@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.1 04/16/2015
+Release Notes - HBase - Version 1.0.1 04/25/2015
 
 ** Sub-task
     * [HBASE-13006] - Document visibility label support for groups
@@ -10,9 +10,13 @@ Release Notes - HBase - Version 1.0.1 04/16/2015
     * [HBASE-13332] - Fix the usage of doAs/runAs in Visibility Controller tests.
     * [HBASE-13335] - Update ClientSmallScanner and ClientSmallReversedScanner
     * [HBASE-13386] - Backport HBASE-12601 to all active branches other than master
+    * [HBASE-13479] - [branch-1.0] Master should not bind to region server ports
+    * [HBASE-13481] - Master should respect master (old) DNS/bind related configurations
 
 ** Bug
     * [HBASE-10728] - get_counter value is never used.
+    * [HBASE-11542] - Unit Test  KeyStoreTestUtil.java compilation failure in IBM JDK 
+    * [HBASE-12006] - [JDK 8] KeyStoreTestUtil#generateCertificate fails due to "subject class type invalid"
     * [HBASE-12102] - Duplicate keys in HBase.RegionServer metrics JSON
     * [HBASE-12908] - Typos in MemStoreFlusher javadocs
     * [HBASE-12931] - The existing KeyValues in memstore are not removed completely after inserting cell into memStore 
@@ -72,6 +76,7 @@ Release Notes - HBase - Version 1.0.1 04/16/2015
     * [HBASE-13294] - Fix the critical ancient loopholes in security testing infrastructure.
     * [HBASE-13296] - Fix the deletion of acl notify nodes for namespace.
     * [HBASE-13298] - Clarify if Table.{set|get}WriteBufferSize() is deprecated or not
+    * [HBASE-13301] - Possible memory leak in BucketCache
     * [HBASE-13305] - Get(Get get) is not copying the row key
     * [HBASE-13309] - Some tests do not reset EnvironmentEdgeManager
     * [HBASE-13314] - Fix NPE in HMaster.getClusterStatus()
@@ -85,7 +90,11 @@ Release Notes - HBase - Version 1.0.1 04/16/2015
     * [HBASE-13409] - Add categories to uncategorized tests
     * [HBASE-13410] - Bug in KeyValueUtil.oswrite() for non Keyvalue cases
     * [HBASE-13414] - TestHCM no longer needs to test for JRE 6.
+    * [HBASE-13423] - Remove duplicate entry for hbase.regionserver.regionSplitLimit in hbase-default.xml
     * [HBASE-13433] - Backward compatibility in 1.0.z for shell broken for get_counter
+    * [HBASE-13457] - SnapshotExistsException doesn't honor the DoNotRetry
+    * [HBASE-13473] - deleted cells come back alive after the stripe compaction
+    * [HBASE-13491] - Issue in FuzzyRowFilter#getNextForFuzzyRule
 
 ** Improvement
     * [HBASE-13002] - Make encryption cipher configurable
@@ -111,6 +120,8 @@ Release Notes - HBase - Version 1.0.1 04/16/2015
     * [HBASE-13362] - Set max result size from client only (like scanner caching).
     * [HBASE-13370] - PE tool could give option for using Explicit Column Tracker which leads to seeks
     * [HBASE-13381] - Expand TestSizeFailures to include small scans
+    * [HBASE-13419] - Thrift gateway should propagate text from exception causes.
+    * [HBASE-13436] - Include user name in ADE for scans
 
 ** New Feature
     * [HBASE-12869] - Add a REST API implementation of the ClusterManager interface
