@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -400,7 +402,9 @@ public class TestFuzzyRowFilter {
 
   private static void assertNext(boolean reverse, byte[] fuzzyRow, byte[] mask, byte[] current,
       byte[] expected) {
-    byte[] nextForFuzzyRule = FuzzyRowFilter.getNextForFuzzyRule(reverse, current, fuzzyRow, mask);
+    KeyValue kv = KeyValueUtil.createFirstOnRow(current);
+    byte[] nextForFuzzyRule = FuzzyRowFilter.getNextForFuzzyRule(reverse, kv.getRowArray(),
+        kv.getRowOffset(), kv.getRowLength(), fuzzyRow, mask);
     Assert.assertEquals(Bytes.toStringBinary(expected), Bytes.toStringBinary(nextForFuzzyRule));
   }
 }
