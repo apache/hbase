@@ -190,4 +190,25 @@ public class TestProcedureStoreTracker {
       tracker.clear();
     }
   }
+
+  @Test
+  public void testLoad() {
+    final int MAX_PROCS = 1000;
+    final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (int numProcs = 1; numProcs < MAX_PROCS; ++numProcs) {
+      for (int start = 1; start <= numProcs; ++start) {
+        assertTrue(tracker.isEmpty());
+
+        LOG.debug("loading " + numProcs + " procs from start=" + start);
+        for (int i = start; i <= numProcs; ++i) {
+          tracker.setDeleted(i, false);
+        }
+        for (int i = 1; i < start; ++i) {
+          tracker.setDeleted(i, false);
+        }
+
+        tracker.clear();
+      }
+    }
+  }
 }

@@ -211,6 +211,7 @@ public class ProcedureStoreTracker {
         long newStart = alignDown(procId);
         delta = (int)(start - newStart) >> ADDRESS_BITS_PER_WORD;
         offset = delta;
+        start = newStart;
       } else {
         // Add to tail
         long newEnd = alignUp(procId + 1);
@@ -383,7 +384,7 @@ public class ProcedureStoreTracker {
   @InterfaceAudience.Private
   public void setDeleted(final long procId, final boolean isDeleted) {
     BitSetNode node = getOrCreateNode(procId);
-    assert node.contains(procId) : "expected procId in the node";
+    assert node.contains(procId) : "expected procId=" + procId + " in the node=" + node;
     node.updateState(procId, isDeleted);
   }
 
