@@ -404,7 +404,9 @@ public class HRegionServer extends HasThread implements
   // key to the config parameter of server hostname
   // the specification of server hostname is optional. The hostname should be resolvable from
   // both master and region server
-  final static String HOSTNAME_KEY = "hbase.regionserver.hostname";
+  final static String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
+
+  final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   /**
    * This servers startcode.
@@ -526,7 +528,11 @@ public class HRegionServer extends HasThread implements
 
     rpcServices = createRpcServices();
     this.startcode = System.currentTimeMillis();
-    useThisHostnameInstead = conf.get(HOSTNAME_KEY);
+    if (this instanceof HMaster) {
+      useThisHostnameInstead = conf.get(MASTER_HOSTNAME_KEY);
+    } else {
+      useThisHostnameInstead = conf.get(RS_HOSTNAME_KEY);
+    }
     String hostName = shouldUseThisHostnameInstead() ? useThisHostnameInstead :
       rpcServices.isa.getHostName();
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
@@ -1730,13 +1736,16 @@ public class HRegionServer extends HasThread implements
   private int putUpWebUI() throws IOException {
     int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
       HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
+
     if(this instanceof HMaster) {
       port = conf.getInt(HConstants.MASTER_INFO_PORT,
           HConstants.DEFAULT_MASTER_INFOPORT);
+      addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     }
     // -1 is for disabling info server
     if (port < 0) return port;
-    String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
+
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg =
           "Failed to start http info server. Address " + addr
