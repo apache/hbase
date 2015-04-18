@@ -345,7 +345,7 @@ public class TestScannerHeartbeatMessages {
     }
 
     public HeartbeatHRegionServer(Configuration conf, CoordinatedStateManager csm)
-        throws IOException {
+        throws IOException, InterruptedException {
       super(conf, csm);
     }
 
