@@ -88,6 +88,7 @@ public class TestRegionServerHostname {
         String hostName = addr.getHostName();
         LOG.info("Found " + hostName + " on " + ni);
         
+        TEST_UTIL.getConfiguration().set(HRegionServer.MASTER_HOSTNAME_KEY, hostName);
         TEST_UTIL.getConfiguration().set(HRegionServer.RS_HOSTNAME_KEY, hostName);
         TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
         try {
@@ -96,7 +97,8 @@ public class TestRegionServerHostname {
           // there would be NUM_RS+1 children - one for the master
           assertTrue(servers.size() == NUM_RS+1);
           for (String server : servers) {
-            assertTrue(server.startsWith(hostName+","));
+            assertTrue("From zookeeper: " + server + " hostname: " + hostName,
+              server.startsWith(hostName+","));
           }
           zkw.close();
         } finally {
