@@ -648,7 +648,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
    * access control is correctly enforced based on the checks performed in preScannerOpen()
    */
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
-    // This is duplicated code!
+    if (!RpcServer.isInRpcCallContext())
+      return;
     String requestUName = RpcServer.getRequestUserName();
     String owner = scannerOwners.get(s);
     if (authorizationEnabled && owner != null && !owner.equals(requestUName)) {

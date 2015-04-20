@@ -2366,6 +2366,10 @@ public class RpcServer implements RpcServerInterface {
     return CurCall.get();
   }
 
+  public static boolean isInRpcCallContext() {
+    return CurCall.get() != null;
+  }
+
   /**
    * Returns the user credentials associated with the current RPC request or
    * <code>null</code> if no credentials were provided.
