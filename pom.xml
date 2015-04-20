@@ -39,7 +39,7 @@
   <groupId>org.apache.hbase</groupId>
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
-  <version>0.98.12</version>
+  <version>0.98.13-SNAPSHOT</version>
   <name>HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
