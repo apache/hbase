@@ -104,7 +104,7 @@ public class TestScannerHeartbeatMessages {
   // Time, in milliseconds, that the client will wait for a response from the server before timing
   // out. This value is used server side to determine when it is necessary to send a heartbeat
   // message to the client
-  private static int CLIENT_TIMEOUT = 500;
+  private static int CLIENT_TIMEOUT = 2000;
 
   // The server limits itself to running for half of the CLIENT_TIMEOUT value.
   private static int SERVER_TIME_LIMIT = CLIENT_TIMEOUT / 2;
@@ -113,7 +113,7 @@ public class TestScannerHeartbeatMessages {
   private static int DEFAULT_ROW_SLEEP_TIME = SERVER_TIME_LIMIT / 2;
   // By default, at most cells for two column families are retrieved before the time limit is
   // reached
-  private static int DEFAULT_CF_SLEEP_TIME = SERVER_TIME_LIMIT / 2;
+  private static int DEFAULT_CF_SLEEP_TIME = DEFAULT_ROW_SLEEP_TIME / NUM_FAMILIES;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -173,6 +173,7 @@ public class TestScannerHeartbeatMessages {
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.deleteTable(TABLE_NAME);
     TEST_UTIL.shutdownMiniCluster();
   }
 
