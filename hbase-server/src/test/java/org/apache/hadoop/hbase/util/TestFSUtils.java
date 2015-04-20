@@ -345,6 +345,49 @@ public class TestFSUtils {
     }
   }
 
+  private void verifyFileInDirWithStoragePolicy(final String policy) throws Exception {
+    HBaseTestingUtility htu = new HBaseTestingUtility();
+    Configuration conf = htu.getConfiguration();
+    conf.set(HConstants.WAL_STORAGE_POLICY, policy);
+
+    MiniDFSCluster cluster = htu.startMiniDFSCluster(1);
+    try {
+      assertTrue(FSUtils.isHDFS(conf));
+
+      FileSystem fs = FileSystem.get(conf);
+      Path testDir = htu.getDataTestDirOnTestFS("testArchiveFile");
+      fs.mkdirs(testDir);
+
+      FSUtils.setStoragePolicy(fs, conf, testDir, HConstants.WAL_STORAGE_POLICY,
+          HConstants.DEFAULT_WAL_STORAGE_POLICY);
+
+      String file = UUID.randomUUID().toString();
+      Path p = new Path(testDir, file);
+      WriteDataToHDFS(fs, p, 4096);
+      // will assert existance before deleting.
+      cleanupFile(fs, testDir);
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testSetStoragePolicyDefault() throws Exception {
+    verifyFileInDirWithStoragePolicy(HConstants.DEFAULT_WAL_STORAGE_POLICY);
+  }
+
+  /* might log a warning, but still work. (always warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyValidButMaybeNotPresent() throws Exception {
+    verifyFileInDirWithStoragePolicy("ALL_SSD");
+  }
+
+  /* should log a warning, but still work. (different warning on Hadoop < 2.6.0) */
+  @Test
+  public void testSetStoragePolicyInvalid() throws Exception {
+    verifyFileInDirWithStoragePolicy("1772");
+  }
+
   /**
    * Ugly test that ensures we can get at the hedged read counters in dfsclient.
    * Does a bit of preading with hedged reads enabled using code taken from hdfs TestPread.

@@ -957,9 +957,9 @@ public final class HConstants {
 
   /** Configuration name of WAL storage policy
    * Valid values are:
-   *  NONE: no preference in destination of replicas
-   *  ONE_SSD: place only one replica in SSD and the remaining in default storage
-   *  and ALL_SSD: place all replica on SSD
+   *  NONE: no preference in destination of block replicas
+   *  ONE_SSD: place only one block replica in SSD and the remaining in default storage
+   *  and ALL_SSD: place all block replicas on SSD
    *
    * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
