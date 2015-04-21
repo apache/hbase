@@ -4073,6 +4073,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         store.replayCompactionMarker(compaction, pickCompactionFiles, removeFiles);
         logRegionFiles();
+      } catch (FileNotFoundException ex) {
+        LOG.warn(getRegionInfo().getEncodedName() + " : "
+            + "At least one of the store files in compaction: "
+            + TextFormat.shortDebugString(compaction)
+            + " doesn't exist any more. Skip loading the file(s)", ex);
       } finally {
         closeRegionOperation(Operation.REPLAY_EVENT);
       }
@@ -4341,15 +4346,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // flushes from ALL stores.
         getMVCC().advanceMemstoreReadPointIfNeeded(flush.getFlushSequenceNumber());
 
-        // C. Finally notify anyone waiting on memstore to clear:
-        // e.g. checkResources().
-        synchronized (this) {
-          notifyAll(); // FindBugs NN_NAKED_NOTIFY
-        }
-      } finally {
+      } catch (FileNotFoundException ex) {
+        LOG.warn(getRegionInfo().getEncodedName() + " : "
+            + "At least one of the store files in flush: " + TextFormat.shortDebugString(flush)
+            + " doesn't exist any more. Skip loading the file(s)", ex);
+      }
+      finally {
         status.cleanup();
         writestate.notifyAll();
       }
+    }
+
+    // C. Finally notify anyone waiting on memstore to clear:
+    // e.g. checkResources().
+    synchronized (this) {
+      notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
   }
 
@@ -4389,6 +4400,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             + Bytes.toString(family) + " but no associated flush context. Ignoring");
         continue;
       }
+
       ctx.replayFlush(flushFiles, dropMemstoreSnapshot); // replay the flush
 
       // Record latest flush time
@@ -4531,7 +4543,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           long storeSeqId = store.getMaxSequenceId();
           List<String> storeFiles = storeDescriptor.getStoreFileList();
-          store.refreshStoreFiles(storeFiles); // replace the files with the new ones
+          try {
+            store.refreshStoreFiles(storeFiles); // replace the files with the new ones
+          } catch (FileNotFoundException ex) {
+            LOG.warn(getRegionInfo().getEncodedName() + " : "
+                    + "At least one of the store files: " + storeFiles
+                    + " doesn't exist any more. Skip loading the file(s)", ex);
+            continue;
+          }
           if (store.getMaxSequenceId() != storeSeqId) {
             // Record latest flush time if we picked up new files
             lastStoreFlushTimeMap.put(store, EnvironmentEdgeManager.currentTime());
