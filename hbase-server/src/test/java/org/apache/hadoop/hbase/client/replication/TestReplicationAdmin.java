@@ -167,11 +167,23 @@ public class TestReplicationAdmin {
 
     // append table t2 to replication
     admin.appendPeerTableCFs(ID_ONE, "t2");
-    assertEquals("t2;t1", admin.getPeerTableCFs(ID_ONE));
+    String peerTablesOne = admin.getPeerTableCFs(ID_ONE);
+
+    // Different jdk's return different sort order for the tables. ( Not sure on why exactly )
+    //
+    // So instead of asserting that the string is exactly we
+    // assert that the string contains all tables and the needed separator.
+    assertTrue("Should contain t1", peerTablesOne.contains("t1"));
+    assertTrue("Should contain t2", peerTablesOne.contains("t2"));
+    assertTrue("Should contain ; as the seperator", peerTablesOne.contains(";"));
 
     // append table column family: f1 of t3 to replication
     admin.appendPeerTableCFs(ID_ONE, "t3:f1");
-    assertEquals("t3:f1;t2;t1", admin.getPeerTableCFs(ID_ONE));
+    String peerTablesTwo = admin.getPeerTableCFs(ID_ONE);
+    assertTrue("Should contain t1", peerTablesTwo.contains("t1"));
+    assertTrue("Should contain t2", peerTablesTwo.contains("t2"));
+    assertTrue("Should contain t3:f1", peerTablesTwo.contains("t3:f1"));
+    assertTrue("Should contain ; as the seperator", peerTablesTwo.contains(";"));
     admin.removePeer(ID_ONE);
   }
 
