@@ -41,6 +41,7 @@ public class TagRewriteCell implements Cell, SettableSequenceId, SettableTimesta
   public TagRewriteCell(Cell cell, byte[] tags) {
     assert cell instanceof SettableSequenceId;
     assert cell instanceof SettableTimestamp;
+    assert tags != null;
     this.cell = cell;
     this.tags = tags;
     // tag offset will be treated as 0 and length this.tags.length
@@ -143,6 +144,10 @@ public class TagRewriteCell implements Cell, SettableSequenceId, SettableTimesta
 
   @Override
   public int getTagsLength() {
+    if (null == this.tags) {
+      // Nulled out tags array optimization in constructor
+      return 0;
+    }
     return this.tags.length;
   }
 
