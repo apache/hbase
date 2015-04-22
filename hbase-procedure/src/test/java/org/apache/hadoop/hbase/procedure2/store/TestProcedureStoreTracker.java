@@ -211,4 +211,30 @@ public class TestProcedureStoreTracker {
       }
     }
   }
+
+  @Test
+  public void testDelete() {
+    final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+
+    long[] procIds = new long[] { 65, 1, 193 };
+    for (int i = 0; i < procIds.length; ++i) {
+      tracker.insert(procIds[i]);
+      tracker.dump();
+    }
+
+    for (int i = 0; i < (64 * 4); ++i) {
+      boolean hasProc = false;
+      for (int j = 0; j < procIds.length; ++j) {
+        if (procIds[j] == i) {
+          hasProc = true;
+          break;
+        }
+      }
+      if (hasProc) {
+        assertEquals(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(i));
+      } else {
+        assertEquals("procId=" + i, ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(i));
+      }
+    }
+  }
 }

@@ -52,6 +52,7 @@ public class ProcedureStoreTracker {
     private final static int BITS_PER_WORD = 1 << ADDRESS_BITS_PER_WORD;
     private final static int MAX_NODE_SIZE = 4 << ADDRESS_BITS_PER_WORD;
 
+    private final boolean partial;
     private long[] updated;
     private long[] deleted;
     private long start;
@@ -88,6 +89,7 @@ public class ProcedureStoreTracker {
         deleted[i] = partial ? 0 : WORD_MASK;
       }
 
+      this.partial = partial;
       updateState(procId, false);
     }
 
@@ -95,6 +97,7 @@ public class ProcedureStoreTracker {
       this.start = start;
       this.updated = updated;
       this.deleted = deleted;
+      this.partial = false;
     }
 
     public void update(final long procId) {
@@ -223,17 +226,18 @@ public class ProcedureStoreTracker {
       int oldSize = updated.length;
 
       newBitmap = new long[oldSize + delta];
+      for (int i = 0; i < newBitmap.length; ++i) {
+        newBitmap[i] = 0;
+      }
       System.arraycopy(updated, 0, newBitmap, offset, oldSize);
       updated = newBitmap;
 
       newBitmap = new long[deleted.length + delta];
+      for (int i = 0; i < newBitmap.length; ++i) {
+        newBitmap[i] = partial ? 0 : WORD_MASK;
+      }
       System.arraycopy(deleted, 0, newBitmap, offset, oldSize);
       deleted = newBitmap;
-
-      for (int i = 0; i < delta; ++i) {
-        updated[oldSize + i] = 0;
-        deleted[oldSize + i] = WORD_MASK;
-      }
     }
 
     public void merge(final BitSetNode rightNode) {
@@ -256,7 +260,7 @@ public class ProcedureStoreTracker {
 
       for (int i = 0; i < newSize; ++i) {
         updated[offset + i] = 0;
-        deleted[offset + i] = WORD_MASK;
+        deleted[offset + i] = partial ? 0 : WORD_MASK;
       }
     }
 
