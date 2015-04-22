@@ -119,6 +119,7 @@ public class HTable implements HTableInterface, RegionLocator {
   private boolean autoFlush = true;
   private boolean closed = false;
   protected int scannerCaching;
+  protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi & Scan
   private int operationTimeout;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
@@ -352,7 +353,7 @@ public class HTable implements HTableInterface, RegionLocator {
     this.operationTimeout = tableName.isSystemTable() ?
         tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
     this.scannerCaching = tableConfiguration.getScannerCaching();
-
+    this.scannerMaxResultSize = tableConfiguration.getScannerMaxResultSize();
     if (this.rpcCallerFactory == null) {
       this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
     }
@@ -801,6 +802,9 @@ public class HTable implements HTableInterface, RegionLocator {
     }
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
+    }
+    if (scan.getMaxResultSize() <= 0) {
+      scan.setMaxResultSize(scannerMaxResultSize);
     }
 
     if (scan.isReversed()) {
