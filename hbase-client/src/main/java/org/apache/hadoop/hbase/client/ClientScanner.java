@@ -209,6 +209,11 @@ public class ClientScanner extends AbstractClientScanner {
       return lastNext;
     }
 
+    @VisibleForTesting
+    protected long getMaxResultSize() {
+      return maxScannerResultSize;
+    }
+
     // returns true if the passed region endKey
     protected boolean checkScanStopRow(final byte [] endKey) {
       if (this.scan.getStopRow().length > 0) {
