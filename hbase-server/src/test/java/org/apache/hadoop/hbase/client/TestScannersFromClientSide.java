@@ -601,6 +601,56 @@ public class TestScannersFromClientSide {
     verifyResult(result, kvListExp, toLog, "Testing scan on re-opened region");
   }
 
+  @Test
+  public void testMaxResultSizeIsSetToDefault() throws Exception {
+    TableName TABLE = TableName.valueOf("testMaxResultSizeIsSetToDefault");
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+
+    // The max result size we expect the scan to use by default.
+    long expectedMaxResultSize =
+        TEST_UTIL.getConfiguration().getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+            HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+
+    int numRows = 5;
+    byte[][] ROWS = HTestConst.makeNAscii(ROW, numRows);
+
+    int numQualifiers = 10;
+    byte[][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, numQualifiers);
+
+    // Specify the cell size such that a single row will be larger than the default
+    // value of maxResultSize. This means that Scan RPCs should return at most a single
+    // result back to the client.
+    int cellSize = (int) (expectedMaxResultSize / (numQualifiers - 1));
+    byte[] cellValue = Bytes.createMaxByteArray(cellSize);
+
+    Put put;
+    List<Put> puts = new ArrayList<Put>();
+    for (byte[] ROW1 : ROWS) {
+      put = new Put(ROW1);
+      for (byte[] QUALIFIER1 : QUALIFIERS) {
+        KeyValue kv = new KeyValue(ROW1, FAMILY, QUALIFIER1, cellValue);
+        put.add(kv);
+      }
+      puts.add(put);
+    }
+    ht.put(puts);
+
+    // Create a scan with the default configuration.
+    Scan scan = new Scan();
+
+    ResultScanner scanner = ht.getScanner(scan);
+    assertTrue(scanner instanceof ClientScanner);
+    ClientScanner clientScanner = (ClientScanner) scanner;
+
+    // Call next to issue a single RPC to the server
+    scanner.next();
+
+    // The scanner should have, at most, a single result in its cache. If there more results exists
+    // in the cache it means that more than the expected max result size was fetched.
+    assertTrue("The cache contains: " + clientScanner.getCacheSize() + " results",
+        clientScanner.getCacheSize() <= 1);
+  }
+
   static void verifyResult(Result result, List<Cell> expKvList, boolean toLog,
       String msg) {
 

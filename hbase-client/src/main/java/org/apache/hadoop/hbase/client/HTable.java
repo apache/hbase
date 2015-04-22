@@ -134,6 +134,7 @@ public class HTable implements HTableInterface {
   private boolean autoFlush;
   protected long currentWriteBufferSize;
   protected int scannerCaching;
+  protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi
   private boolean closed;
   private int operationTimeout;
@@ -377,6 +378,7 @@ public class HTable implements HTableInterface {
     this.autoFlush = true;
     this.currentWriteBufferSize = 0;
     this.scannerCaching = tableConfiguration.getScannerCaching();
+    this.scannerMaxResultSize = tableConfiguration.getScannerMaxResultSize();
 
     if (this.rpcCallerFactory == null) {
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(configuration,
@@ -758,6 +760,10 @@ public class HTable implements HTableInterface {
     }
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
+    }
+
+    if (scan.getMaxResultSize() <= 0) {
+      scan.setMaxResultSize(scannerMaxResultSize);
     }
 
     if (scan.isReversed()) {

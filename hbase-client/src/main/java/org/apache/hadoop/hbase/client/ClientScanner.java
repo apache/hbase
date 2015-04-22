@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.LinkedList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -214,6 +215,10 @@ public class ClientScanner extends AbstractClientScanner {
       return lastNext;
     }
 
+    protected long getMaxResultSize() {
+      return maxScannerResultSize;
+    }
+
     // returns true if the passed region endKey
     protected boolean checkScanStopRow(final byte [] endKey) {
       if (this.scan.getStopRow().length > 0) {
@@ -341,6 +346,11 @@ public class ClientScanner extends AbstractClientScanner {
       writeScanMetrics();
       return null;
     }
+
+  @VisibleForTesting
+  public int getCacheSize() {
+    return cache != null ? cache.size() : 0;
+  }
 
   /**
    * Contact the servers to load more {@link Result}s in the cache.

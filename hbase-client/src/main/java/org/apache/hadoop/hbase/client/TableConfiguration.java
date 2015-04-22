@@ -44,6 +44,8 @@ public class TableConfiguration {
 
   private final int scannerCaching;
 
+  private final long scannerMaxResultSize;
+
   private final int retries;
 
   private final int maxKeyValueSize;
@@ -65,6 +67,9 @@ public class TableConfiguration {
     this.scannerCaching = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_CACHING, HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
+    this.scannerMaxResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+        HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+
     this.retries = conf.getInt(
        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
 
@@ -82,6 +87,7 @@ public class TableConfiguration {
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.scannerCaching = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
+    this.scannerMaxResultSize = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
     this.maxKeyValueSize = -1;
   }
@@ -100,6 +106,10 @@ public class TableConfiguration {
 
   public int getScannerCaching() {
     return scannerCaching;
+  }
+
+  public long getScannerMaxResultSize() {
+    return scannerMaxResultSize;
   }
 
   public int getRetriesNumber() {
