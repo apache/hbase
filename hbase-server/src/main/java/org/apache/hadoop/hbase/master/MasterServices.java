@@ -95,6 +95,11 @@ public interface MasterServices extends Server {
       throws IOException, TableNotFoundException, TableNotDisabledException;
 
   /**
+   * Check whether the procedure executor is enabled
+   */
+  boolean isMasterProcedureExecutorEnabled();
+
+  /**
    * Create a table using the given table definition.
    * @param desc The table definition
    * @param splitKeys Starting row keys for the initial table regions.  If null

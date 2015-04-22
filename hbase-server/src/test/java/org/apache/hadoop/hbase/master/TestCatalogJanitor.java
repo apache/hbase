@@ -224,6 +224,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public boolean isMasterProcedureExecutorEnabled() {
+      return true;
+    }
+
+    @Override
     public long createTable(HTableDescriptor desc, byte[][] splitKeys)
         throws IOException {
       // no-op

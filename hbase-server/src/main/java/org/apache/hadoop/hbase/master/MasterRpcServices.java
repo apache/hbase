@@ -403,6 +403,10 @@ public class MasterRpcServices extends RSRpcServices
     }
   }
 
+  private boolean isValidProcId(final long procId) {
+    return (procId > 0);
+  }
+
   @Override
   public CreateTableResponse createTable(RpcController controller, CreateTableRequest req)
   throws ServiceException {
@@ -410,7 +414,11 @@ public class MasterRpcServices extends RSRpcServices
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
       long procId = master.createTable(hTableDescriptor, splitKeys);
-      return CreateTableResponse.newBuilder().setProcId(procId).build();
+      if (isValidProcId(procId)) {
+        return CreateTableResponse.newBuilder().setProcId(procId).build();
+      } else {
+        return CreateTableResponse.newBuilder().build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -466,7 +474,11 @@ public class MasterRpcServices extends RSRpcServices
       DeleteTableRequest request) throws ServiceException {
     try {
       long procId = master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
-      return DeleteTableResponse.newBuilder().setProcId(procId).build();
+      if (isValidProcId(procId)) {
+        return DeleteTableResponse.newBuilder().setProcId(procId).build();
+      } else {
+        return DeleteTableResponse.newBuilder().build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -489,7 +501,11 @@ public class MasterRpcServices extends RSRpcServices
       DisableTableRequest request) throws ServiceException {
     try {
       long procId = master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
-      return DisableTableResponse.newBuilder().setProcId(procId).build();
+      if (isValidProcId(procId)) {
+        return DisableTableResponse.newBuilder().setProcId(procId).build();
+      } else {
+        return DisableTableResponse.newBuilder().build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -575,7 +591,11 @@ public class MasterRpcServices extends RSRpcServices
       EnableTableRequest request) throws ServiceException {
     try {
       long procId = master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
-      return EnableTableResponse.newBuilder().setProcId(procId).build();
+      if (isValidProcId(procId)) {
+        return EnableTableResponse.newBuilder().setProcId(procId).build();
+      } else {
+        return EnableTableResponse.newBuilder().build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

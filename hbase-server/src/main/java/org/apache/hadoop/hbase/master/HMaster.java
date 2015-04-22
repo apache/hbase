@@ -90,7 +90,16 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
+import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
+import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.DispatchMergingRegionHandler;
+import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
+import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
+import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
+import org.apache.hadoop.hbase.master.handler.TruncateTableHandler;
 import org.apache.hadoop.hbase.master.procedure.AddColumnFamilyProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.DeleteColumnFamilyProcedure;
@@ -293,6 +302,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   //should we check encryption settings at master side, default true
   private final boolean masterCheckEncryption;
 
+  // This is for fallback to use the code from 1.0 release.
+  private enum ProcedureConf {
+    PROCEDURE_ENABLED, // default
+    HANDLER_USED, // handler code executed in DDL, procedure executor still start
+    PROCEDURE_FULLY_DISABLED, // procedure fully disabled
+  }
+  private final ProcedureConf procedureConf;
+
   Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
   // monitor for snapshot of hbase tables
@@ -370,6 +387,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
 
+    // Check configuration to see whether procedure is disabled (not execute at all),
+    // unused (not used to execute DDL, but executor starts to complete unfinished operations
+    // in procedure store, or enabled (default behavior).
+    String procedureConfString = conf.get("hbase.master.procedure.tableddl", "enabled");
+    if (procedureConfString.equalsIgnoreCase("disabled")) {
+      LOG.info("Master will use handler for new table DDL"
+        + " and all unfinished table DDLs in procedure store will be disgarded.");
+      this.procedureConf = ProcedureConf.PROCEDURE_FULLY_DISABLED;
+    } else if (procedureConfString.equalsIgnoreCase("unused")) {
+      LOG.info("Master will use handler for new table DDL"
+        + " and all unfinished table DDLs in procedure store will continue to execute.");
+      this.procedureConf = ProcedureConf.HANDLER_USED;
+    } else {
+      this.procedureConf = ProcedureConf.PROCEDURE_ENABLED;
+    }
     // preload table descriptor at startup
     this.preLoadTableDescriptors = conf.getBoolean("hbase.master.preload.tabledescriptors", true);
 
@@ -1106,13 +1138,39 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.mpmHost != null) this.mpmHost.stop("server shutting down.");
   }
 
+  /**
+   * Check whether the procedure executor is enabled
+   */
+  @Override
+  public boolean isMasterProcedureExecutorEnabled() {
+    return (this.procedureConf == ProcedureConf.PROCEDURE_ENABLED);
+  }
+
   private void startProcedureExecutor() throws IOException {
     final MasterProcedureEnv procEnv = new MasterProcedureEnv(this);
     final Path logDir = new Path(fileSystemManager.getRootDir(),
         MasterProcedureConstants.MASTER_PROCEDURE_LOGDIR);
 
+    if (this.procedureConf == ProcedureConf.PROCEDURE_FULLY_DISABLED) {
+      // Clean up the procedure store so that we will in a clean state when procedure
+      // is enabled later.
+      // Note: hbck might needed for uncompleted procedures.
+      try {
+        fs.delete(logDir, true);
+        LOG.warn("Procedure executor is disabled from configuartion. " +
+            "All the state logs from procedure store were removed." +
+            "You should check the cluster state using HBCK.");
+      } catch (Exception e) {
+        // Ignore exception and move on.
+        LOG.error("Removing all the state logs from procedure store failed." +
+            "You should check the cluster state using HBCK.");
+      }
+      return;
+    }
+
     procedureStore = new WALProcedureStore(conf, fileSystemManager.getFileSystem(), logDir,
         new MasterProcedureEnv.WALStoreLeaseRecovery(this));
+
     procedureStore.registerListener(new MasterProcedureEnv.MasterProcedureStoreListener(this));
     procedureExecutor = new ProcedureExecutor(conf, procEnv, procedureStore,
         procEnv.getProcedureQueue());
@@ -1383,13 +1441,19 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " create " + hTableDescriptor);
 
-    // TODO: We can handle/merge duplicate requests, and differentiate the case of
-    //       TableExistsException by saying if the schema is the same or not.
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(),
-        hTableDescriptor, newRegions, latch));
-    latch.await();
+    long procId = -1;
+    if (isMasterProcedureExecutorEnabled()) {
+      // TODO: We can handle/merge duplicate requests, and differentiate the case of
+      //       TableExistsException by saying if the schema is the same or not.
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+      procId = this.procedureExecutor.submitProcedure(
+        new CreateTableProcedure(procedureExecutor.getEnvironment(),
+          hTableDescriptor, newRegions, latch));
+      latch.await();
+    } else {
+      this.service.submit(new CreateTableHandler(this, this.fileSystemManager, hTableDescriptor,
+        conf, newRegions, this).prepare());
+    }
 
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
@@ -1623,11 +1687,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " delete " + tableName);
 
-    // TODO: We can handle/merge duplicate request
-    ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
+    long procId = -1;
+    if (isMasterProcedureExecutorEnabled()) {
+      // TODO: We can handle/merge duplicate request
+      ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
+      procId = this.procedureExecutor.submitProcedure(
         new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch));
-    latch.await();
+      latch.await();
+    } else {
+      this.service.submit(new DeleteTableHandler(tableName, this, this).prepare());
+    }
 
     if (cpHost != null) {
       cpHost.postDeleteTable(tableName);
@@ -1644,9 +1713,16 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
 
-    long procId = this.procedureExecutor.submitProcedure(
+    if (isMasterProcedureExecutorEnabled()) {
+      long procId = this.procedureExecutor.submitProcedure(
         new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits));
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+      ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    } else {
+      TruncateTableHandler handler =
+          new TruncateTableHandler(tableName, this, this, preserveSplits);
+      handler.prepare();
+      handler.process();
+    }
 
     if (cpHost != null) {
       cpHost.postTruncateTable(tableName);
@@ -1664,11 +1740,17 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         return;
       }
     }
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId =
+    LOG.info(getClientIdAuditPrefix() + " add " + columnDescriptor);
+
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation synchronously - wait for the operation to complete before continuing.
+      long procId =
         this.procedureExecutor.submitProcedure(new AddColumnFamilyProcedure(procedureExecutor
             .getEnvironment(), tableName, columnDescriptor));
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+      ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    } else {
+      new TableAddFamilyHandler(tableName, columnDescriptor, this, this).prepare().process();
+    }
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, columnDescriptor);
     }
@@ -1687,11 +1769,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
 
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId =
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation synchronously - wait for the operation to complete before continuing.
+      long procId =
         this.procedureExecutor.submitProcedure(new ModifyColumnFamilyProcedure(procedureExecutor
             .getEnvironment(), tableName, descriptor));
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+      ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    } else {
+      new TableModifyFamilyHandler(tableName, descriptor, this, this).prepare().process();
+    }
 
     if (cpHost != null) {
       cpHost.postModifyColumn(tableName, descriptor);
@@ -1709,11 +1795,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
 
-    // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId =
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation synchronously - wait for the operation to complete before continuing.
+      long procId =
         this.procedureExecutor.submitProcedure(new DeleteColumnFamilyProcedure(procedureExecutor
             .getEnvironment(), tableName, columnName));
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+      ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    } else {
+      new TableDeleteFamilyHandler(tableName, columnName, this, this).prepare().process();
+    }
 
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, columnName);
@@ -1728,16 +1818,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " enable " + tableName);
 
-    // Execute the operation asynchronously - client will check the progress of the operation
-    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
-    long procId =
-        this.procedureExecutor.submitProcedure(new EnableTableProcedure(procedureExecutor
+    long procId = -1;
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation asynchronously - client will check the progress of the operation
+      final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+      procId =
+          this.procedureExecutor.submitProcedure(new EnableTableProcedure(procedureExecutor
             .getEnvironment(), tableName, false, prepareLatch));
-    // Before returning to client, we want to make sure that the table is prepared to be
-    // enabled (the table is locked and the table state is set).
-    //
-    // Note: if the procedure throws exception, we will catch it and rethrow.
-    prepareLatch.await();
+      // Before returning to client, we want to make sure that the table is prepared to be
+      // enabled (the table is locked and the table state is set).
+      //
+      // Note: if the procedure throws exception, we will catch it and rethrow.
+      prepareLatch.await();
+    } else {
+      this.service.submit(new EnableTableHandler(this, tableName,
+        assignmentManager, tableLockManager, false).prepare());
+    }
 
     if (cpHost != null) {
       cpHost.postEnableTable(tableName);
@@ -1754,17 +1850,22 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     LOG.info(getClientIdAuditPrefix() + " disable " + tableName);
 
-    // Execute the operation asynchronously - client will check the progress of the operation
-    final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
-    // Execute the operation asynchronously - client will check the progress of the operation
-    long procId =
-        this.procedureExecutor.submitProcedure(new DisableTableProcedure(procedureExecutor
+    long procId = -1;
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation asynchronously - client will check the progress of the operation
+      final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
+      procId =
+          this.procedureExecutor.submitProcedure(new DisableTableProcedure(procedureExecutor
             .getEnvironment(), tableName, false, prepareLatch));
-    // Before returning to client, we want to make sure that the table is prepared to be
-    // enabled (the table is locked and the table state is set).
-    //
-    // Note: if the procedure throws exception, we will catch it and rethrow.
-    prepareLatch.await();
+      // Before returning to client, we want to make sure that the table is prepared to be
+      // enabled (the table is locked and the table state is set).
+      //
+      // Note: if the procedure throws exception, we will catch it and rethrow.
+      prepareLatch.await();
+    } else {
+      this.service.submit(new DisableTableHandler(this, tableName,
+        assignmentManager, tableLockManager, false).prepare());
+    }
 
     if (cpHost != null) {
       cpHost.postDisableTable(tableName);
@@ -1820,11 +1921,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     LOG.info(getClientIdAuditPrefix() + " modify " + tableName);
 
-    // Execute the operation synchronously - wait for the operation completes before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
+    if (isMasterProcedureExecutorEnabled()) {
+      // Execute the operation synchronously - wait for the operation completes before continuing.
+      long procId = this.procedureExecutor.submitProcedure(
         new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor));
 
-    ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+      ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
+    } else {
+      new ModifyTableHandler(tableName, descriptor, this, this).prepare().process();
+    }
 
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);

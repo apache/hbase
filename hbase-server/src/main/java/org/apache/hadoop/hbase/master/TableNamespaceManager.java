@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
+import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -239,12 +240,22 @@ public class TableNamespaceManager {
     HRegionInfo[] newRegions = new HRegionInfo[]{
         new HRegionInfo(HTableDescriptor.NAMESPACE_TABLEDESC.getTableName(), null, null)};
 
-    // we need to create the table this way to bypass checkInitialized
-    masterServices.getMasterProcedureExecutor()
-      .submitProcedure(new CreateTableProcedure(
+    if (masterServices.isMasterProcedureExecutorEnabled()) {
+      // we need to create the table this way to bypass checkInitialized
+      masterServices.getMasterProcedureExecutor()
+        .submitProcedure(new CreateTableProcedure(
           masterServices.getMasterProcedureExecutor().getEnvironment(),
           HTableDescriptor.NAMESPACE_TABLEDESC,
           newRegions));
+    } else {
+      masterServices.getExecutorService()
+          .submit(new CreateTableHandler(masterServices,
+              masterServices.getMasterFileSystem(),
+              HTableDescriptor.NAMESPACE_TABLEDESC,
+              masterServices.getConfiguration(),
+              newRegions,
+              masterServices).prepare());
+    }
   }
 
   /**
