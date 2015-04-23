@@ -97,7 +97,8 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Master: <% master.getServerName().getHostname() %></title>
+    <title><%if master.isActiveMaster() %>Master: <%else>Backup Master: </%if>
+    <% master.getServerName().getHostname() %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
@@ -137,7 +138,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	<%if master.isActiveMaster() %>
         <div class="row inner_header">
             <div class="page-header">
-                <h1>Master <small><% master.getServerName().getHostname() %> </small></h1>
+                <h1>Master <small><% master.getServerName().getHostname() %></small></h1>
             </div>
         </div>
 
