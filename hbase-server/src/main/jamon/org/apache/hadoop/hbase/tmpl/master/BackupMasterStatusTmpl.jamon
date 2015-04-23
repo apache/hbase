@@ -27,32 +27,23 @@ org.apache.hadoop.hbase.master.HMaster;
 org.apache.hadoop.hbase.zookeeper.MasterAddressTracker;
 </%import>
 <%java>
-Collection<ServerName> masters = null;
 MasterAddressTracker masterAddressTracker = master.getMasterAddressTracker();
-if (master.isActiveMaster()) {
-  ClusterStatus status = master.getClusterStatus();
-  masters = status.getBackupMasters();
-} else{
-  ServerName sn = masterAddressTracker == null ? null
-    : masterAddressTracker.getMasterAddress();
-  assert sn != null : "Failed to retreive master's ServerName!";
-  masters = Collections.singletonList(sn);
-}
 </%java>
 
-<%java>
-ServerName [] serverNames = masters.toArray(new ServerName[masters.size()]);
-int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMasterInfoPort();
-</%java>
 <%if (!master.isActiveMaster()) %>
-    <%if serverNames[0] != null %>
-        <h2>Master</h2>
-        <a href="//<% serverNames[0].getHostname() %>:<%
-          infoPort %>/master-status" target="_blank"><%
-          serverNames[0].getHostname() %></a>
-    <%else>
-        Unable to parse master hostname.
-    </%if>
+    <%java>
+    ServerName active_master =
+        (masterAddressTracker == null) ? null : masterAddressTracker.getMasterAddress();
+    assert active_master != null : "Failed to retrieve master's ServerName!";
+    int infoPort = (masterAddressTracker == null) ? 0 : masterAddressTracker.getMasterInfoPort();
+    </%java>
+    <div class="row inner_header">
+        <div class="page-header">
+            <h1>Backup Master <small><% master.getServerName().getHostname() %></small></h1>
+        </div>
+    </div>
+    <h4>Current Active Master: <a href="//<% active_master.getHostname() %>:<% infoPort %>/master-status"
+        target="_blank"><% active_master.getHostname() %></a><h4>
 <%else>
     <h2>Backup Masters</h2>
 
@@ -63,14 +54,16 @@ int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMaster
         <th>Start Time</th>
     </tr>
     <%java>
-    Arrays.sort(serverNames);
-    for (ServerName serverName : serverNames) {
-      infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getBackupMasterInfoPort(serverName);
+    Collection<ServerName> backup_masters = master.getClusterStatus().getBackupMasters();
+    ServerName [] backupServerNames = backup_masters.toArray(new ServerName[backup_masters.size()]);
+    Arrays.sort(backupServerNames);
+    for (ServerName serverName : backupServerNames) {
+      int infoPort = (masterAddressTracker == null) ? 0 : masterAddressTracker
+          .getBackupMasterInfoPort(serverName);
     </%java>
     <tr>
-        <td><a href="//<% serverName.getHostname() %>:<%
-          infoPort %>/master-status" target="_blank"><%
-          serverName.getHostname() %></a>
+        <td><a href="//<% serverName.getHostname() %>:<% infoPort %>/master-status"
+            target="_blank"><% serverName.getHostname() %></a>
         </td>
         <td><% serverName.getPort() %></td>
         <td><% new Date(serverName.getStartcode()) %></td>
@@ -78,6 +71,6 @@ int infoPort = masterAddressTracker == null ? 0 : masterAddressTracker.getMaster
     <%java>
     }
     </%java>
-    <tr><td>Total:<% (masters != null) ? masters.size() : 0 %></td>
+    <tr><td>Total:<% backupServerNames.length %></td>
     </table>
 </%if>
