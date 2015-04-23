@@ -870,7 +870,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * @return Comparator to use comparing {@link KeyValue}s.
+   * @deprecated This method should not have been here.  Use Region#getCellComparator()
    */
+  @Deprecated
   public KVComparator getComparator() {
     return isMetaRegion()?
       KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;

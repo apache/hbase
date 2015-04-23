@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -289,7 +290,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final HRegionFileSystem fs;
   protected final Configuration conf;
   private final Configuration baseConf;
-  private final KeyValue.KVComparator comparator;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
@@ -638,7 +638,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throw new IllegalArgumentException("Need original base configuration");
     }
 
-    this.comparator = fs.getRegionInfo().getComparator();
     this.wal = wal;
     this.fs = fs;
 
@@ -1641,13 +1640,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     return size;
-  }
-
-  /**
-   * @return KeyValue Comparator
-   */
-  public KeyValue.KVComparator getComparator() {
-    return this.comparator;
   }
 
   /*
@@ -5207,6 +5199,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private long readPt;
     private long maxResultSize;
     protected HRegion region;
+    protected KVComparator comparator;
 
     @Override
     public HRegionInfo getRegionInfo() {
@@ -5223,6 +5216,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         this.filter = null;
       }
+      this.comparator = region.getCellCompartor();
 
       /**
        * By default, calls to next/nextRaw must enforce the batch limit. Thus, construct a default
@@ -5273,9 +5267,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region)
         throws IOException {
-      this.storeHeap = new KeyValueHeap(scanners, region.comparator);
+      this.storeHeap = new KeyValueHeap(scanners, comparator);
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new KeyValueHeap(joinedScanners, region.comparator);
+        this.joinedHeap = new KeyValueHeap(joinedScanners, comparator);
       }
     }
 
@@ -7147,7 +7141,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      45 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      44 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
@@ -7836,5 +7830,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Store s : this.stores.values()) {
       configurationManager.get().deregisterObserver(s);
     }
+  }
+
+  @Override
+  public KVComparator getCellCompartor() {
+    return this.getRegionInfo().isMetaRegion() ? KeyValue.META_COMPARATOR : KeyValue.COMPARATOR;
   }
 }
