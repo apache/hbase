@@ -91,6 +91,8 @@ public class TestRegionServerReportForDuty {
     master.start();
     rs.start();
 
+    waitForClusterOnline(master);
+
     // Add a 2nd region server
     cluster.getConfiguration().set(HConstants.REGION_SERVER_IMPL, MyRegionServer.class.getName());
     rs2 = cluster.addRegionServer();
@@ -100,7 +102,7 @@ public class TestRegionServerReportForDuty {
     LOG.debug("Starting 2nd region server: " + rs2.getRegionServer().getServerName());
     rs2.start();
 
-    waitForClusterOnline(master);
+    waitForSecondRsStarted();
 
     // Stop the current master.
     master.getMaster().stop("Stopping master");
@@ -125,14 +127,23 @@ public class TestRegionServerReportForDuty {
 
   private void waitForClusterOnline(MasterThread master) throws InterruptedException {
     while (true) {
-      if (master.getMaster().isInitialized()
-          && ((MyRegionServer) rs2.getRegionServer()).getRpcStubCreatedFlag() == true) {
+      if (master.getMaster().isInitialized()) {
         break;
       }
       Thread.sleep(SLEEP_INTERVAL);
       LOG.debug("Waiting for master to come online ...");
     }
     rs.waitForServerOnline();
+  }
+
+  private void waitForSecondRsStarted() throws InterruptedException {
+    while (true) {
+      if (((MyRegionServer) rs2.getRegionServer()).getRpcStubCreatedFlag() == true) {
+        break;
+      }
+      Thread.sleep(SLEEP_INTERVAL);
+      LOG.debug("Waiting 2nd RS to be started ...");
+    }
   }
 
   // Create a Region Server that provide a hook so that we can wait for the master switch over
@@ -169,6 +180,7 @@ public class TestRegionServerReportForDuty {
         try {
           Thread.sleep(SLEEP_INTERVAL);
         } catch (InterruptedException e) {
+          return null;
         }
         LOG.debug("Waiting for master switch over ... ");
       }
