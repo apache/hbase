@@ -104,6 +104,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   public static ServerName getMasterAddress(final ZooKeeperWatcher zkw)
   throws KeeperException, IOException {
     byte [] data = ZKUtil.getData(zkw, zkw.getMasterAddressZNode());
+    // TODO javadoc claims we return null in this case. :/
     if (data == null){
       throw new IOException("Can't get master address from ZooKeeper; znode data == null");
     }
@@ -123,7 +124,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
    * @param zkw The ZooKeeperWatcher to use.
    * @param znode Where to create the znode; could be at the top level or it
    * could be under backup masters
-   * @param master ServerName of the current master
+   * @param master ServerName of the current master must not be null.
    * @return true if node created, false if not; a watch is set in both cases
    * @throws KeeperException
    */
@@ -142,7 +143,7 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
   }
 
   /**
-   * @param sn
+   * @param sn must not be null
    * @return Content of the master znode as a serialized pb with the pb
    * magic as prefix.
    */
@@ -159,6 +160,8 @@ public class MasterAddressTracker extends ZooKeeperNodeTracker {
 
   /**
    * delete the master znode if its content is same as the parameter
+   * @param zkw must not be null
+   * @param content must not be null
    */
   public static boolean deleteIfEquals(ZooKeeperWatcher zkw, final String content) {
     if (content == null){

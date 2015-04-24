@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.Semaphore;
@@ -34,6 +35,8 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Rule;
+import org.junit.rules.TestName;
 import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
@@ -41,6 +44,9 @@ public class TestMasterAddressTracker {
   private static final Log LOG = LogFactory.getLog(TestMasterAddressTracker.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+
+  @Rule
+  public TestName name = new TestName();
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -51,16 +57,28 @@ public class TestMasterAddressTracker {
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
-  /**
-   * Unit tests that uses ZooKeeper but does not use the master-side methods
-   * but rather acts directly on ZK.
-   * @throws Exception
-   */
-  @Test
-  public void testMasterAddressTrackerFromZK() throws Exception {
 
+  @Test
+  public void testDeleteIfEquals() throws Exception {
+    final ServerName sn = ServerName.valueOf("localhost", 1234, System.currentTimeMillis());
+    final MasterAddressTracker addressTracker = setupMasterTracker(sn);
+    try {
+      assertFalse("shouldn't have deleted wrong master server.",
+          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), "some other string."));
+    } finally {
+      assertTrue("Couldn't clean up master",
+          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+    }
+  }
+
+  /**
+   * create an address tracker instance
+   * @param sn if not-null set the active master
+   */
+  private MasterAddressTracker setupMasterTracker(final ServerName sn)
+      throws Exception {
     ZooKeeperWatcher zk = new ZooKeeperWatcher(TEST_UTIL.getConfiguration(),
-        "testMasterAddressTrackerFromZK", null);
+        name.getMethodName(), null);
     ZKUtil.createAndFailSilent(zk, zk.baseZNode);
 
     // Should not have a master yet
@@ -73,21 +91,43 @@ public class TestMasterAddressTracker {
     NodeCreationListener listener = new NodeCreationListener(zk, zk.getMasterAddressZNode());
     zk.registerListener(listener);
 
+    if (sn != null) {
+      LOG.info("Creating master node");
+      MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
+
+      // Wait for the node to be created
+      LOG.info("Waiting for master address manager to be notified");
+      listener.waitForCreation();
+      LOG.info("Master node created");
+    }
+    return addressTracker;
+  }
+
+  /**
+   * Unit tests that uses ZooKeeper but does not use the master-side methods
+   * but rather acts directly on ZK.
+   * @throws Exception
+   */
+  @Test
+  public void testMasterAddressTrackerFromZK() throws Exception {
     // Create the master node with a dummy address
-    String host = "localhost";
-    int port = 1234;
-    ServerName sn = ServerName.valueOf(host, port, System.currentTimeMillis());
-    LOG.info("Creating master node");
-    MasterAddressTracker.setMasterAddress(zk, zk.getMasterAddressZNode(), sn);
+    final ServerName sn = ServerName.valueOf("localhost", 1234, System.currentTimeMillis());
+    final MasterAddressTracker addressTracker = setupMasterTracker(sn);
+    try {
+      assertTrue(addressTracker.hasMaster());
+      ServerName pulledAddress = addressTracker.getMasterAddress();
+      assertTrue(pulledAddress.equals(sn));
+    } finally {
+      assertTrue("Couldn't clean up master",
+          MasterAddressTracker.deleteIfEquals(addressTracker.getWatcher(), sn.toString()));
+    }
+  }
 
-    // Wait for the node to be created
-    LOG.info("Waiting for master address manager to be notified");
-    listener.waitForCreation();
-    LOG.info("Master node created");
-    assertTrue(addressTracker.hasMaster());
-    ServerName pulledAddress = addressTracker.getMasterAddress();
-    assertTrue(pulledAddress.equals(sn));
-
+  @Test
+  public void testNoMaster() throws Exception {
+    final MasterAddressTracker addressTracker = setupMasterTracker(null);
+    assertFalse(addressTracker.hasMaster());
+    assertNull("should get null master when none active.", addressTracker.getMasterAddress());
   }
 
   public static class NodeCreationListener extends ZooKeeperListener {
