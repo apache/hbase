@@ -300,7 +300,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * The other attributes are defaulted.
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:<code>
+   * letter -- and may not contain a <code>:</code>
    */
   public HColumnDescriptor(final String familyName) {
     this(Bytes.toBytes(familyName));
@@ -311,7 +311,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * The other attributes are defaulted.
    *
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:<code>
+   * letter -- and may not contain a <code>:</code>
    */
   public HColumnDescriptor(final byte [] familyName) {
     this (familyName == null || familyName.length <= 0?
@@ -342,7 +342,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:<code>
+   * letter -- and may not contain a <code>:</code>
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -370,7 +370,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:<code>
+   * letter -- and may not contain a <code>:</code>
    * @param maxVersions Maximum number of versions to keep
    * @param compression Compression type
    * @param inMemory If true, column data should be kept in an HRegionServer's
@@ -404,7 +404,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Constructor
    * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:<code>
+   * letter -- and may not contain a <code>:</code>
    * @param minVersions Minimum number of versions to keep
    * @param maxVersions Maximum number of versions to keep
    * @param keepDeletedCells Whether to retain deleted cells until they expire
