@@ -346,8 +346,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
 
     // We assume that most compactions are small. So, put system compactions into small
     // pool; we will do selection there, and move to large pool if necessary.
-    long size = selectNow ? compaction.getRequest().getSize() : 0;
-    ThreadPoolExecutor pool = (!selectNow && s.throttleCompaction(size))
+    ThreadPoolExecutor pool = (selectNow && s.throttleCompaction(compaction.getRequest().getSize()))
       ? longCompactions : shortCompactions;
     pool.execute(new CompactionRunner(s, r, compaction, pool));
     if (LOG.isDebugEnabled()) {
