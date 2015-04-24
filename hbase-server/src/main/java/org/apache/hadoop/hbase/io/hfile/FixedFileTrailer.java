@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 
+
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
  * variable parts of the file. Also includes basic metadata on this file. The
@@ -107,7 +108,8 @@ public class FixedFileTrailer {
   private long lastDataBlockOffset;
 
   /** Raw key comparator class name in version 3 */
-  private String comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
+  // We could write the actual class name from 2.0 onwards and handle BC
+  private String comparatorClassName = KeyValue.COMPARATOR.getClass().getName();
 
   /** The encryption key */
   private byte[] encryptionKey;
@@ -200,7 +202,7 @@ public class FixedFileTrailer {
       .setNumDataIndexLevels(numDataIndexLevels)
       .setFirstDataBlockOffset(firstDataBlockOffset)
       .setLastDataBlockOffset(lastDataBlockOffset)
-      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have
       // some compat code here.
       .setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal());
@@ -539,25 +541,17 @@ public class FixedFileTrailer {
   public void setComparatorClass(Class<? extends KVComparator> klass) {
     // Is the comparator instantiable?
     try {
-      KVComparator comp = klass.newInstance();
-
-      // HFile V2 legacy comparator class names.
-      if (KeyValue.COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
-      } else if (KeyValue.META_COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.META_COMPARATOR.getLegacyKeyComparatorName();
-      } else if (KeyValue.RAW_COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName();
-      } else {
-        // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
+      // If null, it should be the Bytes.BYTES_RAWCOMPARATOR
+      if (klass != null) {
+        KVComparator comp = klass.newInstance();
+        // if the name wasn't one of the legacy names, maybe its a legit new
+        // kind of comparator.
         comparatorClassName = klass.getName();
       }
 
     } catch (Exception e) {
-      throw new RuntimeException("Comparator class " + klass.getName() +
-        " is not instantiable", e);
+      throw new RuntimeException("Comparator class " + klass.getName() + " is not instantiable", e);
     }
-
   }
 
   @SuppressWarnings("unchecked")
@@ -570,13 +564,16 @@ public class FixedFileTrailer {
       } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())) {
         comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
       } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
-        comparatorClassName = KeyValue.RAW_COMPARATOR.getClass().getName();
+        return null;
       }
 
       // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
-
-      return (Class<? extends KVComparator>)
-          Class.forName(comparatorClassName);
+      if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getClass().getName())) {
+        // Return null for Bytes.BYTES_RAWCOMPARATOR
+        return null;
+      } else {
+        return (Class<? extends KVComparator>) Class.forName(comparatorClassName);
+      }
     } catch (ClassNotFoundException ex) {
       throw new IOException(ex);
     }
@@ -585,7 +582,8 @@ public class FixedFileTrailer {
   public static KVComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
-      return getComparatorClass(comparatorClassName).newInstance();
+      Class<? extends KVComparator> comparatorClass = getComparatorClass(comparatorClassName);
+      return comparatorClass != null ? comparatorClass.newInstance() : null;
     } catch (InstantiationException e) {
       throw new IOException("Comparator class " + comparatorClassName +
         " is not instantiable", e);

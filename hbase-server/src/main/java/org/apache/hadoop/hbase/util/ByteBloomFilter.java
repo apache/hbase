@@ -27,8 +27,6 @@ import java.text.NumberFormat;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -623,12 +621,6 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
     if (qualLen > 0)
       System.arraycopy(qualBuf, qualOffset, result, rowLen, qualLen);
     return result;
-  }
-
-  @Override
-  public KVComparator getComparator() {
-//    return Bytes.BYTES_RAWCOMPARATOR;
-    return KeyValue.RAW_COMPARATOR;
   }
 
   /**

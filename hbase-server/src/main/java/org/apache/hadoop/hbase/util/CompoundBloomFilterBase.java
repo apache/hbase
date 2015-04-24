@@ -50,7 +50,6 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /** Hash function type to use, as defined in {@link Hash} */
   protected int hashType;
-  
   /** Comparator used to compare Bloom filter keys */
   protected KVComparator comparator;
 
@@ -87,11 +86,6 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
     KeyValue kv = KeyValueUtil.createFirstOnRow(row, roffset, rlength, DUMMY, 0, 0,
         qualifier, qoffset, qlength);
     return kv.getKey();
-  }
-
-  @Override
-  public KVComparator getComparator() {
-    return comparator;
   }
 
 }

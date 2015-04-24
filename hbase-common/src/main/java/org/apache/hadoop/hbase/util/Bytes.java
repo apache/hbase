@@ -2056,6 +2056,23 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Binary search for keys in indexes using Bytes.BYTES_RAWCOMPARATOR
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param offset the offset in the key you want to find
+   * @param length the length of the key
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   */
+  public static int binarySearch(byte[][] arr, byte[] key, int offset, int length) {
+    return binarySearch(arr, key, offset, length, Bytes.BYTES_RAWCOMPARATOR);
+  }
+  /**
    * Binary search for keys in indexes.
    *
    * @param arr array of byte arrays to search for
@@ -2069,9 +2086,14 @@ public class Bytes implements Comparable<Bytes> {
    *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
+   * @deprecated {@link Bytes#binarySearch(byte[][], byte[], int, int)}
    */
+  @Deprecated
   public static int binarySearch(byte [][]arr, byte []key, int offset,
       int length, RawComparator<?> comparator) {
+    if(comparator == null) {
+      comparator = Bytes.BYTES_RAWCOMPARATOR;
+    }
     int low = 0;
     int high = arr.length - 1;
 
@@ -2107,8 +2129,47 @@ public class Bytes implements Comparable<Bytes> {
    *         means that this function can return 2N + 1 different values
    *         ranging from -(N + 1) to N - 1.
    * @return the index of the block
+   * @deprecated Use {@link Bytes#binarySearch(byte[][], Cell, Comparator)}
    */
+  @Deprecated
   public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
+    int low = 0;
+    int high = arr.length - 1;
+    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
+    while (low <= high) {
+      int mid = (low+high) >>> 1;
+      // we have to compare in this order, because the comparator order
+      // has special logic when the 'left side' is a special key.
+      r.setKey(arr[mid], 0, arr[mid].length);
+      int cmp = comparator.compare(key, r);
+      // key lives above the midpoint
+      if (cmp > 0)
+        low = mid + 1;
+      // key lives below the midpoint
+      else if (cmp < 0)
+        high = mid - 1;
+      // BAM. how often does this really happen?
+      else
+        return mid;
+    }
+    return - (low+1);
+  }
+
+  /**
+   * Binary search for keys in indexes.
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param comparator a comparator to compare.
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   * @return the index of the block
+   */
+  public static int binarySearch(byte[][] arr, Cell key, Comparator<Cell> comparator) {
     int low = 0;
     int high = arr.length - 1;
     KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();

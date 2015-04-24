@@ -243,8 +243,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
       // Fields that don't have equivalents in ByteBloomFilter.
       out.writeInt(numChunks);
-      Bytes.writeByteArray(out,
-          Bytes.toBytes(comparator.getClass().getName()));
+      if (comparator != null) {
+        Bytes.writeByteArray(out, Bytes.toBytes(comparator.getClass().getName()));
+      } else {
+        // Internally writes a 0 vint if the byte[] is null
+        Bytes.writeByteArray(out, null);
+      }
 
       // Write a single-level index without compression or block header.
       bloomBlockIndexWriter.writeSingleLevelIndex(out, "Bloom filter");

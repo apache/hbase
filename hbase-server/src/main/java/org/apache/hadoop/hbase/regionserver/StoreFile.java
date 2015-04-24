@@ -884,15 +884,22 @@ public class StoreFile {
                 " (ROW or ROWCOL expected)");
           }
           generalBloomFilterWriter.add(bloomKey, bloomKeyOffset, bloomKeyLen);
-          if (lastBloomKey != null
-              && generalBloomFilterWriter.getComparator().compareFlatKey(bloomKey,
-                  bloomKeyOffset, bloomKeyLen, lastBloomKey,
-                  lastBloomKeyOffset, lastBloomKeyLen) <= 0) {
-            throw new IOException("Non-increasing Bloom keys: "
-                + Bytes.toStringBinary(bloomKey, bloomKeyOffset, bloomKeyLen)
-                + " after "
-                + Bytes.toStringBinary(lastBloomKey, lastBloomKeyOffset,
-                    lastBloomKeyLen));
+          if (lastBloomKey != null) {
+            int res = 0;
+            // hbase:meta does not have blooms. So we need not have special interpretation
+            // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
+            if (bloomType == BloomType.ROW) {
+              res = Bytes.BYTES_RAWCOMPARATOR.compare(bloomKey, bloomKeyOffset, bloomKeyLen,
+                  lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen);
+            } else {
+              res = KeyValue.COMPARATOR.compareFlatKey(bloomKey,
+                  bloomKeyOffset, bloomKeyLen, lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen);
+            }
+            if (res <= 0) {
+              throw new IOException("Non-increasing Bloom keys: "
+                  + Bytes.toStringBinary(bloomKey, bloomKeyOffset, bloomKeyLen) + " after "
+                  + Bytes.toStringBinary(lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen));
+            }
           }
           lastBloomKey = bloomKey;
           lastBloomKeyOffset = bloomKeyOffset;
@@ -913,6 +920,8 @@ public class StoreFile {
       if (null != this.deleteFamilyBloomFilterWriter) {
         boolean newKey = true;
         if (lastDeleteFamilyCell != null) {
+          // hbase:meta does not have blooms. So we need not have special interpretation
+          // of the hbase:meta cells
           newKey = !kvComparator.matchingRows(cell, lastDeleteFamilyCell);
         }
         if (newKey) {
@@ -1280,8 +1289,16 @@ public class StoreFile {
           // Whether the primary Bloom key is greater than the last Bloom key
           // from the file info. For row-column Bloom filters this is not yet
           // a sufficient condition to return false.
-          boolean keyIsAfterLast = lastBloomKey != null
-              && bloomFilter.getComparator().compareFlatKey(key, lastBloomKey) > 0;
+          boolean keyIsAfterLast = (lastBloomKey != null);
+          // hbase:meta does not have blooms. So we need not have special interpretation
+          // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
+          if (keyIsAfterLast) {
+            if (bloomFilterType == BloomType.ROW) {
+              keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
+            } else {
+              keyIsAfterLast = (KeyValue.COMPARATOR.compareFlatKey(key, lastBloomKey)) > 0;
+            }
+          }
 
           if (bloomFilterType == BloomType.ROWCOL) {
             // Since a Row Delete is essentially a DeleteFamily applied to all
@@ -1292,7 +1309,7 @@ public class StoreFile {
                 null, 0, 0);
 
             if (keyIsAfterLast
-                && bloomFilter.getComparator().compareFlatKey(rowBloomKey,
+                && KeyValue.COMPARATOR.compareFlatKey(rowBloomKey,
                     lastBloomKey) > 0) {
               exists = false;
             } else {

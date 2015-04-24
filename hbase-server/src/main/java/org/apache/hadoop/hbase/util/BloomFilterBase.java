@@ -49,9 +49,4 @@ public interface BloomFilterBase {
   byte[] createBloomKey(byte[] rowBuf, int rowOffset, int rowLen,
       byte[] qualBuf, int qualOffset, int qualLen);
 
-  /**
-   * @return Bloom key comparator
-   */
-  KVComparator getComparator();
-
 }

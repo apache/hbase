@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -70,8 +69,13 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     totalKeyCount = meta.readLong();
     totalMaxKeys = meta.readLong();
     numChunks = meta.readInt();
-    comparator = FixedFileTrailer.createComparator(
-        Bytes.toString(Bytes.readByteArray(meta)));
+    byte[] comparatorClassName = Bytes.readByteArray(meta);
+    // The writer would have return 0 as the vint length for the case of 
+    // Bytes.BYTES_RAWCOMPARATOR.  In such cases do not initialize comparator, it can be
+    // null
+    if (comparatorClassName.length != 0) {
+      comparator = FixedFileTrailer.createComparator(Bytes.toString(comparatorClassName));
+    }
 
     hash = Hash.getInstance(hashType);
     if (hash == null) {
@@ -131,11 +135,6 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     return numChunks;
   }
 
-  @Override
-  public KVComparator getComparator() {
-    return comparator;
-  }
-
   public void enableTestingStats() {
     numQueriesPerChunk = new long[numChunks];
     numPositivesPerChunk = new long[numChunks];
@@ -172,7 +171,9 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
         "Number of chunks: " + numChunks);
     sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
-        "Comparator: " + comparator.getClass().getSimpleName());
+        ((comparator != null) ? "Comparator: "
+        + comparator.getClass().getSimpleName() : "Comparator: "
+        + Bytes.BYTES_RAWCOMPARATOR.getClass().getSimpleName()));
     return sb.toString();
   }
 
