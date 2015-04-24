@@ -338,4 +338,10 @@ public abstract class ScheduledChore implements Runnable {
    */
   protected synchronized void cleanup() {
   }
+
+  @Override
+  public String toString() {
+    return "[ScheduledChore: Name: " + getName() + " Period: " + getPeriod() + " Unit: "
+        + getTimeUnit() + "]";
+  }
 }
