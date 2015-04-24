@@ -490,10 +490,19 @@ module Hbase
           # Unset table attributes
           elsif method == "table_att_unset"
             raise(ArgumentError, "NAME parameter missing for table_att_unset method") unless name
-            if (htd.getValue(name) == nil)
-              raise ArgumentError, "Can not find attribute: #{name}"
+            if name.kind_of?(Array)
+              name.each do |key|
+                if (htd.getValue(key) == nil)
+                  raise ArgumentError, "Could not find attribute: #{key}"
+                end
+                htd.remove(key)
+              end
+            else
+              if (htd.getValue(name) == nil)
+                raise ArgumentError, "Could not find attribute: #{name}"
+              end
+              htd.remove(name)
             end
-            htd.remove(name)
             @admin.modifyTable(table_name.to_java_bytes, htd)
           # Unknown method
           else
