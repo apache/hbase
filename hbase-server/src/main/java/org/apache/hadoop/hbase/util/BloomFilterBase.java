@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * Common methods Bloom filter methods required at read and write time.
