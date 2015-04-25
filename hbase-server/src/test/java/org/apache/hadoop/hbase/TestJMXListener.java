@@ -52,6 +52,9 @@ public class TestJMXListener {
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       JMXListener.class.getName());
     conf.setInt("regionserver.rmi.registry.port", connectorPort);
+    
+    conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
+    conf.setInt("master.rmi.registry.port", connectorPort - 1);
 
     UTIL.startMiniCluster();
   }

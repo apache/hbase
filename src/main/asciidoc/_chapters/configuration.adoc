@@ -994,8 +994,7 @@ To enable it in 0.99 or above, add below property in _hbase-site.xml_:
 NOTE: DO NOT set `com.sun.management.jmxremote.port` for Java VM at the same time.
 
 Currently it supports Master and RegionServer Java VM.
-The reason why you only configure coprocessor for 'regionserver' is that, starting from HBase 0.99, a Master IS also a RegionServer.
-(See link:https://issues.apache.org/jira/browse/HBASE-10569[HBASE-10569] for more information.) By default, the JMX listens on TCP port 10102, you can further configure the port using below properties:
+By default, the JMX listens on TCP port 10102, you can further configure the port using below properties:
 
 [source,xml]
 ----
@@ -1062,7 +1061,7 @@ Finally start `jconsole` on the client using the key store:
 jconsole -J-Djavax.net.ssl.trustStore=/home/tianq/jconsoleKeyStore
 ----
 
-NOTE: for HBase 0.98, To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_: 
+NOTE: To enable the HBase JMX implementation on Master, you also need to add below property in _hbase-site.xml_: 
 
 [source,xml]
 ----
