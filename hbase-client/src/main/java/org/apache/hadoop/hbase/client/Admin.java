@@ -23,6 +23,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
@@ -242,19 +243,21 @@ public interface Admin extends Abortable, Closeable {
   void createTable(final HTableDescriptor desc, byte[][] splitKeys) throws IOException;
 
   /**
-   * Creates a new table but does not block and wait for it to come online. Asynchronous operation.
-   * To check if the table exists, use {@link #isTableAvailable} -- it is not safe to create an
-   * HTable instance to this table before it is available. Note : Avoid passing empty split key.
+   * Creates a new table but does not block and wait for it to come online.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
    * @param desc table descriptor for table
-   * @throws IllegalArgumentException Bad table name, if the split keys are repeated and if the
-   * split key has empty byte array.
-   * @throws MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
-   * threads, the table may have been created between test-for-existence and attempt-at-creation).
-   * @throws IOException
+   * @param splitKeys keys to check if the table has been created with all split keys
+   * @throws IllegalArgumentException Bad table name, if the split keys
+   *    are repeated and if the split key has empty byte array.
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
    */
-  void createTableAsync(final HTableDescriptor desc, final byte[][] splitKeys) throws IOException;
+  Future<Void> createTableAsync(final HTableDescriptor desc, final byte[][] splitKeys) throws IOException;
 
   /**
    * Deletes a table. Synchronous operation.
@@ -263,6 +266,20 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void deleteTable(final TableName tableName) throws IOException;
+
+  /**
+   * Deletes the table but does not block and wait for it be completely removed.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param tableName name of table to delete
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async delete. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  Future<Void> deleteTableAsync(TableName tableName) throws IOException;
 
   /**
    * Deletes tables matching the passed in pattern and wait on completion. Warning: Use this method
@@ -316,16 +333,18 @@ public interface Admin extends Abortable, Closeable {
   void enableTable(final TableName tableName) throws IOException;
 
   /**
-   * Brings a table on-line (enables it).  Method returns immediately though enable of table may
-   * take some time to complete, especially if the table is large (All regions are opened as part of
-   * enabling process).  Check {@link #isTableEnabled(org.apache.hadoop.hbase.TableName)} to learn
-   * when table is fully online.  If table is taking too long to online, check server logs.
+   * Enable the table but does not block and wait for it be completely enabled.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
-   * @param tableName
-   * @throws IOException
-   * @since 0.90.0
+   * @param tableName name of table to delete
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async enable. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
    */
-  void enableTableAsync(final TableName tableName) throws IOException;
+  Future<Void> enableTableAsync(final TableName tableName) throws IOException;
 
   /**
    * Enable tables matching the passed in pattern and wait on completion. Warning: Use this method
@@ -351,19 +370,18 @@ public interface Admin extends Abortable, Closeable {
   HTableDescriptor[] enableTables(Pattern pattern) throws IOException;
 
   /**
-   * Starts the disable of a table.  If it is being served, the master will tell the servers to stop
-   * serving it.  This method returns immediately. The disable of a table can take some time if the
-   * table is large (all regions are closed as part of table disable operation). Call {@link
-   * #isTableDisabled(org.apache.hadoop.hbase.TableName)} to check for when disable completes. If
-   * table is taking too long to online, check server logs.
+   * Disable the table but does not block and wait for it be completely disabled.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
-   * @param tableName name of table
+   * @param tableName name of table to delete
    * @throws IOException if a remote or network exception occurs
-   * @see #isTableDisabled(org.apache.hadoop.hbase.TableName)
-   * @see #isTableEnabled(org.apache.hadoop.hbase.TableName)
-   * @since 0.90.0
+   * @return the result of the async disable. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
    */
-  void disableTableAsync(final TableName tableName) throws IOException;
+  Future<Void> disableTableAsync(final TableName tableName) throws IOException;
 
   /**
    * Disable table and wait on completion.  May timeout eventually.  Use {@link

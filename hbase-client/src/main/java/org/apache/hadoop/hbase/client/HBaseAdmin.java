@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.client;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -53,13 +52,11 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
-import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
-import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -557,7 +554,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void createTable(final HTableDescriptor desc, byte [][] splitKeys)
       throws IOException {
-    Future<Void> future = createTableAsyncV2(desc, splitKeys);
+    Future<Void> future = createTableAsync(desc, splitKeys);
     try {
       // TODO: how long should we wait? spin forever?
       future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
@@ -577,28 +574,6 @@ public class HBaseAdmin implements Admin {
 
   /**
    * Creates a new table but does not block and wait for it to come online.
-   * Asynchronous operation.  To check if the table exists, use
-   * {@link #isTableAvailable} -- it is not safe to create an HTable
-   * instance to this table before it is available.
-   * Note : Avoid passing empty split key.
-   * @param desc table descriptor for table
-   *
-   * @throws IllegalArgumentException Bad table name, if the split keys
-   * are repeated and if the split key has empty byte array.
-   * @throws MasterNotRunningException if master is not running
-   * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
-   * threads, the table may have been created between test-for-existence
-   * and attempt-at-creation).
-   * @throws IOException
-   */
-  @Override
-  public void createTableAsync(final HTableDescriptor desc, final byte [][] splitKeys)
-      throws IOException {
-    createTableAsyncV2(desc, splitKeys);
-  }
-
-  /**
-   * Creates a new table but does not block and wait for it to come online.
    * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
    * It may throw ExecutionException if there was an error while executing the operation
    * or TimeoutException in case the wait timeout was not long enough to allow the
@@ -612,8 +587,8 @@ public class HBaseAdmin implements Admin {
    * @return the result of the async creation. You can use Future.get(long, TimeUnit)
    *    to wait on the operation to complete.
    */
-  // TODO: This should be called Async but it will break binary compatibility
-  private Future<Void> createTableAsyncV2(final HTableDescriptor desc, final byte[][] splitKeys)
+  @Override
+  public Future<Void> createTableAsync(final HTableDescriptor desc, final byte[][] splitKeys)
       throws IOException {
     if (desc.getTableName() == null) {
       throw new IllegalArgumentException("TableName cannot be null");
@@ -776,7 +751,7 @@ public class HBaseAdmin implements Admin {
    */
   @Override
   public void deleteTable(final TableName tableName) throws IOException {
-    Future<Void> future = deleteTableAsyncV2(tableName);
+    Future<Void> future = deleteTableAsync(tableName);
     try {
       future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -799,14 +774,13 @@ public class HBaseAdmin implements Admin {
    * or TimeoutException in case the wait timeout was not long enough to allow the
    * operation to complete.
    *
-   * @param desc table descriptor for table
    * @param tableName name of table to delete
    * @throws IOException if a remote or network exception occurs
    * @return the result of the async delete. You can use Future.get(long, TimeUnit)
    *    to wait on the operation to complete.
    */
-  // TODO: This should be called Async but it will break binary compatibility
-  private Future<Void> deleteTableAsyncV2(final TableName tableName) throws IOException {
+  @Override
+  public Future<Void> deleteTableAsync(final TableName tableName) throws IOException {
     DeleteTableResponse response = executeCallable(
         new MasterCallable<DeleteTableResponse>(getConnection()) {
       @Override
@@ -946,7 +920,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void enableTable(final TableName tableName)
   throws IOException {
-    Future<Void> future = enableTableAsyncV2(tableName);
+    Future<Void> future = enableTableAsync(tableName);
     try {
       future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -1013,22 +987,6 @@ public class HBaseAdmin implements Admin {
     }
   }
 
-  /**
-   * Brings a table on-line (enables it).  Method returns immediately though
-   * enable of table may take some time to complete, especially if the table
-   * is large (All regions are opened as part of enabling process).  Check
-   * {@link #isTableEnabled(byte[])} to learn when table is fully online.  If
-   * table is taking too long to online, check server logs.
-   * @param tableName
-   * @throws IOException
-   * @since 0.90.0
-   */
-  @Override
-  public void enableTableAsync(final TableName tableName)
-  throws IOException {
-    enableTableAsyncV2(tableName);
-  }
-
   public void enableTableAsync(final byte[] tableName)
   throws IOException {
     enableTable(TableName.valueOf(tableName));
@@ -1051,8 +1009,8 @@ public class HBaseAdmin implements Admin {
    * @return the result of the async enable. You can use Future.get(long, TimeUnit)
    *    to wait on the operation to complete.
    */
-  // TODO: This should be called Async but it will break binary compatibility
-  private Future<Void> enableTableAsyncV2(final TableName tableName) throws IOException {
+  @Override
+  public Future<Void> enableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     EnableTableResponse response = executeCallable(
         new MasterCallable<EnableTableResponse>(getConnection()) {
@@ -1160,24 +1118,6 @@ public class HBaseAdmin implements Admin {
     return failed.toArray(new HTableDescriptor[failed.size()]);
   }
 
-  /**
-   * Starts the disable of a table.  If it is being served, the master
-   * will tell the servers to stop serving it.  This method returns immediately.
-   * The disable of a table can take some time if the table is large (all
-   * regions are closed as part of table disable operation).
-   * Call {@link #isTableDisabled(byte[])} to check for when disable completes.
-   * If table is taking too long to online, check server logs.
-   * @param tableName name of table
-   * @throws IOException if a remote or network exception occurs
-   * @see #isTableDisabled(byte[])
-   * @see #isTableEnabled(byte[])
-   * @since 0.90.0
-   */
-  @Override
-  public void disableTableAsync(final TableName tableName) throws IOException {
-    disableTableAsyncV2(tableName);
-  }
-
   public void disableTableAsync(final byte[] tableName) throws IOException {
     disableTableAsync(TableName.valueOf(tableName));
   }
@@ -1200,7 +1140,7 @@ public class HBaseAdmin implements Admin {
   @Override
   public void disableTable(final TableName tableName)
   throws IOException {
-    Future<Void> future = disableTableAsyncV2(tableName);
+    Future<Void> future = disableTableAsync(tableName);
     try {
       future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
     } catch (InterruptedException e) {
@@ -1238,8 +1178,8 @@ public class HBaseAdmin implements Admin {
    * @return the result of the async disable. You can use Future.get(long, TimeUnit)
    *    to wait on the operation to complete.
    */
-  // TODO: This should be called Async but it will break binary compatibility
-  private Future<Void> disableTableAsyncV2(final TableName tableName) throws IOException {
+  @Override
+  public Future<Void> disableTableAsync(final TableName tableName) throws IOException {
     TableName.isLegalFullyQualifiedTableName(tableName.getName());
     DisableTableResponse response = executeCallable(
         new MasterCallable<DisableTableResponse>(getConnection()) {
