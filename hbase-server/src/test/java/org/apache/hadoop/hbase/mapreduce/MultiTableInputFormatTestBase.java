@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
  */
 public abstract class MultiTableInputFormatTestBase {
   static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);
-  static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  public static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   static final String TABLE_NAME = "scantest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final String KEY_STARTROW = "startRow";
@@ -143,6 +143,10 @@ public abstract class MultiTableInputFormatTestBase {
       LOG.info("scan before: " + scan);
     }
 
+    runJob(jobName, c, scans);
+  }
+
+  protected void runJob(String jobName, Configuration c, List<Scan> scans) throws IOException, InterruptedException, ClassNotFoundException {
     Job job = new Job(c, jobName);
 
     initJob(scans, job);
@@ -173,6 +177,11 @@ public abstract class MultiTableInputFormatTestBase {
     @Override
     public void map(ImmutableBytesWritable key, Result value, Context context)
         throws IOException, InterruptedException {
+      makeAssertions(key, value);
+      context.write(key, key);
+    }
+
+    public void makeAssertions(ImmutableBytesWritable key, Result value) throws IOException {
       if (value.size() != 1) {
         throw new IOException("There should only be one input column");
       }
@@ -185,7 +194,6 @@ public abstract class MultiTableInputFormatTestBase {
       String val = Bytes.toStringBinary(value.getValue(INPUT_FAMILY, null));
       LOG.debug("map: key -> " + Bytes.toStringBinary(key.get()) +
           ", value -> " + val);
-      context.write(key, key);
     }
   }
 
@@ -203,6 +211,10 @@ public abstract class MultiTableInputFormatTestBase {
     protected void reduce(ImmutableBytesWritable key,
         Iterable<ImmutableBytesWritable> values, Context context)
         throws IOException, InterruptedException {
+      makeAssertions(key, values);
+    }
+
+    protected void makeAssertions(ImmutableBytesWritable key, Iterable<ImmutableBytesWritable> values) {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());
@@ -219,6 +231,10 @@ public abstract class MultiTableInputFormatTestBase {
     protected void cleanup(Context context) throws IOException,
         InterruptedException {
       Configuration c = context.getConfiguration();
+      cleanup(c);
+    }
+
+    protected void cleanup(Configuration c) {
       String startRow = c.get(KEY_STARTROW);
       String lastRow = c.get(KEY_LASTROW);
       LOG.info("cleanup: first -> \"" + first + "\", start row -> \"" +

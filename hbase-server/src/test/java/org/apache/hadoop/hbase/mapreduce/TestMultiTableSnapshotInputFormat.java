@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {
 
-  private Path restoreDir;
+  protected Path restoreDir;
 
   @BeforeClass
   public static void setUpSnapshots() throws Exception {
@@ -62,7 +62,7 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
     );
   }
 
-  private Map<String, Collection<Scan>> getSnapshotScanMapping(final List<Scan> scans) {
+  protected Map<String, Collection<Scan>> getSnapshotScanMapping(final List<Scan> scans) {
     return Multimaps.index(scans, new Function<Scan, String>() {
       @Nullable
       @Override
