@@ -86,7 +86,8 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * the hbase:meta table.
    *
    * Pre-0.92:
-   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist (is not stored at hbase:meta table)
+   *   HRI.VERSION == 0 and HConstants.META_VERSION does not exist
+    *  (is not stored at hbase:meta table)
    *   HRegionInfo had an HTableDescriptor reference inside it.
    *   HRegionInfo is serialized as Writable to hbase:meta table.
    * For 0.92.x and 0.94.x:
@@ -257,7 +258,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /** Default constructor - creates empty object
-   * @deprecated Used by Writables and Writables are going away.
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-5453">HBASE-5453</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Used by Writables and Writables are going away.
    */
   @Deprecated
   public HRegionInfo() {
@@ -509,7 +513,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * Gets the table name from the specified region name.
    * @param regionName
    * @return Table name.
-   * @deprecated Since 0.96.0; use #getTable(byte[])
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
+   *             This will be removed in HBase 2.0.0. Use {@link #getTable(byte[])}.
    */
   @Deprecated
   public static byte [] getTableName(byte[] regionName) {
@@ -676,7 +682,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   /**
    * Get current table name of the region
    * @return byte array of table name
-   * @deprecated Since 0.96.0; use #getTable()
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
+   *             This will be removed in HBase 2.0.0. Use {@link #getTable()}.
    */
   @Deprecated
   public byte [] getTableName() {
@@ -1264,7 +1272,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (in.markSupported()) { //read it with mark()
       in.mark(pblen);
     }
-    int read = in.read(pbuf); //assumption: if Writable serialization, it should be longer than pblen.
+
+    //assumption: if Writable serialization, it should be longer than pblen.
+    int read = in.read(pbuf);
     if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));

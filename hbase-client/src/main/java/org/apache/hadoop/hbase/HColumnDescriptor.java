@@ -285,8 +285,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   private int cachedMaxVersions = UNINITIALIZED;
 
   /**
-   * Default constructor. Must be present for Writable.
-   * @deprecated Used by Writables and Writables are going away.
+   * Default constructor.
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-5453">HBASE-5453</a>).
+   *             This will be made private in HBase 2.0.0.
+   *             Used by Writables and Writables are going away.
    */
   @Deprecated
   // Make this private rather than remove after deprecation period elapses.  Its needed by pb
@@ -356,7 +359,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated use {@link #HColumnDescriptor(String)} and setters
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #HColumnDescriptor(String)} and setters.
    */
   @Deprecated
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
@@ -388,7 +394,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated use {@link #HColumnDescriptor(String)} and setters
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #HColumnDescriptor(String)} and setters.
    */
   @Deprecated
   public HColumnDescriptor(final byte [] familyName, final int maxVersions,
@@ -428,7 +437,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
    * a <code>:</code>
    * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated use {@link #HColumnDescriptor(String)} and setters
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #HColumnDescriptor(String)} and setters.
    */
   @Deprecated
   public HColumnDescriptor(final byte[] familyName, final int minVersions,
@@ -670,7 +682,12 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
     return setValue(COMPRESSION, type.getName().toUpperCase());
   }
 
-  /** @return data block encoding algorithm used on disk */
+  /**
+   * @return data block encoding algorithm used on disk
+   * @deprecated As of release 0.98
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9870">HBASE-9870</a>).
+   *             This will be removed in HBase 2.0.0. See {@link #getDataBlockEncoding()}}
+   */
   @Deprecated
   public DataBlockEncoding getDataBlockEncodingOnDisk() {
     return getDataBlockEncoding();
@@ -680,6 +697,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * This method does nothing now. Flag ENCODE_ON_DISK is not used
    * any more. Data blocks have the same encoding in cache as on disk.
    * @return this (for chained invocation)
+   * @deprecated As of release 0.98
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9870">HBASE-9870</a>).
+   *             This will be removed in HBase 2.0.0. This method does nothing now.
    */
   @Deprecated
   public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {
@@ -727,7 +747,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
    *         DataBlockEncoding is been used, this is having no effect.
-   * @deprecated Use {@link #isCompressTags()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0. Use {@link #isCompressTags()} instead.
    */
   @Deprecated
   public boolean shouldCompressTags() {
@@ -805,7 +827,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param keepDeletedCells True if deleted rows should not be collected
    * immediately.
    * @return this (for chained invocation)
-   * @deprecated use {@link #setKeepDeletedCells(KeepDeletedCells)}
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-12363">HBASE-12363</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #setKeepDeletedCells(KeepDeletedCells)}.
    */
   @Deprecated
   public HColumnDescriptor setKeepDeletedCells(boolean keepDeletedCells) {
@@ -915,7 +940,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @return true if we should cache data blocks on write
-   * @deprecated Use {@link #isCacheDataOnWrite()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0. Use {@link #isCacheDataOnWrite()}} instead.
    */
   @Deprecated
   public boolean shouldCacheDataOnWrite() {
@@ -940,7 +967,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return true if we should cache data blocks in the L1 cache (if block cache deploy
    * has more than one tier; e.g. we are using CombinedBlockCache).
-   * @deprecated Use {@link #isCacheDataInL1()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0. Use {@link #isCacheDataInL1()}} instead.
    */
   @Deprecated
   public boolean shouldCacheDataInL1() {
@@ -972,7 +1001,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @return true if we should cache index blocks on write
-   * @deprecated Use {@link #isCacheIndexesOnWrite()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #isCacheIndexesOnWrite()} instead.
    */
   @Deprecated
   public boolean shouldCacheIndexesOnWrite() {
@@ -996,7 +1028,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @return true if we should cache bloomfilter blocks on write
-   * @deprecated Use {@link #isCacheBloomsOnWrite()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #isCacheBloomsOnWrite()}} instead.
    */
   @Deprecated
   public boolean shouldCacheBloomsOnWrite() {
@@ -1021,7 +1056,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   /**
    * @return true if we should evict cached blocks from the blockcache on
    * close
-   * @deprecated {@link #isEvictBlocksOnClose()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #isEvictBlocksOnClose()}} instead.
    */
   @Deprecated
   public boolean shouldEvictBlocksOnClose() {
@@ -1046,7 +1084,10 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @return true if we should prefetch blocks into the blockcache on open
-   * @deprecated Use {@link #isPrefetchBlocksOnOpen()} instead
+   * @deprecated As of release 1.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #isPrefetchBlocksOnOpen()}}} instead.
    */
   @Deprecated
   public boolean shouldPrefetchBlocksOnOpen() {
