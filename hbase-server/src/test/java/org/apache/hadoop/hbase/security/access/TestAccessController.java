@@ -1913,10 +1913,10 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, TABLE_ADMIN);
     verifyIfEmptyList(listTablesAction, USER_RW, USER_RO, USER_NONE);
 
-    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, TABLE_ADMIN);
     verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
   }
 
@@ -1937,7 +1937,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_RW, USER_RO);
+    verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER,
+        USER_RW, USER_RO);
     verifyIfEmptyList(listTablesAction, USER_NONE);
   }
 
