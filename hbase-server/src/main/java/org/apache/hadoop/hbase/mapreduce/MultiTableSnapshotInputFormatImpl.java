@@ -26,6 +26,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -45,9 +47,11 @@ import java.util.UUID;
  * .MultiTableSnapshotInputFormat} and mapred
  * ({@link org.apache.hadoop.hbase.mapred.MultiTableSnapshotInputFormat} implementations.
  */
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class MultiTableSnapshotInputFormatImpl {
 
-  private static final Log LOG = LogFactory.getLog(MultiTableSnapshotInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(MultiTableSnapshotInputFormatImpl.class);
 
   public static final String RESTORE_DIRS_KEY =
       "hbase.MultiTableSnapshotInputFormat.restore.snapshotDirMapping";
@@ -71,7 +75,7 @@ public class MultiTableSnapshotInputFormatImpl {
 
     setSnapshotToScans(conf, snapshotScans);
     Map<String, Path> restoreDirs =
-        generateSnapshotToRestoreDir(snapshotScans.keySet(), restoreDir);
+        generateSnapshotToRestoreDirMapping(snapshotScans.keySet(), restoreDir);
     setSnapshotDirs(conf, restoreDirs);
     restoreSnapshots(conf, restoreDirs, fs);
   }
@@ -107,9 +111,7 @@ public class MultiTableSnapshotInputFormatImpl {
       for (Scan scan : entry.getValue()) {
         List<TableSnapshotInputFormatImpl.InputSplit> splits =
             TableSnapshotInputFormatImpl.getSplits(scan, manifest, regionInfos, restoreDir, conf);
-        for (TableSnapshotInputFormatImpl.InputSplit split : splits) {
-          rtn.add(split);
-        }
+        rtn.addAll(splits);
       }
     }
     return rtn;
@@ -207,7 +209,7 @@ public class MultiTableSnapshotInputFormatImpl {
    * @param baseRestoreDir base directory under which all snapshots in snapshots will be restored
    * @return a mapping from snapshot name to the directory in which that snapshot has been restored
    */
-  private Map<String, Path> generateSnapshotToRestoreDir(Collection<String> snapshots,
+  private Map<String, Path> generateSnapshotToRestoreDirMapping(Collection<String> snapshots,
       Path baseRestoreDir) {
     Map<String, Path> rtn = Maps.newHashMap();
 

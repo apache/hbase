@@ -308,7 +308,7 @@ public class TableMapReduceUtil {
   }
 
   /**
-   * Sets up the job for reading from one or more multiple table snapshots, with one or more scan
+   * Sets up the job for reading from one or more table snapshots, with one or more scans
    * per snapshot.
    * It bypasses hbase servers and read directly from snapshot files.
    *
