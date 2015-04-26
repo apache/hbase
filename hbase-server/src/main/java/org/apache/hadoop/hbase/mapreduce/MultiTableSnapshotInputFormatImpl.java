@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
@@ -44,9 +44,6 @@ import java.util.*;
 public class MultiTableSnapshotInputFormatImpl {
 
   private static final Log LOG = LogFactory.getLog(MultiTableSnapshotInputFormat.class);
-
-  // TODO: hopefully this is a good delimiter; it's not in the base64 alphabet, nor is it valid for paths
-  public static final char KVP_DELIMITER = '^';
 
   public static final String RESTORE_DIRS_KEY = "hbase.MultiTableSnapshotInputFormat.restore.snapshotDirMapping";
   public static final String SNAPSHOT_TO_SCANS_KEY = "hbase.MultiTableSnapshotInputFormat.snapshotsToScans";
@@ -122,7 +119,8 @@ public class MultiTableSnapshotInputFormatImpl {
 
     Map<String, Collection<Scan>> rtn = Maps.newHashMap();
 
-    for (Map.Entry<String, String> entry : getKeyValues(conf, SNAPSHOT_TO_SCANS_KEY)) {
+    for (Map.Entry<String, String> entry : ConfigurationUtil
+        .getKeyValues(conf, SNAPSHOT_TO_SCANS_KEY)) {
       String snapshotName = entry.getKey();
       String scan = entry.getValue();
 
@@ -159,7 +157,8 @@ public class MultiTableSnapshotInputFormatImpl {
       }
     }
 
-    setKeyValues(conf, SNAPSHOT_TO_SCANS_KEY, snapshotToSerializedScans);
+    ConfigurationUtil
+        .setKeyValues(conf, SNAPSHOT_TO_SCANS_KEY, snapshotToSerializedScans);
   }
 
   /**
@@ -170,7 +169,7 @@ public class MultiTableSnapshotInputFormatImpl {
    * @throws IOException
    */
   public Map<String, Path> getSnapshotDirs(Configuration conf) throws IOException {
-    List<Map.Entry<String, String>> kvps = getKeyValues(conf, RESTORE_DIRS_KEY);
+    List<Map.Entry<String, String>> kvps = ConfigurationUtil.getKeyValues(conf, RESTORE_DIRS_KEY);
     Map<String, Path> rtn = Maps.newHashMapWithExpectedSize(kvps.size());
 
     for (Map.Entry<String, String> kvp : kvps) {
@@ -187,7 +186,7 @@ public class MultiTableSnapshotInputFormatImpl {
       toSet.put(entry.getKey(), entry.getValue().toString());
     }
 
-    setKeyValues(conf, RESTORE_DIRS_KEY, toSet.entrySet());
+    ConfigurationUtil.setKeyValues(conf, RESTORE_DIRS_KEY, toSet.entrySet());
   }
 
   /**
@@ -234,45 +233,4 @@ public class MultiTableSnapshotInputFormatImpl {
 
   // TODO: these probably belong elsewhere/may already be implemented elsewhere.
 
-  /**
-   * Store a collection of Map.Entry's in conf, with each entry separated by ',' and key values delimited by ':'
-   * @param conf configuration to store the collection in
-   * @param key overall key to store keyValues under
-   * @param keyValues kvps to be stored under key in conf
-   */
-  private static void setKeyValues(Configuration conf, String key, Collection<Map.Entry<String, String>> keyValues) {
-    List<String> serializedKvps = Lists.newArrayList();
-
-    for (Map.Entry<String, String> kvp : keyValues) {
-      serializedKvps.add(kvp.getKey() + KVP_DELIMITER + kvp.getValue());
-    }
-
-    conf.setStrings(key, serializedKvps.toArray(new String[serializedKvps.size()]));
-  }
-
-  /**
-   * Retrieve a list of key value pairs from configuration, stored under the provided key
-   *
-   * @see #setKeyValues(Configuration, String, Collection)
-   * @param conf configuration to retrieve kvps from
-   * @param key key under which the key values are stored
-   * @return the list of kvps stored under key in conf, or null if the key isn't present.
-   */
-  private static List<Map.Entry<String, String>> getKeyValues(Configuration conf, String key) {
-    String[] kvps = conf.getStrings(key);
-
-    List<Map.Entry<String, String>> rtn = Lists.newArrayList();
-
-    for (String kvp : kvps) {
-      String[] splitKvp = StringUtils.split(kvp, KVP_DELIMITER);
-
-      if (splitKvp.length != 2) {
-        throw new IllegalArgumentException("Expected key value pair for configuration key '" + key + "'"
-            + " to be of form '<key>" + KVP_DELIMITER + "<value>; was " + kvp + " instead");
-      }
-
-      rtn.add(new AbstractMap.SimpleImmutableEntry<>(splitKvp[0], splitKvp[1]));
-    }
-    return rtn;
-  }
 }
