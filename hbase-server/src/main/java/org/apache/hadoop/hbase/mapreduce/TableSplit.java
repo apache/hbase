@@ -91,7 +91,10 @@ implements Writable, Comparable<TableSplit> {
   }
 
   /**
-   * @deprecated Since 0.96.0; use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}.
    */
   @Deprecated
   public TableSplit(final byte [] tableName, Scan scan, byte [] startRow, byte [] endRow,
@@ -139,7 +142,10 @@ implements Writable, Comparable<TableSplit> {
   }
 
   /**
-   * @deprecated Since 0.96.0; use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}.
    */
   @Deprecated
   public TableSplit(final byte [] tableName, byte[] startRow, byte[] endRow,
