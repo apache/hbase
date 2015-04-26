@@ -33,7 +33,11 @@ import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Shared implementation of mapreduce code over multiple table snapshots.

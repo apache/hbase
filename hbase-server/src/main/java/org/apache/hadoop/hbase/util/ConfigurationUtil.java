@@ -31,10 +31,15 @@ import java.util.Map;
  * Utilities for storing more complex collection types in
  * {@link org.apache.hadoop.conf.Configuration} instances.
  */
-public class ConfigurationUtil {
+public final class ConfigurationUtil {
   // TODO: hopefully this is a good delimiter; it's not in the base64 alphabet, 
   // nor is it valid for paths
   public static final char KVP_DELIMITER = '^';
+
+  // Disallow instantiation
+  private ConfigurationUtil() {
+
+  }
 
   /**
    * Store a collection of Map.Entry's in conf, with each entry separated by ','
