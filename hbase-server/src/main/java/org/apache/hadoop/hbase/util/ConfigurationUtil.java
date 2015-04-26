@@ -25,7 +25,7 @@ import org.apache.hadoop.util.StringUtils;
 import java.util.*;
 
 /**
- * Utilities for storing more complex collection types in 
+ * Utilities for storing more complex collection types in
  * {@link org.apache.hadoop.conf.Configuration} instances.
  */
 public class ConfigurationUtil {
@@ -37,8 +37,8 @@ public class ConfigurationUtil {
    * Store a collection of Map.Entry's in conf, with each entry separated by ','
    * and key values delimited by {@link #KVP_DELIMITER}
    *
-   * @param conf configuration to store the collection in
-   * @param key overall key to store keyValues under
+   * @param conf      configuration to store the collection in
+   * @param key       overall key to store keyValues under
    * @param keyValues kvps to be stored under key in conf
    */
   public static void setKeyValues(Configuration conf, String key,
@@ -50,8 +50,8 @@ public class ConfigurationUtil {
    * Store a collection of Map.Entry's in conf, with each entry separated by ','
    * and key values delimited by delimiter.
    *
-   * @param conf configuration to store the collection in
-   * @param key overall key to store keyValues under
+   * @param conf      configuration to store the collection in
+   * @param key       overall key to store keyValues under
    * @param keyValues kvps to be stored under key in conf
    * @param delimiter character used to separate each kvp
    */
@@ -69,10 +69,10 @@ public class ConfigurationUtil {
   /**
    * Retrieve a list of key value pairs from configuration, stored under the provided key
    *
-   * @see #setKeyValues(Configuration, String, Collection, char)
    * @param conf configuration to retrieve kvps from
-   * @param key key under which the key values are stored
+   * @param key  key under which the key values are stored
    * @return the list of kvps stored under key in conf, or null if the key isn't present.
+   * @see #setKeyValues(Configuration, String, Collection, char)
    */
   public static List<Map.Entry<String, String>> getKeyValues(Configuration conf, String key) {
     return getKeyValues(conf, key, KVP_DELIMITER);
@@ -81,14 +81,14 @@ public class ConfigurationUtil {
   /**
    * Retrieve a list of key value pairs from configuration, stored under the provided key
    *
-   * @see #setKeyValues(Configuration, String, Collection, char)
-   * @param conf configuration to retrieve kvps from
-   * @param key key under which the key values are stored
+   * @param conf      configuration to retrieve kvps from
+   * @param key       key under which the key values are stored
    * @param delimiter character used to separate each kvp
    * @return the list of kvps stored under key in conf, or null if the key isn't present.
+   * @see #setKeyValues(Configuration, String, Collection, char)
    */
   public static List<Map.Entry<String, String>> getKeyValues(Configuration conf, String key,
-                                                             char delimiter) {
+      char delimiter) {
     String[] kvps = conf.getStrings(key);
 
     if (kvps == null) {
@@ -102,8 +102,8 @@ public class ConfigurationUtil {
 
       if (splitKvp.length != 2) {
         throw new IllegalArgumentException(
-            "Expected key value pair for configuration key '" + key + "'"
-            + " to be of form '<key>" + delimiter + "<value>; was " + kvp + " instead");
+            "Expected key value pair for configuration key '" + key + "'" + " to be of form '<key>"
+                + delimiter + "<value>; was " + kvp + " instead");
       }
 
       rtn.add(new AbstractMap.SimpleImmutableEntry<>(splitKvp[0], splitKvp[1]));

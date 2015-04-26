@@ -77,8 +77,7 @@ public abstract class MultiTableInputFormatTestBase {
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
     for (String tableName : TABLES) {
-      try (HTable table =
-          TEST_UTIL.createMultiRegionTable(TableName.valueOf(tableName),
+      try (HTable table = TEST_UTIL.createMultiRegionTable(TableName.valueOf(tableName),
             INPUT_FAMILY, 4)) {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
       }
@@ -100,26 +99,25 @@ public abstract class MultiTableInputFormatTestBase {
   }
 
   @Test
-  public void testScanEmptyToEmpty() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanEmptyToEmpty()
+      throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, null, null);
   }
 
   @Test
-  public void testScanEmptyToAPP() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanEmptyToAPP()
+      throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "app", "apo");
   }
 
   @Test
-  public void testScanOBBToOPP() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanOBBToOPP() throws IOException, InterruptedException, ClassNotFoundException {
     testScan("obb", "opp", "opo");
   }
 
   @Test
-  public void testScanYZYToEmpty() throws IOException, InterruptedException,
-      ClassNotFoundException {
+  public void testScanYZYToEmpty()
+      throws IOException, InterruptedException, ClassNotFoundException {
     testScan("yzy", null, "zzz");
   }
 
@@ -132,9 +130,8 @@ public abstract class MultiTableInputFormatTestBase {
    */
   private void testScan(String start, String stop, String last)
       throws IOException, InterruptedException, ClassNotFoundException {
-    String jobName =
-        "Scan" + (start != null ? start.toUpperCase() : "Empty") + "To" +
-            (stop != null ? stop.toUpperCase() : "Empty");
+    String jobName = "Scan" + (start != null ? start.toUpperCase() : "Empty") + "To" +
+        (stop != null ? stop.toUpperCase() : "Empty");
     LOG.info("Before map/reduce startup - job " + jobName);
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
 
@@ -143,7 +140,7 @@ public abstract class MultiTableInputFormatTestBase {
 
     List<Scan> scans = new ArrayList<Scan>();
 
-    for(String tableName : TABLES){
+    for (String tableName : TABLES) {
       Scan scan = new Scan();
 
       scan.addFamily(INPUT_FAMILY);
@@ -164,7 +161,8 @@ public abstract class MultiTableInputFormatTestBase {
     runJob(jobName, c, scans);
   }
 
-  protected void runJob(String jobName, Configuration c, List<Scan> scans) throws IOException, InterruptedException, ClassNotFoundException {
+  protected void runJob(String jobName, Configuration c, List<Scan> scans)
+      throws IOException, InterruptedException, ClassNotFoundException {
     Job job = new Job(c, jobName);
 
     initJob(scans, job);
@@ -232,7 +230,8 @@ public abstract class MultiTableInputFormatTestBase {
       makeAssertions(key, values);
     }
 
-    protected void makeAssertions(ImmutableBytesWritable key, Iterable<ImmutableBytesWritable> values) {
+    protected void makeAssertions(ImmutableBytesWritable key,
+        Iterable<ImmutableBytesWritable> values) {
       int count = 0;
       for (ImmutableBytesWritable value : values) {
         String val = Bytes.toStringBinary(value.get());

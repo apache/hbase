@@ -41,7 +41,7 @@ import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 
-@Category({SmallTests.class})
+@Category({ SmallTests.class })
 public class TestMultiTableSnapshotInputFormatImpl {
 
   private MultiTableSnapshotInputFormatImpl subject;
@@ -55,21 +55,24 @@ public class TestMultiTableSnapshotInputFormatImpl {
     this.subject = Mockito.spy(new MultiTableSnapshotInputFormatImpl());
 
     // mock out restoreSnapshot
-    // TODO: this is kind of meh; it'd be much nicer to just inject the RestoreSnapshotHelper dependency into the
-    // input format. However, we need a new RestoreSnapshotHelper per snapshot in the current design, and it *also*
-    // feels weird to introduce a RestoreSnapshotHelperFactory and inject that, which would probably be the more "pure"
+    // TODO: this is kind of meh; it'd be much nicer to just inject the RestoreSnapshotHelper
+    // dependency into the
+    // input format. However, we need a new RestoreSnapshotHelper per snapshot in the current
+    // design, and it *also*
+    // feels weird to introduce a RestoreSnapshotHelperFactory and inject that, which would
+    // probably be the more "pure"
     // way of doing things. This is the lesser of two evils, perhaps?
     doNothing().when(this.subject).
-        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class), any(Path.class), any(FileSystem.class)) ;
+        restoreSnapshot(any(Configuration.class), any(String.class), any(Path.class),
+            any(Path.class), any(FileSystem.class));
 
     this.conf = new Configuration();
     this.rootDir = new Path("file:///test-root-dir");
     FSUtils.setRootDir(conf, rootDir);
-    this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of(
-        "snapshot1", ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))),
-        "snapshot2", ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
-                                      new Scan(Bytes.toBytes("5"), Bytes.toBytes("6")))
-    );
+    this.snapshotScans = ImmutableMap.<String, Collection<Scan>>of("snapshot1",
+        ImmutableList.of(new Scan(Bytes.toBytes("1"), Bytes.toBytes("2"))), "snapshot2",
+        ImmutableList.of(new Scan(Bytes.toBytes("3"), Bytes.toBytes("4")),
+            new Scan(Bytes.toBytes("5"), Bytes.toBytes("6"))));
 
     this.restoreDir = new Path(FSUtils.getRootDir(conf), "restore-dir");
 
@@ -79,7 +82,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     subject.setInput(this.conf, snapshotScans, restoreDir);
   }
 
-  public Map<String, Collection<ScanWithEquals>> toScanWithEquals(Map<String, Collection<Scan>> snapshotScans) throws IOException {
+  public Map<String, Collection<ScanWithEquals>> toScanWithEquals(
+      Map<String, Collection<Scan>> snapshotScans) throws IOException {
     Map<String, Collection<ScanWithEquals>> rtn = Maps.newHashMap();
 
     for (Map.Entry<String, Collection<Scan>> entry : snapshotScans.entrySet()) {
@@ -94,7 +98,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
     return rtn;
   }
 
-  public static class ScanWithEquals  {
+  public static class ScanWithEquals {
 
     private final String startRow;
     private final String stopRow;
@@ -112,19 +116,18 @@ public class TestMultiTableSnapshotInputFormatImpl {
 
     @Override
     public boolean equals(Object obj) {
-      if (! (obj instanceof ScanWithEquals)) {
+      if (!(obj instanceof ScanWithEquals)) {
         return false;
       }
       ScanWithEquals otherScan = (ScanWithEquals) obj;
-      return Objects.equals(this.startRow, otherScan.startRow) && Objects.equals(this.stopRow, otherScan.stopRow);
+      return Objects.equals(this.startRow, otherScan.startRow) && Objects
+          .equals(this.stopRow, otherScan.stopRow);
     }
 
     @Override
     public String toString() {
-      return com.google.common.base.Objects.toStringHelper(this)
-          .add("startRow", startRow)
-          .add("stopRow", stopRow)
-          .toString();
+      return com.google.common.base.Objects.toStringHelper(this).add("startRow", startRow)
+          .add("stopRow", stopRow).toString();
     }
   }
 
@@ -158,7 +161,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     Map<String, Path> restoreDirs = subject.getSnapshotDirs(conf);
 
     for (Path snapshotDir : restoreDirs.values()) {
-      assertEquals("Expected " + snapshotDir + " to be a child of " + restoreDir, restoreDir, snapshotDir.getParent());
+      assertEquals("Expected " + snapshotDir + " to be a child of " + restoreDir, restoreDir,
+          snapshotDir.getParent());
     }
   }
 
@@ -169,7 +173,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     Map<String, Path> snapshotDirs = subject.getSnapshotDirs(conf);
 
     for (Map.Entry<String, Path> entry : snapshotDirs.entrySet()) {
-      verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir), eq(entry.getValue()), any(FileSystem.class));
+      verify(this.subject).restoreSnapshot(eq(this.conf), eq(entry.getKey()), eq(this.rootDir),
+          eq(entry.getValue()), any(FileSystem.class));
     }
   }
 }

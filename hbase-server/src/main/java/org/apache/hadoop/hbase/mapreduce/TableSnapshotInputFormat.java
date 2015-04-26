@@ -100,7 +100,8 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
 
     public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
         List<String> locations, Scan scan, Path restoreDir) {
-      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
+      this.delegate =
+          new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override

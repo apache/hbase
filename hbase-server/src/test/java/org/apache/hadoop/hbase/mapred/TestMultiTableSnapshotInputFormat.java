@@ -38,24 +38,23 @@ import java.util.List;
 
 import static org.junit.Assert.assertTrue;
 
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
-public class TestMultiTableSnapshotInputFormat extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+public class TestMultiTableSnapshotInputFormat
+    extends org.apache.hadoop.hbase.mapreduce.TestMultiTableSnapshotInputFormat {
 
   private static final Log LOG = LogFactory.getLog(TestMultiTableSnapshotInputFormat.class);
 
   @Override
-  protected void runJob(String jobName, Configuration c, List<Scan> scans) throws IOException, InterruptedException, ClassNotFoundException {
+  protected void runJob(String jobName, Configuration c, List<Scan> scans)
+      throws IOException, InterruptedException, ClassNotFoundException {
     JobConf job = new JobConf(TEST_UTIL.getConfiguration());
 
     job.setJobName(jobName);
     job.setMapperClass(Mapper.class);
     job.setReducerClass(Reducer.class);
 
-    TableMapReduceUtil.initMultiTableSnapshotMapperJob(
-        getSnapshotScanMapping(scans), Mapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job,
-        true, restoreDir
-    );
+    TableMapReduceUtil.initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans), Mapper.class,
+        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
 
     TableMapReduceUtil.addDependencyJars(job);
 
@@ -70,10 +69,13 @@ public class TestMultiTableSnapshotInputFormat extends org.apache.hadoop.hbase.m
     LOG.info("After map/reduce completion - job " + jobName);
   }
 
-  public static class Mapper extends TestMultiTableSnapshotInputFormat.ScanMapper implements TableMap<ImmutableBytesWritable, ImmutableBytesWritable> {
+  public static class Mapper extends TestMultiTableSnapshotInputFormat.ScanMapper
+      implements TableMap<ImmutableBytesWritable, ImmutableBytesWritable> {
 
     @Override
-    public void map(ImmutableBytesWritable key, Result value, OutputCollector<ImmutableBytesWritable, ImmutableBytesWritable> outputCollector, Reporter reporter) throws IOException {
+    public void map(ImmutableBytesWritable key, Result value,
+        OutputCollector<ImmutableBytesWritable, ImmutableBytesWritable> outputCollector,
+        Reporter reporter) throws IOException {
       makeAssertions(key, value);
       outputCollector.collect(key, key);
     }
@@ -95,13 +97,16 @@ public class TestMultiTableSnapshotInputFormat extends org.apache.hadoop.hbase.m
     }
   }
 
-  public static class Reducer extends TestMultiTableSnapshotInputFormat.ScanReducer implements org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
-      NullWritable, NullWritable> {
+  public static class Reducer extends TestMultiTableSnapshotInputFormat.ScanReducer implements
+      org.apache.hadoop.mapred.Reducer<ImmutableBytesWritable, ImmutableBytesWritable,
+          NullWritable, NullWritable> {
 
     private JobConf jobConf;
 
     @Override
-    public void reduce(ImmutableBytesWritable key, Iterator<ImmutableBytesWritable> values, OutputCollector<NullWritable, NullWritable> outputCollector, Reporter reporter) throws IOException {
+    public void reduce(ImmutableBytesWritable key, Iterator<ImmutableBytesWritable> values,
+        OutputCollector<NullWritable, NullWritable> outputCollector, Reporter reporter)
+        throws IOException {
       makeAssertions(key, Lists.newArrayList(values));
     }
 

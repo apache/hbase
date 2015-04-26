@@ -41,7 +41,6 @@ import java.util.Map;
  * and thus has the same performance advantages;
  * see {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for
  * more details.
- *
  * Usage is similar to TableSnapshotInputFormat, with the following exception:
  * initMultiTableSnapshotMapperJob takes in a map
  * from snapshot name to a collection of scans. For each snapshot in the map, each corresponding
@@ -65,13 +64,11 @@ import java.util.Map;
  *      MyMapOutputValueWritable.class, job, true, restoreDir);
  * }
  * </pre>
- *
  * Internally, this input format restores each snapshot into a subdirectory of the given tmp
  * directory. Input splits and
  * record readers are created as described in {@link org.apache.hadoop.hbase.mapreduce
  * .TableSnapshotInputFormat}
  * (one per region).
- *
  * See {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for more notes on
  * permissioning; the
  * same caveats apply here.
@@ -88,8 +85,10 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
   }
 
   @Override
-  public List<InputSplit> getSplits(JobContext jobContext) throws IOException, InterruptedException {
-    List<TableSnapshotInputFormatImpl.InputSplit> splits = delegate.getSplits(jobContext.getConfiguration());
+  public List<InputSplit> getSplits(JobContext jobContext)
+      throws IOException, InterruptedException {
+    List<TableSnapshotInputFormatImpl.InputSplit> splits =
+        delegate.getSplits(jobContext.getConfiguration());
     List<InputSplit> rtn = Lists.newArrayListWithCapacity(splits.size());
 
     for (TableSnapshotInputFormatImpl.InputSplit split : splits) {
@@ -99,8 +98,8 @@ public class MultiTableSnapshotInputFormat extends TableSnapshotInputFormat {
     return rtn;
   }
 
-
-  public static void setInput(Configuration configuration, Map<String, Collection<Scan>> snapshotScans, Path tmpRestoreDir) throws IOException {
+  public static void setInput(Configuration configuration,
+      Map<String, Collection<Scan>> snapshotScans, Path tmpRestoreDir) throws IOException {
     new MultiTableSnapshotInputFormatImpl().setInput(configuration, snapshotScans, tmpRestoreDir);
   }
 }

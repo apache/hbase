@@ -301,24 +301,22 @@ public class TableMapReduceUtil {
   }
 
   /**
-   *  Sets up the job for reading from one or more multiple table snapshots, with one or more scan per snapshot.
-   *  It bypasses hbase servers and read directly from snapshot files.
+   * Sets up the job for reading from one or more multiple table snapshots, with one or more scan
+   * per snapshot.
+   * It bypasses hbase servers and read directly from snapshot files.
    *
-   * @param snapshotScans map of snapshot name to scans on that snapshot.
-   * @param mapper  The mapper class to use.
-   * @param outputKeyClass  The class of the output key.
+   * @param snapshotScans     map of snapshot name to scans on that snapshot.
+   * @param mapper            The mapper class to use.
+   * @param outputKeyClass    The class of the output key.
    * @param outputValueClass  The class of the output value.
-   * @param job  The current job to adjust.  Make sure the passed job is
-   * carrying all necessary HBase configuration.
+   * @param job               The current job to adjust.  Make sure the passed job is
+   *                          carrying all necessary HBase configuration.
    * @param addDependencyJars upload HBase jars and jars for any of the configured
-   *           job classes via the distributed cache (tmpjars).
+   *                          job classes via the distributed cache (tmpjars).
    */
   public static void initMultiTableSnapshotMapperJob(Map<String, Collection<Scan>> snapshotScans,
-                                                     Class<? extends TableMapper> mapper,
-                                                     Class<?> outputKeyClass,
-                                                     Class<?> outputValueClass, Job job,
-                                                     boolean addDependencyJars, Path tmpRestoreDir
-  ) throws IOException {
+      Class<? extends TableMapper> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+      Job job, boolean addDependencyJars, Path tmpRestoreDir) throws IOException {
     MultiTableSnapshotInputFormat.setInput(job.getConfiguration(), snapshotScans, tmpRestoreDir);
 
     job.setInputFormatClass(MultiTableSnapshotInputFormat.class);

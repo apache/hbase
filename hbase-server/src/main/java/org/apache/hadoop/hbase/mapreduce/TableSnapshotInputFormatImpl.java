@@ -68,7 +68,6 @@ public class TableSnapshotInputFormatImpl {
 
   public static final Log LOG = LogFactory.getLog(TableSnapshotInputFormatImpl.class);
 
-
   private static final String SNAPSHOT_NAME_KEY = "hbase.TableSnapshotInputFormat.snapshot.name";
   // key for specifying the root dir of the restored snapshot
   protected static final String RESTORE_DIR_KEY = "hbase.TableSnapshotInputFormat.restore.dir";
@@ -92,7 +91,8 @@ public class TableSnapshotInputFormatImpl {
     // constructor for mapreduce framework / Writable
     public InputSplit() {}
 
-    public InputSplit(HTableDescriptor htd, HRegionInfo regionInfo, List<String> locations, Scan scan, Path restoreDir) {
+    public InputSplit(HTableDescriptor htd, HRegionInfo regionInfo, List<String> locations,
+        Scan scan, Path restoreDir) {
       this.htd = htd;
       this.regionInfo = regionInfo;
       if (locations == null || locations.isEmpty()) {
@@ -208,7 +208,8 @@ public class TableSnapshotInputFormatImpl {
       // disable caching of data blocks
       scan.setCacheBlocks(false);
 
-      scanner = new ClientSideRegionScanner(conf, fs, new Path(split.restoreDir), htd, hri, scan, null);
+      scanner =
+          new ClientSideRegionScanner(conf, fs, new Path(split.restoreDir), htd, hri, scan, null);
     }
 
     public boolean nextKeyValue() throws IOException {
@@ -280,7 +281,8 @@ public class TableSnapshotInputFormatImpl {
     return regionInfos;
   }
 
-  public static SnapshotManifest getSnapshotManifest(Configuration conf, String snapshotName, Path rootDir, FileSystem fs) throws IOException {
+  public static SnapshotManifest getSnapshotManifest(Configuration conf, String snapshotName,
+      Path rootDir, FileSystem fs) throws IOException {
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
     return SnapshotManifest.open(conf, fs, snapshotDir, snapshotDesc);
@@ -303,12 +305,8 @@ public class TableSnapshotInputFormatImpl {
     return scan;
   }
 
-  public static List<InputSplit> getSplits(Scan scan,
-                                           SnapshotManifest manifest,
-                                           List<HRegionInfo> regionManifests,
-                                           Path restoreDir,
-                                           Configuration conf
-                                           ) throws IOException {
+  public static List<InputSplit> getSplits(Scan scan, SnapshotManifest manifest,
+      List<HRegionInfo> regionManifests, Path restoreDir, Configuration conf) throws IOException {
     // load table descriptor
     HTableDescriptor htd = manifest.getTableDescriptor();
 
@@ -318,8 +316,8 @@ public class TableSnapshotInputFormatImpl {
     for (HRegionInfo hri : regionManifests) {
       // load region descriptor
 
-      if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
-          hri.getStartKey(), hri.getEndKey())) {
+      if (CellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
+          hri.getEndKey())) {
         // compute HDFS locations from snapshot files (which will get the locations for
         // referred hfiles)
         List<String> hosts = getBestLocations(conf,

@@ -45,7 +45,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-@Category({VerySlowMapReduceTests.class, LargeTests.class})
+@Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {
 
   protected Path restoreDir;
@@ -58,10 +58,11 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
     // take a snapshot of every table we have.
     for (String tableName : TABLES) {
-      SnapshotTestingUtils.createSnapshotAndValidate(
-          TEST_UTIL.getHBaseAdmin(), TableName.valueOf(tableName),
-          ImmutableList.of(MultiTableInputFormatTestBase.INPUT_FAMILY), null,
-          snapshotNameForTable(tableName), FSUtils.getRootDir(TEST_UTIL.getConfiguration()), TEST_UTIL.getTestFileSystem(), true);
+      SnapshotTestingUtils
+          .createSnapshotAndValidate(TEST_UTIL.getHBaseAdmin(), TableName.valueOf(tableName),
+              ImmutableList.of(MultiTableInputFormatTestBase.INPUT_FAMILY), null,
+              snapshotNameForTable(tableName), FSUtils.getRootDir(TEST_UTIL.getConfiguration()),
+              TEST_UTIL.getTestFileSystem(), true);
     }
   }
 
@@ -73,11 +74,9 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
 
   @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
-    TableMapReduceUtil.initMultiTableSnapshotMapperJob(
-        getSnapshotScanMapping(scans), ScanMapper.class,
-        ImmutableBytesWritable.class, ImmutableBytesWritable.class, job,
-        true, restoreDir
-    );
+    TableMapReduceUtil
+        .initMultiTableSnapshotMapperJob(getSnapshotScanMapping(scans), ScanMapper.class,
+            ImmutableBytesWritable.class, ImmutableBytesWritable.class, job, true, restoreDir);
   }
 
   protected Map<String, Collection<Scan>> getSnapshotScanMapping(final List<Scan> scans) {
@@ -85,7 +84,8 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
       @Nullable
       @Override
       public String apply(Scan input) {
-        return snapshotNameForTable(Bytes.toStringBinary(input.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME)));
+        return snapshotNameForTable(
+            Bytes.toStringBinary(input.getAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME)));
       }
     }).asMap();
   }
