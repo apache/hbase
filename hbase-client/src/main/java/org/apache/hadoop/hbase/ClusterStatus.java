@@ -87,7 +87,10 @@ public class ClusterStatus extends VersionedWritable {
 
   /**
    * Constructor, for Writable
-   * @deprecated Used by Writables and Writables are going away.
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-6038">HBASE-6038</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Used by Writables and Writables are going away.
    */
   @Deprecated
   public ClusterStatus() {
@@ -221,8 +224,12 @@ public class ClusterStatus extends VersionedWritable {
    * Returns detailed region server information: A list of
    * {@link ServerName}.
    * @return region server information
-   * @deprecated Use {@link #getServers()}
+   * @deprecated As of release 0.92
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1502">HBASE-1502</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Use {@link #getServers()}.
    */
+  @Deprecated
   public Collection<ServerName> getServerInfo() {
     return getServers();
   }

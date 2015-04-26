@@ -309,7 +309,10 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   /**
    * Default constructor which constructs an empty object.
    * For deserializing an HTableDescriptor instance only.
-   * @deprecated Used by Writables and Writables are going away.
+   * @deprecated As of release 0.96
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-5453">HBASE-5453</a>).
+   *             This will be removed in HBase 2.0.0.
+   *             Used by Writables and Writables are going away.
    */
   @Deprecated
   public HTableDescriptor() {
@@ -1107,7 +1110,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * This compares the content of the two descriptors and not the reference.
    *
    * @return 0 if the contents of the descriptors are exactly matching,
-   * 		 1 if there is a mismatch in the contents
+   *         1 if there is a mismatch in the contents
    */
   @Override
   public int compareTo(final HTableDescriptor other) {
