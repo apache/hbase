@@ -32,20 +32,26 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * MultiTableSnapshotInputFormat generalizes {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
- * allowing a MapReduce job to run over one or more table snapshots, with one or more scans configured for each.
- * Internally, the input format delegates to {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
- * and thus has the same performance advantages; see {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for
+ * MultiTableSnapshotInputFormat generalizes
+ * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
+ * allowing a MapReduce job to run over one or more table snapshots, with one or more scans
+ * configured for each.
+ * Internally, the input format delegates to
+ * {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
+ * and thus has the same performance advantages;
+ * see {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for
  * more details.
  *
-
- * <p>
- * Usage is similar to TableSnapshotInputFormat, with the following exception: initMultiTableSnapshotMapperJob takes in a map
- * from snapshot name to a collection of scans. For each snapshot in the map, each corresponding scan will be applied;
- * the overall dataset for the job is defined by the concatenation of the regions and tables included in each snapshot/scan
+ * Usage is similar to TableSnapshotInputFormat, with the following exception:
+ * initMultiTableSnapshotMapperJob takes in a map
+ * from snapshot name to a collection of scans. For each snapshot in the map, each corresponding
+ * scan will be applied;
+ * the overall dataset for the job is defined by the concatenation of the regions and tables
+ * included in each snapshot/scan
  * pair.
- *
- * {@link org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#initMultiTableSnapshotMapperJob(java.util.Map, Class, Class, Class, org.apache.hadoop.mapreduce.Job, boolean, org.apache.hadoop.fs.Path)}
+ * {@link org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil#initMultiTableSnapshotMapperJob
+ * (java.util.Map, Class, Class, Class, org.apache.hadoop.mapreduce.Job, boolean, org.apache
+ * .hadoop.fs.Path)}
  * can be used to configure the job.
  * <pre>{@code
  * Job job = new Job(conf);
@@ -59,13 +65,15 @@ import java.util.Map;
  *      MyMapOutputValueWritable.class, job, true, restoreDir);
  * }
  * </pre>
- * <p>
- * Internally, this input format restores each snapshot into a subdirectory of the given tmp directory. Input splits and
- * record readers are created as described in {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat}
- * (one per region).
- * <p>
  *
- * See {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for more notes on permissioning; the
+ * Internally, this input format restores each snapshot into a subdirectory of the given tmp
+ * directory. Input splits and
+ * record readers are created as described in {@link org.apache.hadoop.hbase.mapreduce
+ * .TableSnapshotInputFormat}
+ * (one per region).
+ *
+ * See {@link org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat} for more notes on
+ * permissioning; the
  * same caveats apply here.
  *
  * @see org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat

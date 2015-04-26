@@ -71,9 +71,12 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Return the list of splits extracted from the scans/snapshots pushed to conf by {@link #setInput(org.apache.hadoop.conf.Configuration, java.util.Map, org.apache.hadoop.fs.Path)}
-   * @param conf
-   * @return
+   * Return the list of splits extracted from the scans/snapshots pushed to conf by
+   * {@link
+   * #setInput(org.apache.hadoop.conf.Configuration, java.util.Map, org.apache.hadoop.fs.Path)}
+   *
+   * @param conf Configuration to determine splits from
+   * @return Return the list of splits extracted from the scans/snapshots pushed to conf
    * @throws IOException
    */
   public List<TableSnapshotInputFormatImpl.InputSplit> getSplits(Configuration conf) throws IOException {
@@ -109,9 +112,10 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Retrieve the snapshot name -> list<scan> mapping pushed to configuration by {@link #setSnapshotToScans(org.apache.hadoop.conf.Configuration, java.util.Map)}
-   * @param conf
-   * @return
+   * Retrieve the snapshot name -> list<scan> mapping pushed to configuration by
+   * {@link #setSnapshotToScans(org.apache.hadoop.conf.Configuration, java.util.Map)}
+   * @param conf Configuration to extract name -> list<scan> mappings from.
+   * @return the snapshot name -> list<scan> mapping pushed to configuration
    * @throws IOException
    */
   public Map<String, Collection<Scan>> getSnapshotsToScans(Configuration conf) throws IOException {
@@ -159,9 +163,10 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Retrieve the directories into which snapshots have been restored from ({@link #RESTORE_DIRS_KEY})
-   * @param conf
-   * @return
+   * Retrieve the directories into which snapshots have been restored from
+   * ({@link #RESTORE_DIRS_KEY})
+   * @param conf Configuration to extract restore directories from
+   * @return the directories into which snapshots have been restored from
    * @throws IOException
    */
   public Map<String, Path> getSnapshotDirs(Configuration conf) throws IOException {
@@ -186,11 +191,11 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Generate a random path underneath baseRestoreDir for each snapshot in snapshots and return a map from the snapshot
-   * to the restore directory.
-   * @param snapshots
-   * @param baseRestoreDir
-   * @return
+   * Generate a random path underneath baseRestoreDir for each snapshot in snapshots and
+   * return a map from the snapshot to the restore directory.
+   * @param snapshots collection of snapshot names to restore
+   * @param baseRestoreDir base directory under which all snapshots in snapshots will be restored
+   * @return a mapping from snapshot name to the directory in which that snapshot has been restored
    */
   private Map<String, Path> generateSnapshotToRestoreDir(Collection<String> snapshots, Path baseRestoreDir) {
     Map<String, Path> rtn = Maps.newHashMap();
@@ -205,9 +210,9 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Restore each (snapshot name, restore directory) pair in snapshotToDir
-   * @param conf
-   * @param snapshotToDir
-   * @param fs
+   * @param conf configuration to restore with
+   * @param snapshotToDir mapping from snapshot names to restore directories
+   * @param fs filesystem to do snapshot restoration on
    * @throws IOException
    */
   public void restoreSnapshots(Configuration conf, Map<String, Path> snapshotToDir, FileSystem fs) throws IOException {
@@ -231,9 +236,9 @@ public class MultiTableSnapshotInputFormatImpl {
 
   /**
    * Store a collection of Map.Entry's in conf, with each entry separated by ',' and key values delimited by ':'
-   * @param conf
-   * @param key
-   * @param keyValues
+   * @param conf configuration to store the collection in
+   * @param key overall key to store keyValues under
+   * @param keyValues kvps to be stored under key in conf
    */
   private static void setKeyValues(Configuration conf, String key, Collection<Map.Entry<String, String>> keyValues) {
     List<String> serializedKvps = Lists.newArrayList();
@@ -245,6 +250,14 @@ public class MultiTableSnapshotInputFormatImpl {
     conf.setStrings(key, serializedKvps.toArray(new String[serializedKvps.size()]));
   }
 
+  /**
+   * Retrieve a list of key value pairs from configuration, stored under the provided key
+   *
+   * @see #setKeyValues(Configuration, String, Collection)
+   * @param conf configuration to retrieve kvps from
+   * @param key key under which the key values are stored
+   * @return the list of kvps stored under key in conf, or null if the key isn't present.
+   */
   private static List<Map.Entry<String, String>> getKeyValues(Configuration conf, String key) {
     String[] kvps = conf.getStrings(key);
 
