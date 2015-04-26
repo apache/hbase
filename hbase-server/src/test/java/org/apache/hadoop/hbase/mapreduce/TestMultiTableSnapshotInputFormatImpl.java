@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -32,7 +35,9 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;

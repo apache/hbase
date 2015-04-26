@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.mapred;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.MultiTableSnapshotInputFormatImpl;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapred.*;
 
 import java.io.IOException;

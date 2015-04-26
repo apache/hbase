@@ -19,8 +19,8 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import com.google.common.base.Function;
-import com.google.common.collect.*;
-import org.apache.hadoop.conf.Configuration;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multimaps;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -33,17 +33,13 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.mapreduce.Job;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.assertEquals;
 
 @Category({ VerySlowMapReduceTests.class, LargeTests.class })
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {

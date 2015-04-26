@@ -18,14 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.yammer.metrics.core.MetricsRegistry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -54,8 +48,14 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.yammer.metrics.core.MetricsRegistry;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
