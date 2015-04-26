@@ -1972,7 +1972,7 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN);
     verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN);
 
-    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, TABLE_ADMIN);
+    verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, TABLE_ADMIN);
     verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
   }
 
