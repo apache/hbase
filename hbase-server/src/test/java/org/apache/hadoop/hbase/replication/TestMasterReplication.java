@@ -36,12 +36,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -286,15 +284,8 @@ public class TestMasterReplication {
   }
 
   private void createTableOnClusters(HTableDescriptor table) throws Exception {
-    int numClusters = configurations.length;
-    for (int i = 0; i < numClusters; i++) {
-      Admin hbaseAdmin = null;
-      try {
-        hbaseAdmin = new HBaseAdmin(configurations[i]);
-        hbaseAdmin.createTable(table);
-      } finally {
-        close(hbaseAdmin);
-      }
+    for (HBaseTestingUtility utility : utilities) {
+      utility.getHBaseAdmin().createTable(table);
     }
   }
 

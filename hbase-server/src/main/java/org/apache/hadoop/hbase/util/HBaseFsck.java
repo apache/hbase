@@ -62,7 +62,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultimap;
 import com.google.protobuf.ServiceException;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -97,10 +96,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -3181,21 +3180,12 @@ public class HBaseFsck extends Configured implements Closeable {
 
   HTableDescriptor[] getHTableDescriptors(List<TableName> tableNames) {
     HTableDescriptor[] htd = new HTableDescriptor[0];
-    Admin admin = null;
-    try {
       LOG.info("getHTableDescriptors == tableNames => " + tableNames);
-      admin = new HBaseAdmin(getConf());
+    try (Connection conn = ConnectionFactory.createConnection(getConf());
+        Admin admin = conn.getAdmin()) {
       htd = admin.getTableDescriptorsByTableName(tableNames);
     } catch (IOException e) {
       LOG.debug("Exception getting table descriptors", e);
-    } finally {
-      if (admin != null) {
-        try {
-          admin.close();
-        } catch (IOException e) {
-          LOG.debug("Exception closing HBaseAdmin", e);
-        }
-      }
     }
     return htd;
   }

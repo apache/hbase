@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -112,7 +111,7 @@ import java.util.concurrent.TimeUnit;
 @InterfaceStability.Stable
 public class LoadIncrementalHFiles extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(LoadIncrementalHFiles.class);
-  private Admin hbAdmin;
+  private boolean initalized = false;
 
   public static final String NAME = "completebulkload";
   public static final String MAX_FILES_PER_REGION_PER_FAMILY
@@ -138,18 +137,19 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   }
 
   private void initialize() throws Exception {
-    if (hbAdmin == null) {
-      // make a copy, just to be sure we're not overriding someone else's config
-      setConf(HBaseConfiguration.create(getConf()));
-      Configuration conf = getConf();
-      // disable blockcache for tool invocation, see HBASE-10500
-      conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
-      this.hbAdmin = new HBaseAdmin(conf);
-      this.userProvider = UserProvider.instantiate(conf);
-      this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
-      assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
-      maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
+    if (initalized) {
+      return;
     }
+    // make a copy, just to be sure we're not overriding someone else's config
+    setConf(HBaseConfiguration.create(getConf()));
+    Configuration conf = getConf();
+    // disable blockcache for tool invocation, see HBASE-10500
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    this.userProvider = UserProvider.instantiate(conf);
+    this.fsDelegationToken = new FsDelegationToken(userProvider, "renewer");
+    assignSeqIds = conf.getBoolean(ASSIGN_SEQ_IDS, true);
+    maxFilesPerRegionPerFamily = conf.getInt(MAX_FILES_PER_REGION_PER_FAMILY, 32);
+    initalized = true;
   }
 
   private void usage() {
@@ -856,10 +856,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     return !HFile.isReservedFileInfoKey(key);
   }
 
-  private boolean doesTableExist(TableName tableName) throws Exception {
-    return hbAdmin.tableExists(tableName);
-  }
-
   /*
    * Infers region boundaries for a new table.
    * Parameter:
@@ -894,7 +890,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * If the table is created for the first time, then "completebulkload" reads the files twice.
    * More modifications necessary if we want to avoid doing it.
    */
-  private void createTable(TableName tableName, String dirPath) throws Exception {
+  private void createTable(TableName tableName, String dirPath, Admin admin) throws Exception {
     final Path hfofDir = new Path(dirPath);
     final FileSystem fs = hfofDir.getFileSystem(getConf());
 
@@ -942,7 +938,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     });
 
     byte[][] keys = LoadIncrementalHFiles.inferBoundaries(map);
-    this.hbAdmin.createTable(htd,keys);
+    admin.createTable(htd, keys);
 
     LOG.info("Table "+ tableName +" is available!!");
   }
@@ -955,26 +951,27 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     }
 
     initialize();
-
-    String dirPath = args[0];
-    TableName tableName = TableName.valueOf(args[1]);
-
-    boolean tableExists = this.doesTableExist(tableName);
-    if (!tableExists) {
-      if ("yes".equalsIgnoreCase(getConf().get(CREATE_TABLE_CONF_KEY, "yes"))) {
-        this.createTable(tableName, dirPath);
-      } else {
-        String errorMsg = format("Table '%s' does not exist.", tableName);
-        LOG.error(errorMsg);
-        throw new TableNotFoundException(errorMsg);
-      }
-    }
-
-    Path hfofDir = new Path(dirPath);
-
     try (Connection connection = ConnectionFactory.createConnection(getConf());
-        HTable table = (HTable) connection.getTable(tableName);) {
-      doBulkLoad(hfofDir, table);
+        Admin admin = connection.getAdmin()) {
+      String dirPath = args[0];
+      TableName tableName = TableName.valueOf(args[1]);
+
+      boolean tableExists = admin.tableExists(tableName);
+      if (!tableExists) {
+        if ("yes".equalsIgnoreCase(getConf().get(CREATE_TABLE_CONF_KEY, "yes"))) {
+          this.createTable(tableName, dirPath, admin);
+        } else {
+          String errorMsg = format("Table '%s' does not exist.", tableName);
+          LOG.error(errorMsg);
+          throw new TableNotFoundException(errorMsg);
+        }
+      }
+
+      Path hfofDir = new Path(dirPath);
+
+      try (HTable table = (HTable) connection.getTable(tableName);) {
+        doBulkLoad(hfofDir, table);
+      }
     }
 
     return 0;

@@ -383,11 +383,10 @@ public class TestHFileOutputFormat  {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
     byte[][] splitKeys = generateRandomSplitKeys(4);
-    HBaseAdmin admin = null;
     try {
       util.startMiniCluster();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      admin = util.getHBaseAdmin();
+      HBaseAdmin admin = util.getHBaseAdmin();
       HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
       assertEquals("Should start with empty table",
           0, util.countRows(table));
@@ -466,7 +465,6 @@ public class TestHFileOutputFormat  {
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
-      if (admin != null) admin.close();
       util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
@@ -908,7 +906,7 @@ public class TestHFileOutputFormat  {
     try {
       util.startMiniCluster();
       final FileSystem fs = util.getDFSCluster().getFileSystem();
-      HBaseAdmin admin = new HBaseAdmin(conf);
+      HBaseAdmin admin = util.getHBaseAdmin();
       HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table", 0, util.countRows(table));
 
