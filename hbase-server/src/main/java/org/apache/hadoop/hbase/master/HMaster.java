@@ -1376,8 +1376,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
-    this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
-      newRegions.length);
+
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
