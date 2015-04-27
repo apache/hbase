@@ -126,6 +126,7 @@ message TruncateTableRequest {
 }
 
 message TruncateTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message EnableTableRequest {

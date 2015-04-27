@@ -1605,7 +1605,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
+  public long truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preTruncateTable(tableName);
@@ -1619,6 +1619,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postTruncateTable(tableName);
     }
+    return procId;
   }
 
   @Override

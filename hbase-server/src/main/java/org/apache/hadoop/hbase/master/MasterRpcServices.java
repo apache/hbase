@@ -477,12 +477,13 @@ public class MasterRpcServices extends RSRpcServices
   public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
       throws ServiceException {
     try {
-      master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
-        request.getPreserveSplits());
+      long procId =
+          master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
+            request.getPreserveSplits());
+      return TruncateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return TruncateTableResponse.newBuilder().build();
   }
 
   @Override

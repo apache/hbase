@@ -318,6 +318,20 @@ public interface Admin extends Abortable, Closeable {
       throws IOException;
 
   /**
+   * Truncate the table but does not block and wait for it be completely enabled. You can use
+   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
+   * ExecutionException if there was an error while executing the operation or TimeoutException in
+   * case the wait timeout was not long enough to allow the operation to complete.
+   * @param tableName name of table to delete
+   * @param preserveSplits true if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async truncate. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  Future<Void> truncateTableAsync(final TableName tableName, final boolean preserveSplits)
+      throws IOException;
+
+  /**
    * Enable a table.  May timeout.  Use {@link #enableTableAsync(org.apache.hadoop.hbase.TableName)}
    * and {@link #isTableEnabled(org.apache.hadoop.hbase.TableName)} instead. The table has to be in
    * disabled state for it to be enabled.

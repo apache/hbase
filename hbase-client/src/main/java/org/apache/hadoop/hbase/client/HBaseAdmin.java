@@ -137,6 +137,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
@@ -622,115 +623,33 @@ public class HBaseAdmin implements Admin {
     return new CreateTableFuture(this, desc, splitKeys, response);
   }
 
-  private static class CreateTableFuture extends ProcedureFuture<Void> {
+  private static class CreateTableFuture extends TableFuture<Void> {
     private final HTableDescriptor desc;
     private final byte[][] splitKeys;
 
     public CreateTableFuture(final HBaseAdmin admin, final HTableDescriptor desc,
         final byte[][] splitKeys, final CreateTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
+      super(admin, desc.getTableName(),
+              (response != null && response.hasProcId()) ? response.getProcId() : null);
       this.splitKeys = splitKeys;
       this.desc = desc;
     }
 
     @Override
-    protected Void waitOperationResult(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForTableEnabled(deadlineTs);
-      waitForAllRegionsOnline(deadlineTs);
-      return null;
+    protected HTableDescriptor getTableDescriptor() {
+      return desc;
     }
 
     @Override
-    protected Void postOperationResult(final Void result, final long deadlineTs)
-        throws IOException, TimeoutException {
-      LOG.info("Created " + desc.getTableName());
-      return result;
+    protected String getDescription() {
+      return "Creating " + desc.getNameAsString();
     }
 
-    private void waitForTableEnabled(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          try {
-            if (getAdmin().isTableAvailable(desc.getTableName())) {
-              return true;
-            }
-          } catch (TableNotFoundException tnfe) {
-            LOG.debug("Table "+ desc.getTableName() +" was not enabled, sleeping. tries="+  tries);
-          }
-          return false;
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table " +
-              desc.getTableName() + " to be enabled");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + desc.getTableName() +
-            " not enabled after " + elapsedTime + "msec");
-        }
-      });
-    }
-
-    private void waitForAllRegionsOnline(final long deadlineTs)
-        throws IOException, TimeoutException {
-      final AtomicInteger actualRegCount = new AtomicInteger(0);
-      final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
-        @Override
-        public boolean visit(Result rowResult) throws IOException {
-          RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
-          if (list == null) {
-            LOG.warn("No serialized HRegionInfo in " + rowResult);
-            return true;
-          }
-          HRegionLocation l = list.getRegionLocation();
-          if (l == null) {
-            return true;
-          }
-          if (!l.getRegionInfo().getTable().equals(desc.getTableName())) {
-            return false;
-          }
-          if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
-          HRegionLocation[] locations = list.getRegionLocations();
-          for (HRegionLocation location : locations) {
-            if (location == null) continue;
-            ServerName serverName = location.getServerName();
-            // Make sure that regions are assigned to server
-            if (serverName != null && serverName.getHostAndPort() != null) {
-              actualRegCount.incrementAndGet();
-            }
-          }
-          return true;
-        }
-      };
-
-      int tries = 0;
-      IOException serverEx = null;
-      int numRegs = (splitKeys == null ? 1 : splitKeys.length + 1) * desc.getRegionReplication();
-      while (EnvironmentEdgeManager.currentTime() < deadlineTs) {
-        actualRegCount.set(0);
-        MetaTableAccessor.scanMetaForTableRegions(
-          getAdmin().getConnection(), visitor, desc.getTableName());
-        if (actualRegCount.get() == numRegs) {
-          // all the regions are online
-          return;
-        }
-
-        try {
-          Thread.sleep(getAdmin().getPauseTime(tries++));
-        } catch (InterruptedException e) {
-          throw new InterruptedIOException("Interrupted when opening" +
-            " regions; " + actualRegCount.get() + " of " + numRegs +
-            " regions processed so far");
-        }
-      }
-      throw new TimeoutException("Only " + actualRegCount.get() +
-              " of " + numRegs + " regions are online; retries exhausted.");
+    @Override
+    protected Void waitOperationResult(final long deadlineTs) throws IOException, TimeoutException {
+      waitForTableEnabled(deadlineTs);
+      waitForAllRegionsOnline(deadlineTs, splitKeys);
+      return null;
     }
   }
 
@@ -792,13 +711,16 @@ public class HBaseAdmin implements Admin {
     return new DeleteTableFuture(this, tableName, response);
   }
 
-  private static class DeleteTableFuture extends ProcedureFuture<Void> {
-    private final TableName tableName;
-
+  private static class DeleteTableFuture extends TableFuture<Void> {
     public DeleteTableFuture(final HBaseAdmin admin, final TableName tableName,
         final DeleteTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
-      this.tableName = tableName;
+      super(admin, tableName,
+              (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    protected String getDescription() {
+      return "Deleting " + getTableName();
     }
 
     @Override
@@ -812,30 +734,8 @@ public class HBaseAdmin implements Admin {
     protected Void postOperationResult(final Void result, final long deadlineTs)
         throws IOException, TimeoutException {
       // Delete cached information to prevent clients from using old locations
-      getAdmin().getConnection().clearRegionCache(tableName);
-      LOG.info("Deleted " + tableName);
-      return result;
-    }
-
-    private void waitTableNotFound(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          return !getAdmin().tableExists(tableName);
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table to be deleted");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName + " not yet deleted after " +
-              elapsedTime + "msec");
-        }
-      });
+      getAdmin().getConnection().clearRegionCache(getTableName());
+      return super.postOperationResult(result, deadlineTs);
     }
   }
 
@@ -883,9 +783,7 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Truncate a table.
-   * Synchronous operation.
-   *
+   * Truncate a table. Synchronous operation.
    * @param tableName name of table to truncate
    * @param preserveSplits True if the splits should be preserved
    * @throws IOException if a remote or network exception occurs
@@ -893,16 +791,91 @@ public class HBaseAdmin implements Admin {
   @Override
   public void truncateTable(final TableName tableName, final boolean preserveSplits)
       throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        TruncateTableRequest req = RequestConverter.buildTruncateTableRequest(
-          tableName, preserveSplits);
-        master.truncateTable(null, req);
-        return null;
+    Future<Void> future = truncateTableAsync(tableName, preserveSplits);
+    try {
+      future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for table " + tableName
+          + " to be enabled.");
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      } else {
+        throw new IOException(e.getCause());
       }
-    });
+    }
   }
+
+  /**
+   * Truncate the table but does not block and wait for it be completely enabled. You can use
+   * Future.get(long, TimeUnit) to wait on the operation to complete. It may throw
+   * ExecutionException if there was an error while executing the operation or TimeoutException in
+   * case the wait timeout was not long enough to allow the operation to complete. Asynchronous
+   * operation.
+   * @param tableName name of table to delete
+   * @param preserveSplits true if the splits should be preserved
+   * @throws IOException if a remote or network exception occurs
+   * @return the result of the async truncate. You can use Future.get(long, TimeUnit) to wait on the
+   *         operation to complete.
+   */
+  @Override
+  public Future<Void> truncateTableAsync(final TableName tableName, final boolean preserveSplits)
+      throws IOException {
+    TruncateTableResponse response =
+        executeCallable(new MasterCallable<TruncateTableResponse>(getConnection()) {
+          @Override
+          public TruncateTableResponse call(int callTimeout) throws ServiceException {
+            LOG.info("Started enable of " + tableName);
+            TruncateTableRequest req =
+                RequestConverter.buildTruncateTableRequest(tableName, preserveSplits);
+            return master.truncateTable(null, req);
+          }
+        });
+    return new TruncateTableFuture(this, tableName, preserveSplits, response);
+  }
+
+  private static class TruncateTableFuture extends TableFuture<Void> {
+    private final boolean preserveSplits;
+
+    public TruncateTableFuture(final HBaseAdmin admin, final TableName tableName,
+        final boolean preserveSplits, final TruncateTableResponse response) {
+      super(admin, tableName,
+             (response != null && response.hasProcId()) ? response.getProcId() : null);
+      this.preserveSplits = preserveSplits;
+    }
+
+    @Override
+    public String getDescription() {
+      return "Truncating " + getTableName();
+    }
+
+    @Override
+    protected Void waitOperationResult(final long deadlineTs) throws IOException, TimeoutException {
+      waitForTableEnabled(deadlineTs);
+      // once the table is enabled, we know the operation is done. so we can fetch the splitKeys
+      byte[][] splitKeys = preserveSplits ? getAdmin().getTableSplits(getTableName()) : null;
+      waitForAllRegionsOnline(deadlineTs, splitKeys);
+      return null;
+    }
+  }
+
+  private byte[][] getTableSplits(final TableName tableName) throws IOException {
+    byte[][] splits = null;
+    try (RegionLocator locator = getConnection().getRegionLocator(tableName)) {
+      byte[][] startKeys = locator.getStartKeys();
+      if (startKeys.length == 1) {
+        return splits;
+      }
+      splits = new byte[startKeys.length - 1][];
+      for (int i = 1; i < startKeys.length; i++) {
+        splits[i - 1] = startKeys[i];
+      }
+    }
+    return splits;
+  }
+
 
   /**
    * Enable a table.  May timeout.  Use {@link #enableTableAsync(byte[])}
@@ -1024,54 +997,22 @@ public class HBaseAdmin implements Admin {
     return new EnableTableFuture(this, tableName, response);
   }
 
-  private static class EnableTableFuture extends ProcedureFuture<Void> {
-    private final TableName tableName;
-
+  private static class EnableTableFuture extends TableFuture<Void> {
     public EnableTableFuture(final HBaseAdmin admin, final TableName tableName,
         final EnableTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
-      this.tableName = tableName;
+      super(admin, tableName,
+              (response != null && response.hasProcId()) ? response.getProcId() : null);
     }
 
     @Override
-    protected Void waitOperationResult(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitTableEnabled(deadlineTs);
+    protected String getDescription() {
+      return "Enabling " + getTableName();
+    }
+
+    @Override
+    protected Void waitOperationResult(final long deadlineTs) throws IOException, TimeoutException {
+      waitForTableEnabled(deadlineTs);
       return null;
-    }
-
-    @Override
-    protected Void postOperationResult(final Void result, final long deadlineTs)
-        throws IOException, TimeoutException {
-      LOG.info("Enabled " + tableName);
-      return result;
-    }
-
-    private void waitTableEnabled(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          boolean enabled;
-          try {
-            enabled = getAdmin().isTableEnabled(tableName);
-          } catch (TableNotFoundException tnfe) {
-            return false;
-          }
-          return enabled && getAdmin().isTableAvailable(tableName);
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table to be enabled");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName + " not yet enabled after " +
-              elapsedTime + "msec");
-        }
-      });
     }
   }
 
@@ -1193,48 +1134,23 @@ public class HBaseAdmin implements Admin {
     return new DisableTableFuture(this, tableName, response);
   }
 
-  private static class DisableTableFuture extends ProcedureFuture<Void> {
-    private final TableName tableName;
-
+  private static class DisableTableFuture extends TableFuture<Void> {
     public DisableTableFuture(final HBaseAdmin admin, final TableName tableName,
         final DisableTableResponse response) {
-      super(admin, (response != null && response.hasProcId()) ? response.getProcId() : null);
-      this.tableName = tableName;
+      super(admin, tableName,
+              (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    protected String getDescription() {
+      return "Disabling " + getTableName();
     }
 
     @Override
     protected Void waitOperationResult(final long deadlineTs)
         throws IOException, TimeoutException {
-      waitTableDisabled(deadlineTs);
+      waitForTableDisabled(deadlineTs);
       return null;
-    }
-
-    @Override
-    protected Void postOperationResult(final Void result, final long deadlineTs)
-        throws IOException, TimeoutException {
-      LOG.info("Disabled " + tableName);
-      return result;
-    }
-
-    private void waitTableDisabled(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          return getAdmin().isTableDisabled(tableName);
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName + " not yet disabled after " +
-              elapsedTime + "msec");
-        }
-      });
     }
   }
 
@@ -4083,7 +3999,7 @@ public class HBaseAdmin implements Admin {
             result = postOperationResult(result, deadlineTs);
             done = true;
           } catch (IOException e) {
-            result = postOpeartionFailure(e, deadlineTs);
+            result = postOperationFailure(e, deadlineTs);
             done = true;
           }
         } catch (IOException e) {
@@ -4199,9 +4115,9 @@ public class HBaseAdmin implements Admin {
     }
 
     /**
-     * Called after the operation is completed and the result fetched.
-     * this allows to perform extra steps after the procedure is completed.
-     * it allows to apply transformations to the result that will be returned by get().
+     * Called after the operation is completed and the result fetched. this allows to perform extra
+     * steps after the procedure is completed. it allows to apply transformations to the result that
+     * will be returned by get().
      * @param result the result of the procedure
      * @param deadlineTs the timestamp after which this method should throw a TimeoutException
      * @return the result of the procedure, which may be the same as the passed one
@@ -4220,7 +4136,7 @@ public class HBaseAdmin implements Admin {
      * @param deadlineTs the timestamp after which this method should throw a TimeoutException
      * @return the result of the procedure, which may be the same as the passed one
      */
-    protected V postOpeartionFailure(final IOException exception, final long deadlineTs)
+    protected V postOperationFailure(final IOException exception, final long deadlineTs)
         throws IOException, TimeoutException {
       throw exception;
     }
@@ -4256,6 +4172,177 @@ public class HBaseAdmin implements Admin {
       } else {
         callable.throwTimeoutException(EnvironmentEdgeManager.currentTime() - startTime);
       }
+    }
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Evolving
+  protected static abstract class TableFuture<V> extends ProcedureFuture<V> {
+    private final TableName tableName;
+
+    public TableFuture(final HBaseAdmin admin, final TableName tableName, final Long procId) {
+      super(admin, procId);
+      this.tableName = tableName;
+    }
+
+    /**
+     * @return the table name
+     */
+    protected TableName getTableName() {
+      return tableName;
+    }
+
+    /**
+     * @return the table descriptor
+     */
+    protected HTableDescriptor getTableDescriptor() throws IOException {
+      return getAdmin().getTableDescriptorByTableName(getTableName());
+    }
+
+    /**
+     * @return a description of the operation
+     */
+    protected abstract String getDescription();
+
+    @Override
+    protected V postOperationResult(final V result, final long deadlineTs)
+        throws IOException, TimeoutException {
+      LOG.info(getDescription() + " completed");
+      return super.postOperationResult(result, deadlineTs);
+    }
+
+    @Override
+    protected V postOperationFailure(final IOException exception, final long deadlineTs)
+        throws IOException, TimeoutException {
+      LOG.info(getDescription() + " failed with " + exception.getMessage());
+      return super.postOperationFailure(exception, deadlineTs);
+    }
+
+    protected void waitForTableEnabled(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new WaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          try {
+            if (getAdmin().isTableAvailable(tableName)) {
+              return true;
+            }
+          } catch (TableNotFoundException tnfe) {
+            LOG.debug("Table " + tableName.getNameAsString()
+                + " was not enabled, sleeping. tries=" + tries);
+          }
+          return false;
+        }
+
+        @Override
+        public void throwInterruptedException() throws InterruptedIOException {
+          throw new InterruptedIOException("Interrupted when waiting for table "
+              + tableName.getNameAsString() + " to be enabled");
+        }
+
+        @Override
+        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+          throw new TimeoutException("Table " + tableName.getNameAsString()
+              + " not enabled after " + elapsedTime + "msec");
+        }
+      });
+    }
+
+    protected void waitForTableDisabled(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new WaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().isTableDisabled(tableName);
+        }
+
+        @Override
+        public void throwInterruptedException() throws InterruptedIOException {
+          throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
+        }
+
+        @Override
+        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+          throw new TimeoutException("Table " + tableName + " not yet disabled after "
+              + elapsedTime + "msec");
+        }
+      });
+    }
+
+    protected void waitForAllRegionsOnline(final long deadlineTs, final byte[][] splitKeys)
+        throws IOException, TimeoutException {
+      final HTableDescriptor desc = getTableDescriptor();
+      final AtomicInteger actualRegCount = new AtomicInteger(0);
+      final MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+        @Override
+        public boolean visit(Result rowResult) throws IOException {
+          RegionLocations list = MetaTableAccessor.getRegionLocations(rowResult);
+          if (list == null) {
+            LOG.warn("No serialized HRegionInfo in " + rowResult);
+            return true;
+          }
+          HRegionLocation l = list.getRegionLocation();
+          if (l == null) {
+            return true;
+          }
+          if (!l.getRegionInfo().getTable().equals(desc.getTableName())) {
+            return false;
+          }
+          if (l.getRegionInfo().isOffline() || l.getRegionInfo().isSplit()) return true;
+          HRegionLocation[] locations = list.getRegionLocations();
+          for (HRegionLocation location : locations) {
+            if (location == null) continue;
+            ServerName serverName = location.getServerName();
+            // Make sure that regions are assigned to server
+            if (serverName != null && serverName.getHostAndPort() != null) {
+              actualRegCount.incrementAndGet();
+            }
+          }
+          return true;
+        }
+      };
+
+      int tries = 0;
+      int numRegs = (splitKeys == null ? 1 : splitKeys.length + 1) * desc.getRegionReplication();
+      while (EnvironmentEdgeManager.currentTime() < deadlineTs) {
+        actualRegCount.set(0);
+        MetaTableAccessor.scanMetaForTableRegions(getAdmin().getConnection(), visitor,
+          desc.getTableName());
+        if (actualRegCount.get() == numRegs) {
+          // all the regions are online
+          return;
+        }
+
+        try {
+          Thread.sleep(getAdmin().getPauseTime(tries++));
+        } catch (InterruptedException e) {
+          throw new InterruptedIOException("Interrupted when opening" + " regions; "
+              + actualRegCount.get() + " of " + numRegs + " regions processed so far");
+        }
+      }
+      throw new TimeoutException("Only " + actualRegCount.get() + " of " + numRegs
+          + " regions are online; retries exhausted.");
+    }
+
+    protected void waitTableNotFound(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new WaitForStateCallable() {
+        @Override
+        public boolean checkState(int tries) throws IOException {
+          return !getAdmin().tableExists(tableName);
+        }
+
+        @Override
+        public void throwInterruptedException() throws InterruptedIOException {
+          throw new InterruptedIOException("Interrupted when waiting for table to be deleted");
+        }
+
+        @Override
+        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+          throw new TimeoutException("Table " + tableName + " not yet deleted after "
+              + elapsedTime + "msec");
+        }
+      });
     }
   }
 }
