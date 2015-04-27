@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -58,6 +57,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
@@ -129,6 +129,8 @@ public class TestMasterObserver {
     private boolean stopCalled;
     private boolean preSnapshotCalled;
     private boolean postSnapshotCalled;
+    private boolean preListSnapshotCalled;
+    private boolean postListSnapshotCalled;
     private boolean preCloneSnapshotCalled;
     private boolean postCloneSnapshotCalled;
     private boolean preRestoreSnapshotCalled;
@@ -205,6 +207,8 @@ public class TestMasterObserver {
       postBalanceSwitchCalled = false;
       preSnapshotCalled = false;
       postSnapshotCalled = false;
+      preListSnapshotCalled = false;
+      postListSnapshotCalled = false;
       preCloneSnapshotCalled = false;
       postCloneSnapshotCalled = false;
       preRestoreSnapshotCalled = false;
@@ -758,6 +762,22 @@ public class TestMasterObserver {
 
     public boolean wasSnapshotCalled() {
       return preSnapshotCalled && postSnapshotCalled;
+    }
+    
+    @Override
+    public void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot) throws IOException {
+      preListSnapshotCalled = true;
+    }
+
+    @Override
+    public void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+        final SnapshotDescription snapshot) throws IOException {
+      postListSnapshotCalled = true;
+    }
+
+    public boolean wasListSnapshotCalled() {
+      return preListSnapshotCalled && postListSnapshotCalled;
     }
 
     @Override
@@ -1387,6 +1407,11 @@ public class TestMasterObserver {
       admin.snapshot(TEST_SNAPSHOT, tableName);
       assertTrue("Coprocessor should have been called on snapshot",
         cp.wasSnapshotCalled());
+      
+      //Test list operation
+      admin.listSnapshots();
+      assertTrue("Coprocessor should have been called on snapshot list",
+        cp.wasListSnapshotCalled());
 
       // Test clone operation
       admin.cloneSnapshot(TEST_SNAPSHOT, TEST_CLONE);

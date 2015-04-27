@@ -386,6 +386,16 @@ public class BaseMasterObserver implements MasterObserver {
   }
 
   @Override
+  public void preListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
+
+  @Override
+  public void postListSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final SnapshotDescription snapshot) throws IOException {
+  }
+  
+  @Override
   public void preCloneSnapshot(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor)
       throws IOException {
