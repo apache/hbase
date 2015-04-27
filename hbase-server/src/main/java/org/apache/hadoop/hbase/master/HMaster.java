@@ -1428,14 +1428,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       throw new MasterNotRunningException();
     }
 
-    String namespace = hTableDescriptor.getTableName().getNamespaceAsString();
+    TableName tableName = hTableDescriptor.getTableName();
+    String namespace = tableName.getNamespaceAsString();
     ensureNamespaceExists(namespace);
 
     HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
-    this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
-      newRegions.length);
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1451,8 +1450,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           hTableDescriptor, newRegions, latch));
       latch.await();
     } else {
-      this.service.submit(new CreateTableHandler(this, this.fileSystemManager, hTableDescriptor,
-        conf, newRegions, this).prepare());
+      try {
+        this.quotaManager.checkNamespaceTableAndRegionQuota(tableName, newRegions.length);
+        this.service.submit(new CreateTableHandler(this, this.fileSystemManager, hTableDescriptor,
+            conf, newRegions, this).prepare());
+      } catch (IOException e) {
+        this.quotaManager.removeTableFromNamespaceQuota(tableName);
+        LOG.error("Exception occurred while creating the table " + tableName.getNameAsString(), e);
+        throw e;
+      }
     }
 
     if (cpHost != null) {

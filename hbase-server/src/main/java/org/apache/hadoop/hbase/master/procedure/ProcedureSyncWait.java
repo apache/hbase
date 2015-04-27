@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureResult;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -176,5 +177,16 @@ public final class ProcedureSyncWait {
         }
       });
     }
+  }
+
+  protected static MasterQuotaManager getMasterQuotaManager(final MasterProcedureEnv env)
+      throws IOException {
+    return ProcedureSyncWait.waitFor(env, "quota manager to be available",
+      new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
+        @Override
+        public MasterQuotaManager evaluate() throws IOException {
+          return env.getMasterServices().getMasterQuotaManager();
+        }
+      });
   }
 }
