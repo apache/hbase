@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescripti
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
@@ -213,6 +214,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
     // ignore all the snapshots in progress
     FileStatus[] snapshots = fs.listStatus(snapshotDir,
       new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    MasterCoprocessorHost cpHost = master.getMasterCoprocessorHost();
     // loop through all the completed snapshots
     for (FileStatus snapshot : snapshots) {
       Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
@@ -225,7 +227,22 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       try {
         in = fs.open(info);
         SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+        if (cpHost != null) {
+          try {
+            cpHost.preListSnapshot(desc);
+          } catch (AccessDeniedException e) {
+            LOG.warn("Current user does not have access to " + desc.getName() + " snapshot. "
+                + "Either you should be owner of this snapshot or admin user.");
+            // Skip this and try for next snapshot
+            continue;
+          }
+        }
         snapshotDescs.add(desc);
+
+        // call coproc post hook
+        if (cpHost != null) {
+          cpHost.postListSnapshot(desc);
+        }
       } catch (IOException e) {
         LOG.warn("Found a corrupted snapshot " + snapshot.getPath(), e);
       } finally {
