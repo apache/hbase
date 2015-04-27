@@ -401,7 +401,6 @@ public class HFileLink extends FileLink {
    * @param rootDir root hbase directory
    * @param linkRefPath Link Back Reference path
    * @return full path of the referenced hfile
-   * @throws IOException on unexpected error.
    */
   public static Path getHFileFromBackReference(final Path rootDir, final Path linkRefPath) {
     Pair<TableName, String> p = parseBackReferenceName(linkRefPath.getName());

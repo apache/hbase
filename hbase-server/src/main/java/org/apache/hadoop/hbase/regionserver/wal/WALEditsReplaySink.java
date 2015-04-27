@@ -53,9 +53,9 @@ import com.google.protobuf.ServiceException;
 
 /**
  * This class is responsible for replaying the edits coming from a failed region server.
- * <p/>
+ * <p>
  * This class uses the native HBase client in order to replay WAL entries.
- * <p/>
+ * </p>
  */
 @InterfaceAudience.Private
 public class WALEditsReplaySink {

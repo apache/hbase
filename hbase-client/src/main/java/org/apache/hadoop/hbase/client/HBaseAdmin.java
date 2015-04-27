@@ -231,7 +231,8 @@ public class HBaseAdmin implements Admin {
    * The connection to master will be created when required by admin functions.
    *
    * @param connection The Connection instance to use
-   * @throws MasterNotRunningException, ZooKeeperConnectionException are not
+   * @throws MasterNotRunningException
+   * @throws ZooKeeperConnectionException are not
    *  thrown anymore but kept into the interface for backward api compatibility
    * @deprecated Constructing HBaseAdmin objects manually has been deprecated.
    * Use {@link Connection#getAdmin()} to obtain an instance of {@link Admin} instead.

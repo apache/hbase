@@ -656,7 +656,6 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   /**
    * Close the connection to ZooKeeper.
    *
-   * @throws InterruptedException
    */
   @Override
   public void close() {

@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Per-peer per-node throttling controller for replication: enabled if
- * bandwidth > 0, a cycle = 100ms, by throttling we guarantee data pushed
+ * bandwidth &gt; 0, a cycle = 100ms, by throttling we guarantee data pushed
  * to peer within each cycle won't exceed 'bandwidth' bytes
  */
 @InterfaceAudience.Private

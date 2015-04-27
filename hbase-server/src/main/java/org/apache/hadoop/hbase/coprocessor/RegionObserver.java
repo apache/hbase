@@ -344,7 +344,7 @@ public interface RegionObserver extends Coprocessor {
    * (e.getRegion() returns the parent region)
    * @throws IOException if an error occurred on the coprocessor
    * @deprecated Use preSplit(
-   *    final ObserverContext<RegionCoprocessorEnvironment> c, byte[] splitRow)
+   *    final ObserverContext&lt;RegionCoprocessorEnvironment&gt; c, byte[] splitRow)
    */
   @Deprecated
   void preSplit(final ObserverContext<RegionCoprocessorEnvironment> c) throws IOException;
@@ -1068,7 +1068,8 @@ public interface RegionObserver extends Coprocessor {
    * <li>
    * <code>boolean filterRow()</code> returning true</li>
    * <li>
-   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from the passed List</li>
+   * <code>void filterRow(List&lt;KeyValue&gt; kvs)</code> removing all the kvs
+   * from the passed List</li>
    * </ol>
    * @param c the environment provided by the region server
    * @param s the scanner
@@ -1095,7 +1096,8 @@ public interface RegionObserver extends Coprocessor {
    * <li>
    * <code>boolean filterRow()</code> returning true</li>
    * <li>
-   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from the passed List</li>
+   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from
+   * the passed List</li>
    * </ol>
    * @param c the environment provided by the region server
    * @param s the scanner

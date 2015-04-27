@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * This class converts between positive ints and 1-4 bytes that represent the int.  All input ints
  * must be positive.  Max values stored in N bytes are:
  *
- * N=1: 2^8  =>           256
- * N=2: 2^16 =>        65,536
- * N=3: 2^24 =>    16,777,216
- * N=4: 2^31 => 2,147,483,648 (Integer.MAX_VALUE)
+ * N=1: 2^8  =&gt;           256
+ * N=2: 2^16 =&gt;        65,536
+ * N=3: 2^24 =&gt;    16,777,216
+ * N=4: 2^31 =&gt; 2,147,483,648 (Integer.MAX_VALUE)
  *
  * This was created to get most of the memory savings of a variable length integer when encoding
  * an array of input integers, but to fix the number of bytes for each integer to the number needed

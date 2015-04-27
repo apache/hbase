@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 
 /**
- * A "non-reversed & non-lazy" scanner which does not support backward scanning
+ * A "non-reversed &amp; non-lazy" scanner which does not support backward scanning
  * and always does a real seek operation. Most scanners are inherited from this
  * class.
  */

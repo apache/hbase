@@ -25,10 +25,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
+ * <p>
  * Pools PrefixTreeArraySearcher objects. Each Searcher can consist of hundreds or thousands of
  * objects and 1 is needed for each HFile during a Get operation. With tens of thousands of
  * Gets/second, reusing these searchers may save a lot of young gen collections.
- * <p/>
+ * </p>
  * Alternative implementation would be a ByteBufferSearcherPool (not implemented yet).
  */
 @InterfaceAudience.Private

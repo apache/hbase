@@ -91,7 +91,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 public class FileLink {
   private static final Log LOG = LogFactory.getLog(FileLink.class);
 
-  /** Define the Back-reference directory name prefix: .links-<hfile>/ */
+  /** Define the Back-reference directory name prefix: .links-&lt;hfile&gt;/ */
   public static final String BACK_REFERENCES_DIRECTORY_PREFIX = ".links-";
 
   /**

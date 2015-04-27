@@ -42,8 +42,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *
  * <pre>
  * /hbase/.snapshots
- *          /.tmp                <---- working directory
- *          /[snapshot name]     <----- completed snapshot
+ *          /.tmp                &lt;---- working directory
+ *          /[snapshot name]     &lt;----- completed snapshot
  * </pre>
  *
  * A completed snapshot named 'completed' then looks like (multiple regions, servers, files, etc.
@@ -51,16 +51,16 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *
  * <pre>
  * /hbase/.snapshots/completed
- *                   .snapshotinfo          <--- Description of the snapshot
- *                   .tableinfo             <--- Copy of the tableinfo
+ *                   .snapshotinfo          &lt;--- Description of the snapshot
+ *                   .tableinfo             &lt;--- Copy of the tableinfo
  *                    /.logs
  *                        /[server_name]
  *                            /... [log files]
  *                         ...
- *                   /[region name]           <---- All the region's information
- *                   .regioninfo              <---- Copy of the HRegionInfo
+ *                   /[region name]           &lt;---- All the region's information
+ *                   .regioninfo              &lt;---- Copy of the HRegionInfo
  *                      /[column family name]
- *                          /[hfile name]     <--- name of the hfile in the real region
+ *                          /[hfile name]     &lt;--- name of the hfile in the real region
  *                          ...
  *                      ...
  *                    ...

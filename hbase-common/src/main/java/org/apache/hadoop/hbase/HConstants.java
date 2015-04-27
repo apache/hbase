@@ -1133,7 +1133,8 @@ public final class HConstants {
 
   /**
    * When using bucket cache, this is a float that EITHER represents a percentage of total heap
-   * memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
+   * memory size to give to the cache (if &lt; 1.0) OR, it is the capacity in
+   * megabytes of the cache.
    */
   public static final String BUCKET_CACHE_SIZE_KEY = "hbase.bucketcache.size";
 

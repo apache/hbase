@@ -765,7 +765,7 @@ public class MasterRpcServices extends RSRpcServices
    * @return Pair indicating the number of regions updated Pair.getFirst is the
    *         regions that are yet to be updated Pair.getSecond is the total number
    *         of regions of the table
-   * @throws IOException
+   * @throws ServiceException
    */
   @Override
   public GetSchemaAlterStatusResponse getSchemaAlterStatus(

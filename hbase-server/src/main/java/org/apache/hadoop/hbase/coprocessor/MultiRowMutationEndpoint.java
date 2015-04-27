@@ -52,14 +52,14 @@ import com.google.protobuf.Service;
  *
  * Defines a protocol to perform multi row transactions.
  * See {@link MultiRowMutationEndpoint} for the implementation.
- * </br>
+ * <br>
  * See
  * {@link HRegion#mutateRowsWithLocks(java.util.Collection, java.util.Collection)}
  * for details and limitations.
- * </br>
+ * <br>
  * Example:
- * <code><pre>
- * List<Mutation> mutations = ...;
+ * <code>
+ * List&lt;Mutation&gt; mutations = ...;
  * Put p1 = new Put(row1);
  * Put p2 = new Put(row2);
  * ...
@@ -73,7 +73,7 @@ import com.google.protobuf.Service;
  *    MultiRowMutationService.newBlockingStub(channel);
  * MutateRowsRequest mrm = mrmBuilder.build();
  * service.mutateRows(null, mrm);
- * </pre></code>
+ * </code>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving

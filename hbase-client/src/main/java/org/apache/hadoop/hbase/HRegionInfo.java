@@ -54,17 +54,21 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * about the region.
  *
  * The region has a unique name which consists of the following fields:
+ * <ul>
  * <li> tableName   : The name of the table </li>
  * <li> startKey    : The startKey for the region. </li>
  * <li> regionId    : A timestamp when the region is created. </li>
  * <li> replicaId   : An id starting from 0 to differentiate replicas of the same region range
  * but hosted in separated servers. The same region range can be hosted in multiple locations.</li>
  * <li> encodedName : An MD5 encoded string for the region name.</li>
+ * </ul>
  *
  * <br> Other than the fields in the region name, region info contains:
+ * <ul>
  * <li> endKey      : the endKey for the region (exclusive) </li>
  * <li> split       : Whether the region is split </li>
  * <li> offline     : Whether the region is offline </li>
+ * </ul>
  *
  * In 0.98 or before, a list of table's regions would fully cover the total keyspace, and at any
  * point in time, a row key always belongs to a single region, which is hosted in a single server.
@@ -647,7 +651,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * by this region. For example, if the region is foo,a,g and this is
    * passed ["b","c"] or ["a","c"] it will return true, but if this is passed
    * ["b","z"] it will return false.
-   * @throws IllegalArgumentException if the range passed is invalid (ie end < start)
+   * @throws IllegalArgumentException if the range passed is invalid (ie. end &lt; start)
    */
   public boolean containsRange(byte[] rangeStartKey, byte[] rangeEndKey) {
     if (Bytes.compareTo(rangeStartKey, rangeEndKey) > 0) {
@@ -1098,7 +1102,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    * @param r Result to pull from
    * @return A pair of the {@link HRegionInfo} and the {@link ServerName}
    * (or null for server address if no address set in hbase:meta).
-   * @throws IOException
    * @deprecated use MetaTableAccessor methods for interacting with meta layouts
    */
   @Deprecated

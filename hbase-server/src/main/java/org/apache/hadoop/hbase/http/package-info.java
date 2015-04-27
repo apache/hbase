@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 /**
- * </ul>
  * <p>
- * Copied from hadoop source code.<br/>
+ * Copied from hadoop source code.<br>
  * See https://issues.apache.org/jira/browse/HADOOP-10232 to know why.
  * </p>
  */

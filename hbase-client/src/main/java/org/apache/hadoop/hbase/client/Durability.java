@@ -47,13 +47,13 @@ public enum Durability {
    * Write the Mutation to the WAL synchronously.
    * The data is flushed to the filesystem implementation, but not necessarily to disk.
    * For HDFS this will flush the data to the designated number of DataNodes.
-   * See <a href="https://issues.apache.org/jira/browse/HADOOP-6313">HADOOP-6313<a/>
+   * See <a href="https://issues.apache.org/jira/browse/HADOOP-6313">HADOOP-6313</a>
    */
   SYNC_WAL,
   /**
    * Write the Mutation to the WAL synchronously and force the entries to disk.
    * (Note: this is currently not supported and will behave identical to {@link #SYNC_WAL})
-   * See <a href="https://issues.apache.org/jira/browse/HADOOP-6313">HADOOP-6313<a/>
+   * See <a href="https://issues.apache.org/jira/browse/HADOOP-6313">HADOOP-6313</a>
    */
   FSYNC_WAL
 }

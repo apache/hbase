@@ -179,7 +179,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
 
   /**
    * <em>INTERNAL</em> flag to indicate whether or not the memstore should be replicated
-   * for read-replicas (CONSISTENCY => TIMELINE).
+   * for read-replicas (CONSISTENCY =&gt; TIMELINE).
    */
   public static final String REGION_MEMSTORE_REPLICATION = "REGION_MEMSTORE_REPLICATION";
   private static final Bytes REGION_MEMSTORE_REPLICATION_KEY =

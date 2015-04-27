@@ -132,7 +132,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    *     Order the regions to move from most recent to least.
    *
    * <li>Iterate down the least loaded servers, assigning regions so each server
-   *     has exactly </b>MIN</b> regions.  Stop once you reach a server that
+   *     has exactly <b>MIN</b> regions.  Stop once you reach a server that
    *     already has &gt;= <b>MIN</b> regions.
    *
    *     Regions being assigned to underloaded servers are those that were shed
@@ -159,7 +159,7 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
    *
    * <li>If we still have more regions that need assignment, again iterate the
    *     least loaded servers, this time giving each one (filling them to
-   *     </b>MAX</b>) until we run out.
+   *     <b>MAX</b>) until we run out.
    *
    * <li>All servers will now either host <b>MIN</b> or <b>MAX</b> regions.
    *

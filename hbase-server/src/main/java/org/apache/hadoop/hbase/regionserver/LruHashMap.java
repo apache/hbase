@@ -36,7 +36,7 @@ import java.util.Set;
  * The LruHashMap is a memory-aware HashMap with a configurable maximum
  * memory footprint.
  * <p>
- * It maintains an ordered list of all entries in the map ordered by
+ * It maintains an ordered list of all entries in the/ map ordered by
  * access time.  When space needs to be freed becase the maximum has been
  * reached, or the application has asked to free memory, entries will be
  * evicted according to an LRU (least-recently-used) algorithm.  That is,
@@ -102,7 +102,7 @@ implements HeapSize, Map<K,V> {
    * @throws IllegalArgumentException if the initial capacity is less than one
    * @throws IllegalArgumentException if the initial capacity is greater than
    * the maximum capacity
-   * @throws IllegalArgumentException if the load factor is <= 0
+   * @throws IllegalArgumentException if the load factor is &lt;= 0
    * @throws IllegalArgumentException if the max memory usage is too small
    * to support the base overhead
    */
@@ -141,7 +141,7 @@ implements HeapSize, Map<K,V> {
    * @throws IllegalArgumentException if the initial capacity is less than one
    * @throws IllegalArgumentException if the initial capacity is greater than
    * the maximum capacity
-   * @throws IllegalArgumentException if the load factor is <= 0
+   * @throws IllegalArgumentException if the load factor is &lt;= 0
    */
   public LruHashMap(int initialCapacity, float loadFactor) {
     this(initialCapacity, loadFactor, DEFAULT_MAX_MEM_USAGE);

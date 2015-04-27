@@ -61,7 +61,7 @@ public class ThrottledInputStream extends InputStream {
     rawStream.close();
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public int read() throws IOException {
     throttle();
@@ -72,7 +72,7 @@ public class ThrottledInputStream extends InputStream {
     return data;
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public int read(byte[] b) throws IOException {
     throttle();
@@ -83,7 +83,7 @@ public class ThrottledInputStream extends InputStream {
     return readLen;
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public int read(byte[] b, int off, int len) throws IOException {
     throttle();
@@ -159,7 +159,7 @@ public class ThrottledInputStream extends InputStream {
     return totalSleepTime;
   }
 
-  /** @inheritDoc */
+  /** {@inheritDoc} */
   @Override
   public String toString() {
     return "ThrottledInputStream{" +

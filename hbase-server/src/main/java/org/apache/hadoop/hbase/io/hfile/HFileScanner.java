@@ -44,11 +44,11 @@ public interface HFileScanner {
    * Consider the cell stream of all the cells in the file,
    * <code>c[0] .. c[n]</code>, where there are n cells in the file.
    * @param cell
-   * @return -1, if cell < c[0], no position;
+   * @return -1, if cell &lt; c[0], no position;
    * 0, such that c[i] = cell and scanner is left in position i; and
-   * 1, such that c[i] < cell, and scanner is left in position i.
+   * 1, such that c[i] &lt; cell, and scanner is left in position i.
    * The scanner will position itself between c[i] and c[i+1] where
-   * c[i] < cell <= c[i+1].
+   * c[i] &lt; cell &lt;= c[i+1].
    * If there is no cell c[i+1] greater than or equal to the input cell, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
@@ -66,14 +66,14 @@ public interface HFileScanner {
    * <code>c[0] .. c[n]</code>, where there are n cellc in the file after
    * current position of HFileScanner.
    * The scanner will position itself between c[i] and c[i+1] where
-   * c[i] < cell <= c[i+1].
+   * c[i] &lt; cell &lt;= c[i+1].
    * If there is no cell c[i+1] greater than or equal to the input cell, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
    * @param cell Cell to find (should be non-null)
-   * @return -1, if cell < c[0], no position;
+   * @return -1, if cell &lt; c[0], no position;
    * 0, such that c[i] = cell and scanner is left in position i; and
-   * 1, such that c[i] < cell, and scanner is left in position i.
+   * 1, such that c[i] &lt; cell, and scanner is left in position i.
    * @throws IOException
    */
   int reseekTo(Cell cell) throws IOException;
@@ -82,9 +82,9 @@ public interface HFileScanner {
    * Consider the cell stream of all the cells in the file,
    * <code>c[0] .. c[n]</code>, where there are n cells in the file.
    * @param cell Cell to find
-   * @return false if cell <= c[0] or true with scanner in position 'i' such
-   * that: c[i] < cell.  Furthermore: there may be a c[i+1], such that
-   * c[i] < cell <= c[i+1] but there may also NOT be a c[i+1], and next() will
+   * @return false if cell &lt;= c[0] or true with scanner in position 'i' such
+   * that: c[i] &lt; cell.  Furthermore: there may be a c[i+1], such that
+   * c[i] &lt; cell &lt;= c[i+1] but there may also NOT be a c[i+1], and next() will
    * return false (EOF).
    * @throws IOException
    */

@@ -180,7 +180,7 @@ public class MetaTableAccessor {
     }
   }
 
-  /** The delimiter for meta columns for replicaIds > 0 */
+  /** The delimiter for meta columns for replicaIds &gt; 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
   /** A regex for parsing server columns from meta. See above javadoc for meta layout */
@@ -1080,7 +1080,7 @@ public class MetaTableAccessor {
   /**
    * Fetch table states from META table
    * @param conn connection to use
-   * @return map {tableName -> state}
+   * @return map {tableName -&gt; state}
    * @throws IOException
    */
   public static Map<TableName, TableState> getTableStates(Connection conn)

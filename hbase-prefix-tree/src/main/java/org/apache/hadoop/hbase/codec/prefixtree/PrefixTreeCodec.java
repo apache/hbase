@@ -47,9 +47,10 @@ import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
+ * <p>
  * This class is created via reflection in DataBlockEncoding enum. Update the enum if class name or
  * package changes.
- * <p/>
+ * </p>
  * PrefixTreeDataBlockEncoder implementation of DataBlockEncoder. This is the primary entry point
  * for PrefixTree encoding and decoding. Encoding is delegated to instances of
  * {@link PrefixTreeEncoder}, and decoding is delegated to instances of

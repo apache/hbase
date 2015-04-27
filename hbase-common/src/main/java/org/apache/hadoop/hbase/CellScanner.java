@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * may or may not point to a reusable cell implementation, so users of the CellScanner should not,
  * for example, accumulate a List of Cells. All of the references may point to the same object,
  * which would be the latest state of the underlying Cell. In short, the Cell is mutable.
- * <p/>
+ * </p>
  * Typical usage:
  *
  * <pre>

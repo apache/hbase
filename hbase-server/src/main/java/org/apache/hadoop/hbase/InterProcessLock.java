@@ -99,7 +99,7 @@ public interface InterProcessLock {
   /**
    * Visits the locks (both held and attempted) of this type with the given
    * {@link MetadataHandler}.
-   * @throws InterruptedException If there is an unrecoverable error
+   * @throws IOException If there is an unrecoverable error
    */
   void visitLocks(MetadataHandler handler) throws IOException;
 }

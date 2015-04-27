@@ -27,7 +27,7 @@ public interface RpcCallContext extends Delayable {
   /**
    * Check if the caller who made this IPC call has disconnected.
    * If called from outside the context of IPC, this does nothing.
-   * @return < 0 if the caller is still connected. The time in ms
+   * @return &lt; 0 if the caller is still connected. The time in ms
    *  since the disconnection otherwise
    */
   long disconnectSince();

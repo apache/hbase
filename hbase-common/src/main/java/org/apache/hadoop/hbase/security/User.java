@@ -194,7 +194,6 @@ public abstract class User {
    * @param action
    * @return the result of the action
    * @throws IOException
-   * @throws InterruptedException
    */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <T> T runAsLoginUser(PrivilegedExceptionAction<T> action) throws IOException {

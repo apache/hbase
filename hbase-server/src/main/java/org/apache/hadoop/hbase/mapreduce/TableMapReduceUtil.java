@@ -513,7 +513,8 @@ public class TableMapReduceUtil {
    * and add it to the credentials for the given map reduce job.
    *
    * The quorumAddress is the key to the ZK ensemble, which contains:
-   * hbase.zookeeper.quorum, hbase.zookeeper.client.port and zookeeper.znode.parent
+   * hbase.zookeeper.quorum, hbase.zookeeper.client.port and
+   * zookeeper.znode.parent
    *
    * @param job The job that requires the permission.
    * @param quorumAddress string that contains the 3 required configuratins
@@ -619,7 +620,8 @@ public class TableMapReduceUtil {
    * default; e.g. copying tables between clusters, the source would be
    * designated by <code>hbase-site.xml</code> and this param would have the
    * ensemble address of the remote cluster.  The format to pass is particular.
-   * Pass <code> &lt;hbase.zookeeper.quorum>:&lt;hbase.zookeeper.client.port>:&lt;zookeeper.znode.parent>
+   * Pass <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
    * </code> such as <code>server,server2,server3:2181:/hbase</code>.
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl
@@ -650,7 +652,8 @@ public class TableMapReduceUtil {
    * default; e.g. copying tables between clusters, the source would be
    * designated by <code>hbase-site.xml</code> and this param would have the
    * ensemble address of the remote cluster.  The format to pass is particular.
-   * Pass <code> &lt;hbase.zookeeper.quorum>:&lt;hbase.zookeeper.client.port>:&lt;zookeeper.znode.parent>
+   * Pass <code> &lt;hbase.zookeeper.quorum&gt;:&lt;
+   *             hbase.zookeeper.client.port&gt;:&lt;zookeeper.znode.parent&gt;
    * </code> such as <code>server,server2,server3:2181:/hbase</code>.
    * @param serverClass redefined hbase.regionserver.class
    * @param serverImpl redefined hbase.regionserver.impl

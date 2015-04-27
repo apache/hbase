@@ -51,11 +51,11 @@ import com.google.protobuf.Service;
  * {@link ColumnInterpreter} is used to interpret column value. This class is
  * parameterized with the following (these are the types with which the {@link ColumnInterpreter}
  * is parameterized, and for more description on these, refer to {@link ColumnInterpreter}):
- * @param <T> Cell value data type
- * @param <S> Promoted data type
- * @param <P> PB message that is used to transport initializer specific bytes
- * @param <Q> PB message that is used to transport Cell (<T>) instance
- * @param <R> PB message that is used to transport Promoted (<S>) instance
+ * @param T Cell value data type
+ * @param S Promoted data type
+ * @param P PB message that is used to transport initializer specific bytes
+ * @param Q PB message that is used to transport Cell (&lt;T&gt;) instance
+ * @param R PB message that is used to transport Promoted (&lt;S&gt;) instance
  */
 @InterfaceAudience.Private
 public class AggregateImplementation<T, S, P extends Message, Q extends Message, R extends Message> 
@@ -229,7 +229,6 @@ extends AggregateService implements CoprocessorService, Coprocessor {
   /**
    * Gives the row count for the given column family and column qualifier, in
    * the given row range as defined in the Scan object.
-   * @throws IOException
    */
   @Override
   public void getRowNum(RpcController controller, AggregateRequest request,

@@ -142,11 +142,11 @@ public class ZKSplitLog {
    */
 
   /**
-   * check if /hbase/recovering-regions/<current region encoded name> exists. Returns true if exists
-   * and set watcher as well.
+   * check if /hbase/recovering-regions/&lt;current region encoded name&gt;
+   * exists. Returns true if exists and set watcher as well.
    * @param zkw
    * @param regionEncodedName region encode name
-   * @return true when /hbase/recovering-regions/<current region encoded name> exists
+   * @return true when /hbase/recovering-regions/&lt;current region encoded name&gt; exists
    * @throws KeeperException
    */
   public static boolean
@@ -199,7 +199,7 @@ public class ZKSplitLog {
    * @param zkw
    * @param serverName
    * @param encodedRegionName
-   * @return the last flushed sequence ids recorded in ZK of the region for <code>serverName<code>
+   * @return the last flushed sequence ids recorded in ZK of the region for <code>serverName</code>
    * @throws IOException
    */
 

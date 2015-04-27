@@ -29,8 +29,8 @@ import org.apache.hadoop.hbase.util.FSUtils;
 /**
  * WALLink describes a link to a WAL.
  *
- * An wal can be in /hbase/.logs/<server>/<wal>
- * or it can be in /hbase/.oldlogs/<wal>
+ * An wal can be in /hbase/.logs/&lt;server&gt;/&lt;wal&gt;
+ * or it can be in /hbase/.oldlogs/&lt;wal&gt;
  *
  * The link checks first in the original path,
  * if it is not present it fallbacks to the archived path.

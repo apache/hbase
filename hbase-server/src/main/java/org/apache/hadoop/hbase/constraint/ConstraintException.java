@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  *  {@link org.apache.hadoop.hbase.client.Put}.
  * <p>Does <b>NOT</b> attempt the
  *  {@link org.apache.hadoop.hbase.client.Put} multiple times, 
- *  since the constraint <it>should</it> fail every time for 
+ *  since the constraint <b>should</b> fail every time for
  *  the same {@link org.apache.hadoop.hbase.client.Put} (it should be
  * idempotent).
  */

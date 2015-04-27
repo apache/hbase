@@ -43,7 +43,7 @@ public class UVLongTool{
     MAX_VALUE_BYTES = new byte[] { -1, -1, -1, -1, -1, -1, -1, -1, 127 };
 
 
-  /********************* long -> bytes **************************/
+  /********************* long -&gt; bytes **************************/
 
   public static int numBytes(long in) {// do a check for illegal arguments if not protected
     if (in == 0) {
@@ -77,7 +77,7 @@ public class UVLongTool{
     return numBytes;
   }
 
-  /******************** bytes -> long **************************/
+  /******************** bytes -&gt; long **************************/
 
   public static long getLong(byte[] bytes) {
     return getLong(bytes, 0);

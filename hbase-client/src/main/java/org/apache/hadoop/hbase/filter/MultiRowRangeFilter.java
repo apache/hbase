@@ -44,7 +44,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * phoenix etc. However, both solutions are inefficient. Both of them can't utilize the range info
  * to perform fast forwarding during scan which is quite time consuming. If the number of ranges
  * are quite big (e.g. millions), join is a proper solution though it is slow. However, there are
- * cases that user wants to specify a small number of ranges to scan (e.g. <1000 ranges). Both
+ * cases that user wants to specify a small number of ranges to scan (e.g. &lt;1000 ranges). Both
  * solutions can't provide satisfactory performance in such case. MultiRowRangeFilter is to support
  * such usec ase (scan multiple row key ranges), which can construct the row key ranges from user
  * specified list and perform fast-forwarding during scan. Thus, the scan will be quite efficient.

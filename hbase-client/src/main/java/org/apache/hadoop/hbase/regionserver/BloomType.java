@@ -34,7 +34,7 @@ public enum BloomType {
    */
   ROW,
   /**
-   * Bloom enabled with Table row & column (family+qualifier) as Key
+   * Bloom enabled with Table row &amp; column (family+qualifier) as Key
    */
   ROWCOL
 }

@@ -137,7 +137,7 @@ public interface SplitLogManagerCoordination {
    * It removes recovering regions from Coordination
    * @param serverNames servers which are just recovered
    * @param isMetaRecovery whether current recovery is for the meta region on
-   *          <code>serverNames<code>
+   *          <code>serverNames</code>
    */
   void removeRecoveringRegions(Set<String> serverNames, Boolean isMetaRecovery) throws IOException;
 

@@ -252,7 +252,7 @@ public final class ProtobufUtil {
    * to flag what follows as a protobuf in hbase.  Prepend these bytes to all content written to
    * znodes, etc.
    * @param bytes Bytes to decorate
-   * @return The passed <code>bytes</codes> with magic prepended (Creates a new
+   * @return The passed <code>bytes</code> with magic prepended (Creates a new
    * byte array that is <code>bytes.length</code> plus {@link ProtobufMagic#PB_MAGIC}.length.
    */
   public static byte [] prependPBMagic(final byte [] bytes) {
@@ -2120,7 +2120,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * Convert a ListMultimap<String, TablePermission> where key is username
+   * Convert a ListMultimap&lt;String, TablePermission&gt; where key is username
    * to a protobuf UserPermission
    *
    * @param perm the list of user and table permissions
@@ -2374,7 +2374,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert a protobuf UserTablePermissions to a
-   * ListMultimap<String, TablePermission> where key is username.
+   * ListMultimap&lt;String, TablePermission&gt; where key is username.
    *
    * @param proto the protobuf UserPermission
    * @return the converted UserPermission

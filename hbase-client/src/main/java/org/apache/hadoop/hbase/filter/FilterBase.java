@@ -41,7 +41,7 @@ public abstract class FilterBase extends Filter {
    * Filters that are purely stateless and do nothing in their reset() methods can inherit
    * this null/empty implementation.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public void reset() throws IOException {
@@ -51,7 +51,7 @@ public abstract class FilterBase extends Filter {
    * Filters that do not filter by row key can inherit this implementation that
    * never filters anything. (ie: returns false).
    *
-   * @inheritDoc
+   * {@inheritDoc}
    * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    *             Instead use {@link #filterRowKey(Cell)}
    */
@@ -72,7 +72,7 @@ public abstract class FilterBase extends Filter {
    * Filters that never filter all remaining can inherit this implementation that
    * never stops the filter early.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public boolean filterAllRemaining() throws IOException {
@@ -82,7 +82,7 @@ public abstract class FilterBase extends Filter {
   /**
    * By default no transformation takes place
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public Cell transformCell(Cell v) throws IOException {
@@ -93,7 +93,7 @@ public abstract class FilterBase extends Filter {
    * Filters that never filter by modifying the returned List of Cells can
    * inherit this implementation that does nothing.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public void filterRowCells(List<Cell> ignored) throws IOException {
@@ -103,7 +103,7 @@ public abstract class FilterBase extends Filter {
    * Fitlers that never filter by modifying the returned List of Cells can
    * inherit this implementation that does nothing.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public boolean hasFilterRow() {
@@ -115,7 +115,7 @@ public abstract class FilterBase extends Filter {
    * {@link #filterKeyValue(Cell)} can inherit this implementation that
    * never filters a row.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   @Override
   public boolean filterRow() throws IOException {
@@ -126,7 +126,7 @@ public abstract class FilterBase extends Filter {
    * Filters that are not sure which key must be next seeked to, can inherit
    * this implementation that, by default, returns a null Cell.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   public Cell getNextCellHint(Cell currentCell) throws IOException {
     return null;
@@ -136,7 +136,7 @@ public abstract class FilterBase extends Filter {
    * By default, we require all scan's column families to be present. Our
    * subclasses may be more precise.
    *
-   * @inheritDoc
+   * {@inheritDoc}
    */
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return true;

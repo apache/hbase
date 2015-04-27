@@ -35,6 +35,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * </p>
  * <p>
  * This interface differs from ByteBuffer:
+ * </p>
+ * <ul>
  * <li>On-heap bytes only</li>
  * <li>Raw {@code byte} access only; does not encode other primitives.</li>
  * <li>Implements {@code equals(Object)}, {@code #hashCode()}, and
@@ -46,7 +48,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * <li>Can be reused in tight loops like a major compaction which can save
  * significant amounts of garbage. (Without reuse, we throw off garbage like
  * <a href="http://www.youtube.com/watch?v=lkmBH-MjZF4">this thing</a>.)</li>
- * </p>
+ * </ul>
  * <p>
  * Mutable, and always evaluates {@code #equals(Object)}, {@code #hashCode()},
  * and {@code #compareTo(ByteRange)} based on the current contents.

@@ -111,7 +111,6 @@ public class MultiHConnection {
    * @param results the results array
    * @param callback 
    * @throws IOException
-   * @throws InterruptedException
    */
   @SuppressWarnings("deprecation")
   public <R> void processBatchCallback(List<? extends Row> actions, TableName tableName,

@@ -24,7 +24,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * This contains a visibility expression which can be associated with a cell. When it is set with a
  * Mutation, all the cells in that mutation will get associated with this expression. A visibility
- * expression can contain visibility labels combined with logical operators AND(&), OR(|) and NOT(!)
+ * expression can contain visibility labels combined with logical
+ * operators AND(&amp;), OR(|) and NOT(!)
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -51,7 +52,7 @@ public class CellVisibility {
   /**
    * Helps in quoting authentication Strings. Use this if unicode characters to
    * be used in expression or special characters like '(', ')',
-   * '"','\','&','|','!'
+   * '"','\','&amp;','|','!'
    */
   public static String quote(String auth) {
     return quote(Bytes.toBytes(auth));
@@ -60,7 +61,7 @@ public class CellVisibility {
   /**
    * Helps in quoting authentication Strings. Use this if unicode characters to
    * be used in expression or special characters like '(', ')',
-   * '"','\','&','|','!'
+   * '"','\','&amp;','|','!'
    */
   public static String quote(byte[] auth) {
     int escapeChars = 0;

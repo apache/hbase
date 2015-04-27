@@ -94,9 +94,9 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * Create a Jetty embedded server to answer http requests. The primary goal
  * is to serve up status information for the server.
  * There are three contexts:
- *   "/logs/" -> points to the log directory
- *   "/static/" -> points to common static files (src/webapps/static)
- *   "/" -> the jsp server code from (src/webapps/<name>)
+ *   "/logs/" -&gt; points to the log directory
+ *   "/static/" -&gt; points to common static files (src/webapps/static)
+ *   "/" -&gt; the jsp server code from (src/webapps/<name>)
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -425,7 +425,7 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/<name>.
+   * The jsp scripts are taken from src/webapps/&lt;name&gt;.
    * @param name The name of the server
    * @param port The port to use on the server
    * @param findPort whether the server should start at the given port and
@@ -1108,13 +1108,14 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Checks the user has privileges to access to instrumentation servlets.
-   * <p/>
+   * <p>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to FALSE
    * (default value) it always returns TRUE.
-   * <p/>
+   * </p><p>
    * If <code>hadoop.security.instrumentation.requires.admin</code> is set to TRUE
    * it will check that if the current user is in the admin ACLS. If the user is
    * in the admin ACLs it returns TRUE, otherwise it returns FALSE.
+   * </p>
    *
    * @param servletContext the servlet context.
    * @param request the servlet request.

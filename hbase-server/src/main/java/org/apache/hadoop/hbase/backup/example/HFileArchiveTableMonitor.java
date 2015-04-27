@@ -38,7 +38,7 @@ public class HFileArchiveTableMonitor {
    * Set the tables to be archived. Internally adds each table and attempts to
    * register it.
    * <p>
-   * <b>Note: All previous tables will be removed in favor of these tables.<b>
+   * <b>Note: All previous tables will be removed in favor of these tables.</b>
    * @param tables add each of the tables to be archived.
    */
   public synchronized void setArchiveTables(List<String> tables) {

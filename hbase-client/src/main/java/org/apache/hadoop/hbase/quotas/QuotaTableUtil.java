@@ -51,11 +51,11 @@ import org.apache.hadoop.hbase.util.Strings;
  * Helper class to interact with the quota table.
  * <pre>
  *     ROW-KEY      FAM/QUAL        DATA
- *   n.<namespace> q:s         <global-quotas>
- *   t.<table>     q:s         <global-quotas>
- *   u.<user>      q:s         <global-quotas>
- *   u.<user>      q:s.<table> <table-quotas>
- *   u.<user>      q:s.<ns>:   <namespace-quotas>
+ *   n.&lt;namespace&gt; q:s         &lt;global-quotas&gt;
+ *   t.&lt;table&gt;     q:s         &lt;global-quotas&gt;
+ *   u.&lt;user&gt;      q:s         &lt;global-quotas&gt;
+ *   u.&lt;user&gt;      q:s.&lt;table&gt; &lt;table-quotas&gt;
+ *   u.&lt;user&gt;      q:s.&lt;ns&gt;:   &lt;namespace-quotas&gt;
  * </pre>
  */
 @InterfaceAudience.Private

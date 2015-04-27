@@ -35,7 +35,8 @@ import com.google.protobuf.RpcController;
  * When implementing {@link com.google.protobuf.Service} defined methods, 
  * coprocessor endpoints can use the following pattern to pass exceptions back to the RPC client:
  * <code>
- * public void myMethod(RpcController controller, MyRequest request, RpcCallback<MyResponse> done) {
+ * public void myMethod(RpcController controller, MyRequest request,
+ *     RpcCallback&lt;MyResponse&gt; done) {
  *   MyResponse response = null;
  *   try {
  *     // do processing

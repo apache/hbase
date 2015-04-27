@@ -49,8 +49,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * <p>This is a best effort load balancer. Given a Cost function F(C) => x It will
- * randomly try and mutate the cluster to Cprime. If F(Cprime) < F(C) then the
+ * <p>This is a best effort load balancer. Given a Cost function F(C) =&gt; x It will
+ * randomly try and mutate the cluster to Cprime. If F(Cprime) &lt; F(C) then the
  * new cluster state becomes the plan. It includes costs functions to compute the cost of:</p>
  * <ul>
  * <li>Region Load</li>

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * </p>
  *
  * <pre>
- * List<Scan> scans = new ArrayList<Scan>();
+ * List&lt;Scan&gt; scans = new ArrayList&lt;Scan&gt;();
  * 
  * Scan scan1 = new Scan();
  * scan1.setStartRow(firstRow1);

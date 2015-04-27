@@ -126,7 +126,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   /**
    * Adds a value to the memstore
    * @param cell
-   * @return memstore size delta & newly added KV which maybe different than the passed in KV
+   * @return memstore size delta &amp; newly added KV which maybe different than the passed in KV
    */
   Pair<Long, Cell> add(Cell cell);
 
@@ -136,8 +136,9 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   long timeOfOldestEdit();
 
   /**
-   * Removes a Cell from the memstore. The Cell is removed only if its key & memstoreTS match the
-   * key & memstoreTS value of the cell parameter.
+   * Removes a Cell from the memstore. The Cell is removed only if its key
+   * &amp; memstoreTS match the key &amp; memstoreTS value of the cell
+   * parameter.
    * @param cell
    */
   void rollback(final Cell cell);

@@ -39,10 +39,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
+ * <p>
  * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the
  * scan results, unless the results cross multiple regions or the row count of
  * results exceed the caching.
- * <p/>
+ * </p>
  * For small scan, it will get better performance than {@link ReversedClientScanner}
  */
 @InterfaceAudience.Private

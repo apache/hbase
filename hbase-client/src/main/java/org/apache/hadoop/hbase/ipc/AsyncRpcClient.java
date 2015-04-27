@@ -422,7 +422,6 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @param rpcTimeout default rpc operation timeout
    *
    * @return A rpc channel that goes via this rpc client instance.
-   * @throws IOException when channel could not be created
    */
   public RpcChannel createRpcChannel(final ServerName sn, final User user, int rpcTimeout) {
     return new RpcChannelImplementation(this, sn, user, rpcTimeout);

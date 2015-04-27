@@ -199,7 +199,7 @@ public interface Admin extends Abortable, Closeable {
    *
    * @param desc table descriptor for table
    * @throws IllegalArgumentException if the table name is reserved
-   * @throws MasterNotRunningException if master is not running
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
    * @throws IOException if a remote or network exception occurs
@@ -218,7 +218,7 @@ public interface Admin extends Abortable, Closeable {
    * @param endKey end of key range
    * @param numRegions the total number of regions to create
    * @throws IllegalArgumentException if the table name is reserved
-   * @throws MasterNotRunningException if master is not running
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
    * @throws IOException
@@ -235,7 +235,7 @@ public interface Admin extends Abortable, Closeable {
    * @param splitKeys array of split keys for the initial regions of the table
    * @throws IllegalArgumentException if the table name is reserved, if the split keys are repeated
    * and if the split key has empty byte array.
-   * @throws MasterNotRunningException if master is not running
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
    * @throws IOException
@@ -248,11 +248,11 @@ public interface Admin extends Abortable, Closeable {
    * It may throw ExecutionException if there was an error while executing the operation
    * or TimeoutException in case the wait timeout was not long enough to allow the
    * operation to complete.
+   * Throws IllegalArgumentException Bad table name, if the split keys
+   *    are repeated and if the split key has empty byte array.
    *
    * @param desc table descriptor for table
    * @param splitKeys keys to check if the table has been created with all split keys
-   * @throws IllegalArgumentException Bad table name, if the split keys
-   *    are repeated and if the split key has empty byte array.
    * @throws IOException if a remote or network exception occurs
    * @return the result of the async creation. You can use Future.get(long, TimeUnit)
    *    to wait on the operation to complete.
@@ -727,7 +727,7 @@ public interface Admin extends Abortable, Closeable {
    * @param destServerName The servername of the destination regionserver.  If passed the empty byte
    * array we'll assign to a random server.  A server name is made of host, port and startcode.
    * Here is an example: <code> host187.example.com,60020,1289493121758</code>
-   * @throws UnknownRegionException Thrown if we can't find a region named
+   * @throws IOException if we can't find a region named
    * <code>encodedRegionName</code>
    */
   void move(final byte[] encodedRegionName, final byte[] destServerName)

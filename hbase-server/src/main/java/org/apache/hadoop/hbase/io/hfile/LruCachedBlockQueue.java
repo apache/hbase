@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 
 /**
  * A memory-bound queue that will grow until an element brings
- * total size >= maxSize.  From then on, only entries that are sorted larger
+ * total size &gt;= maxSize.  From then on, only entries that are sorted larger
  * than the smallest current entry will be inserted/replaced.
  *
  * <p>Use this when you want to find the largest elements (according to their

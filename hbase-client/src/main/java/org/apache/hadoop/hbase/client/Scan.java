@@ -727,10 +727,10 @@ public class Scan extends Query {
    * this can deliver huge perf gains when there's a cf with lots of data; however, it can
    * also lead to some inconsistent results, as follows:
    * - if someone does a concurrent update to both column families in question you may get a row
-   *   that never existed, e.g. for { rowKey = 5, { cat_videos => 1 }, { video => "my cat" } }
-   *   someone puts rowKey 5 with { cat_videos => 0 }, { video => "my dog" }, concurrent scan
-   *   filtering on "cat_videos == 1" can get { rowKey = 5, { cat_videos => 1 },
-   *   { video => "my dog" } }.
+   *   that never existed, e.g. for { rowKey = 5, { cat_videos =&gt; 1 }, { video =&gt; "my cat" } }
+   *   someone puts rowKey 5 with { cat_videos =&gt; 0 }, { video =&gt; "my dog" }, concurrent scan
+   *   filtering on "cat_videos == 1" can get { rowKey = 5, { cat_videos =&gt; 1 },
+   *   { video =&gt; "my dog" } }.
    * - if there's a concurrent split and you have more than 2 column families, some rows may be
    *   missing some column families.
    */
@@ -982,7 +982,6 @@ public class Scan extends Query {
     return ProtobufUtil.toScanMetrics(bytes);
   }
 
-
   public Boolean isAsyncPrefetch() {
     return asyncPrefetch;
   }
@@ -991,6 +990,4 @@ public class Scan extends Query {
     this.asyncPrefetch = asyncPrefetch;
     return this;
   }
-
-
 }

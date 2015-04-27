@@ -480,7 +480,7 @@ public class LruBlockCache implements ResizableBlockCache, HeapSize {
   }
 
   /**
-   * Evict the block, and it will be cached by the victim handler if exists &&
+   * Evict the block, and it will be cached by the victim handler if exists &amp;&amp;
    * block may be read again later
    * @param block
    * @param evictedByEvictionProcess true if the given block is evicted by

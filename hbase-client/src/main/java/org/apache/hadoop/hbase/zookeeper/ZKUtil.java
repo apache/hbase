@@ -1206,8 +1206,6 @@ public class ZKUtil {
    * @param data data of node to create
    * @param cb
    * @param ctx
-   * @throws KeeperException if unexpected zookeeper exception
-   * @throws KeeperException.NodeExistsException if node already exists
    */
   public static void asyncCreate(ZooKeeperWatcher zkw,
       String znode, byte [] data, final AsyncCallback.StringCallback cb,
@@ -2027,7 +2025,6 @@ public class ZKUtil {
   /**
    * Recursively print the current state of ZK (non-transactional)
    * @param root name of the root directory in zk to print
-   * @throws KeeperException
    */
   public static void logZKTree(ZooKeeperWatcher zkw, String root) {
     if (!LOG.isDebugEnabled()) return;

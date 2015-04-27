@@ -261,7 +261,6 @@ public abstract class Filter {
    * @param pbBytes A pb serialized {@link Filter} instance
    * @return An instance of {@link Filter} made from <code>bytes</code>
    * @throws DeserializationException
-   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    * @see #toByteArray
    */
   public static Filter parseFrom(final byte [] pbBytes) throws DeserializationException {

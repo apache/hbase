@@ -29,7 +29,7 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public interface BloomFilterWriter extends BloomFilterBase {
 
-  /** Compact the Bloom filter before writing metadata & data to disk. */
+  /** Compact the Bloom filter before writing metadata &amp; data to disk. */
   void compactBloom();
   /**
    * Get a writable interface into bloom filter meta data.

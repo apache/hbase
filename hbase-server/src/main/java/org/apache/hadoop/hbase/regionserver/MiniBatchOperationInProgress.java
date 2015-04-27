@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  * ObserverContext, MiniBatchOperationInProgress)
  * @see org.apache.hadoop.hbase.coprocessor.RegionObserver#postBatchMutate(
  * ObserverContext, MiniBatchOperationInProgress)
- * @param <T> Pair<Mutation, Integer> pair of Mutations and associated rowlock ids .
+ * @param T Pair&lt;Mutation, Integer&gt; pair of Mutations and associated rowlock ids .
  */
 @InterfaceAudience.Private
 public class MiniBatchOperationInProgress<T> {

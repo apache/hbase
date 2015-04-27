@@ -60,10 +60,12 @@ import org.apache.hadoop.util.ToolRunner;
  * have such files.
  * <p>
  * To print the help section of the tool:
+ * </p>
  * <ul>
- * <li>./bin/hbase org.apache.hadoop.hbase.util.HFileV1Detector --h or,
- * <li>java -cp `hbase classpath` org.apache.hadoop.hbase.util.HFileV1Detector --h
+ * <li>./bin/hbase org.apache.hadoop.hbase.util.HFileV1Detector --h or,</li>
+ * <li>java -cp `hbase classpath` org.apache.hadoop.hbase.util.HFileV1Detector --h</li>
  * </ul>
+ * <p>
  * It also supports -h, --help, -help options.
  * </p>
  */

@@ -46,12 +46,12 @@ import org.apache.hadoop.io.WritableUtils;
 /**
  * This is the primary class for converting a CellOutputStream into an encoded byte[]. As Cells are
  * added they are completely copied into the various encoding structures. This is important because
- * usually the cells being fed in during compactions will be transient.<br/>
- * <br/>
- * Usage:<br/>
- * 1) constructor<br/>
- * 4) append cells in sorted order: write(Cell cell)<br/>
- * 5) flush()<br/>
+ * usually the cells being fed in during compactions will be transient.<br>
+ * <br>
+ * Usage:<br>
+ * 1) constructor<br>
+ * 4) append cells in sorted order: write(Cell cell)<br>
+ * 5) flush()<br>
  */
 @InterfaceAudience.Private
 public class PrefixTreeEncoder implements CellOutputStream {
@@ -391,10 +391,11 @@ public class PrefixTreeEncoder implements CellOutputStream {
   }
 
   /**
+   * <p>
    * The following "compile" methods do any intermediate work necessary to transform the cell
    * fragments collected during the writing phase into structures that are ready to write to the
    * outputStream.
-   * <p/>
+   * </p>
    * The family and qualifier treatment is almost identical, as is timestamp and mvccVersion.
    */
 

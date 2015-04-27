@@ -42,7 +42,7 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
 
   /**
    * @param nbRows number of rows to return
-   * @return Between zero and <param>nbRows</param> Results
+   * @return Between zero and nbRows results
    * @throws IOException e
    */
   Result [] next(int nbRows) throws IOException;

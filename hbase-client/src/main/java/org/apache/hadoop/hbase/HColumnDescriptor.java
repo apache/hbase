@@ -85,8 +85,8 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Key for cache data into L1 if cache is set up with more than one tier.
    * To set in the shell, do something like this:
-   * <code>hbase(main):003:0> create 't',
-   *    {NAME => 't', CONFIGURATION => {CACHE_DATA_IN_L1 => 'true'}}</code>
+   * <code>hbase(main):003:0&gt; create 't',
+   *    {NAME =&gt; 't', CONFIGURATION =&gt; {CACHE_DATA_IN_L1 =&gt; 'true'}}</code>
    */
   public static final String CACHE_DATA_IN_L1 = "CACHE_DATA_IN_L1";
 
@@ -115,7 +115,7 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /**
    * Retain all cells across flushes and compactions even if they fall behind
    * a delete tombstone. To see all retained cells, do a 'raw' scan; see
-   * Scan#setRaw or pass RAW => true attribute in the shell.
+   * Scan#setRaw or pass RAW =&gt; true attribute in the shell.
    */
   public static final String KEEP_DELETED_CELLS = "KEEP_DELETED_CELLS";
   public static final String COMPRESS_TAGS = "COMPRESS_TAGS";

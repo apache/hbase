@@ -126,8 +126,8 @@ public final class TableName implements Comparable<TableName> {
    * The name may not start with '.' or '-'.
    *
    * Valid fully qualified table names:
-   * foo:bar, namespace=>foo, table=>bar
-   * org:foo.bar, namespace=org, table=>foo.bar
+   * foo:bar, namespace=&gt;foo, table=&gt;bar
+   * org:foo.bar, namespace=org, table=&gt;foo.bar
    */
   public static byte [] isLegalFullyQualifiedTableName(final byte[] tableName) {
     if (tableName == null || tableName.length <= 0) {

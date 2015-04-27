@@ -46,9 +46,10 @@ import org.apache.hadoop.ipc.RemoteException;
  * For the slave cluster it selects a random number of peers
  * using a replication ratio. For example, if replication ration = 0.1
  * and slave cluster has 100 region servers, 10 will be selected.
- * <p/>
+ * <p>
  * A stream is considered down when we cannot contact a region server on the
  * peer cluster for more than 55 seconds by default.
+ * </p>
  */
 @InterfaceAudience.Private
 public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoint {

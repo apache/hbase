@@ -139,7 +139,8 @@ public class TableRecordReaderImpl {
   /**
    * Build the scanner. Not done in constructor to allow for extension.
    *
-   * @throws IOException, InterruptedException
+   * @throws IOException
+   * @throws InterruptedException
    */
   public void initialize(InputSplit inputsplit,
       TaskAttemptContext context) throws IOException,

@@ -44,7 +44,6 @@ public class ReplayHLogKey extends HLogKey {
   /**
    * Returns the original sequence id
    * @return long the new assigned sequence number
-   * @throws InterruptedException
    */
   @Override
   public long getSequenceId() throws IOException {

@@ -290,7 +290,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    * region server hosting the region can allow reads to the recovered region
    * @param recoveredServerNameSet servers which are just recovered
    * @param isMetaRecovery whether current recovery is for the meta region on
-   *          <code>serverNames<code>
+   *          <code>serverNames</code>
    */
   @Override
   public void removeRecoveringRegions(final Set<String> recoveredServerNameSet,
@@ -684,8 +684,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   /**
    * ZooKeeper implementation of
-   * {@link org.apache.hadoop.hbase.coordination.
-   * SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
+   * {@link SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
    */
   @Override
   public void removeStaleRecoveringRegions(final Set<String> knownFailedServers)

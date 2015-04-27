@@ -32,15 +32,16 @@ import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
+ * <p>
  * This filter is used to filter based on the column family. It takes an
  * operator (equal, greater, not equal, etc) and a byte [] comparator for the
  * column family portion of a key.
- * <p/>
+ * </p><p>
  * This filter can be wrapped with {@link org.apache.hadoop.hbase.filter.WhileMatchFilter} and {@link org.apache.hadoop.hbase.filter.SkipFilter}
  * to add more control.
- * <p/>
+ * </p><p>
  * Multiple filters can be combined using {@link org.apache.hadoop.hbase.filter.FilterList}.
- * <p/>
+ * </p>
  * If an already known column family is looked for, use {@link org.apache.hadoop.hbase.client.Get#addFamily(byte[])}
  * directly rather than a filter.
  */

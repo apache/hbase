@@ -63,8 +63,9 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   }
 
   /**
+   * <p>
    * Currently unused.
-   * <p/>
+   * </p>
    * TODO performance leak. should reuse the searchers. hbase does not currently have a hook where
    * this can be called
    */
@@ -110,12 +111,13 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   }
 
   /**
+   * <p>
    * Currently unused.
-   * <p/>
+   * </p><p>
    * A nice, lightweight reference, though the underlying cell is transient. This method may return
    * the same reference to the backing PrefixTreeCell repeatedly, while other implementations may
    * return a different reference for each Cell.
-   * <p/>
+   * </p>
    * The goal will be to transition the upper layers of HBase, like Filters and KeyValueHeap, to
    * use this method instead of the getKeyValue() methods above.
    */

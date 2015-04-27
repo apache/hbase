@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * scenario where the end of the buffer has been reached but there are still
  * nullable fields remaining in the {@code Struct} definition. When this
  * happens, it will produce null entries for the remaining values. For example:
+ * </p>
  * <pre>
  * StructBuilder builder = new StructBuilder()
  *     .add(OrderedNumeric.ASCENDING) // nullable
@@ -57,11 +58,10 @@ import org.apache.hadoop.hbase.util.PositionedByteRange;
  * Object[] val = new Object[] { BigDecimal.ONE, "foo" };
  * shorter.encode(buf1, val); // write short value with short Struct
  * buf1.setPosition(0); // reset position marker, prepare for read
- * longer.decode(buf1); // => { BigDecimal.ONE, "foo", null } ; long Struct reads implied null
+ * longer.decode(buf1); // =&gt; { BigDecimal.ONE, "foo", null } ; long Struct reads implied null
  * longer.encode(buf2, val); // write short value with long struct
- * Bytes.equals(buf1.getBytes(), buf2.getBytes()); // => true; long Struct skips writing null
+ * Bytes.equals(buf1.getBytes(), buf2.getBytes()); // =&gt; true; long Struct skips writing null
  * </pre>
- * </p>
  * <h3>Sort Order</h3>
  * <p>
  * {@code Struct} instances sort according to the composite order of their

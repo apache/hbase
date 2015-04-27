@@ -102,7 +102,7 @@ public interface BaseSource {
 
   /**
    * Get the name of the context in JMX that this source will be exposed through.
-   * This is in ObjectName format. With the default context being Hadoop -> HBase
+   * This is in ObjectName format. With the default context being Hadoop -&gt; HBase
    */
   String getMetricsJmxContext();
 

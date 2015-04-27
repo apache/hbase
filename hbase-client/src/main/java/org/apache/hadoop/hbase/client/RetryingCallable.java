@@ -24,7 +24,7 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * A Callable<T> that will be retried.  If {@link #call(int)} invocation throws exceptions,
+ * A Callable&lt;T&gt; that will be retried.  If {@link #call(int)} invocation throws exceptions,
  * we will call {@link #throwable(Throwable, boolean)} with whatever the exception was.
  * @param <T>
  */
@@ -42,7 +42,7 @@ public interface RetryingCallable<T> {
    * make it so we succeed on next call (clear caches, do relookup of locations, etc.).
    * @param t
    * @param retrying True if we are in retrying mode (we are not in retrying mode when max
-   * retries == 1; we ARE in retrying mode if retries > 1 even when we are the last attempt)
+   * retries == 1; we ARE in retrying mode if retries &gt; 1 even when we are the last attempt)
    */
   void throwable(final Throwable t, boolean retrying);
 

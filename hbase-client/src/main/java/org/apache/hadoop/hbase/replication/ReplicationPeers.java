@@ -125,7 +125,7 @@ public interface ReplicationPeers {
    * have to be connected. The state is read directly from the backing store.
    * @param peerId a short that identifies the cluster
    * @return true if replication is enabled, false otherwise.
-   * @throws IOException Throws if there's an error contacting the store
+   * @throws ReplicationException thrown if there's an error contacting the store
    */
   boolean getStatusOfPeerFromBackingStore(String peerId) throws ReplicationException;
 

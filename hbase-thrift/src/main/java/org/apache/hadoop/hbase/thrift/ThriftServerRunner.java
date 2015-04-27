@@ -676,7 +676,6 @@ public class ThriftServerRunner implements Runnable {
      *          name of table
      * @return Table object
      * @throws IOException
-     * @throws IOError
      */
     public Table getTable(final byte[] tableName) throws
         IOException {
@@ -718,7 +717,7 @@ public class ThriftServerRunner implements Runnable {
 
     /**
      * Removes the scanner associated with the specified ID from the internal
-     * id->scanner hash-map.
+     * id-&gt;scanner hash-map.
      *
      * @param id
      * @return a Scanner, or null if ID was invalid.

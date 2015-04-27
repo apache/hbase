@@ -93,8 +93,8 @@ extends ConstantSizeRegionSplitPolicy {
   }
 
   /**
-   * @return Region max size or <code>count of regions squared * flushsize, which ever is
-   * smaller; guard against there being zero regions on this server.
+   * @return Region max size or <code>count of regions squared * flushsize</code>,
+   * which ever is smaller; guard against there being zero regions on this server.
    */
   protected long getSizeToCheck(final int tableRegionsCount) {
     // safety check for 100 to avoid numerical overflow in extreme cases
