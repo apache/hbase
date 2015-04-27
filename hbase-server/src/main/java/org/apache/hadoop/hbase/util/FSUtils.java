@@ -179,8 +179,9 @@ public abstract class FSUtils {
   }
 
   /**
-   * Compare of path component. Does not consider schema; i.e. if schemas different but <code>path
-   * <code> starts with <code>rootPath<code>, then the function returns true
+   * Compare of path component. Does not consider schema; i.e. if schemas
+   * different but <code>path</code> starts with <code>rootPath</code>,
+   * then the function returns true
    * @param rootPath
    * @param path
    * @return True if <code>path</code> starts with <code>rootPath</code>
@@ -1433,7 +1434,7 @@ public abstract class FSUtils {
    * Given a particular table dir, return all the regiondirs inside it, excluding files such as
    * .tableinfo
    * @param fs A file system for the Path
-   * @param tableDir Path to a specific table directory <hbase.rootdir>/<tabledir>
+   * @param tableDir Path to a specific table directory &lt;hbase.rootdir&gt;/&lt;tabledir&gt;
    * @return List of paths to valid region directories in table dir.
    * @throws IOException
    */
@@ -1450,7 +1451,7 @@ public abstract class FSUtils {
 
   /**
    * Filter for all dirs that are legal column family names.  This is generally used for colfam
-   * dirs <hbase.rootdir>/<tabledir>/<regiondir>/<colfamdir>.
+   * dirs &lt;hbase.rootdir&gt;/&lt;tabledir&gt;/&lt;regiondir&gt;/&lt;colfamdir&gt;.
    */
   public static class FamilyDirFilter implements PathFilter {
     final FileSystem fs;

@@ -2116,7 +2116,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
   /**
    * Report whether this master has started initialization and is about to do meta region assignment
-   * @return true if master is in initialization & about to assign hbase:meta regions
+   * @return true if master is in initialization &amp; about to assign hbase:meta regions
    */
   public boolean isInitializationStartsMetaRegionAssignment() {
     return this.initializationBeforeMetaAssignment;

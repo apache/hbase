@@ -32,7 +32,7 @@ public interface BloomFilterWriter extends BloomFilterBase {
   /** Allocate memory for the bloom filter data. */
   void allocBloom();
 
-  /** Compact the Bloom filter before writing metadata & data to disk. */
+  /** Compact the Bloom filter before writing metadata &amp; data to disk. */
   void compactBloom();
 
   /**

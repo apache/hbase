@@ -137,7 +137,7 @@ public interface HTableInterface extends Table {
    * Executes all the buffered {@link Put} operations.
    * <p>
    * This method gets called once automatically for every {@link Put} or batch
-   * of {@link Put}s (when <code>put(List<Put>)</code> is used) when
+   * of {@link Put}s (when <code>put(List&lt;Put&gt;)</code> is used) when
    * {@link #isAutoFlush} is {@code true}.
    * @throws IOException if a remote or network exception occurs.
    * @deprecated as of 1.0.0. Replaced by {@link BufferedMutator#flush()}

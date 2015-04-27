@@ -24,7 +24,7 @@ import java.net.InetSocketAddress;
 
 /**
  * This class holds the address and the user ticket, etc. The client connections
- * to servers are uniquely identified by <remoteAddress, ticket, serviceName>
+ * to servers are uniquely identified by &lt;remoteAddress, ticket, serviceName&gt;
  */
 @InterfaceAudience.Private
 public class ConnectionId {

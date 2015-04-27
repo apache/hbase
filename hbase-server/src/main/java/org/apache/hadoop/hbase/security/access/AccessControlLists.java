@@ -93,6 +93,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * user,family,qualifier    column qualifier level permissions for a user
  * group,family,qualifier   column qualifier level permissions for a group
  * </pre>
+ * <p>
  * All values are encoded as byte arrays containing the codes from the
  * org.apache.hadoop.hbase.security.access.TablePermission.Action enum.
  * </p>

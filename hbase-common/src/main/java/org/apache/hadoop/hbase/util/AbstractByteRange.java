@@ -33,7 +33,7 @@ public abstract class AbstractByteRange implements ByteRange {
   // reuse objects of this class
 
   /**
-   * The array containing the bytes in this range. It will be >= length.
+   * The array containing the bytes in this range. It will be &gt;= length.
    */
   protected byte[] bytes;
 
@@ -44,7 +44,7 @@ public abstract class AbstractByteRange implements ByteRange {
   protected int offset;
 
   /**
-   * The number of bytes in the range. Offset + length must be <= bytes.length
+   * The number of bytes in the range. Offset + length must be &lt;= bytes.length
    */
   protected int length;
 

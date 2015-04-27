@@ -947,7 +947,7 @@ public class HFileReaderV2 extends AbstractHFileReader {
 
     /**
      * @param v
-     * @return True if v < 0 or v > current block buffer limit.
+     * @return True if v &lt; 0 or v &gt; current block buffer limit.
      */
     protected final boolean checkLen(final int v) {
       return v < 0 || v > this.blockBuffer.limit();

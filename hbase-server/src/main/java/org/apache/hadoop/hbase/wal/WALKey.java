@@ -295,9 +295,9 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   }
   
   /**
-   * Wait for sequence number is assigned & return the assigned value
+   * Wait for sequence number is assigned &amp; return the assigned value
    * @return long the new assigned sequence number
-   * @throws InterruptedException
+   * @throws IOException
    */
   @Override
   public long getSequenceId() throws IOException {

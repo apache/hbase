@@ -39,8 +39,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * entire row if any of its weights are zero.  In this case, we want to prevent
  * rows from being emitted if a single key is filtered.  Combine this filter
  * with a {@link ValueFilter}:
+ * </p>
  * <p>
- * <pre>
+ * <code>
  * scan.setFilter(new SkipFilter(new ValueFilter(CompareOp.NOT_EQUAL,
  *     new BinaryComparator(Bytes.toBytes(0))));
  * </code>
@@ -48,6 +49,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * (since ValueFilter will not pass that Cell).
  * Without this filter, the other non-zero valued columns in the row would still
  * be emitted.
+ * </p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable

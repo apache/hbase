@@ -221,7 +221,7 @@ public class DefaultMemStore implements MemStore {
   /**
    * Write an update
    * @param cell
-   * @return approximate size of the passed KV & newly added KV which maybe different than the
+   * @return approximate size of the passed KV &amp; newly added KV which maybe different than the
    *         passed-in KV
    */
   @Override

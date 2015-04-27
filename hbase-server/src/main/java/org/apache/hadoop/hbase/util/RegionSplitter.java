@@ -85,7 +85,7 @@ import com.google.common.collect.Sets;
  * <b>Answer:</b> Automatic splitting is determined by the configuration value
  * <i>HConstants.HREGION_MAX_FILESIZE</i>. It is not recommended that you set this
  * to Long.MAX_VALUE in case you forget about manual splits. A suggested setting
- * is 100GB, which would result in > 1hr major compactions if reached.
+ * is 100GB, which would result in &gt; 1hr major compactions if reached.
  * <p>
  * <b>Question:</b> Why did the original authors decide to manually split? <br>
  * <b>Answer:</b> Specific workload characteristics of our use case allowed us
@@ -227,7 +227,7 @@ public class RegionSplitter {
     /**
      * @param row
      *          byte array representing a row in HBase
-     * @return String to use for debug & file printing
+     * @return String to use for debug &amp; file printing
      */
     String rowToStr(byte[] row);
 
@@ -254,12 +254,12 @@ public class RegionSplitter {
    * <p>
    * <ul>
    * <li>create a table named 'myTable' with 60 pre-split regions containing 2
-   * column families 'test' & 'rs', assuming the keys are hex-encoded ASCII:
+   * column families 'test' &amp; 'rs', assuming the keys are hex-encoded ASCII:
    * <ul>
    * <li>bin/hbase org.apache.hadoop.hbase.util.RegionSplitter -c 60 -f test:rs
    * myTable HexStringSplit
    * </ul>
-   * <li>perform a rolling split of 'myTable' (i.e. 60 => 120 regions), # 2
+   * <li>perform a rolling split of 'myTable' (i.e. 60 =&gt; 120 regions), # 2
    * outstanding splits at a time, assuming keys are uniformly distributed
    * bytes:
    * <ul>
@@ -878,10 +878,10 @@ public class RegionSplitter {
    * boundaries. The format of a HexStringSplit region boundary is the ASCII
    * representation of an MD5 checksum, or any other uniformly distributed
    * hexadecimal value. Row are hex-encoded long values in the range
-   * <b>"00000000" => "FFFFFFFF"</b> and are left-padded with zeros to keep the
+   * <b>"00000000" =&gt; "FFFFFFFF"</b> and are left-padded with zeros to keep the
    * same order lexicographically as if they were binary.
    *
-   * Since this split algorithm uses hex strings as keys, it is easy to read &
+   * Since this split algorithm uses hex strings as keys, it is easy to read &amp;
    * write in the shell but takes up more space and may be non-intuitive.
    */
   public static class HexStringSplit implements SplitAlgorithm {
@@ -1032,7 +1032,7 @@ public class RegionSplitter {
   /**
    * A SplitAlgorithm that divides the space of possible keys evenly. Useful
    * when the keys are approximately uniform random bytes (e.g. hashes). Rows
-   * are raw byte values in the range <b>00 => FF</b> and are right-padded with
+   * are raw byte values in the range <b>00 =&gt; FF</b> and are right-padded with
    * zeros to keep the same memcmp() order. This is the natural algorithm to use
    * for a byte[] environment and saves space, but is not necessarily the
    * easiest for readability.

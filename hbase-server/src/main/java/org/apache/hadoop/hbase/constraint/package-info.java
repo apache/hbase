@@ -19,7 +19,6 @@
 /**
  * Restrict the domain of a data attribute, often times to fulfill business rules/requirements.
  *
- <p>
  <h2> Table of Contents</h2>
  <ul>
  <li><a href="#overview">Overview</a></li>
@@ -27,7 +26,6 @@
  <li><a href="#caveats">Caveats</a></li>
  <li><a href="#usage">Example Usage</a></li>
  </ul>
- </p>
 
  <h2><a name="overview">Overview</a></h2>
  Constraints are used to enforce business rules in a database.
@@ -127,9 +125,9 @@
  public class IntegerConstraint extends BaseConstraint {
  public void check(Put p) throws ConstraintException {
 
- Map&ltbyte[], List&ltKeyValue&gt&gt familyMap = p.getFamilyMap();
+ Map&lt;byte[], List&lt;KeyValue&gt;&gt; familyMap = p.getFamilyMap();
 
- for (List &ltKeyValue&gt kvs : familyMap.values()) {
+ for (List &lt;KeyValue&gt; kvs : familyMap.values()) {
  for (KeyValue kv : kvs) {
 
  // just make sure that we can actually pull out an int

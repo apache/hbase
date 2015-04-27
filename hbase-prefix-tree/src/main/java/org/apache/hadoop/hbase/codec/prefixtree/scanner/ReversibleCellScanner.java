@@ -35,7 +35,7 @@ public interface ReversibleCellScanner extends CellScanner {
   /**
    * Try to position the scanner one Cell before the current position.
    * @return true if the operation was successful, meaning getCurrentCell() will return a valid
-   *         Cell.<br/>
+   *         Cell.<br>
    *         false if there were no previous cells, meaning getCurrentCell() will return null.
    *         Scanner position will be
    *         {@link org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition#BEFORE_FIRST}
@@ -46,7 +46,7 @@ public interface ReversibleCellScanner extends CellScanner {
    * Try to position the scanner in the row before the current row.
    * @param endOfRow true for the last cell in the previous row; false for the first cell
    * @return true if the operation was successful, meaning getCurrentCell() will return a valid
-   *         Cell.<br/>
+   *         Cell.<br>
    *         false if there were no previous cells, meaning getCurrentCell() will return null.
    *         Scanner position will be
    *         {@link org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition#BEFORE_FIRST}

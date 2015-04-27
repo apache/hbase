@@ -121,7 +121,7 @@ public class MetaTableAccessor {
       META_REGION_PREFIX, 0, len);
   }
 
-  /** The delimiter for meta columns for replicaIds > 0 */
+  /** The delimiter for meta columns for replicaIds &gt; 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
   /** A regex for parsing server columns from meta. See above javadoc for meta layout */

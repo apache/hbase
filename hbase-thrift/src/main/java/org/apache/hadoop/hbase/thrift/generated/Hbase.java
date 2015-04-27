@@ -564,8 +564,6 @@ public class Hbase {
      * 
      * @throws IllegalArgument if ScannerID is invalid
      * 
-     * @throws NotFound when the scanner reaches the end
-     * 
      * @param id id of a scanner returned by scannerOpen
      */
     public List<TRowResult> scannerGet(int id) throws IOError, IllegalArgument, org.apache.thrift.TException;
@@ -579,8 +577,6 @@ public class Hbase {
      * @return a TRowResult containing the current row and a map of the columns to TCells.
      * 
      * @throws IllegalArgument if ScannerID is invalid
-     * 
-     * @throws NotFound when the scanner reaches the end
      * 
      * @param id id of a scanner returned by scannerOpen
      * 

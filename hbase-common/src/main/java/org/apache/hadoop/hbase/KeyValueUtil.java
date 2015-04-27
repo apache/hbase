@@ -525,7 +525,7 @@ public class KeyValueUtil {
   /*************** misc **********************************/
   /**
    * @param cell
-   * @return <code>cell<code> if it is an instance of {@link KeyValue} else we will return a
+   * @return <code>cell</code> if it is an instance of {@link KeyValue} else we will return a
    * new {@link KeyValue} instance made from <code>cell</code>
    * @deprecated without any replacement.
    */

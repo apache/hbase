@@ -37,7 +37,7 @@ import org.apache.hadoop.util.StringUtils;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- * A pool of {@link HeapMemStoreLAB$Chunk} instances.
+ * A pool of {@link HeapMemStoreLAB.Chunk} instances.
  * 
  * MemStoreChunkPool caches a number of retired chunks for reusing, it could
  * decrease allocating bytes when writing, thereby optimizing the garbage

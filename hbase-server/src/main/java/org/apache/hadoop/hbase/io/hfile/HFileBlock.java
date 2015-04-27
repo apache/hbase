@@ -67,16 +67,16 @@ import com.google.common.base.Preconditions;
  * <li>Uncompressed block size, excluding header, excluding checksum (4 bytes)
  * <li>The offset of the previous block of the same type (8 bytes). This is
  * used to be able to navigate to the previous block without going to the block
- * <li>For minorVersions >=1, the ordinal describing checksum type (1 byte)
- * <li>For minorVersions >=1, the number of data bytes/checksum chunk (4 bytes)
- * <li>For minorVersions >=1, the size of data on disk, including header,
+ * <li>For minorVersions &gt;=1, the ordinal describing checksum type (1 byte)
+ * <li>For minorVersions &gt;=1, the number of data bytes/checksum chunk (4 bytes)
+ * <li>For minorVersions &gt;=1, the size of data on disk, including header,
  * excluding checksums (4 bytes)
  * </ul>
  * </li>
  * <li>Raw/Compressed/Encrypted/Encoded data. The compression algorithm is the
  * same for all the blocks in the {@link HFile}, similarly to what was done in
  * version 1.
- * <li>For minorVersions >=1, a series of 4 byte checksums, one each for
+ * <li>For minorVersions &gt;=1, a series of 4 byte checksums, one each for
  * the number of bytes specified by bytesPerChecksum.
  * </ul>
  * </ul>
@@ -1240,8 +1240,8 @@ public class HFileBlock implements Cacheable {
 
     /**
      * Creates a block iterator over the given portion of the {@link HFile}.
-     * The iterator returns blocks starting with offset such that offset <=
-     * startOffset < endOffset. Returned blocks are always unpacked.
+     * The iterator returns blocks starting with offset such that offset &lt;=
+     * startOffset &lt; endOffset. Returned blocks are always unpacked.
      *
      * @param startOffset the offset of the block to start iteration with
      * @param endOffset the offset to end iteration at (exclusive)

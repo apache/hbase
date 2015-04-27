@@ -50,9 +50,9 @@ import com.google.protobuf.ByteString;
  * the return is a set of sub-procedures or null in case the procedure doesn't
  * have sub-procedures. Once the sub-procedures are successfully completed
  * the execute() method is called again, you should think at it as a stack:
- *  -> step 1
- *  ---> step 2
- *  -> step 1
+ *  -&gt; step 1
+ *  ---&gt; step 2
+ *  -&gt; step 1
  *
  * rollback() is called when the procedure or one of the sub-procedures is failed.
  * the rollback step is supposed to cleanup the resources created during the

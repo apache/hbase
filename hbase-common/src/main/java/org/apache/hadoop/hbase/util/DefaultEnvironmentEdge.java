@@ -27,8 +27,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class DefaultEnvironmentEdge implements EnvironmentEdge {
   /**
    * {@inheritDoc}
-   * <p/>
+   * <p>
    * This implementation returns {@link System#currentTimeMillis()}
+   * </p>
    */
   @Override
   public long currentTime() {

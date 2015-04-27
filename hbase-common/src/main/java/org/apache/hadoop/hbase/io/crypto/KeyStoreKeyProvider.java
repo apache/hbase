@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * on the local filesystem. It is configured with a URI passed in as a String
  * to init(). The URI should have the form:
  * <p>
- * <pre>    scheme://path?option1=value1&option2=value2</pre>
+ * <pre>    scheme://path?option1=value1&amp;option2=value2</pre>
  * <p>
  * <i>scheme</i> can be either "jks" or "jceks", specifying the file based
  * providers shipped with every JRE. The latter is the certificate store for

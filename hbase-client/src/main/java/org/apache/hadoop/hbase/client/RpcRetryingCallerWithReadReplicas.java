@@ -177,6 +177,7 @@ public class RpcRetryingCallerWithReadReplicas {
   }
 
   /**
+   * <p>
    * Algo:
    * - we put the query into the execution pool.
    * - after x ms, if we don't have a result, we add the queries for the secondary replicas
@@ -189,7 +190,7 @@ public class RpcRetryingCallerWithReadReplicas {
    * - a call is a thread. Let's not multiply the number of thread by the number of replicas.
    * Server side, if we can cancel when it's still in the handler pool, it's much better, as a call
    * can take some i/o.
-   * <p/>
+   * </p>
    * Globally, the number of retries, timeout and so on still applies, but it's per replica,
    * not global. We continue until all retries are done, or all timeouts are exceeded.
    */

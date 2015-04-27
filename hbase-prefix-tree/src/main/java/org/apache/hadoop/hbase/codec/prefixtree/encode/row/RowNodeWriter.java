@@ -188,8 +188,9 @@ public class RowNodeWriter{
    * offsets into the timestamp/column data structures that are written in the middle of the block.
    * We use {@link UFIntTool} to encode these indexes/offsets to allow random access during a binary
    * search of a particular column/timestamp combination.
-   * <p/>
+   * <p>
    * Branch nodes will not have any data in these sections.
+   * </p>
    */
 
   protected void writeFamilyNodeOffsets(OutputStream os) throws IOException {

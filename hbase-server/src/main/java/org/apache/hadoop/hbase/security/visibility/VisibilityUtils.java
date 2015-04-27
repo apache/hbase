@@ -120,7 +120,7 @@ public class VisibilityUtils {
 
   /**
    * Reads back from the zookeeper. The data read here is of the form written by
-   * writeToZooKeeper(Map<byte[], Integer> entries).
+   * writeToZooKeeper(Map&lt;byte[], Integer&gt; entries).
    * 
    * @param data
    * @return Labels and their ordinal details

@@ -62,7 +62,7 @@ when the corresponding events happen. The master transitions regions
 through the following states:
 <p>
 &nbsp;&nbsp;&nbsp;
-unassigned -> pendingOpen -> open -> pendingClose -> closed.
+unassigned -&gt; pendingOpen -&gt; open -&gt; pendingClose -7gt; closed.
 <p>
 Coprocessors have opportunity to intercept and handle events in
 pendingOpen, open, and pendingClose states.
@@ -75,7 +75,7 @@ can piggyback or fail this process.
 <p>
 <ul>
   <li>preOpen, postOpen: Called before and after the region is reported as
- online to the master.</li><p>
+ online to the master.</li>
 </ul>
 <p>
 <h3>Open</h3>
@@ -85,9 +85,9 @@ split, etc.). Coprocessors can piggyback administrative actions via:
 <p>
 <ul>
   <li>preFlush, postFlush: Called before and after the memstore is flushed
-  into a new store file.</li><p>
-  <li>preCompact, postCompact: Called before and after compaction.</li><p>
-  <li>preSplit, postSplit: Called after the region is split.</li><p>
+  into a new store file.</li>
+  <li>preCompact, postCompact: Called before and after compaction.</li>
+  <li>preSplit, postSplit: Called after the region is split.</li>
 </ul>
 <p>
 <h3>PendingClose</h3>
@@ -99,7 +99,7 @@ an indication to this effect will be passed as an argument.
 <p>
 <ul>
   <li>preClose and postClose: Called before and after the region is
-  reported as closed to the master.</li><p>
+  reported as closed to the master.</li>
 </ul>
 <p>
 
@@ -109,23 +109,23 @@ observe and mediate client actions on the region:
 <p>
 <ul>
   <li>preGet, postGet: Called before and after a client makes a Get
-  request.</li><p>
+  request.</li>
   <li>preExists, postExists: Called before and after the client tests
-  for existence using a Get.</li><p>
+  for existence using a Get.</li>
   <li>prePut and postPut: Called before and after the client stores a value.
-  </li><p>
+  </li>
   <li>preDelete and postDelete: Called before and after the client
-  deletes a value.</li><p>
+  deletes a value.</li>
   <li>preScannerOpen postScannerOpen: Called before and after the client
-  opens a new scanner.</li><p>
+  opens a new scanner.</li>
   <li>preScannerNext, postScannerNext: Called before and after the client
-  asks for the next row on a scanner.</li><p>
+  asks for the next row on a scanner.</li>
   <li>preScannerClose, postScannerClose: Called before and after the client
-  closes a scanner.</li><p>
+  closes a scanner.</li>
   <li>preCheckAndPut, postCheckAndPut: Called before and after the client
-  calls checkAndPut().</li><p>
+  calls checkAndPut().</li>
   <li>preCheckAndDelete, postCheckAndDelete: Called before and after the client
-  calls checkAndDelete().</li><p>
+  calls checkAndDelete().</li>
 </ul>
 You can also extend abstract class <code>BaseRegionObserverCoprocessor</code>
 which
@@ -245,7 +245,7 @@ recognize and load it.
 </div>
 <p>
 &lt;path&gt; must point to a jar, can be on any filesystem supported by the
-Hadoop </code>FileSystem</code> object.
+Hadoop <code>FileSystem</code> object.
 <p>
 &lt;class&gt; is the coprocessor implementation class. A jar can contain
 more than one coprocessor implementation, but only one can be specified
@@ -270,7 +270,7 @@ policy implementations, perhaps) ahead of observers.
     ":" + Coprocessor.Priority.USER);
   HBaseAdmin admin = new HBaseAdmin(this.conf);
   admin.createTable(htd);
-
+</pre></blockquote>
 <h3>Chain of RegionObservers</h3>
 As described above, multiple coprocessors can be loaded at one region at the
 same time. In case of RegionObserver, you can have more than one
@@ -278,8 +278,6 @@ RegionObservers register to one same hook point, i.e, preGet(), etc.
 When a region reach the
 hook point, the framework will invoke each registered RegionObserver by the
 order of assigned priority.
-
-</pre></blockquote>
 </div>
 
 */

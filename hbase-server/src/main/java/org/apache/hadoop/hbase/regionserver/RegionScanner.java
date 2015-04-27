@@ -91,7 +91,7 @@ public interface RegionScanner extends InternalScanner {
    * Upon returning from this method, the {@link ScannerContext} will contain information about the
    * progress made towards the limits. This is a special internal method to be called from
    * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
-   * close a region operation, an synchronize on the scanner object. Example: <code><pre>
+   * close a region operation, an synchronize on the scanner object. Example: <code>
    * HRegion region = ...;
    * RegionScanner scanner = ...
    * MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
@@ -105,7 +105,7 @@ public interface RegionScanner extends InternalScanner {
    * } finally {
    *   region.closeRegionOperation();
    * }
-   * </pre></code>
+   * </code>
    * @param result return output array
    * @param scannerContext The {@link ScannerContext} instance encapsulating all limits that should
    *          be tracked during calls to this method. The progress towards these limits can be

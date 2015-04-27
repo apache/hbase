@@ -206,7 +206,7 @@ public class HeapMemoryManager {
   }
 
   /**
-   * @return heap occupancy percentage, 0 <= n <= 1
+   * @return heap occupancy percentage, 0 &lt;= n &lt;= 1
    */
   public float getHeapOccupancyPercent() {
     return this.heapOccupancyPercent;

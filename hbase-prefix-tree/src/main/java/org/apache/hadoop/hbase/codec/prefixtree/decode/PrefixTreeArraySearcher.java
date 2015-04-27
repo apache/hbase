@@ -28,10 +28,11 @@ import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
 import com.google.common.primitives.UnsignedBytes;
 
 /**
+ * <p>
  * Searcher extends the capabilities of the Scanner + ReversibleScanner to add the ability to
  * position itself on a requested Cell without scanning through cells before it. The PrefixTree is
  * set up to be a Trie of rows, so finding a particular row is extremely cheap.
- * <p/>
+ * </p>
  * Once it finds the row, it does a binary search through the cells inside the row, which is not as
  * fast as the trie search, but faster than iterating through every cell like existing block
  * formats
@@ -309,8 +310,8 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
   /****************** complete seek when token mismatch ******************/
 
   /**
-   * @param searcherIsAfterInputKey <0: input key is before the searcher's position<br/>
-   *          >0: input key is after the searcher's position
+   * @param searcherIsAfterInputKey &lt;0: input key is before the searcher's position<br/>
+   *          &gt;0: input key is after the searcher's position
    */
   protected CellScannerPosition fixRowTokenMissReverse(int searcherIsAfterInputKey) {
     if (searcherIsAfterInputKey < 0) {//searcher position is after the input key, so back up
@@ -337,8 +338,8 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
   }
 
   /**
-   * @param searcherIsAfterInputKey <0: input key is before the searcher's position<br/>
-   *                   >0: input key is after the searcher's position
+   * @param searcherIsAfterInputKey &lt;0: input key is before the searcher's position<br>
+   *                   &gt;0: input key is after the searcher's position
    */
   protected CellScannerPosition fixRowTokenMissForward(int searcherIsAfterInputKey) {
     if (searcherIsAfterInputKey < 0) {//searcher position is after the input key

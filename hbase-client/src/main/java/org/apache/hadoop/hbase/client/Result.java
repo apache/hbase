@@ -216,7 +216,7 @@ public class Result implements CellScannable, CellScanner {
   /**
    * Return the array of Cells backing this Result instance.
    *
-   * The array is sorted from smallest -> largest using the
+   * The array is sorted from smallest -&gt; largest using the
    * {@link KeyValue#COMPARATOR}.
    *
    * The array only contains what your Get or Scan specifies and no more.
@@ -673,7 +673,7 @@ public class Result implements CellScannable, CellScanner {
    * Map of families to all versions of its qualifiers and values.
    * <p>
    * Returns a three level Map of the form:
-   * <code>Map&amp;family,Map&lt;qualifier,Map&lt;timestamp,value>>></code>
+   * <code>Map&amp;family,Map&lt;qualifier,Map&lt;timestamp,value&gt;&gt;&gt;</code>
    * <p>
    * Note: All other map returning methods make use of this map internally.
    * @return map from families to qualifiers to versions
@@ -717,7 +717,7 @@ public class Result implements CellScannable, CellScanner {
   /**
    * Map of families to their most recent qualifiers and values.
    * <p>
-   * Returns a two level Map of the form: <code>Map&amp;family,Map&lt;qualifier,value>></code>
+   * Returns a two level Map of the form: <code>Map&amp;family,Map&lt;qualifier,value&gt;&gt;</code>
    * <p>
    * The most recent version of each qualifier will be used.
    * @return map from families to qualifiers and value
@@ -749,7 +749,7 @@ public class Result implements CellScannable, CellScanner {
   /**
    * Map of qualifiers to values.
    * <p>
-   * Returns a Map of the form: <code>Map&lt;qualifier,value></code>
+   * Returns a Map of the form: <code>Map&lt;qualifier,value&gt;</code>
    * @param family column family to get
    * @return map of qualifiers to values
    */

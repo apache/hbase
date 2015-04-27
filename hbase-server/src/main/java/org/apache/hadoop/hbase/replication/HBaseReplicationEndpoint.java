@@ -160,7 +160,6 @@ public abstract class HBaseReplicationEndpoint extends BaseReplicationEndpoint
    * Get a list of all the addresses of all the region servers
    * for this peer cluster
    * @return list of addresses
-   * @throws KeeperException
    */
   // Synchronize peer cluster connection attempts to avoid races and rate
   // limit connections when multiple replication sources try to connect to

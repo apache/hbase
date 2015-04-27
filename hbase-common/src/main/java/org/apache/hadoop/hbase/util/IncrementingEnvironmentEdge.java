@@ -45,9 +45,10 @@ public class IncrementingEnvironmentEdge implements EnvironmentEdge {
 
   /**
    * {@inheritDoc}
-   * <p/>
+   * <p>
    * This method increments a known value for the current time each time this
    * method is called. The first value is 1.
+   * </p>
    */
   @Override
   public synchronized long currentTime() {

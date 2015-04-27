@@ -30,15 +30,17 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
  * <p>
  * Currently there are two different types of Store/Family-level queries.
  * <ul><li>{@link ExplicitColumnTracker} is used when the query specifies
- * one or more column qualifiers to return in the family.
- * <ul><li>{@link ScanWildcardColumnTracker} is used when no columns are
- * explicitly specified.
+ * one or more column qualifiers to return in the family.</li>
+ * <li>{@link ScanWildcardColumnTracker} is used when no columns are
+ * explicitly specified.</li>
+ * </ul>
  * <p>
  * This class is utilized by {@link ScanQueryMatcher} mainly through two methods:
  * <ul><li>{@link #checkColumn} is called when a Put satisfies all other
- * conditions of the query.
- * <ul><li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
- * believes that the current column should be skipped (by timestamp, filter etc.)
+ * conditions of the query.</li>
+ * <li>{@link #getNextRowOrNextColumn} is called whenever ScanQueryMatcher
+ * believes that the current column should be skipped (by timestamp, filter etc.)</li>
+ * </ul>
  * <p>
  * These two methods returns a 
  * {@link org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode}

@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Represents an interval of version timestamps.
  * <p>
- * Evaluated according to minStamp <= timestamp < maxStamp
+ * Evaluated according to minStamp &lt;= timestamp &lt; maxStamp
  * or [minStamp,maxStamp) in interval notation.
  * <p>
  * Only used internally; should not be accessed directly by clients.

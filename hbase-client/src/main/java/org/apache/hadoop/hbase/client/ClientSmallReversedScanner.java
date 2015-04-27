@@ -39,10 +39,11 @@ import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 /**
+ * <p>
  * Client scanner for small reversed scan. Generally, only one RPC is called to fetch the
  * scan results, unless the results cross multiple regions or the row count of
  * results exceed the caching.
- * <p/>
+ * </p>
  * For small scan, it will get better performance than {@link ReversedClientScanner}
  */
 @InterfaceAudience.Private

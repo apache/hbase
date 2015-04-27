@@ -26,9 +26,10 @@ import org.apache.hadoop.hbase.Cell;
  * during the course of a Get or Scan operation.
  * <p>
  * This class is utilized through three methods:
- * <ul><li>{@link #add} when encountering a Delete
- * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted
- * <li>{@link #update} when reaching the end of a StoreFile
+ * <ul><li>{@link #add} when encountering a Delete</li>
+ * <li>{@link #isDeleted} when checking if a Put KeyValue has been deleted</li>
+ * <li>{@link #update} when reaching the end of a StoreFile</li>
+ * </ul>
  */
 @InterfaceAudience.Private
 public interface DeleteTracker {

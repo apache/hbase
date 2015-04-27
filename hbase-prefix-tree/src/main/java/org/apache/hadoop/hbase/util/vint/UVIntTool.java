@@ -42,7 +42,7 @@ public class UVIntTool {
   public static final byte[]
     MAX_VALUE_BYTES = new byte[] { -1, -1, -1, -1, 7 };
 
-  /********************* int -> bytes **************************/
+  /********************* int -&gt; bytes **************************/
 
   public static int numBytes(int in) {
     if (in == 0) {
@@ -79,7 +79,7 @@ public class UVIntTool {
     return numBytes;
   }
 
-  /******************** bytes -> int **************************/
+  /******************** bytes -&gt; int **************************/
 
   public static int getInt(byte[] bytes) {
     return getInt(bytes, 0);

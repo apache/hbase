@@ -54,7 +54,7 @@ import com.google.common.base.Preconditions;
 public class RegionStateStore {
   private static final Log LOG = LogFactory.getLog(RegionStateStore.class);
 
-  /** The delimiter for meta columns for replicaIds > 0 */
+  /** The delimiter for meta columns for replicaIds &gt; 0 */
   protected static final char META_REPLICA_ID_DELIMITER = '_';
 
   private volatile Region metaRegion;

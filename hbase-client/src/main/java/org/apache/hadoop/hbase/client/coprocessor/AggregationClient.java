@@ -65,16 +65,17 @@ import com.google.protobuf.Message;
  * <p>
  * This will serve as the client side handler for invoking the aggregate
  * functions.
- * <ul>
  * For all aggregate functions,
- * <li>start row < end row is an essential condition (if they are not
+ * <ul>
+ * <li>start row &lt; end row is an essential condition (if they are not
  * {@link HConstants#EMPTY_BYTE_ARRAY})
  * <li>Column family can't be null. In case where multiple families are
  * provided, an IOException will be thrown. An optional column qualifier can
- * also be defined.
+ * also be defined.</li>
  * <li>For methods to find maximum, minimum, sum, rowcount, it returns the
  * parameter type. For average and std, it returns a double value. For row
- * count, it returns a long value.
+ * count, it returns a long value.</li>
+ * </ul>
  * <p>Call {@link #close()} when done.
  */
 @InterfaceAudience.Private
@@ -110,10 +111,10 @@ public class AggregationClient implements Closeable {
    * @param tableName
    * @param ci
    * @param scan
-   * @return max val <R>
+   * @return max val &lt;R&gt;
    * @throws Throwable
    *           The caller is supposed to handle the exception as they are thrown
-   *           & propagated to it.
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R max(
       final TableName tableName, final ColumnInterpreter<R, S, P, Q, T> ci, final Scan scan)
@@ -130,10 +131,10 @@ public class AggregationClient implements Closeable {
    * @param table
    * @param ci
    * @param scan
-   * @return max val <R>
+   * @return max val &lt;&gt;
    * @throws Throwable
    *           The caller is supposed to handle the exception as they are thrown
-   *           & propagated to it.
+   *           &amp; propagated to it.
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
   R max(final Table table, final ColumnInterpreter<R, S, P, Q, T> ci,
@@ -201,7 +202,7 @@ public class AggregationClient implements Closeable {
    * @param tableName
    * @param ci
    * @param scan
-   * @return min val <R>
+   * @return min val &lt;R&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> R min(
@@ -219,7 +220,7 @@ public class AggregationClient implements Closeable {
    * @param table
    * @param ci
    * @param scan
-   * @return min val <R>
+   * @return min val &lt;R&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
@@ -271,11 +272,11 @@ public class AggregationClient implements Closeable {
    * optimised the operation. In case qualifier is provided, I can't use the
    * filter as it may set the flag to skip to next row, but the value read is
    * not of the given filter: in this case, this particular row will not be
-   * counted ==> an error.
+   * counted ==&gt; an error.
    * @param tableName
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> long rowCount(
@@ -292,11 +293,11 @@ public class AggregationClient implements Closeable {
    * optimised the operation. In case qualifier is provided, I can't use the
    * filter as it may set the flag to skip to next row, but the value read is
    * not of the given filter: in this case, this particular row will not be
-   * counted ==> an error.
+   * counted ==&gt; an error.
    * @param table
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
@@ -343,7 +344,7 @@ public class AggregationClient implements Closeable {
    * @param tableName
    * @param ci
    * @param scan
-   * @return sum <S>
+   * @return sum &lt;S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> S sum(
@@ -360,7 +361,7 @@ public class AggregationClient implements Closeable {
    * @param table
    * @param ci
    * @param scan
-   * @return sum <S>
+   * @return sum &lt;S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
@@ -487,7 +488,7 @@ public class AggregationClient implements Closeable {
    * @param tableName
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
@@ -506,7 +507,7 @@ public class AggregationClient implements Closeable {
    * @param table
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double avg(
@@ -595,7 +596,7 @@ public class AggregationClient implements Closeable {
    * @param tableName
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message>
@@ -615,7 +616,7 @@ public class AggregationClient implements Closeable {
    * @param table
    * @param ci
    * @param scan
-   * @return <R, S>
+   * @return &lt;R, S&gt;
    * @throws Throwable
    */
   public <R, S, P extends Message, Q extends Message, T extends Message> double std(

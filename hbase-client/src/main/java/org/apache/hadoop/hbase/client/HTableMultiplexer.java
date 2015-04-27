@@ -121,7 +121,6 @@ public class HTableMultiplexer {
    * @param tableName
    * @param put
    * @return true if the request can be accepted by its corresponding buffer queue.
-   * @throws IOException
    */
   public boolean put(TableName tableName, final Put put) {
     return put(tableName, put, this.retryNum);
@@ -133,7 +132,6 @@ public class HTableMultiplexer {
    * @param tableName
    * @param puts
    * @return the list of puts which could not be queued
-   * @throws IOException
    */
   public List<Put> put(TableName tableName, final List<Put> puts) {
     if (puts == null)
@@ -169,7 +167,6 @@ public class HTableMultiplexer {
    * retried before dropping the request.
    * Return false if the queue is already full.
    * @return true if the request can be accepted by its corresponding buffer queue.
-   * @throws IOException
    */
   public boolean put(final TableName tableName, final Put put, int retry) {
     if (retry <= 0) {

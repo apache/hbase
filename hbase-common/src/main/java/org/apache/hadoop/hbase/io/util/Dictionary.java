@@ -45,7 +45,7 @@ public interface Dictionary {
    * 
    * @param data the byte array that we're looking up
    * @param offset Offset into <code>data</code> to add to Dictionary.
-   * @param length Length beyond <code>offset</code> that comprises entry; must be > 0.
+   * @param length Length beyond <code>offset</code> that comprises entry; must be &gt; 0.
    * @return the index of the entry, or {@link #NOT_IN_DICTIONARY} if not found
    */
   short findEntry(byte[] data, int offset, int length);
@@ -59,7 +59,7 @@ public interface Dictionary {
    * 
    * @param data the entry to add
    * @param offset Offset into <code>data</code> to add to Dictionary.
-   * @param length Length beyond <code>offset</code> that comprises entry; must be > 0.
+   * @param length Length beyond <code>offset</code> that comprises entry; must be &gt; 0.
    * @return the index of the entry
    */
 

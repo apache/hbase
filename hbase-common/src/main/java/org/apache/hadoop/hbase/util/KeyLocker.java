@@ -36,8 +36,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * A utility class to manage a set of locks. Each lock is identified by a String which serves
  * as a key. Typical usage is: <p>
  * class Example{
- * private final static KeyLocker<String> locker = new Locker<String>();
- * <p/>
+ * private final static KeyLocker&lt;String&gt; locker = new Locker&lt;String&gt;();
+ * </p>
+ * <p>
  * public void foo(String s){
  * Lock lock = locker.acquireLock(s);
  * try {

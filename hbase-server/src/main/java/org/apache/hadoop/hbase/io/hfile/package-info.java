@@ -37,7 +37,7 @@
  * (roughly because GC is less). See Nick Dimiduk's
  * <a href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</a> for some numbers.
  *
- * <h1>Enabling {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}</h2>
+ * <h1>Enabling {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}</h1>
  * See the HBase Reference Guide <a href="http://hbase.apache.org/book.html#enable.bucketcache">Enable BucketCache</a>.
  *
  */

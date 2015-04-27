@@ -31,11 +31,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 /**
  * Implementation of Filter interface that limits results to a specific page
- * size. It terminates scanning once the number of filter-passed rows is >
+ * size. It terminates scanning once the number of filter-passed rows is &gt;
  * the given page size.
  * <p>
  * Note that this filter cannot guarantee that the number of results returned
- * to a client are <= page size. This is because the filter is applied
+ * to a client are &lt;= page size. This is because the filter is applied
  * separately on different region servers. It does however optimize the scan of
  * individual HRegions by making sure that the page size is never exceeded
  * locally.

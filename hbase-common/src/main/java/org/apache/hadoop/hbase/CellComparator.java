@@ -56,7 +56,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @param b
    * @param ignoreSequenceid True if we are to compare the key portion only and ignore
    * the sequenceid. Set to false to compare key and consider sequenceid.
-   * @return 0 if equal, -1 if a < b, and +1 if a > b.
+   * @return 0 if equal, -1 if a &lt; b, and +1 if a &gt; b.
    */
   public static int compare(final Cell a, final Cell b, boolean ignoreSequenceid) {
     // row

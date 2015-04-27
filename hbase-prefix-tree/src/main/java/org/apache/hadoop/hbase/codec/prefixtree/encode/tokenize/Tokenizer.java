@@ -31,10 +31,12 @@ import com.google.common.collect.Lists;
 
 /**
  * Data structure used in the first stage of PrefixTree encoding:
+ * <ul>
  * <li>accepts a sorted stream of ByteRanges
  * <li>splits them into a set of tokens, each held by a {@link TokenizerNode}
  * <li>connects the TokenizerNodes via standard java references
  * <li>keeps a pool of TokenizerNodes and a reusable byte[] for holding all token content
+ * </ul>
  * <p><br>
  * Mainly used for turning Cell rowKeys into a trie, but also used for family and qualifier
  * encoding.

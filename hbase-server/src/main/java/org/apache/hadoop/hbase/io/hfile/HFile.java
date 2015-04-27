@@ -118,11 +118,12 @@ import com.google.common.base.Preconditions;
  * File is made of data blocks followed by meta data blocks (if any), a fileinfo
  * block, data block index, meta data block index, and a fixed size trailer
  * which records the offsets at which file changes content type.
- * <pre>&lt;data blocks>&lt;meta blocks>&lt;fileinfo>&lt;data index>&lt;meta index>&lt;trailer></pre>
+ * <pre>&lt;data blocks&gt;&lt;meta blocks&gt;&lt;fileinfo&gt;&lt;
+ * data index&gt;&lt;meta index&gt;&lt;trailer&gt;</pre>
  * Each block has a bit of magic at its start.  Block are comprised of
  * key/values.  In data blocks, they are both byte arrays.  Metadata blocks are
  * a String key and a byte array value.  An empty file looks like this:
- * <pre>&lt;fileinfo>&lt;trailer></pre>.  That is, there are not data nor meta
+ * <pre>&lt;fileinfo&gt;&lt;trailer&gt;</pre>.  That is, there are not data nor meta
  * blocks present.
  * <p>
  * TODO: Do scanners need to be able to take a start and end row?

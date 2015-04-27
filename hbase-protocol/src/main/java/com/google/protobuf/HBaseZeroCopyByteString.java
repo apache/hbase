@@ -37,6 +37,8 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
 
   /**
    * Wraps a byte array in a {@link ByteString} without copying it.
+   * @param array array to be wrapped
+   * @return wrapped array
    */
   public static ByteString wrap(final byte[] array) {
     return new LiteralByteString(array);
@@ -44,6 +46,10 @@ public final class HBaseZeroCopyByteString extends LiteralByteString {
 
   /**
    * Wraps a subset of a byte array in a {@link ByteString} without copying it.
+   * @param array array to be wrapped
+   * @param offset from
+   * @param length length
+   * @return wrapped array
    */
   public static ByteString wrap(final byte[] array, int offset, int length) {
     return new BoundedByteString(array, offset, length);

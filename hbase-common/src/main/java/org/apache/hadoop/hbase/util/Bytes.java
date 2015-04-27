@@ -1186,7 +1186,7 @@ public class Bytes {
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
    * @return deserialized long from buffer.
-   * @deprecated Use {@link #readAsVLong(byte[], int)} instead.
+   * @deprecated Use {@link #readAsVLong(byte[],int)} instead.
    */
   @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
@@ -1218,7 +1218,7 @@ public class Bytes {
   /**
    * @param left left operand
    * @param right right operand
-   * @return 0 if equal, < 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(final byte [] left, final byte [] right) {
     return LexicographicalComparerHolder.BEST_COMPARER.
@@ -1234,7 +1234,7 @@ public class Bytes {
    * @param offset2 Where to start comparing in the right buffer
    * @param length1 How much to compare from the left buffer
    * @param length2 How much to compare from the right buffer
-   * @return 0 if equal, < 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(byte[] buffer1, int offset1, int length1,
       byte[] buffer2, int offset2, int length2) {
@@ -1963,7 +1963,7 @@ public class Bytes {
    * Bytewise binary increment/deincrement of long contained in byte array
    * on given amount.
    *
-   * @param value - array of bytes containing long (length <= SIZEOF_LONG)
+   * @param value - array of bytes containing long (length &lt;= SIZEOF_LONG)
    * @param amount value will be incremented on (deincremented if negative)
    * @return array of bytes containing incremented long (length == SIZEOF_LONG)
    */

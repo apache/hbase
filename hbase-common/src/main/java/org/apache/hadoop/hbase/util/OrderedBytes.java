@@ -40,7 +40,8 @@ import com.google.common.annotations.VisibleForTesting;
  * Each value is encoded as one or more bytes. The first byte of the encoding,
  * its meaning, and a terse description of the bytes that follow is given by
  * the following table:
- * <table>
+ * </p>
+ * <table summary="Encodings">
  * <tr><th>Content Type</th><th>Encoding</th></tr>
  * <tr><td>NULL</td><td>0x05</td></tr>
  * <tr><td>negative infinity</td><td>0x07</td></tr>
@@ -63,7 +64,6 @@ import com.google.common.annotations.VisibleForTesting;
  * <tr><td>variable length BLOB</td><td>0x35, B</td></tr>
  * <tr><td>byte-for-byte BLOB</td><td>0x36, X</td></tr>
  * </table>
- * </p>
  *
  * <h3>Null Encoding</h3>
  * <p>
@@ -258,8 +258,8 @@ import com.google.common.annotations.VisibleForTesting;
  * values are 5 bytes in length.
  * </p>
  * <p>
- * {@code OrderedBytes} encodings are heavily influenced by the <a href="
- * http://sqlite.org/src4/doc/trunk/www/key_encoding.wiki">SQLite4 Key
+ * {@code OrderedBytes} encodings are heavily influenced by the
+ * <a href="http://sqlite.org/src4/doc/trunk/www/key_encoding.wiki">SQLite4 Key
  * Encoding</a>. Slight deviations are make in the interest of order
  * correctness and user extensibility. Fixed-width {@code Long} and
  * {@link Double} encodings are based on implementations from the now defunct
@@ -1408,6 +1408,7 @@ public class OrderedBytes {
    * -Double.MIN_VALUE &lt; -0.0 &lt; +0.0; &lt; Double.MIN_VALUE &lt; ...
    * &lt; Double.MAX_VALUE &lt; Double.POSITIVE_INFINITY &lt; Double.NaN
    * </p>
+   * <p>
    * Floating point numbers are encoded as specified in IEEE 754. A 64-bit
    * double precision float consists of a sign bit, 11-bit unsigned exponent
    * encoded in offset-1023 notation, and a 52-bit significand. The format is

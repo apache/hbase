@@ -127,6 +127,7 @@ import com.google.protobuf.Service;
  * <p>
  * {@code AccessController} performs authorization checks for HBase operations
  * based on:
+ * </p>
  * <ul>
  *   <li>the identity of the user performing the operation</li>
  *   <li>the scope over which the operation is performed, in increasing
@@ -134,6 +135,7 @@ import com.google.protobuf.Service;
  *   <li>the type of action being performed (as mapped to
  *   {@link Permission.Action} values)</li>
  * </ul>
+ * <p>
  * If the authorization check fails, an {@link AccessDeniedException}
  * will be thrown for the operation.
  * </p>

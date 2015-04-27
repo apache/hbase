@@ -37,7 +37,7 @@ public class Addressing {
   public static final String HOSTNAME_PORT_SEPARATOR = ":";
 
   /**
-   * @param hostAndPort Formatted as <code>&lt;hostname> ':' &lt;port></code>
+   * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return An InetSocketInstance
    */
   public static InetSocketAddress createInetSocketAddressFromHostAndPortStr(
@@ -50,7 +50,7 @@ public class Addressing {
    * @param port Server port
    * @return Returns a concatenation of <code>hostname</code> and
    * <code>port</code> in following
-   * form: <code>&lt;hostname> ':' &lt;port></code>.  For example, if hostname
+   * form: <code>&lt;hostname&gt; ':' &lt;port&gt;</code>.  For example, if hostname
    * is <code>example.org</code> and port is 1234, this method will return
    * <code>example.org:1234</code>
    */
@@ -59,7 +59,7 @@ public class Addressing {
   }
 
   /**
-   * @param hostAndPort Formatted as <code>&lt;hostname> ':' &lt;port></code>
+   * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return The hostname portion of <code>hostAndPort</code>
    */
   public static String parseHostname(final String hostAndPort) {
@@ -71,7 +71,7 @@ public class Addressing {
   }
 
   /**
-   * @param hostAndPort Formatted as <code>&lt;hostname> ':' &lt;port></code>
+   * @param hostAndPort Formatted as <code>&lt;hostname&gt; ':' &lt;port&gt;</code>
    * @return The port portion of <code>hostAndPort</code>
    */
   public static int parsePort(final String hostAndPort) {

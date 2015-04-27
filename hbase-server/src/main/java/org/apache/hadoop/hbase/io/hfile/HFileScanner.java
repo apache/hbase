@@ -44,11 +44,11 @@ public interface HFileScanner {
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
    * @param key Key to find.
-   * @return -1, if key < k[0], no position;
+   * @return -1, if key &lt; k[0], no position;
    * 0, such that k[i] = key and scanner is left in position i; and
-   * 1, such that k[i] < key, and scanner is left in position i.
+   * 1, such that k[i] &lt; key, and scanner is left in position i.
    * The scanner will position itself between k[i] and k[i+1] where
-   * k[i] < key <= k[i+1].
+   * k[i] &lt; key &lt;= k[i+1].
    * If there is no key k[i+1] greater than or equal to the input key, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
@@ -70,14 +70,14 @@ public interface HFileScanner {
    * <code>k[0] .. k[n]</code>, where there are n keys in the file after
    * current position of HFileScanner.
    * The scanner will position itself between k[i] and k[i+1] where
-   * k[i] < key <= k[i+1].
+   * k[i] &lt; key &lt;= k[i+1].
    * If there is no key k[i+1] greater than or equal to the input key, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
    * @param key Key to find (should be non-null)
-   * @return -1, if key < k[0], no position;
+   * @return -1, if key &lt; k[0], no position;
    * 0, such that k[i] = key and scanner is left in position i; and
-   * 1, such that k[i] < key, and scanner is left in position i.
+   * 1, such that k[i] &lt; key, and scanner is left in position i.
    * @throws IOException
    */
   @Deprecated
@@ -90,9 +90,9 @@ public interface HFileScanner {
    * Consider the key stream of all the keys in the file,
    * <code>k[0] .. k[n]</code>, where there are n keys in the file.
    * @param key Key to find
-   * @return false if key <= k[0] or true with scanner in position 'i' such
-   * that: k[i] < key.  Furthermore: there may be a k[i+1], such that
-   * k[i] < key <= k[i+1] but there may also NOT be a k[i+1], and next() will
+   * @return false if key &lt;= k[0] or true with scanner in position 'i' such
+   * that: k[i] &lt; key.  Furthermore: there may be a k[i+1], such that
+   * k[i] &lt; key &lt;= k[i+1] but there may also NOT be a k[i+1], and next() will
    * return false (EOF).
    * @throws IOException
    */

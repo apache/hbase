@@ -35,12 +35,12 @@ import com.google.common.collect.Lists;
  * Individual node in a Trie structure.  Each node is one of 3 types:
  * <li>Branch: an internal trie node that may have a token and must have multiple children, but does
  * not represent an actual input byte[], hence its numOccurrences is 0
- * <li>Leaf: a node with no children and where numOccurrences is >= 1.  It's token represents the
+ * <li>Leaf: a node with no children and where numOccurrences is &gt;= 1.  It's token represents the
  * last bytes in the input byte[]s.
  * <li>Nub: a combination of a branch and leaf.  Its token represents the last bytes of input
- * byte[]s and has numOccurrences >= 1, but it also has child nodes which represent input byte[]s
+ * byte[]s and has numOccurrences &gt;= 1, but it also has child nodes which represent input byte[]s
  * that add bytes to this nodes input byte[].
- * <br/><br/>
+ * <br><br>
  * Example inputs (numInputs=7):
  * 0: AAA
  * 1: AAA
@@ -49,13 +49,13 @@ import com.google.common.collect.Lists;
  * 4: AAB
  * 5: AABQQ
  * 6: AABQQ
- * <br/><br/>
+ * <br><br>
  * Resulting TokenizerNodes:
- * AA <- branch, numOccurrences=0, tokenStartOffset=0, token.length=2
- * A  <- leaf, numOccurrences=2, tokenStartOffset=2, token.length=1
- * B  <- nub, numOccurrences=3, tokenStartOffset=2, token.length=1
- * QQ <- leaf, numOccurrences=2, tokenStartOffset=3, token.length=2
- * <br/><br/>
+ * AA &lt;- branch, numOccurrences=0, tokenStartOffset=0, token.length=2
+ * A  &lt;- leaf, numOccurrences=2, tokenStartOffset=2, token.length=1
+ * B  &lt;- nub, numOccurrences=3, tokenStartOffset=2, token.length=1
+ * QQ &lt;- leaf, numOccurrences=2, tokenStartOffset=3, token.length=2
+ * <br><br>
  * numInputs == 7 == sum(numOccurrences) == 0 + 2 + 3 + 2
  */
 @InterfaceAudience.Private
@@ -236,13 +236,15 @@ public class TokenizerNode{
   /**
    * Called when we need to convert a leaf node into a branch with 2 leaves. Comments inside the
    * method assume we have token BAA starting at tokenStartOffset=0 and are adding BOO. The output
-   * will be 3 nodes:<br/>
-   * <li>1: B <- branch
-   * <li>2: AA <- leaf
-   * <li>3: OO <- leaf
+   * will be 3 nodes:<br>
+   * <ul>
+   * <li>1: B &lt;- branch
+   * <li>2: AA &lt;- leaf
+   * <li>3: OO &lt;- leaf
+   * </ul>
    *
-   * @param numTokenBytesToRetain => 1 (the B)
-   * @param bytes => BOO
+   * @param numTokenBytesToRetain =&gt; 1 (the B)
+   * @param bytes =&gt; BOO
    */
   protected void split(int numTokenBytesToRetain, final ByteRange bytes) {
     int childNodeDepth = nodeDepth;

@@ -63,18 +63,21 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>
  * KeyValue wraps a byte array and takes offsets and lengths into passed array at where to start
  * interpreting the content as KeyValue. The KeyValue format inside a byte array is:
- * <code>&lt;keylength> &lt;valuelength> &lt;key> &lt;value></code> Key is further decomposed as:
- * <code>&lt;rowlength> &lt;row> &lt;columnfamilylength> &lt;columnfamily> &lt;columnqualifier>
- * &lt;timestamp> &lt;keytype></code>
+ * <code>&lt;keylength&gt; &lt;valuelength&gt; &lt;key&gt; &lt;value&gt;</code>
+ * Key is further decomposed as:
+ * <code>&lt;rowlength&gt; &lt;row&gt; &lt;columnfamilylength&gt;
+ * &lt;columnfamily&gt; &lt;columnqualifier&gt;
+ * &lt;timestamp&gt; &lt;keytype&gt;</code>
  * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>, column family length maximum
- * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be <
+ * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be &lt;
  * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
  * {@link #COLUMN_FAMILY_DELIMITER}<br>
  * KeyValue can optionally contain Tags. When it contains tags, it is added in the byte array after
- * the value part. The format for this part is: <code>&lt;tagslength>&lt;tagsbytes></code>.
+ * the value part. The format for this part is: <code>&lt;tagslength&gt;&lt;tagsbytes&gt;</code>.
  * <code>tagslength</code> maximum is <code>Short.MAX_SIZE</code>. The <code>tagsbytes</code>
  * contain one or more tags where as each tag is of the form
- * <code>&lt;taglength>&lt;tagtype>&lt;tagbytes></code>.  <code>tagtype</code> is one byte and
+ * <code>&lt;taglength&gt;&lt;tagtype&gt;&lt;tagbytes&gt;</code>.
+ * <code>tagtype</code> is one byte and
  * <code>taglength</code> maximum is <code>Short.MAX_SIZE</code> and it includes 1 byte type length
  * and actual tag bytes length.
  */
@@ -1198,7 +1201,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * as JSON. Values are left out due to their tendency to be large. If needed,
    * they can be added manually.
    *
-   * @return the Map<String,?> containing data from this key
+   * @return the Map&lt;String,?&gt; containing data from this key
    */
   public Map<String, Object> toStringMap() {
     Map<String, Object> stringMap = new HashMap<String, Object>();
@@ -1913,7 +1916,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * Compares the only the user specified portion of a Key.  This is overridden by MetaComparator.
      * @param left
      * @param right
-     * @return 0 if equal, <0 if left smaller, >0 if right smaller
+     * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     protected int compareRowKey(final Cell left, final Cell right) {
       return CellComparator.compareRows(left, right);
@@ -1928,7 +1931,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param right
      * @param roffset
      * @param rlength
-     * @return  0 if equal, <0 if left smaller, >0 if right smaller
+     * @return  0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     public int compareFlatKey(byte[] left, int loffset, int llength,
         byte[] right, int roffset, int rlength) {
@@ -2040,7 +2043,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param right
      * @param roffset
      * @param rlength
-     * @return 0 if equal, <0 if left smaller, >0 if right smaller
+     * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     public int compareRows(byte [] left, int loffset, int llength,
         byte [] right, int roffset, int rlength) {
@@ -2089,7 +2092,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param right
      * @param roffset
      * @param rlength
-     * @return 0 if equal, <0 if left smaller, >0 if right smaller
+     * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
      */
     @Override // SamePrefixComparator
     public int compareIgnoringPrefix(int commonPrefix, byte[] left,
@@ -2327,9 +2330,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * This is a HFile block index key optimization.
      * @param leftKey
      * @param rightKey
-     * @return 0 if equal, <0 if left smaller, >0 if right smaller
-     * @deprecated Since 0.99.2; Use
-     *             {@link CellComparator#getMidpoint(KeyValue.KVComparator, Cell, Cell) instead}
+     * @return 0 if equal, &lt;0 if left smaller, &gt;0 if right smaller
+     * @deprecated Since 0.99.2;
      */
     @Deprecated
     public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {

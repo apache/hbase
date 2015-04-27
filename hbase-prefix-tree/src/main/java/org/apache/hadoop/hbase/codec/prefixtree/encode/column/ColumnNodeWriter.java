@@ -32,14 +32,17 @@ import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 
 /**
+ * <p>
  * Column nodes can be either family nodes or qualifier nodes, as both sections encode similarly.
  * The family and qualifier sections of the data block are made of 1 or more of these nodes.
- * <p/>
- * Each node is composed of 3 sections:<br/>
+ * </p>
+ * Each node is composed of 3 sections:<br>
+ * <ul>
  * <li>tokenLength: UVInt (normally 1 byte) indicating the number of token bytes
  * <li>token[]: the actual token bytes
  * <li>parentStartPosition: the offset of the next node from the start of the family or qualifier
  * section
+ * </ul>
  */
 @InterfaceAudience.Private
 public class ColumnNodeWriter{
