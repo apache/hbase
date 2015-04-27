@@ -284,6 +284,11 @@ public class CreateTableProcedure
 
   private void preCreate(final MasterProcedureEnv env)
       throws IOException, InterruptedException {
+    if (!getTableName().isSystemTable()) {
+      ProcedureSyncWait.getMasterQuotaManager(env)
+        .checkNamespaceTableAndRegionQuota(getTableName(), newRegions.size());
+    }
+
     final MasterCoprocessorHost cpHost = env.getMasterCoprocessorHost();
     if (cpHost != null) {
       final HRegionInfo[] regions = newRegions == null ? null :

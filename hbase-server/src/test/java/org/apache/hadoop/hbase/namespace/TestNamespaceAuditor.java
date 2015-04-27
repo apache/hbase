@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -100,6 +102,7 @@ public class TestNamespaceAuditor {
     UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       MasterSyncObserver.class.getName());
     Configuration conf = UTIL.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     conf.setClass("hbase.coprocessor.regionserver.classes", CPRegionServerObserver.class,
       RegionServerObserver.class);
@@ -470,6 +473,58 @@ public class TestNamespaceAuditor {
     htable.close();
   }
 
+  /*
+   * Create a table and make sure that the table creation fails after adding this table entry into
+   * namespace quota cache. Now correct the failure and recreate the table with same name.
+   * HBASE-13394
+   */
+  @Test(timeout = 180000)
+  public void testRecreateTableWithSameNameAfterFirstTimeFailure() throws Exception {
+    String nsp1 = prefix + "_testRecreateTable";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp1)
+            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "20")
+            .addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "1").build();
+    ADMIN.createNamespace(nspDesc);
+    final TableName tableOne = TableName.valueOf(nsp1 + TableName.NAMESPACE_DELIM + "table1");
+    byte[] columnFamily = Bytes.toBytes("info");
+    HTableDescriptor tableDescOne = new HTableDescriptor(tableOne);
+    tableDescOne.addFamily(new HColumnDescriptor(columnFamily));
+    MasterSyncObserver.throwExceptionInPreCreateTableHandler = true;
+    try {
+      try {
+        ADMIN.createTable(tableDescOne);
+        fail("Table " + tableOne.toString() + "creation should fail.");
+      } catch (Exception exp) {
+        LOG.error(exp);
+      }
+      assertFalse(ADMIN.tableExists(tableOne));
+
+      NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp1);
+      assertEquals("First table creation failed in namespace so number of tables in namespace "
+          + "should be 0.", 0, nstate.getTables().size());
+
+      MasterSyncObserver.throwExceptionInPreCreateTableHandler = false;
+      try {
+        ADMIN.createTable(tableDescOne);
+      } catch (Exception e) {
+        fail("Table " + tableOne.toString() + "creation should succeed.");
+        LOG.error(e);
+      }
+      assertTrue(ADMIN.tableExists(tableOne));
+      nstate = getNamespaceState(nsp1);
+      assertEquals("First table was created successfully so table size in namespace should "
+          + "be one now.", 1, nstate.getTables().size());
+    } finally {
+      MasterSyncObserver.throwExceptionInPreCreateTableHandler = false;
+      if (ADMIN.tableExists(tableOne)) {
+        ADMIN.disableTable(tableOne);
+        deleteTable(tableOne);
+      }
+      ADMIN.deleteNamespace(nsp1);
+    }
+  }
+
   private NamespaceTableAndRegionInfo getNamespaceState(String namespace) throws KeeperException,
       IOException {
     return getQuotaManager().getState(namespace);
@@ -569,6 +624,7 @@ public class TestNamespaceAuditor {
 
   public static class MasterSyncObserver extends BaseMasterObserver {
     volatile CountDownLatch tableDeletionLatch;
+    static boolean throwExceptionInPreCreateTableHandler;
 
     @Override
     public void preDeleteTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
@@ -581,6 +637,14 @@ public class TestNamespaceAuditor {
         final ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
         throws IOException {
       tableDeletionLatch.countDown();
+    }
+
+    @Override
+    public void preCreateTableHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      if (throwExceptionInPreCreateTableHandler) {
+        throw new IOException("Throw exception as it is demanded.");
+      }
     }
   }
 
