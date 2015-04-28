@@ -61,7 +61,7 @@ import com.google.common.base.Joiner;
 @RunWith(Parameterized.class)
 public class TestThriftServerCmdLine {
 
-  public static final Log LOG =
+  private static final Log LOG =
       LogFactory.getLog(TestThriftServerCmdLine.class);
 
   private final ImplType implType;

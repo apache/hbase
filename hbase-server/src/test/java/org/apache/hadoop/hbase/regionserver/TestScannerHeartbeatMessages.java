@@ -75,7 +75,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category(MediumTests.class)
 public class TestScannerHeartbeatMessages {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestScannerHeartbeatMessages.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

@@ -49,7 +49,7 @@ import org.apache.hadoop.metrics2.MetricsExecutor;
 class MetricsRegionServerWrapperImpl
     implements MetricsRegionServerWrapper {
 
-  public static final Log LOG = LogFactory.getLog(MetricsRegionServerWrapperImpl.class);
+  private static final Log LOG = LogFactory.getLog(MetricsRegionServerWrapperImpl.class);
 
   private final HRegionServer regionServer;
 

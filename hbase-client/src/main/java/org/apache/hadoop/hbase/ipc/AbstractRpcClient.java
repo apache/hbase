@@ -49,6 +49,7 @@ import java.net.SocketAddress;
  */
 @InterfaceAudience.Private
 public abstract class AbstractRpcClient implements RpcClient {
+  // Log level is being changed in tests
   public static final Log LOG = LogFactory.getLog(AbstractRpcClient.class);
 
   protected final Configuration conf;

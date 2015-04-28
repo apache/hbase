@@ -41,7 +41,7 @@ import static org.junit.Assert.*;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestCompressionTest {
-  static final Log LOG = LogFactory.getLog(TestCompressionTest.class);
+  private static final Log LOG = LogFactory.getLog(TestCompressionTest.class);
 
   @Test
   public void testExceptionCaching() {

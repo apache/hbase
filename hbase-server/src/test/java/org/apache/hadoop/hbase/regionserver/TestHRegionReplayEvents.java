@@ -101,7 +101,7 @@ import com.google.protobuf.ByteString;
 @Category(MediumTests.class)
 public class TestHRegionReplayEvents {
 
-  static final Log LOG = LogFactory.getLog(TestHRegion.class);
+  private static final Log LOG = LogFactory.getLog(TestHRegion.class);
   @Rule public TestName name = new TestName();
 
   private static HBaseTestingUtility TEST_UTIL;

@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class NamespaceStateManager {
 
-  private static Log LOG = LogFactory.getLog(NamespaceStateManager.class);
+  private static final Log LOG = LogFactory.getLog(NamespaceStateManager.class);
   private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
   private MasterServices master;
   private volatile boolean initialized = false;

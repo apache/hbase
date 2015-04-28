@@ -50,7 +50,7 @@ public class ColumnAggregationEndpointNullResponse
     extends
     ColumnAggregationServiceNullResponse
 implements Coprocessor, CoprocessorService  {
-  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointNullResponse.class);
+  private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointNullResponse.class);
   private RegionCoprocessorEnvironment env = null;
   @Override
   public Service getService() {

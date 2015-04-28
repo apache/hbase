@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestZKLeaderManager {
-  private static Log LOG = LogFactory.getLog(TestZKLeaderManager.class);
+  private static final Log LOG = LogFactory.getLog(TestZKLeaderManager.class);
 
   private static final String LEADER_ZNODE =
       "/test/" + TestZKLeaderManager.class.getSimpleName();

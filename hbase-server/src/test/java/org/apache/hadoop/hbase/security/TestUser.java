@@ -41,7 +41,7 @@ import com.google.common.collect.ImmutableSet;
 
 @Category({SecurityTests.class, SmallTests.class})
 public class TestUser {
-  private static Log LOG = LogFactory.getLog(TestUser.class);
+  private static final Log LOG = LogFactory.getLog(TestUser.class);
 
   @Test
   public void testBasicAttributes() throws Exception {

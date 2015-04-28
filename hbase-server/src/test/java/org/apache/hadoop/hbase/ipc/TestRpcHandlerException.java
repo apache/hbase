@@ -58,7 +58,7 @@ import static org.mockito.Mockito.mock;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestRpcHandlerException {
-  public static final Log LOG = LogFactory.getLog(TestRpcHandlerException.class);
+  private static final Log LOG = LogFactory.getLog(TestRpcHandlerException.class);
   static String example = "xyz";
   static byte[] CELL_BYTES = example.getBytes();
   static Cell CELL = new KeyValue(CELL_BYTES, CELL_BYTES, CELL_BYTES, CELL_BYTES);

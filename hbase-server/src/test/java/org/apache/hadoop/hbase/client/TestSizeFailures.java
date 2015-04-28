@@ -43,7 +43,7 @@ import com.google.common.collect.Maps;
 
 @Category(LargeTests.class)
 public class TestSizeFailures {
-  static final Log LOG = LogFactory.getLog(TestSizeFailures.class);
+  private static final Log LOG = LogFactory.getLog(TestSizeFailures.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
   protected static int SLAVES = 1;

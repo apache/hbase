@@ -66,7 +66,7 @@ import static org.junit.Assert.fail;
  */
 @Category(MediumTests.class)
 public class TestMetaWithReplicas {
-  static final Log LOG = LogFactory.getLog(TestMetaWithReplicas.class);
+  private static final Log LOG = LogFactory.getLog(TestMetaWithReplicas.class);
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   @Before

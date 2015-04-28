@@ -79,7 +79,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestLoadIncrementalHFilesSplitRecovery {
-  final static Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
+  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
 
   static HBaseTestingUtility util;
   //used by secure subclass

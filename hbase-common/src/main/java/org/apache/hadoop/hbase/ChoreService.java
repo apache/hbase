@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ChoreService implements ChoreServicer {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ChoreService.class);
 
   /**
    * The minimum number of threads in the core pool of the underlying ScheduledThreadPoolExecutor

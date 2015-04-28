@@ -43,7 +43,7 @@ import org.apache.hadoop.io.Writable;
 public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     implements BloomFilterWriter, InlineBlockWriter {
 
-  protected static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(CompoundBloomFilterWriter.class);
 
   /** The current chunk being written to */

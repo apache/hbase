@@ -56,7 +56,8 @@ import com.google.protobuf.ByteString;
 
 @Category({SecurityTests.class, MediumTests.class})
 public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibilityLabels {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(
+    TestVisibilityLabelsWithDefaultVisLabelService.class);
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {

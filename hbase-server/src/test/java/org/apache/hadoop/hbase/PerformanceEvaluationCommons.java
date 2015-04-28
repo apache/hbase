@@ -30,7 +30,7 @@ import org.apache.commons.logging.LogFactory;
  * Code shared by PE tests.
  */
 public class PerformanceEvaluationCommons {
-  static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(PerformanceEvaluationCommons.class.getName());
 
   public static void assertValueSize(final int expectedSize, final int got) {

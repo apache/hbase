@@ -46,7 +46,7 @@ import com.google.protobuf.Service;
  */
 public class ColumnAggregationEndpoint extends ColumnAggregationService
 implements Coprocessor, CoprocessorService {
-  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
+  private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpoint.class);
   private RegionCoprocessorEnvironment env = null;
 
   @Override

@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MapReduceTests.class, MediumTests.class})
 public class TestRowCounter {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestRowCounter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String TABLE_NAME = "testRowCounter";
   private final static String COL_FAM = "col_fam";

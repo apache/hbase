@@ -101,7 +101,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class HttpServer implements FilterContainer {
-  public static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final Log LOG = LogFactory.getLog(HttpServer.class);
 
   static final String FILTER_INITIALIZERS_PROPERTY
       = "hbase.http.filter.initializers";

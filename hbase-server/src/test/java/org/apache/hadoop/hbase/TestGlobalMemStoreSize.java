@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestGlobalMemStoreSize {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(TestGlobalMemStoreSize.class);
   private static int regionServerNum = 4;
   private static int regionNum = 16;
   // total region num = region num + root and meta regions

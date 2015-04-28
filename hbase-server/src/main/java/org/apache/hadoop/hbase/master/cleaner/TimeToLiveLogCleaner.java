@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveLogCleaner extends BaseLogCleanerDelegate {
-  static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
+  private static final Log LOG = LogFactory.getLog(TimeToLiveLogCleaner.class.getName());
   // Configured time a log can be kept after it was closed
   private long ttl;
   private boolean stopped = false;

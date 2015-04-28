@@ -97,7 +97,7 @@ import com.google.common.collect.Lists;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestStore {
-  public static final Log LOG = LogFactory.getLog(TestStore.class);
+  private static final Log LOG = LogFactory.getLog(TestStore.class);
   @Rule public TestName name = new TestName();
 
   HStore store;

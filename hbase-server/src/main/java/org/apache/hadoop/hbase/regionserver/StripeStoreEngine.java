@@ -42,7 +42,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class StripeStoreEngine extends StoreEngine<StripeStoreFlusher,
   StripeCompactionPolicy, StripeCompactor, StripeStoreFileManager> {
-  static final Log LOG = LogFactory.getLog(StripeStoreEngine.class);
+  private static final Log LOG = LogFactory.getLog(StripeStoreEngine.class);
   private StripeStoreConfig config;
 
   @Override

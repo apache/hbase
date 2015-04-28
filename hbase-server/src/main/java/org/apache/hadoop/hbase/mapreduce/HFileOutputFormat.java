@@ -57,7 +57,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class HFileOutputFormat extends FileOutputFormat<ImmutableBytesWritable, KeyValue> {
-  static Log LOG = LogFactory.getLog(HFileOutputFormat.class);
+  private static final Log LOG = LogFactory.getLog(HFileOutputFormat.class);
 
   // This constant is public since the client can modify this when setting
   // up their conf object and thus refer to this symbol.

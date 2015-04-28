@@ -43,7 +43,7 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class MasterCoprocessorRpcChannel extends CoprocessorRpcChannel{
-  private static Log LOG = LogFactory.getLog(MasterCoprocessorRpcChannel.class);
+  private static final Log LOG = LogFactory.getLog(MasterCoprocessorRpcChannel.class);
 
   private final HConnection connection;
 

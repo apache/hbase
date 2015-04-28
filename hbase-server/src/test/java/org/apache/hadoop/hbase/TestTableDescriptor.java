@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
  */
 @Category(SmallTests.class)
 public class TestTableDescriptor {
-  final static Log LOG = LogFactory.getLog(TestTableDescriptor.class);
+   private static final Log LOG = LogFactory.getLog(TestTableDescriptor.class);
 
   @Test
   public void testPb() throws DeserializationException, IOException {

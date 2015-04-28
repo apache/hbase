@@ -48,7 +48,7 @@ import static org.junit.Assert.*;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWALActionsListener {
-  protected static final Log LOG = LogFactory.getLog(TestWALActionsListener.class);
+  private static final Log LOG = LogFactory.getLog(TestWALActionsListener.class);
 
   private final static HBaseTestingUtility TEST_UTIL =
       new HBaseTestingUtility();

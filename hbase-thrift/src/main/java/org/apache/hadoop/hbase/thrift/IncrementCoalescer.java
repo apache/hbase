@@ -161,7 +161,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   private int maxQueueSize = 500000;
   private static final int CORE_POOL_SIZE = 1;
 
-  protected final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(FullyQualifiedRow.class);
 
   @SuppressWarnings("deprecation")
   public IncrementCoalescer(HBaseHandler hand) {

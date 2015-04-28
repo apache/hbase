@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.util.StoppableImplementation;
  */
 public abstract class Policy extends StoppableImplementation implements Runnable {
 
-  protected static Log LOG = LogFactory.getLog(Policy.class);
+  protected static final Log LOG = LogFactory.getLog(Policy.class);
 
   protected PolicyContext context;
 

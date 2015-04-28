@@ -41,7 +41,7 @@ import org.mortbay.util.ajax.JSON;
  */
 @Path("")
 public class JerseyResource {
-  static final Log LOG = LogFactory.getLog(JerseyResource.class);
+  private static final Log LOG = LogFactory.getLog(JerseyResource.class);
 
   public static final String PATH = "path";
   public static final String OP = "op";

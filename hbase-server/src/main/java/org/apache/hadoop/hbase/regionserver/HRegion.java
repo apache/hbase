@@ -195,7 +195,7 @@ import com.google.protobuf.TextFormat;
 
 @InterfaceAudience.Private
 public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
-  public static final Log LOG = LogFactory.getLog(HRegion.class);
+  private static final Log LOG = LogFactory.getLog(HRegion.class);
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";

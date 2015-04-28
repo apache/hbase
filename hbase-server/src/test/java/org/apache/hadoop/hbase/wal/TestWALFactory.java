@@ -81,7 +81,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestWALFactory {
-  protected static final Log LOG = LogFactory.getLog(TestWALFactory.class);
+  private static final Log LOG = LogFactory.getLog(TestWALFactory.class);
 
   protected static Configuration conf;
   private static MiniDFSCluster cluster;

@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class LocalHBaseCluster {
-  static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
+  private static final Log LOG = LogFactory.getLog(LocalHBaseCluster.class);
   private final List<JVMClusterUtil.MasterThread> masterThreads =
     new CopyOnWriteArrayList<JVMClusterUtil.MasterThread>();
   private final List<JVMClusterUtil.RegionServerThread> regionThreads =

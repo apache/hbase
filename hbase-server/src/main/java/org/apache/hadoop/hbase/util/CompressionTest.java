@@ -50,7 +50,7 @@ import org.apache.hadoop.io.compress.Compressor;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class CompressionTest {
-  static final Log LOG = LogFactory.getLog(CompressionTest.class);
+  private static final Log LOG = LogFactory.getLog(CompressionTest.class);
 
   public static boolean testCompression(String codec) {
     codec = codec.toLowerCase();

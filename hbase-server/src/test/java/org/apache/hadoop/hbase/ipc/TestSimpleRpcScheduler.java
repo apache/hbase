@@ -60,7 +60,7 @@ import static org.mockito.Mockito.when;
 
 @Category({RPCTests.class, SmallTests.class})
 public class TestSimpleRpcScheduler {
-  public static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
+  private static final Log LOG = LogFactory.getLog(TestSimpleRpcScheduler.class);
 
   private final RpcScheduler.Context CONTEXT = new RpcScheduler.Context() {
     @Override

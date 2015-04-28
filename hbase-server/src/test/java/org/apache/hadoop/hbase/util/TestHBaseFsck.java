@@ -132,8 +132,7 @@ import com.google.common.collect.Multimap;
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsck {
   static final int POOL_SIZE = 7;
-
-  final static Log LOG = LogFactory.getLog(TestHBaseFsck.class);
+  private static final Log LOG = LogFactory.getLog(TestHBaseFsck.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
   private final static String FAM_STR = "fam";

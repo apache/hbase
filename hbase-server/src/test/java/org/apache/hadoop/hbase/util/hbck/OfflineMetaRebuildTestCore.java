@@ -75,7 +75,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class OfflineMetaRebuildTestCore {
-  protected final static Log LOG = LogFactory
+  private final static Log LOG = LogFactory
       .getLog(OfflineMetaRebuildTestCore.class);
   protected HBaseTestingUtility TEST_UTIL;
   protected Configuration conf;

@@ -29,7 +29,7 @@ import org.apache.hadoop.util.StringUtils;
  * The Class HealthCheckChore for running health checker regularly.
  */
 public class HealthCheckChore extends ScheduledChore {
-  private static Log LOG = LogFactory.getLog(HealthCheckChore.class);
+  private static final Log LOG = LogFactory.getLog(HealthCheckChore.class);
   private HealthChecker healthChecker;
   private Configuration config;
   private int threshold;

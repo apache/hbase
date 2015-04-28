@@ -51,7 +51,7 @@ import com.google.common.cache.LoadingCache;
  */
 class RegionLocationFinder {
 
-  private static Log LOG = LogFactory.getLog(RegionLocationFinder.class);
+  private static final Log LOG = LogFactory.getLog(RegionLocationFinder.class);
 
   private Configuration conf;
   private ClusterStatus status;

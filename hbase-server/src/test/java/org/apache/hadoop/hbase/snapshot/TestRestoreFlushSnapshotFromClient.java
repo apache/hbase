@@ -49,7 +49,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestRestoreFlushSnapshotFromClient {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestRestoreFlushSnapshotFromClient.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

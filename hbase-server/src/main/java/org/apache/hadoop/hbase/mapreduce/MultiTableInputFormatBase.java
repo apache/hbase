@@ -59,7 +59,7 @@ import java.util.Iterator;
 public abstract class MultiTableInputFormatBase extends
     InputFormat<ImmutableBytesWritable, Result> {
 
-  final Log LOG = LogFactory.getLog(MultiTableInputFormatBase.class);
+  private static final Log LOG = LogFactory.getLog(MultiTableInputFormatBase.class);
 
   /** Holds the set of scans used to define the input. */
   private List<Scan> scans;

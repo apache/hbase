@@ -73,7 +73,7 @@ import com.google.common.collect.Lists;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestStoreFile extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestStoreFile.class);
+  private static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();

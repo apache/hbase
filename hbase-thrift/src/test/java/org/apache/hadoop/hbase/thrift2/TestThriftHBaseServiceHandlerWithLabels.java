@@ -74,7 +74,7 @@ import org.junit.experimental.categories.Category;
 @Category({ClientTests.class, MediumTests.class})
 public class TestThriftHBaseServiceHandlerWithLabels {
 
-public static final Log LOG = LogFactory
+  private static final Log LOG = LogFactory
     .getLog(TestThriftHBaseServiceHandlerWithLabels.class);
 private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

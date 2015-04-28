@@ -46,7 +46,7 @@ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
  */
 @InterfaceAudience.Private
 public class HBaseSaslRpcServer {
-  public static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
+  private static final Log LOG = LogFactory.getLog(HBaseSaslRpcServer.class);
 
   public static void init(Configuration conf) {
     SaslUtil.initSaslProperties(conf.get("hbase.rpc.protection", 

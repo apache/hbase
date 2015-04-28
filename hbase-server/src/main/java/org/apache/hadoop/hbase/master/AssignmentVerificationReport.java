@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
  */
 @InterfaceAudience.Private
 public class AssignmentVerificationReport {
-  protected static final Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
       AssignmentVerificationReport.class.getName());
 
   private TableName tableName = null;

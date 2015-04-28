@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.util.Threads;
  */
 @InterfaceAudience.Private
 public abstract class HBaseCluster implements Closeable, Configurable {
+  // Log is being used in DistributedHBaseCluster class, hence keeping it as package scope
   static final Log LOG = LogFactory.getLog(HBaseCluster.class.getName());
   protected Configuration conf;
 

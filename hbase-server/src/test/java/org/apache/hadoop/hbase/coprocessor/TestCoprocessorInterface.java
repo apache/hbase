@@ -75,7 +75,7 @@ import org.mockito.Mockito;
 @Category({CoprocessorTests.class, SmallTests.class})
 public class TestCoprocessorInterface {
   @Rule public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
+  private static final Log LOG = LogFactory.getLog(TestCoprocessorInterface.class);
   private static final HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   static final Path DIR = TEST_UTIL.getDataTestDir();
 

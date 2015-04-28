@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MasterTests.class, MediumTests.class})
 public class TestQuotaTableUtil {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestQuotaTableUtil.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;

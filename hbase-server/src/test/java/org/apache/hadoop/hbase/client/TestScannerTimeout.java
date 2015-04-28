@@ -47,7 +47,7 @@ public class TestScannerTimeout {
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();
 
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestScannerTimeout.class);
   private final static byte[] SOME_BYTES = Bytes.toBytes("f");
   private final static TableName TABLE_NAME = TableName.valueOf("t");
   private final static int NB_ROWS = 10;

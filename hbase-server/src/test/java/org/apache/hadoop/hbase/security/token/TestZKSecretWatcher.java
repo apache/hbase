@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({SecurityTests.class, LargeTests.class})
 public class TestZKSecretWatcher {
-  private static Log LOG = LogFactory.getLog(TestZKSecretWatcher.class);
+  private static final Log LOG = LogFactory.getLog(TestZKSecretWatcher.class);
   private static HBaseTestingUtility TEST_UTIL;
   private static AuthenticationTokenSecretManager KEY_MASTER;
   private static AuthenticationTokenSecretManagerForTest KEY_SLAVE;

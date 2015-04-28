@@ -62,7 +62,7 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestProtobufLog {
-  protected static final Log LOG = LogFactory.getLog(TestProtobufLog.class);
+  private static final Log LOG = LogFactory.getLog(TestProtobufLog.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

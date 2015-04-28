@@ -43,6 +43,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -67,6 +70,8 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class AsyncRpcClient extends AbstractRpcClient {
+
+  private static final Log LOG = LogFactory.getLog(AsyncRpcClient.class);
 
   public static final String CLIENT_MAX_THREADS = "hbase.rpc.client.threads.max";
   public static final String USE_NATIVE_TRANSPORT = "hbase.rpc.client.nativetransport";

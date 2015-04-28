@@ -52,7 +52,7 @@ import org.junit.Test;
 @Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings ("deprecation")
 public class TestWarmupRegion {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestWarmupRegion.class);
   protected TableName TABLENAME = TableName.valueOf("testPurgeFutureDeletes");
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");

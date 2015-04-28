@@ -119,7 +119,7 @@ public class AccessControlLists {
   /** Configuration key for superusers */
   public static final String SUPERUSER_CONF_KEY = "hbase.superuser";
 
-  private static Log LOG = LogFactory.getLog(AccessControlLists.class);
+  private static final Log LOG = LogFactory.getLog(AccessControlLists.class);
 
   /**
    * Create the ACL table

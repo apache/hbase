@@ -53,7 +53,7 @@ import org.apache.hadoop.io.compress.DefaultCodec;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class SequenceFileLogWriter extends WriterBase {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(SequenceFileLogWriter.class);
   // The sequence file we delegate to.
   private SequenceFile.Writer writer;
   // This is the FSDataOutputStream instance that is the 'out' instance

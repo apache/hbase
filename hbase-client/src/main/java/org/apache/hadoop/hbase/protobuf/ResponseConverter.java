@@ -63,7 +63,7 @@ import com.google.protobuf.RpcController;
  */
 @InterfaceAudience.Private
 public final class ResponseConverter {
-  public static final Log LOG = LogFactory.getLog(ResponseConverter.class);
+  private static final Log LOG = LogFactory.getLog(ResponseConverter.class);
 
   private ResponseConverter() {
   }

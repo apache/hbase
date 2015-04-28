@@ -49,7 +49,7 @@ import java.util.List;
  */
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseTestingUtility {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestHBaseTestingUtility.class);
 
   /**
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share

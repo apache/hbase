@@ -61,6 +61,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
   protected static final String NUM_READ_THREADS_KEY = "num_read_threads";
   protected static final int DEFAULT_NUM_READ_THREADS = 20;
 
+  // Log is being used in IntegrationTestIngestWithEncryption, hence it is protected
   protected static final Log LOG = LogFactory.getLog(IntegrationTestIngest.class);
   protected IntegrationTestingUtility util;
   protected HBaseCluster cluster;

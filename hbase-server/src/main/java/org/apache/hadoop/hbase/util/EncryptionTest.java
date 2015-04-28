@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.security.EncryptionUtil;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class EncryptionTest {
-  static final Log LOG = LogFactory.getLog(EncryptionTest.class);
+  private static final Log LOG = LogFactory.getLog(EncryptionTest.class);
 
   static final Map<String, Boolean> keyProviderResults = new ConcurrentHashMap<String, Boolean>();
   static final Map<String, Boolean> cipherProviderResults =

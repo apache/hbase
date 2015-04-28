@@ -48,7 +48,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 public class ReplicationSyncUp extends Configured implements Tool {
 
-  static final Log LOG = LogFactory.getLog(ReplicationSyncUp.class.getName());
+  private static final Log LOG = LogFactory.getLog(ReplicationSyncUp.class.getName());
 
   private static Configuration conf;
 

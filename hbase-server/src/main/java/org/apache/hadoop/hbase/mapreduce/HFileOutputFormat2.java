@@ -86,7 +86,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class HFileOutputFormat2
     extends FileOutputFormat<ImmutableBytesWritable, Cell> {
-  static Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
+  private static final Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
 
   // The following constants are private since these are used by
   // HFileOutputFormat2 to internally transfer data between job setup and

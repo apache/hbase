@@ -63,7 +63,7 @@ import com.google.common.collect.Lists;
 /** memstore test case */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestDefaultMemStore extends TestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestDefaultMemStore.class);
   private DefaultMemStore memstore;
   private static final int ROW_COUNT = 10;
   private static final int QUALIFIER_COUNT = ROW_COUNT;

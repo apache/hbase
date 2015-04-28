@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestChoreService {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestChoreService.class);
 
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService

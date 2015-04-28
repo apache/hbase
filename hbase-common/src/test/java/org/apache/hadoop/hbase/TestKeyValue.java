@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import static org.junit.Assert.assertNotEquals;
 
 public class TestKeyValue extends TestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
 
   public void testColumnCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");

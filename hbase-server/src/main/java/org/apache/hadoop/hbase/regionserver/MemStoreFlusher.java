@@ -73,7 +73,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 class MemStoreFlusher implements FlushRequester {
-  static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
+  private static final Log LOG = LogFactory.getLog(MemStoreFlusher.class);
 
   private Configuration conf;
   // These two data members go together.  Any entry in the one must have

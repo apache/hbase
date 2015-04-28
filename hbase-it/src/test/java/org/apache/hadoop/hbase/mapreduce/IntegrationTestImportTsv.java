@@ -63,7 +63,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestImportTsv implements Configurable, Tool {
 
   private static final String NAME = IntegrationTestImportTsv.class.getSimpleName();
-  protected static final Log LOG = LogFactory.getLog(IntegrationTestImportTsv.class);
+  private static final Log LOG = LogFactory.getLog(IntegrationTestImportTsv.class);
 
   protected static final String simple_tsv =
       "row1\t1\tc1\tc2\n" +

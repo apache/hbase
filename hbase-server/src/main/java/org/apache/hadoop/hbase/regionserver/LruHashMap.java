@@ -52,7 +52,7 @@ import java.util.Set;
 public class LruHashMap<K extends HeapSize, V extends HeapSize>
 implements HeapSize, Map<K,V> {
 
-  static final Log LOG = LogFactory.getLog(LruHashMap.class);
+  private static final Log LOG = LogFactory.getLog(LruHashMap.class);
 
   /** The default size (in bytes) of the LRU */
   private static final long DEFAULT_MAX_MEM_USAGE = 50000;

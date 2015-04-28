@@ -70,7 +70,7 @@ import com.yammer.metrics.core.MetricsRegistry;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableMapReduceUtil {
-  static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+  private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up

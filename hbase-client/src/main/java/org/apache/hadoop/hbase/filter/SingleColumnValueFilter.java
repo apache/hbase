@@ -71,7 +71,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SingleColumnValueFilter extends FilterBase {
-  static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
+  private static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 
   protected byte [] columnFamily;
   protected byte [] columnQualifier;

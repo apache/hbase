@@ -54,7 +54,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestClientScannerRPCTimeout {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestClientScannerRPCTimeout.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");

@@ -38,7 +38,7 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
-  public static final Log LOG = LogFactory.getLog(AsyncServerResponseHandler.class.getName());
+  private static final Log LOG = LogFactory.getLog(AsyncServerResponseHandler.class.getName());
 
   private final AsyncRpcChannel channel;
 

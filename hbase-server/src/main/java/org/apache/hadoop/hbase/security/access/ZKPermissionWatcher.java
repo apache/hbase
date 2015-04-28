@@ -44,7 +44,7 @@ import java.util.concurrent.CountDownLatch;
  */
 @InterfaceAudience.Private
 public class ZKPermissionWatcher extends ZooKeeperListener {
-  private static Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
+  private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
   TableAuthManager authManager;

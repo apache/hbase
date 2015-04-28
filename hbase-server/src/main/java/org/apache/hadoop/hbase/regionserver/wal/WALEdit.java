@@ -83,7 +83,7 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.LimitedPrivate({ HBaseInterfaceAudience.REPLICATION,
     HBaseInterfaceAudience.COPROC })
 public class WALEdit implements Writable, HeapSize {
-  public static final Log LOG = LogFactory.getLog(WALEdit.class);
+  private static final Log LOG = LogFactory.getLog(WALEdit.class);
 
   // TODO: Get rid of this; see HBASE-8457
   public static final byte [] METAFAMILY = Bytes.toBytes("METAFAMILY");

@@ -77,7 +77,7 @@ import com.google.common.collect.Lists;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestIOFencing {
-  static final Log LOG = LogFactory.getLog(TestIOFencing.class);
+  private static final Log LOG = LogFactory.getLog(TestIOFencing.class);
   static {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).

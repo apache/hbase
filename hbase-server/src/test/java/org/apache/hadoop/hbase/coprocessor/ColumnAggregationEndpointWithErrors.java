@@ -51,7 +51,7 @@ public class ColumnAggregationEndpointWithErrors
     extends
     ColumnAggregationWithErrorsProtos.ColumnAggregationServiceWithErrors
 implements Coprocessor, CoprocessorService  {
-  static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointWithErrors.class);
+  private static final Log LOG = LogFactory.getLog(ColumnAggregationEndpointWithErrors.class);
   private RegionCoprocessorEnvironment env = null;
   @Override
   public Service getService() {

@@ -46,7 +46,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class BoundedByteBufferPool {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(BoundedByteBufferPool.class);
 
   @VisibleForTesting
   final Queue<ByteBuffer> buffers;

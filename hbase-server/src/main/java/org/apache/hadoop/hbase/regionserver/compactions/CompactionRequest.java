@@ -43,7 +43,7 @@ import com.google.common.collect.Collections2;
 @InterfaceAudience.LimitedPrivate({ "coprocessor" })
 @InterfaceStability.Evolving
 public class CompactionRequest implements Comparable<CompactionRequest> {
-  static final Log LOG = LogFactory.getLog(CompactionRequest.class);
+  private static final Log LOG = LogFactory.getLog(CompactionRequest.class);
   // was this compaction promoted to an off-peak
   private boolean isOffPeak = false;
   private enum DisplayCompactionType { MINOR, ALL_FILES, MAJOR }

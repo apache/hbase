@@ -193,7 +193,7 @@ import com.google.protobuf.ServiceException;
 public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId {
 
-  public static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   /**
    * For testing only!  Set to true to skip notifying region assignment to master .

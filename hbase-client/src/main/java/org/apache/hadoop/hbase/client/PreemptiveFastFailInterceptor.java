@@ -73,7 +73,7 @@ import org.apache.hadoop.ipc.RemoteException;
 @InterfaceAudience.Private
 class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
 
-  public static final Log LOG = LogFactory
+  private static final Log LOG = LogFactory
       .getLog(PreemptiveFastFailInterceptor.class);
 
   // amount of time to wait before we consider a server to be in fast fail

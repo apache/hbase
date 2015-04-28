@@ -109,7 +109,7 @@ public class TestHFileOutputFormat  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static Log LOG = LogFactory.getLog(TestHFileOutputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TestHFileOutputFormat.class);
 
   /**
    * Simple mapper that makes KeyValue output.

@@ -78,7 +78,7 @@ import com.google.common.collect.ImmutableList;
  * It works with TestRegionObserverInterface to provide the test case.
  */
 public class SimpleRegionObserver extends BaseRegionObserver {
-  static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
   final AtomicInteger ctBeforeDelete = new AtomicInteger(1);
   final AtomicInteger ctPreOpen = new AtomicInteger(0);

@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestWideScanner extends HBaseTestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestWideScanner.class);
 
   static final byte[] A = Bytes.toBytes("A");
   static final byte[] B = Bytes.toBytes("B");

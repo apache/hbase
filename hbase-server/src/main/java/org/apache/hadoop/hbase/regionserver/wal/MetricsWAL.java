@@ -32,7 +32,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class MetricsWAL extends WALActionsListener.Base {
-  static final Log LOG = LogFactory.getLog(MetricsWAL.class);
+  private static final Log LOG = LogFactory.getLog(MetricsWAL.class);
 
   private final MetricsWALSource source;
 

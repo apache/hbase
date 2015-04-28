@@ -77,7 +77,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestAdmin1 {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
 

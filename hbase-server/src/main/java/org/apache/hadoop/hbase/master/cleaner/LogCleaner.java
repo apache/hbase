@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.wal.DefaultWALProvider;
  */
 @InterfaceAudience.Private
 public class LogCleaner extends CleanerChore<BaseLogCleanerDelegate> {
-  static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
+  private static final Log LOG = LogFactory.getLog(LogCleaner.class.getName());
 
   /**
    * @param p the period of time to sleep between each run

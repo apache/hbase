@@ -124,7 +124,7 @@ import com.google.protobuf.RpcController;
 @Deprecated
 @InterfaceAudience.Private
 class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, Configurable {
-  protected final static Log LOG = LogFactory.getLog(HbaseObjectWritableFor96Migration.class);
+  private final static Log LOG = LogFactory.getLog(HbaseObjectWritableFor96Migration.class);
 
   // Here we maintain two static maps of classes to code and vice versa.
   // Add new classes+codes as wanted or figure way to auto-generate these

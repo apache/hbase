@@ -53,7 +53,7 @@ import static org.junit.Assert.fail;
  */
 @Category({ClientTests.class, MediumTests.class})
 public class TestQuotaAdmin {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestQuotaAdmin.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
