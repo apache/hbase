@@ -37,7 +37,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class TablePermission extends Permission {
-  private static Log LOG = LogFactory.getLog(TablePermission.class);
+  private static final Log LOG = LogFactory.getLog(TablePermission.class);
 
   private TableName table;
   private byte[] family;

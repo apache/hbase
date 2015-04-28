@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 class ClientIdGenerator {
-  static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
+  private static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
 
   /**
    * @return a unique ID incorporating IP address, PID, TID and timer. Might be an overkill...

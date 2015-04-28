@@ -51,7 +51,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class HalfStoreFileReader extends StoreFile.Reader {
-  final Log LOG = LogFactory.getLog(HalfStoreFileReader.class);
+  private static final Log LOG = LogFactory.getLog(HalfStoreFileReader.class);
   final boolean top;
   // This is the key we split around.  Its the first possible entry on a row:
   // i.e. empty column and a timestamp of LATEST_TIMESTAMP.

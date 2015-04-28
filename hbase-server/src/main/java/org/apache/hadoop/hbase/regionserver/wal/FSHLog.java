@@ -153,7 +153,7 @@ public class FSHLog implements WAL {
   // synchronization class used to halt the consumer at a safe point --  just after all outstanding
   // syncs and appends have completed -- so the log roller can swap the WAL out under it.
 
-  static final Log LOG = LogFactory.getLog(FSHLog.class);
+  private static final Log LOG = LogFactory.getLog(FSHLog.class);
 
   private static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
   

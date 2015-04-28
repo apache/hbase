@@ -132,7 +132,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public class WALSplitter {
-  static final Log LOG = LogFactory.getLog(WALSplitter.class);
+  private static final Log LOG = LogFactory.getLog(WALSplitter.class);
 
   /** By default we retry errors in splitting, rather than skipping. */
   public static final boolean SPLIT_SKIP_ERRORS_DEFAULT = false;

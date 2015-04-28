@@ -76,7 +76,7 @@ import com.google.common.util.concurrent.Service;
 public class ReplicationSource extends Thread
     implements ReplicationSourceInterface {
 
-  public static final Log LOG = LogFactory.getLog(ReplicationSource.class);
+  private static final Log LOG = LogFactory.getLog(ReplicationSource.class);
   // Queue of logs to process
   private PriorityBlockingQueue<Path> queue;
   private ReplicationQueues replicationQueues;

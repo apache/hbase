@@ -42,7 +42,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public abstract class ScheduledChore implements Runnable {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ScheduledChore.class);
 
   private final String name;
 

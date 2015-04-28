@@ -34,7 +34,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({ MediumTests.class })
 public class TestQuotaAdmin {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestQuotaAdmin.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

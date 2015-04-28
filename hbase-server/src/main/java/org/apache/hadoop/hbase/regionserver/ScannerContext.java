@@ -50,7 +50,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class ScannerContext {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ScannerContext.class);
 
   /**
    * Two sets of the same fields. One for the limits, another for the progress towards those limits

@@ -61,7 +61,7 @@ import java.util.Random;
  */
 @InterfaceAudience.Private
 public class HBaseFsckRepair {
-  public static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
+  private static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
 
   /**
    * Fix multiple assignment by doing silent closes on each RS hosting the region

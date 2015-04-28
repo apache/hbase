@@ -73,7 +73,7 @@ import org.junit.runners.Parameterized.Parameters;
 @Category(MediumTests.class)
 @RunWith(Parameterized.class)
 public class TestCoprocessorScanPolicy {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestCoprocessorScanPolicy.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] F = Bytes.toBytes("fam");
   private static final byte[] Q = Bytes.toBytes("qual");

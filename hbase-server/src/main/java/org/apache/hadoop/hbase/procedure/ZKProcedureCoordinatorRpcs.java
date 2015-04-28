@@ -38,7 +38,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Private
 public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
-  public static final Log LOG = LogFactory.getLog(ZKProcedureCoordinatorRpcs.class);
+  private static final Log LOG = LogFactory.getLog(ZKProcedureCoordinatorRpcs.class);
   private ZKProcedureUtil zkProc = null;
   protected ProcedureCoordinator coordinator = null;  // if started this should be non-null
 

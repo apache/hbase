@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({MediumTests.class})
 public class TestRegionPlacement2 {
-  final static Log LOG = LogFactory.getLog(TestRegionPlacement2.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionPlacement2.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 7;
   private final static int PRIMARY = Position.PRIMARY.ordinal();

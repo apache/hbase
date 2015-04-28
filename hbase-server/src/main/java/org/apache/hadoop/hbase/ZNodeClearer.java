@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * check its content to make sure that the backup server is not now in charge.</p>
  */
 public class ZNodeClearer {
-  public static final Log LOG = LogFactory.getLog(ZNodeClearer.class);
+  private static final Log LOG = LogFactory.getLog(ZNodeClearer.class);
 
   private ZNodeClearer() {}
 

@@ -141,7 +141,7 @@ import com.google.common.collect.Sets;
  */
 @InterfaceAudience.Private
 public class RegionSplitter {
-  static final Log LOG = LogFactory.getLog(RegionSplitter.class);
+  private static final Log LOG = LogFactory.getLog(RegionSplitter.class);
 
   /**
    * A generic interface for the RegionSplitter code to use for all it's

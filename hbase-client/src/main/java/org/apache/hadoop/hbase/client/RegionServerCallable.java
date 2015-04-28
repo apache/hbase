@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public abstract class RegionServerCallable<T> implements RetryingCallable<T> {
   // Public because used outside of this package over in ipc.
-  static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
+  private static final Log LOG = LogFactory.getLog(RegionServerCallable.class);
   protected final Connection connection;
   protected final TableName tableName;
   protected final byte[] row;

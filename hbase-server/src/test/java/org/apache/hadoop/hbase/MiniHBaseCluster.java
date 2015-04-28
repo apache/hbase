@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.Threads;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class MiniHBaseCluster extends HBaseCluster {
-  static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
+  private static final Log LOG = LogFactory.getLog(MiniHBaseCluster.class.getName());
   public LocalHBaseCluster hbaseCluster;
   private static int index;
 

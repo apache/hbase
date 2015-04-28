@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.Stoppable;
  */
 @InterfaceAudience.Private
 public class Sleeper {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(Sleeper.class);
   private final int period;
   private final Stoppable stopper;
   private static final long MINIMAL_DELTA_FOR_LOGGING = 10000;

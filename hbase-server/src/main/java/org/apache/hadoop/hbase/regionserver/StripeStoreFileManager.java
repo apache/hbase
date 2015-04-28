@@ -64,7 +64,7 @@ import com.google.common.collect.ImmutableList;
 @InterfaceAudience.Private
 public class StripeStoreFileManager
   implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
-  static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
+  private static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
 
   /**
    * The file metadata fields that contain the stripe information.

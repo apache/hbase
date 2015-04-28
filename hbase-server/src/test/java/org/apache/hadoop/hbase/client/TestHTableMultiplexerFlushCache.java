@@ -37,7 +37,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestHTableMultiplexerFlushCache {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestHTableMultiplexerFlushCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER1 = Bytes.toBytes("testQualifier_1");

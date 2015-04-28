@@ -84,7 +84,7 @@ import org.mockito.stubbing.Answer;
 @Category(MediumTests.class)
 public class TestCompaction {
   @Rule public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
+  private static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   

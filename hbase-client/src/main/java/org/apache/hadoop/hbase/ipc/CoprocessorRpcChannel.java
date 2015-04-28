@@ -43,7 +43,7 @@ import java.io.IOException;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public abstract class CoprocessorRpcChannel implements RpcChannel, BlockingRpcChannel {
-  private static Log LOG = LogFactory.getLog(CoprocessorRpcChannel.class);
+  private static final Log LOG = LogFactory.getLog(CoprocessorRpcChannel.class);
 
   @Override
   @InterfaceAudience.Private

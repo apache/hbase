@@ -80,7 +80,7 @@ import org.junit.rules.TestName;
  */
 @Category(MediumTests.class)
 public class TestFSHLog {
-  protected static final Log LOG = LogFactory.getLog(TestFSHLog.class);
+  private static final Log LOG = LogFactory.getLog(TestFSHLog.class);
 
   protected static Configuration conf;
   protected static FileSystem fs;

@@ -73,7 +73,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
-  protected static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
+  private static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 

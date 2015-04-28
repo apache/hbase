@@ -33,7 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Public
 public class NamespaceAuditor {
-  private static Log LOG = LogFactory.getLog(NamespaceAuditor.class);
+  private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
   static final String NS_AUDITOR_INIT_TIMEOUT = "hbase.namespace.auditor.init.timeout";
   static final int DEFAULT_NS_AUDITOR_INIT_TIMEOUT = 120000;
   private NamespaceStateManager stateManager;

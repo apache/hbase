@@ -51,7 +51,7 @@ import org.ietf.jgss.Oid;
 @InterfaceAudience.Private
 public class ThriftHttpServlet extends TServlet {
   private static final long serialVersionUID = 1L;
-  public static final Log LOG = LogFactory.getLog(ThriftHttpServlet.class.getName());
+  private static final Log LOG = LogFactory.getLog(ThriftHttpServlet.class.getName());
   private transient final UserGroupInformation realUser;
   private transient final Configuration conf;
   private final boolean securityEnabled;

@@ -44,6 +44,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class CodecPerformance {
+  /** @deprecated LOG variable would be made private. */
+  @Deprecated
   public static final Log LOG = LogFactory.getLog(CodecPerformance.class);
 
   static Cell [] getCells(final int howMany) {

@@ -69,7 +69,7 @@ import com.google.protobuf.TextFormat;
 //to figure out whether it is a meta region or not.
 @InterfaceAudience.Private
 class AnnotationReadingPriorityFunction implements PriorityFunction {
-  public static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */

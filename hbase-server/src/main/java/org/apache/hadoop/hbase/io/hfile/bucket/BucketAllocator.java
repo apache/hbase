@@ -49,7 +49,7 @@ import com.google.common.primitives.Ints;
 @InterfaceAudience.Private
 @JsonIgnoreProperties({"indexStatistics", "freeSize", "usedSize"})
 public final class BucketAllocator {
-  static final Log LOG = LogFactory.getLog(BucketAllocator.class);
+  private static final Log LOG = LogFactory.getLog(BucketAllocator.class);
 
   @JsonIgnoreProperties({"completelyFree", "uninstantiated"})
   public final static class Bucket {

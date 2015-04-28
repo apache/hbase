@@ -25,6 +25,8 @@ import static org.junit.Assert.assertFalse;
 import java.util.Arrays;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.HBaseFsck;
@@ -43,6 +45,7 @@ import com.google.common.collect.Multimap;
  */
 @Category(MediumTests.class)
 public class TestOfflineMetaRebuildOverlap extends OfflineMetaRebuildTestCore {
+  private final static Log LOG = LogFactory.getLog(TestOfflineMetaRebuildOverlap.class);
 
   @Test(timeout = 120000)
   public void testMetaRebuildOverlapFail() throws Exception {

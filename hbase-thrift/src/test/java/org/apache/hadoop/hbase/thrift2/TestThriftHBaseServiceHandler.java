@@ -88,7 +88,7 @@ import static java.nio.ByteBuffer.wrap;
 @Category(MediumTests.class)
 public class TestThriftHBaseServiceHandler {
 
-  public static final Log LOG = LogFactory.getLog(TestThriftHBaseServiceHandler.class);
+  private static final Log LOG = LogFactory.getLog(TestThriftHBaseServiceHandler.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   // Static names for tables, columns, rows, and values

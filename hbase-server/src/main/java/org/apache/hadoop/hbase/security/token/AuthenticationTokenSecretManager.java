@@ -60,7 +60,7 @@ public class AuthenticationTokenSecretManager
 
   static final String NAME_PREFIX = "SecretManager-";
 
-  private static Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
       AuthenticationTokenSecretManager.class);
 
   private long lastKeyUpdate;

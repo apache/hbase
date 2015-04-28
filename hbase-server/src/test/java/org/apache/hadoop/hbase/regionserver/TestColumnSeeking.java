@@ -56,7 +56,7 @@ public class TestColumnSeeking {
 
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  static final Log LOG = LogFactory.getLog(TestColumnSeeking.class);
+  private static final Log LOG = LogFactory.getLog(TestColumnSeeking.class);
 
   @SuppressWarnings("unchecked")
   @Test

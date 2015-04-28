@@ -24,6 +24,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,6 +41,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestOfflineMetaRebuildBase extends OfflineMetaRebuildTestCore {
+  private static final Log LOG = LogFactory.getLog(TestOfflineMetaRebuildBase.class);
 
   @Test(timeout = 120000)
   public void testMetaRebuild() throws Exception {

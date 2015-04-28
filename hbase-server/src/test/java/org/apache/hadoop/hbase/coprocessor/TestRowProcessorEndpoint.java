@@ -84,7 +84,7 @@ import org.apache.commons.logging.LogFactory;
 @Category(MediumTests.class)
 public class TestRowProcessorEndpoint {
 
-  static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);
+  private static final Log LOG = LogFactory.getLog(TestRowProcessorEndpoint.class);
 
   private static final TableName TABLE = TableName.valueOf("testtable");
   private final static byte[] ROW = Bytes.toBytes("testrow");

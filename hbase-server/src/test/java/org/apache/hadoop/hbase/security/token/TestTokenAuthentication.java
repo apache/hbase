@@ -101,7 +101,7 @@ public class TestTokenAuthentication {
     System.setProperty("java.security.krb5.realm", "hbase");
     System.setProperty("java.security.krb5.kdc", "blah");
   }
-  private static Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
+  private static final Log LOG = LogFactory.getLog(TestTokenAuthentication.class);
 
   public interface AuthenticationServiceSecurityInfo {}
 
@@ -110,7 +110,7 @@ public class TestTokenAuthentication {
    */
   private static class TokenServer extends TokenProvider
   implements AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
-    private static Log LOG = LogFactory.getLog(TokenServer.class);
+    private static final Log LOG = LogFactory.getLog(TokenServer.class);
     private Configuration conf;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;

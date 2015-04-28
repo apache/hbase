@@ -84,7 +84,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestRegionObserverInterface {
-  static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionObserverInterface.class);
 
   public static final TableName TEST_TABLE = TableName.valueOf("TestTable");
   public final static byte[] A = Bytes.toBytes("a");

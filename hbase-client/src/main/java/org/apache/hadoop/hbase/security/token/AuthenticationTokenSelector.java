@@ -31,7 +31,7 @@ import java.util.Collection;
 @InterfaceAudience.Private
 public class AuthenticationTokenSelector
     implements TokenSelector<AuthenticationTokenIdentifier> {
-  private static Log LOG = LogFactory.getLog(AuthenticationTokenSelector.class);
+  private static final Log LOG = LogFactory.getLog(AuthenticationTokenSelector.class);
 
   public AuthenticationTokenSelector() {
   }

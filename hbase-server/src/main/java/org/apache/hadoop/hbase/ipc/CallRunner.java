@@ -18,6 +18,8 @@ package org.apache.hadoop.hbase.ipc;
  */
 import java.nio.channels.ClosedChannelException;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
@@ -38,6 +40,8 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class CallRunner {
+  private static final Log LOG = LogFactory.getLog(CallRunner.class);
+
   private Call call;
   private RpcServerInterface rpcServer;
   private MonitoredRPCHandler status;

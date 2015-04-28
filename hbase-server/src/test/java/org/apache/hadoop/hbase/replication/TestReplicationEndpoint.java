@@ -53,7 +53,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestReplicationEndpoint extends TestReplicationBase {
-  static final Log LOG = LogFactory.getLog(TestReplicationEndpoint.class);
+  private static final Log LOG = LogFactory.getLog(TestReplicationEndpoint.class);
 
   static int numRegionServers;
 

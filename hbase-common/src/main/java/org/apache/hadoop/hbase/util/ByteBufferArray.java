@@ -34,7 +34,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public final class ByteBufferArray {
-  static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
+  private static final Log LOG = LogFactory.getLog(ByteBufferArray.class);
 
   static final int DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
   private ByteBuffer buffers[];

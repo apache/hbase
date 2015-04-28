@@ -50,7 +50,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class) 
 public class TestIPCUtil {
 
-  public static final Log LOG = LogFactory.getLog(IPCUtil.class);
+  private static final Log LOG = LogFactory.getLog(TestIPCUtil.class);
 
   IPCUtil util;
   @Before

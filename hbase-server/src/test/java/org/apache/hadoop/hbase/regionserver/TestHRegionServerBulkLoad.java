@@ -79,7 +79,7 @@ import static org.junit.Assert.assertThat;
  */
 @Category(LargeTests.class)
 public class TestHRegionServerBulkLoad {
-  final static Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
+  private static final Log LOG = LogFactory.getLog(TestHRegionServerBulkLoad.class);
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private final static Configuration conf = UTIL.getConfiguration();
   private final static byte[] QUAL = Bytes.toBytes("qual");

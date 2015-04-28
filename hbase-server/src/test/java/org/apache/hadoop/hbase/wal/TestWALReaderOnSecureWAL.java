@@ -66,7 +66,7 @@ import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
  */
 @Category(MediumTests.class)
 public class TestWALReaderOnSecureWAL {
-  static final Log LOG = LogFactory.getLog(TestWALReaderOnSecureWAL.class);
+  private static final Log LOG = LogFactory.getLog(TestWALReaderOnSecureWAL.class);
   static {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
       .getLogger().setLevel(Level.ALL);

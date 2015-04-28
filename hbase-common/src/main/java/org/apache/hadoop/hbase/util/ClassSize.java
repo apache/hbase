@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ClassSize {
-  static final Log LOG = LogFactory.getLog(ClassSize.class);
+  private static final Log LOG = LogFactory.getLog(ClassSize.class);
 
   private static int nrOfRefsPerObj = 2;
 

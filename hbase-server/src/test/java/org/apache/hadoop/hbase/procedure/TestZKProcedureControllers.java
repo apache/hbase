@@ -55,7 +55,7 @@ import com.google.common.collect.Lists;
 @Category(MediumTests.class)
 public class TestZKProcedureControllers {
 
-  static final Log LOG = LogFactory.getLog(TestZKProcedureControllers.class);
+  private static final Log LOG = LogFactory.getLog(TestZKProcedureControllers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final String COHORT_NODE_NAME = "expected";
   private static final String CONTROLLER_NODE_NAME = "controller";

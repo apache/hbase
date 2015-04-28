@@ -195,7 +195,7 @@ import com.google.protobuf.ServiceException;
 public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId {
 
-  public static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   /*
    * Strings to be used in forming the exception message for

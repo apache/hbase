@@ -115,7 +115,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * default is true. False means the table is using binary row key*/
   public static final String TABLE_ROW_TEXTKEY = "hbase.table.row.textkey";
 
-  final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+  private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
 
   private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
       "initialized. Ensure you call initializeTable either in your constructor or initialize " +

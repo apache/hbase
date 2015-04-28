@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 @InterfaceAudience.Private
 class HMerge {
   // TODO: Where is this class used?  How does it relate to Merge in same package?
-  static final Log LOG = LogFactory.getLog(HMerge.class);
+  private static final Log LOG = LogFactory.getLog(HMerge.class);
   static final Random rand = new Random();
 
   /*

@@ -56,7 +56,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(SmallTests.class)
 public class TestHFile extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestHFile.class);
+  private static final Log LOG = LogFactory.getLog(TestHFile.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static String ROOT_DIR =

@@ -90,7 +90,7 @@ public class TableAuthManager {
     }
   }
 
-  private static Log LOG = LogFactory.getLog(TableAuthManager.class);
+  private static final Log LOG = LogFactory.getLog(TableAuthManager.class);
 
   private static TableAuthManager instance;
 

@@ -46,7 +46,7 @@ import com.google.protobuf.TextFormat;
  */
 @InterfaceAudience.Private
 public class WALUtil {
-  static final Log LOG = LogFactory.getLog(WALUtil.class);
+  private static final Log LOG = LogFactory.getLog(WALUtil.class);
 
   /**
    * Write the marker that a compaction has succeeded and is about to be committed.

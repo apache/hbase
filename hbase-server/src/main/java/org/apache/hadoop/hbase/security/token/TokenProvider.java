@@ -50,7 +50,7 @@ import org.apache.hadoop.security.token.Token;
 public class TokenProvider implements AuthenticationProtos.AuthenticationService.Interface,
     Coprocessor, CoprocessorService {
 
-  private static Log LOG = LogFactory.getLog(TokenProvider.class);
+  private static final Log LOG = LogFactory.getLog(TokenProvider.class);
 
   private AuthenticationTokenSecretManager secretManager;
 

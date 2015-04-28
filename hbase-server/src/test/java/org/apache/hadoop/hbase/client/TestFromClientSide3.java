@@ -50,7 +50,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestFromClientSide3 {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestFromClientSide3.class);
   private final static HBaseTestingUtility TEST_UTIL
     = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");

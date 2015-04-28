@@ -47,7 +47,7 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{
-  private static Log LOG = LogFactory.getLog(RegionCoprocessorRpcChannel.class);
+  private static final Log LOG = LogFactory.getLog(RegionCoprocessorRpcChannel.class);
 
   private final HConnection connection;
   private final TableName table;

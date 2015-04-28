@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class MetricsSource {
 
-  public static final Log LOG = LogFactory.getLog(MetricsSource.class);
+  private static final Log LOG = LogFactory.getLog(MetricsSource.class);
 
   private long lastTimestamp = 0;
   private int lastQueueSize = 0;

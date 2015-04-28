@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 @InterfaceAudience.Private
 public class HbaseHandlerMetricsProxy implements InvocationHandler {
 
-  public static final Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
       HbaseHandlerMetricsProxy.class);
 
   private final Hbase.Iface handler;

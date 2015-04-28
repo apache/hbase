@@ -58,7 +58,7 @@ import org.junit.experimental.categories.Category;
 @Category(LargeTests.class)
 public class TestMultiTableInputFormat {
 
-  static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);
+  private static final Log LOG = LogFactory.getLog(TestMultiTableInputFormat.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final String TABLE_NAME = "scantest";

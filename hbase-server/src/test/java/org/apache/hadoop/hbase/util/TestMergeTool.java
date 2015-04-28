@@ -50,7 +50,7 @@ import org.junit.experimental.categories.Category;
 /** Test stand alone merge tool that can merge arbitrary regions */
 @Category(LargeTests.class)
 public class TestMergeTool extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestMergeTool.class);
+  private static final Log LOG = LogFactory.getLog(TestMergeTool.class);
   HBaseTestingUtility TEST_UTIL;
 //  static final byte [] COLUMN_NAME = Bytes.toBytes("contents:");
   static final byte [] FAMILY = Bytes.toBytes("contents");

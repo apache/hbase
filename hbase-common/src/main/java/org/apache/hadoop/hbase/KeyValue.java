@@ -82,7 +82,7 @@ import com.google.common.annotations.VisibleForTesting;
 public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, SettableTimestamp {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
 
-  static final Log LOG = LogFactory.getLog(KeyValue.class);
+  private static final Log LOG = LogFactory.getLog(KeyValue.class);
 
   /**
    * Colon character in UTF-8

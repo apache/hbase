@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
-  static final Log LOG = LogFactory.getLog(StoreScanner.class);
+  private static final Log LOG = LogFactory.getLog(StoreScanner.class);
   protected Store store;
   protected ScanQueryMatcher matcher;
   protected KeyValueHeap heap;

@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
-  public static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
+  private static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded.

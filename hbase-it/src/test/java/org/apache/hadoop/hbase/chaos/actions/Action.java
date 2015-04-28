@@ -50,7 +50,7 @@ public class Action {
   public static final String KILL_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.killrstimeout";
   public static final String START_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.startrstimeout";
 
-  protected static Log LOG = LogFactory.getLog(Action.class);
+  protected static final Log LOG = LogFactory.getLog(Action.class);
 
   protected static final long KILL_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;

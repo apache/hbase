@@ -60,7 +60,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ScannerCallableWithReplicas.class);
   volatile ScannerCallable currentScannerCallable;
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
   final ClusterConnection cConnection;

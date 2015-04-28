@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class CallQueue implements BlockingQueue<Runnable> {
-  private static Log LOG = LogFactory.getLog(CallQueue.class);
+  private static final Log LOG = LogFactory.getLog(CallQueue.class);
 
   private final BlockingQueue<Call> underlyingQueue;
   private final ThriftMetrics metrics;

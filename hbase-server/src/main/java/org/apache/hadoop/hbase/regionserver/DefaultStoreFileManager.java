@@ -43,7 +43,7 @@ import com.google.common.collect.Lists;
  */
 @InterfaceAudience.Private
 class DefaultStoreFileManager implements StoreFileManager {
-  static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
+  private static final Log LOG = LogFactory.getLog(DefaultStoreFileManager.class);
 
   private final KVComparator kvComparator;
   private final CompactionConfiguration comConf;

@@ -60,7 +60,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestMasterOperationsForRegionReplicas {
-  final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static Connection CONNECTION = null;
   private static Admin ADMIN;

@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 
 public abstract class MultithreadedTestUtil {
 
-  public static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(MultithreadedTestUtil.class);
 
   public static class TestContext {

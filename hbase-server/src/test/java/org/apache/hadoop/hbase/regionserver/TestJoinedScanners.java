@@ -61,7 +61,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestJoinedScanners {
-  static final Log LOG = LogFactory.getLog(TestJoinedScanners.class);
+  private static final Log LOG = LogFactory.getLog(TestJoinedScanners.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestJoinedScanners").toString();

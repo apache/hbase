@@ -44,7 +44,7 @@ import org.junit.experimental.categories.Category;
 /** Unit tests to test retrieving table/region compaction state*/
 @Category(LargeTests.class)
 public class TestCompactionState {
-  final static Log LOG = LogFactory.getLog(TestCompactionState.class);
+  private static final Log LOG = LogFactory.getLog(TestCompactionState.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Random random = new Random();
 

@@ -57,7 +57,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(MediumTests.class)
 public class TestSecureWAL {
-  static final Log LOG = LogFactory.getLog(TestSecureWAL.class);
+  private static final Log LOG = LogFactory.getLog(TestSecureWAL.class);
   static {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
       .getLogger().setLevel(Level.ALL);

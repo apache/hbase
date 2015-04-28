@@ -133,6 +133,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class HFile {
+  // LOG is being used in HFileBlock and CheckSumUtil
   static final Log LOG = LogFactory.getLog(HFile.class);
 
   /**

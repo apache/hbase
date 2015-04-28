@@ -53,7 +53,7 @@ import com.google.common.collect.TreeMultimap;
  */
 @InterfaceAudience.Private
 public class RegionSplitCalculator<R extends KeyRange> {
-  final static Log LOG = LogFactory.getLog(RegionSplitCalculator.class);
+  private static final Log LOG = LogFactory.getLog(RegionSplitCalculator.class);
 
   private final Comparator<R> rangeCmp;
   /**

@@ -60,7 +60,7 @@ public class HFilePerformanceEvaluation {
       "WARN");
   }
   
-  static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(HFilePerformanceEvaluation.class.getName());
 
   static byte [] format(final int i) {

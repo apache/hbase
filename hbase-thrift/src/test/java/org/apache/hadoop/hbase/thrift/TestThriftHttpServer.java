@@ -48,7 +48,7 @@ import com.google.common.base.Joiner;
 
 public class TestThriftHttpServer {
 
-  public static final Log LOG =
+  private static final Log LOG =
       LogFactory.getLog(TestThriftHttpServer.class);
 
   private static final HBaseTestingUtility TEST_UTIL =

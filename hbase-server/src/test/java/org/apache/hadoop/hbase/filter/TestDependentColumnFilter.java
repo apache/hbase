@@ -52,7 +52,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestDependentColumnFilter {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestDependentColumnFilter.class);
   private static final byte[][] ROWS = {
     Bytes.toBytes("test1"),Bytes.toBytes("test2")
   };

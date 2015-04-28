@@ -44,7 +44,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(LargeTests.class)
 public class TestMultipleTimestamps {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestMultipleTimestamps.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**

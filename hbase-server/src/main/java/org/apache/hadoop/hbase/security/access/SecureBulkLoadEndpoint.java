@@ -109,7 +109,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   private static final int RANDOM_WIDTH = 320;
   private static final int RANDOM_RADIX = 32;
 
-  private static Log LOG = LogFactory.getLog(SecureBulkLoadEndpoint.class);
+  private static final Log LOG = LogFactory.getLog(SecureBulkLoadEndpoint.class);
 
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
   private final static FsPermission PERM_HIDDEN = FsPermission.valueOf("-rwx--x--x");

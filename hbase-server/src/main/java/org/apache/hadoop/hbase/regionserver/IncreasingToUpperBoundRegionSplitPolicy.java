@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 @InterfaceAudience.Private
 public class IncreasingToUpperBoundRegionSplitPolicy
 extends ConstantSizeRegionSplitPolicy {
-  static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(IncreasingToUpperBoundRegionSplitPolicy.class);
   private long initialSize;
 

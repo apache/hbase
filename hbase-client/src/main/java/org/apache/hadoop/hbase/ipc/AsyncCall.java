@@ -39,7 +39,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class AsyncCall extends DefaultPromise<Message> {
-  public static final Log LOG = LogFactory.getLog(AsyncCall.class.getName());
+  private static final Log LOG = LogFactory.getLog(AsyncCall.class.getName());
 
   final int id;
 

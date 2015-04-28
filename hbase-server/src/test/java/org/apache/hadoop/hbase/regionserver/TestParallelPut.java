@@ -56,7 +56,7 @@ import org.junit.rules.TestName;
  */
 @Category(MediumTests.class)
 public class TestParallelPut {
-  static final Log LOG = LogFactory.getLog(TestParallelPut.class);
+  private static final Log LOG = LogFactory.getLog(TestParallelPut.class);
   @Rule public TestName name = new TestName(); 
   
   private HRegion region = null;

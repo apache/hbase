@@ -46,7 +46,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestFSVisitor {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestFSVisitor.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

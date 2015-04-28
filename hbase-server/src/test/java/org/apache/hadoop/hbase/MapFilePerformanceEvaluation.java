@@ -45,7 +45,7 @@ public class MapFilePerformanceEvaluation {
   private static final int ROW_LENGTH = 10;
   private static final int ROW_COUNT = 100000;
 
-  static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(MapFilePerformanceEvaluation.class.getName());
 
   /**

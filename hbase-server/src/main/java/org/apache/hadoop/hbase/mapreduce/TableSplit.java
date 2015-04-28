@@ -43,6 +43,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 @InterfaceStability.Evolving
 public class TableSplit extends InputSplit
 implements Writable, Comparable<TableSplit> {
+  /** @deprecated LOG variable would be made private. */
+  @Deprecated
   public static final Log LOG = LogFactory.getLog(TableSplit.class);
   
   // should be < 0 (@see #readFields(DataInput))

@@ -38,7 +38,7 @@ import org.apache.zookeeper.KeeperException;
 public class ZKSecretWatcher extends ZooKeeperListener {
   private static final String DEFAULT_ROOT_NODE = "tokenauth";
   private static final String DEFAULT_KEYS_PARENT = "keys";
-  private static Log LOG = LogFactory.getLog(ZKSecretWatcher.class);
+  private static final Log LOG = LogFactory.getLog(ZKSecretWatcher.class);
 
   private AuthenticationTokenSecretManager secretManager;
   private String baseKeyZNode;

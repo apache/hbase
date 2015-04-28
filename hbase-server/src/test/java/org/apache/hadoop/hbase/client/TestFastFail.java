@@ -56,7 +56,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({MediumTests.class})
 public class TestFastFail {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final Random random = new Random();

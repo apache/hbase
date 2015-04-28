@@ -83,7 +83,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
  */
 @InterfaceAudience.Private
 public final class WALPerformanceEvaluation extends Configured implements Tool {
-  static final Log LOG = LogFactory.getLog(WALPerformanceEvaluation.class.getName());
+  private static final Log LOG = LogFactory.getLog(WALPerformanceEvaluation.class.getName());
   private final MetricsRegistry metrics = new MetricsRegistry();
   private final Meter syncMeter =
     metrics.newMeter(WALPerformanceEvaluation.class, "syncMeter", "syncs", TimeUnit.MILLISECONDS);

@@ -40,7 +40,7 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 public class Threads {
-  protected static final Log LOG = LogFactory.getLog(Threads.class);
+  private static final Log LOG = LogFactory.getLog(Threads.class);
   private static final AtomicInteger poolNumber = new AtomicInteger(1);
 
   private static UncaughtExceptionHandler LOGGING_EXCEPTION_HANDLER =

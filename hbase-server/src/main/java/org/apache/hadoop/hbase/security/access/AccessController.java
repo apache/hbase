@@ -155,7 +155,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     implements RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
 
-  public static final Log LOG = LogFactory.getLog(AccessController.class);
+  private static final Log LOG = LogFactory.getLog(AccessController.class);
 
   private static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+AccessController.class.getName());

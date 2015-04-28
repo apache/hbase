@@ -76,7 +76,7 @@ import org.junit.rules.TestName;
  */
 @Category(MediumTests.class) // Starts 100 threads
 public class TestAtomicOperation {
-  static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
+  private static final Log LOG = LogFactory.getLog(TestAtomicOperation.class);
   @Rule public TestName name = new TestName();
 
   Region region = null;

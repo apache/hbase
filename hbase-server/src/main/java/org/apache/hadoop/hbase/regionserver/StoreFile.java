@@ -80,7 +80,7 @@ import com.google.common.collect.Ordering;
  */
 @InterfaceAudience.LimitedPrivate("Coprocessor")
 public class StoreFile {
-  static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
+  private static final Log LOG = LogFactory.getLog(StoreFile.class.getName());
 
   // Keys for fileinfo values in HFile
 
@@ -1020,7 +1020,7 @@ public class StoreFile {
    * Reader for a StoreFile.
    */
   public static class Reader {
-    static final Log LOG = LogFactory.getLog(Reader.class.getName());
+    private static final Log LOG = LogFactory.getLog(Reader.class.getName());
 
     protected BloomFilter generalBloomFilter = null;
     protected BloomFilter deleteFamilyBloomFilter = null;

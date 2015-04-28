@@ -36,7 +36,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestProcedureManager {
 
-  static final Log LOG = LogFactory.getLog(TestProcedureManager.class);
+  private static final Log LOG = LogFactory.getLog(TestProcedureManager.class);
   private static final int NUM_RS = 2;
   private static HBaseTestingUtility util = new HBaseTestingUtility();
 

@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
  */
 @InterfaceAudience.Private
 public class FavoredNodesPlan {
-  protected static final Log LOG = LogFactory.getLog(
+  private static final Log LOG = LogFactory.getLog(
       FavoredNodesPlan.class.getName());
 
   /** the map between each region and its favored region server list */

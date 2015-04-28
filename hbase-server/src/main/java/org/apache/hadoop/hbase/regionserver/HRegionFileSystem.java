@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
  */
 @InterfaceAudience.Private
 public class HRegionFileSystem {
-  public static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
+  private static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
 
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";

@@ -62,7 +62,7 @@ import java.util.concurrent.TimeoutException;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerWithReadReplicas {
-  static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
+  private static final Log LOG = LogFactory.getLog(RpcRetryingCallerWithReadReplicas.class);
 
   protected final ExecutorService pool;
   protected final ClusterConnection cConnection;

@@ -55,7 +55,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 public class HBaseSaslRpcClient {
-  public static final Log LOG = LogFactory.getLog(HBaseSaslRpcClient.class);
+  private static final Log LOG = LogFactory.getLog(HBaseSaslRpcClient.class);
 
   private final SaslClient saslClient;
   private final boolean fallbackAllowed;

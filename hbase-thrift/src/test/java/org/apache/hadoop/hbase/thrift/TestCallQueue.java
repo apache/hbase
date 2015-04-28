@@ -47,7 +47,7 @@ import org.junit.Test;
 @RunWith(Parameterized.class)
 public class TestCallQueue {
 
-  public static final Log LOG = LogFactory.getLog(TestCallQueue.class);
+  private static final Log LOG = LogFactory.getLog(TestCallQueue.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final MetricsAssertHelper metricsHelper =

@@ -53,7 +53,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 @Deprecated
 public class HLogKey extends WALKey implements Writable {
-  public static final Log LOG = LogFactory.getLog(HLogKey.class);
+  private static final Log LOG = LogFactory.getLog(HLogKey.class);
 
   public HLogKey() {
     super();

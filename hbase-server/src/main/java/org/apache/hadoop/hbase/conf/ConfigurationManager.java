@@ -73,7 +73,7 @@ import java.util.WeakHashMap;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ConfigurationManager {
-  public static final Log LOG = LogFactory.getLog(ConfigurationManager.class);
+  private static final Log LOG = LogFactory.getLog(ConfigurationManager.class);
 
   // The set of Configuration Observers. These classes would like to get
   // notified when the configuration is reloaded from disk. This is a set

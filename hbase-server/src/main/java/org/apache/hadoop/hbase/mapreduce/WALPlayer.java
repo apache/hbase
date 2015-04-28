@@ -68,7 +68,7 @@ import java.util.TreeMap;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class WALPlayer extends Configured implements Tool {
-  final static Log LOG = LogFactory.getLog(WALPlayer.class);
+  private static final Log LOG = LogFactory.getLog(WALPlayer.class);
   final static String NAME = "WALPlayer";
   final static String BULK_OUTPUT_CONF_KEY = "wal.bulk.output";
   final static String TABLES_KEY = "wal.input.tables";

@@ -34,7 +34,7 @@ import java.io.IOException;
  */
 @InterfaceAudience.Private
 public class UserPermission extends TablePermission {
-  private static Log LOG = LogFactory.getLog(UserPermission.class);
+  private static final Log LOG = LogFactory.getLog(UserPermission.class);
 
   private byte[] user;
 

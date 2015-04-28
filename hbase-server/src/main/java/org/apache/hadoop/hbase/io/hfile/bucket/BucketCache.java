@@ -92,7 +92,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  */
 @InterfaceAudience.Private
 public class BucketCache implements BlockCache, HeapSize {
-  static final Log LOG = LogFactory.getLog(BucketCache.class);
+  private static final Log LOG = LogFactory.getLog(BucketCache.class);
 
   /** Priority buckets */
   private static final float DEFAULT_SINGLE_FACTOR = 0.25f;

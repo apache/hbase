@@ -42,7 +42,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category(IntegrationTests.class)
 public class IntegrationTestMetaReplicas {
-  static final Log LOG = LogFactory.getLog(IntegrationTestMetaReplicas.class);
+  private static final Log LOG = LogFactory.getLog(IntegrationTestMetaReplicas.class);
   /**
    * Util to get at the cluster.
    */

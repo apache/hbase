@@ -35,7 +35,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 class RegionMergeRequest implements Runnable {
-  static final Log LOG = LogFactory.getLog(RegionMergeRequest.class);
+  private static final Log LOG = LogFactory.getLog(RegionMergeRequest.class);
   private final HRegion region_a;
   private final HRegion region_b;
   private final HRegionServer server;

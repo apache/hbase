@@ -76,7 +76,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestZooKeeper {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestZooKeeper.class);
 
   private final static HBaseTestingUtility
       TEST_UTIL = new HBaseTestingUtility();

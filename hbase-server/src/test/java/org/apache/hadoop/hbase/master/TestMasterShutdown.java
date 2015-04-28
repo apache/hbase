@@ -43,7 +43,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
 public class TestMasterShutdown {
-  public static final Log LOG = LogFactory.getLog(TestMasterShutdown.class);
+  private static final Log LOG = LogFactory.getLog(TestMasterShutdown.class);
 
   /**
    * Simple test of shutdown.

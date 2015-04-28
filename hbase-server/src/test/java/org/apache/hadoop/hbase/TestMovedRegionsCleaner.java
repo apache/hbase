@@ -36,7 +36,7 @@ import java.io.IOException;
  */
 @Category( MediumTests.class ) public class TestMovedRegionsCleaner {
 
-  public static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   public static int numCalls = 0;

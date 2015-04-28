@@ -65,6 +65,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     = "hbase.client.log.scanner.latency.cutoff";
   public static final String LOG_SCANNER_ACTIVITY = "hbase.client.log.scanner.activity";
 
+  // Keeping LOG public as it is being used in TestScannerHeartbeatMessages
   public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   protected long scannerId = -1L;
   protected boolean instantiated = false;

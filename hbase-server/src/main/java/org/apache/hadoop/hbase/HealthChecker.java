@@ -35,7 +35,7 @@ import org.apache.hadoop.util.Shell.ShellCommandExecutor;
  */
 class HealthChecker {
 
-  private static Log LOG = LogFactory.getLog(HealthChecker.class);
+  private static final Log LOG = LogFactory.getLog(HealthChecker.class);
   private ShellCommandExecutor shexec = null;
   private String exceptionStackTrace;
 

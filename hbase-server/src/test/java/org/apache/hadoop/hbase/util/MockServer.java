@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
  * Basic mock Server for handler tests.
  */
 public class MockServer implements Server {
-  static final Log LOG = LogFactory.getLog(MockServer.class);
+  private static final Log LOG = LogFactory.getLog(MockServer.class);
   final static ServerName NAME = ServerName.valueOf("MockServer", 123, -1);
   
   boolean stopped;

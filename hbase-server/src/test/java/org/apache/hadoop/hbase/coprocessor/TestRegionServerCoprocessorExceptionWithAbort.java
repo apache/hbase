@@ -51,7 +51,8 @@ import org.junit.experimental.categories.Category;
  */
 @Category(MediumTests.class)
 public class TestRegionServerCoprocessorExceptionWithAbort {
-  static final Log LOG = LogFactory.getLog(TestRegionServerCoprocessorExceptionWithAbort.class);
+  private static final Log LOG = LogFactory.getLog(
+    TestRegionServerCoprocessorExceptionWithAbort.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("observed_table");
 

@@ -181,7 +181,7 @@ import com.google.protobuf.ByteString;
 public class TestHRegion {
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
   // over in TestHRegionOnCluster.
-  static final Log LOG = LogFactory.getLog(TestHRegion.class);
+  private static final Log LOG = LogFactory.getLog(TestHRegion.class);
   @Rule public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";

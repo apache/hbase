@@ -40,7 +40,7 @@ import org.junit.experimental.categories.Category;
 @Category(SmallTests.class)
 public class TestKeyStoreKeyProvider {
 
-  static final Log LOG = LogFactory.getLog(TestKeyStoreKeyProvider.class);
+  private static final Log LOG = LogFactory.getLog(TestKeyStoreKeyProvider.class);
   static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
   static final String ALIAS = "test";
   static final String PASSWORD = "password";

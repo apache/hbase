@@ -157,6 +157,7 @@ import com.google.protobuf.TextFormat;
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX})
 @InterfaceStability.Evolving
 public class RpcServer implements RpcServerInterface {
+  // LOG is being used in CallRunner and the log level is being changed in tests
   public static final Log LOG = LogFactory.getLog(RpcServer.class);
   private static final CallQueueTooBigException CALL_QUEUE_TOO_BIG_EXCEPTION
       = new CallQueueTooBigException();

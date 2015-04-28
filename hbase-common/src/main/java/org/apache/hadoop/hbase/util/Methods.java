@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 @InterfaceAudience.Private
 public class Methods {
-  private static Log LOG = LogFactory.getLog(Methods.class);
+  private static final Log LOG = LogFactory.getLog(Methods.class);
 
   public static <T> Object call(Class<T> clazz, T instance, String methodName,
       Class[] types, Object[] args) throws Exception {

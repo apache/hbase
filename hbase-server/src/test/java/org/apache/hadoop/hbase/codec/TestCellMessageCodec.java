@@ -42,7 +42,7 @@ import com.google.common.io.CountingOutputStream;
 
 @Category(SmallTests.class)
 public class TestCellMessageCodec {
-  public static final Log LOG = LogFactory.getLog(TestCellMessageCodec.class);
+  private static final Log LOG = LogFactory.getLog(TestCellMessageCodec.class);
 
   @Test
   public void testEmptyWorks() throws IOException {

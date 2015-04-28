@@ -56,7 +56,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class CompactSplitThread implements CompactionRequestor, PropagatingConfigurationObserver {
-  static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
+  private static final Log LOG = LogFactory.getLog(CompactSplitThread.class);
 
   // Configuration key for the large compaction threads.
   public final static String LARGE_COMPACTION_THREADS =

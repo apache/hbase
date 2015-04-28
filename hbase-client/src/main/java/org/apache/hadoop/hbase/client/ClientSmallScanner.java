@@ -51,7 +51,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public class ClientSmallScanner extends ClientScanner {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ClientSmallScanner.class);
   private ScannerCallableWithReplicas smallScanCallable = null;
   private SmallScannerCallableFactory callableFactory;
 
