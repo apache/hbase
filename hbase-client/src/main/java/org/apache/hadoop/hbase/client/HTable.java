@@ -1800,6 +1800,12 @@ public class HTable implements HTableInterface {
       byte[] startKey, byte[] endKey, final R responsePrototype, final Callback<R> callback)
       throws ServiceException, Throwable {
 
+    if (startKey == null) {
+      startKey = HConstants.EMPTY_START_ROW;
+    }
+    if (endKey == null) {
+      endKey = HConstants.EMPTY_END_ROW;
+    }
     // get regions covered by the row range
     Pair<List<byte[]>, List<HRegionLocation>> keysAndRegions =
         getKeysAndRegionsInRange(startKey, endKey, true);
