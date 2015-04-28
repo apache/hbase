@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
  * This allows to resume the execution of pending/in-progress procedures in case
  * of machine failure or service shutdown.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public interface ProcedureStore {
   /**
