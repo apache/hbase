@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.hbase.mapred;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormatImpl;
 import org.apache.hadoop.mapred.InputFormat;
@@ -60,8 +61,9 @@ public class TableSnapshotInputFormat implements InputFormat<ImmutableBytesWrita
     }
 
     public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
-        List<String> locations) {
-      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations);
+        List<String> locations, Scan scan, Path restoreDir) {
+      this.delegate =
+          new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override

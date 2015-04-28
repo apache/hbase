@@ -18,19 +18,14 @@
 
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.io.Writable;
@@ -41,7 +36,12 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * TableSnapshotInputFormat allows a MapReduce job to run over a table snapshot. The job
@@ -98,8 +98,9 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
     }
 
     public TableSnapshotRegionSplit(HTableDescriptor htd, HRegionInfo regionInfo,
-        List<String> locations) {
-      this.delegate = new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations);
+        List<String> locations, Scan scan, Path restoreDir) {
+      this.delegate =
+          new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
     }
 
     @Override
