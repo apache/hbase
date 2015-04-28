@@ -1249,7 +1249,9 @@ public class FSHLog implements WAL {
     void offer(final long sequence, final SyncFuture [] syncFutures, final int syncFutureCount) {
       // Set sequence first because the add to the queue will wake the thread if sleeping.
       this.sequence = sequence;
-      this.syncFutures.addAll(Arrays.asList(syncFutures).subList(0, syncFutureCount));
+      for (int i = 0; i < syncFutureCount; ++i) {
+        this.syncFutures.add(syncFutures[i]);
+      }
     }
 
     /**
