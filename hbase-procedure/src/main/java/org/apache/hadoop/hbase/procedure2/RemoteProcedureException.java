@@ -38,7 +38,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
  * of the original exception created on original 'remote' source.  These ProxyThrowables have their
  * their stacks traces and messages overridden to reflect the original 'remote' exception.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 @SuppressWarnings("serial")
 public class RemoteProcedureException extends ProcedureException {

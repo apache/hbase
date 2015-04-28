@@ -22,7 +22,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 // TODO: Not used yet
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class ProcedureYieldException extends ProcedureException {
   /** default constructor */
