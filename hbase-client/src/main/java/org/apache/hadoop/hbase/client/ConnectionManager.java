@@ -812,7 +812,7 @@ class ConnectionManager {
             //the queue is full, a new thread will be started
             this.metaLookupPool = getThreadPool(
                conf.getInt("hbase.hconnection.meta.lookup.threads.max", 128),
-               conf.getInt("hbase.hconnection.meta.lookup.threads.max.core", 10),
+               conf.getInt("hbase.hconnection.meta.lookup.threads.core", 10),
              "-metaLookup-shared-", new LinkedBlockingQueue<Runnable>());
           }
         }
