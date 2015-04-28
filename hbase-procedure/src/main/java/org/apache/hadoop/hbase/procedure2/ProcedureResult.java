@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * The user of the Procedure framework will get the procedure result with
  * procedureExecutor.getResult(procId)
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureResult {
   private final RemoteProcedureException exception;

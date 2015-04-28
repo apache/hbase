@@ -38,7 +38,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachinePr
  * states using setNextState(MyStateEnum.ordinal()).
  * The rollback will call rollbackState() for each state that was executed, in reverse order.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class StateMachineProcedure<TEnvironment, TState>
     extends Procedure<TEnvironment> {
