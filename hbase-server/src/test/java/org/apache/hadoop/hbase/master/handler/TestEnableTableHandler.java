@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -73,6 +74,7 @@ public class TestEnableTableHandler {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Ignore
   @Test(timeout = 300000)
   public void testEnableTableWithNoRegionServers() throws Exception {
     final TableName tableName = TableName.valueOf("testEnableTableWithNoRegionServers");
