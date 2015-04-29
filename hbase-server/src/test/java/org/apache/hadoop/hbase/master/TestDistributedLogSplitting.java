@@ -169,6 +169,7 @@ public class TestDistributedLogSplitting {
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
     conf.setInt("hbase.regionserver.wal.max.splitters", 3);
     conf.setInt("hbase.master.maximum.ping.server.attempts", 3);
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 40);
     TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
