@@ -51,8 +51,7 @@ public class JMXListener implements Coprocessor {
   private static final Log LOG = LogFactory.getLog(JMXListener.class);
   public static final String RMI_REGISTRY_PORT_CONF_KEY = ".rmi.registry.port";
   public static final String RMI_CONNECTOR_PORT_CONF_KEY = ".rmi.connector.port";
-  public static final int defMasterRMIRegistryPort = 10101;
-  public static final int defRegionserverRMIRegistryPort = 10102;
+  public static final int defRMIRegistryPort = 10102;
 
   /**
    * workaround for HBASE-11146
@@ -164,17 +163,11 @@ public class JMXListener implements Coprocessor {
     Configuration conf = env.getConfiguration();
 
     if (env instanceof MasterCoprocessorEnvironment) {
-      // running on Master
-      rmiRegistryPort =
-          conf.getInt("master" + RMI_REGISTRY_PORT_CONF_KEY, defMasterRMIRegistryPort);
-      rmiConnectorPort = conf.getInt("master" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
-      LOG.info("Master rmiRegistryPort:" + rmiRegistryPort + ",Master rmiConnectorPort:"
-          + rmiConnectorPort);
+      LOG.error("JMXListener should not be loaded in Master Environment!");
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
-      // running on RegionServer
+      // running on RegionServer --since 0.99 HMaster is also a HRegionServer
       rmiRegistryPort =
-        conf.getInt("regionserver" + RMI_REGISTRY_PORT_CONF_KEY,
-        defRegionserverRMIRegistryPort);
+        conf.getInt("regionserver" + RMI_REGISTRY_PORT_CONF_KEY, defRMIRegistryPort);
       rmiConnectorPort =
         conf.getInt("regionserver" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
       LOG.info("RegionServer rmiRegistryPort:" + rmiRegistryPort
@@ -182,7 +175,6 @@ public class JMXListener implements Coprocessor {
 
     } else if (env instanceof RegionCoprocessorEnvironment) {
       LOG.error("JMXListener should not be loaded in Region Environment!");
-      return;
     }
 
     synchronized(JMXListener.class) {
