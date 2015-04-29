@@ -22,16 +22,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.protobuf.HBaseZeroCopyByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -144,10 +144,10 @@ public class MultiRowRangeFilter extends FilterBase {
       if (range != null) {
         FilterProtos.RowRange.Builder rangebuilder = FilterProtos.RowRange.newBuilder();
         if (range.startRow != null)
-          rangebuilder.setStartRow(HBaseZeroCopyByteString.wrap(range.startRow));
+          rangebuilder.setStartRow(ByteStringer.wrap(range.startRow));
         rangebuilder.setStartRowInclusive(range.startRowInclusive);
         if (range.stopRow != null)
-          rangebuilder.setStopRow(HBaseZeroCopyByteString.wrap(range.stopRow));
+          rangebuilder.setStopRow(ByteStringer.wrap(range.stopRow));
         rangebuilder.setStopRowInclusive(range.stopRowInclusive);
         range.isScan = Bytes.equals(range.startRow, range.stopRow) ? 1 : 0;
         builder.addRowRangeList(rangebuilder.build());
