@@ -257,7 +257,6 @@ Release Notes - HBase - Version 1.1.0 04/29/2015
     * [HBASE-13242] - TestPerColumnFamilyFlush.testFlushingWhenLogRolling hung
     * [HBASE-13246] - Correct the assertion for namespace permissions in tearDown method of TestAccessController
     * [HBASE-13253] - LoadIncrementalHFiles unify hfiles discovery
-    * [HBASE-13260] - Bootstrap Tables for fun and profit 
     * [HBASE-13262] - ResultScanner doesn't return all rows in Scan
     * [HBASE-13265] - Make thrift2 usable from c++
     * [HBASE-13273] - Make Result.EMPTY_RESULT read-only; currently it can be modified
