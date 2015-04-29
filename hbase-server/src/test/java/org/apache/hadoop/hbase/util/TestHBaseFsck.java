@@ -619,6 +619,7 @@ public class TestHBaseFsck {
    *
    * @throws Exception
    */
+  @Ignore
   @Test (timeout=180000)
   public void testParallelWithRetriesHbck() throws Exception {
     final ExecutorService service;
