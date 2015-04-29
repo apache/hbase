@@ -1,0 +1,222 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[appendix]
+[[hbase.rpc]]
+== 0.95 RPC Specification
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+In 0.95, all client/server communication is done with link:https://developers.google.com/protocol-buffers/[protobuf'ed] Messages rather than with link:http://hadoop.apache.org/docs/current/api/org/apache/hadoop/io/Writable.html[Hadoop
+            Writables].
+Our RPC wire format therefore changes.
+This document describes the client/server request/response protocol and our new RPC wire-format.
+
+
+
+For what RPC is like in 0.94 and previous, see Benoît/Tsuna's link:https://github.com/OpenTSDB/asynchbase/blob/master/src/HBaseRpc.java#L164[Unofficial
+            Hadoop / HBase RPC protocol documentation].
+For more background on how we arrived at this spec., see link:https://docs.google.com/document/d/1WCKwgaLDqBw2vpux0jPsAu2WPTRISob7HGCO8YhfDTA/edit#[HBase
+            RPC: WIP]
+
+
+
+=== Goals
+
+
+
+. A wire-format we can evolve
+. A format that does not require our rewriting server core or radically changing its current architecture (for later).        
+
+=== TODO
+
+
+
+. List of problems with currently specified format and where we would like to go in a version2, etc.
+  For example, what would we have to change if anything to move server async or to support streaming/chunking?
+. Diagram on how it works
+. A grammar that succinctly describes the wire-format.
+  Currently we have these words and the content of the rpc protobuf idl but a grammar for the back and forth would help with groking rpc.
+  Also, a little state machine on client/server interactions would help with understanding (and ensuring correct implementation).        
+
+=== RPC
+
+The client will send setup information on connection establish.
+Thereafter, the client invokes methods against the remote server sending a protobuf Message and receiving a protobuf Message in response.
+Communication is synchronous.
+All back and forth is preceded by an int that has the total length of the request/response.
+Optionally, Cells(KeyValues) can be passed outside of protobufs in follow-behind Cell blocks (because link:https://docs.google.com/document/d/1WEtrq-JTIUhlnlnvA0oYRLp0F8MKpEBeBSCFcQiacdw/edit#[we
+                can't protobuf megabytes of KeyValues] or Cells). These CellBlocks are encoded and optionally compressed.
+
+
+
+For more detail on the protobufs involved, see the link:http://svn.apache.org/viewvc/hbase/trunk/hbase-protocol/src/main/protobuf/RPC.proto?view=markup[RPC.proto]            file in trunk.
+
+==== Connection Setup
+
+Client initiates connection.
+
+===== Client
+On connection setup, client sends a preamble followed by a connection header. 
+
+.<preamble>
+[source]
+----
+<MAGIC 4 byte integer> <1 byte RPC Format Version> <1 byte auth type>
+----
+
+We need the auth method spec.
+here so the connection header is encoded if auth enabled.
+
+E.g.: HBas0x000x50 -- 4 bytes of MAGIC -- `HBas' -- plus one-byte of version, 0 in this case, and one byte, 0x50 (SIMPLE). of an auth type.
+
+.<Protobuf ConnectionHeader Message>
+Has user info, and ``protocol'', as well as the encoders and compression the client will use sending CellBlocks.
+CellBlock encoders and compressors are for the life of the connection.
+CellBlock encoders implement org.apache.hadoop.hbase.codec.Codec.
+CellBlocks may then also be compressed.
+Compressors implement org.apache.hadoop.io.compress.CompressionCodec.
+This protobuf is written using writeDelimited so is prefaced by a pb varint with its serialized length
+
+===== Server
+
+After client sends preamble and connection header, server does NOT respond if successful connection setup.
+No response means server is READY to accept requests and to give out response.
+If the version or authentication in the preamble is not agreeable or the server has trouble parsing the preamble, it will throw a org.apache.hadoop.hbase.ipc.FatalConnectionException explaining the error and will then disconnect.
+If the client in the connection header -- i.e.
+the protobuf'd Message that comes after the connection preamble -- asks for for a Service the server does not support or a codec the server does not have, again we throw a FatalConnectionException with explanation.
+
+==== Request
+
+After a Connection has been set up, client makes requests.
+Server responds.
+
+A request is made up of a protobuf RequestHeader followed by a protobuf Message parameter.
+The header includes the method name and optionally, metadata on the optional CellBlock that may be following.
+The parameter type suits the method being invoked: i.e.
+if we are doing a getRegionInfo request, the protobuf Message param will be an instance of GetRegionInfoRequest.
+The response will be a GetRegionInfoResponse.
+The CellBlock is optionally used ferrying the bulk of the RPC data: i.e Cells/KeyValues.
+
+===== Request Parts
+
+.<Total Length>
+The request is prefaced by an int that holds the total length of what follows.
+
+.<Protobuf RequestHeader Message>
+Will have call.id, trace.id, and method name, etc.
+including optional Metadata on the Cell block IFF one is following.
+Data is protobuf'd inline in this pb Message or optionally comes in the following CellBlock
+
+.<Protobuf Param Message>
+If the method being invoked is getRegionInfo, if you study the Service descriptor for the client to regionserver protocol, you will find that the request sends a GetRegionInfoRequest protobuf Message param in this position.
+
+.<CellBlock>
+An encoded and optionally compressed Cell block.
+
+==== Response
+
+Same as Request, it is a protobuf ResponseHeader followed by a protobuf Message response where the Message response type suits the method invoked.
+Bulk of the data may come in a following CellBlock.
+
+===== Response Parts
+
+.<Total Length>
+The response is prefaced by an int that holds the total length of what follows.
+
+.<Protobuf ResponseHeader Message>
+Will have call.id, etc.
+Will include exception if failed processing.
+Optionally includes metadata on optional, IFF there is a CellBlock following.
+
+.<Protobuf Response Message>
+
+Return or may be nothing if exception.
+If the method being invoked is getRegionInfo, if you study the Service descriptor for the client to regionserver protocol, you will find that the response sends a GetRegionInfoResponse protobuf Message param in this position.
+
+.<CellBlock>
+
+An encoded and optionally compressed Cell block.
+
+==== Exceptions
+
+There are two distinct types.
+There is the request failed which is encapsulated inside the response header for the response.
+The connection stays open to receive new requests.
+The second type, the FatalConnectionException, kills the connection.
+
+Exceptions can carry extra information.
+See the ExceptionResponse protobuf type.
+It has a flag to indicate do-no-retry as well as other miscellaneous payload to help improve client responsiveness.
+
+==== CellBlocks
+
+These are not versioned.
+Server can do the codec or it cannot.
+If new version of a codec with say, tighter encoding, then give it a new class name.
+Codecs will live on the server for all time so old clients can connect.
+
+=== Notes
+
+.Constraints
+In some part, current wire-format -- i.e.
+all requests and responses preceeded by a length -- has been dictated by current server non-async architecture.
+
+.One fat pb request or header+param
+We went with pb header followed by pb param making a request and a pb header followed by pb response for now.
+Doing header+param rather than a single protobuf Message with both header and param content:
+
+. Is closer to what we currently have
+. Having a single fat pb requires extra copying putting the already pb'd param into the body of the fat request pb (and same making result)
+. We can decide whether to accept the request or not before we read the param; for example, the request might be low priority.
+  As is, we read header+param in one go as server is currently implemented so this is a TODO.            
+
+The advantages are minor.
+If later, fat request has clear advantage, can roll out a v2 later.
+
+[[rpc.configs]]
+==== RPC Configurations
+
+.CellBlock Codecs
+To enable a codec other than the default `KeyValueCodec`, set `hbase.client.rpc.codec` to the name of the Codec class to use.
+Codec must implement hbase's `Codec` Interface.
+After connection setup, all passed cellblocks will be sent with this codec.
+The server will return cellblocks using this same codec as long as the codec is on the servers' CLASSPATH (else you will get `UnsupportedCellCodecException`).
+
+To change the default codec, set `hbase.client.default.rpc.codec`. 
+
+To disable cellblocks completely and to go pure protobuf, set the default to the empty String and do not specify a codec in your Configuration.
+So, set `hbase.client.default.rpc.codec` to the empty string and do not set `hbase.client.rpc.codec`.
+This will cause the client to connect to the server with no codec specified.
+If a server sees no codec, it will return all responses in pure protobuf.
+Running pure protobuf all the time will be slower than running with cellblocks. 
+
+.Compression
+Uses hadoops compression codecs.
+To enable compressing of passed CellBlocks, set `hbase.client.rpc.compressor` to the name of the Compressor to use.
+Compressor must implement Hadoops' CompressionCodec Interface.
+After connection setup, all passed cellblocks will be sent compressed.
+The server will return cellblocks compressed using this same compressor as long as the compressor is on its CLASSPATH (else you will get `UnsupportedCompressionCodecException`).
+
+:numbered:
