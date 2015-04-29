@@ -133,9 +133,19 @@ public abstract class RegionSplitPolicy extends Configured {
    * the split reference even when the split row not lies in the range. This method can be used
    * to decide, whether to skip the the StoreFile range check or not.
    * @return whether to skip the StoreFile range check or not
+   * @deprecated Use {@link #skipStoreFileRangeCheck(String)}} instead
    */
+  @Deprecated
   protected boolean skipStoreFileRangeCheck() {
     return false;
   }
 
+  /**
+   * See {@link #skipStoreFileRangeCheck()} javadoc.
+   * @param familyName
+   * @return whether to skip the StoreFile range check or not
+   */
+  protected boolean skipStoreFileRangeCheck(String familyName) {
+    return skipStoreFileRangeCheck();
+  }
 }
