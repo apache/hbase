@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +38,7 @@ import com.google.common.collect.Sets;
 /**
  * Tests to verify correct priority on Master RPC methods.
  */
-@Category({MasterTests.class, MediumTests.class})
+@Category({MediumTests.class})
 public class TestMasterPriorityRpc {
   private HMaster master = null;
   private PriorityFunction priority = null;
