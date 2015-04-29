@@ -578,7 +578,7 @@ public class HRegionFileSystem {
   Path splitStoreFile(final HRegionInfo hri, final String familyName, final StoreFile f,
       final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy) throws IOException {
 
-    if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck()) {
+    if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
       try {
