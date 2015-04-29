@@ -166,7 +166,7 @@ public class TestHBaseFsck {
       MasterSyncObserver.class.getName());
 
     conf.setInt("hbase.regionserver.handler.count", 2);
-    conf.setInt("hbase.regionserver.metahandler.count", 2);
+    conf.setInt("hbase.regionserver.metahandler.count", 30);
 
     conf.setInt("hbase.htable.threads.max", POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);

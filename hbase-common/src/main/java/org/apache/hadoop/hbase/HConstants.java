@@ -892,7 +892,7 @@ public final class HConstants {
   //High priority handlers to deal with admin requests and system table operation requests
   public static final String REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";
-  public static final int DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT = 10;
+  public static final int DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT = 20;
 
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
       "hbase.regionserver.replication.handler.count";
@@ -967,12 +967,13 @@ public final class HConstants {
    * by different set of handlers. For example, HIGH_QOS tagged methods are
    * handled by high priority handlers.
    */
+  // normal_QOS < QOS_threshold < replication_QOS < replay_QOS < admin_QOS < high_QOS
   public static final int NORMAL_QOS = 0;
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 200;
-  public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
-  public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
-  public static final int ADMIN_QOS = 100; // QOS_THRESHOLD < ADMIN_QOS < high_QOS
+  public static final int REPLICATION_QOS = 5;
+  public static final int REPLAY_QOS = 6;
+  public static final int ADMIN_QOS = 100;
   public static final int SYSTEMTABLE_QOS = HIGH_QOS;
 
   /** Directory under /hbase where archived hfiles are stored */

@@ -23,10 +23,11 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -39,7 +40,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.regionserver.RSRpcServices.QosPriority;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
@@ -100,9 +100,30 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   private final float scanVirtualTimeWeight;
 
+  /**
+   * Calls {@link #AnnotationReadingPriorityFunction(RSRpcServices, Class)} using the result of
+   * {@code rpcServices#getClass()}
+   *
+   * @param rpcServices
+   *          The RPC server implementation
+   */
   AnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
-    Map<String, Integer> qosMap = new HashMap<String, Integer>();
-    for (Method m : RSRpcServices.class.getMethods()) {
+    this(rpcServices, rpcServices.getClass());
+  }
+
+  /**
+   * Constructs the priority function given the RPC server implementation and the annotations on the
+   * methods in the provided {@code clz}.
+   *
+   * @param rpcServices
+   *          The RPC server implementation
+   * @param clz
+   *          The concrete RPC server implementation's class
+   */
+  AnnotationReadingPriorityFunction(final RSRpcServices rpcServices,
+      Class<? extends RSRpcServices> clz) {
+    Map<String,Integer> qosMap = new HashMap<String,Integer>();
+    for (Method m : clz.getMethods()) {
       QosPriority p = m.getAnnotation(QosPriority.class);
       if (p != null) {
         // Since we protobuf'd, and then subsequently, when we went with pb style, method names
