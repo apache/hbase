@@ -224,7 +224,7 @@ Use the following legend to interpret this table:
 |Hadoop-2.3.x | X | NT | S | S | NT | NT
 |Hadoop-2.4.x | X | NT | S | S | S | S
 |Hadoop-2.5.x | X | NT | S | S | S | S
-|Hadoop-2.6.x | X | NT | NT | NT | NT | S
+|Hadoop-2.6.x | X | NT | NT | NT | S | S
 |Hadoop-2.7.x | X | NT | NT | NT | NT | NT
 |===
 
