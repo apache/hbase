@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -75,6 +73,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
@@ -172,6 +171,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -934,7 +934,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         ProtobufUtil.getRegionEncodedName(regionSpecifier));
   }
 
-  PriorityFunction getPriority() {
+  @VisibleForTesting
+  public PriorityFunction getPriority() {
     return priority;
   }
 
@@ -985,11 +986,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       AdminService.newReflectiveBlockingService(this),
       AdminService.BlockingInterface.class));
     return bssi;
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  protected @interface QosPriority {
-    int priority() default HConstants.NORMAL_QOS;
   }
 
   public InetSocketAddress getSocketAddress() {

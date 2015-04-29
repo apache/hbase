@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
@@ -269,6 +270,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(RpcController controller,
       GetLastFlushedSequenceIdRequest request) throws ServiceException {
     try {
@@ -282,6 +284,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public RegionServerReportResponse regionServerReport(
       RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
@@ -302,6 +305,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public RegionServerStartupResponse regionServerStartup(
       RpcController controller, RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
@@ -327,6 +331,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public ReportRSFatalErrorResponse reportRSFatalError(
       RpcController controller, ReportRSFatalErrorRequest request) throws ServiceException {
     String errorText = request.getErrorMessage();
@@ -1283,6 +1288,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
       ReportRegionStateTransitionRequest req) throws ServiceException {
     try {

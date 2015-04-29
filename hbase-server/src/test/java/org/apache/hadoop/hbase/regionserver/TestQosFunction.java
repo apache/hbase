@@ -45,7 +45,7 @@ public class TestQosFunction {
     when(rpcServices.getConfiguration()).thenReturn(conf);
 
     AnnotationReadingPriorityFunction qosFunction =
-      new AnnotationReadingPriorityFunction(rpcServices);
+      new AnnotationReadingPriorityFunction(rpcServices, RSRpcServices.class);
 
     // Set method name in pb style with the method name capitalized.
     checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);

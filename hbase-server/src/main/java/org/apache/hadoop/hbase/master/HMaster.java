@@ -390,9 +390,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         getChoreService().scheduleChore(clusterStatusPublisherChore);
       }
     }
-    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
-    int infoPort = putUpJettyServer();
-    startActiveMasterManager(infoPort);
+
+    // Some unit tests don't need a cluster, so no zookeeper at all
+    if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+      activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+      int infoPort = putUpJettyServer();
+      startActiveMasterManager(infoPort);
+    } else {
+      activeMasterManager = null;
+    }
   }
 
   // return the actual infoPort, -1 means disable info server.
