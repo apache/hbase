@@ -1778,34 +1778,34 @@ public class HRegion implements HeapSize { // , Writable{
     } finally {
       this.updatesLock.writeLock().unlock();
     }
-    String s = "Finished memstore snapshotting " + this +
-      ", syncing WAL and waiting on mvcc, flushsize=" + totalFlushableSize;
-    status.setStatus(s);
-    if (LOG.isTraceEnabled()) LOG.trace(s);
-
-    // sync unflushed WAL changes when deferred log sync is enabled
-    // see HBASE-8208 for details
-    if (wal != null && !shouldSyncLog()) {
-      wal.sync();
-    }
-
-    // wait for all in-progress transactions to commit to HLog before
-    // we can start the flush. This prevents
-    // uncommitted transactions from being written into HFiles.
-    // We have to block before we start the flush, otherwise keys that
-    // were removed via a rollbackMemstore could be written to Hfiles.
-    mvcc.waitForRead(w);
-
-    s = "Flushing stores of " + this;
-    status.setStatus(s);
-    if (LOG.isTraceEnabled()) LOG.trace(s);
-
-    // Any failure from here on out will be catastrophic requiring server
-    // restart so hlog content can be replayed and put back into the memstore.
-    // Otherwise, the snapshot content while backed up in the hlog, it will not
-    // be part of the current running servers state.
     boolean compactionRequested = false;
     try {
+      String s = "Finished memstore snapshotting " + this +
+        ", syncing WAL and waiting on mvcc, flushsize=" + totalFlushableSize;
+      status.setStatus(s);
+      if (LOG.isTraceEnabled()) LOG.trace(s);
+
+      // sync unflushed WAL changes when deferred log sync is enabled
+      // see HBASE-8208 for details
+      if (wal != null && !shouldSyncLog()) {
+        wal.sync();
+      }
+
+      // wait for all in-progress transactions to commit to HLog before
+      // we can start the flush. This prevents
+      // uncommitted transactions from being written into HFiles.
+      // We have to block before we start the flush, otherwise keys that
+      // were removed via a rollbackMemstore could be written to Hfiles.
+      mvcc.waitForRead(w);
+
+      s = "Flushing stores of " + this;
+      status.setStatus(s);
+      if (LOG.isTraceEnabled()) LOG.trace(s);
+
+      // Any failure from here on out will be catastrophic requiring server
+      // restart so hlog content can be replayed and put back into the memstore.
+      // Otherwise, the snapshot content while backed up in the hlog, it will not
+      // be part of the current running servers state.
       // A.  Flush memstore to all the HStores.
       // Keep running vector of all store files that includes both old and the
       // just-made new flush store file. The new flushed file is still in the
