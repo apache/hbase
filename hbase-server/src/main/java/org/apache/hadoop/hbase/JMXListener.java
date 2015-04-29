@@ -51,8 +51,8 @@ public class JMXListener implements Coprocessor {
   public static final Log LOG = LogFactory.getLog(JMXListener.class);
   public static final String RMI_REGISTRY_PORT_CONF_KEY = ".rmi.registry.port";
   public static final String RMI_CONNECTOR_PORT_CONF_KEY = ".rmi.connector.port";
-  public static int defMasterRMIRegistryPort = 10101;
-  public static int defRegionserverRMIRegistryPort = 10102;
+  public static final int defMasterRMIRegistryPort = 10101;
+  public static final int defRegionserverRMIRegistryPort = 10102;
 
   private JMXConnectorServer jmxCS = null;
 
@@ -158,13 +158,10 @@ public class JMXListener implements Coprocessor {
     if (env instanceof MasterCoprocessorEnvironment) {
       // running on Master
       rmiRegistryPort =
-        conf.getInt("master" + RMI_REGISTRY_PORT_CONF_KEY,
-        defMasterRMIRegistryPort);
-      rmiConnectorPort =
-        conf.getInt("master" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
-      LOG.info("Master rmiRegistryPort:" + rmiRegistryPort
-        + ",Master rmiConnectorPort:" + rmiConnectorPort);
-
+          conf.getInt("master" + RMI_REGISTRY_PORT_CONF_KEY, defMasterRMIRegistryPort);
+      rmiConnectorPort = conf.getInt("master" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
+      LOG.info("Master rmiRegistryPort:" + rmiRegistryPort + ", Master rmiConnectorPort:"
+          + rmiConnectorPort);
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
       // running on RegionServer
       rmiRegistryPort =
@@ -173,10 +170,11 @@ public class JMXListener implements Coprocessor {
       rmiConnectorPort =
         conf.getInt("regionserver" + RMI_CONNECTOR_PORT_CONF_KEY, rmiRegistryPort);
       LOG.info("RegionServer rmiRegistryPort:" + rmiRegistryPort
-        + ",RegionServer rmiConnectorPort:" + rmiConnectorPort);
+        + ", RegionServer rmiConnectorPort:" + rmiConnectorPort);
 
     } else if (env instanceof RegionCoprocessorEnvironment) {
       LOG.error("JMXListener should not be loaded in Region Environment!");
+      return;
     }
 
     startConnectorServer(rmiRegistryPort, rmiConnectorPort);
