@@ -113,12 +113,14 @@ public class StripeCompactor extends Compactor {
         cleanSeqId = true;
       }
 
+      final boolean needMvcc = fd.maxMVCCReadpoint > 0;
+
       final Compression.Algorithm compression = store.getFamily().getCompactionCompression();
       StripeMultiFileWriter.WriterFactory factory = new StripeMultiFileWriter.WriterFactory() {
         @Override
         public Writer createWriter() throws IOException {
           return store.createWriterInTmp(
-              fd.maxKeyCount, compression, true, true, fd.maxTagsLength > 0);
+              fd.maxKeyCount, compression, true, needMvcc, fd.maxTagsLength > 0);
         }
       };
 
