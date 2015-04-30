@@ -27,8 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
@@ -78,6 +76,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.util.BoundedConcurrentLinkedQueue;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.Pair;
@@ -102,6 +101,7 @@ public class RegionCoprocessorHost
       new ReferenceMap(AbstractReferenceMap.HARD, AbstractReferenceMap.WEAK);
 
   /**
+   * 
    * Encapsulation of the environment of each coprocessor
    */
   static class RegionEnvironment extends CoprocessorHost.Environment
@@ -111,8 +111,8 @@ public class RegionCoprocessorHost
     private RegionServerServices rsServices;
     ConcurrentMap<String, Object> sharedData;
     private static final int LATENCY_BUFFER_SIZE = 100;
-    private final BlockingQueue<Long> coprocessorTimeNanos = new ArrayBlockingQueue<Long>(
-        LATENCY_BUFFER_SIZE);
+    private final BoundedConcurrentLinkedQueue<Long> coprocessorTimeNanos =
+        new BoundedConcurrentLinkedQueue<Long>(LATENCY_BUFFER_SIZE);
     private final boolean useLegacyPre;
     private final boolean useLegacyPost;
 
