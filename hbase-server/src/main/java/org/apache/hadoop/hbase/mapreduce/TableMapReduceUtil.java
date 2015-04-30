@@ -64,7 +64,6 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.yammer.metrics.core.MetricsRegistry;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -310,7 +309,6 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
-    addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
     resetCacheConfig(job.getConfiguration());
   }
 
@@ -702,7 +700,8 @@ public class TableMapReduceUtil {
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
       org.cloudera.htrace.Trace.class,
-      org.cliffc.high_scale_lib.Counter.class); // needed for mapred over snapshots
+      org.cliffc.high_scale_lib.Counter.class,
+      com.yammer.metrics.core.MetricsRegistry.class); // needed for mapred over snapshots
   }
 
   /**
