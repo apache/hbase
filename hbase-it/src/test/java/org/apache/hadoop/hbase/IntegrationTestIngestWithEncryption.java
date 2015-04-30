@@ -101,7 +101,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
       LOG.info("Updating CF schema for " + getTablename() + "." +
         columnDescriptor.getNameAsString());
       admin.disableTable(getTablename());
-      admin.modifyColumn(getTablename(), columnDescriptor);
+      admin.modifyColumnFamily(getTablename(), columnDescriptor);
       admin.enableTable(getTablename());
       util.waitFor(30000, 1000, true, new Predicate<IOException>() {
         @Override

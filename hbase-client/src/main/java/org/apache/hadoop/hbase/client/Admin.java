@@ -489,32 +489,78 @@ public interface Admin extends Abortable, Closeable {
   Pair<Integer, Integer> getAlterStatus(final byte[] tableName) throws IOException;
 
   /**
-   * Add a column to an existing table. Asynchronous operation.
+   * Add a column family to an existing table. Asynchronous operation.
    *
-   * @param tableName name of the table to add column to
-   * @param column column descriptor of column to be added
+   * @param tableName name of the table to add column family to
+   * @param columnFamily column family descriptor of column family to be added
    * @throws IOException if a remote or network exception occurs
+   * @deprecated As of release 2.0.0.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
+   *             This will be removed in HBase 3.0.0.
+   *             Use {@link #addColumnFamily(TableName, HColumnDescriptor)}.
    */
-  void addColumn(final TableName tableName, final HColumnDescriptor column) throws IOException;
+  @Deprecated
+  void addColumn(final TableName tableName, final HColumnDescriptor columnFamily)
+    throws IOException;
 
   /**
-   * Delete a column from a table. Asynchronous operation.
+   * Add a column family to an existing table. Asynchronous operation.
    *
-   * @param tableName name of table
-   * @param columnName name of column to be deleted
+   * @param tableName name of the table to add column family to
+   * @param columnFamily column family descriptor of column family to be added
    * @throws IOException if a remote or network exception occurs
    */
-  void deleteColumn(final TableName tableName, final byte[] columnName) throws IOException;
+  void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+    throws IOException;
+
+  /**
+   * Delete a column family from a table. Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param columnFamily name of column family to be deleted
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated As of release 2.0.0.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
+   *             This will be removed in HBase 3.0.0.
+   *             Use {@link #deleteColumnFamily(TableName, byte[])}}.
+   */
+  @Deprecated
+  void deleteColumn(final TableName tableName, final byte[] columnFamily) throws IOException;
+
+  /**
+   * Delete a column family from a table. Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param columnFamily name of column family to be deleted
+   * @throws IOException if a remote or network exception occurs
+   */
+  void deleteColumnFamily(final TableName tableName, final byte[] columnFamily) throws IOException;
 
   /**
    * Modify an existing column family on a table. Asynchronous operation.
    *
    * @param tableName name of table
-   * @param descriptor new column descriptor to use
+   * @param columnFamily new column family descriptor to use
+   * @throws IOException if a remote or network exception occurs
+   * @deprecated As of release 2.0.0.
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
+   *             This will be removed in HBase 3.0.0.
+   *             Use {@link #modifyColumnFamily(TableName, HColumnDescriptor)}.
+   */
+  @Deprecated
+  void modifyColumn(final TableName tableName, final HColumnDescriptor columnFamily)
+      throws IOException;
+
+  /**
+   * Modify an existing column family on a table. Asynchronous operation.
+   *
+   * @param tableName name of table
+   * @param columnFamily new column family descriptor to use
    * @throws IOException if a remote or network exception occurs
    */
-  void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
+  void modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
       throws IOException;
+
 
   /**
    * Close a region. For expert-admins.  Runs close on the regionserver.  The master will not be

@@ -355,7 +355,7 @@ public class TestSnapshotCloneIndependence {
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
 
     admin.disableTable(localTableName);
-    admin.addColumn(localTableName, hcd);
+    admin.addColumnFamily(localTableName, hcd);
 
     // Verify that it is not in the snapshot
     admin.enableTable(localTableName);

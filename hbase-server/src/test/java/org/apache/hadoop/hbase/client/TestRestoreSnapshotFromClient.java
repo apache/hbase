@@ -181,7 +181,7 @@ public class TestRestoreSnapshotFromClient {
 
     // Add one column family and put some data in it
     admin.disableTable(tableName);
-    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
     admin.enableTable(tableName);
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
