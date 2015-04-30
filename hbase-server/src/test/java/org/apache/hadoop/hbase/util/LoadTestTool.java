@@ -300,9 +300,9 @@ public class LoadTestTool extends AbstractHBaseTool {
                       cipher.getName())));
         }
         if (isNewCf) {
-          admin.addColumn(tableName, columnDesc);
+          admin.addColumnFamily(tableName, columnDesc);
         } else {
-          admin.modifyColumn(tableName, columnDesc);
+          admin.modifyColumnFamily(tableName, columnDesc);
         }
       }
       LOG.info("Enabling table " + tableName);

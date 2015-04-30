@@ -118,7 +118,7 @@ public class TestTableDescriptorModification {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      admin.addColumn(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
+      admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
     } finally {
       admin.deleteTable(TABLE_NAME);
@@ -138,12 +138,12 @@ public class TestTableDescriptorModification {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       // Modify the table removing one family and verify the descriptor
-      admin.addColumn(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
+      admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
 
       try {
         // Add same column family again - expect failure
-        admin.addColumn(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
+        admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
         Assert.fail("Delete a non-exist column family should fail");
       } catch (InvalidFamilyOperationException e) {
         // Expected.
@@ -173,7 +173,7 @@ public class TestTableDescriptorModification {
       cfDescriptor.setBlocksize(newBlockSize);
 
       // Modify colymn family
-      admin.modifyColumn(TABLE_NAME, cfDescriptor);
+      admin.modifyColumnFamily(TABLE_NAME, cfDescriptor);
 
       HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME);
       HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
@@ -203,7 +203,7 @@ public class TestTableDescriptorModification {
 
       // Modify a column family that is not in the table.
       try {
-        admin.modifyColumn(TABLE_NAME, cfDescriptor);
+        admin.modifyColumnFamily(TABLE_NAME, cfDescriptor);
         Assert.fail("Modify a non-exist column family should fail");
       } catch (InvalidFamilyOperationException e) {
         // Expected.
@@ -228,7 +228,7 @@ public class TestTableDescriptorModification {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
 
       // Modify the table removing one family and verify the descriptor
-      admin.deleteColumn(TABLE_NAME, FAMILY_1);
+      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1);
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
     } finally {
       admin.deleteTable(TABLE_NAME);
@@ -249,12 +249,12 @@ public class TestTableDescriptorModification {
       verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
 
       // Modify the table removing one family and verify the descriptor
-      admin.deleteColumn(TABLE_NAME, FAMILY_1);
+      admin.deleteColumnFamily(TABLE_NAME, FAMILY_1);
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
 
       try {
         // Delete again - expect failure
-        admin.deleteColumn(TABLE_NAME, FAMILY_1);
+        admin.deleteColumnFamily(TABLE_NAME, FAMILY_1);
         Assert.fail("Delete a non-exist column family should fail");
       } catch (Exception e) {
         // Expected.
