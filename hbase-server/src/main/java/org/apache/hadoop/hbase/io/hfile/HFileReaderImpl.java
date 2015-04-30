@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -823,12 +824,21 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (!isSeeked())
         return null;
 
-      KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-          + blockBuffer.position(), getCellBufSize());
-      if (this.reader.shouldIncludeMemstoreTS()) {
-        ret.setSequenceId(currMemstoreTS);
+      if(currTagsLen > 0) {
+        KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+            + blockBuffer.position(), getCellBufSize());
+        if (this.reader.shouldIncludeMemstoreTS()) {
+          ret.setSequenceId(currMemstoreTS);
+        }
+        return ret;
+      } else {
+        NoTagsKeyValue ret = new NoTagsKeyValue(blockBuffer.array(),
+            blockBuffer.arrayOffset() + blockBuffer.position(), getCellBufSize());
+        if (this.reader.shouldIncludeMemstoreTS()) {
+          ret.setSequenceId(currMemstoreTS);
+        }
+        return ret;
       }
-      return ret;
     }
 
     @Override
