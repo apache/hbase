@@ -98,9 +98,11 @@ public class DefaultCompactor extends Compactor {
           smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
           cleanSeqId = true;
         }
-        
+
+        // When all MVCC readpoints are 0, don't write them.
+        // See HBASE-8166, HBASE-12600, and HBASE-13389.
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-            true, fd.maxTagsLength > 0);
+          fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0);
         boolean finished =
             performCompaction(scanner, writer, smallestReadPoint, cleanSeqId, throughputController);
         if (!finished) {
