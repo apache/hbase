@@ -42,6 +42,8 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String QUEUE_CALL_TIME_DESC = "Queue Call Time.";
   String PROCESS_CALL_TIME_NAME = "processCallTime";
   String PROCESS_CALL_TIME_DESC = "Processing call time.";
+  String TOTAL_CALL_TIME_NAME = "totalCallTime";
+  String TOTAL_CALL_TIME_DESC = "Total call time, including both queued and processing time.";
   String QUEUE_SIZE_NAME = "queueSize";
   String QUEUE_SIZE_DESC = "Number of bytes in the call queues.";
   String GENERAL_QUEUE_NAME = "numCallsInGeneralQueue";
@@ -93,4 +95,6 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void dequeuedCall(int qTime);
 
   void processedCall(int processingTime);
-}
+
+  void queuedAndProcessedCall(int totalTime);
+  }

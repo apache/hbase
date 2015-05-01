@@ -69,6 +69,10 @@ public class MetricsHBaseServer {
     source.processedCall(processingTime);
   }
 
+  void totalCall(int totalTime) {
+    source.queuedAndProcessedCall(totalTime);
+  }
+
   public void exception(Throwable throwable) {
     source.exception();
 

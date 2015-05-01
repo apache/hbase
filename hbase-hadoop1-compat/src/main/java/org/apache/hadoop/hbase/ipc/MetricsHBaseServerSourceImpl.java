@@ -46,6 +46,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
 
   private MetricMutableHistogram queueCallTime;
   private MetricMutableHistogram processCallTime;
+  private MetricMutableHistogram totalCallTime;
 
   public MetricsHBaseServerSourceImpl(String metricsName,
                                       String metricsDescription,
@@ -86,6 +87,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         QUEUE_CALL_TIME_DESC);
     this.processCallTime = this.getMetricsRegistry().newHistogram(PROCESS_CALL_TIME_NAME,
         PROCESS_CALL_TIME_DESC);
+    this.totalCallTime = this.getMetricsRegistry().newHistogram(TOTAL_CALL_TIME_NAME,
+        TOTAL_CALL_TIME_DESC);
   }
 
   @Override
@@ -161,6 +164,11 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   @Override
   public void processedCall(int processingTime) {
     processCallTime.add(processingTime);
+  }
+
+  @Override
+  public void queuedAndProcessedCall(int totalTime) {
+    totalCallTime.add(totalTime);
   }
 
   @Override

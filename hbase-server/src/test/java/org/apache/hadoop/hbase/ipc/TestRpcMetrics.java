@@ -102,8 +102,10 @@ public class TestRpcMetrics {
 
     mrpc.dequeuedCall(100);
     mrpc.processedCall(101);
+    mrpc.totalCall(102);
     HELPER.assertCounter("queueCallTime_NumOps", 1, serverSource);
     HELPER.assertCounter("processCallTime_NumOps", 1, serverSource);
+    HELPER.assertCounter("totalCallTime_NumOps", 1, serverSource);
 
     mrpc.sentBytes(103);
     mrpc.sentBytes(103);

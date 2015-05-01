@@ -2105,16 +2105,20 @@ public class RpcServer implements RpcServerInterface {
       long startTime = System.currentTimeMillis();
       PayloadCarryingRpcController controller = new PayloadCarryingRpcController(cellScanner);
       Message result = service.callBlockingMethod(md, controller, param);
-      int processingTime = (int) (System.currentTimeMillis() - startTime);
+      long endTime = System.currentTimeMillis();
+      int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
+      int totalTime = (int) (endTime - receiveTime);
       if (LOG.isTraceEnabled()) {
         LOG.trace(CurCall.get().toString() +
             ", response " + TextFormat.shortDebugString(result) +
             " queueTime: " + qTime +
-            " processingTime: " + processingTime);
+            " processingTime: " + processingTime +
+            " totalTime: " + totalTime);
       }
       metrics.dequeuedCall(qTime);
       metrics.processedCall(processingTime);
+      metrics.totalCall(totalTime);
       long responseSize = result.getSerializedSize();
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
