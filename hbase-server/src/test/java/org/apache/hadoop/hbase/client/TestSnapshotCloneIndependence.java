@@ -41,7 +41,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -178,7 +177,6 @@ public class TestSnapshotCloneIndependence {
     runTestSnapshotDeleteIndependent(false);
   }
 
-  @Ignore
   @Test (timeout=300000)
   public void testOnlineSnapshotDeleteIndependent() throws Exception {
     runTestSnapshotDeleteIndependent(true);
