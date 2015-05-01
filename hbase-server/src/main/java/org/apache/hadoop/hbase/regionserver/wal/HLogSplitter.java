@@ -264,6 +264,7 @@ public class HLogSplitter {
     boolean progress_failed = false;
     int editsCount = 0;
     int editsSkipped = 0;
+    Reader in = null;
 
     status =
         TaskMonitor.get().createStatus(
@@ -277,7 +278,6 @@ public class HLogSplitter {
         progress_failed = true;
         return false;
       }
-      Reader in = null;
       try {
         in = getReader(fs, logfile, conf, skipErrors, reporter);
       } catch (CorruptedLogFileException e) {
@@ -357,6 +357,14 @@ public class HLogSplitter {
       throw e;
     } finally {
       LOG.debug("Finishing writing output logs and closing down.");
+      try {
+        if (null != in) {
+          in.close();
+        }
+      } catch (IOException exception) {
+        LOG.warn("Could not close wal reader: " + exception.getMessage());
+        LOG.debug("exception details", exception);
+      }
       try {
         if (outputSinkStarted) {
           // Set progress_failed to true as the immediate following statement will reset its value

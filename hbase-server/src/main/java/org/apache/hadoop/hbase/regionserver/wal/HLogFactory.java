@@ -107,6 +107,7 @@ public class HLogFactory {
         long startWaiting = EnvironmentEdgeManager.currentTimeMillis();
         long openTimeout = conf.getInt("hbase.hlog.open.timeout", 300000) + startWaiting;
         int nbAttempt = 0;
+        FSDataInputStream stream = null;
         while (true) {
           try {
             if (lrClass != ProtobufLogReader.class) {
@@ -115,7 +116,7 @@ public class HLogFactory {
               reader.init(fs, path, conf, null);
               return reader;
             } else {
-              FSDataInputStream stream = fs.open(path);
+              stream = fs.open(path);
               // Note that zero-length file will fail to read PB magic, and attempt to create
               // a non-PB reader and fail the same way existing code expects it to. If we get
               // rid of the old reader entirely, we need to handle 0-size files differently from
@@ -129,6 +130,14 @@ public class HLogFactory {
               return reader;
             }
           } catch (IOException e) {
+            try {
+              if (stream != null) {
+                stream.close();
+              }
+            } catch (IOException exception) {
+              LOG.warn("Could not close FSDataInputStream" + exception.getMessage());
+              LOG.debug("exception details", exception);
+            }
             String msg = e.getMessage();
             if (msg != null && (msg.contains("Cannot obtain block length")
                 || msg.contains("Could not obtain the last block")
