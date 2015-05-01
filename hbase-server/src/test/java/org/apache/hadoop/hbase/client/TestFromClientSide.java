@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -5043,6 +5044,39 @@ public class TestFromClientSide {
     ScanMetrics scanMetrics = getScanMetrics(scan);
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.get());
+
+    // check byte counters
+    scan = new Scan();
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scan.setCaching(1);
+    scanner = ht.getScanner(scan);
+    int numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += KeyValueUtil.ensureKeyValue(cell).getLength();
+      }
+    }
+    scanner.close();
+    scanMetrics = getScanMetrics(scan);
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
+
+    // check byte counters on a small scan
+    scan = new Scan();
+    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scan.setCaching(1);
+    scan.setSmall(true);
+    scanner = ht.getScanner(scan);
+    numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += KeyValueUtil.ensureKeyValue(cell).getLength();
+      }
+    }
+    scanner.close();
+    scanMetrics = getScanMetrics(scan);
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
 
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records

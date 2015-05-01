@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -184,11 +186,46 @@ public class ClientSmallScanner extends ClientScanner {
           + Bytes.toStringBinary(localStartKey) + "'");
     }
     smallScanCallable = callableFactory.getCallable(
-        scan, getConnection(), getTable(), localStartKey, cacheNum, rpcControllerFactory);
+        scan, getConnection(), getTable(), scanMetrics, localStartKey, cacheNum,
+        rpcControllerFactory);
     if (this.scanMetrics != null && regionChanged) {
       this.scanMetrics.countOfRegions.incrementAndGet();
     }
     return true;
+  }
+
+  static class SmallScannerCallable extends ScannerCallable {
+    public SmallScannerCallable(HConnection connection, TableName tableName, Scan scan,
+        ScanMetrics scanMetrics, PayloadCarryingRpcController controller, int cacheNum) {
+      super(connection, tableName, scan, scanMetrics, controller);
+      this.setCaching(cacheNum);
+    }
+
+    @Override
+    public Result [] call() throws IOException {
+      if (this.closed) return null;
+      if (Thread.interrupted()) {
+        throw new InterruptedIOException();
+      }
+      ScanRequest request = RequestConverter.buildScanRequest(getLocation()
+        .getRegionInfo().getRegionName(), getScan(), getCaching(), true);
+      ScanResponse response = null;
+      try {
+        controller.setPriority(getTableName());
+        response = getStub().scan(controller, request);
+        Result[] results = ResponseConverter.getResults(controller.cellScanner(), response);
+        if (response.hasMoreResultsInRegion()) {
+          setHasMoreResultsContext(true);
+          setServerHasMoreResults(response.getMoreResultsInRegion());
+        } else {
+          setHasMoreResultsContext(false);
+        }
+        updateResultsMetrics(results);
+        return results;
+      } catch (ServiceException se) {
+        throw ProtobufUtil.getRemoteException(se);
+      }
+    }
   }
 
   @Override
@@ -276,33 +313,12 @@ public class ClientSmallScanner extends ClientScanner {
   protected static class SmallScannerCallableFactory {
 
     public RegionServerCallable<Result[]> getCallable(final Scan sc, HConnection connection,
-        TableName table, byte[] localStartKey, final int cacheNum,
+        TableName tableName, ScanMetrics scanMetrics, byte[] localStartKey, final int cacheNum,
         final RpcControllerFactory rpcControllerFactory) throws IOException {
       sc.setStartRow(localStartKey);
-      RegionServerCallable<Result[]> callable = new RegionServerCallable<Result[]>(
-          connection, table, sc.getStartRow()) {
-        public Result[] call() throws IOException {
-          ScanRequest request = RequestConverter.buildScanRequest(getLocation()
-            .getRegionInfo().getRegionName(), sc, cacheNum, true);
-          ScanResponse response = null;
-          PayloadCarryingRpcController controller = rpcControllerFactory.newController();
-          try {
-            controller.setPriority(getTableName());
-            response = getStub().scan(controller, request);
-            if (response.hasMoreResultsInRegion()) {
-              setHasMoreResultsContext(true);
-              setServerHasMoreResults(response.getMoreResultsInRegion());
-            } else {
-              setHasMoreResultsContext(false);
-            }
-            return ResponseConverter.getResults(controller.cellScanner(),
-                response);
-          } catch (ServiceException se) {
-            throw ProtobufUtil.getRemoteException(se);
-          }
-        }
-      };
-      return callable;
+      PayloadCarryingRpcController controller = rpcControllerFactory.newController();
+      return new SmallScannerCallable(connection, tableName, sc, scanMetrics, controller,
+        cacheNum);
     }
 
   }

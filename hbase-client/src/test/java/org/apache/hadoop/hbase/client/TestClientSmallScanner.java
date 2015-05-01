@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -104,7 +105,7 @@ public class TestClientSmallScanner {
     return new SmallScannerCallableFactory() {
       @Override
       public RegionServerCallable<Result[]> getCallable(final Scan sc, HConnection connection,
-          TableName table, byte[] localStartKey, final int cacheNum,
+          TableName table, ScanMetrics scanMetrics, byte[] localStartKey, final int cacheNum,
           final RpcControllerFactory rpcControllerFactory) {
         return callableWithReplicas;
       }

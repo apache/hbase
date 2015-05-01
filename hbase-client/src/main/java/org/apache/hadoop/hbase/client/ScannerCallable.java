@@ -64,7 +64,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
   public static final Log LOG = LogFactory.getLog(ScannerCallable.class);
   private long scannerId = -1L;
   protected boolean instantiated = false;
-  private boolean closed = false;
+  protected boolean closed = false;
   private Scan scan;
   private int caching = 1;
   protected ScanMetrics scanMetrics;
@@ -272,7 +272,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
   }
 
-  private void updateResultsMetrics(Result[] rrs) {
+  protected void updateResultsMetrics(Result[] rrs) {
     if (this.scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
