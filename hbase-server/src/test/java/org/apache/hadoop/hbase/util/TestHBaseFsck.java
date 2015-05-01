@@ -613,7 +613,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * This test makes sure that with 5 retries both parallel instances
+   * This test makes sure that with 10 retries both parallel instances
    * of hbck will be completed successfully.
    *
    * @throws Exception
@@ -627,7 +627,10 @@ public class TestHBaseFsck {
 
       @Override
       public HBaseFsck call() throws Exception {
-        return doFsck(conf, false);
+        // Increase retry attempts to make sure the non-active hbck doesn't get starved
+        Configuration c = new Configuration(conf);
+        c.setInt("hbase.hbck.lockfile.attempts", 10);
+        return doFsck(c, false);
       }
     }
     service = Executors.newFixedThreadPool(2);
@@ -635,7 +638,7 @@ public class TestHBaseFsck {
     hbck2 = service.submit(new RunHbck());
     service.shutdown();
     //wait for 15 seconds, for both hbck calls finish
-    service.awaitTermination(15, TimeUnit.SECONDS);
+    service.awaitTermination(25, TimeUnit.SECONDS);
     HBaseFsck h1 = hbck1.get();
     HBaseFsck h2 = hbck2.get();
     // Both should be successful
