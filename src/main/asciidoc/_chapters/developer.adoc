@@ -401,6 +401,16 @@ mvn -DskipTests clean install && mvn -DskipTests package assembly:single
 
 The distribution tarball is built in _hbase-assembly/target/hbase-<version>-bin.tar.gz_.
 
+You can install or deploy the tarball by having the assembly:single goal before install or deploy in the maven command:
+
+----
+mvn -DskipTests package assembly:single install
+----
+----
+mvn -DskipTests package assembly:single deploy
+----
+
+
 [[build.gotchas]]
 ==== Build Gotchas
 
