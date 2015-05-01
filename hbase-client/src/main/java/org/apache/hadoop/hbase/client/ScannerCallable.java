@@ -325,7 +325,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
   }
 
-  private void updateResultsMetrics(Result[] rrs) {
+  protected void updateResultsMetrics(Result[] rrs) {
     if (this.scanMetrics == null || rrs == null || rrs.length == 0) {
       return;
     }
