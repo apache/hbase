@@ -29,6 +29,8 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -83,8 +85,8 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
         } catch (Throwable e) {
         }
         return null;
@@ -97,8 +99,8 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     // Ideally this should not be allowed.  this operation should fail or do nothing.
     action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user3");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE }, "user3");
         } catch (Throwable e) {
         }
         return null;
@@ -113,8 +115,8 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     PrivilegedExceptionAction<GetAuthsResponse> action1 =
         new PrivilegedExceptionAction<GetAuthsResponse>() {
       public GetAuthsResponse run() throws Exception {
-        try {
-          return VisibilityClient.getAuths(conf, "user1");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.getAuths(conn, "user1");
         } catch (Throwable e) {
         }
         return null;
@@ -136,8 +138,9 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action2 = 
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.clearAuths(conf, new String[] { CONFIDENTIAL, PRIVATE }, "user1");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.clearAuths(conn, new String[] {
+              CONFIDENTIAL, PRIVATE }, "user1");
         } catch (Throwable e) {
         }
         return null;
@@ -160,8 +163,8 @@ public class TestVisibilityLabelsOpWithDifferentUsersNoACL {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }

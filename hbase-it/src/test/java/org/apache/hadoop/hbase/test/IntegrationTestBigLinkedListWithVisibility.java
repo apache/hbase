@@ -385,8 +385,8 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
 
   private void addLabels() throws Exception {
     try {
-      VisibilityClient.addLabels(util.getConfiguration(), labels.split(COMMA));
-      VisibilityClient.setAuths(util.getConfiguration(), labels.split(COMMA), USER.getName());
+      VisibilityClient.addLabels(util.getConnection(), labels.split(COMMA));
+      VisibilityClient.setAuths(util.getConnection(), labels.split(COMMA), USER.getName());
     } catch (Throwable t) {
       throw new IOException(t);
     }

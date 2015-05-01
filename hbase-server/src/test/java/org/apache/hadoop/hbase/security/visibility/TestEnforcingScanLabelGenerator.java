@@ -83,9 +83,9 @@ public class TestEnforcingScanLabelGenerator {
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.addLabels(conf, new String[] { SECRET, CONFIDENTIAL });
-          VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, }, TESTUSER.getShortName());
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
+          VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, }, TESTUSER.getShortName());
         } catch (Throwable t) {
           throw new IOException(t);
         }

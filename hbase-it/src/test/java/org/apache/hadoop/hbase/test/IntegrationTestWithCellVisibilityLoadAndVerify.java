@@ -140,10 +140,10 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
 
   private void addLabelsAndAuths() throws Exception {
     try {
-      VisibilityClient.addLabels(util.getConfiguration(), LABELS);
-      VisibilityClient.setAuths(util.getConfiguration(), new String[] { CONFIDENTIAL, TOPSECRET,
+      VisibilityClient.addLabels(util.getConnection(), LABELS);
+      VisibilityClient.setAuths(util.getConnection(), new String[] { CONFIDENTIAL, TOPSECRET,
           SECRET, PRIVATE }, USER1.getName());
-      VisibilityClient.setAuths(util.getConfiguration(), new String[] { PUBLIC },
+      VisibilityClient.setAuths(util.getConnection(), new String[] { PUBLIC },
           USER2.getName());
     } catch (Throwable t) {
       throw new IOException(t);

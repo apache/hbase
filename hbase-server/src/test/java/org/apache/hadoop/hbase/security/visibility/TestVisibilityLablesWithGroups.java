@@ -96,10 +96,10 @@ public class TestVisibilityLablesWithGroups {
     // Set up for the test
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.addLabels(conf, new String[] { SECRET, CONFIDENTIAL });
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, new String[] { SECRET, CONFIDENTIAL });
           // set auth for @testgroup
-          VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL }, "@testgroup");
+          VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL }, "@testgroup");
         } catch (Throwable t) {
           throw new IOException(t);
         }
@@ -173,8 +173,8 @@ public class TestVisibilityLablesWithGroups {
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
-        try {
-          authsResponse = VisibilityClient.getAuths(conf, "@testgroup");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          authsResponse = VisibilityClient.getAuths(conn, "@testgroup");
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -266,8 +266,9 @@ public class TestVisibilityLablesWithGroups {
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         VisibilityLabelsResponse response = null;
-        try {
-          response = VisibilityClient.clearAuths(conf, new String[] { CONFIDENTIAL }, "@testgroup");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          response = VisibilityClient.clearAuths(conn, new String[] {
+            CONFIDENTIAL }, "@testgroup");
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -279,8 +280,8 @@ public class TestVisibilityLablesWithGroups {
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
-        try {
-          authsResponse = VisibilityClient.getAuths(conf, "@testgroup");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          authsResponse = VisibilityClient.getAuths(conn, "@testgroup");
         } catch (Throwable e) {
           fail("Should not have failed");
         }

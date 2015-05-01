@@ -41,6 +41,8 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -166,8 +168,8 @@ public class TestScannersWithLabels {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }
@@ -178,8 +180,8 @@ public class TestScannersWithLabels {
   }
   private static void setAuths() throws Exception {
     String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-    try {
-      VisibilityClient.setAuths(conf, labels, User.getCurrent().getShortName());
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      VisibilityClient.setAuths(conn, labels, User.getCurrent().getShortName());
     } catch (Throwable t) {
       throw new IOException(t);
     }
