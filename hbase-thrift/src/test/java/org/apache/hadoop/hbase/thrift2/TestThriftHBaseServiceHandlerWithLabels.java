@@ -39,6 +39,8 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
@@ -153,8 +155,8 @@ private static void createLabels() throws IOException, InterruptedException {
   PrivilegedExceptionAction<VisibilityLabelsResponse> action = new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
     public VisibilityLabelsResponse run() throws Exception {
       String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
-      try {
-        VisibilityClient.addLabels(conf, labels);
+      try (Connection conn = ConnectionFactory.createConnection(conf)) {
+        VisibilityClient.addLabels(conn, labels);
       } catch (Throwable t) {
         throw new IOException(t);
       }
@@ -167,7 +169,7 @@ private static void createLabels() throws IOException, InterruptedException {
 private static void setAuths() throws IOException {
   String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, PUBLIC, TOPSECRET };
   try {
-    VisibilityClient.setAuths(conf, labels, User.getCurrent().getShortName());
+    VisibilityClient.setAuths(UTIL.getConnection(), labels, User.getCurrent().getShortName());
   } catch (Throwable t) {
     throw new IOException(t);
   }

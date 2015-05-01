@@ -32,6 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -85,8 +87,8 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { "L1", SECRET, "L2", "invalid~", "L3" };
         VisibilityLabelsResponse response = null;
-        try {
-          response = VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          response = VisibilityClient.addLabels(conn, labels);
         } catch (Throwable e) {
           fail("Should not have thrown exception");
         }
@@ -124,8 +126,8 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
           new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
         public VisibilityLabelsResponse run() throws Exception {
           String[] labels = { SECRET, CONFIDENTIAL, PRIVATE, "ABC", "XYZ" };
-          try {
-            VisibilityLabelsResponse resp = VisibilityClient.addLabels(conf, labels);
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            VisibilityLabelsResponse resp = VisibilityClient.addLabels(conn, labels);
             List<RegionActionResult> results = resp.getResultList();
             if (results.get(0).hasException()) {
               NameBytesPair pair = results.get(0).getException();
@@ -172,8 +174,8 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         new PrivilegedExceptionAction<ListLabelsResponse>() {
       public ListLabelsResponse run() throws Exception {
         ListLabelsResponse response = null;
-        try {
-          response = VisibilityClient.listLabels(conf, null);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          response = VisibilityClient.listLabels(conn, null);
         } catch (Throwable e) {
           fail("Should not have thrown exception");
         }
@@ -202,8 +204,8 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
         new PrivilegedExceptionAction<ListLabelsResponse>() {
       public ListLabelsResponse run() throws Exception {
         ListLabelsResponse response = null;
-        try {
-          response = VisibilityClient.listLabels(conf, ".*secret");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          response = VisibilityClient.listLabels(conn, ".*secret");
         } catch (Throwable e) {
           fail("Should not have thrown exception");
         }

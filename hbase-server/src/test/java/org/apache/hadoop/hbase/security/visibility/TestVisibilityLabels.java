@@ -413,8 +413,8 @@ public abstract class TestVisibilityLabels {
     PrivilegedExceptionAction<Void> action = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         String[] auths = { SECRET, CONFIDENTIAL };
-        try {
-          VisibilityClient.setAuths(conf, auths, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
         }
         return null;
@@ -439,8 +439,8 @@ public abstract class TestVisibilityLabels {
     action = new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
         GetAuthsResponse authsResponse = null;
-        try {
-          authsResponse = VisibilityClient.getAuths(conf, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -461,10 +461,10 @@ public abstract class TestVisibilityLabels {
       public Void run() throws Exception {
         String[] auths1 = { SECRET, CONFIDENTIAL };
         GetAuthsResponse authsResponse = null;
-        try {
-          VisibilityClient.setAuths(conf, auths1, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.setAuths(conn, auths1, user);
           try {
-            authsResponse = VisibilityClient.getAuths(conf, user);
+            authsResponse = VisibilityClient.getAuths(conn, user);
           } catch (Throwable e) {
             fail("Should not have failed");
           }
@@ -502,8 +502,8 @@ public abstract class TestVisibilityLabels {
       public Void run() throws Exception {
         String[] auths = { SECRET, CONFIDENTIAL, PRIVATE };
         String user = "testUser";
-        try {
-          VisibilityClient.setAuths(conf, auths, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.setAuths(conn, auths, user);
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -511,8 +511,8 @@ public abstract class TestVisibilityLabels {
         // Passing a non existing auth also.
         auths = new String[] { SECRET, PUBLIC, CONFIDENTIAL };
         VisibilityLabelsResponse response = null;
-        try {
-          response = VisibilityClient.clearAuths(conf, auths, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          response = VisibilityClient.clearAuths(conn, auths, user);
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -540,8 +540,8 @@ public abstract class TestVisibilityLabels {
         }
 
         GetAuthsResponse authsResponse = null;
-        try {
-          authsResponse = VisibilityClient.getAuths(conf, user);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          authsResponse = VisibilityClient.getAuths(conn, user);
         } catch (Throwable e) {
           fail("Should not have failed");
         }
@@ -826,8 +826,8 @@ public abstract class TestVisibilityLabels {
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, COPYRIGHT, ACCENT,
             UNICODE_VIS_TAG, UC1, UC2 };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }
