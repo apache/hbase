@@ -26,8 +26,8 @@ module Hbase
 
     def initialize(admin, formatter)
       @admin = admin
-      @config = @admin.getConfiguration()
       @formatter = formatter
+      @connection = @admin.getConnection()
     end
 
     def close
@@ -45,7 +45,7 @@ module Hbase
       end
 
       begin
-        response = VisibilityClient.addLabels(@config, labels.to_java(:string))
+        response = VisibilityClient.addLabels(@connection, labels.to_java(:string))
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
@@ -70,7 +70,7 @@ module Hbase
       end
 
       begin
-        response = VisibilityClient.setAuths(@config, auths.to_java(:string), user)
+        response = VisibilityClient.setAuths(@connection, auths.to_java(:string), user)
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
@@ -90,7 +90,7 @@ module Hbase
     def get_auths(user)
       lables_table_available?
       begin
-        response = VisibilityClient.getAuths(@config, user)
+        response = VisibilityClient.getAuths(@connection, user)
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
@@ -104,7 +104,7 @@ module Hbase
     def list_labels(regex = ".*")
       lables_table_available?
       begin
-        response = VisibilityClient.listLabels(@config, regex)
+        response = VisibilityClient.listLabels(@connection, regex)
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
@@ -123,7 +123,7 @@ module Hbase
       end
 
       begin
-        response = VisibilityClient.clearAuths(@config, auths.to_java(:string), user)
+        response = VisibilityClient.clearAuths(@connection, auths.to_java(:string), user)
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
