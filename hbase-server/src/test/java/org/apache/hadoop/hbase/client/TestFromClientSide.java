@@ -5098,6 +5098,39 @@ public class TestFromClientSide {
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.get());
 
+    // check byte counters
+    scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(1);
+    scanner = ht.getScanner(scan2);
+    int numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    scanner.close();
+    scanMetrics = scan2.getScanMetrics();
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
+
+    // check byte counters on a small scan
+    scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(1);
+    scan2.setSmall(true);
+    scanner = ht.getScanner(scan2);
+    numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    scanner.close();
+    scanMetrics = scan2.getScanMetrics();
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
+
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
     /** There seems to be a timing issue here.  Comment out for now. Fix when time.

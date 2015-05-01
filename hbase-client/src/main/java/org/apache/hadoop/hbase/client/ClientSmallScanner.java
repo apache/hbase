@@ -208,6 +208,8 @@ public class ClientSmallScanner extends ClientScanner {
         } else {
           setHasMoreResultsContext(false);
         }
+        // We need to update result metrics since we are overriding call()
+        updateResultsMetrics(results);
         return results;
       } catch (ServiceException se) {
         throw ProtobufUtil.getRemoteException(se);
