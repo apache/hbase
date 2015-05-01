@@ -42,9 +42,6 @@
           <finalName>hbase-${project.version}</finalName>
           <skipAssembly>false</skipAssembly>
           <appendAssemblyId>true</appendAssemblyId>
-          <!--We do not want assembly attached; run on command-line explicitly
-               if you want to do an assembly-->
-          <attach>false</attach>
           <tarLongFileMode>gnu</tarLongFileMode>
           <descriptors>
             <descriptor>${assembly.file}</descriptor>

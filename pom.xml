@@ -753,8 +753,6 @@
             <!--Defer to the hbase-assembly sub-module.  It
              does all assembly-->
             <skipAssembly>true</skipAssembly>
-            <!--Do not attach assembly to project.-->
-            <attach>false</attach>
           </configuration>
         </plugin>
         <plugin>
