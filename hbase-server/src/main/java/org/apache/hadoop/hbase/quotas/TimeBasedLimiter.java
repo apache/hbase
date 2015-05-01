@@ -19,12 +19,10 @@
 package org.apache.hadoop.hbase.quotas;
 
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.quotas.OperationQuota.AvgOperationSize;
 import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
@@ -36,8 +34,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class TimeBasedLimiter implements QuotaLimiter {
-  private static final Log LOG = LogFactory.getLog(TimeBasedLimiter.class);
-
   private long writeLastTs = 0;
   private long readLastTs = 0;
 
@@ -110,7 +106,8 @@ public class TimeBasedLimiter implements QuotaLimiter {
       ThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
     }
     if (!reqSizeLimiter.canExecute(now, lastTs, writeSize + readSize)) {
-      ThrottlingException.throwNumRequestsExceeded(reqSizeLimiter.waitInterval(writeSize+readSize));
+      ThrottlingException.throwRequestSizeExceeded(reqSizeLimiter
+          .waitInterval(writeSize + readSize));
     }
 
     if (writeSize > 0) {

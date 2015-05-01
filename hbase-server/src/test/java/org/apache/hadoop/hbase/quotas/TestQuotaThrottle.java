@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -51,10 +51,11 @@ import static org.junit.Assert.assertEquals;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestQuotaThrottle {
-  final Log LOG = LogFactory.getLog(getClass());
+  private final static Log LOG = LogFactory.getLog(TestQuotaThrottle.class);
+
+  private final static int REFRESH_TIME = 30 * 60000;
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-
   private final static byte[] FAMILY = Bytes.toBytes("cf");
   private final static byte[] QUALIFIER = Bytes.toBytes("q");
 
@@ -64,11 +65,13 @@ public class TestQuotaThrottle {
     TableName.valueOf("TestQuotaAdmin2")
   };
 
+  private static ManualEnvironmentEdge envEdge;
   private static HTable[] tables;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, REFRESH_TIME);
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
@@ -82,10 +85,15 @@ public class TestQuotaThrottle {
     for (int i = 0; i < TABLE_NAMES.length; ++i) {
       tables[i] = TEST_UTIL.createTable(TABLE_NAMES[i], FAMILY);
     }
+
+    envEdge = new ManualEnvironmentEdge();
+    envEdge.setValue(EnvironmentEdgeManager.currentTime());
+    EnvironmentEdgeManagerTestHelper.injectEdge(envEdge);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    EnvironmentEdgeManager.reset();
     for (int i = 0; i < tables.length; ++i) {
       if (tables[i] != null) {
         tables[i].close();
@@ -375,12 +383,12 @@ public class TestQuotaThrottle {
 
   private void triggerCacheRefresh(boolean bypass, boolean userLimiter, boolean tableLimiter,
       boolean nsLimiter, final TableName... tables) throws Exception {
+    envEdge.incValue(2 * REFRESH_TIME);
     for (RegionServerThread rst: TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads()) {
       RegionServerQuotaManager quotaManager = rst.getRegionServer().getRegionServerQuotaManager();
       QuotaCache quotaCache = quotaManager.getQuotaCache();
 
       quotaCache.triggerCacheRefresh();
-      Thread.sleep(250);
 
       for (TableName table: tables) {
         quotaCache.getTableLimiter(table);
@@ -388,6 +396,7 @@ public class TestQuotaThrottle {
 
       boolean isUpdated = false;
       while (!isUpdated) {
+        quotaCache.triggerCacheRefresh();
         isUpdated = true;
         for (TableName table: tables) {
           boolean isBypass = true;
@@ -401,8 +410,8 @@ public class TestQuotaThrottle {
             isBypass &= quotaCache.getNamespaceLimiter(table.getNamespaceAsString()).isBypass();
           }
           if (isBypass != bypass) {
+            envEdge.incValue(100);
             isUpdated = false;
-            Thread.sleep(250);
             break;
           }
         }
@@ -416,8 +425,6 @@ public class TestQuotaThrottle {
   }
 
   private void waitMinuteQuota() {
-    EnvironmentEdgeManagerTestHelper.injectEdge(
-      new IncrementingEnvironmentEdge(
-        EnvironmentEdgeManager.currentTime() + 70000));
+    envEdge.incValue(70000);
   }
 }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -285,7 +286,7 @@ public class TestBlockReorder {
 
     int nbTest = 0;
     while (nbTest < 10) {
-      final List<HRegion> regions = targetRs.getOnlineRegions(h.getName());
+      final List<Region> regions = targetRs.getOnlineRegions(h.getName());
       final CountDownLatch latch = new CountDownLatch(regions.size());
       // listen for successful log rolls
       final WALActionsListener listener = new WALActionsListener.Base() {
@@ -294,8 +295,8 @@ public class TestBlockReorder {
               latch.countDown();
             }
           };
-      for (HRegion region : regions) {
-        region.getWAL().registerWALActionsListener(listener);
+      for (Region region : regions) {
+        ((HRegion)region).getWAL().registerWALActionsListener(listener);
       }
 
       htu.getHBaseAdmin().rollWALWriter(targetRs.getServerName());
@@ -308,8 +309,8 @@ public class TestBlockReorder {
             "tests fail, it's probably because we should still be waiting.");
         Thread.currentThread().interrupt();
       }
-      for (HRegion region : regions) {
-        region.getWAL().unregisterWALActionsListener(listener);
+      for (Region region : regions) {
+        ((HRegion)region).getWAL().unregisterWALActionsListener(listener);
       }
 
       // We need a sleep as the namenode is informed asynchronously

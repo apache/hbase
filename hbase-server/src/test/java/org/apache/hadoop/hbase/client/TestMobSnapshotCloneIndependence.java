@@ -196,7 +196,7 @@ public class TestMobSnapshotCloneIndependence {
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
 
-    HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
+    Table original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
     try {
 
       SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
@@ -215,7 +215,8 @@ public class TestMobSnapshotCloneIndependence {
       TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
-      HTable clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName);
+      Table clonedTable = ConnectionFactory.createConnection(UTIL.getConfiguration())
+              .getTable(cloneTableName);
 
       try {
         final int clonedTableRowCount = MobSnapshotTestingUtils.countMobRows(clonedTable);
@@ -230,7 +231,6 @@ public class TestMobSnapshotCloneIndependence {
         Put p = new Put(Bytes.toBytes(rowKey));
         p.add(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
         original.put(p);
-        original.flushCommits();
 
         // Verify that it is not present in the original table
         Assert.assertEquals("The row count of the original table was not modified by the put",
@@ -240,9 +240,8 @@ public class TestMobSnapshotCloneIndependence {
           clonedTableRowCount, MobSnapshotTestingUtils.countMobRows(clonedTable));
 
         p = new Put(Bytes.toBytes(rowKey));
-        p.add(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
+        p.addColumn(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
         clonedTable.put(p);
-        clonedTable.flushCommits();
 
         // Verify that the new family is not in the restored table's description
         Assert.assertEquals(
@@ -273,7 +272,7 @@ public class TestMobSnapshotCloneIndependence {
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
-    HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
+    Table original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
     SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
     final int loadedTableCount = MobSnapshotTestingUtils.countMobRows(original);
     System.out.println("Original table has: " + loadedTableCount + " rows");
@@ -295,7 +294,7 @@ public class TestMobSnapshotCloneIndependence {
     admin.cloneSnapshot(snapshotName, cloneTableName);
 
     // Verify that region information is the same pre-split
-    original.clearRegionCache();
+    ((HTable)original).clearRegionCache();
     List<HRegionInfo> originalTableHRegions = admin.getTableRegions(localTableName);
 
     final int originalRegionCount = originalTableHRegions.size();
@@ -306,7 +305,7 @@ public class TestMobSnapshotCloneIndependence {
 
     // Split a region on the parent table
     admin.splitRegion(originalTableHRegions.get(0).getRegionName());
-    waitOnSplit(original, originalRegionCount);
+    waitOnSplit((HTable)original, originalRegionCount);
 
     // Verify that the cloned table region is not split
     final int cloneTableRegionCount2 = admin.getTableRegions(cloneTableName).size();
@@ -329,7 +328,7 @@ public class TestMobSnapshotCloneIndependence {
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
-    HTable original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
+    Table original = MobSnapshotTestingUtils.createMobTable(UTIL, localTableName, TEST_FAM);
     SnapshotTestingUtils.loadData(UTIL, localTableName, 500, TEST_FAM);
 
     final String snapshotNameAsString = "snapshot_" + localTableName;

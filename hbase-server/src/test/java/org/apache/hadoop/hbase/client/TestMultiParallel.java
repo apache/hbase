@@ -567,7 +567,7 @@ public class TestMultiParallel {
       validateResult(result, QUALIFIER, Bytes.toBytes((numRequests / 2) + 1L));
       table.close();
     } finally {
-      ConnectionManager.injectNonceGeneratorForTesting((ClusterConnection)connection, oldCnm);
+      ConnectionImplementation.injectNonceGeneratorForTesting((ClusterConnection) connection, oldCnm);
     }
   }
 

@@ -46,8 +46,8 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.HTableWrapper;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
 import org.apache.hadoop.hbase.util.VersionInfo;
@@ -73,6 +73,11 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     "hbase.coprocessor.wal.classes";
   public static final String ABORT_ON_ERROR_KEY = "hbase.coprocessor.abortonerror";
   public static final boolean DEFAULT_ABORT_ON_ERROR = true;
+  public static final String COPROCESSORS_ENABLED_CONF_KEY = "hbase.coprocessor.enabled";
+  public static final boolean DEFAULT_COPROCESSORS_ENABLED = true;
+  public static final String USER_COPROCESSORS_ENABLED_CONF_KEY =
+    "hbase.coprocessor.user.enabled";
+  public static final boolean DEFAULT_USER_COPROCESSORS_ENABLED = true;
 
   private static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected Abortable abortable;
@@ -123,6 +128,12 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    * Called by constructor.
    */
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
+    boolean coprocessorsEnabled = conf.getBoolean(COPROCESSORS_ENABLED_CONF_KEY,
+      DEFAULT_COPROCESSORS_ENABLED);
+    if (!coprocessorsEnabled) {
+      return;
+    }
+
     Class<?> implClass = null;
 
     // load default coprocessors from configure file
@@ -366,8 +377,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
     /** Current coprocessor state */
     Coprocessor.State state = Coprocessor.State.UNINSTALLED;
     /** Accounting for tables opened by the coprocessor */
-    protected List<HTableInterface> openTables =
-      Collections.synchronizedList(new ArrayList<HTableInterface>());
+    protected List<Table> openTables =
+      Collections.synchronizedList(new ArrayList<Table>());
     private int seq;
     private Configuration conf;
     private ClassLoader classLoader;
@@ -427,7 +438,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
             " because not active (state="+state.toString()+")");
       }
       // clean up any table references
-      for (HTableInterface table: openTables) {
+      for (Table table: openTables) {
         try {
           ((HTableWrapper)table).internalClose();
         } catch (IOException e) {
@@ -482,7 +493,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @exception java.io.IOException Exception
      */
     @Override
-    public HTableInterface getTable(TableName tableName) throws IOException {
+    public Table getTable(TableName tableName) throws IOException {
       return this.getTable(tableName, HTable.getDefaultExecutor(getConfiguration()));
     }
 
@@ -493,7 +504,7 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
      * @exception java.io.IOException Exception
      */
     @Override
-    public HTableInterface getTable(TableName tableName, ExecutorService pool) throws IOException {
+    public Table getTable(TableName tableName, ExecutorService pool) throws IOException {
       return HTableWrapper.createWrapper(openTables, tableName, this, pool);
     }
   }

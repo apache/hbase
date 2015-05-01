@@ -17,14 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
-import com.google.protobuf.RpcChannel;
-import com.google.protobuf.RpcController;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -35,11 +28,24 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timeout;
+import io.netty.util.TimerTask;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -49,25 +55,26 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
 import org.apache.hadoop.hbase.util.Threads;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
+import com.google.protobuf.RpcChannel;
+import com.google.protobuf.RpcController;
 
 /**
  * Netty client for the requests and responses
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class AsyncRpcClient extends AbstractRpcClient {
 
   public static final String CLIENT_MAX_THREADS = "hbase.rpc.client.threads.max";
-  public static final String USE_NATIVE_TRANSPORT = "hbase.rpc.client.useNativeTransport";
+  public static final String USE_NATIVE_TRANSPORT = "hbase.rpc.client.nativetransport";
+  public static final String USE_GLOBAL_EVENT_LOOP_GROUP = "hbase.rpc.client.globaleventloopgroup";
 
-  public static final HashedWheelTimer WHEEL_TIMER =
-      new HashedWheelTimer(100, TimeUnit.MILLISECONDS);
+  private static final HashedWheelTimer WHEEL_TIMER =
+      new HashedWheelTimer(Threads.newDaemonThreadFactory("AsyncRpcChannel-timer"),
+          100, TimeUnit.MILLISECONDS);
 
   private static final ChannelInitializer<SocketChannel> DEFAULT_CHANNEL_INITIALIZER =
       new ChannelInitializer<SocketChannel>() {
@@ -79,12 +86,54 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
   protected final AtomicInteger callIdCnt = new AtomicInteger();
 
-  private final EventLoopGroup eventLoopGroup;
   private final PoolMap<Integer, AsyncRpcChannel> connections;
 
   final FailedServers failedServers;
 
-  private final Bootstrap bootstrap;
+  @VisibleForTesting
+  final Bootstrap bootstrap;
+
+  private final boolean useGlobalEventLoopGroup;
+
+  @VisibleForTesting
+  static Pair<EventLoopGroup, Class<? extends Channel>> GLOBAL_EVENT_LOOP_GROUP;
+
+  private synchronized static Pair<EventLoopGroup, Class<? extends Channel>>
+      getGlobalEventLoopGroup(Configuration conf) {
+    if (GLOBAL_EVENT_LOOP_GROUP == null) {
+      GLOBAL_EVENT_LOOP_GROUP = createEventLoopGroup(conf);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Create global event loop group "
+            + GLOBAL_EVENT_LOOP_GROUP.getFirst().getClass().getSimpleName());
+      }
+    }
+    return GLOBAL_EVENT_LOOP_GROUP;
+  }
+
+  private static Pair<EventLoopGroup, Class<? extends Channel>> createEventLoopGroup(
+      Configuration conf) {
+    // Max amount of threads to use. 0 lets Netty decide based on amount of cores
+    int maxThreads = conf.getInt(CLIENT_MAX_THREADS, 0);
+
+    // Config to enable native transport. Does not seem to be stable at time of implementation
+    // although it is not extensively tested.
+    boolean epollEnabled = conf.getBoolean(USE_NATIVE_TRANSPORT, false);
+
+    // Use the faster native epoll transport mechanism on linux if enabled
+    if (epollEnabled && JVM.isLinux()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Create EpollEventLoopGroup with maxThreads = " + maxThreads);
+      }
+      return new Pair<EventLoopGroup, Class<? extends Channel>>(new EpollEventLoopGroup(maxThreads,
+          Threads.newDaemonThreadFactory("AsyncRpcChannel")), EpollSocketChannel.class);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Create NioEventLoopGroup with maxThreads = " + maxThreads);
+      }
+      return new Pair<EventLoopGroup, Class<? extends Channel>>(new NioEventLoopGroup(maxThreads,
+          Threads.newDaemonThreadFactory("AsyncRpcChannel")), NioSocketChannel.class);
+    }
+  }
 
   /**
    * Constructor for tests
@@ -103,23 +152,16 @@ public class AsyncRpcClient extends AbstractRpcClient {
       LOG.debug("Starting async Hbase RPC client");
     }
 
-    // Max amount of threads to use. 0 lets Netty decide based on amount of cores
-    int maxThreads = conf.getInt(CLIENT_MAX_THREADS, 0);
-
-    // Config to enable native transport. Does not seem to be stable at time of implementation
-    // although it is not extensively tested.
-    boolean epollEnabled = conf.getBoolean(USE_NATIVE_TRANSPORT, false);
-
-    // Use the faster native epoll transport mechanism on linux if enabled
-    Class<? extends Channel> socketChannelClass;
-    if (epollEnabled && JVM.isLinux()) {
-      socketChannelClass = EpollSocketChannel.class;
-      this.eventLoopGroup =
-          new EpollEventLoopGroup(maxThreads, Threads.newDaemonThreadFactory("AsyncRpcChannel"));
+    Pair<EventLoopGroup, Class<? extends Channel>> eventLoopGroupAndChannelClass;
+    this.useGlobalEventLoopGroup = conf.getBoolean(USE_GLOBAL_EVENT_LOOP_GROUP, true);
+    if (useGlobalEventLoopGroup) {
+      eventLoopGroupAndChannelClass = getGlobalEventLoopGroup(configuration);
     } else {
-      socketChannelClass = NioSocketChannel.class;
-      this.eventLoopGroup =
-          new NioEventLoopGroup(maxThreads, Threads.newDaemonThreadFactory("AsyncRpcChannel"));
+      eventLoopGroupAndChannelClass = createEventLoopGroup(configuration);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Use " + (useGlobalEventLoopGroup ? "global" : "individual") + " event loop group "
+          + eventLoopGroupAndChannelClass.getFirst().getClass().getSimpleName());
     }
 
     this.connections = new PoolMap<>(getPoolType(configuration), getPoolSize(configuration));
@@ -130,8 +172,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
     // Configure the default bootstrap.
     this.bootstrap = new Bootstrap();
-    bootstrap.group(eventLoopGroup).channel(socketChannelClass)
-        .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+    bootstrap.group(eventLoopGroupAndChannelClass.getFirst())
+        .channel(eventLoopGroupAndChannelClass.getSecond())
         .option(ChannelOption.TCP_NODELAY, tcpNoDelay)
         .option(ChannelOption.SO_KEEPALIVE, tcpKeepAlive)
         .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, operationTimeout);
@@ -169,16 +211,19 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @throws InterruptedException if call is interrupted
    * @throws java.io.IOException  if a connection failure is encountered
    */
-  @Override protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
+  @Override
+  protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
       InetSocketAddress addr) throws IOException, InterruptedException {
-
+    if (pcrc == null) {
+      pcrc = new PayloadCarryingRpcController();
+    }
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-    Promise<Message> promise = connection.callMethodWithPromise(md, pcrc, param, returnType);
-
+    Promise<Message> promise = connection.callMethod(md, pcrc, param, returnType);
+    long timeout = pcrc.hasCallTimeout() ? pcrc.getCallTimeout() : 0;
     try {
-      Message response = promise.get();
+      Message response = timeout > 0 ? promise.get(timeout, TimeUnit.MILLISECONDS) : promise.get();
       return new Pair<>(response, pcrc.cellScanner());
     } catch (ExecutionException e) {
       if (e.getCause() instanceof IOException) {
@@ -186,6 +231,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
       } else {
         throw new IOException(e.getCause());
       }
+    } catch (TimeoutException e) {
+      throw new CallTimeoutException(promise.toString());
     }
   }
 
@@ -231,6 +278,8 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
   }
 
+  private boolean closed = false;
+
   /**
    * Close netty
    */
@@ -240,12 +289,18 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
 
     synchronized (connections) {
+      if (closed) {
+        return;
+      }
+      closed = true;
       for (AsyncRpcChannel conn : connections.values()) {
         conn.close(null);
       }
     }
-
-    eventLoopGroup.shutdownGracefully();
+    // do not close global EventLoopGroup.
+    if (!useGlobalEventLoopGroup) {
+      bootstrap.group().shutdownGracefully();
+    }
   }
 
   /**
@@ -282,10 +337,6 @@ public class AsyncRpcClient extends AbstractRpcClient {
    */
   private AsyncRpcChannel createRpcChannel(String serviceName, InetSocketAddress location,
       User ticket) throws StoppedRpcClientException, FailedServerException {
-    if (this.eventLoopGroup.isShuttingDown() || this.eventLoopGroup.isShutdown()) {
-      throw new StoppedRpcClientException();
-    }
-
     // Check if server is failed
     if (this.failedServers.isFailedServer(location)) {
       if (LOG.isDebugEnabled()) {
@@ -300,6 +351,9 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
     AsyncRpcChannel rpcChannel;
     synchronized (connections) {
+      if (closed) {
+        throw new StoppedRpcClientException();
+      }
       rpcChannel = connections.get(hashCode);
       if (rpcChannel == null) {
         rpcChannel = new AsyncRpcChannel(this.bootstrap, this, ticket, serviceName, location);
@@ -337,12 +391,20 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
   /**
    * Remove connection from pool
-   *
-   * @param connectionHashCode of connection
    */
-  public void removeConnection(int connectionHashCode) {
+  public void removeConnection(AsyncRpcChannel connection) {
+    int connectionHashCode = connection.getConnectionHashCode();
     synchronized (connections) {
-      this.connections.remove(connectionHashCode);
+      // we use address as cache key, so we should check here to prevent removing the
+      // wrong connection
+      AsyncRpcChannel connectionInPool = this.connections.get(connectionHashCode);
+      if (connectionInPool == connection) {
+        this.connections.remove(connectionHashCode);
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("%s already removed, expected instance %08x, actual %08x",
+          connection.toString(), System.identityHashCode(connection),
+          System.identityHashCode(connectionInPool)));
+      }
     }
   }
 
@@ -398,5 +460,9 @@ public class AsyncRpcClient extends AbstractRpcClient {
 
       this.rpcClient.callMethod(md, pcrc, param, returnType, this.ticket, this.isa, done);
     }
+  }
+
+  Timeout newTimeout(TimerTask task, long delay, TimeUnit unit) {
+    return WHEEL_TIMER.newTimeout(task, delay, unit);
   }
 }

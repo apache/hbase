@@ -26,11 +26,11 @@ import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -39,15 +39,15 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorException;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest;
-import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse;
-import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteRequest.DeleteType;
+import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse;
 import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteResponse.Builder;
+import org.apache.hadoop.hbase.coprocessor.example.generated.BulkDeleteProtos.BulkDeleteService;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -112,7 +112,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       RpcCallback<BulkDeleteResponse> done) {
     long totalRowsDeleted = 0L;
     long totalVersionsDeleted = 0L;
-    HRegion region = env.getRegion();
+    Region region = env.getRegion();
     int rowBatchSize = request.getRowBatchSize();
     Long timestamp = null;
     if (request.hasTimestamp()) {
@@ -151,7 +151,8 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
           for (List<Cell> deleteRow : deleteRows) {
             deleteArr[i++] = createDeleteMutation(deleteRow, deleteType, timestamp);
           }
-          OperationStatus[] opStatus = region.batchMutate(deleteArr);
+          OperationStatus[] opStatus = region.batchMutate(deleteArr, HConstants.NO_NONCE,
+            HConstants.NO_NONCE);
           for (i = 0; i < opStatus.length; i++) {
             if (opStatus[i].getOperationStatusCode() != OperationStatusCode.SUCCESS) {
               break;

@@ -75,7 +75,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -86,11 +86,12 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.PrepareBulkLoadRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
@@ -164,11 +165,11 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   TableAuthManager authManager = null;
 
-  // flags if we are running on a region of the _acl_ table
+  /** flags if we are running on a region of the _acl_ table */
   boolean aclRegion = false;
 
-  // defined only for Endpoint implementation, so it can have way to
-  // access region services.
+  /** defined only for Endpoint implementation, so it can have way to
+   access region services */
   private RegionCoprocessorEnvironment regionEnv;
 
   /** Mapping of scanner instances to the user who created them */
@@ -177,28 +178,33 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   private Map<TableName, List<UserPermission>> tableAcls;
 
-  // Provider for mapping principal names to Users
+  /** Provider for mapping principal names to Users */
   private UserProvider userProvider;
 
-  // The list of users with superuser authority
+  /** The list of users with superuser authority */
   private List<String> superusers;
 
-  // if we are able to support cell ACLs
+  /** if we are active, usually true, only not true if "hbase.security.authorization"
+   has been set to false in site configuration */
+  boolean authorizationEnabled;
+
+  /** if we are able to support cell ACLs */
   boolean cellFeaturesEnabled;
 
-  // if we should check EXEC permissions
+  /** if we should check EXEC permissions */
   boolean shouldCheckExecPermission;
 
-  // if we should terminate access checks early as soon as table or CF grants
-  // allow access; pre-0.98 compatible behavior
+  /** if we should terminate access checks early as soon as table or CF grants
+    allow access; pre-0.98 compatible behavior */
   boolean compatibleEarlyTermination;
 
+  /** if we have been successfully initialized */
   private volatile boolean initialized = false;
 
-  // This boolean having relevance only in the Master.
+  /** if the ACL table is available, only relevant in the master */
   private volatile boolean aclTabAvailable = false;
 
-  public HRegion getRegion() {
+  public Region getRegion() {
     return regionEnv != null ? regionEnv.getRegion() : null;
   }
 
@@ -207,7 +213,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   void initialize(RegionCoprocessorEnvironment e) throws IOException {
-    final HRegion region = e.getRegion();
+    final Region region = e.getRegion();
     Configuration conf = e.getConfiguration();
     Map<byte[], ListMultimap<String,TablePermission>> tables =
         AccessControlLists.loadAll(region);
@@ -371,11 +377,7 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   private void logResult(AuthResult result) {
     if (AUDITLOG.isTraceEnabled()) {
-      RequestContext ctx = RequestContext.get();
-      InetAddress remoteAddr = null;
-      if (ctx != null) {
-        remoteAddr = ctx.getRemoteAddress();
-      }
+      InetAddress remoteAddr = RpcServer.getRemoteAddress();
       AUDITLOG.trace("Access " + (result.isAllowed() ? "allowed" : "denied") +
           " for user " + (result.getUser() != null ? result.getUser().getShortName() : "UNKNOWN") +
           "; reason: " + result.getReason() +
@@ -391,8 +393,8 @@ public class AccessController extends BaseMasterAndRegionObserver
    * otherwise the currently logged in user is used.
    */
   private User getActiveUser() throws IOException {
-    User user = RequestContext.getRequestUser();
-    if (!RequestContext.isInRequestContext()) {
+    User user = RpcServer.getRequestUser();
+    if (user == null) {
       // for non-rpc handling, fallback to system user
       user = userProvider.getCurrent();
     }
@@ -408,8 +410,8 @@ public class AccessController extends BaseMasterAndRegionObserver
    * @throws IOException if obtaining the current user fails
    * @throws AccessDeniedException if user has no authorization
    */
-  private void requirePermission(String request, TableName tableName, byte[] family, byte[] qualifier,
-      Action... permissions) throws IOException {
+  private void requirePermission(String request, TableName tableName, byte[] family,
+      byte[] qualifier, Action... permissions) throws IOException {
     User user = getActiveUser();
     AuthResult result = null;
 
@@ -425,7 +427,40 @@ public class AccessController extends BaseMasterAndRegionObserver
       }
     }
     logResult(result);
-    if (!result.isAllowed()) {
+    if (authorizationEnabled && !result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
+    }
+  }
+
+  /**
+   * Authorizes that the current user has any of the given permissions for the
+   * given table, column family and column qualifier.
+   * @param tableName Table requested
+   * @param family Column family param
+   * @param qualifier Column qualifier param
+   * @throws IOException if obtaining the current user fails
+   * @throws AccessDeniedException if user has no authorization
+   */
+  private void requireTablePermission(String request, TableName tableName, byte[] family,
+      byte[] qualifier, Action... permissions) throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.authorize(user, tableName, null, null, permission)) {
+        result = AuthResult.allow(request, "Table permission granted", user,
+            permission, tableName, null, null);
+        result.getParams().setFamily(family).setQualifier(qualifier);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+            permission, tableName, family, qualifier);
+        result.getParams().setFamily(family).setQualifier(qualifier);
+      }
+    }
+    logResult(result);
+    if (authorizationEnabled && !result.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
@@ -455,7 +490,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       }
     }
     logResult(result);
-    if (!result.isAllowed()) {
+    if (authorizationEnabled && !result.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions " + result.toContextString());
     }
   }
@@ -471,31 +506,6 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   /**
-   * Authorizes that the current user has permission to perform the given
-   * action on the set of table column families.
-   * @param perm Action that is required
-   * @param env The current coprocessor environment
-   * @param families The map of column families-qualifiers.
-   * @throws AccessDeniedException if the authorization check failed
-   */
-  private void requirePermission(String request, Action perm,
-        RegionCoprocessorEnvironment env,
-        Map<byte[], ? extends Collection<?>> families)
-      throws IOException {
-    User user = getActiveUser();
-    AuthResult result = permissionGranted(request, user, perm, env, families);
-    logResult(result);
-
-    if (!result.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions (table=" +
-        env.getRegion().getTableDesc().getTableName()+
-        ((families != null && families.size() > 0) ? ", family: " +
-        result.toFamilyString() : "") + ", action=" +
-        perm.toString() + ")");
-    }
-  }
-
-  /**
    * Checks that the user has the given global permission. The generated
    * audit log message will contain context information for the operation
    * being authorized, based on the given parameters.
@@ -506,13 +516,20 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm, TableName tableName,
       Map<byte[], ? extends Collection<byte[]>> familyMap) throws IOException {
     User user = getActiveUser();
+    AuthResult result = null;
     if (authManager.authorize(user, perm)) {
-      logResult(AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap));
+      result = AuthResult.allow(request, "Global check allowed", user, perm, tableName, familyMap);
+      result.getParams().setTableName(tableName).setFamilies(familyMap);
+      logResult(result);
     } else {
-      logResult(AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap));
-      throw new AccessDeniedException("Insufficient permissions for user '" +
+      result = AuthResult.deny(request, "Global check failed", user, perm, tableName, familyMap);
+      result.getParams().setTableName(tableName).setFamilies(familyMap);
+      logResult(result);
+      if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions for user '" +
           (user != null ? user.getShortName() : "null") +"' (global, action=" +
           perm.toString() + ")");
+      }
     }
   }
 
@@ -526,13 +543,20 @@ public class AccessController extends BaseMasterAndRegionObserver
   private void requireGlobalPermission(String request, Action perm,
                                        String namespace) throws IOException {
     User user = getActiveUser();
+    AuthResult authResult = null;
     if (authManager.authorize(user, perm)) {
-      logResult(AuthResult.allow(request, "Global check allowed", user, perm, namespace));
+      authResult = AuthResult.allow(request, "Global check allowed", user, perm, null);
+      authResult.getParams().setNamespace(namespace);
+      logResult(authResult);
     } else {
-      logResult(AuthResult.deny(request, "Global check failed", user, perm, namespace));
-      throw new AccessDeniedException("Insufficient permissions for user '" +
+      authResult = AuthResult.deny(request, "Global check failed", user, perm, null);
+      authResult.getParams().setNamespace(namespace);
+      logResult(authResult);
+      if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions for user '" +
           (user != null ? user.getShortName() : "null") +"' (global, action=" +
           perm.toString() + ")");
+      }
     }
   }
 
@@ -558,7 +582,38 @@ public class AccessController extends BaseMasterAndRegionObserver
       }
     }
     logResult(result);
-    if (!result.isAllowed()) {
+    if (authorizationEnabled && !result.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions "
+          + result.toContextString());
+    }
+  }
+
+  /**
+   * Checks that the user has the given global or namespace permission.
+   * @param namespace
+   * @param permissions Actions being requested
+   */
+  public void requireNamespacePermission(String request, String namespace, TableName tableName,
+      Map<byte[], ? extends Collection<byte[]>> familyMap, Action... permissions)
+      throws IOException {
+    User user = getActiveUser();
+    AuthResult result = null;
+
+    for (Action permission : permissions) {
+      if (authManager.authorize(user, namespace, permission)) {
+        result = AuthResult.allow(request, "Namespace permission granted",
+            user, permission, namespace);
+        result.getParams().setTableName(tableName).setFamilies(familyMap);
+        break;
+      } else {
+        // rest of the world
+        result = AuthResult.deny(request, "Insufficient permissions", user,
+            permission, namespace);
+        result.getParams().setTableName(tableName).setFamilies(familyMap);
+      }
+    }
+    logResult(result);
+    if (authorizationEnabled && !result.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions "
           + result.toContextString());
     }
@@ -693,6 +748,8 @@ public class AccessController extends BaseMasterAndRegionObserver
             }
           }
         }
+      } else if (entry.getValue() == null) {
+        get.addFamily(col);        
       } else {
         throw new RuntimeException("Unhandled collection type " +
           entry.getValue().getClass().getName());
@@ -736,10 +793,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     boolean foundColumn = false;
     try {
       boolean more = false;
+      ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(1).build();
+
       do {
         cells.clear();
         // scan with limit as 1 to hold down memory use on wide rows
-        more = scanner.next(cells, 1);
+        more = scanner.next(cells, scannerContext);
         for (Cell cell: cells) {
           if (LOG.isTraceEnabled()) {
             LOG.trace("Found cell " + cell);
@@ -826,8 +885,14 @@ public class AccessController extends BaseMasterAndRegionObserver
   // Checks whether incoming cells contain any tag with type as ACL_TAG_TYPE. This tag
   // type is reserved and should not be explicitly set by user.
   private void checkForReservedTagPresence(User user, Mutation m) throws IOException {
+    // No need to check if we're not going to throw
+    if (!authorizationEnabled) {
+      m.setAttribute(TAG_CHECK_PASSED, TRUE);
+      return;
+    }
     // Superusers are allowed to store cells unconditionally.
     if (superusers.contains(user.getShortName())) {
+      m.setAttribute(TAG_CHECK_PASSED, TRUE);
       return;
     }
     // We already checked (prePut vs preBatchMutation)
@@ -854,6 +919,11 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void start(CoprocessorEnvironment env) throws IOException {
     CompoundConfiguration conf = new CompoundConfiguration();
     conf.add(env.getConfiguration());
+
+    authorizationEnabled = conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
+    if (!authorizationEnabled) {
+      LOG.warn("The AccessController has been loaded with authorization checks disabled.");
+    }
 
     shouldCheckExecPermission = conf.getBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY,
       AccessControlConstants.DEFAULT_EXEC_PERMISSION_CHECKS);
@@ -918,7 +988,8 @@ public class AccessController extends BaseMasterAndRegionObserver
     for (byte[] family: families) {
       familyMap.put(family, null);
     }
-    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(), Action.CREATE);
+    requireNamespacePermission("createTable", desc.getTableName().getNamespaceAsString(),
+        desc.getTableName(), familyMap, Action.CREATE);
   }
 
   @Override
@@ -990,6 +1061,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
       final TableName tableName) throws IOException {
     requirePermission("truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+
     final Configuration conf = c.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
@@ -1049,7 +1121,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor column) throws IOException {
-    requirePermission("addColumn", tableName, null, null, Action.ADMIN, Action.CREATE);
+    requireTablePermission("addColumn", tableName, column.getName(), null, Action.ADMIN,
+        Action.CREATE);
   }
 
   @Override
@@ -1088,8 +1161,12 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preDisableTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName)
       throws IOException {
     if (Bytes.equals(tableName.getName(), AccessControlLists.ACL_GLOBAL_NAME)) {
+      // We have to unconditionally disallow disable of the ACL table when we are installed,
+      // even if not enforcing authorizations. We are still allowing grants and revocations,
+      // checking permissions and logging audit messages, etc. If the ACL table is not
+      // available we will fail random actions all over the place.
       throw new AccessDeniedException("Not allowed to disable "
-          + AccessControlLists.ACL_TABLE_NAME + " table.");
+          + AccessControlLists.ACL_TABLE_NAME + " table with AccessController installed");
     }
     requirePermission("disableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
   }
@@ -1168,6 +1245,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       final SnapshotDescription snapshot) throws IOException {
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, getActiveUser())) {
       // list it, if user is the owner of snapshot
+      // TODO: We are not logging this for audit
     } else {
       requirePermission("listSnapshot", Action.ADMIN);
     }
@@ -1197,6 +1275,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       final SnapshotDescription snapshot) throws IOException {
     if (SnapshotDescriptionUtils.isSnapshotOwner(snapshot, getActiveUser())) {
       // Snapshot owner is allowed to delete the snapshot
+      // TODO: We are not logging this for audit
     } else {
       requirePermission("deleteSnapshot", Action.ADMIN);
     }
@@ -1225,7 +1304,8 @@ public class AccessController extends BaseMasterAndRegionObserver
         return null;
       }
     });
-    LOG.info(namespace + "entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
+    this.authManager.getZKPermissionWatcher().deleteNamespaceACLNode(namespace);
+    LOG.info(namespace + " entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
   }
 
   @Override
@@ -1270,7 +1350,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preOpen(ObserverContext<RegionCoprocessorEnvironment> e)
       throws IOException {
     RegionCoprocessorEnvironment env = e.getEnvironment();
-    final HRegion region = env.getRegion();
+    final Region region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in preOpen()");
     } else {
@@ -1286,7 +1366,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void postOpen(ObserverContext<RegionCoprocessorEnvironment> c) {
     RegionCoprocessorEnvironment env = c.getEnvironment();
-    final HRegion region = env.getRegion();
+    final Region region = env.getRegion();
     if (region == null) {
       LOG.error("NULL region from RegionCoprocessorEnvironment in postOpen()");
       return;
@@ -1363,8 +1443,9 @@ public class AccessController extends BaseMasterAndRegionObserver
       authResult.setReason("Covering cell set");
     }
     logResult(authResult);
-    if (!authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+    if (authorizationEnabled && !authResult.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions " +
+        authResult.toContextString());
     }
   }
 
@@ -1390,7 +1471,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       throw new RuntimeException("Unhandled operation " + opType);
     }
     AuthResult authResult = permissionGranted(opType, user, env, families, Action.READ);
-    HRegion region = getRegion(env);
+    Region region = getRegion(env);
     TableName table = getTableName(region);
     Map<ByteRange, Integer> cfVsMaxVersions = Maps.newHashMap();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
@@ -1407,26 +1488,29 @@ public class AccessController extends BaseMasterAndRegionObserver
         // grants three times (permissionGranted above, here, and in the
         // filter) but that's the price of backwards compatibility.
         if (hasFamilyQualifierPermission(user, Action.READ, env, families)) {
-          Filter ourFilter = new AccessControlFilter(authManager, user, table,
-            AccessControlFilter.Strategy.CHECK_TABLE_AND_CF_ONLY,
-            cfVsMaxVersions);
-          // wrap any existing filter
-          if (filter != null) {
-            ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
-              Lists.newArrayList(ourFilter, filter));
-          }
           authResult.setAllowed(true);
           authResult.setReason("Access allowed with filter");
-          switch (opType) {
-          case GET:
-          case EXISTS:
-            ((Get)query).setFilter(ourFilter);
-            break;
-          case SCAN:
-            ((Scan)query).setFilter(ourFilter);
-            break;
-          default:
-            throw new RuntimeException("Unhandled operation " + opType);
+          // Only wrap the filter if we are enforcing authorizations
+          if (authorizationEnabled) {
+            Filter ourFilter = new AccessControlFilter(authManager, user, table,
+              AccessControlFilter.Strategy.CHECK_TABLE_AND_CF_ONLY,
+              cfVsMaxVersions);
+            // wrap any existing filter
+            if (filter != null) {
+              ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
+                Lists.newArrayList(ourFilter, filter));
+            }
+            switch (opType) {
+              case GET:
+              case EXISTS:
+                ((Get)query).setFilter(ourFilter);
+                break;
+              case SCAN:
+                ((Scan)query).setFilter(ourFilter);
+                break;
+              default:
+                throw new RuntimeException("Unhandled operation " + opType);
+            }
           }
         }
       } else {
@@ -1434,33 +1518,37 @@ public class AccessController extends BaseMasterAndRegionObserver
         // than whole table or CF. Simply inject a filter and return what is
         // allowed. We will not throw an AccessDeniedException. This is a
         // behavioral change since 0.96.
-        Filter ourFilter = new AccessControlFilter(authManager, user, table,
-          AccessControlFilter.Strategy.CHECK_CELL_DEFAULT, cfVsMaxVersions);
-        // wrap any existing filter
-        if (filter != null) {
-          ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
-            Lists.newArrayList(ourFilter, filter));
-        }
         authResult.setAllowed(true);
         authResult.setReason("Access allowed with filter");
-        switch (opType) {
-        case GET:
-        case EXISTS:
-          ((Get)query).setFilter(ourFilter);
-          break;
-        case SCAN:
-          ((Scan)query).setFilter(ourFilter);
-          break;
-        default:
-          throw new RuntimeException("Unhandled operation " + opType);
+        // Only wrap the filter if we are enforcing authorizations
+        if (authorizationEnabled) {
+          Filter ourFilter = new AccessControlFilter(authManager, user, table,
+            AccessControlFilter.Strategy.CHECK_CELL_DEFAULT, cfVsMaxVersions);
+          // wrap any existing filter
+          if (filter != null) {
+            ourFilter = new FilterList(FilterList.Operator.MUST_PASS_ALL,
+              Lists.newArrayList(ourFilter, filter));
+          }
+          switch (opType) {
+            case GET:
+            case EXISTS:
+              ((Get)query).setFilter(ourFilter);
+              break;
+            case SCAN:
+              ((Scan)query).setFilter(ourFilter);
+              break;
+            default:
+              throw new RuntimeException("Unhandled operation " + opType);
+          }
         }
       }
     }
 
     logResult(authResult);
-    if (!authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions (table=" + table +
-        ", action=READ)");
+    if (authorizationEnabled && !authResult.isAllowed()) {
+      throw new AccessDeniedException("Insufficient permissions for user '"
+          + (user != null ? user.getShortName() : "null")
+          + "' (table=" + table + ", action=READ)");
     }
   }
 
@@ -1481,14 +1569,15 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit, final Durability durability)
       throws IOException {
+    User user = getActiveUser();
+    checkForReservedTagPresence(user, put);
+
     // Require WRITE permission to the table, CF, or top visible value, if any.
     // NOTE: We don't need to check the permissions for any earlier Puts
     // because we treat the ACLs in each Put as timestamped like any other
     // HBase value. A new ACL in a new Put applies to that Put. It doesn't
     // change the ACL of any previous Put. This allows simple evolution of
     // security policy over time without requiring expensive updates.
-    User user = getActiveUser();
-    checkForReservedTagPresence(user, put);
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = put.getFamilyCellMap();
     AuthResult authResult = permissionGranted(OpType.PUT, user, env, families, Action.WRITE);
@@ -1496,10 +1585,11 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         put.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
+      } else if (authorizationEnabled) {
         throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
       }
     }
+
     // Add cell ACLs from the operation to the cells themselves
     byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
@@ -1540,8 +1630,9 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         delete.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      } else if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
   }
@@ -1564,18 +1655,18 @@ public class AccessController extends BaseMasterAndRegionObserver
             opType = OpType.DELETE;
           }
           AuthResult authResult = null;
-          if (checkCoveringPermission(opType, c.getEnvironment(), m.getRow(), m.getFamilyCellMap(),
-              m.getTimeStamp(), Action.WRITE)) {
-            authResult = AuthResult.allow(opType.toString(), "Covering cell set", getActiveUser(),
-                Action.WRITE, table, m.getFamilyCellMap());
+          if (checkCoveringPermission(opType, c.getEnvironment(), m.getRow(),
+            m.getFamilyCellMap(), m.getTimeStamp(), Action.WRITE)) {
+            authResult = AuthResult.allow(opType.toString(), "Covering cell set",
+              getActiveUser(), Action.WRITE, table, m.getFamilyCellMap());
           } else {
-            authResult = AuthResult.deny(opType.toString(), "Covering cell set", getActiveUser(),
-                Action.WRITE, table, m.getFamilyCellMap());
+            authResult = AuthResult.deny(opType.toString(), "Covering cell set",
+              getActiveUser(), Action.WRITE, table, m.getFamilyCellMap());
           }
           logResult(authResult);
-          if (!authResult.isAllowed()) {
+          if (authorizationEnabled && !authResult.isAllowed()) {
             throw new AccessDeniedException("Insufficient permissions "
-                + authResult.toContextString());
+              + authResult.toContextString());
           }
         }
       }
@@ -1597,9 +1688,10 @@ public class AccessController extends BaseMasterAndRegionObserver
       final CompareFilter.CompareOp compareOp,
       final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException {
-    // Require READ and WRITE permissions on the table, CF, and KV to update
     User user = getActiveUser();
     checkForReservedTagPresence(user, put);
+
+    // Require READ and WRITE permissions on the table, CF, and KV to update
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
     AuthResult authResult = permissionGranted(OpType.CHECK_AND_PUT, user, env, families,
@@ -1608,10 +1700,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         put.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      } else if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
+
     byte[] bytes = put.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (cellFeaturesEnabled) {
@@ -1643,7 +1737,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             getActiveUser(), Action.READ, table, families);
       }
       logResult(authResult);
-      if (!authResult.isAllowed()) {
+      if (authorizationEnabled && !authResult.isAllowed()) {
         throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
       }
     }
@@ -1672,8 +1766,9 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         delete.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      } else if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
     return result;
@@ -1700,7 +1795,7 @@ public class AccessController extends BaseMasterAndRegionObserver
             getActiveUser(), Action.READ, table, families);
       }
       logResult(authResult);
-      if (!authResult.isAllowed()) {
+      if (authorizationEnabled && !authResult.isAllowed()) {
         throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
       }
     }
@@ -1725,7 +1820,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       authResult.setReason("Covering cell set");
     }
     logResult(authResult);
-    if (!authResult.isAllowed()) {
+    if (authorizationEnabled && !authResult.isAllowed()) {
       throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
     }
     return -1;
@@ -1734,9 +1829,10 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public Result preAppend(ObserverContext<RegionCoprocessorEnvironment> c, Append append)
       throws IOException {
-    // Require WRITE permission to the table, CF, and the KV to be appended
     User user = getActiveUser();
     checkForReservedTagPresence(user, append);
+
+    // Require WRITE permission to the table, CF, and the KV to be appended
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = append.getFamilyCellMap();
     AuthResult authResult = permissionGranted(OpType.APPEND, user, env, families, Action.WRITE);
@@ -1744,10 +1840,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         append.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      } else if (authorizationEnabled)  {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
+
     byte[] bytes = append.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (cellFeaturesEnabled) {
@@ -1756,6 +1854,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         throw new DoNotRetryIOException("Cell ACLs cannot be persisted");
       }
     }
+
     return null;
   }
 
@@ -1776,8 +1875,9 @@ public class AccessController extends BaseMasterAndRegionObserver
             getActiveUser(), Action.WRITE, table, append.getFamilyCellMap());
       }
       logResult(authResult);
-      if (!authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      if (authorizationEnabled && !authResult.isAllowed()) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
     return null;
@@ -1787,10 +1887,11 @@ public class AccessController extends BaseMasterAndRegionObserver
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment)
       throws IOException {
-    // Require WRITE permission to the table, CF, and the KV to be replaced by
-    // the incremented value
     User user = getActiveUser();
     checkForReservedTagPresence(user, increment);
+
+    // Require WRITE permission to the table, CF, and the KV to be replaced by
+    // the incremented value
     RegionCoprocessorEnvironment env = c.getEnvironment();
     Map<byte[],? extends Collection<Cell>> families = increment.getFamilyCellMap();
     AuthResult authResult = permissionGranted(OpType.INCREMENT, user, env, families,
@@ -1799,10 +1900,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
         increment.setAttribute(CHECK_COVERING_PERM, TRUE);
-      } else {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      } else if (authorizationEnabled) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
+
     byte[] bytes = increment.getAttribute(AccessControlConstants.OP_ATTRIBUTE_ACL);
     if (bytes != null) {
       if (cellFeaturesEnabled) {
@@ -1811,6 +1914,7 @@ public class AccessController extends BaseMasterAndRegionObserver
         throw new DoNotRetryIOException("Cell ACLs cannot be persisted");
       }
     }
+
     return null;
   }
 
@@ -1831,8 +1935,9 @@ public class AccessController extends BaseMasterAndRegionObserver
             getActiveUser(), Action.WRITE, table, increment.getFamilyCellMap());
       }
       logResult(authResult);
-      if (!authResult.isAllowed()) {
-        throw new AccessDeniedException("Insufficient permissions " + authResult.toContextString());
+      if (authorizationEnabled && !authResult.isAllowed()) {
+        throw new AccessDeniedException("Insufficient permissions " +
+          authResult.toContextString());
       }
     }
     return null;
@@ -1914,7 +2019,8 @@ public class AccessController extends BaseMasterAndRegionObserver
   public RegionScanner postScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Scan scan, final RegionScanner s) throws IOException {
     User user = getActiveUser();
-    if (user != null && user.getShortName() != null) {      // store reference to scanner owner for later checks
+    if (user != null && user.getShortName() != null) {
+      // store reference to scanner owner for later checks
       scannerOwners.put(s, user.getShortName());
     }
     return s;
@@ -1946,14 +2052,11 @@ public class AccessController extends BaseMasterAndRegionObserver
    * If so, we assume that access control is correctly enforced based on
    * the checks performed in preScannerOpen()
    */
-  private void requireScannerOwner(InternalScanner s)
-      throws AccessDeniedException {
-    if (RequestContext.isInRequestContext()) {
-      String requestUserName = RequestContext.getRequestUserName();
-      String owner = scannerOwners.get(s);
-      if (owner != null && !owner.equals(requestUserName)) {
-        throw new AccessDeniedException("User '"+ requestUserName +"' is not the scanner owner!");
-      }
+  private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
+    String requestUserName = RpcServer.getRequestUserName();
+    String owner = scannerOwners.get(s);
+    if (authorizationEnabled && owner != null && !owner.equals(requestUserName)) {
+      throw new AccessDeniedException("User '"+ requestUserName +"' is not the scanner owner!");
     }
   }
 
@@ -2046,11 +2149,11 @@ public class AccessController extends BaseMasterAndRegionObserver
           case Global :
           case Table :
             requirePermission("grant", perm.getTableName(), perm.getFamily(),
-                perm.getQualifier(), Action.ADMIN);
+              perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
             requireGlobalPermission("grant", Action.ADMIN, perm.getNamespace());
-            break;
+           break;
         }
 
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
@@ -2097,7 +2200,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           case Global :
           case Table :
             requirePermission("revoke", perm.getTableName(), perm.getFamily(),
-                              perm.getQualifier(), Action.ADMIN);
+              perm.getQualifier(), Action.ADMIN);
             break;
           case Namespace :
             requireGlobalPermission("revoke", Action.ADMIN, perm.getNamespace());
@@ -2191,9 +2294,12 @@ public class AccessController extends BaseMasterAndRegionObserver
     }
     AccessControlProtos.CheckPermissionsResponse response = null;
     try {
+      User user = getActiveUser();
       TableName tableName = regionEnv.getRegion().getTableDesc().getTableName();
       for (Permission permission : permissions) {
         if (permission instanceof TablePermission) {
+          // Check table permissions
+
           TablePermission tperm = (TablePermission) permission;
           for (Action action : permission.getActions()) {
             if (!tperm.getTableName().equals(tableName)) {
@@ -2203,7 +2309,8 @@ public class AccessController extends BaseMasterAndRegionObserver
                   tperm.getTableName()));
             }
 
-            Map<byte[], Set<byte[]>> familyMap = new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
+            Map<byte[], Set<byte[]>> familyMap =
+                new TreeMap<byte[], Set<byte[]>>(Bytes.BYTES_COMPARATOR);
             if (tperm.getFamily() != null) {
               if (tperm.getQualifier() != null) {
                 Set<byte[]> qualifiers = Sets.newTreeSet(Bytes.BYTES_COMPARATOR);
@@ -2214,12 +2321,37 @@ public class AccessController extends BaseMasterAndRegionObserver
               }
             }
 
-            requirePermission("checkPermissions", action, regionEnv, familyMap);
+            AuthResult result = permissionGranted("checkPermissions", user, action, regionEnv,
+              familyMap);
+            logResult(result);
+            if (!result.isAllowed()) {
+              // Even if passive we need to throw an exception here, we support checking
+              // effective permissions, so throw unconditionally
+              throw new AccessDeniedException("Insufficient permissions (table=" + tableName +
+                (familyMap.size() > 0 ? ", family: " + result.toFamilyString() : "") +
+                ", action=" + action.toString() + ")");
+            }
           }
 
         } else {
+          // Check global permissions
+
           for (Action action : permission.getActions()) {
-            requirePermission("checkPermissions", action);
+            AuthResult result;
+            if (authManager.authorize(user, action)) {
+              result = AuthResult.allow("checkPermissions", "Global action allowed", user,
+                action, null, null);
+            } else {
+              result = AuthResult.deny("checkPermissions", "Global action denied", user, action,
+                null, null);
+            }
+            logResult(result);
+            if (!result.isAllowed()) {
+              // Even if passive we need to throw an exception here, we support checking
+              // effective permissions, so throw unconditionally
+              throw new AccessDeniedException("Insufficient permissions (action=" +
+                action.toString() + ")");
+            }
           }
         }
       }
@@ -2235,19 +2367,19 @@ public class AccessController extends BaseMasterAndRegionObserver
     return AccessControlProtos.AccessControlService.newReflectiveService(this);
   }
 
-  private HRegion getRegion(RegionCoprocessorEnvironment e) {
+  private Region getRegion(RegionCoprocessorEnvironment e) {
     return e.getRegion();
   }
 
   private TableName getTableName(RegionCoprocessorEnvironment e) {
-    HRegion region = e.getRegion();
+    Region region = e.getRegion();
     if (region != null) {
       return getTableName(region);
     }
     return null;
   }
 
-  private TableName getTableName(HRegion region) {
+  private TableName getTableName(Region region) {
     HRegionInfo regionInfo = region.getRegionInfo();
     if (regionInfo != null) {
       return regionInfo.getTable();
@@ -2262,6 +2394,10 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   private void isSystemOrSuperUser(Configuration conf) throws IOException {
+    // No need to check if we're not going to throw
+    if (!authorizationEnabled) {
+      return;
+    }
     User user = userProvider.getCurrent();
     if (user == null) {
       throw new IOException("Unable to obtain the current user, " +
@@ -2351,31 +2487,31 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, HRegion regionA,
-      HRegion regionB) throws IOException {
+  public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
+      Region regionB) throws IOException {
     requirePermission("mergeRegions", regionA.getTableDesc().getTableName(), null, null,
       Action.ADMIN);
   }
 
   @Override
-  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, HRegion regionA,
-      HRegion regionB, HRegion mergedRegion) throws IOException { }
+  public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, Region regionA,
+      Region regionB, Region mergedRegion) throws IOException { }
 
   @Override
   public void preMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB, List<Mutation> metaEntries) throws IOException { }
+      Region regionA, Region regionB, List<Mutation> metaEntries) throws IOException { }
 
   @Override
   public void postMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB, HRegion mergedRegion) throws IOException { }
+      Region regionA, Region regionB, Region mergedRegion) throws IOException { }
 
   @Override
   public void preRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB) throws IOException { }
+      Region regionA, Region regionB) throws IOException { }
 
   @Override
   public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      HRegion regionA, HRegion regionB) throws IOException { }
+      Region regionA, Region regionB) throws IOException { }
 
   @Override
   public void preRollWALWriterRequest(ObserverContext<RegionServerCoprocessorEnvironment> ctx)

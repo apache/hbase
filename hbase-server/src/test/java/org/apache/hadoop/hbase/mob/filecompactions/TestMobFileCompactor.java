@@ -42,16 +42,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Delete;
-import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -74,22 +67,24 @@ public class TestMobFileCompactor {
   private Configuration conf = null;
   private String tableNameAsString;
   private TableName tableName;
-  private HTable hTable;
+  private static Connection conn;
+  private BufferedMutator bufMut;
+  private Table hTable;
   private Admin admin;
   private HTableDescriptor desc;
   private HColumnDescriptor hcd1;
   private HColumnDescriptor hcd2;
   private FileSystem fs;
-  private final String family1 = "family1";
-  private final String family2 = "family2";
-  private final String qf1 = "qualifier1";
-  private final String qf2 = "qualifier2";
-  private byte[] KEYS = Bytes.toBytes("012");
-  private int regionNum = KEYS.length;
-  private int delRowNum = 1;
-  private int delCellNum = 6;
-  private int cellNumPerRow = 3;
-  private int rowNumPerFile = 2;
+  private static final String family1 = "family1";
+  private static final String family2 = "family2";
+  private static final String qf1 = "qualifier1";
+  private static final String qf2 = "qualifier2";
+  private static byte[] KEYS = Bytes.toBytes("012");
+  private static int regionNum = KEYS.length;
+  private static int delRowNum = 1;
+  private static int delCellNum = 6;
+  private static int cellNumPerRow = 3;
+  private static int rowNumPerFile = 2;
   private static ExecutorService pool;
 
   @BeforeClass
@@ -99,11 +94,13 @@ public class TestMobFileCompactor {
     TEST_UTIL.getConfiguration().setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, 5000);
     TEST_UTIL.startMiniCluster(1);
     pool = createThreadPool(TEST_UTIL.getConfiguration());
+    conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), pool);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     pool.shutdown();
+    conn.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -127,8 +124,8 @@ public class TestMobFileCompactor {
     desc.addFamily(hcd2);
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc, getSplitKeys());
-    hTable = new HTable(conf, tableNameAsString);
-    hTable.setAutoFlush(false, false);
+    hTable = conn.getTable(tableName);
+    bufMut = conn.getBufferedMutator(tableName);
   }
 
   @After
@@ -160,12 +157,12 @@ public class TestMobFileCompactor {
     desc.addFamily(hcd1);
     desc.addFamily(hcd2);
     admin.createTable(desc, getSplitKeys());
-    HTable table = new HTable(conf, tableName);
-    table.setAutoFlush(false, false);
+    BufferedMutator bufMut= conn.getBufferedMutator(tableName);
+    Table table = conn.getTable(tableName);
 
     int count = 4;
     // generate mob files
-    loadData(admin, table, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count * rowNumPerFile;
 
     assertEquals("Before compaction: mob rows count", regionNum * rowNumPerRegion,
@@ -194,7 +191,7 @@ public class TestMobFileCompactor {
     resetConf();
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before compaction: mob rows count", regionNum*rowNumPerRegion,
@@ -218,7 +215,7 @@ public class TestMobFileCompactor {
     resetConf();
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before deleting: mob rows count", regionNum*rowNumPerRegion,
@@ -273,7 +270,7 @@ public class TestMobFileCompactor {
 
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before deleting: mob rows count", regionNum*rowNumPerRegion,
@@ -326,7 +323,7 @@ public class TestMobFileCompactor {
     conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, batchSize);
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before deleting: mob row count", regionNum*rowNumPerRegion,
@@ -374,7 +371,7 @@ public class TestMobFileCompactor {
     resetConf();
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     long tid = System.currentTimeMillis();
@@ -461,7 +458,7 @@ public class TestMobFileCompactor {
   public void testCompactionFromAdmin() throws Exception {
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before deleting: mob rows count", regionNum*rowNumPerRegion,
@@ -512,7 +509,7 @@ public class TestMobFileCompactor {
   public void testMajorCompactionFromAdmin() throws Exception {
     int count = 4;
     // generate mob files
-    loadData(admin, hTable, tableName, count, rowNumPerFile);
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
     int rowNumPerRegion = count*rowNumPerFile;
 
     assertEquals("Before deleting: mob rows count", regionNum*rowNumPerRegion,
@@ -574,7 +571,7 @@ public class TestMobFileCompactor {
    * @param table to get the  scanner
    * @return the number of rows
    */
-  private int countMobRows(final HTable table) throws IOException {
+  private int countMobRows(final Table table) throws IOException {
     Scan scan = new Scan();
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
@@ -592,7 +589,7 @@ public class TestMobFileCompactor {
    * @param table to get the  scanner
    * @return the number of cells
    */
-  private int countMobCells(final HTable table) throws IOException {
+  private int countMobCells(final Table table) throws IOException {
     Scan scan = new Scan();
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
@@ -680,9 +677,8 @@ public class TestMobFileCompactor {
 
   /**
    * loads some data to the table.
-   * @param count the mob file number
    */
-  private void loadData(Admin admin, HTable table, TableName tableName, int fileNum,
+  private void loadData(Admin admin, BufferedMutator table, TableName tableName, int fileNum,
     int rowNumPerFile) throws IOException, InterruptedException {
     if (fileNum <= 0) {
       throw new IllegalArgumentException();
@@ -694,12 +690,12 @@ public class TestMobFileCompactor {
         byte[] mobVal = makeDummyData(10 * (i + 1));
         Put put = new Put(key);
         put.setDurability(Durability.SKIP_WAL);
-        put.add(Bytes.toBytes(family1), Bytes.toBytes(qf1), mobVal);
-        put.add(Bytes.toBytes(family1), Bytes.toBytes(qf2), mobVal);
-        put.add(Bytes.toBytes(family2), Bytes.toBytes(qf1), mobVal);
-        table.put(put);
+        put.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1), mobVal);
+        put.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf2), mobVal);
+        put.addColumn(Bytes.toBytes(family2), Bytes.toBytes(qf1), mobVal);
+        table.mutate(put);
         if ((i + 1) % rowNumPerFile == 0) {
-          table.flushCommits();
+          table.flush();
           admin.flush(tableName);
         }
       }
@@ -715,7 +711,7 @@ public class TestMobFileCompactor {
       // delete a family
       byte[] key1 = Bytes.add(k, Bytes.toBytes(0));
       Delete delete1 = new Delete(key1);
-      delete1.deleteFamily(Bytes.toBytes(family1));
+      delete1.addFamily(Bytes.toBytes(family1));
       hTable.delete(delete1);
       // delete one row
       byte[] key2 = Bytes.add(k, Bytes.toBytes(2));
@@ -724,21 +720,20 @@ public class TestMobFileCompactor {
       // delete one cell
       byte[] key3 = Bytes.add(k, Bytes.toBytes(4));
       Delete delete3 = new Delete(key3);
-      delete3.deleteColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1));
+      delete3.addColumn(Bytes.toBytes(family1), Bytes.toBytes(qf1));
       hTable.delete(delete3);
-      hTable.flushCommits();
       admin.flush(tableName);
       List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(
           Bytes.toBytes(tableNameAsString));
       for (HRegion region : regions) {
         region.waitForFlushesAndCompactions();
-        region.compactStores(true);
+        region.compact(true);
       }
     }
   }
   /**
    * Creates the dummy data with a specific size.
-   * @param the size of data
+   * @param size the size of value
    * @return the dummy data
    */
   private byte[] makeDummyData(int size) {

@@ -55,7 +55,7 @@ public class TestMobStoreScanner {
   private final static byte [] qf1 = Bytes.toBytes("qualifier1");
   private final static byte [] qf2 = Bytes.toBytes("qualifier2");
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
-  private static HTable table;
+  private static Table table;
   private static HBaseAdmin admin;
   private static HColumnDescriptor hcd;
   private static HTableDescriptor desc;
@@ -83,9 +83,10 @@ public class TestMobStoreScanner {
     hcd.setMobThreshold(threshold);
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
-    table = new HTable(TEST_UTIL.getConfiguration(), TN);
+    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getTable(TableName.valueOf(TN));
   }
 
   /**
@@ -143,9 +144,9 @@ public class TestMobStoreScanner {
     byte[] bigValue = new byte[25*1024*1024];
 
     Put put = new Put(row1);
-    put.add(family, qf1, bigValue);
-    put.add(family, qf2, bigValue);
-    put.add(family, qf3, bigValue);
+    put.addColumn(family, qf1, bigValue);
+    put.addColumn(family, qf2, bigValue);
+    put.addColumn(family, qf3, bigValue);
     table.put(put);
 
     Get g = new Get(row1);
@@ -155,6 +156,7 @@ public class TestMobStoreScanner {
 
   public void testGetFromFiles(boolean reversed) throws Exception {
     String TN = "testGetFromFiles" + reversed;
+    TableName tn = TableName.valueOf(TN);
     setUp(defaultThreshold, TN);
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1 + 1;
@@ -162,13 +164,12 @@ public class TestMobStoreScanner {
     byte [] value = generateMobValue((int)defaultThreshold+1);
 
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, value);
-    put1.add(family, qf2, ts2, value);
-    put1.add(family, qf3, ts1, value);
+    put1.addColumn(family, qf1, ts3, value);
+    put1.addColumn(family, qf2, ts2, value);
+    put1.addColumn(family, qf3, ts1, value);
     table.put(put1);
 
-    table.flushCommits();
-    admin.flush(TN);
+    admin.flush(tn);
 
     Scan scan = new Scan();
     setScan(scan, reversed, false);
@@ -197,9 +198,9 @@ public class TestMobStoreScanner {
     byte [] value = generateMobValue((int)defaultThreshold+1);;
 
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, value);
-    put1.add(family, qf2, ts2, value);
-    put1.add(family, qf3, ts1, value);
+    put1.addColumn(family, qf1, ts3, value);
+    put1.addColumn(family, qf2, ts2, value);
+    put1.addColumn(family, qf3, ts1, value);
     table.put(put1);
 
     Scan scan = new Scan();
@@ -222,6 +223,7 @@ public class TestMobStoreScanner {
 
   public void testGetReferences(boolean reversed) throws Exception {
     String TN = "testGetReferences" + reversed;
+    TableName tn = TableName.valueOf(TN);
     setUp(defaultThreshold, TN);
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1 + 1;
@@ -229,13 +231,12 @@ public class TestMobStoreScanner {
     byte [] value = generateMobValue((int)defaultThreshold+1);;
 
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, value);
-    put1.add(family, qf2, ts2, value);
-    put1.add(family, qf3, ts1, value);
+    put1.addColumn(family, qf1, ts3, value);
+    put1.addColumn(family, qf2, ts2, value);
+    put1.addColumn(family, qf3, ts1, value);
     table.put(put1);
 
-    table.flushCommits();
-    admin.flush(TN);
+    admin.flush(tn);
 
     Scan scan = new Scan();
     setScan(scan, reversed, true);
@@ -256,6 +257,7 @@ public class TestMobStoreScanner {
 
   public void testMobThreshold(boolean reversed) throws Exception {
     String TN = "testMobThreshold" + reversed;
+    TableName tn = TableName.valueOf(TN);
     setUp(defaultThreshold, TN);
     byte [] valueLess = generateMobValue((int)defaultThreshold-1);
     byte [] valueEqual = generateMobValue((int)defaultThreshold);
@@ -265,13 +267,12 @@ public class TestMobStoreScanner {
     long ts3 = ts1 + 2;
 
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, valueLess);
-    put1.add(family, qf2, ts2, valueEqual);
-    put1.add(family, qf3, ts1, valueGreater);
+    put1.addColumn(family, qf1, ts3, valueLess);
+    put1.addColumn(family, qf2, ts2, valueEqual);
+    put1.addColumn(family, qf3, ts1, valueGreater);
     table.put(put1);
 
-    table.flushCommits();
-    admin.flush(TN);
+    admin.flush(tn);
 
     Scan scan = new Scan();
     setScan(scan, reversed, true);
@@ -307,6 +308,7 @@ public class TestMobStoreScanner {
 
   public void testGetFromArchive(boolean reversed) throws Exception {
     String TN = "testGetFromArchive" + reversed;
+    TableName tn = TableName.valueOf(TN);
     setUp(defaultThreshold, TN);
     long ts1 = System.currentTimeMillis();
     long ts2 = ts1 + 1;
@@ -314,13 +316,12 @@ public class TestMobStoreScanner {
     byte [] value = generateMobValue((int)defaultThreshold+1);;
     // Put some data
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, value);
-    put1.add(family, qf2, ts2, value);
-    put1.add(family, qf3, ts1, value);
+    put1.addColumn(family, qf1, ts3, value);
+    put1.addColumn(family, qf2, ts2, value);
+    put1.addColumn(family, qf3, ts1, value);
     table.put(put1);
 
-    table.flushCommits();
-    admin.flush(TN);
+    admin.flush(tn);
 
     // Get the files in the mob path
     Path mobFamilyPath;

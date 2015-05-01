@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.FileNotFoundException;
@@ -46,6 +47,41 @@ import org.junit.experimental.categories.Category;
  */
 @Category({IOTests.class, MediumTests.class})
 public class TestFileLink {
+
+  @Test
+  public void testEquals() {
+    Path p1 = new Path("/p1");
+    Path p2 = new Path("/p2");
+    Path p3 = new Path("/p3");
+
+    assertEquals(new FileLink(), new FileLink());
+    assertEquals(new FileLink(p1), new FileLink(p1));
+    assertEquals(new FileLink(p1, p2), new FileLink(p1, p2));
+    assertEquals(new FileLink(p1, p2, p3), new FileLink(p1, p2, p3));
+
+    assertNotEquals(new FileLink(p1), new FileLink(p3));
+    assertNotEquals(new FileLink(p1, p2), new FileLink(p1));
+    assertNotEquals(new FileLink(p1, p2), new FileLink(p2));
+    assertNotEquals(new FileLink(p1, p2), new FileLink(p2, p1)); // ordering important!
+  }
+
+  @Test
+  public void testHashCode() {
+    Path p1 = new Path("/p1");
+    Path p2 = new Path("/p2");
+    Path p3 = new Path("/p3");
+
+    assertEquals(new FileLink().hashCode(), new FileLink().hashCode());
+    assertEquals(new FileLink(p1).hashCode(), new FileLink(p1).hashCode());
+    assertEquals(new FileLink(p1, p2).hashCode(), new FileLink(p1, p2).hashCode());
+    assertEquals(new FileLink(p1, p2, p3).hashCode(), new FileLink(p1, p2, p3).hashCode());
+
+    assertNotEquals(new FileLink(p1).hashCode(), new FileLink(p3).hashCode());
+    assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p1).hashCode());
+    assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p2).hashCode());
+    assertNotEquals(new FileLink(p1, p2).hashCode(), new FileLink(p2, p1).hashCode()); // ordering
+  }
+
   /**
    * Test, on HDFS, that the FileLink is still readable
    * even when the current file gets renamed.

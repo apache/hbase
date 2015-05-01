@@ -152,7 +152,9 @@ public class RetryCounter {
   public void sleepUntilNextRetry() throws InterruptedException {
     int attempts = getAttemptTimes();
     long sleepTime = retryConfig.backoffPolicy.getBackoffTime(retryConfig, attempts);
-    LOG.info("Sleeping " + sleepTime + "ms before retry #" + attempts + "...");
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Sleeping " + sleepTime + "ms before retry #" + attempts + "...");
+    }
     retryConfig.getTimeUnit().sleep(sleepTime);
     useRetry();
   }

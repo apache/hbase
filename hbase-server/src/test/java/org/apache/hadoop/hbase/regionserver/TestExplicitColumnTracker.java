@@ -48,9 +48,9 @@ public class TestExplicitColumnTracker {
   private void runTest(int maxVersions,
                        TreeSet<byte[]> trackColumns,
                        List<byte[]> scannerColumns,
-                       List<MatchCode> expected, int lookAhead) throws IOException {
+                       List<MatchCode> expected) throws IOException {
     ColumnTracker exp = new ExplicitColumnTracker(
-      trackColumns, 0, maxVersions, Long.MIN_VALUE, lookAhead);
+      trackColumns, 0, maxVersions, Long.MIN_VALUE);
 
 
     //Initialize result
@@ -92,7 +92,7 @@ public class TestExplicitColumnTracker {
     scanner.add(col4);
     scanner.add(col5);
 
-    runTest(maxVersions, columns, scanner, expected, 0);
+    runTest(maxVersions, columns, scanner, expected);
   }
 
   @Test
@@ -144,59 +144,7 @@ public class TestExplicitColumnTracker {
     scanner.add(col5);
 
     //Initialize result
-    runTest(maxVersions, columns, scanner, expected, 0);
-  }
-
-  @Test
-  public void testGet_MultiVersionWithLookAhead() throws IOException{
-    //Create tracker
-    TreeSet<byte[]> columns = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
-    //Looking for every other
-    columns.add(col2);
-    columns.add(col4);
-
-    List<ScanQueryMatcher.MatchCode> expected = new ArrayList<ScanQueryMatcher.MatchCode>();
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);                   // col2; 1st version
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_COL); // col2; 2nd version
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-
-    expected.add(ScanQueryMatcher.MatchCode.SKIP);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_COL);
-
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE);                   // col4; 1st version
-    expected.add(ScanQueryMatcher.MatchCode.INCLUDE_AND_SEEK_NEXT_ROW); // col4; 2nd version
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
-
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
-    expected.add(ScanQueryMatcher.MatchCode.SEEK_NEXT_ROW);
-    int maxVersions = 2;
-
-    //Create "Scanner"
-    List<byte[]> scanner = new ArrayList<byte[]>();
-    scanner.add(col1);
-    scanner.add(col1);
-    scanner.add(col1);
-    scanner.add(col2);
-    scanner.add(col2);
-    scanner.add(col2);
-    scanner.add(col3);
-    scanner.add(col3);
-    scanner.add(col3);
-    scanner.add(col4);
-    scanner.add(col4);
-    scanner.add(col4);
-    scanner.add(col5);
-    scanner.add(col5);
-    scanner.add(col5);
-
-    //Initialize result
-    runTest(maxVersions, columns, scanner, expected, 2);
+    runTest(maxVersions, columns, scanner, expected);
   }
 
   /**
@@ -211,7 +159,7 @@ public class TestExplicitColumnTracker {
     }
 
     ColumnTracker explicit = new ExplicitColumnTracker(columns, 0, maxVersions,
-        Long.MIN_VALUE, 0);
+        Long.MIN_VALUE);
     for (int i = 0; i < 100000; i+=2) {
       byte [] col = Bytes.toBytes("col"+i);
       ScanQueryMatcher.checkColumn(explicit, col, 0, col.length, 1, KeyValue.Type.Put.getCode(),
@@ -240,7 +188,7 @@ public class TestExplicitColumnTracker {
       new ScanQueryMatcher.MatchCode[] {
         ScanQueryMatcher.MatchCode.SEEK_NEXT_COL,
         ScanQueryMatcher.MatchCode.SEEK_NEXT_COL });
-    runTest(1, columns, scanner, expected, 0);
+    runTest(1, columns, scanner, expected);
   }
 
 }

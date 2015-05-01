@@ -38,13 +38,12 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coordination.ZkSplitLogWorkerCoordination;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
@@ -238,7 +237,7 @@ public class TestZooKeeper {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
     m.abort("Test recovery from zk session expired",
-      new KeeperException.SessionExpiredException());
+        new KeeperException.SessionExpiredException());
     assertTrue(m.isStopped()); // Master doesn't recover any more
     testSanity("testMasterZKSessionRecoveryFailure");
   }
@@ -285,9 +284,9 @@ public class TestZooKeeper {
 
     // make sure they aren't the same
     ZooKeeperWatcher z1 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(localMeta.getConfiguration()));
+      getZooKeeperWatcher(ConnectionFactory.createConnection(localMeta.getConfiguration()));
     ZooKeeperWatcher z2 =
-      getZooKeeperWatcher(HConnectionManager.getConnection(otherConf));
+      getZooKeeperWatcher(ConnectionFactory.createConnection(otherConf));
     assertFalse(z1 == z2);
     assertFalse(z1.getQuorum().equals(z2.getQuorum()));
 
@@ -347,8 +346,8 @@ public class TestZooKeeper {
 
   @Test
   public void testClusterKey() throws Exception {
-    testKey("server", "2181", "hbase");
-    testKey("server1,server2,server3", "2181", "hbase");
+    testKey("server", 2181, "hbase");
+    testKey("server1,server2,server3", 2181, "hbase");
     try {
       ZKUtil.transformClusterKey("2181:hbase");
     } catch (IOException ex) {
@@ -356,20 +355,58 @@ public class TestZooKeeper {
     }
   }
 
-  private void testKey(String ensemble, String port, String znode)
+  @Test
+  public void testClusterKeyWithMultiplePorts() throws Exception {
+    // server has different port than the default port
+    testKey("server1:2182", 2181, "hbase", true);
+    // multiple servers have their own port
+    testKey("server1:2182,server2:2183,server3:2184", 2181, "hbase", true);
+    // one server has no specified port, should use default port
+    testKey("server1:2182,server2,server3:2184", 2181, "hbase", true);
+    // the last server has no specified port, should use default port
+    testKey("server1:2182,server2:2183,server3", 2181, "hbase", true);
+    // multiple servers have no specified port, should use default port for those servers
+    testKey("server1:2182,server2,server3:2184,server4", 2181, "hbase", true);
+    // same server, different ports
+    testKey("server1:2182,server1:2183,server1", 2181, "hbase", true);
+    // mix of same server/different port and different server
+    testKey("server1:2182,server2:2183,server1", 2181, "hbase", true);
+  }
+
+  private void testKey(String ensemble, int port, String znode)
+      throws IOException {
+    testKey(ensemble, port, znode, false); // not support multiple client ports
+  }
+
+  private void testKey(String ensemble, int port, String znode, Boolean multiplePortSupport)
       throws IOException {
     Configuration conf = new Configuration();
     String key = ensemble+":"+port+":"+znode;
-    String[] parts = ZKUtil.transformClusterKey(key);
-    assertEquals(ensemble, parts[0]);
-    assertEquals(port, parts[1]);
-    assertEquals(znode, parts[2]);
+    String ensemble2 = null;
+    ZKUtil.ZKClusterKey zkClusterKey = ZKUtil.transformClusterKey(key);
+    if (multiplePortSupport) {
+      ensemble2 = ZKUtil.standardizeQuorumServerString(ensemble, Integer.toString(port));
+      assertEquals(ensemble2, zkClusterKey.quorumString);
+    }
+    else {
+      assertEquals(ensemble, zkClusterKey.quorumString);
+    }
+    assertEquals(port, zkClusterKey.clientPort);
+    assertEquals(znode, zkClusterKey.znodeParent);
+
     ZKUtil.applyClusterKeyToConf(conf, key);
-    assertEquals(parts[0], conf.get(HConstants.ZOOKEEPER_QUORUM));
-    assertEquals(parts[1], conf.get(HConstants.ZOOKEEPER_CLIENT_PORT));
-    assertEquals(parts[2], conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+    assertEquals(zkClusterKey.quorumString, conf.get(HConstants.ZOOKEEPER_QUORUM));
+    assertEquals(zkClusterKey.clientPort, conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, -1));
+    assertEquals(zkClusterKey.znodeParent, conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT));
+
     String reconstructedKey = ZKUtil.getZooKeeperClusterKey(conf);
-    assertEquals(key, reconstructedKey);
+    if (multiplePortSupport) {
+      String key2 = ensemble2 + ":" + port + ":" + znode;
+      assertEquals(key2, reconstructedKey);
+    }
+    else {
+      assertEquals(key, reconstructedKey);
+    }
   }
 
   /**
@@ -491,14 +528,12 @@ public class TestZooKeeper {
     cluster.startRegionServer();
     cluster.waitForActiveAndReadyMaster(10000);
     HMaster m = cluster.getMaster();
-    ZooKeeperWatcher zkw = m.getZooKeeper();
-    int expectedNumOfListeners = zkw.getNumberOfListeners();
+    final ZooKeeperWatcher zkw = m.getZooKeeper();
     // now the cluster is up. So assign some regions.
-    Admin admin = TEST_UTIL.getHBaseAdmin();
-    try {
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
       byte[][] SPLIT_KEYS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"),
-        Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
-        Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
+          Bytes.toBytes("c"), Bytes.toBytes("d"), Bytes.toBytes("e"), Bytes.toBytes("f"),
+          Bytes.toBytes("g"), Bytes.toBytes("h"), Bytes.toBytes("i"), Bytes.toBytes("j") };
       String tableName = "testRegionAssignmentAfterMasterRecoveryDueToZKExpiry";
       HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
       htd.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
@@ -506,8 +541,9 @@ public class TestZooKeeper {
       TEST_UTIL.waitUntilNoRegionsInTransition(60000);
       m.getZooKeeper().close();
       MockLoadBalancer.retainAssignCalled = false;
+      final int expectedNumOfListeners = countPermanentListeners(zkw);
       m.abort("Test recovery from zk session expired",
-        new KeeperException.SessionExpiredException());
+          new KeeperException.SessionExpiredException());
       assertTrue(m.isStopped()); // Master doesn't recover any more
       // The recovered master should not call retainAssignment, as it is not a
       // clean startup.
@@ -515,10 +551,37 @@ public class TestZooKeeper {
       // number of listeners should be same as the value before master aborted
       // wait for new master is initialized
       cluster.waitForActiveAndReadyMaster(120000);
-      assertEquals(expectedNumOfListeners, zkw.getNumberOfListeners());
-    } finally {
-      admin.close();
+      final HMaster newMaster = cluster.getMasterThread().getMaster();
+      assertEquals(expectedNumOfListeners, countPermanentListeners(newMaster.getZooKeeper()));
     }
+  }
+
+  /**
+   * Count listeners in zkw excluding listeners, that belongs to workers or other
+   * temporary processes.
+   */
+  private int countPermanentListeners(ZooKeeperWatcher watcher) {
+    return countListeners(watcher, ZkSplitLogWorkerCoordination.class);
+  }
+
+  /**
+   * Count listeners in zkw excluding provided classes
+   */
+  private int countListeners(ZooKeeperWatcher watcher, Class<?>... exclude) {
+    int cnt = 0;
+    for (Object o : watcher.getListeners()) {
+      boolean skip = false;
+      for (Class<?> aClass : exclude) {
+        if (aClass.isAssignableFrom(o.getClass())) {
+          skip = true;
+          break;
+        }
+      }
+      if (!skip) {
+        cnt += 1;
+      }
+    }
+    return cnt;
   }
 
   /**

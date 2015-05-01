@@ -28,10 +28,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -73,7 +70,7 @@ public class MobSnapshotTestingUtils {
    * @return An HTable instance for the created table.
    * @throws IOException
    */
-  public static HTable createMobTable(final HBaseTestingUtility util,
+  public static Table createMobTable(final HBaseTestingUtility util,
       final TableName tableName, final byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     for (byte[] family : families) {
@@ -92,13 +89,13 @@ public class MobSnapshotTestingUtils {
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait
     // until they are assigned
     util.waitUntilAllRegionsAssigned(htd.getTableName());
-    return new HTable(util.getConfiguration(), htd.getTableName());
+    return ConnectionFactory.createConnection(util.getConfiguration()).getTable(htd.getTableName());
   }
 
   /**
    * Return the number of rows in the given table.
    */
-  public static int countMobRows(final HTable table) throws IOException {
+  public static int countMobRows(final Table table) throws IOException {
     Scan scan = new Scan();
     ResultScanner results = table.getScanner(scan);
     int count = 0;
@@ -117,7 +114,7 @@ public class MobSnapshotTestingUtils {
   /**
    * Return the number of rows in the given table.
    */
-  public static int countMobRows(final HTable table, final byte[]... families)
+  public static int countMobRows(final Table table, final byte[]... families)
       throws IOException {
     Scan scan = new Scan();
     for (byte[] family : families) {
@@ -139,7 +136,8 @@ public class MobSnapshotTestingUtils {
 
   public static void verifyMobRowCount(final HBaseTestingUtility util,
       final TableName tableName, long expectedRows) throws IOException {
-    HTable table = new HTable(util.getConfiguration(), tableName);
+
+    Table table = ConnectionFactory.createConnection(util.getConfiguration()).getTable(tableName);
     try {
       assertEquals(expectedRows, countMobRows(table));
     } finally {

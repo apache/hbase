@@ -36,11 +36,12 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.RegionMergeTransaction;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransactionFactory;
+import org.apache.hadoop.hbase.regionserver.RegionMergeTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -90,7 +91,7 @@ public class TestRegionServerObserver {
       desc.addFamily(new HColumnDescriptor(FAM));
       admin.createTable(desc, new byte[][] { Bytes.toBytes("row") });
       assertFalse(regionServerObserver.wasRegionMergeCalled());
-      List<HRegion> regions = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME));
+      List<Region> regions = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME));
       admin.mergeRegions(regions.get(0).getRegionInfo().getEncodedNameAsBytes(), regions.get(1)
           .getRegionInfo().getEncodedNameAsBytes(), true);
       int regionsCount = regionServer.getOnlineRegions(TableName.valueOf(TABLENAME)).size();
@@ -110,7 +111,7 @@ public class TestRegionServerObserver {
   }
 
   public static class CPRegionServerObserver extends BaseRegionServerObserver {
-    private RegionMergeTransaction rmt = null;
+    private RegionMergeTransactionImpl rmt = null;
     private HRegion mergedRegion = null;
 
     private boolean preMergeCalled;
@@ -130,20 +131,21 @@ public class TestRegionServerObserver {
     }
 
     @Override
-    public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, HRegion regionA,
-        HRegion regionB) throws IOException {
+    public void preMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx, Region regionA,
+        Region regionB) throws IOException {
       preMergeCalled = true;
     }
 
     @Override
     public void preMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-        HRegion regionA, HRegion regionB, List<Mutation> metaEntries) throws IOException {
+        Region regionA, Region regionB, List<Mutation> metaEntries) throws IOException {
       preMergeBeforePONRCalled = true;
       RegionServerCoprocessorEnvironment environment = ctx.getEnvironment();
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
-      List<HRegion> onlineRegions =
+      List<Region> onlineRegions =
           rs.getOnlineRegions(TableName.valueOf("testRegionServerObserver_2"));
-      rmt = new RegionMergeTransaction(onlineRegions.get(0), onlineRegions.get(1), true);
+      rmt = (RegionMergeTransactionImpl) new RegionMergeTransactionFactory(rs.getConfiguration())
+        .create(onlineRegions.get(0), onlineRegions.get(1), true);
       if (!rmt.prepare(rs)) {
         LOG.error("Prepare for the region merge of table "
             + onlineRegions.get(0).getTableDesc().getNameAsString()
@@ -159,7 +161,7 @@ public class TestRegionServerObserver {
 
     @Override
     public void postMergeCommit(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-        HRegion regionA, HRegion regionB, HRegion mr) throws IOException {
+        Region regionA, Region regionB, Region mr) throws IOException {
       preMergeAfterPONRCalled = true;
       RegionServerCoprocessorEnvironment environment = ctx.getEnvironment();
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
@@ -168,19 +170,19 @@ public class TestRegionServerObserver {
 
     @Override
     public void preRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-        HRegion regionA, HRegion regionB) throws IOException {
+        Region regionA, Region regionB) throws IOException {
       preRollBackMergeCalled = true;
     }
 
     @Override
     public void postRollBackMerge(ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-        HRegion regionA, HRegion regionB) throws IOException {
+        Region regionA, Region regionB) throws IOException {
       postRollBackMergeCalled = true;
     }
 
     @Override
-    public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, HRegion regionA,
-        HRegion regionB, HRegion mergedRegion) throws IOException {
+    public void postMerge(ObserverContext<RegionServerCoprocessorEnvironment> c, Region regionA,
+        Region regionB, Region mergedRegion) throws IOException {
       postMergeCalled = true;
     }
 

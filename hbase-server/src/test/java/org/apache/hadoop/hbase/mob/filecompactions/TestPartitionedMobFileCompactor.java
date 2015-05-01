@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -54,13 +55,6 @@ import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactionRequest.CompactionType;
 import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartition;
-import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -93,7 +87,7 @@ public class TestPartitionedMobFileCompactor {
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
     TEST_UTIL.startMiniCluster(1);
-    pool = createThreadPool(TEST_UTIL.getConfiguration());
+    pool = createThreadPool();
   }
 
   @AfterClass
@@ -403,6 +397,7 @@ public class TestPartitionedMobFileCompactor {
         scanners, 0L, HConstants.LATEST_TIMESTAMP);
     List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
+
     while (hasMore) {
       hasMore = scanner.next(results);
       size += results.size();
@@ -412,7 +407,7 @@ public class TestPartitionedMobFileCompactor {
     return size;
   }
 
-  private static ExecutorService createThreadPool(Configuration conf) {
+  private static ExecutorService createThreadPool() {
     int maxThreads = 10;
     long keepAliveTime = 60;
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();

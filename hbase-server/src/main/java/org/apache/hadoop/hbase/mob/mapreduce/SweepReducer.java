@@ -43,8 +43,7 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -93,7 +92,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
   private Path familyDir;
   private CacheConfig cacheConfig;
   private long compactionBegin;
-  private HTable table;
+  private BufferedMutator table;
   private HColumnDescriptor family;
   private long mobCompactionDelay;
   private Path mobTableDir;
@@ -101,6 +100,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
   @Override
   protected void setup(Context context) throws IOException, InterruptedException {
     this.conf = context.getConfiguration();
+    Connection c = ConnectionFactory.createConnection(this.conf);
     this.fs = FileSystem.get(conf);
     // the MOB_SWEEP_JOB_DELAY is ONE_DAY by default. Its value is only changed when testing.
     mobCompactionDelay = conf.getLong(SweepJob.MOB_SWEEP_JOB_DELAY, SweepJob.ONE_DAY);
@@ -108,7 +108,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
     String familyName = conf.get(TableInputFormat.SCAN_COLUMN_FAMILY);
     TableName tn = TableName.valueOf(tableName);
     this.familyDir = MobUtils.getMobFamilyPath(conf, tn, familyName);
-    HBaseAdmin admin = new HBaseAdmin(this.conf);
+    Admin admin = c.getAdmin();
     try {
       family = admin.getTableDescriptor(tn).getFamily(Bytes.toBytes(familyName));
       if (family == null) {
@@ -128,10 +128,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     this.cacheConfig = new CacheConfig(copyOfConf);
 
-    table = new HTable(this.conf, Bytes.toBytes(tableName));
-    table.setAutoFlush(false, false);
-
-    table.setWriteBufferSize(1 * 1024 * 1024); // 1MB
+    table = c.getBufferedMutator(new BufferedMutatorParams(tn).writeBufferSize(1*1024*1024));
     memstore = new MemStoreWrapper(context, fs, table, family, new DefaultMemStore(), cacheConfig);
 
     // The start time of the sweep tool.

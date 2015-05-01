@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -52,7 +54,7 @@ import org.junit.rules.TestName;
  */
 @Category({MasterTests.class, LargeTests.class})
 public class TestTableDescriptorModification {
-  
+
   @Rule public TestName name = new TestName();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = null;
@@ -74,7 +76,7 @@ public class TestTableDescriptorModification {
     TABLE_NAME = TableName.valueOf(name.getMethodName());
 
   }
-  
+
   @AfterClass
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -124,6 +126,95 @@ public class TestTableDescriptorModification {
   }
 
   @Test
+  public void testAddSameColumnFamilyTwice() throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    admin.createTable(baseHtd);
+    admin.disableTable(TABLE_NAME);
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      // Modify the table removing one family and verify the descriptor
+      admin.addColumn(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+
+      try {
+        // Add same column family again - expect failure
+        admin.addColumn(TABLE_NAME, new HColumnDescriptor(FAMILY_1));
+        Assert.fail("Delete a non-exist column family should fail");
+      } catch (InvalidFamilyOperationException e) {
+        // Expected.
+      }
+
+    } finally {
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  @Test
+  public void testModifyColumnFamily() throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+
+    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_0);
+    int blockSize = cfDescriptor.getBlocksize();
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(cfDescriptor);
+    admin.createTable(baseHtd);
+    admin.disableTable(TABLE_NAME);
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      int newBlockSize = 2 * blockSize;
+      cfDescriptor.setBlocksize(newBlockSize);
+
+      // Modify colymn family
+      admin.modifyColumn(TABLE_NAME, cfDescriptor);
+
+      HTableDescriptor htd = admin.getTableDescriptor(TABLE_NAME);
+      HColumnDescriptor hcfd = htd.getFamily(FAMILY_0);
+      assertTrue(hcfd.getBlocksize() == newBlockSize);
+    } finally {
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  @Test
+  public void testModifyNonExistingColumnFamily() throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+
+    HColumnDescriptor cfDescriptor = new HColumnDescriptor(FAMILY_1);
+    int blockSize = cfDescriptor.getBlocksize();
+    // Create a table with one families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    admin.createTable(baseHtd);
+    admin.disableTable(TABLE_NAME);
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      int newBlockSize = 2 * blockSize;
+      cfDescriptor.setBlocksize(newBlockSize);
+
+      // Modify a column family that is not in the table.
+      try {
+        admin.modifyColumn(TABLE_NAME, cfDescriptor);
+        Assert.fail("Modify a non-exist column family should fail");
+      } catch (InvalidFamilyOperationException e) {
+        // Expected.
+      }
+
+    } finally {
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  @Test
   public void testDeleteColumn() throws IOException {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with two families
@@ -139,6 +230,35 @@ public class TestTableDescriptorModification {
       // Modify the table removing one family and verify the descriptor
       admin.deleteColumn(TABLE_NAME, FAMILY_1);
       verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+    } finally {
+      admin.deleteTable(TABLE_NAME);
+    }
+  }
+
+  @Test
+  public void testDeleteSameColumnFamilyTwice() throws IOException {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    // Create a table with two families
+    HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_0));
+    baseHtd.addFamily(new HColumnDescriptor(FAMILY_1));
+    admin.createTable(baseHtd);
+    admin.disableTable(TABLE_NAME);
+    try {
+      // Verify the table descriptor
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0, FAMILY_1);
+
+      // Modify the table removing one family and verify the descriptor
+      admin.deleteColumn(TABLE_NAME, FAMILY_1);
+      verifyTableDescriptor(TABLE_NAME, FAMILY_0);
+
+      try {
+        // Delete again - expect failure
+        admin.deleteColumn(TABLE_NAME, FAMILY_1);
+        Assert.fail("Delete a non-exist column family should fail");
+      } catch (Exception e) {
+        // Expected.
+      }
     } finally {
       admin.deleteTable(TABLE_NAME);
     }

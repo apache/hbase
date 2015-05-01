@@ -164,7 +164,7 @@ public class RowSpec {
         i++;
       }
       try {
-        time0 = Long.valueOf(URLDecoder.decode(stamp.toString(),
+        time0 = Long.parseLong(URLDecoder.decode(stamp.toString(),
           HConstants.UTF8_ENCODING));
       } catch (NumberFormatException e) {
         throw new IllegalArgumentException(e);
@@ -177,7 +177,7 @@ public class RowSpec {
           i++;
         }
         try {
-          time1 = Long.valueOf(URLDecoder.decode(stamp.toString(),
+          time1 = Long.parseLong(URLDecoder.decode(stamp.toString(),
             HConstants.UTF8_ENCODING));
         } catch (NumberFormatException e) {
           throw new IllegalArgumentException(e);
@@ -245,7 +245,7 @@ public class RowSpec {
           }
           sb.append(c);
         }
-        maxVersions = Integer.valueOf(sb.toString());
+        maxVersions = Integer.parseInt(sb.toString());
       } break;
       case 'n': {
         StringBuilder sb = new StringBuilder();
@@ -257,7 +257,7 @@ public class RowSpec {
           }
           sb.append(c);
         }
-        maxValues = Integer.valueOf(sb.toString());
+        maxValues = Integer.parseInt(sb.toString());
       } break;
       default:
         throw new IllegalArgumentException("unknown parameter '" + c + "'");

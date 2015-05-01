@@ -25,14 +25,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
@@ -89,10 +89,9 @@ public class TestBlocksScanned extends HBaseTestCase {
   }
 
   private void _testBlocksScanned(HTableDescriptor table) throws Exception {
-    HRegion r = createNewHRegion(table, START_KEY, END_KEY,
-        TEST_UTIL.getConfiguration());
+    Region r = createNewHRegion(table, START_KEY, END_KEY, TEST_UTIL.getConfiguration());
     addContent(r, FAMILY, COL);
-    r.flushcache();
+    r.flush(true);
 
     CacheStats stats = new CacheConfig(TEST_UTIL.getConfiguration()).getBlockCache().getStats();
     long before = stats.getHitCount() + stats.getMissCount();
@@ -103,7 +102,8 @@ public class TestBlocksScanned extends HBaseTestCase {
 
     InternalScanner s = r.getScanner(scan);
     List<Cell> results = new ArrayList<Cell>();
-    while (s.next(results));
+    while (s.next(results))
+      ;
     s.close();
 
     int expectResultSize = 'z' - 'a';

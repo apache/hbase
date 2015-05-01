@@ -283,9 +283,9 @@ public class TestCacheConfig {
     // TODO: Assert sizes allocated are right and proportions.
     LruBlockCache lbc = (LruBlockCache)cc.getBlockCache();
     assertEquals(lruExpectedSize, lbc.getMaxSize());
-    BucketCache bc = lbc.getVictimHandler();
+    BlockCache bc = lbc.getVictimHandler();
     // getMaxSize comes back in bytes but we specified size in MB
-    assertEquals(bcExpectedSize, bc.getMaxSize());
+    assertEquals(bcExpectedSize, ((BucketCache) bc).getMaxSize());
     // Test the L1+L2 deploy works as we'd expect with blocks evicted from L1 going to L2.
     long initialL1BlockCount = lbc.getBlockCount();
     long initialL2BlockCount = bc.getBlockCount();

@@ -423,7 +423,7 @@ public class TestChoreService {
     shutdownService(service);
   }
 
-  @Test (timeout=20000)
+  @Test(timeout = 30000)
   public void testCorePoolDecrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
     ChoreService service = new ChoreService("testCorePoolDecrease", initialCorePoolSize);
@@ -456,6 +456,8 @@ public class TestChoreService {
       service.getNumberOfScheduledChores(), service.getCorePoolSize());
     assertEquals(service.getNumberOfChoresMissingStartTime(), 5);
 
+    // Now we begin to cancel the chores that caused an increase in the core thread pool of the
+    // ChoreService. These cancellations should cause a decrease in the core thread pool.
     slowChore5.cancel();
     Thread.sleep(chorePeriod * 10);
     assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
@@ -485,44 +487,6 @@ public class TestChoreService {
     assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
       service.getCorePoolSize());
     assertEquals(service.getNumberOfChoresMissingStartTime(), 0);
-
-    slowChore1.resetState();
-    service.scheduleChore(slowChore1);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 1);
-
-    slowChore2.resetState();
-    service.scheduleChore(slowChore2);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
-
-    DoNothingChore fastChore1 = new DoNothingChore("fastChore1", chorePeriod);
-    service.scheduleChore(fastChore1);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
-    assertEquals("Should increase", 3, service.getCorePoolSize());
-
-    DoNothingChore fastChore2 = new DoNothingChore("fastChore2", chorePeriod);
-    service.scheduleChore(fastChore2);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
-    assertEquals("Should increase", 3, service.getCorePoolSize());
-
-    DoNothingChore fastChore3 = new DoNothingChore("fastChore3", chorePeriod);
-    service.scheduleChore(fastChore3);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
-    assertEquals("Should not change", 3, service.getCorePoolSize());
-
-    DoNothingChore fastChore4 = new DoNothingChore("fastChore4", chorePeriod);
-    service.scheduleChore(fastChore4);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
-    assertEquals("Should not change", 3, service.getCorePoolSize());
 
     shutdownService(service);
   }
@@ -653,35 +617,6 @@ public class TestChoreService {
 
     Thread.sleep(sleepTime);
     assertTrue(service.getCorePoolSize() <= service.getNumberOfScheduledChores());
-
-    shutdownService(service);
-  }
-
-  @Test (timeout=20000)
-  public void testScheduledChoreReset() throws InterruptedException {
-    final int period = 100;
-    ChoreService service = new ChoreService("testScheduledChoreReset");
-    ScheduledChore chore = new DoNothingChore("sampleChore", period);
-
-    // TRUE
-    assertTrue(!chore.isInitialChoreComplete());
-    assertTrue(chore.getTimeOfLastRun() == -1);
-    assertTrue(chore.getTimeOfThisRun() == -1);
-
-    service.scheduleChore(chore);
-    Thread.sleep(5 * period);
-
-    // FALSE
-    assertFalse(!chore.isInitialChoreComplete());
-    assertFalse(chore.getTimeOfLastRun() == -1);
-    assertFalse(chore.getTimeOfThisRun() == -1);
-
-    chore.resetState();
-
-    // TRUE
-    assertTrue(!chore.isInitialChoreComplete());
-    assertTrue(chore.getTimeOfLastRun() == -1);
-    assertTrue(chore.getTimeOfThisRun() == -1);
 
     shutdownService(service);
   }

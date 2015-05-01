@@ -24,7 +24,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -53,6 +52,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,7 +60,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.junit.After;
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -545,11 +544,8 @@ public class TestAdmin2 {
         + DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null)) + " log files");
 
     // flush all regions
-
-    List<HRegion> regions = new ArrayList<HRegion>(regionServer
-        .getOnlineRegionsLocalContext());
-    for (HRegion r : regions) {
-      r.flushcache();
+    for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+      r.flush(true);
     }
     admin.rollWALWriter(regionServer.getServerName());
     int count = DefaultWALProvider.getNumRolledLogFiles(regionServer.getWAL(null));
@@ -633,20 +629,6 @@ public class TestAdmin2 {
   }
 
   /**
-   * HBASE-4417 checkHBaseAvailable() doesn't close zk connections
-   */
-  @Test (timeout=300000)
-  public void testCheckHBaseAvailableClosesConnection() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
-
-    int initialCount = HConnectionTestingUtility.getConnectionCount();
-    HBaseAdmin.checkHBaseAvailable(conf);
-    int finalCount = HConnectionTestingUtility.getConnectionCount();
-
-    Assert.assertEquals(initialCount, finalCount) ;
-  }
-
-  /**
    * Check that we have an exception if the cluster is not there.
    */
   @Test (timeout=300000)
@@ -656,8 +638,6 @@ public class TestAdmin2 {
     // Change the ZK address to go to something not used.
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT,
       conf.getInt(HConstants.ZOOKEEPER_CLIENT_PORT, 9999)+10);
-
-    int initialCount = HConnectionTestingUtility.getConnectionCount();
 
     long start = System.currentTimeMillis();
     try {
@@ -669,10 +649,6 @@ public class TestAdmin2 {
     } catch (IOException ignored) {
     }
     long end = System.currentTimeMillis();
-
-    int finalCount = HConnectionTestingUtility.getConnectionCount();
-
-    Assert.assertEquals(initialCount, finalCount) ;
 
     LOG.info("It took "+(end-start)+" ms to find out that" +
       " HBase was not available");
@@ -725,5 +701,27 @@ public class TestAdmin2 {
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
     pair = rawAdmin.getRegion(region.getEncodedNameAsBytes());
     assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+  }
+
+  @Test(timeout = 30000)
+  public void testBalancer() throws Exception {
+    boolean initialState = admin.isBalancerEnabled();
+
+    // Start the balancer, wait for it.
+    boolean prevState = admin.setBalancerRunning(!initialState, true);
+
+    // The previous state should be the original state we observed
+    assertEquals(initialState, prevState);
+
+    // Current state should be opposite of the original
+    assertEquals(!initialState, admin.isBalancerEnabled());
+
+    // Reset it back to what it was
+    prevState = admin.setBalancerRunning(initialState, true);
+
+    // The previous state should be the opposite of the initial state
+    assertEquals(!initialState, prevState);
+    // Current state should be the original state again
+    assertEquals(initialState, admin.isBalancerEnabled());
   }
 }

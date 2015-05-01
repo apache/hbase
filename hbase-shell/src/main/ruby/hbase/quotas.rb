@@ -34,11 +34,13 @@ end
 
 module Hbase
   class QuotasAdmin
-    def initialize(configuration, formatter)
-      @config = configuration
-      @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(configuration)
-      @admin = @connection.getAdmin()
+    def initialize(admin, formatter)
+      @admin = admin
       @formatter = formatter
+    end
+
+    def close
+      @admin.close
     end
 
     def throttle(args)

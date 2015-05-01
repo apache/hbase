@@ -28,11 +28,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.mob.ExpiredMobFileCleaner;
-import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
@@ -53,7 +49,7 @@ public class TestExpiredMobFileCleaner {
   private final static byte[] row2 = Bytes.toBytes("row2");
   private final static byte[] qf = Bytes.toBytes("qf");
 
-  private static HTable table;
+  private static BufferedMutator table;
   private static Admin admin;
 
   @BeforeClass
@@ -93,8 +89,8 @@ public class TestExpiredMobFileCleaner {
 
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    table.setAutoFlush(false, false);
+    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getBufferedMutator(tableName);
   }
 
   private void modifyColumnExpiryDays(int expireDays) throws Exception {
@@ -108,14 +104,14 @@ public class TestExpiredMobFileCleaner {
     admin.modifyColumn(tableName, hcd);
   }
 
-  private void putKVAndFlush(HTable table, byte[] row, byte[] value, long ts)
+  private void putKVAndFlush(BufferedMutator table, byte[] row, byte[] value, long ts)
       throws Exception {
 
     Put put = new Put(row, ts);
-    put.add(Bytes.toBytes(family), qf, value);
-    table.put(put);
+    put.addColumn(Bytes.toBytes(family), qf, value);
+    table.mutate(put);
 
-    table.flushCommits();
+    table.flush();
     admin.flush(tableName);
   }
 

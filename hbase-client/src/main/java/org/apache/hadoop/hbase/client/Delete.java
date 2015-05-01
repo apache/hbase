@@ -253,7 +253,9 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param family family name
    * @param timestamp version timestamp
    * @return this for invocation chaining
+   * @deprecated Since hbase-1.0.0. Use {@link #addFamilyVersion(byte[], long)}
    */
+  @Deprecated
   public Delete deleteFamilyVersion(byte [] family, long timestamp) {
     return addFamilyVersion(family, timestamp);
   }
@@ -264,9 +266,7 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param family family name
    * @param timestamp version timestamp
    * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addFamilyVersion(byte[], long)}
    */
-  @Deprecated
   public Delete addFamilyVersion(final byte [] family, final long timestamp) {
     List<Cell> list = familyMap.get(family);
     if(list == null) {

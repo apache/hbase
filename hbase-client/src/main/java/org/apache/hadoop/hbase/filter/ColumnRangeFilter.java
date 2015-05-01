@@ -133,7 +133,7 @@ public class ColumnRangeFilter extends FilterBase {
     }
 
     if (!this.minColumnInclusive && cmpMin == 0) {
-      return ReturnCode.SKIP;
+      return ReturnCode.NEXT_COL;
     }
 
     if (this.maxColumn == null) {

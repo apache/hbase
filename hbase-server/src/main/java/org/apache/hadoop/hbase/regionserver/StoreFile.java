@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -44,6 +43,7 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -412,7 +411,7 @@ public class StoreFile {
     }
     this.reader.setSequenceID(this.sequenceid);
 
-    b = metadataMap.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+    b = metadataMap.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
     if (b != null) {
       this.maxMemstoreTS = Bytes.toLong(b);
     }
@@ -1308,7 +1307,7 @@ public class StoreFile {
             // columns, a file might be skipped if using row+col Bloom filter.
             // In order to ensure this file is included an additional check is
             // required looking only for a row bloom.
-            byte[] rowBloomKey = bloomFilter.createBloomKey(row, 0, row.length,
+            byte[] rowBloomKey = bloomFilter.createBloomKey(row, rowOffset, rowLen,
                 null, 0, 0);
 
             if (keyIsAfterLast

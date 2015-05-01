@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,31 +86,26 @@ public class TableNamespaceManager {
 
   public void start() throws IOException {
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
-        TableName.NAMESPACE_TABLE_NAME)) {
+      TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
 
     try {
-      // Wait for the namespace table to be assigned.
-      // If timed out, we will move ahead without initializing it.
-      // So that it should be initialized later on lazily.
+      // Wait for the namespace table to be initialized.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
-      while (!(isTableAssigned() && isTableEnabled())) {
+      while (!isTableAvailableAndInitialized()) {
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
-          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to " +
-            "be assigned and enabled: " + getTableState());
+          throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
+              + "be assigned and enabled: " + getTableState());
         }
         Thread.sleep(100);
       }
     } catch (InterruptedException e) {
-      throw (InterruptedIOException)new InterruptedIOException().initCause(e);
+      throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
-
-    // initialize namespace table
-    isTableAvailableAndInitialized();
   }
 
   private synchronized Table getNamespaceTable() throws IOException {
@@ -236,18 +231,15 @@ public class TableNamespaceManager {
   }
 
   private void createNamespaceTable(MasterServices masterServices) throws IOException {
-    HRegionInfo newRegions[] = new HRegionInfo[]{
+    HRegionInfo[] newRegions = new HRegionInfo[]{
         new HRegionInfo(HTableDescriptor.NAMESPACE_TABLEDESC.getTableName(), null, null)};
 
-    //we need to create the table this way to bypass
-    //checkInitialized
-    masterServices.getExecutorService()
-        .submit(new CreateTableHandler(masterServices,
-            masterServices.getMasterFileSystem(),
-            HTableDescriptor.NAMESPACE_TABLEDESC,
-            masterServices.getConfiguration(),
-            newRegions,
-            masterServices).prepare());
+    // we need to create the table this way to bypass checkInitialized
+    masterServices.getMasterProcedureExecutor()
+      .submitProcedure(new CreateTableProcedure(
+          masterServices.getMasterProcedureExecutor().getEnvironment(),
+          HTableDescriptor.NAMESPACE_TABLEDESC,
+          newRegions));
   }
 
   /**

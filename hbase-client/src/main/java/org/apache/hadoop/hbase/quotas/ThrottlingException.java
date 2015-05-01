@@ -21,8 +21,6 @@ package org.apache.hadoop.hbase.quotas;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
@@ -38,12 +36,11 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 public class ThrottlingException extends QuotaExceededException {
   private static final long serialVersionUID = 1406576492085155743L;
 
-  private static final Log LOG = LogFactory.getLog(ThrottlingException.class);
-
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public enum Type {
     NumRequestsExceeded,
+    RequestSizeExceeded,
     NumReadRequestsExceeded,
     NumWriteRequestsExceeded,
     WriteSizeExceeded,
@@ -52,6 +49,7 @@ public class ThrottlingException extends QuotaExceededException {
 
   private static final String[] MSG_TYPE = new String[] {
     "number of requests exceeded",
+    "request size limit exceeded",
     "number of read requests exceeded",
     "number of write requests exceeded",
     "write size limit exceeded",
@@ -96,6 +94,11 @@ public class ThrottlingException extends QuotaExceededException {
   public static void throwNumRequestsExceeded(final long waitInterval)
       throws ThrottlingException {
     throwThrottlingException(Type.NumRequestsExceeded, waitInterval);
+  }
+
+  public static void throwRequestSizeExceeded(final long waitInterval)
+      throws ThrottlingException {
+    throwThrottlingException(Type.RequestSizeExceeded, waitInterval);
   }
 
   public static void throwNumReadRequestsExceeded(final long waitInterval)

@@ -1284,11 +1284,11 @@ Whether or not the bucketcache is used in league with the LRU
 *`hbase.bucketcache.size`*::
 +
 .Description
-The size of the buckets for the bucketcache if you only use a single size. 
-      Defaults to the default blocksize, which is 64 * 1024.
+Used along with bucket cache, this is a float that EITHER represents a percentage of total heap
+   memory size to give to the cache (if < 1.0) OR, it is the capacity in megabytes of the cache.
 +
 .Default
-`65536`
+`0` when specified as a float
 
   
 [[hbase.bucketcache.sizes]]

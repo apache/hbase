@@ -23,12 +23,26 @@ import java.util.Iterator;
 
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility methods which contain the logic for regions and replicas.
  */
 @InterfaceAudience.Private
 public class RegionReplicaUtil {
+
+  /**
+   * Whether or not the secondary region will wait for observing a flush / region open event
+   * from the primary region via async wal replication before enabling read requests. Since replayed
+   * edits from async wal replication from primary is not persisted in WAL, the memstore of the
+   * secondary region might be non-empty at the time of close or crash. For ensuring seqId's not
+   * "going back in time" in the secondary region replica, this should be enabled. However, in some
+   * cases the above semantics might be ok for some application classes.
+   * See HBASE-11580 for more context.
+   */
+  public static final String REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY
+    = "hbase.region.replica.wait.for.primary.flush";
+  protected static final boolean DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH = true;
 
   /**
    * The default replicaId for the region
@@ -91,5 +105,47 @@ public class RegionReplicaUtil {
         iterator.remove();
       }
     }
+  }
+
+  public static boolean isReplicasForSameRegion(HRegionInfo regionInfoA, HRegionInfo regionInfoB) {
+    return compareRegionInfosWithoutReplicaId(regionInfoA, regionInfoB) == 0;
+  }
+
+  private static int compareRegionInfosWithoutReplicaId(HRegionInfo regionInfoA,
+      HRegionInfo regionInfoB) {
+    int result = regionInfoA.getTable().compareTo(regionInfoB.getTable());
+    if (result != 0) {
+      return result;
+    }
+
+    // Compare start keys.
+    result = Bytes.compareTo(regionInfoA.getStartKey(), regionInfoB.getStartKey());
+    if (result != 0) {
+      return result;
+    }
+
+    // Compare end keys.
+    result = Bytes.compareTo(regionInfoA.getEndKey(), regionInfoB.getEndKey());
+
+    if (result != 0) {
+      if (regionInfoA.getStartKey().length != 0
+              && regionInfoA.getEndKey().length == 0) {
+          return 1; // this is last region
+      }
+      if (regionInfoB.getStartKey().length != 0
+              && regionInfoB.getEndKey().length == 0) {
+          return -1; // o is the last region
+      }
+      return result;
+    }
+
+    // regionId is usually milli timestamp -- this defines older stamps
+    // to be "smaller" than newer stamps in sort order.
+    if (regionInfoA.getRegionId() > regionInfoB.getRegionId()) {
+      return 1;
+    } else if (regionInfoA.getRegionId() < regionInfoB.getRegionId()) {
+      return -1;
+    }
+    return 0;
   }
 }

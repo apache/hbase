@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.common.base.Strings;
 
 @InterfaceAudience.Private
-class HBaseKerberosUtils {
+public class HBaseKerberosUtils {
   public static final String KRB_PRINCIPAL = "hbase.regionserver.kerberos.principal";
+  public static final String MASTER_KRB_PRINCIPAL = "hbase.master.kerberos.principal";
   public static final String KRB_KEYTAB_FILE = "hbase.regionserver.keytab.file";
 
-  static boolean isKerberosPropertySetted() {
+  public static boolean isKerberosPropertySetted() {
     String krbPrincipal = System.getProperty(KRB_PRINCIPAL);
     String krbKeytab = System.getProperty(KRB_KEYTAB_FILE);
     if (Strings.isNullOrEmpty(krbPrincipal) || Strings.isNullOrEmpty(krbKeytab)) {
@@ -38,41 +39,46 @@ class HBaseKerberosUtils {
     return true;
   }
 
-  static void setPrincipalForTesting(String principal) {
+  public static void setPrincipalForTesting(String principal) {
     setSystemProperty(KRB_PRINCIPAL, principal);
   }
 
-  static void setKeytabFileForTesting(String keytabFile) {
+  public static void setKeytabFileForTesting(String keytabFile) {
     setSystemProperty(KRB_KEYTAB_FILE, keytabFile);
   }
 
-  static void setSystemProperty(String propertyName, String propertyValue) {
+  public static void setSystemProperty(String propertyName, String propertyValue) {
     System.setProperty(propertyName, propertyValue);
   }
 
-  static String getKeytabFileForTesting() {
+  public static String getKeytabFileForTesting() {
     return System.getProperty(KRB_KEYTAB_FILE);
   }
 
-  static String getPrincipalForTesting() {
+  public static String getPrincipalForTesting() {
     return System.getProperty(KRB_PRINCIPAL);
   }
 
-  static Configuration getConfigurationWoPrincipal() {
+  public static Configuration getConfigurationWoPrincipal() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    conf.set("hbase.security.authentication", "kerberos");
-    conf.setBoolean("hbase.security.authorization", true);
+    conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     return conf;
   }
 
-  static Configuration getSecuredConfiguration() {
+  public static Configuration getSecuredConfiguration() {
     Configuration conf = HBaseConfiguration.create();
+    setSecuredConfiguration(conf);
+    return conf;
+  }
+
+  public static void setSecuredConfiguration(Configuration conf) {
     conf.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
-    conf.set("hbase.security.authentication", "kerberos");
-    conf.setBoolean("hbase.security.authorization", true);
+    conf.set(User.HBASE_SECURITY_CONF_KEY, "kerberos");
+    conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     conf.set(KRB_KEYTAB_FILE, System.getProperty(KRB_KEYTAB_FILE));
     conf.set(KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
-    return conf;
+    conf.set(MASTER_KRB_PRINCIPAL, System.getProperty(KRB_PRINCIPAL));
   }
 }

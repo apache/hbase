@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
+import java.util.Random;
+
 /**
  * A {@link RegionSplitPolicy} implementation which splits a region
  * as soon as any of its store files exceeds a maximum configurable
@@ -34,6 +36,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
+  private static final Random RANDOM = new Random();
+
   private long desiredMaxFileSize;
 
   @Override
@@ -48,6 +52,8 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       this.desiredMaxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
+    double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", 0.25D);
+    this.desiredMaxFileSize += (long)(desiredMaxFileSize * (RANDOM.nextFloat() - 0.5D) * jitter);
   }
 
   @Override
@@ -55,7 +61,7 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
     boolean force = region.shouldForceSplit();
     boolean foundABigStore = false;
 
-    for (Store store : region.getStores().values()) {
+    for (Store store : region.getStores()) {
       // If any of the stores are unable to split (eg they contain reference files)
       // then don't split
       if ((!store.canSplit())) {

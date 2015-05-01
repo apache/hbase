@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -127,78 +128,6 @@ public class HTable implements HTableInterface {
   private RpcRetryingCallerFactory rpcCallerFactory;
   private RpcControllerFactory rpcControllerFactory;
 
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final String tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName)
-  throws IOException {
-    this(conf, TableName.valueOf(tableName));
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName table name pojo
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName)
-  throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = true;
-    this.cleanupConnectionOnClose = true;
-    if (conf == null) {
-      this.connection = null;
-      return;
-    }
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    this.configuration = conf;
-
-    this.pool = getDefaultExecutor(conf);
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Do not use.
-   */
-  @Deprecated
-  public HTable(TableName tableName, Connection connection) throws IOException {
-    this.tableName = tableName;
-    this.cleanupPoolOnClose = true;
-    this.cleanupConnectionOnClose = false;
-    this.connection = (ClusterConnection)connection;
-    this.configuration = connection.getConfiguration();
-
-    this.pool = getDefaultExecutor(this.configuration);
-    this.finishSetup();
-  }
-
   // Marked Private @since 1.0
   @InterfaceAudience.Private
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
@@ -220,68 +149,6 @@ public class HTable implements HTableInterface {
 
   /**
    * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final byte[] tableName, final ExecutorService pool)
-      throws IOException {
-    this(conf, TableName.valueOf(tableName), pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param conf Configuration object to use.
-   * @param tableName Name of the table.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated Constructing HTable objects manually has been deprecated. Please use
-   * {@link Connection} to instantiate a {@link Table} instead.
-   */
-  @Deprecated
-  public HTable(Configuration conf, final TableName tableName, final ExecutorService pool)
-      throws IOException {
-    this.connection = (ClusterConnection) ConnectionFactory.createConnection(conf);
-    this.configuration = conf;
-    this.pool = pool;
-    if (pool == null) {
-      this.pool = getDefaultExecutor(conf);
-      this.cleanupPoolOnClose = true;
-    } else {
-      this.cleanupPoolOnClose = false;
-    }
-    this.tableName = tableName;
-    this.cleanupConnectionOnClose = true;
-    this.finishSetup();
-  }
-
-  /**
-   * Creates an object to access a HBase table.
-   * @param tableName Name of the table.
-   * @param connection HConnection to be used.
-   * @param pool ExecutorService to be used.
-   * @throws IOException if a remote or network exception occurs.
-   * @deprecated Do not use, internal ctor.
-   */
-  @Deprecated
-  public HTable(final byte[] tableName, final Connection connection,
-      final ExecutorService pool) throws IOException {
-    this(TableName.valueOf(tableName), connection, pool);
-  }
-
-  /** @deprecated Do not use, internal ctor. */
-  @Deprecated
-  public HTable(TableName tableName, final Connection connection,
-      final ExecutorService pool) throws IOException {
-    this(tableName, (ClusterConnection)connection, null, null, null, pool);
-  }
-
-  /**
-   * Creates an object to access a HBase table.
    * Used by HBase internally.  DO NOT USE. See {@link ConnectionFactory} class comment for how to
    * get a {@link Table} instance (use {@link Table} instead of {@link HTable}).
    * @param tableName Name of the table.
@@ -290,7 +157,7 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    */
   @InterfaceAudience.Private
-  public HTable(TableName tableName, final ClusterConnection connection,
+  protected HTable(TableName tableName, final ClusterConnection connection,
       final TableConfiguration tableConfig,
       final RpcRetryingCallerFactory rpcCallerFactory,
       final RpcControllerFactory rpcControllerFactory,
@@ -452,12 +319,9 @@ public class HTable implements HTableInterface {
   @Deprecated
   public static boolean isTableEnabled(Configuration conf,
       final TableName tableName) throws IOException {
-    return HConnectionManager.execute(new HConnectable<Boolean>(conf) {
-      @Override
-      public Boolean connect(HConnection connection) throws IOException {
-        return connection.isTableEnabled(tableName);
-      }
-    });
+    try(Connection conn = ConnectionFactory.createConnection(conf)) {
+      return conn.getAdmin().isTableEnabled(tableName);
+    }
   }
 
   /**
@@ -518,39 +382,12 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * Gets the number of rows that a scanner will fetch at once.
-   * <p>
-   * The default value comes from {@code hbase.client.scanner.caching}.
-   * @deprecated Use {@link Scan#setCaching(int)} and {@link Scan#getCaching()}
-   */
-  @Deprecated
-  public int getScannerCaching() {
-    return scannerCaching;
-  }
-
-  /**
    * Kept in 0.96 for backward compatibility
    * @deprecated  since 0.96. This is an internal buffer that should not be read nor write.
    */
   @Deprecated
   public List<Row> getWriteBuffer() {
     return mutator == null ? null : mutator.getWriteBuffer();
-  }
-
-  /**
-   * Sets the number of rows that a scanner will fetch at once.
-   * <p>
-   * This will override the value specified by
-   * {@code hbase.client.scanner.caching}.
-   * Increasing this value will reduce the amount of work needed each time
-   * {@code next()} is called on a scanner, at the expense of memory use
-   * (since more rows will need to be maintained in memory by the scanners).
-   * @param scannerCaching the number of rows a scanner will fetch at once.
-   * @deprecated Use {@link Scan#setCaching(int)}
-   */
-  @Deprecated
-  public void setScannerCaching(int scannerCaching) {
-    this.scannerCaching = scannerCaching;
   }
 
   /**
@@ -625,11 +462,12 @@ public class HTable implements HTableInterface {
    * @throws IOException if a remote or network exception occurs
    * @deprecated This is no longer a public API.  Use {@link #getAllRegionLocations()} instead.
    */
+  @SuppressWarnings("deprecation")
   @Deprecated
   public NavigableMap<HRegionInfo, ServerName> getRegionLocations() throws IOException {
     // TODO: Odd that this returns a Map of HRI to SN whereas getRegionLocator, singular,
     // returns an HRegionLocation.
-    return MetaScanner.allTableRegions(this.connection, getName());
+    return MetaTableAccessor.allTableRegions(this.connection, getName());
   }
 
   /**
@@ -775,7 +613,7 @@ public class HTable implements HTableInterface {
       throw new IllegalArgumentException("Small scan should not be used with batching");
     }
     if (scan.getCaching() <= 0) {
-      scan.setCaching(getScannerCaching());
+      scan.setCaching(scannerCaching);
     }
 
     if (scan.isReversed()) {
@@ -1038,7 +876,15 @@ public class HTable implements HTableInterface {
           regionMutationBuilder.setAtomic(true);
           MultiRequest request =
             MultiRequest.newBuilder().addRegionAction(regionMutationBuilder.build()).build();
-          getStub().multi(controller, request);
+          ClientProtos.MultiResponse response = getStub().multi(controller, request);
+          ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+          if (res.hasException()) {
+            Throwable ex = ProtobufUtil.toException(res.getException());
+            if(ex instanceof IOException) {
+              throw (IOException)ex;
+            }
+            throw new IOException("Failed to mutate row: "+Bytes.toStringBinary(rm.getRow()), ex);
+          }
         } catch (ServiceException se) {
           throw ProtobufUtil.getRemoteException(se);
         }
@@ -1317,6 +1163,15 @@ public class HTable implements HTableInterface {
                   getLocation().getRegionInfo().getRegionName(), row, family, qualifier,
                   new BinaryComparator(value), compareType, rm);
               ClientProtos.MultiResponse response = getStub().multi(controller, request);
+              ClientProtos.RegionActionResult res = response.getRegionActionResultList().get(0);
+              if (res.hasException()) {
+                Throwable ex = ProtobufUtil.toException(res.getException());
+                if(ex instanceof IOException) {
+                  throw (IOException)ex;
+                }
+                throw new IOException("Failed to checkAndMutate row: "+
+                    Bytes.toStringBinary(rm.getRow()), ex);
+              }
               return Boolean.valueOf(response.getProcessed());
             } catch (ServiceException se) {
               throw ProtobufUtil.getRemoteException(se);
@@ -1438,6 +1293,7 @@ public class HTable implements HTableInterface {
           terminated = this.pool.awaitTermination(60, TimeUnit.SECONDS);
         } while (!terminated);
       } catch (InterruptedException e) {
+        this.pool.shutdownNow();
         LOG.warn("waitForTermination interrupted");
       }
     }

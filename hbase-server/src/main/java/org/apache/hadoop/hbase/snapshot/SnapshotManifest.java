@@ -224,7 +224,7 @@ public class SnapshotManifest {
     // 2. iterate through all the stores in the region
     LOG.debug("Creating references for hfiles");
 
-    for (Store store : region.getStores().values()) {
+    for (Store store : region.getStores()) {
       // 2.1. build the snapshot reference for the store
       Object familyData = visitor.familyOpen(regionData, store.getFamily().getName());
       monitor.rethrowException();

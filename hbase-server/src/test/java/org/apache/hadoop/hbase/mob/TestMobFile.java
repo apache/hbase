@@ -25,10 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -73,35 +73,35 @@ public class TestMobFile extends TestCase {
     KeyValue expectedKey =
         new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     KeyValue seekKey = expectedKey.createKeyOnly(false);
-    KeyValue kv = KeyValueUtil.ensureKeyValue(mobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    Cell cell = mobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the end key
     byte[] endKey = Bytes.toBytes("zz");  // The end key bytes
     expectedKey = new KeyValue(endKey, family, qualify, Long.MAX_VALUE, Type.Put, endKey);
     seekKey = expectedKey.createKeyOnly(false);
-    kv = KeyValueUtil.ensureKeyValue(mobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = mobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the random key
     byte[] randomKey = Bytes.toBytes(MobTestUtil.generateRandomString(2));
     expectedKey = new KeyValue(randomKey, family, qualify, Long.MAX_VALUE, Type.Put, randomKey);
     seekKey = expectedKey.createKeyOnly(false);
-    kv = KeyValueUtil.ensureKeyValue(mobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = mobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is less than the start key
     byte[] lowerKey = Bytes.toBytes("a1"); // Smaller than "aa"
     expectedKey = new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     seekKey = new KeyValue(lowerKey, family, qualify, Long.MAX_VALUE, Type.Put, lowerKey);
-    kv = KeyValueUtil.ensureKeyValue(mobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = mobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is more than the end key
     byte[] upperKey = Bytes.toBytes("z{"); // Bigger than "zz"
     seekKey = new KeyValue(upperKey, family, qualify, Long.MAX_VALUE, Type.Put, upperKey);
-    kv = KeyValueUtil.ensureKeyValue(mobFile.readCell(seekKey, false));
-    assertNull(kv);
+    cell = mobFile.readCell(seekKey, false);
+    assertNull(cell);
   }
 
   @Test

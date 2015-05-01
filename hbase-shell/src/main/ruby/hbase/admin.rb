@@ -34,7 +34,7 @@ module Hbase
 
     def initialize(admin, formatter)
       @admin = admin
-      connection = @admin.getConnection()
+      @connection = @admin.getConnection()
       @formatter = formatter
     end
 
@@ -84,7 +84,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a regionserver's WAL roll
     def wal_roll(server_name)
-      @admin.rollWALWriter(server_name)
+      @admin.rollWALWriter(ServerName.valueOf(server_name))
     end
     # TODO remove older hlog_roll version
     alias :hlog_roll :wal_roll
@@ -112,6 +112,13 @@ module Hbase
     def balance_switch(enableDisable)
       @admin.setBalancerRunning(
         java.lang.Boolean::valueOf(enableDisable), java.lang.Boolean::valueOf(false))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query the current state of the LoadBalancer.
+    # Returns the balancer's state (true is enabled).
+    def balancer_enabled?()
+      @admin.isBalancerEnabled()
     end
 
     #----------------------------------------------------------------------------------------------
@@ -168,7 +175,7 @@ module Hbase
     #---------------------------------------------------------------------------------------------
     # Throw exception if table doesn't exist
     def tableExists(table_name)
-      raise ArgumentError, "Table #{table_name} does not exist.'" unless exists?(table_name)
+      raise ArgumentError, "Table #{table_name} does not exist." unless exists?(table_name)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -181,7 +188,7 @@ module Hbase
     # Drops a table
     def drop(table_name)
       tableExists(table_name)
-      raise ArgumentError, "Table #{table_name} is enabled. Disable it first.'" if enabled?(table_name)
+      raise ArgumentError, "Table #{table_name} is enabled. Disable it first." if enabled?(table_name)
 
       @admin.deleteTable(org.apache.hadoop.hbase.TableName.valueOf(table_name))
     end
@@ -372,7 +379,7 @@ module Hbase
     # Truncates table (deletes all records by recreating the table)
     def truncate(table_name, conf = @conf)
       table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
-      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first.'" unless enabled?(table_name)
+      raise ArgumentError, "Table #{table_name} is not enabled. Enable it first." unless enabled?(table_name)
       yield 'Disabling table...' if block_given?
       @admin.disableTable(table_name)
 
@@ -399,14 +406,14 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Truncates table while maintaing region boundaries (deletes all records by recreating the table)
     def truncate_preserve(table_name, conf = @conf)
-      h_table = @conn.getTable(table_name)      
-      locator = @conn.getRegionLocator(table_name)
+      h_table = @connection.getTable(TableName.valueOf(table_name))
+      locator = @connection.getRegionLocator(TableName.valueOf(table_name))
       splits = locator.getAllRegionLocations().
           map{|i| Bytes.toString(i.getRegionInfo().getStartKey)}.
           delete_if{|k| k == ""}.to_java :String
       locator.close()
 
-      table_description = @admin.getTableDescriptor(table_name)
+      table_description = @admin.getTableDescriptor(TableName.valueOf(table_name))
       yield 'Disabling table...' if block_given?
       disable(table_name)
 
@@ -608,7 +615,7 @@ module Hbase
       end
     end
 
-    def status(format)
+    def status(format, type)
       status = @admin.getClusterStatus()
       if format == "detailed"
         puts("version %s" % [ status.getHBaseVersion() ])
@@ -634,6 +641,46 @@ module Hbase
         puts("%d dead servers" % [ status.getDeadServers() ])
         for server in status.getDeadServerNames()
           puts("    %s" % [ server ])
+        end
+      elsif format == "replication"
+        #check whether replication is enabled or not
+        if (!@admin.getConfiguration().getBoolean(org.apache.hadoop.hbase.HConstants::REPLICATION_ENABLE_KEY, 
+          org.apache.hadoop.hbase.HConstants::REPLICATION_ENABLE_DEFAULT))
+          puts("Please enable replication first.")
+        else
+          puts("version %s" % [ status.getHBaseVersion() ])
+          puts("%d live servers" % [ status.getServersSize() ])
+          for server in status.getServers()
+            sl = status.getLoad(server)
+            rSinkString   = "       SINK  :"
+            rSourceString = "       SOURCE:"
+            rLoadSink = sl.getReplicationLoadSink()
+            rSinkString << " AgeOfLastAppliedOp=" + rLoadSink.getAgeOfLastAppliedOp().to_s
+            rSinkString << ", TimeStampsOfLastAppliedOp=" + 
+			    (java.util.Date.new(rLoadSink.getTimeStampsOfLastAppliedOp())).toString()
+            rLoadSourceList = sl.getReplicationLoadSourceList()
+            index = 0
+            while index < rLoadSourceList.size()
+              rLoadSource = rLoadSourceList.get(index)
+              rSourceString << " PeerID=" + rLoadSource.getPeerID()
+              rSourceString << ", AgeOfLastShippedOp=" + rLoadSource.getAgeOfLastShippedOp().to_s
+              rSourceString << ", SizeOfLogQueue=" + rLoadSource.getSizeOfLogQueue().to_s
+              rSourceString << ", TimeStampsOfLastShippedOp=" + 
+			      (java.util.Date.new(rLoadSource.getTimeStampOfLastShippedOp())).toString()
+              rSourceString << ", Replication Lag=" + rLoadSource.getReplicationLag().to_s
+              index = index + 1
+            end
+            puts("    %s:" %
+            [ server.getHostname() ])
+            if type.casecmp("SOURCE") == 0
+              puts("%s" % rSourceString)
+            elsif type.casecmp("SINK") == 0
+              puts("%s" % rSinkString)
+            else
+              puts("%s" % rSourceString)
+              puts("%s" % rSinkString)
+            end
+          end
         end
       elsif format == "simple"
         load = 0
@@ -746,7 +793,7 @@ module Hbase
     # Enables/disables a region by name
     def online(region_name, on_off)
       # Open meta table
-      meta = connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
+      meta = @connection.getTable(org.apache.hadoop.hbase.TableName::META_TABLE_NAME)
 
       # Read region info
       # FIXME: fail gracefully if can't find the region

@@ -47,8 +47,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
@@ -58,15 +57,8 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactionRequest.CompactionType;
 import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartition;
 import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartitionId;
-import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.ScanInfo;
-import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
-import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
@@ -240,7 +232,8 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       return Collections.emptyList();
     }
     List<Path> paths = new ArrayList<Path>();
-    final HTable table = new HTable(conf, tableName);
+    Connection c = ConnectionFactory.createConnection(conf);
+    final Table table = c.getTable(tableName);
     try {
       Map<CompactionPartitionId, Future<List<Path>>> results =
         new HashMap<CompactionPartitionId, Future<List<Path>>>();
@@ -289,7 +282,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @throws IOException
    */
   private List<Path> compactMobFilePartition(PartitionedMobFileCompactionRequest request,
-    CompactionPartition partition, List<StoreFile> delFiles, HTable table) throws IOException {
+    CompactionPartition partition, List<StoreFile> delFiles, Table table) throws IOException {
     List<Path> newFiles = new ArrayList<Path>();
     List<FileStatus> files = partition.listFiles();
     int offset = 0;
@@ -343,7 +336,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @throws IOException
    */
   private void compactMobFilesInBatch(PartitionedMobFileCompactionRequest request,
-    CompactionPartition partition, HTable table, List<StoreFile> filesToCompact, int batch,
+    CompactionPartition partition, Table table, List<StoreFile> filesToCompact, int batch,
     Path bulkloadPathOfPartition, Path bulkloadColumnPath, List<Path> newFiles)
     throws IOException {
     // open scanner to the selected mob files and del files.
@@ -370,8 +363,10 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       refFilePath = refFileWriter.getPath();
       List<Cell> cells = new ArrayList<Cell>();
       boolean hasMore = false;
+      ScannerContext scannerContext =
+              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
       do {
-        hasMore = scanner.next(cells, compactionKVMax);
+        hasMore = scanner.next(cells, scannerContext);
         for (Cell cell : cells) {
           // TODO remove this after the new code are introduced.
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
@@ -475,8 +470,10 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       filePath = writer.getPath();
       List<Cell> cells = new ArrayList<Cell>();
       boolean hasMore = false;
+      ScannerContext scannerContext =
+              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
       do {
-        hasMore = scanner.next(cells, compactionKVMax);
+        hasMore = scanner.next(cells, scannerContext);
         for (Cell cell : cells) {
           // TODO remove this after the new code are introduced.
           KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
@@ -532,12 +529,12 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @param fileName The current file name.
    * @throws IOException
    */
-  private void bulkloadRefFile(HTable table, Path bulkloadDirectory, String fileName)
+  private void bulkloadRefFile(Table table, Path bulkloadDirectory, String fileName)
     throws IOException {
     // bulkload the ref file
     try {
       LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-      bulkload.doBulkLoad(bulkloadDirectory, table);
+      bulkload.doBulkLoad(bulkloadDirectory, (HTable)table);
     } catch (Exception e) {
       // delete the committed mob file
       deletePath(new Path(mobFamilyDir, fileName));

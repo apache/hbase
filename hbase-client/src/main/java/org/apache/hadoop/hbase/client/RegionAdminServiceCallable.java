@@ -23,13 +23,17 @@ import java.io.InterruptedIOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
+import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Similar to {@link RegionServerCallable} but for the AdminService interface. This service callable
@@ -42,25 +46,39 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
 
   protected final ClusterConnection connection;
 
+  protected final RpcControllerFactory rpcControllerFactory;
+
   protected AdminService.BlockingInterface stub;
 
   protected HRegionLocation location;
 
   protected final TableName tableName;
   protected final byte[] row;
+  protected final int replicaId;
 
   protected final static int MIN_WAIT_DEAD_SERVER = 10000;
 
-  public RegionAdminServiceCallable(ClusterConnection connection, TableName tableName, byte[] row) {
-    this(connection, null, tableName, row);
+  public RegionAdminServiceCallable(ClusterConnection connection,
+      RpcControllerFactory rpcControllerFactory, TableName tableName, byte[] row) {
+    this(connection, rpcControllerFactory, null, tableName, row);
   }
 
-  public RegionAdminServiceCallable(ClusterConnection connection, HRegionLocation location,
+  public RegionAdminServiceCallable(ClusterConnection connection,
+      RpcControllerFactory rpcControllerFactory, HRegionLocation location,
       TableName tableName, byte[] row) {
+    this(connection, rpcControllerFactory, location,
+      tableName, row, RegionReplicaUtil.DEFAULT_REPLICA_ID);
+  }
+
+  public RegionAdminServiceCallable(ClusterConnection connection,
+      RpcControllerFactory rpcControllerFactory, HRegionLocation location,
+      TableName tableName, byte[] row, int replicaId) {
     this.connection = connection;
+    this.rpcControllerFactory = rpcControllerFactory;
     this.location = location;
     this.tableName = tableName;
     this.row = row;
+    this.replicaId = replicaId;
   }
 
   @Override
@@ -85,7 +103,18 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
     this.stub = stub;
   }
 
-  public abstract HRegionLocation getLocation(boolean useCache) throws IOException;
+  public HRegionLocation getLocation(boolean useCache) throws IOException {
+    RegionLocations rl = getRegionLocations(connection, tableName, row, useCache, replicaId);
+    if (rl == null) {
+      throw new HBaseIOException(getExceptionMessage());
+    }
+    HRegionLocation location = rl.getRegionLocation(replicaId);
+    if (location == null) {
+      throw new HBaseIOException(getExceptionMessage());
+    }
+
+    return location;
+  }
 
   @Override
   public void throwable(Throwable t, boolean retrying) {
@@ -115,7 +144,8 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
 
   //subclasses can override this.
   protected String getExceptionMessage() {
-    return "There is no location";
+    return "There is no location" + " table=" + tableName
+        + " ,replica=" + replicaId + ", row=" + Bytes.toStringBinary(row);
   }
 
   @Override
@@ -131,5 +161,28 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
       sleep = ConnectionUtils.addJitter(MIN_WAIT_DEAD_SERVER, 0.10f);
     }
     return sleep;
+  }
+
+  public static RegionLocations getRegionLocations(
+      ClusterConnection connection, TableName tableName, byte[] row,
+      boolean useCache, int replicaId)
+      throws RetriesExhaustedException, DoNotRetryIOException, InterruptedIOException {
+    RegionLocations rl;
+    try {
+      rl = connection.locateRegion(tableName, row, useCache, true, replicaId);
+    } catch (DoNotRetryIOException e) {
+      throw e;
+    } catch (RetriesExhaustedException e) {
+      throw e;
+    } catch (InterruptedIOException e) {
+      throw e;
+    } catch (IOException e) {
+      throw new RetriesExhaustedException("Can't get the location", e);
+    }
+    if (rl == null) {
+      throw new RetriesExhaustedException("Can't get the locations");
+    }
+
+    return rl;
   }
 }

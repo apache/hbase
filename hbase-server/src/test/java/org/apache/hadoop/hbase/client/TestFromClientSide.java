@@ -43,6 +43,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.log4j.Level;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
@@ -91,6 +93,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateR
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -98,6 +101,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Logger;
+import org.apache.log4j.spi.LoggingEvent;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -285,96 +291,6 @@ public class TestFromClientSide {
      table.close();
    }
 
-   /**
-    * @deprecated Tests deprecated functionality. Remove when we are past 1.0.
-    * @throws Exception
-    */
-   @Deprecated
-   @Test
-   public void testSharedZooKeeper() throws Exception {
-     Configuration newConfig = new Configuration(TEST_UTIL.getConfiguration());
-     newConfig.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "12345");
-
-     // First with a simple ZKW
-     ZooKeeperWatcher z0 = new ZooKeeperWatcher(
-       newConfig, "hconnection", new Abortable() {
-       @Override public void abort(String why, Throwable e) {}
-       @Override public boolean isAborted() {return false;}
-     });
-     z0.getRecoverableZooKeeper().getZooKeeper().exists("/oldZooKeeperWatcher", false);
-     z0.close();
-
-     // Then a ZooKeeperKeepAliveConnection
-     ConnectionManager.HConnectionImplementation connection1 =
-       (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig);
-
-     ZooKeeperKeepAliveConnection z1 = connection1.getKeepAliveZooKeeperWatcher();
-     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1", false);
-
-     z1.close();
-
-     // will still work, because the real connection is not closed yet
-     // Not do be done in real code
-     z1.getRecoverableZooKeeper().getZooKeeper().exists("/z1afterclose", false);
-
-
-     ZooKeeperKeepAliveConnection z2 = connection1.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection equals on same connection", z1 == z2);
-
-
-
-     Configuration newConfig2 = new Configuration(TEST_UTIL.getConfiguration());
-     newConfig2.set(HConstants.HBASE_CLIENT_INSTANCE_ID, "6789");
-     ConnectionManager.HConnectionImplementation connection2 =
-       (ConnectionManager.HConnectionImplementation)
-         HConnectionManager.getConnection(newConfig2);
-
-     assertTrue("connections should be different ", connection1 != connection2);
-
-     ZooKeeperKeepAliveConnection z3 = connection2.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection should be different" +
-         " on different connections", z1 != z3);
-
-     // Bypass the private access
-     Method m = ConnectionManager.HConnectionImplementation.class.
-       getDeclaredMethod("closeZooKeeperWatcher");
-     m.setAccessible(true);
-     m.invoke(connection2);
-
-     ZooKeeperKeepAliveConnection z4 = connection2.getKeepAliveZooKeeperWatcher();
-     assertTrue(
-       "ZooKeeperKeepAliveConnection should be recreated" +
-         " when previous connections was closed"
-       , z3 != z4);
-
-
-     z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
-     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-
-
-     HConnectionManager.deleteConnection(newConfig);
-     try {
-       z2.getRecoverableZooKeeper().getZooKeeper().exists("/z2", false);
-       assertTrue("We should not have a valid connection for z2", false);
-     } catch (Exception e){
-     }
-
-     z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-     // We expect success here.
-
-
-     HConnectionManager.deleteConnection(newConfig2);
-     try {
-       z4.getRecoverableZooKeeper().getZooKeeper().exists("/z4", false);
-       assertTrue("We should not have a valid connection for z4", false);
-     } catch (Exception e){
-     }
-   }
-
-
   /**
    * Verifies that getConfiguration returns the same Configuration object used
    * to create the HTable instance.
@@ -433,11 +349,6 @@ public class TestFromClientSide {
       0, getNumberOfRows(keyPrefix2, value2, table));
     assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3,
       0, getNumberOfRows(keyPrefix3, value2, table));
-    ht.setScannerCaching(0);
-    assertEquals("Got back incorrect number of rows from scan", 0,
-      getNumberOfRows(keyPrefix1, value2, table)); ht.setScannerCaching(100);
-    assertEquals("Got back incorrect number of rows from scan", 0,
-      getNumberOfRows(keyPrefix2, value2, table));
   }
 
   private void deleteColumns(Table ht, String value, String keyPrefix)
@@ -4127,7 +4038,7 @@ public class TestFromClientSide {
    */
   HTable createUnmangedHConnectionHTable(final TableName tableName) throws IOException {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY);
-    HConnection conn = HConnectionManager.createConnection(TEST_UTIL.getConfiguration());
+    Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     return (HTable)conn.getTable(tableName);
   }
 
@@ -4275,7 +4186,7 @@ public class TestFromClientSide {
     // set block size to 64 to making 2 kvs into one block, bypassing the walkForwardInSingleRow
     // in Store.rowAtOrBeforeFromStoreFile
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
-    HRegion region =
+    Region region =
         TEST_UTIL.getRSForFirstRegionInTable(tableAname).getFromOnlineRegions(regionName);
     Put put1 = new Put(firstRow);
     Put put2 = new Put(secondRow);
@@ -4294,7 +4205,7 @@ public class TestFromClientSide {
     table.put(put2);
     table.put(put3);
     table.put(put4);
-    region.flushcache();
+    region.flush(true);
     Result result = null;
 
     // Test before first that null is returned
@@ -4432,6 +4343,17 @@ public class TestFromClientSide {
     r = t.get(g);
     assertEquals(0, Bytes.compareTo(VALUE, r.getValue(FAMILY, QUALIFIERS[1])));
     assertNull(r.getValue(FAMILY, QUALIFIERS[0]));
+
+    //Test that we get a region level exception
+    try {
+      arm = new RowMutations(ROW);
+      p = new Put(ROW);
+      p.add(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+      arm.add(p);
+      t.mutateRow(arm);
+      fail("Expected NoSuchColumnFamilyException");
+    } catch(NoSuchColumnFamilyException e) {
+    }
   }
 
   @Test
@@ -4604,6 +4526,49 @@ public class TestFromClientSide {
     assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[1], 2);
     assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[0], 2);
     assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
+  }
+
+  @Test
+  public void testIncrementOnSameColumn() throws Exception {
+    LOG.info("Starting testIncrementOnSameColumn");
+    final byte[] TABLENAME = Bytes.toBytes("testIncrementOnSameColumn");
+    HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
+
+    byte[][] QUALIFIERS =
+        new byte[][] { Bytes.toBytes("A"), Bytes.toBytes("B"), Bytes.toBytes("C") };
+
+    Increment inc = new Increment(ROW);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+    }
+    ht.increment(inc);
+
+    // Verify expected results
+    Result r = ht.get(new Get(ROW));
+    Cell[] kvs = r.rawCells();
+    assertEquals(3, kvs.length);
+    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 1);
+    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 1);
+    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 1);
+
+    // Now try multiple columns again
+    inc = new Increment(ROW);
+    for (int i = 0; i < QUALIFIERS.length; i++) {
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+      inc.addColumn(FAMILY, QUALIFIERS[i], 1);
+    }
+    ht.increment(inc);
+
+    // Verify
+    r = ht.get(new Get(ROW));
+    kvs = r.rawCells();
+    assertEquals(3, kvs.length);
+    assertIncrementKey(kvs[0], ROW, FAMILY, QUALIFIERS[0], 2);
+    assertIncrementKey(kvs[1], ROW, FAMILY, QUALIFIERS[1], 2);
+    assertIncrementKey(kvs[2], ROW, FAMILY, QUALIFIERS[2], 2);
+    
+    ht.close();
   }
 
   @Test
@@ -5003,58 +4968,62 @@ public class TestFromClientSide {
 
     Scan scan1 = new Scan();
     int numRecords = 0;
-    for(Result result : ht.getScanner(scan1)) {
+    ResultScanner scanner = ht.getScanner(scan1);
+    for(Result result : scanner) {
       numRecords++;
     }
+    scanner.close();
     LOG.info("test data has " + numRecords + " records.");
 
     // by default, scan metrics collection is turned off
-    assertEquals(null, scan1.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+    assertEquals(null, scan1.getScanMetrics());
 
     // turn on scan metrics
-    Scan scan = new Scan();
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
-    scan.setCaching(numRecords+1);
-    ResultScanner scanner = ht.getScanner(scan);
+    Scan scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(numRecords+1);
+    scanner = ht.getScanner(scan2);
     for (Result result : scanner.next(numRecords - 1)) {
     }
     scanner.close();
     // closing the scanner will set the metrics.
-    assertNotNull(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+    assertNotNull(scan2.getScanMetrics());
 
-    // set caching to 1, becasue metrics are collected in each roundtrip only
-    scan = new Scan();
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
-    scan.setCaching(1);
-    scanner = ht.getScanner(scan);
+    // set caching to 1, because metrics are collected in each roundtrip only
+    scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(1);
+    scanner = ht.getScanner(scan2);
     // per HBASE-5717, this should still collect even if you don't run all the way to
     // the end of the scanner. So this is asking for 2 of the 3 rows we inserted.
     for (Result result : scanner.next(numRecords - 1)) {
     }
     scanner.close();
 
-    ScanMetrics scanMetrics = getScanMetrics(scan);
+    ScanMetrics scanMetrics = scan2.getScanMetrics();
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.get());
 
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records
+    /** There seems to be a timing issue here.  Comment out for now. Fix when time.
     Scan scanWithoutClose = new Scan();
     scanWithoutClose.setCaching(1);
-    scanWithoutClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scanWithoutClose.setScanMetricsEnabled(true);
     ResultScanner scannerWithoutClose = ht.getScanner(scanWithoutClose);
     for (Result result : scannerWithoutClose.next(numRecords + 1)) {
     }
     ScanMetrics scanMetricsWithoutClose = getScanMetrics(scanWithoutClose);
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetricsWithoutClose.countOfRegions.get());
+    */
 
     // finally, test that the metrics are collected correctly if you both run past all the records,
     // AND close the scanner
     Scan scanWithClose = new Scan();
     // make sure we can set caching up to the number of a scanned values
     scanWithClose.setCaching(numRecords);
-    scanWithClose.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scanWithClose.setScanMetricsEnabled(true);
     ResultScanner scannerWithClose = ht.getScanner(scanWithClose);
     for (Result result : scannerWithClose.next(numRecords + 1)) {
     }
@@ -5067,7 +5036,6 @@ public class TestFromClientSide {
   private ScanMetrics getScanMetrics(Scan scan) throws Exception {
     byte[] serializedMetrics = scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
     assertTrue("Serialized metrics were not found.", serializedMetrics != null);
-
 
     ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
 
@@ -5089,8 +5057,9 @@ public class TestFromClientSide {
     HTable table = TEST_UTIL.createTable(tableName, FAMILY);
     // get the block cache and region
     String regionName = table.getRegionLocations().firstKey().getEncodedName();
-    HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getFromOnlineRegions(regionName);
-    Store store = region.getStores().values().iterator().next();
+    Region region = TEST_UTIL.getRSForFirstRegionInTable(tableName)
+      .getFromOnlineRegions(regionName);
+    Store store = region.getStores().iterator().next();
     CacheConfig cacheConf = store.getCacheConfig();
     cacheConf.setCacheDataOnWrite(true);
     cacheConf.setEvictOnClose(true);
@@ -5125,7 +5094,7 @@ public class TestFromClientSide {
     assertEquals(startBlockMiss, cache.getStats().getMissCount());
     // flush the data
     System.out.println("Flushing cache");
-    region.flushcache();
+    region.flush(true);
     // expect one more block in cache, no change in hits/misses
     long expectedBlockCount = startBlockCount + 1;
     long expectedBlockHits = startBlockHits;
@@ -5152,7 +5121,7 @@ public class TestFromClientSide {
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
     // flush, one new block
     System.out.println("Flushing cache");
-    region.flushcache();
+    region.flush(true);
     assertEquals(++expectedBlockCount, cache.getBlockCount());
     assertEquals(expectedBlockHits, cache.getStats().getHitCount());
     assertEquals(expectedBlockMiss, cache.getStats().getMissCount());
@@ -5160,7 +5129,7 @@ public class TestFromClientSide {
     System.out.println("Compacting");
     assertEquals(2, store.getStorefilesCount());
     store.triggerMajorCompaction();
-    region.compactStores();
+    region.compact(true);
     waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
     assertEquals(1, store.getStorefilesCount());
     expectedBlockCount -= 2; // evicted two blocks, cached none
@@ -5209,10 +5178,10 @@ public class TestFromClientSide {
       // Verify region location before move.
       HRegionLocation addrCache = table.getRegionLocation(regionInfo.getStartKey(), false);
       HRegionLocation addrNoCache = table.getRegionLocation(regionInfo.getStartKey(),  true);
-  
+
       assertEquals(addrBefore.getPort(), addrCache.getPort());
       assertEquals(addrBefore.getPort(), addrNoCache.getPort());
-  
+
       ServerName addrAfter = null;
       // Now move the region to a different server.
       for (int i = 0; i < SLAVES; i++) {
@@ -5227,7 +5196,7 @@ public class TestFromClientSide {
           break;
         }
       }
-  
+
       // Verify the region was moved.
       addrCache = table.getRegionLocation(regionInfo.getStartKey(), false);
       addrNoCache = table.getRegionLocation(regionInfo.getStartKey(), true);
@@ -5474,8 +5443,44 @@ public class TestFromClientSide {
 
     // check the conf settings to disable sanity checks
     htd.setMemStoreFlushSize(0);
+
+    // Check that logs warn on invalid table but allow it.
+    ListAppender listAppender = new ListAppender();
+    Logger log = Logger.getLogger(HMaster.class);
+    log.addAppender(listAppender);
+    log.setLevel(Level.WARN);
+
     htd.setConfiguration("hbase.table.sanity.checks", Boolean.FALSE.toString());
     checkTableIsLegal(htd);
+
+    assertFalse(listAppender.getMessages().isEmpty());
+    assertTrue(listAppender.getMessages().get(0).startsWith("MEMSTORE_FLUSHSIZE for table "
+        + "descriptor or \"hbase.hregion.memstore.flush.size\" (0) is too small, which might "
+        + "cause very frequent flushing."));
+
+    log.removeAppender(listAppender);
+  }
+
+  private static class ListAppender extends AppenderSkeleton {
+    private final List<String> messages = new ArrayList<String>();
+
+    @Override
+    protected void append(LoggingEvent event) {
+      messages.add(event.getMessage().toString());
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    public boolean requiresLayout() {
+      return false;
+    }
+
+    public List<String> getMessages() {
+      return messages;
+    }
   }
 
   private void checkTableIsLegal(HTableDescriptor htd) throws IOException {

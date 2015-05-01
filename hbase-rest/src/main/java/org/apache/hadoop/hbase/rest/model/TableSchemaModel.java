@@ -221,7 +221,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getIsMeta() {
     Object o = attrs.get(IS_META);
-    return o != null ? Boolean.valueOf(o.toString()) : false;
+    return o != null ? Boolean.parseBoolean(o.toString()) : false;
   }
 
   /**
@@ -229,7 +229,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getIsRoot() {
     Object o = attrs.get(IS_ROOT);
-    return o != null ? Boolean.valueOf(o.toString()) : false;
+    return o != null ? Boolean.parseBoolean(o.toString()) : false;
   }
 
   /**
@@ -237,8 +237,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
    */
   public boolean __getReadOnly() {
     Object o = attrs.get(READONLY);
-    return o != null ? 
-      Boolean.valueOf(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
+    return o != null ? Boolean.parseBoolean(o.toString()) : HTableDescriptor.DEFAULT_READONLY;
   }
 
   /**
@@ -285,12 +284,10 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
         familyBuilder.addAttrs(attrBuilder);
       }
       if (familyAttrs.containsKey(TTL)) {
-        familyBuilder.setTtl(
-          Integer.valueOf(familyAttrs.get(TTL).toString()));
+        familyBuilder.setTtl(Integer.parseInt(familyAttrs.get(TTL).toString()));
       }
       if (familyAttrs.containsKey(VERSIONS)) {
-        familyBuilder.setMaxVersions(
-          Integer.valueOf(familyAttrs.get(VERSIONS).toString()));
+        familyBuilder.setMaxVersions(Integer.parseInt(familyAttrs.get(VERSIONS).toString()));
       }
       if (familyAttrs.containsKey(COMPRESSION)) {
         familyBuilder.setCompression(familyAttrs.get(COMPRESSION).toString());
@@ -298,8 +295,7 @@ public class TableSchemaModel implements Serializable, ProtobufMessageHandler {
       builder.addColumns(familyBuilder);
     }
     if (attrs.containsKey(READONLY)) {
-      builder.setReadOnly(
-        Boolean.valueOf(attrs.get(READONLY).toString()));
+      builder.setReadOnly(Boolean.parseBoolean(attrs.get(READONLY).toString()));
     }
     return builder.build().toByteArray();
   }

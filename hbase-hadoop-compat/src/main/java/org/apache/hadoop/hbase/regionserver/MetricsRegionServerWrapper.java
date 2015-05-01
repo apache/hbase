@@ -154,6 +154,11 @@ public interface MetricsRegionServerWrapper {
   int getPercentFileLocal();
 
   /**
+   * Get the percent of HFiles' that are local for secondary region replicas.
+   */
+  int getPercentFileLocalSecondaryRegions();
+
+  /**
    * Get the size of the split queue
    */
   int getSplitQueueSize();
@@ -253,7 +258,6 @@ public interface MetricsRegionServerWrapper {
   long getMajorCompactedCellsSize();
 
   /**
-<<<<<<< HEAD
    * Gets the number of cells move to mob during compaction.
    */
   long getMobCompactedIntoMobCellsCount();

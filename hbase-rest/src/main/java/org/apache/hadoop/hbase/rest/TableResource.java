@@ -34,6 +34,7 @@ import javax.ws.rs.core.UriInfo;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -69,7 +70,7 @@ public class TableResource extends ResourceBase {
    * @throws IOException
    */
   boolean exists() throws IOException {
-    return servlet.getAdmin().tableExists(table);
+    return servlet.getAdmin().tableExists(TableName.valueOf(table));
   }
 
   @Path("exists")

@@ -32,12 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -57,7 +52,8 @@ public class TestMobSweeper {
   private final static String row = "row_";
   private final static String family = "family";
   private final static String column = "column";
-  private static HTable table;
+  private static Table table;
+  private static BufferedMutator bufMut;
   private static Admin admin;
 
   private Random random = new Random();
@@ -94,9 +90,10 @@ public class TestMobSweeper {
 
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    table.setAutoFlush(false, false);
-
+    Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    TableName tn = TableName.valueOf(tableName);
+    table = c.getTable(tn);
+    bufMut = c.getBufferedMutator(tn);
   }
 
   @After
@@ -120,7 +117,7 @@ public class TestMobSweeper {
     return sb.toString();
   }
 
-  private void generateMobTable(Admin admin, HTable table, String tableName, int count,
+  private void generateMobTable(Admin admin, BufferedMutator table, String tableName, int count,
     int flushStep) throws IOException, InterruptedException {
     if (count <= 0 || flushStep <= 0)
       return;
@@ -130,14 +127,14 @@ public class TestMobSweeper {
       random.nextBytes(mobVal);
 
       Put put = new Put(Bytes.toBytes(row + i));
-      put.add(Bytes.toBytes(family), Bytes.toBytes(column), mobVal);
-      table.put(put);
+      put.addColumn(Bytes.toBytes(family), Bytes.toBytes(column), mobVal);
+      table.mutate(put);
       if (index++ % flushStep == 0) {
-        table.flushCommits();
+        table.flush();
         admin.flush(TableName.valueOf(tableName));
       }
     }
-    table.flushCommits();
+    table.flush();
     admin.flush(TableName.valueOf(tableName));
   }
 
@@ -145,11 +142,11 @@ public class TestMobSweeper {
   public void testSweeper() throws Exception {
     int count = 10;
     //create table and generate 10 mob files
-    generateMobTable(admin, table, tableName, count, 1);
+    generateMobTable(admin, bufMut, tableName, count, 1);
     //get mob files
     Path mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     FileStatus[] fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
-    // mobFileSet0 stores the orignal mob files
+    // mobFileSet0 stores the original mob files
     TreeSet<String> mobFilesSet = new TreeSet<String>();
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
@@ -211,11 +208,11 @@ public class TestMobSweeper {
             .equalsIgnoreCase(mobFilesSet.iterator().next()));
   }
 
-  private void testCompactionDelaySweeperInternal(HTable table, String tableName)
+  private void testCompactionDelaySweeperInternal(Table table, BufferedMutator bufMut, String tableName)
     throws Exception {
     int count = 10;
     //create table and generate 10 mob files
-    generateMobTable(admin, table, tableName, count, 1);
+    generateMobTable(admin, bufMut, tableName, count, 1);
     //get mob files
     Path mobFamilyPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
     FileStatus[] fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
@@ -282,7 +279,7 @@ public class TestMobSweeper {
 
   @Test
   public void testCompactionDelaySweeper() throws Exception {
-    testCompactionDelaySweeperInternal(table, tableName);
+    testCompactionDelaySweeperInternal(table, bufMut, tableName);
   }
 
   @Test
@@ -299,9 +296,10 @@ public class TestMobSweeper {
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
     admin.createTable(desc);
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
-    table.setAutoFlush(false, false);
-    testCompactionDelaySweeperInternal(table, tableNameAsString);
+    Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    BufferedMutator bufMut = c.getBufferedMutator(tableName);
+    Table table = c.getTable(tableName);
+    testCompactionDelaySweeperInternal(table, bufMut, tableNameAsString);
     table.close();
     admin.disableTable(tableName);
     admin.deleteTable(tableName);

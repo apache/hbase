@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
@@ -129,15 +128,13 @@ public class TestVisibilityWithCheckAuths {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(colDesc);
     hBaseAdmin.createTable(desc);
-    Table table = null;
     try {
       TEST_UTIL.getHBaseAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          Table table = null;
-          try {
-            table = TEST_UTIL.getConnection().getTable(tableName);
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+               Table table = connection.getTable(tableName)) {
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.add(fam, qual, 125l, value);
@@ -145,8 +142,6 @@ public class TestVisibilityWithCheckAuths {
             Assert.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
-          } finally {
-            table.close();
           }
           return null;
         }
@@ -173,25 +168,18 @@ public class TestVisibilityWithCheckAuths {
     };
     SUPERUSER.runAs(action);
     final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
-    Table table = null;
-    try {
-      table = TEST_UTIL.createTable(tableName, fam);
+    try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       final byte[] row1 = Bytes.toBytes("row1");
       final byte[] val = Bytes.toBytes("a");
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          Connection connection = ConnectionFactory.createConnection(conf);
-          Table table = null;
-          try {
-            table = connection.getTable(tableName);
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+               Table table = connection.getTable(tableName)) {
             Put put = new Put(row1);
             put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
             put.setCellVisibility(new CellVisibility(TOPSECRET));
             table.put(put);
-          } finally {
-            table.close();
-            connection.close();
           }
           return null;
         }
@@ -200,16 +188,11 @@ public class TestVisibilityWithCheckAuths {
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          Connection connection = ConnectionFactory.createConnection(conf);
-          Table table = null;
-          try {
-            table = TEST_UTIL.getConnection().getTable(tableName);
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+               Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("b"));
             table.append(append);
-          } finally {
-            table.close();
-            connection.close();
           }
           return null;
         }
@@ -218,11 +201,8 @@ public class TestVisibilityWithCheckAuths {
       actiona = new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          Table table = null;
-          Connection connection = null;
-          try {
-            connection = ConnectionFactory.createConnection(conf);
-            table = connection.getTable(tableName);
+          try (Connection connection = ConnectionFactory.createConnection(conf);
+               Table table = connection.getTable(tableName)) {
             Append append = new Append(row1);
             append.add(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
@@ -230,22 +210,11 @@ public class TestVisibilityWithCheckAuths {
             Assert.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
-          } finally {
-            if (table != null) {
-              table.close();
-            }
-            if (connection != null) {
-              connection.close();
-            }
           }
           return null;
         }
       };
       USER.runAs(actiona);
-    } finally {
-      if (table != null) {
-        table.close();
-      }
     }
   }
 }

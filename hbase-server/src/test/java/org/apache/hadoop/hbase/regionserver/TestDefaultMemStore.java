@@ -24,7 +24,6 @@ import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -48,9 +47,9 @@ import org.apache.hadoop.hbase.KeyValueTestUtil;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -842,12 +841,16 @@ public class TestDefaultMemStore extends TestCase {
     this.memstore.upsert(l, 2);// readpoint is 2
     long newSize = this.memstore.size.get();
     assert(newSize > oldSize);
-
+    //The kv1 should be removed.
+    assert(memstore.cellSet.size() == 2);
+    
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
     this.memstore.upsert(l, 3);
     assertEquals(newSize, this.memstore.size.get());
+    //The kv2 should be removed.
+    assert(memstore.cellSet.size() == 2);
     //this.memstore = null;
   }
 
@@ -919,10 +922,10 @@ public class TestDefaultMemStore extends TestCase {
       HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
       HRegion region = hbaseUtility.createTestRegion("foobar", new HColumnDescriptor("foo"));
 
-      Map<byte[], Store> stores = region.getStores();
+      List<Store> stores = region.getStores();
       assertTrue(stores.size() == 1);
 
-      Store s = stores.entrySet().iterator().next().getValue();
+      Store s = stores.iterator().next();
       edge.setCurrentTimeMillis(1234);
       s.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
       edge.setCurrentTimeMillis(1234 + 100);

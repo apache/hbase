@@ -20,9 +20,12 @@
 
 package org.apache.hadoop.hbase;
 
+import java.util.List;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Strings;
 
@@ -151,6 +154,13 @@ public class RegionLoad {
    */
   public long getCompleteSequenceId() {
     return regionLoadPB.getCompleteSequenceId();
+  }
+
+  /**
+   * @return completed sequence id per store.
+   */
+  public List<StoreSequenceId> getStoreCompleteSequenceId() {
+    return regionLoadPB.getStoreCompleteSequenceIdList();
   }
 
   /**

@@ -21,20 +21,18 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.NavigableMap;
-import java.util.Map.Entry;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Pair;
-
-import com.google.common.annotations.VisibleForTesting;
 
 /**
  * An implementation of {@link RegionLocator}. Used to view region location information for a single
@@ -85,11 +83,11 @@ public class HRegionLocator implements RegionLocator {
 
   @Override
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
-    NavigableMap<HRegionInfo, ServerName> locations =
-        MetaScanner.allTableRegions(this.connection, getName());
+    List<Pair<HRegionInfo, ServerName>> locations =
+        MetaTableAccessor.getTableRegionsAndLocations(this.connection, getName());
     ArrayList<HRegionLocation> regions = new ArrayList<>(locations.size());
-    for (Entry<HRegionInfo, ServerName> entry : locations.entrySet()) {
-      regions.add(new HRegionLocation(entry.getKey(), entry.getValue()));
+    for (Pair<HRegionInfo, ServerName> entry : locations) {
+      regions.add(new HRegionLocation(entry.getFirst(), entry.getSecond()));
     }
     return regions;
   }
@@ -139,7 +137,18 @@ public class HRegionLocator implements RegionLocator {
 
   @VisibleForTesting
   List<RegionLocations> listRegionLocations() throws IOException {
-    return MetaScanner.listTableRegionLocations(getConfiguration(), this.connection, getName());
+    final List<RegionLocations> regions = new ArrayList<RegionLocations>();
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
+      @Override
+      public boolean visitInternal(Result result) throws IOException {
+        RegionLocations locations = MetaTableAccessor.getRegionLocations(result);
+        if (locations == null) return true;
+        regions.add(locations);
+        return true;
+      }
+    };
+    MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName);
+    return regions;
   }
 
   public Configuration getConfiguration() {

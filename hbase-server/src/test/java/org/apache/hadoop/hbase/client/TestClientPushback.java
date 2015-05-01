@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.backoff.ServerStatistics;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -91,7 +92,7 @@ public class TestClientPushback {
     HTable table = (HTable) conn.getTable(tablename);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    HRegion region = rs.getOnlineRegions(tablename).get(0);
+    Region region = rs.getOnlineRegions(tablename).get(0);
 
     LOG.debug("Writing some data to "+tablename);
     // write some data
@@ -101,7 +102,7 @@ public class TestClientPushback {
     table.flushCommits();
 
     // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
-    int load = (int)((region.addAndGetGlobalMemstoreSize(0) * 100) / flushSizeBytes);
+    int load = (int)((((HRegion)region).addAndGetGlobalMemstoreSize(0) * 100) / flushSizeBytes);
     LOG.debug("Done writing some data to "+tablename);
 
     // get the stats for the region hosting our table
@@ -114,7 +115,7 @@ public class TestClientPushback {
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
     ServerName server = rs.getServerName();
-    byte[] regionName = region.getRegionName();
+    byte[] regionName = region.getRegionInfo().getRegionName();
 
     // check to see we found some load on the memstore
     ServerStatistics serverStats = stats.getServerStatsForTesting(server);
@@ -125,8 +126,8 @@ public class TestClientPushback {
     // check that the load reported produces a nonzero delay
     long backoffTime = backoffPolicy.getBackoffTime(server, regionName, serverStats);
     assertNotEquals("Reported load does not produce a backoff", backoffTime, 0);
-    LOG.debug("Backoff calculated for " + region.getRegionNameAsString() + " @ " + server +
-      " is " + backoffTime);
+    LOG.debug("Backoff calculated for " + region.getRegionInfo().getRegionNameAsString() + " @ " +
+      server + " is " + backoffTime);
 
     // Reach into the connection and submit work directly to AsyncProcess so we can
     // monitor how long the submission was delayed via a callback

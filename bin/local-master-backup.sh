@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 #/**
 # * Copyright 2007 The Apache Software Foundation
 # *
@@ -54,5 +54,9 @@ shift;
 
 for i in $*
 do
-  run_master  $cmd $i
+  if [[ "$i" =~ ^[0-9]+$ ]]; then
+   run_master $cmd $i
+  else
+   echo "Invalid argument"
+  fi
 done

@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.ServerName;
@@ -102,7 +103,7 @@ public class TestClientNoCluster extends Configured implements Tool {
   @Before
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
-    // Run my HConnection overrides.  Use my little HConnectionImplementation below which
+    // Run my HConnection overrides.  Use my little ConnectionImplementation below which
     // allows me insert mocks and also use my Registry below rather than the default zk based
     // one so tests run faster and don't have zk dependency.
     this.conf.set("hbase.client.registry.impl", SimpleRegistry.class.getName());
@@ -205,11 +206,11 @@ public class TestClientNoCluster extends Configured implements Tool {
   }
 
   @Test
-  public void testDoNotRetryMetaScanner() throws IOException {
+  public void testDoNotRetryMetaTableAccessor() throws IOException {
     this.conf.set("hbase.client.connection.impl",
       RegionServerStoppedOnScannerOpenConnection.class.getName());
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      MetaScanner.metaScan(connection, null);
+      MetaTableAccessor.fullScanRegions(connection);
     }
   }
 
@@ -260,45 +261,13 @@ public class TestClientNoCluster extends Configured implements Tool {
   /**
    * Override to shutdown going to zookeeper for cluster id and meta location.
    */
-  static class ScanOpenNextThenExceptionThenRecoverConnection
-  extends ConnectionManager.HConnectionImplementation {
-    final ClientService.BlockingInterface stub;
-
-    ScanOpenNextThenExceptionThenRecoverConnection(Configuration conf,
-        boolean managed, ExecutorService pool) throws IOException {
-      super(conf, managed);
-      // Mock up my stub so open scanner returns a scanner id and then on next, we throw
-      // exceptions for three times and then after that, we return no more to scan.
-      this.stub = Mockito.mock(ClientService.BlockingInterface.class);
-      long sid = 12345L;
-      try {
-        Mockito.when(stub.scan((RpcController)Mockito.any(),
-            (ClientProtos.ScanRequest)Mockito.any())).
-          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).build()).
-          thenThrow(new ServiceException(new RegionServerStoppedException("From Mockito"))).
-          thenReturn(ClientProtos.ScanResponse.newBuilder().setScannerId(sid).
-              setMoreResults(false).build());
-      } catch (ServiceException e) {
-        throw new IOException(e);
-      }
-    }
-
-    @Override
-    public BlockingInterface getClient(ServerName sn) throws IOException {
-      return this.stub;
-    }
-  }
-
-  /**
-   * Override to shutdown going to zookeeper for cluster id and meta location.
-   */
   static class RegionServerStoppedOnScannerOpenConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RegionServerStoppedOnScannerOpenConnection(Configuration conf, boolean managed,
+    RegionServerStoppedOnScannerOpenConnection(Configuration conf,
         ExecutorService pool, User user) throws IOException {
-      super(conf, managed);
+      super(conf, pool, user);
       // Mock up my stub so open scanner returns a scanner id and then on next, we throw
       // exceptions for three times and then after that, we return no more to scan.
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
@@ -325,12 +294,12 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Override to check we are setting rpc timeout right.
    */
   static class RpcTimeoutConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     final ClientService.BlockingInterface stub;
 
-    RpcTimeoutConnection(Configuration conf, boolean managed, ExecutorService pool, User user)
+    RpcTimeoutConnection(Configuration conf, ExecutorService pool, User user)
     throws IOException {
-      super(conf, managed);
+      super(conf, pool, user);
       // Mock up my stub so an exists call -- which turns into a get -- throws an exception
       this.stub = Mockito.mock(ClientService.BlockingInterface.class);
       try {
@@ -352,7 +321,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Fake many regionservers and many regions on a connection implementation.
    */
   static class ManyServersManyRegionsConnection
-  extends ConnectionManager.HConnectionImplementation {
+  extends ConnectionImplementation {
     // All access should be synchronized
     final Map<ServerName, ClientService.BlockingInterface> serversByClient;
 
@@ -363,10 +332,10 @@ public class TestClientNoCluster extends Configured implements Tool {
     final AtomicLong sequenceids = new AtomicLong(0);
     private final Configuration conf;
 
-    ManyServersManyRegionsConnection(Configuration conf, boolean managed,
+    ManyServersManyRegionsConnection(Configuration conf,
         ExecutorService pool, User user)
     throws IOException {
-      super(conf, managed, pool, user);
+      super(conf, pool, user);
       int serverCount = conf.getInt("hbase.test.servers", 10);
       this.serversByClient =
         new HashMap<ServerName, ClientService.BlockingInterface>(serverCount);

@@ -25,7 +25,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -106,7 +107,7 @@ public class TestMobRestoreFlushSnapshotFromClient {
     // create Table
     MobSnapshotTestingUtils.createMobTable(UTIL, tableName, 1, FAMILY);
 
-    HTable table = new HTable(UTIL.getConfiguration(), tableName);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(tableName);
     SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
     snapshot0Rows = MobSnapshotTestingUtils.countMobRows(table);
     LOG.info("=== before snapshot with 500 rows");

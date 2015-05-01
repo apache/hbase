@@ -46,7 +46,7 @@ public class LoadTestDataGeneratorWithMOB
     if (args.length != 3) {
       throw new IllegalArgumentException(
           "LoadTestDataGeneratorWithMOB can have 3 arguments."
-              + "1st arguement is a column family, the 2nd argument "
+              + "1st argument is a column family, the 2nd argument "
               + "is the minimum mob data size and the 3rd argument "
               + "is the maximum mob data size.");
     }

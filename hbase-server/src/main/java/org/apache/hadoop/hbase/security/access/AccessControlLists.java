@@ -61,8 +61,8 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -327,7 +327,7 @@ public class AccessControlLists {
    * Returns {@code true} if the given region is part of the {@code _acl_}
    * metadata table.
    */
-  static boolean isAclRegion(HRegion region) {
+  static boolean isAclRegion(Region region) {
     return ACL_TABLE_NAME.equals(region.getTableDesc().getTableName());
   }
 
@@ -346,8 +346,7 @@ public class AccessControlLists {
    * @return a map of the permissions for this table.
    * @throws IOException
    */
-  static Map<byte[], ListMultimap<String,TablePermission>> loadAll(
-      HRegion aclRegion)
+  static Map<byte[], ListMultimap<String,TablePermission>> loadAll(Region aclRegion)
     throws IOException {
 
     if (!isAclRegion(aclRegion)) {

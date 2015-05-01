@@ -29,12 +29,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
@@ -71,32 +66,33 @@ public class TestDefaultMobStoreFlusher {
  @Test
  public void testFlushNonMobFile() throws InterruptedException {
    String TN = "testFlushNonMobFile";
-   HTable table = null;
+   TableName tn = TableName.valueOf(TN);
+   Table table = null;
    HBaseAdmin admin = null;
 
    try {
-     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TN));
+     HTableDescriptor desc = new HTableDescriptor(tn);
      HColumnDescriptor hcd = new HColumnDescriptor(family);
      hcd.setMaxVersions(4);
      desc.addFamily(hcd);
 
-     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+     admin = TEST_UTIL.getHBaseAdmin();
      admin.createTable(desc);
-     table = new HTable(TEST_UTIL.getConfiguration(), TN);
+     table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+             .getTable(TableName.valueOf(TN));
 
      //Put data
      Put put0 = new Put(row1);
-     put0.add(family, qf1, 1, value1);
+     put0.addColumn(family, qf1, 1, value1);
      table.put(put0);
 
      //Put more data
      Put put1 = new Put(row2);
-     put1.add(family, qf2, 1, value2);
+     put1.addColumn(family, qf2, 1, value2);
      table.put(put1);
 
      //Flush
-     table.flushCommits();
-     admin.flush(TN);
+     admin.flush(tn);
 
      Scan scan = new Scan();
      scan.addColumn(family, qf1);
@@ -131,34 +127,35 @@ public class TestDefaultMobStoreFlusher {
  @Test
  public void testFlushMobFile() throws InterruptedException {
    String TN = "testFlushMobFile";
-   HTable table = null;
-   HBaseAdmin admin = null;
+   TableName tn = TableName.valueOf(TN);
+   Table table = null;
+   Admin admin = null;
 
    try {
-     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(TN));
+     HTableDescriptor desc = new HTableDescriptor(tn);
      HColumnDescriptor hcd = new HColumnDescriptor(family);
      hcd.setMobEnabled(true);
      hcd.setMobThreshold(3L);
      hcd.setMaxVersions(4);
      desc.addFamily(hcd);
 
-     admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+     Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+     admin = c.getAdmin();
      admin.createTable(desc);
-     table = new HTable(TEST_UTIL.getConfiguration(), TN);
+     table = c.getTable(TableName.valueOf(TN));
 
      //put data
      Put put0 = new Put(row1);
-     put0.add(family, qf1, 1, value1);
+     put0.addColumn(family, qf1, 1, value1);
      table.put(put0);
 
      //put more data
      Put put1 = new Put(row2);
-     put1.add(family, qf2, 1, value2);
+     put1.addColumn(family, qf2, 1, value2);
      table.put(put1);
 
      //flush
-     table.flushCommits();
-     admin.flush(TN);
+     admin.flush(tn);
 
      //Scan
      Scan scan = new Scan();

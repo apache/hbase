@@ -166,6 +166,7 @@ public class TimeRange {
    * 1 if timestamp is greater than timerange
    */
   public int compare(long timestamp) {
+    if (allTime) return 0;
     if (timestamp < minStamp) {
       return -1;
     } else if (timestamp >= maxStamp) {

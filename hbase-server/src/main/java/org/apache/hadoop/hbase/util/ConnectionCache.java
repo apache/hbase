@@ -27,11 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
-import org.apache.hadoop.hbase.client.HTableInterface;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -127,14 +129,13 @@ public class ConnectionCache {
    * Caller doesn't close the admin afterwards.
    * We need to manage it and close it properly.
    */
-  @SuppressWarnings("deprecation")
-  public HBaseAdmin getAdmin() throws IOException {
+  public Admin getAdmin() throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
     if (connInfo.admin == null) {
       Lock lock = locker.acquireLock(getEffectiveUser());
       try {
         if (connInfo.admin == null) {
-          connInfo.admin = new HBaseAdmin(connInfo.connection);
+          connInfo.admin = connInfo.connection.getAdmin();
         }
       } finally {
         lock.unlock();
@@ -146,9 +147,16 @@ public class ConnectionCache {
   /**
    * Caller closes the table afterwards.
    */
-  public HTableInterface getTable(String tableName) throws IOException {
+  public Table getTable(String tableName) throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
-    return connInfo.connection.getTable(tableName);
+    return connInfo.connection.getTable(TableName.valueOf(tableName));
+  }
+
+  /**
+   * Retrieve a regionLocator for the table. The user should close the RegionLocator.
+   */
+  public RegionLocator getRegionLocator(byte[] tableName) throws IOException {
+    return getCurrentConnection().connection.getRegionLocator(TableName.valueOf(tableName));
   }
 
   /**
@@ -168,7 +176,7 @@ public class ConnectionCache {
             ugi = UserGroupInformation.createProxyUser(userName, realUser);
           }
           User user = userProvider.create(ugi);
-          HConnection conn = HConnectionManager.createConnection(conf, user);
+          Connection conn = ConnectionFactory.createConnection(conf, user);
           connInfo = new ConnectionInfo(conn, userName);
           connections.put(userName, connInfo);
         }
@@ -180,14 +188,14 @@ public class ConnectionCache {
   }
 
   class ConnectionInfo {
-    final HConnection connection;
+    final Connection connection;
     final String userName;
 
-    volatile HBaseAdmin admin;
+    volatile Admin admin;
     private long lastAccessTime;
     private boolean closed;
 
-    ConnectionInfo(HConnection conn, String user) {
+    ConnectionInfo(Connection conn, String user) {
       lastAccessTime = EnvironmentEdgeManager.currentTime();
       connection = conn;
       closed = false;

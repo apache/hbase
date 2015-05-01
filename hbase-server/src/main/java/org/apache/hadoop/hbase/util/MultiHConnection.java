@@ -35,8 +35,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 
@@ -64,7 +64,7 @@ public class MultiHConnection {
     synchronized (this.hConnectionsLock) {
       hConnections = new HConnection[noOfConnections];
       for (int i = 0; i < noOfConnections; i++) {
-        HConnection conn = HConnectionManager.createConnection(conf);
+        HConnection conn = (HConnection) ConnectionFactory.createConnection(conf);
         hConnections[i] = conn;
       }
     }
@@ -130,11 +130,11 @@ public class MultiHConnection {
   }
 
   
-  // Copied from HConnectionImplementation.getBatchPool()
+  // Copied from ConnectionImplementation.getBatchPool()
   // We should get rid of this when HConnection.processBatchCallback is un-deprecated and provides
   // an API to manage a batch pool
   private void createBatchPool(Configuration conf) {
-    // Use the same config for keep alive as in HConnectionImplementation.getBatchPool();
+    // Use the same config for keep alive as in ConnectionImplementation.getBatchPool();
     int maxThreads = conf.getInt("hbase.multihconnection.threads.max", 256);
     int coreThreads = conf.getInt("hbase.multihconnection.threads.core", 256);
     if (maxThreads == 0) {

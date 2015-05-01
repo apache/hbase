@@ -32,14 +32,14 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.AfterClass;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public class TestScannerSelectionUsingKeyRange {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
+    Region region = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
         htd);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
@@ -111,7 +111,7 @@ public class TestScannerSelectionUsingKeyRange {
         }
         region.put(put);
       }
-      region.flushcache();
+      region.flush(true);
     }
 
     Scan scan = new Scan(Bytes.toBytes("aaa"), Bytes.toBytes("aaz"));

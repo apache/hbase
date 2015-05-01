@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -130,7 +131,7 @@ public class TestLoadIncrementalHFiles {
           new byte[][]{ Bytes.toBytes("fff"), Bytes.toBytes("zzz") },
     });
   }
-  
+
   /**
    * Test loading into a column family that has a ROWCOL bloom filter.
    */
@@ -270,7 +271,7 @@ public class TestLoadIncrementalHFiles {
           file.getPath().getName() != "DONOTERASE");
       }
     }
-    
+
     util.deleteTable(tableName);
   }
 
@@ -303,6 +304,76 @@ public class TestLoadIncrementalHFiles {
       assertTrue("Incorrect exception message, expected message: ["
           + EXPECTED_MSG_FOR_NON_EXISTING_FAMILY + "], current message: [" + errMsg + "]",
           errMsg.contains(EXPECTED_MSG_FOR_NON_EXISTING_FAMILY));
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testNonHfileFolderWithUnmatchedFamilyName() throws Exception {
+    testNonHfileFolder("testNonHfileFolderWithUnmatchedFamilyName", true);
+  }
+
+  @Test(timeout = 60000)
+  public void testNonHfileFolder() throws Exception {
+    testNonHfileFolder("testNonHfileFolder", false);
+  }
+
+  /**
+   * Write a random data file and a non-file in a dir with a valid family name
+   * but not part of the table families. we should we able to bulkload without
+   * getting the unmatched family exception. HBASE-13037/HBASE-13227
+   */
+  private void testNonHfileFolder(String tableName, boolean preCreateTable) throws Exception {
+    Path dir = util.getDataTestDirOnTestFS(tableName);
+    FileSystem fs = util.getTestFileSystem();
+    dir = dir.makeQualified(fs);
+
+    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
+    HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_0"),
+        FAMILY, QUALIFIER, Bytes.toBytes("begin"), Bytes.toBytes("end"), 500);
+    createRandomDataFile(fs, new Path(familyDir, "012356789"), 16 * 1024);
+
+    final String NON_FAMILY_FOLDER = "_logs";
+    Path nonFamilyDir = new Path(dir, NON_FAMILY_FOLDER);
+    fs.mkdirs(nonFamilyDir);
+    fs.mkdirs(new Path(nonFamilyDir, "non-file"));
+    createRandomDataFile(fs, new Path(nonFamilyDir, "012356789"), 16 * 1024);
+
+    Table table = null;
+    try {
+      if (preCreateTable) {
+        table = util.createTable(TableName.valueOf(tableName), FAMILY);
+      } else {
+        table = util.getConnection().getTable(TableName.valueOf(tableName));
+      }
+
+      final String[] args = {dir.toString(), tableName};
+      new LoadIncrementalHFiles(util.getConfiguration()).run(args);
+      assertEquals(500, util.countRows(table));
+    } finally {
+      if (table != null) {
+        table.close();
+      }
+      fs.delete(dir, true);
+    }
+  }
+
+  private static void createRandomDataFile(FileSystem fs, Path path, int size)
+      throws IOException {
+    FSDataOutputStream stream = fs.create(path);
+    try {
+      byte[] data = new byte[1024];
+      for (int i = 0; i < data.length; ++i) {
+        data[i] = (byte)(i & 0xff);
+      }
+      while (size >= data.length) {
+        stream.write(data, 0, data.length);
+        size -= data.length;
+      }
+      if (size > 0) {
+        stream.write(data, 0, size);
+      }
+    } finally {
+      stream.close();
     }
   }
 
@@ -363,8 +434,8 @@ public class TestLoadIncrementalHFiles {
      *
      * Should be inferred as:
      * a-----------------k   m-------------q   r--------------t  u---------x
-     * 
-     * The output should be (m,r,u) 
+     *
+     * The output should be (m,r,u)
      */
 
     String first;
@@ -372,7 +443,7 @@ public class TestLoadIncrementalHFiles {
 
     first = "a"; last = "e";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "r"; last = "s";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
@@ -393,14 +464,14 @@ public class TestLoadIncrementalHFiles {
 
     first = "s"; last = "t";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
-    
+
     first = "u"; last = "w";
     addStartEndKeysForTest(map, first.getBytes(), last.getBytes());
 
     byte[][] keysArray = LoadIncrementalHFiles.inferBoundaries(map);
     byte[][] compare = new byte[3][];
     compare[0] = "m".getBytes();
-    compare[1] = "r".getBytes(); 
+    compare[1] = "r".getBytes();
     compare[2] = "u".getBytes();
 
     assertEquals(keysArray.length, 3);

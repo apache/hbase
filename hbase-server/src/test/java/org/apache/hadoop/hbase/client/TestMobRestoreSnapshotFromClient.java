@@ -115,7 +115,8 @@ public class TestMobRestoreSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getTable(tableName);
     // enable table and insert data
     admin.enableTable(tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
@@ -179,7 +180,8 @@ public class TestMobRestoreSnapshotFromClient {
   public void testRestoreSchemaChange() throws Exception {
     byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Table table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getTable(tableName);
 
     // Add one column family and put some data in it
     admin.disableTable(tableName);

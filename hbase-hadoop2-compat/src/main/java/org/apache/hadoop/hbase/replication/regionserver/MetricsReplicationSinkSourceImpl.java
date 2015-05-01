@@ -44,4 +44,9 @@ public class MetricsReplicationSinkSourceImpl implements MetricsReplicationSinkS
   @Override public void incrAppliedOps(long batchsize) {
     opsCounter.incr(batchsize);
   }
+
+  @Override
+  public long getLastAppliedOpAge() {
+    return ageGauge.value();
+  }
 }

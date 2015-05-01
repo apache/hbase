@@ -217,12 +217,19 @@ public class DisableTableHandler extends EventHandler {
       long startTime = System.currentTimeMillis();
       long remaining = timeout;
       List<HRegionInfo> regions = null;
+      long lastLogTime = startTime;
       while (!server.isStopped() && remaining > 0) {
         Thread.sleep(waitingTimeForEvents);
         regions = assignmentManager.getRegionStates().getRegionsOfTable(tableName);
-        LOG.debug("Disable waiting until done; " + remaining + " ms remaining; " + regions);
+        long now = System.currentTimeMillis();
+        // Don't log more than once every ten seconds. Its obnoxious. And only log table regions
+        // if we are waiting a while for them to go down...
+        if (LOG.isDebugEnabled() && ((now - lastLogTime) > 10000)) {
+          lastLogTime =  now;
+          LOG.debug("Disable waiting until done; " + remaining + " ms remaining; " + regions);
+        }
         if (regions.isEmpty()) break;
-        remaining = timeout - (System.currentTimeMillis() - startTime);
+        remaining = timeout - (now - startTime);
       }
       return regions != null && regions.isEmpty();
     }

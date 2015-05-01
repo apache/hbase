@@ -95,6 +95,10 @@ public class MetricsRegionServer {
     serverSource.updateReplay(t);
   }
 
+  public void updateScannerNext(long scanSize){
+    serverSource.updateScannerNext(scanSize);
+  }
+
   public void updateSplitTime(long t) {
     serverSource.updateSplitTime(t);
   }

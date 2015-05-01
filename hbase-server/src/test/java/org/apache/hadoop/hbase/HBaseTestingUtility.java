@@ -18,11 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import javax.annotation.Nullable;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -63,6 +58,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
@@ -94,11 +90,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -126,6 +124,10 @@ import org.apache.hadoop.mapred.TaskLog;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooKeeper.States;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Facility for testing HBase. Replacement for
@@ -283,6 +285,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     htu.getConfiguration().set(HConstants.HBASE_DIR, dataTestDir);
     LOG.debug("Setting " + HConstants.HBASE_DIR + " to " + dataTestDir);
     return htu;
+  }
+
+  /**
+   * Close both the region {@code r} and it's underlying WAL. For use in tests.
+   */
+  public static void closeRegionAndWAL(final Region r) throws IOException {
+    closeRegionAndWAL((HRegion)r);
   }
 
   /**
@@ -710,15 +719,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @see #shutdownMiniZKCluster()
    * @return zk cluster started.
    */
-  public MiniZooKeeperCluster startMiniZKCluster(int zooKeeperServerNum)
+  public MiniZooKeeperCluster startMiniZKCluster(
+      final int zooKeeperServerNum,
+      final int ... clientPortList)
       throws Exception {
     setupClusterTestDir();
-    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum);
+    return startMiniZKCluster(clusterTestDir, zooKeeperServerNum, clientPortList);
   }
 
   private MiniZooKeeperCluster startMiniZKCluster(final File dir)
     throws Exception {
-    return startMiniZKCluster(dir,1);
+    return startMiniZKCluster(dir, 1, null);
   }
 
   /**
@@ -726,7 +737,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    *  the port mentionned is used as the default port for ZooKeeper.
    */
   private MiniZooKeeperCluster startMiniZKCluster(final File dir,
-      int zooKeeperServerNum)
+      final int zooKeeperServerNum,
+      final int [] clientPortList)
   throws Exception {
     if (this.zkCluster != null) {
       throw new IOException("Cluster already running at " + dir);
@@ -737,6 +749,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     if (defPort > 0){
       // If there is a port in the config file, we use it.
       this.zkCluster.setDefaultClientPort(defPort);
+    }
+
+    if (clientPortList != null) {
+      // Ignore extra client ports
+      int clientPortListSize = (clientPortList.length <= zooKeeperServerNum) ?
+          clientPortList.length : zooKeeperServerNum;
+      for (int i=0; i < clientPortListSize; i++) {
+        this.zkCluster.addClientPort(clientPortList[i]);
+      }
     }
     int clientPort =   this.zkCluster.startup(dir,zooKeeperServerNum);
     this.conf.set(HConstants.ZOOKEEPER_CLIENT_PORT,
@@ -1021,7 +1042,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     this.hbaseCluster = new MiniHBaseCluster(this.conf, servers);
     // Don't leave here till we've done a successful scan of the hbase:meta
-    Table t = new HTable(new Configuration(this.conf), TableName.META_TABLE_NAME);
+    Connection conn = ConnectionFactory.createConnection(this.conf);
+    Table t = conn.getTable(TableName.META_TABLE_NAME);
     ResultScanner s = t.getScanner(new Scan());
     while (s.next() != null) {
       // do nothing
@@ -1029,6 +1051,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     LOG.info("HBase has been restarted");
     s.close();
     t.close();
+    conn.close();
   }
 
   /**
@@ -1737,7 +1760,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       setFirst(0);
       setSecond(0);
     }};
-    for (int i = 0; status.getFirst() != 0 && i < 500; i++) { // wait up to 500 seconds
+    int i = 0;
+    do {
       status = admin.getAlterStatus(desc.getTableName());
       if (status.getSecond() != 0) {
         LOG.debug(status.getSecond() - status.getFirst() + "/" + status.getSecond()
@@ -1747,9 +1771,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         LOG.debug("All regions updated.");
         break;
       }
-    }
-    if (status.getSecond() != 0) {
-      throw new IOException("Failed to update replica count after 500 seconds.");
+    } while (status.getFirst() != 0 && i++ < 500);
+    if (status.getFirst() != 0) {
+      throw new IOException("Failed to update all regions even after 500 seconds.");
     }
   }
 
@@ -1761,7 +1785,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     admin.disableTable(table);
     HTableDescriptor desc = admin.getTableDescriptor(table);
     desc.setRegionReplication(replicaCount);
-    modifyTableSync(admin, desc);
+    admin.modifyTable(desc.getTableName(), desc);
     admin.enableTable(table);
   }
 
@@ -2115,6 +2139,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return loadRegion(r, f, false);
   }
 
+  public int loadRegion(final Region r, final byte[] f) throws IOException {
+    return loadRegion((HRegion)r, f);
+  }
+
   /**
    * Load region with rows from 'aaa' to 'zzz'.
    * @param r Region
@@ -2136,8 +2164,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
           put.add(f, null, k);
-          if (r.getWAL() == null) put.setDurability(Durability.SKIP_WAL);
-
+          if (r.getWAL() == null) {
+            put.setDurability(Durability.SKIP_WAL);
+          }
           int preRowCount = rowCount;
           int pause = 10;
           int maxPause = 1000;
@@ -2153,7 +2182,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         }
       }
       if (flush) {
-        r.flushcache();
+        r.flush(true);
       }
     }
     return rowCount;
@@ -2169,12 +2198,51 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
   }
 
-  public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
+  public void verifyNumericRows(Table table, final byte[] f, int startRow, int endRow,
+      int replicaId)
       throws IOException {
     for (int i = startRow; i < endRow; i++) {
       String failMsg = "Failed verification of row :" + i;
       byte[] data = Bytes.toBytes(String.valueOf(i));
+      Get get = new Get(data);
+      get.setReplicaId(replicaId);
+      get.setConsistency(Consistency.TIMELINE);
+      Result result = table.get(get);
+      assertTrue(failMsg, result.containsColumn(f, null));
+      assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
+      Cell cell = result.getColumnLatestCell(f, null);
+      assertTrue(failMsg,
+        Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength()));
+    }
+  }
+
+  public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow)
+      throws IOException {
+    verifyNumericRows((HRegion)region, f, startRow, endRow);
+  }
+
+  public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow)
+      throws IOException {
+    verifyNumericRows(region, f, startRow, endRow, true);
+  }
+
+  public void verifyNumericRows(Region region, final byte[] f, int startRow, int endRow,
+      final boolean present) throws IOException {
+    verifyNumericRows((HRegion)region, f, startRow, endRow, present);
+  }
+
+  public void verifyNumericRows(HRegion region, final byte[] f, int startRow, int endRow,
+      final boolean present) throws IOException {
+    for (int i = startRow; i < endRow; i++) {
+      String failMsg = "Failed verification of row :" + i;
+      byte[] data = Bytes.toBytes(String.valueOf(i));
       Result result = region.get(new Get(data));
+
+      boolean hasResult = result != null && !result.isEmpty();
+      assertEquals(failMsg + result, present, hasResult);
+      if (!present) continue;
+
       assertTrue(failMsg, result.containsColumn(f, null));
       assertEquals(failMsg, result.getColumnCells(f, null).size(), 1);
       Cell cell = result.getColumnLatestCell(f, null);
@@ -2220,6 +2288,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     }
     results.close();
     return count;
+  }
+
+  /**
+   * Return the number of rows in the given table.
+   */
+  public int countRows(final TableName tableName) throws IOException {
+    Table table = getConnection().getTable(tableName);
+    try {
+      return countRows(table);
+    } finally {
+      table.close();
+    }
   }
 
   /**
@@ -2982,7 +3062,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       }
     };
     MetaTableAccessor
-        .fullScan(connection, visitor, table.getName(), MetaTableAccessor.QueryType.TABLE, true);
+        .scanMeta(connection, null, null,
+            MetaTableAccessor.QueryType.TABLE,
+            Integer.MAX_VALUE, visitor);
     return lastTableState.get();
   }
 
@@ -3577,6 +3659,29 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @return the number of regions the table was split into
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
+      TableName tableName, byte[][] columnFamilies, Algorithm compression,
+      DataBlockEncoding dataBlockEncoding, int numRegionsPerServer, int regionReplication,
+      Durability durability)
+          throws IOException {
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.setDurability(durability);
+    desc.setRegionReplication(regionReplication);
+    HColumnDescriptor[] hcds = new HColumnDescriptor[columnFamilies.length];
+    for (int i = 0; i < columnFamilies.length; i++) {
+      HColumnDescriptor hcd = new HColumnDescriptor(columnFamilies[i]);
+      hcd.setDataBlockEncoding(dataBlockEncoding);
+      hcd.setCompressionType(compression);
+      hcds[i] = hcd;
+    }
+    return createPreSplitLoadTestTable(conf, desc, hcds, numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd) throws IOException {
     return createPreSplitLoadTestTable(conf, desc, hcd, DEFAULT_REGIONS_PER_SERVER);
   }
@@ -3588,8 +3693,21 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public static int createPreSplitLoadTestTable(Configuration conf,
       HTableDescriptor desc, HColumnDescriptor hcd, int numRegionsPerServer) throws IOException {
-    if (!desc.hasFamily(hcd.getName())) {
-      desc.addFamily(hcd);
+    return createPreSplitLoadTestTable(conf, desc, new HColumnDescriptor[] {hcd},
+        numRegionsPerServer);
+  }
+
+  /**
+   * Creates a pre-split table for load testing. If the table already exists,
+   * logs a warning and continues.
+   * @return the number of regions the table was split into
+   */
+  public static int createPreSplitLoadTestTable(Configuration conf,
+      HTableDescriptor desc, HColumnDescriptor[] hcds, int numRegionsPerServer) throws IOException {
+    for (HColumnDescriptor hcd : hcds) {
+      if (!desc.hasFamily(hcd.getName())) {
+        desc.addFamily(hcd);
+      }
     }
 
     int totalNumberOfRegions = 0;
@@ -3672,10 +3790,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           if (server.equals(rs.getServerName())) {
             continue;
           }
-          Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
-          for (HRegion r: hrs) {
+          Collection<Region> hrs = rs.getOnlineRegionsLocalContext();
+          for (Region r: hrs) {
             assertTrue("Region should not be double assigned",
-              r.getRegionId() != hri.getRegionId());
+              r.getRegionInfo().getRegionId() != hri.getRegionId());
           }
         }
         return; // good, we are happy
@@ -3813,6 +3931,37 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public void waitUntilNoRegionsInTransition(
       final long timeout) throws Exception {
     waitFor(timeout, predicateNoRegionsInTransition());
+  }
+
+  /**
+   * Wait until labels is ready in VisibilityLabelsCache.
+   * @param timeoutMillis
+   * @param labels
+   */
+  public void waitLabelAvailable(long timeoutMillis, final String... labels) {
+    final VisibilityLabelsCache labelsCache = VisibilityLabelsCache.get();
+    waitFor(timeoutMillis, new Waiter.ExplainingPredicate<RuntimeException>() {
+
+      @Override
+      public boolean evaluate() {
+        for (String label : labels) {
+          if (labelsCache.getLabelOrdinal(label) == 0) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public String explainFailure() {
+        for (String label : labels) {
+          if (labelsCache.getLabelOrdinal(label) == 0) {
+            return label + " is not available yet";
+          }
+        }
+        return "";
+      }
+    });
   }
 
   /**

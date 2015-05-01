@@ -31,6 +31,8 @@ import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 
@@ -82,6 +84,11 @@ public interface MasterServices extends Server {
   MasterQuotaManager getMasterQuotaManager();
 
   /**
+   * @return Master's instance of {@link ProcedureExecutor}
+   */
+  ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor();
+
+  /**
    * Check table is modifiable; i.e. exists and is offline.
    * @param tableName Name of table to check.
    * @throws TableNotDisabledException
@@ -98,7 +105,7 @@ public interface MasterServices extends Server {
    * @param splitKeys Starting row keys for the initial table regions.  If null
    *     a single region is created.
    */
-  void createTable(HTableDescriptor desc, byte[][] splitKeys)
+  long createTable(HTableDescriptor desc, byte[][] splitKeys)
       throws IOException;
 
   /**
@@ -106,7 +113,7 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void deleteTable(final TableName tableName) throws IOException;
+  long deleteTable(final TableName tableName) throws IOException;
 
   /**
    * Truncate a table
@@ -130,14 +137,14 @@ public interface MasterServices extends Server {
    * @param tableName The table name
    * @throws IOException
    */
-  void enableTable(final TableName tableName) throws IOException;
+  long enableTable(final TableName tableName) throws IOException;
 
   /**
    * Disable an existing table
    * @param tableName The table name
    * @throws IOException
    */
-  void disableTable(final TableName tableName) throws IOException;
+  long disableTable(final TableName tableName) throws IOException;
 
 
   /**

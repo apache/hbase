@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -44,19 +43,19 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.PairOfSameType;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -67,7 +66,7 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Test the {@link SplitTransaction} class against an HRegion (as opposed to
+ * Test the {@link SplitTransactionImpl} class against an HRegion (as opposed to
  * running cluster).
  */
 @Category({RegionServerTests.class, SmallTests.class})
@@ -120,8 +119,8 @@ public class TestSplitTransaction {
     assertEquals(rowcount, parentRowCount);
 
     // Start transaction.
-    SplitTransaction st = prepareGOOD_SPLIT_ROW();
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW();
+    SplitTransactionImpl spiedUponSt = spy(st);
     Mockito
         .doThrow(new MockedFailedDaughterOpen())
         .when(spiedUponSt)
@@ -161,12 +160,13 @@ public class TestSplitTransaction {
     prepareGOOD_SPLIT_ROW();
   }
 
-  private SplitTransaction prepareGOOD_SPLIT_ROW() {
+  private SplitTransactionImpl prepareGOOD_SPLIT_ROW() throws IOException {
     return prepareGOOD_SPLIT_ROW(this.parent);
   }
 
-  private SplitTransaction prepareGOOD_SPLIT_ROW(final HRegion parentRegion) {
-    SplitTransaction st = new SplitTransaction(parentRegion, GOOD_SPLIT_ROW);
+  private SplitTransactionImpl prepareGOOD_SPLIT_ROW(final HRegion parentRegion)
+      throws IOException {
+    SplitTransactionImpl st = new SplitTransactionImpl(parentRegion, GOOD_SPLIT_ROW);
     assertTrue(st.prepare());
     return st;
   }
@@ -181,7 +181,7 @@ public class TestSplitTransaction {
     when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.parent.stores.put(Bytes.toBytes(""), storeMock);
 
-    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
 
     assertFalse("a region should not be splittable if it has instances of store file references",
                 st.prepare());
@@ -192,19 +192,19 @@ public class TestSplitTransaction {
    */
   @Test public void testPrepareWithBadSplitRow() throws IOException {
     // Pass start row as split key.
-    SplitTransaction st = new SplitTransaction(this.parent, STARTROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, STARTROW);
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, HConstants.EMPTY_BYTE_ARRAY);
+    st = new SplitTransactionImpl(this.parent, HConstants.EMPTY_BYTE_ARRAY);
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, new byte [] {'A', 'A', 'A'});
+    st = new SplitTransactionImpl(this.parent, new byte [] {'A', 'A', 'A'});
     assertFalse(st.prepare());
-    st = new SplitTransaction(this.parent, ENDROW);
+    st = new SplitTransactionImpl(this.parent, ENDROW);
     assertFalse(st.prepare());
   }
 
   @Test public void testPrepareWithClosedRegion() throws IOException {
     this.parent.close();
-    SplitTransaction st = new SplitTransaction(this.parent, GOOD_SPLIT_ROW);
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
     assertFalse(st.prepare());
   }
 
@@ -220,12 +220,12 @@ public class TestSplitTransaction {
     ((LruBlockCache) cacheConf.getBlockCache()).clearCache();
 
     // Start transaction.
-    SplitTransaction st = prepareGOOD_SPLIT_ROW();
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW();
 
     // Run the execute.  Look at what it returns.
     Server mockServer = Mockito.mock(Server.class);
     when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
-    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
+    PairOfSameType<Region> daughters = st.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(this.parent.getRegionFileSystem().getSplitsDir()));
     // Assert the parent region is closed.
@@ -235,13 +235,15 @@ public class TestSplitTransaction {
     // to be under the daughter region dirs.
     assertEquals(0, this.fs.listStatus(this.parent.getRegionFileSystem().getSplitsDir()).length);
     // Check daughters have correct key span.
-    assertTrue(Bytes.equals(this.parent.getStartKey(), daughters.getFirst().getStartKey()));
-    assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getEndKey()));
-    assertTrue(Bytes.equals(daughters.getSecond().getStartKey(), GOOD_SPLIT_ROW));
-    assertTrue(Bytes.equals(this.parent.getEndKey(), daughters.getSecond().getEndKey()));
+    assertTrue(Bytes.equals(parent.getRegionInfo().getStartKey(),
+      daughters.getFirst().getRegionInfo().getStartKey()));
+    assertTrue(Bytes.equals(GOOD_SPLIT_ROW, daughters.getFirst().getRegionInfo().getEndKey()));
+    assertTrue(Bytes.equals(daughters.getSecond().getRegionInfo().getStartKey(), GOOD_SPLIT_ROW));
+    assertTrue(Bytes.equals(parent.getRegionInfo().getEndKey(),
+      daughters.getSecond().getRegionInfo().getEndKey()));
     // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion openRegion: daughters) {
+    for (Region openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -264,8 +266,8 @@ public class TestSplitTransaction {
 
     // Start transaction.
     HRegion spiedRegion = spy(this.parent);
-    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
+    SplitTransactionImpl spiedUponSt = spy(st);
     doThrow(new IOException("Failing split. Expected reference file count isn't equal."))
         .when(spiedUponSt).assertReferenceFileCount(anyInt(),
         eq(new Path(this.parent.getRegionFileSystem().getTableDir(),
@@ -292,8 +294,8 @@ public class TestSplitTransaction {
 
     // Start transaction.
     HRegion spiedRegion = spy(this.parent);
-    SplitTransaction st = prepareGOOD_SPLIT_ROW(spiedRegion);
-    SplitTransaction spiedUponSt = spy(st);
+    SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
+    SplitTransactionImpl spiedUponSt = spy(st);
     doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
         eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
     when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
@@ -322,10 +324,10 @@ public class TestSplitTransaction {
 
     // Now retry the split but do not throw an exception this time.
     assertTrue(st.prepare());
-    PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
+    PairOfSameType<Region> daughters = st.execute(mockServer, null);
     // Count rows. daughters are already open
     int daughtersRowCount = 0;
-    for (HRegion openRegion: daughters) {
+    for (Region openRegion: daughters) {
       try {
         int count = countRows(openRegion);
         assertTrue(count > 0 && count != rowcount);
@@ -351,7 +353,7 @@ public class TestSplitTransaction {
   private class MockedFailedDaughterCreation extends IOException {}
   private class MockedFailedDaughterOpen extends IOException {}
 
-  private int countRows(final HRegion r) throws IOException {
+  private int countRows(final Region r) throws IOException {
     int rowcount = 0;
     InternalScanner scanner = r.getScanner(new Scan());
     try {

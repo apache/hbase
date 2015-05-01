@@ -58,23 +58,23 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Stable
-public final class HTableWrapper implements HTableInterface {
+public final class HTableWrapper implements Table {
 
-  private final HTableInterface table;
+  private final Table table;
   private ClusterConnection connection;
-  private final List<HTableInterface> openTables;
+  private final List<Table> openTables;
 
   /**
    * @param openTables External list of tables used for tracking wrappers.
    * @throws IOException
    */
-  public static HTableInterface createWrapper(List<HTableInterface> openTables,
+  public static Table createWrapper(List<Table> openTables,
       TableName tableName, Environment env, ExecutorService pool) throws IOException {
     return new HTableWrapper(openTables, tableName,
         CoprocessorHConnection.getConnectionForEnvironment(env), pool);
   }
 
-  private HTableWrapper(List<HTableInterface> openTables, TableName tableName,
+  private HTableWrapper(List<Table> openTables, TableName tableName,
       ClusterConnection connection, ExecutorService pool)
       throws IOException {
     this.table = connection.getTable(tableName, pool);
@@ -116,8 +116,7 @@ public final class HTableWrapper implements HTableInterface {
   }
 
   /**
-   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
-   * {@link #setAutoFlushTo(boolean)}} instead.
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated.
    */
   @Deprecated
   public Result getRowOrBefore(byte[] row, byte[] family)
@@ -215,14 +214,6 @@ public final class HTableWrapper implements HTableInterface {
     return table.increment(increment);
   }
 
-  public void flushCommits() throws IOException {
-    table.flushCommits();
-  }
-
-  public boolean isAutoFlush() {
-    return table.isAutoFlush();
-  }
-
   public ResultScanner getScanner(Scan scan) throws IOException {
     return table.getScanner(scan);
   }
@@ -238,11 +229,6 @@ public final class HTableWrapper implements HTableInterface {
 
   public HTableDescriptor getTableDescriptor() throws IOException {
     return table.getTableDescriptor();
-  }
-
-  @Override
-  public byte[] getTableName() {
-    return table.getTableName();
   }
 
   @Override
@@ -317,30 +303,6 @@ public final class HTableWrapper implements HTableInterface {
   }
 
   @Override
-  public void setAutoFlush(boolean autoFlush) {
-    table.setAutoFlush(autoFlush);
-  }
-
-  @Override
-  public void setAutoFlush(boolean autoFlush, boolean clearBufferOnFail) {
-    setAutoFlush(autoFlush);
-    if (!autoFlush && !clearBufferOnFail) {
-      // We don't support his combination.  In HTable, the implementation is this:
-      //
-      // this.clearBufferOnFail = autoFlush || clearBufferOnFail
-      //
-      // So if autoFlush == false and clearBufferOnFail is false, that is not supported in
-      // the new Table Interface so just throwing UnsupportedOperationException here.
-      throw new UnsupportedOperationException("Can't do this via wrapper");
-    }
-  }
-
-  @Override
-  public void setAutoFlushTo(boolean autoFlush) {
-    table.setAutoFlushTo(autoFlush);
-  }
-
-  @Override
   public long getWriteBufferSize() {
      return table.getWriteBufferSize();
   }
@@ -348,13 +310,6 @@ public final class HTableWrapper implements HTableInterface {
   @Override
   public void setWriteBufferSize(long writeBufferSize) throws IOException {
     table.setWriteBufferSize(writeBufferSize);
-  }
-
-  @Override
-  public long incrementColumnValue(byte[] row, byte[] family,
-      byte[] qualifier, long amount, boolean writeToWAL) throws IOException {
-    return table.incrementColumnValue(row, family, qualifier, amount,
-        writeToWAL? Durability.USE_DEFAULT: Durability.SKIP_WAL);
   }
 
   @Override

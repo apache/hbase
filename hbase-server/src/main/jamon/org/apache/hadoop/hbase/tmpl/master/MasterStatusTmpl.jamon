@@ -42,7 +42,6 @@ org.apache.hadoop.hbase.NamespaceDescriptor;
 org.apache.hadoop.hbase.ServerLoad;
 org.apache.hadoop.hbase.ServerName;
 org.apache.hadoop.hbase.client.Admin;
-org.apache.hadoop.hbase.client.HConnectionManager;
 org.apache.hadoop.hbase.HRegionInfo;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.HTableDescriptor;
@@ -80,14 +79,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     }
 
     for(int i = 0; i < zks.length; ++i) {
-      quorums.append(zks[i].trim()).append(",");
+      quorums.append(zks[i].trim());
 
-      if ((i+1) % 4 == 0 && i != (zks.length - 1)) {
+      if (i != (zks.length - 1)) {
         quorums.append("<br/>");
       }
     }
 
-    quorums.setLength(quorums.length() - 1);
     return quorums.toString();
   }
 </%class>
@@ -157,6 +155,13 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
           <div class="alert alert-error">
           Please note that your cluster is running with the CatalogJanitor disabled. It can be
           re-enabled from the hbase shell by running the command 'catalogjanitor_switch true'
+          </div>
+        </%if>
+        <%if !master.isBalancerOn() %>
+          <div class="alert alert-warning">
+            The Load Balancer is not enabled which will eventually cause performance degradation
+            in HBase as Regions will not be distributed across all RegionServers. The balancer
+            is only expected to be disabled during rolling upgrade scenarios.
           </div>
         </%if>
 
@@ -255,6 +260,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                     <td>Addresses of all registered ZK servers. For more, see <a href="/zk.jsp">zk dump</a>.</td>
                 </tr>
                 <tr>
+                    <td>Zookeeper Base Path</td>
+                    <td> <% master.getZooKeeper().getBaseZNode() %></td>
+                    <td>Root node of this cluster in ZK.</td>
+                </tr>
+                <tr>
                     <td>HBase Root Directory</td>
                     <td><% FSUtils.getRootDir(master.getConfiguration()).toString() %></td>
                     <td>Location of HBase home directory</td>
@@ -293,6 +303,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	                    <td><% master.getMasterCoprocessorHost() == null ? "[]" :
 	                      java.util.Arrays.toString(master.getMasterCoprocessors()) %></td>
 	                    <td>Coprocessors currently loaded by the master</td>
+	                </tr>
+	                <tr>
+	                    <td>LoadBalancer</td>
+	                    <td><% master.getLoadBalancerClassName() %></td>
+	                    <td>LoadBalancer to be used in the Master</td>
 	                </tr>
                 </%if>
             </table>

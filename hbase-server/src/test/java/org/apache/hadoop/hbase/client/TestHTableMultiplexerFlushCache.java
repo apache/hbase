@@ -19,15 +19,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -35,6 +33,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.assertTrue;
 
 @Category({ LargeTests.class, ClientTests.class })
 public class TestHTableMultiplexerFlushCache {
@@ -64,21 +64,22 @@ public class TestHTableMultiplexerFlushCache {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private static void checkExistence(HTable htable, byte[] row, byte[] family, byte[] quality,
-      byte[] value) throws Exception {
+  private static void checkExistence(final HTable htable, final byte[] row, final byte[] family,
+      final byte[] quality,
+      final byte[] value) throws Exception {
     // verify that the Get returns the correct result
-    Result r;
-    Get get = new Get(row);
-    get.addColumn(family, quality);
-    int nbTry = 0;
-    do {
-      assertTrue("Fail to get from " + htable.getName() + " after " + nbTry + " tries", nbTry < 50);
-      nbTry++;
-      Thread.sleep(100);
-      r = htable.get(get);
-    } while (r == null || r.getValue(family, quality) == null);
-    assertEquals("value", Bytes.toStringBinary(value),
-      Bytes.toStringBinary(r.getValue(family, quality)));
+    TEST_UTIL.waitFor(30000, new Waiter.Predicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        Result r;
+        Get get = new Get(row);
+        get.addColumn(family, quality);
+        r = htable.get(get);
+        return r != null && r.getValue(family, quality) != null
+            && Bytes.toStringBinary(value).equals(
+            Bytes.toStringBinary(r.getValue(family, quality)));
+      }
+    });
   }
 
   @Test

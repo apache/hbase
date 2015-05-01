@@ -22,7 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -101,7 +101,7 @@ public class RESTServlet implements Constants {
     }
   }
 
-  HBaseAdmin getAdmin() throws IOException {
+  Admin getAdmin() throws IOException {
     return connectionCache.getAdmin();
   }
 

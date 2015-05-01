@@ -28,8 +28,9 @@
 @rem
 @rem   HBASE_CLASSPATH  Extra Java CLASSPATH entries.
 @rem
-@rem   HBASE_HEAPSIZE   The maximum amount of heap to use, in MB. 
-@rem                    Default is 1000.
+@rem   HBASE_HEAPSIZE   The maximum amount of heap to use.
+@rem                    Default is unset and uses the JVMs default setting
+@rem                    (usually 1/4th of the available memory).
 @rem
 @rem   HBASE_OPTS       Extra Java runtime options.
 @rem
@@ -87,7 +88,7 @@ if "%hbase-command%"=="" (
   goto :eof
 )
 
-set JAVA_HEAP_MAX=-Xmx1000m
+set JAVA_HEAP_MAX=""
 set JAVA_OFFHEAP_MAX=""
 
 rem check envvars which might override default args

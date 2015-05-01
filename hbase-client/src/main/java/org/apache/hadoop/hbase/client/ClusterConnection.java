@@ -288,12 +288,6 @@ public interface ClusterConnection extends HConnection {
   RpcRetryingCallerFactory getNewRpcRetryingCallerFactory(Configuration conf);
   
   /**
-   * 
-   * @return true if this is a managed connection.
-   */
-  boolean isManaged();
-
-  /**
    * @return the current statistics tracker associated with this connection
    */
   ServerStatisticTracker getStatisticsTracker();

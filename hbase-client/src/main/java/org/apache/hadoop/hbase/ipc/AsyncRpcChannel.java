@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.Message;
-import com.google.protobuf.RpcCallback;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
@@ -31,11 +28,29 @@ import io.netty.util.Timeout;
 import io.netty.util.TimerTask;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
+
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+
+import javax.security.sasl.SaslException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.TracingProtos;
@@ -56,18 +71,9 @@ import org.apache.hadoop.security.token.TokenSelector;
 import org.apache.htrace.Span;
 import org.apache.htrace.Trace;
 
-import javax.security.sasl.SaslException;
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
-import java.nio.ByteBuffer;
-import java.security.PrivilegedExceptionAction;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.TimeUnit;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.Message;
+import com.google.protobuf.RpcCallback;
 
 /**
  * Netty RPC channel
@@ -97,8 +103,6 @@ public class AsyncRpcChannel {
   final String serviceName;
   final InetSocketAddress address;
 
-  ConcurrentSkipListMap<Integer, AsyncCall> calls = new ConcurrentSkipListMap<>();
-
   private int ioFailureCounter = 0;
   private int connectFailureCounter = 0;
 
@@ -108,15 +112,18 @@ public class AsyncRpcChannel {
   private Token<? extends TokenIdentifier> token;
   private String serverPrincipal;
 
-  volatile boolean shouldCloseConnection = false;
-  private IOException closeException;
+
+  // NOTE: closed and connected flags below are only changed when a lock on pendingCalls
+  private final Map<Integer, AsyncCall> pendingCalls = new HashMap<Integer, AsyncCall>();
+  private boolean connected = false;
+  private boolean closed = false;
 
   private Timeout cleanupTimer;
 
   private final TimerTask timeoutTask = new TimerTask() {
-    @Override public void run(Timeout timeout) throws Exception {
-      cleanupTimer = null;
-      cleanupCalls(false);
+    @Override
+    public void run(Timeout timeout) throws Exception {
+      cleanupCalls();
     }
   };
 
@@ -183,10 +190,11 @@ public class AsyncRpcChannel {
               if (ticket == null) {
                 throw new FatalConnectionException("ticket/user is null");
               }
+              final UserGroupInformation realTicket = ticket;
               saslHandler = ticket.doAs(new PrivilegedExceptionAction<SaslClientHandler>() {
                 @Override
                 public SaslClientHandler run() throws IOException {
-                  return getSaslHandler(bootstrap);
+                  return getSaslHandler(realTicket, bootstrap);
                 }
               });
               if (saslHandler != null) {
@@ -213,15 +221,20 @@ public class AsyncRpcChannel {
     ch.pipeline()
         .addLast("frameDecoder", new LengthFieldBasedFrameDecoder(Integer.MAX_VALUE, 0, 4, 0, 4));
     ch.pipeline().addLast(new AsyncServerResponseHandler(this));
-
     try {
       writeChannelHeader(ch).addListener(new GenericFutureListener<ChannelFuture>() {
-        @Override public void operationComplete(ChannelFuture future) throws Exception {
+        @Override
+        public void operationComplete(ChannelFuture future) throws Exception {
           if (!future.isSuccess()) {
             close(future.cause());
             return;
           }
-          for (AsyncCall call : calls.values()) {
+          List<AsyncCall> callsToWrite;
+          synchronized (pendingCalls) {
+            connected = true;
+            callsToWrite = new ArrayList<AsyncCall>(pendingCalls.values());
+          }
+          for (AsyncCall call : callsToWrite) {
             writeRequest(call);
           }
         }
@@ -233,24 +246,26 @@ public class AsyncRpcChannel {
 
   /**
    * Get SASL handler
-   *
    * @param bootstrap to reconnect to
    * @return new SASL handler
    * @throws java.io.IOException if handler failed to create
    */
-  private SaslClientHandler getSaslHandler(final Bootstrap bootstrap) throws IOException {
-    return new SaslClientHandler(authMethod, token, serverPrincipal, client.fallbackAllowed,
-        client.conf.get("hbase.rpc.protection",
-            SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()),
+  private SaslClientHandler getSaslHandler(final UserGroupInformation realTicket,
+      final Bootstrap bootstrap) throws IOException {
+    return new SaslClientHandler(realTicket, authMethod, token, serverPrincipal,
+        client.fallbackAllowed, client.conf.get("hbase.rpc.protection",
+          SaslUtil.QualityOfProtection.AUTHENTICATION.name().toLowerCase()),
         new SaslClientHandler.SaslExceptionHandler() {
-          @Override public void handle(int retryCount, Random random, Throwable cause) {
+          @Override
+          public void handle(int retryCount, Random random, Throwable cause) {
             try {
               // Handle Sasl failure. Try to potentially get new credentials
-              handleSaslConnectionFailure(retryCount, cause, ticket.getUGI());
+              handleSaslConnectionFailure(retryCount, cause, realTicket);
 
               // Try to reconnect
-              AsyncRpcClient.WHEEL_TIMER.newTimeout(new TimerTask() {
-                @Override public void run(Timeout timeout) throws Exception {
+              client.newTimeout(new TimerTask() {
+                @Override
+                public void run(Timeout timeout) throws Exception {
                   connect(bootstrap);
                 }
               }, random.nextInt(reloginMaxBackoff) + 1, TimeUnit.MILLISECONDS);
@@ -259,10 +274,11 @@ public class AsyncRpcChannel {
             }
           }
         }, new SaslClientHandler.SaslSuccessfulConnectHandler() {
-      @Override public void onSuccess(Channel channel) {
-        startHBaseConnection(channel);
-      }
-    });
+          @Override
+          public void onSuccess(Channel channel) {
+            startHBaseConnection(channel);
+          }
+        });
   }
 
   /**
@@ -274,7 +290,7 @@ public class AsyncRpcChannel {
    */
   private void retryOrClose(final Bootstrap bootstrap, int connectCounter, Throwable e) {
     if (connectCounter < client.maxRetries) {
-      AsyncRpcClient.WHEEL_TIMER.newTimeout(new TimerTask() {
+      client.newTimeout(new TimerTask() {
         @Override public void run(Timeout timeout) throws Exception {
           connect(bootstrap);
         }
@@ -295,66 +311,50 @@ public class AsyncRpcChannel {
   public Promise<Message> callMethod(final Descriptors.MethodDescriptor method,
       final PayloadCarryingRpcController controller, final Message request,
       final Message responsePrototype) {
-    if (shouldCloseConnection) {
-      Promise<Message> promise = channel.eventLoop().newPromise();
-      promise.setFailure(new ConnectException());
-      return promise;
-    }
-
-    final AsyncCall call = new AsyncCall(channel.eventLoop(), client.callIdCnt.getAndIncrement(),
-        method, request, controller, responsePrototype);
-
+    final AsyncCall call =
+        new AsyncCall(channel.eventLoop(), client.callIdCnt.getAndIncrement(), method, request,
+            controller, responsePrototype);
     controller.notifyOnCancel(new RpcCallback<Object>() {
       @Override
       public void run(Object parameter) {
-        calls.remove(call.id);
+        // TODO: do not need to call AsyncCall.setFailed?
+        synchronized (pendingCalls) {
+          pendingCalls.remove(call.id);
+        }
       }
     });
+    // TODO: this should be handled by PayloadCarryingRpcController.
     if (controller.isCanceled()) {
       // To finish if the call was cancelled before we set the notification (race condition)
       call.cancel(true);
       return call;
     }
 
-    calls.put(call.id, call);
-
-    // check again, see https://issues.apache.org/jira/browse/HBASE-12951
-    if (shouldCloseConnection) {
-      Promise<Message> promise = channel.eventLoop().newPromise();
-      promise.setFailure(new ConnectException());
-      return promise;
+    synchronized (pendingCalls) {
+      if (closed) {
+        Promise<Message> promise = channel.eventLoop().newPromise();
+        promise.setFailure(new ConnectException());
+        return promise;
+      }
+      pendingCalls.put(call.id, call);
+      // Add timeout for cleanup if none is present
+      if (cleanupTimer == null && call.getRpcTimeout() > 0) {
+        cleanupTimer =
+            client.newTimeout(timeoutTask, call.getRpcTimeout(),
+              TimeUnit.MILLISECONDS);
+      }
+      if (!connected) {
+        return call;
+      }
     }
-
-    // Add timeout for cleanup if none is present
-    if (cleanupTimer == null) {
-      cleanupTimer = AsyncRpcClient.WHEEL_TIMER.newTimeout(timeoutTask, call.getRpcTimeout(),
-          TimeUnit.MILLISECONDS);
-    }
-
-    if(channel.isActive()) {
-      writeRequest(call);
-    }
-
+    writeRequest(call);
     return call;
   }
 
-  /**
-   * Calls method and returns a promise
-   * @param method to call
-   * @param controller to run call with
-   * @param request to send
-   * @param responsePrototype for response message
-   * @return Promise to listen to result
-   * @throws java.net.ConnectException on connection failures
-   */
-  public Promise<Message> callMethodWithPromise(
-      final Descriptors.MethodDescriptor method, final PayloadCarryingRpcController controller,
-      final Message request, final Message responsePrototype) throws ConnectException {
-    if (shouldCloseConnection || !channel.isOpen()) {
-      throw new ConnectException();
+  AsyncCall removePendingCall(int id) {
+    synchronized (pendingCalls) {
+      return pendingCalls.remove(id);
     }
-
-    return this.callMethod(method, controller, request, responsePrototype);
   }
 
   /**
@@ -380,6 +380,7 @@ public class AsyncRpcChannel {
       headerBuilder.setCellBlockCompressorClass(client.compressor.getClass().getCanonicalName());
     }
 
+    headerBuilder.setVersionInfo(ProtobufUtil.getVersionInfo());
     RPCProtos.ConnectionHeader header = headerBuilder.build();
 
 
@@ -400,10 +401,6 @@ public class AsyncRpcChannel {
    */
   private void writeRequest(final AsyncCall call) {
     try {
-      if (shouldCloseConnection) {
-        return;
-      }
-
       final RPCProtos.RequestHeader.Builder requestHeaderBuilder = RPCProtos.RequestHeader
           .newBuilder();
       requestHeaderBuilder.setCallId(call.id)
@@ -439,23 +436,10 @@ public class AsyncRpcChannel {
         IPCUtil.write(out, rh, call.param, cellBlock);
       }
 
-      channel.writeAndFlush(b).addListener(new CallWriteListener(this,call));
+      channel.writeAndFlush(b).addListener(new CallWriteListener(this, call.id));
     } catch (IOException e) {
-      if (!shouldCloseConnection) {
-        close(e);
-      }
+      close(e);
     }
-  }
-
-  /**
-   * Fail a call
-   *
-   * @param call  to fail
-   * @param cause of fail
-   */
-  void failCall(AsyncCall call, IOException cause) {
-    calls.remove(call.id);
-    call.setFailed(cause);
   }
 
   /**
@@ -550,18 +534,22 @@ public class AsyncRpcChannel {
    * @param e exception on close
    */
   public void close(final Throwable e) {
-    client.removeConnection(ConnectionId.hashCode(ticket,serviceName,address));
+    client.removeConnection(this);
 
     // Move closing from the requesting thread to the channel thread
     channel.eventLoop().execute(new Runnable() {
       @Override
       public void run() {
-        if (shouldCloseConnection) {
-          return;
+        List<AsyncCall> toCleanup;
+        synchronized (pendingCalls) {
+          if (closed) {
+            return;
+          }
+          closed = true;
+          toCleanup = new ArrayList<AsyncCall>(pendingCalls.values());
+          pendingCalls.clear();
         }
-
-        shouldCloseConnection = true;
-
+        IOException closeException = null;
         if (e != null) {
           if (e instanceof IOException) {
             closeException = (IOException) e;
@@ -569,16 +557,19 @@ public class AsyncRpcChannel {
             closeException = new IOException(e);
           }
         }
-
         // log the info
         if (LOG.isDebugEnabled() && closeException != null) {
-          LOG.debug(name + ": closing ipc connection to " + address + ": " +
-              closeException.getMessage());
+          LOG.debug(name + ": closing ipc connection to " + address, closeException);
         }
-
-        cleanupCalls(true);
+        if (cleanupTimer != null) {
+          cleanupTimer.cancel();
+          cleanupTimer = null;
+        }
+        for (AsyncCall call : toCleanup) {
+          call.setFailed(closeException != null ? closeException : new ConnectionClosingException(
+              "Call id=" + call.id + " on server " + address + " aborted: connection is closing"));
+        }
         channel.disconnect().addListener(ChannelFutureListener.CLOSE);
-
         if (LOG.isDebugEnabled()) {
           LOG.debug(name + ": closed");
         }
@@ -591,63 +582,36 @@ public class AsyncRpcChannel {
    *
    * @param cleanAll true if all calls should be cleaned, false for only the timed out calls
    */
-  public void cleanupCalls(boolean cleanAll) {
-    // Cancel outstanding timers
-    if (cleanupTimer != null) {
-      cleanupTimer.cancel();
-      cleanupTimer = null;
-    }
-
-    if (cleanAll) {
-      for (AsyncCall call : calls.values()) {
-        synchronized (call) {
-          // Calls can be done on another thread so check before failing them
-          if(!call.isDone()) {
-            if (closeException == null) {
-              failCall(call, new ConnectionClosingException("Call id=" + call.id +
-                  " on server " + address + " aborted: connection is closing"));
-            } else {
-              failCall(call, closeException);
-            }
-          }
-        }
-      }
-    } else {
-      for (AsyncCall call : calls.values()) {
-        long waitTime = EnvironmentEdgeManager.currentTime() - call.getStartTime();
+  private void cleanupCalls() {
+    List<AsyncCall> toCleanup = new ArrayList<AsyncCall>();
+    long currentTime = EnvironmentEdgeManager.currentTime();
+    long nextCleanupTaskDelay = -1L;
+    synchronized (pendingCalls) {
+      for (Iterator<AsyncCall> iter = pendingCalls.values().iterator(); iter.hasNext();) {
+        AsyncCall call = iter.next();
         long timeout = call.getRpcTimeout();
-        if (timeout > 0 && waitTime >= timeout) {
-          synchronized (call) {
-            // Calls can be done on another thread so check before failing them
-            if (!call.isDone()) {
-              closeException = new CallTimeoutException("Call id=" + call.id +
-                  ", waitTime=" + waitTime + ", rpcTimeout=" + timeout);
-              failCall(call, closeException);
+        if (timeout > 0) {
+          if (currentTime - call.getStartTime() >= timeout) {
+            iter.remove();
+            toCleanup.add(call);
+          } else {
+            if (nextCleanupTaskDelay < 0 || timeout < nextCleanupTaskDelay) {
+              nextCleanupTaskDelay = timeout;
             }
           }
-        } else {
-          // We expect the call to be ordered by timeout. It may not be the case, but stopping
-          //  at the first valid call allows to be sure that we still have something to do without
-          //  spending too much time by reading the full list.
-          break;
         }
       }
-
-      if (!calls.isEmpty()) {
-        AsyncCall firstCall = calls.firstEntry().getValue();
-
-        final long newTimeout;
-        long maxWaitTime = EnvironmentEdgeManager.currentTime() - firstCall.getStartTime();
-        if (maxWaitTime < firstCall.getRpcTimeout()) {
-          newTimeout = firstCall.getRpcTimeout() - maxWaitTime;
-        } else {
-          newTimeout = 0;
-        }
-
-        closeException = null;
-        cleanupTimer = AsyncRpcClient.WHEEL_TIMER.newTimeout(timeoutTask,
-            newTimeout, TimeUnit.MILLISECONDS);
+      if (nextCleanupTaskDelay > 0) {
+        cleanupTimer =
+            client.newTimeout(timeoutTask, nextCleanupTaskDelay,
+              TimeUnit.MILLISECONDS);
+      } else {
+        cleanupTimer = null;
       }
+    }
+    for (AsyncCall call : toCleanup) {
+      call.setFailed(new CallTimeoutException("Call id=" + call.id + ", waitTime="
+          + (currentTime - call.getStartTime()) + ", rpcTimeout=" + call.getRpcTimeout()));
     }
   }
 
@@ -745,6 +709,10 @@ public class AsyncRpcChannel {
     });
   }
 
+  public int getConnectionHashCode() {
+    return ConnectionId.hashCode(ticket, serviceName, address);
+  }
+
   @Override
   public String toString() {
     return this.address.toString() + "/" + this.serviceName + "/" + this.ticket;
@@ -755,20 +723,22 @@ public class AsyncRpcChannel {
    */
   private static final class CallWriteListener implements ChannelFutureListener {
     private final AsyncRpcChannel rpcChannel;
-    private final AsyncCall call;
+    private final int id;
 
-    public CallWriteListener(AsyncRpcChannel asyncRpcChannel, AsyncCall call) {
+    public CallWriteListener(AsyncRpcChannel asyncRpcChannel, int id) {
       this.rpcChannel = asyncRpcChannel;
-      this.call = call;
+      this.id = id;
     }
 
-    @Override public void operationComplete(ChannelFuture future) throws Exception {
+    @Override
+    public void operationComplete(ChannelFuture future) throws Exception {
       if (!future.isSuccess()) {
-        if(!this.call.isDone()) {
+        AsyncCall call = rpcChannel.removePendingCall(id);
+        if (call != null) {
           if (future.cause() instanceof IOException) {
-            rpcChannel.failCall(call, (IOException) future.cause());
+            call.setFailed((IOException) future.cause());
           } else {
-            rpcChannel.failCall(call, new IOException(future.cause()));
+            call.setFailed(new IOException(future.cause()));
           }
         }
       }

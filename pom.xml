@@ -56,6 +56,7 @@
     <module>hbase-client</module>
     <module>hbase-hadoop-compat</module>
     <module>hbase-common</module>
+    <module>hbase-procedure</module>
     <module>hbase-it</module>
     <module>hbase-examples</module>
     <module>hbase-prefix-tree</module>
@@ -198,8 +199,8 @@
       <name>Gary Helmling</name>
       <email>garyh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Continuuity</organization>
-      <organizationUrl>http://www.continuuity.com</organizationUrl>
+      <organization>Cask</organization>
+      <organizationUrl>http://www.cask.co</organizationUrl>
     </developer>
     <developer>
       <id>gchanan</id>
@@ -224,6 +225,14 @@
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
       <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>jerryjch</id>
+      <name>Jing Chen (Jerry) He</name>
+      <email>jerryjch@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>IBM</organization>
+      <organizationUrl>http://www.ibm.com</organizationUrl>
     </developer>
     <developer>
       <id>jyates</id>
@@ -338,6 +347,14 @@
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
+      <id>octo47</id>
+      <name>Andrey Stepachev</name>
+      <email>octo47@gmail.com</email>
+      <timezone>0</timezone>
+      <organization>WANdisco</organization>
+      <organizationUrl>http://www.wandisco.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>rawson</id>
       <name>Ryan Rawson</name>
       <email>rawson@apache.org</email>
@@ -352,6 +369,14 @@
       <timezone>-8</timezone>
       <organization>Hortonworks</organization>
       <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>ssrungarapu</id>
+      <name>Srikanth Srungarapu</name>
+      <email>ssrungarapu@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>stack</id>
@@ -434,6 +459,14 @@
       <organizationUrl>http://www.yahoo.com</organizationUrl>
     </developer>
     <developer>
+      <id>zhangduo</id>
+      <name>Duo Zhang</name>
+      <email>zhangduo@apache.org</email>
+      <timezone>+8</timezone>
+      <organization>Wandoujia</organization>
+      <organizationUrl>http://www.wandoujia.com</organizationUrl>
+    </developer>
+    <developer>
       <id>zjushch</id>
       <name>Chunhui Shen</name>
       <email>zjushch@apache.org</email>
@@ -474,23 +507,6 @@
             <useIncrementalCompilation>false</useIncrementalCompilation>
             <compilerArgument>-Xlint:-options</compilerArgument>
           </configuration>
-          <dependencies>
-           <dependency>
-             <groupId>com.google.errorprone</groupId>
-             <artifactId>error_prone_core</artifactId>
-             <version>1.1.1</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac</artifactId>
-             <version>2.3</version>
-           </dependency>
-           <dependency>
-             <groupId>org.codehaus.plexus</groupId>
-             <artifactId>plexus-compiler-javac-errorprone</artifactId>
-             <version>2.3</version>
-           </dependency>
-         </dependencies>
         </plugin>
         <!-- Test oriented plugins -->
         <plugin>
@@ -633,16 +649,63 @@
           <artifactId>maven-eclipse-plugin</artifactId>
           <version>2.9</version>
         </plugin>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It
-          has no influence on the Maven build itself. m2e does not provide any safeguards against
-          rogue maven plugins that leak classloaders, modify random files inside workspace
-          or throw nasty exceptions to fail the build -->
-        <!-- Top level doesn't do any specific configuration currently - left to modules
-          to decide what they want to bind -->
+        <!--This plugin's configuration is used to store Eclipse m2e settings
+            only. It has no influence on the Maven build itself. m2e does not
+            provide any safeguards against rogue maven plugins that leak
+            classloaders, modify random files inside workspace or throw nasty
+            exceptions to fail the build.
+            Top level doesn't do any specific configuration currently - left
+            to modules to decide what they want to bind, sans those plugins
+            defined in this pom. -->
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
           <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <versionRange>[0.6.2.201302030002,)</versionRange>
+                    <goals>
+                      <goal>prepare-agent</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore></ignore>
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <versionRange>[1.0.1,)</versionRange>
+                    <goals>
+                      <goal>enforce</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <versionRange>[1.4,)</versionRange>
+                    <goals>
+                      <goal>process</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
         </plugin>
         <plugin>
           <!-- excludes are inherited -->
@@ -673,6 +736,7 @@
               <exclude>**/META-INF/services/**</exclude>
               <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
+              <exclude>**/src/main/asciidoc/asciidoctor.css</exclude>
               <exclude>**/bootstrap-theme.css</exclude>
               <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
@@ -804,7 +868,7 @@
                 </fileMapper>
               </fileMappers>
               <outputDir>${basedir}/target/asciidoc</outputDir>
-            </transformationSet> 
+            </transformationSet>
           </transformationSets>
         </configuration>
       </plugin>
@@ -947,24 +1011,74 @@
       <plugin>
         <groupId>org.asciidoctor</groupId>
         <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>1.5.2</version> 
+        <version>1.5.2</version>
+        <inherited>false</inherited>
+        <dependencies>
+          <dependency>
+            <groupId>org.asciidoctor</groupId>
+            <artifactId>asciidoctorj-pdf</artifactId>
+            <version>1.5.0-alpha.6</version>
+          </dependency>
+        </dependencies>
+        <configuration>
+          <outputDirectory>target/site</outputDirectory>
+          <doctype>book</doctype>
+          <imagesDir>images</imagesDir>
+          <sourceHighlighter>coderay</sourceHighlighter>
+          <attributes>
+            <docVersion>${project.version}</docVersion>
+          </attributes>
+        </configuration>
         <executions>
           <execution>
-            <id>output-html</id> 
-            <goals>
-              <goal>process-asciidoc</goal> 
-            </goals>
+            <id>output-html</id>
             <phase>site</phase>
+            <goals>
+              <goal>process-asciidoc</goal>
+            </goals>
             <configuration>
-              <imagesDir>./images</imagesDir>
-              <doctype>book</doctype>
               <attributes>
                 <stylesheet>hbase.css</stylesheet>
               </attributes>
               <backend>html5</backend>
-              <sourceHighlighter>coderay</sourceHighlighter>
-              <outputDirectory>target/site</outputDirectory>
             </configuration>
+          </execution>
+          <execution>
+            <id>output-pdf</id>
+            <phase>site</phase>
+            <goals>
+              <goal>process-asciidoc</goal>
+            </goals>
+            <configuration>
+              <backend>pdf</backend>
+              <attributes>
+                <pagenums/>
+                <toc/>
+                <idprefix/>
+                <idseparator>-</idseparator>
+              </attributes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>${maven.antrun.version}</version>
+        <inherited>false</inherited>
+        <!-- Rename the book.pdf generated by asciidoctor -->
+        <executions>
+          <execution>
+            <id>rename-pdf</id>
+            <phase>post-site</phase>
+            <configuration>
+              <target name="rename file">
+                <move file="${project.basedir}/target/site/book.pdf" tofile="${project.basedir}/target/site/apache_hbase_reference_guide.pdf" />
+                <move file="${project.basedir}/target/site/book.pdfmarks" tofile="${project.basedir}/target/site/apache_hbase_reference_guide.pdfmarks" />
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
           </execution>
         </executions>
       </plugin>
@@ -994,6 +1108,13 @@
           </excludes>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.5.3</version>
+        <inherited>true</inherited>
+        <extensions>true</extensions>
+      </plugin>
     </plugins>
   </build>
   <properties>
@@ -1006,7 +1127,6 @@
     <!-- Build dependencies -->
     <maven.min.version>3.0.3</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
-    <java.default.compiler>javac-with-errorprone</java.default.compiler>
     <!-- Dependencies -->
     <hadoop-two.version>2.5.1</hadoop-two.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
@@ -1049,6 +1169,8 @@
     <netty.version>4.0.23.Final</netty.version>
     <joni.version>2.1.2</joni.version>
     <jcodings.version>1.0.8</jcodings.version>
+    <spy.version>2.11.6</spy.version>
+    <bouncycastle.version>1.46</bouncycastle.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.6</maven.antrun.version>
@@ -1067,6 +1189,7 @@
       Modules are pretty heavy-weight things, so doing this work isn't too bad. -->
     <server.test.jar>hbase-server-${project.version}-tests.jar</server.test.jar>
     <common.test.jar>hbase-common-${project.version}-tests.jar</common.test.jar>
+    <procedure.test.jar>hbase-procedure-${project.version}-tests.jar</procedure.test.jar>
     <it.test.jar>hbase-it-${project.version}-tests.jar</it.test.jar>
     <annotations.test.jar>hbase-annotations-${project.version}-tests.jar</annotations.test.jar>
     <surefire.version>2.18</surefire.version>
@@ -1082,9 +1205,9 @@
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
     <test.exclude.pattern></test.exclude.pattern>
-    <!-- default Xmx value is 1900m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
-    <surefire.Xmx>1900m</surefire.Xmx>
-    <surefire.cygwinXmx>1900m</surefire.cygwinXmx>
+    <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
+    <surefire.Xmx>2800m</surefire.Xmx>
+    <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
     <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
@@ -1135,6 +1258,17 @@
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase-protocol</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-procedure</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-procedure</artifactId>
+        <version>${project.version}</version>
+        <type>test-jar</type>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1540,6 +1674,12 @@
         <artifactId>disruptor</artifactId>
         <version>${disruptor.version}</version>
       </dependency>
+        <dependency>
+        <groupId>net.spy</groupId>
+        <artifactId>spymemcached</artifactId>
+        <version>${spy.version}</version>
+        <optional>true</optional>
+    </dependency>
       <dependency>
         <groupId>org.jmock</groupId>
         <artifactId>jmock-junit4</artifactId>
@@ -1552,6 +1692,12 @@
           </exclusion>
         </exclusions>
       </dependency>
+     <dependency>
+       <groupId>org.bouncycastle</groupId>
+       <artifactId>bcprov-jdk16</artifactId>
+       <version>${bouncycastle.version}</version>
+       <scope>test</scope>
+     </dependency>
     </dependencies>
   </dependencyManagement>
   <!-- Dependencies needed by subprojects -->
@@ -1606,6 +1752,39 @@
 
   -->
   <profiles>
+    <!-- profile activated by the Jenkins patch testing job -->
+    <profile>
+      <id>jenkins.patch</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+        <property>
+            <name>HBasePatchProcess</name>
+        </property>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <phase>validate</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <tasks>
+                    <echo>Maven Exceution Environment</echo>
+                    <echo>MAVEN_OPTS="${env.MAVEN_OPTS}"</echo>
+                  </tasks>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>os.linux</id>
       <activation>
@@ -1838,6 +2017,12 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minikdc</artifactId>
+            <version>${hadoop-two.version}</version>
+            <scope>test</scope>
+          </dependency>
         </dependencies>
       </dependencyManagement>
     </profile>
@@ -2003,6 +2188,12 @@
              </exclusion>
            </exclusions>
          </dependency>
+         <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-minikdc</artifactId>
+            <version>${hadoop-three.version}</version>
+            <scope>test</scope>
+          </dependency>
        </dependencies>
      </dependencyManagement>
 
@@ -2430,13 +2621,31 @@
       </build>
     </profile>
     <profile>
-      <id>javac</id>
+      <id>errorProne</id>
       <activation>
         <activeByDefault>false</activeByDefault>
       </activation>
-      <properties>
-        <java.default.compiler>javac</java.default.compiler>
-      </properties>
+        <build>
+            <plugins>
+                <!-- Turn on error-prone -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.1</version>
+                    <configuration>
+                        <compilerId>javac-with-errorprone</compilerId>
+                        <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    </configuration>
+                    <dependencies>
+                        <dependency>
+                            <groupId>org.codehaus.plexus</groupId>
+                            <artifactId>plexus-compiler-javac-errorprone</artifactId>
+                            <version>2.5</version>
+                        </dependency>
+                    </dependencies>
+                </plugin>
+            </plugins>
+        </build>
     </profile>
   </profiles>
   <!-- See http://jira.codehaus.org/browse/MSITE-443 why the settings need to be here and not in pluginManagement. -->
@@ -2536,6 +2745,7 @@
         <artifactId>maven-checkstyle-plugin</artifactId>
         <version>2.13</version>
         <configuration>
+          <excludes>target/**</excludes>
           <configLocation>hbase/checkstyle.xml</configLocation>
           <suppressionsLocation>hbase/checkstyle-suppressions.xml</suppressionsLocation>
         </configuration>

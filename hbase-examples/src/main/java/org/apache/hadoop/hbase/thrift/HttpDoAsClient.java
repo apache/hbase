@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import sun.misc.BASE64Encoder;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
@@ -43,6 +42,7 @@ import org.apache.hadoop.hbase.thrift.generated.ColumnDescriptor;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.thrift.generated.TCell;
 import org.apache.hadoop.hbase.thrift.generated.TRowResult;
+import org.apache.hadoop.hbase.util.Base64;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
@@ -64,21 +64,24 @@ public class HttpDoAsClient {
   static protected String host;
   CharsetDecoder decoder = null;
   private static boolean secure = false;
+  static protected String doAsUser = null;
+  static protected String principal = null;
 
   public static void main(String[] args) throws Exception {
 
-    if (args.length < 2 || args.length > 3) {
+    if (args.length < 3 || args.length > 4) {
 
       System.out.println("Invalid arguments!");
-      System.out.println("Usage: DemoClient host port [secure=false]");
-
+      System.out.println("Usage: HttpDoAsClient host port doAsUserName [security=true]");
       System.exit(-1);
     }
 
-    port = Integer.parseInt(args[1]);
     host = args[0];
-    if (args.length > 2) {
-      secure = Boolean.parseBoolean(args[2]);
+    port = Integer.parseInt(args[1]);
+    doAsUser = args[2];
+    if (args.length > 3) {
+      secure = Boolean.parseBoolean(args[3]);
+      principal = getSubject().getPrincipals().iterator().next().getName();
     }
 
     final HttpDoAsClient client = new HttpDoAsClient();
@@ -134,7 +137,7 @@ public class HttpDoAsClient {
     for (ByteBuffer name : refresh(client, httpClient).getTableNames()) {
       System.out.println("  found: " + utf8(name.array()));
       if (utf8(name.array()).equals(utf8(t))) {
-        if (client.isTableEnabled(name)) {
+        if (refresh(client, httpClient).isTableEnabled(name)) {
           System.out.println("    disabling table: " + utf8(name.array()));
           refresh(client, httpClient).disableTable(name);
         }
@@ -180,8 +183,8 @@ public class HttpDoAsClient {
   }
 
   private Hbase.Client refresh(Hbase.Client client, THttpClient httpClient) {
+    httpClient.setCustomHeader("doAs", doAsUser);
     if(secure) {
-      httpClient.setCustomHeader("doAs", "hbase");
       try {
         httpClient.setCustomHeader("Authorization", generateTicket());
       } catch (GSSException e) {
@@ -196,14 +199,14 @@ public class HttpDoAsClient {
     // Oid for kerberos principal name
     Oid krb5PrincipalOid = new Oid("1.2.840.113554.1.2.2.1");
     Oid KERB_V5_OID = new Oid("1.2.840.113554.1.2.2");
-    final GSSName clientName = manager.createName("hbase/node-1.internal@INTERNAL",
+    final GSSName clientName = manager.createName(principal,
         krb5PrincipalOid);
     final GSSCredential clientCred = manager.createCredential(clientName,
         8 * 3600,
         KERB_V5_OID,
         GSSCredential.INITIATE_ONLY);
 
-    final GSSName serverName = manager.createName("hbase/node-1.internal@INTERNAL", krb5PrincipalOid);
+    final GSSName serverName = manager.createName(principal, krb5PrincipalOid);
 
     final GSSContext context = manager.createContext(serverName,
         KERB_V5_OID,
@@ -216,7 +219,7 @@ public class HttpDoAsClient {
     final byte[] outToken = context.initSecContext(new byte[0], 0, 0);
     StringBuffer outputBuffer = new StringBuffer();
     outputBuffer.append("Negotiate ");
-    outputBuffer.append(new BASE64Encoder().encode(outToken).replace("\n", ""));
+    outputBuffer.append(Base64.encodeBytes(outToken).replace("\n", ""));
     System.out.print("Ticket is: " + outputBuffer);
     return outputBuffer.toString();
   }

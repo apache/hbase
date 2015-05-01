@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.commons.logging.Log;
@@ -25,7 +26,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -40,28 +44,37 @@ import org.apache.hadoop.mapred.Reporter;
  * A Base for {@link TableInputFormat}s. Receives a {@link HTable}, a
  * byte[] of input columns and optionally a {@link Filter}.
  * Subclasses may use other TableRecordReader implementations.
+ *
+ * Subclasses MUST ensure initializeTable(Connection, TableName) is called for an instance to
+ * function properly. Each of the entry points to this class used by the MapReduce framework,
+ * {@link #getRecordReader(InputSplit, JobConf, Reporter)} and {@link #getSplits(JobConf, int)},
+ * will call {@link #initialize(JobConf)} as a convenient centralized location to handle
+ * retrieving the necessary configuration information. If your subclass overrides either of these
+ * methods, either call the parent version or call initialize yourself.
+ *
  * <p>
  * An example of a subclass:
  * <pre>
- *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+ *   class ExampleTIF extends TableInputFormatBase {
  *
- *     public void configure(JobConf job) {
- *       HTable exampleTable = new HTable(HBaseConfiguration.create(job),
- *         Bytes.toBytes("exampleTable"));
- *       // mandatory
- *       setHTable(exampleTable);
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *     {@literal @}Override
+ *     protected void initialize(JobConf context) throws IOException {
+ *       // We are responsible for the lifecycle of this connection until we hand it over in
+ *       // initializeTable.
+ *       Connection connection =
+ *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+ *       TableName tableName = TableName.valueOf("exampleTable");
+ *       // mandatory. once passed here, TableInputFormatBase will handle closing the connection.
+ *       initializeTable(connection, tableName);
+ *       byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
  *         Bytes.toBytes("columnB") };
  *       // mandatory
  *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
+ *       // optional, by default we'll get everything for the given columns.
+ *       Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
  *       setRowFilter(exampleFilter);
  *     }
- *
- *     public void validateInput(JobConf job) throws IOException {
- *     }
- *  }
+ *   }
  * </pre>
  */
 
@@ -71,9 +84,18 @@ public abstract class TableInputFormatBase
 implements InputFormat<ImmutableBytesWritable, Result> {
   private static final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
   private byte [][] inputColumns;
-  private HTable table;
+  private Table table;
+  private RegionLocator regionLocator;
+  private Connection connection;
   private TableRecordReader tableRecordReader;
   private Filter rowFilter;
+
+  private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
+      "initialized. Ensure you call initializeTable either in your constructor or initialize " +
+      "method";
+  private static final String INITIALIZATION_ERROR = "Cannot create a record reader because of a" +
+            " previous error. Please look at the previous logs lines from" +
+            " the task's full log for more details.";
 
   /**
    * Builds a TableRecordReader. If no TableRecordReader was provided, uses
@@ -85,19 +107,63 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   public RecordReader<ImmutableBytesWritable, Result> getRecordReader(
       InputSplit split, JobConf job, Reporter reporter)
   throws IOException {
-    TableSplit tSplit = (TableSplit) split;
-    TableRecordReader trr = this.tableRecordReader;
-    // if no table record reader was provided use default
-    if (trr == null) {
-      trr = new TableRecordReader();
+    // In case a subclass uses the deprecated approach or calls initializeTable directly
+    if (table == null) {
+      initialize(job);
     }
+    // null check in case our child overrides getTable to not throw.
+    try {
+      if (getTable() == null) {
+        // initialize() must not have been implemented in the subclass.
+        throw new IOException(INITIALIZATION_ERROR);
+      }
+    } catch (IllegalStateException exception) {
+      throw new IOException(INITIALIZATION_ERROR, exception);
+    }
+
+    TableSplit tSplit = (TableSplit) split;
+    // if no table record reader was provided use default
+    final TableRecordReader trr = this.tableRecordReader == null ? new TableRecordReader() :
+        this.tableRecordReader;
     trr.setStartRow(tSplit.getStartRow());
     trr.setEndRow(tSplit.getEndRow());
     trr.setHTable(this.table);
     trr.setInputColumns(this.inputColumns);
     trr.setRowFilter(this.rowFilter);
     trr.init();
-    return trr;
+    return new RecordReader<ImmutableBytesWritable, Result>() {
+
+      @Override
+      public void close() throws IOException {
+        trr.close();
+        closeTable();
+      }
+
+      @Override
+      public ImmutableBytesWritable createKey() {
+        return trr.createKey();
+      }
+
+      @Override
+      public Result createValue() {
+        return trr.createValue();
+      }
+
+      @Override
+      public long getPos() throws IOException {
+        return trr.getPos();
+      }
+
+      @Override
+      public float getProgress() throws IOException {
+        return trr.getProgress();
+      }
+
+      @Override
+      public boolean next(ImmutableBytesWritable key, Result value) throws IOException {
+        return trr.next(key, value);
+      }
+    };
   }
 
   /**
@@ -121,9 +187,19 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    */
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
     if (this.table == null) {
-      throw new IOException("No table was provided");
+      initialize(job);
     }
-    byte [][] startKeys = this.table.getStartKeys();
+    // null check in case our child overrides getTable to not throw.
+    try {
+      if (getTable() == null) {
+        // initialize() must not have been implemented in the subclass.
+        throw new IOException(INITIALIZATION_ERROR);
+      }
+    } catch (IllegalStateException exception) {
+      throw new IOException(INITIALIZATION_ERROR, exception);
+    }
+
+    byte [][] startKeys = this.regionLocator.getStartKeys();
     if (startKeys == null || startKeys.length == 0) {
       throw new IOException("Expecting at least one region");
     }
@@ -138,7 +214,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
     for (int i = 0; i < realNumSplits; i++) {
       int lastPos = startPos + middle;
       lastPos = startKeys.length % realNumSplits > i ? lastPos + 1 : lastPos;
-      String regionLocation = table.getRegionLocation(startKeys[startPos]).
+      String regionLocation = regionLocator.getRegionLocation(startKeys[startPos]).
         getHostname();
       splits[i] = new TableSplit(this.table.getName(),
         startKeys[startPos], ((i + 1) < realNumSplits) ? startKeys[lastPos]:
@@ -150,6 +226,23 @@ implements InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
+   * Allows subclasses to initialize the table information.
+   *
+   * @param connection  The Connection to the HBase cluster. MUST be unmanaged. We will close.
+   * @param tableName  The {@link TableName} of the table to process.
+   * @throws IOException
+   */
+  protected void initializeTable(Connection connection, TableName tableName) throws IOException {
+    if (this.table != null || this.connection != null) {
+      LOG.warn("initializeTable called multiple times. Overwriting connection and table " +
+          "reference; TableInputFormatBase will not close these old references when done.");
+    }
+    this.table = connection.getTable(tableName);
+    this.regionLocator = connection.getRegionLocator(tableName);
+    this.connection = connection;
+  }
+
+  /**
    * @param inputColumns to be passed in {@link Result} to the map task.
    */
   protected void setInputColumns(byte [][] inputColumns) {
@@ -158,8 +251,20 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Allows subclasses to get the {@link HTable}.
+   * @deprecated use {@link #getTable()}
    */
-  protected Table getHTable() {
+  @Deprecated
+  protected HTable getHTable() {
+    return (HTable) getTable();
+  }
+
+  /**
+   * Allows subclasses to get the {@link Table}.
+   */
+  protected Table getTable() {
+    if (table == null) {
+      throw new IllegalStateException(NOT_INITIALIZED);
+    }
     return this.table;
   }
 
@@ -167,7 +272,9 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    * Allows subclasses to set the {@link HTable}.
    *
    * @param table to get the data from
+   * @deprecated use {@link #initializeTable(Connection,TableName)}
    */
+  @Deprecated
   protected void setHTable(HTable table) {
     this.table = table;
   }
@@ -189,5 +296,41 @@ implements InputFormat<ImmutableBytesWritable, Result> {
    */
   protected void setRowFilter(Filter rowFilter) {
     this.rowFilter = rowFilter;
+  }
+
+  /**
+   * Handle subclass specific set up.
+   * Each of the entry points used by the MapReduce framework,
+   * {@link #getRecordReader(InputSplit, JobConf, Reporter)} and {@link #getSplits(JobConf, int)},
+   * will call {@link #initialize(JobConf)} as a convenient centralized location to handle
+   * retrieving the necessary configuration information and calling
+   * {@link #initializeTable(Connection, TableName)}.
+   *
+   * Subclasses should implement their initialize call such that it is safe to call multiple times.
+   * The current TableInputFormatBase implementation relies on a non-null table reference to decide
+   * if an initialize call is needed, but this behavior may change in the future. In particular,
+   * it is critical that initializeTable not be called multiple times since this will leak
+   * Connection instances.
+   *
+   */
+  protected void initialize(JobConf job) throws IOException {
+  }
+
+  /**
+   * Close the Table and related objects that were initialized via
+   * {@link #initializeTable(Connection, TableName)}.
+   *
+   * @throws IOException
+   */
+  protected void closeTable() throws IOException {
+    close(table, connection);
+    table = null;
+    connection = null;
+  }
+
+  private void close(Closeable... closables) throws IOException {
+    for (Closeable c : closables) {
+      if(c != null) { c.close(); }
+    }
   }
 }

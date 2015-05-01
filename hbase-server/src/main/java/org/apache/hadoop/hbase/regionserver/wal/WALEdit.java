@@ -126,6 +126,15 @@ public class WALEdit implements Writable, HeapSize {
     return CellUtil.matchingFamily(cell, METAFAMILY);
   }
 
+  public boolean isMetaEdit() {
+    for (Cell cell: cells) {
+      if (!isMetaEditFamily(cell)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /**
    * @return True when current WALEdit is created by log replay. Replication skips WALEdits from
    *         replay.
@@ -345,7 +354,7 @@ public class WALEdit implements Writable, HeapSize {
         bulkLoadDescriptor.toByteArray());
     return new WALEdit().add(kv);
   }
-  
+
   /**
    * Deserialized and returns a BulkLoadDescriptor from the passed in Cell
    * @param cell the key value

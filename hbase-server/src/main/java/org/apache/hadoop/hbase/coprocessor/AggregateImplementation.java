@@ -26,10 +26,10 @@ import java.util.NavigableSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -114,7 +114,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Maximum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + max);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + max);
     done.run(response);
   }
 
@@ -167,7 +167,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Minimum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + min);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + min);
     done.run(response);
   }
 
@@ -222,7 +222,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.debug("Sum from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + sum);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + sum);
     done.run(response);
   }
 
@@ -273,7 +273,7 @@ extends AggregateService implements CoprocessorService, Coprocessor {
       }
     }
     log.info("Row counter from this region is "
-        + env.getRegion().getRegionNameAsString() + ": " + counter);
+        + env.getRegion().getRegionInfo().getRegionNameAsString() + ": " + counter);
     done.run(response);
   }
 

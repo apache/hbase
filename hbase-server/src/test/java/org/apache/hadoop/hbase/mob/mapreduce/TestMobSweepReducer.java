@@ -37,9 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
@@ -74,7 +72,7 @@ public class TestMobSweepReducer {
   private final static String row = "row";
   private final static String family = "family";
   private final static String qf = "qf";
-  private static HTable table;
+  private static BufferedMutator table;
   private static Admin admin;
 
   @BeforeClass
@@ -104,7 +102,8 @@ public class TestMobSweepReducer {
 
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
-    table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getBufferedMutator(TableName.valueOf(tableName));
   }
 
   @After
@@ -138,12 +137,12 @@ public class TestMobSweepReducer {
     Path mobFamilyPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tn, family);
 
     Put put = new Put(Bytes.toBytes(row));
-    put.add(Bytes.toBytes(family), Bytes.toBytes(qf), 1, mobValueBytes);
+    put.addColumn(Bytes.toBytes(family), Bytes.toBytes(qf), 1, mobValueBytes);
     Put put2 = new Put(Bytes.toBytes(row + "ignore"));
-    put2.add(Bytes.toBytes(family), Bytes.toBytes(qf), 1, mobValueBytes);
-    table.put(put);
-    table.put(put2);
-    table.flushCommits();
+    put2.addColumn(Bytes.toBytes(family), Bytes.toBytes(qf), 1, mobValueBytes);
+    table.mutate(put);
+    table.mutate(put2);
+    table.flush();
     admin.flush(tn);
 
     FileStatus[] fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);

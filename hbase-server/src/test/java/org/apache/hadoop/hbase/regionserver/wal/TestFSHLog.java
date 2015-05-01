@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -451,7 +452,7 @@ public class TestFSHLog {
             System.currentTimeMillis(), clusterIds, -1, -1);
         wal.append(htd, info, logkey, edits, region.getSequenceId(), true, null);
       }
-      region.flushcache();
+      region.flush(true);
       // FlushResult.flushSequenceId is not visible here so go get the current sequence id.
       long currentSequenceId = region.getSequenceId().get();
       // Now release the appends

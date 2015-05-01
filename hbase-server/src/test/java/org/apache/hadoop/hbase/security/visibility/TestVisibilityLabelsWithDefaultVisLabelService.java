@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -150,20 +149,16 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // Scan the visibility label
     Scan s = new Scan();
     s.setAuthorizations(new Authorizations(VisibilityUtils.SYSTEM_LABEL));
-    Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);
+
     int i = 0;
-    try {
-      ResultScanner scanner = ht.getScanner(s);
+    try (Table ht = TEST_UTIL.getConnection().getTable(LABELS_TABLE_NAME);
+         ResultScanner scanner = ht.getScanner(s)) {
       while (true) {
         Result next = scanner.next();
         if (next == null) {
           break;
         }
         i++;
-      }
-    } finally {
-      if (ht != null) {
-        ht.close();
       }
     }
     // One label is the "system" label.

@@ -40,7 +40,6 @@ import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
 import com.google.protobuf.*;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -56,6 +55,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
-import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -89,6 +88,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.MergeRegionsReques
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.CellProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.Col
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionLoad;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
 import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
@@ -120,6 +121,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
@@ -133,6 +135,8 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSink;
+import org.apache.hadoop.hbase.replication.ReplicationLoadSource;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.security.access.UserPermission;
@@ -145,6 +149,7 @@ import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
@@ -1277,6 +1282,7 @@ public final class ProtobufUtil {
     }
 
     builder.setStale(result.isStale());
+    builder.setPartial(result.isPartial());
 
     return builder.build();
   }
@@ -1335,7 +1341,7 @@ public final class ProtobufUtil {
     for (CellProtos.Cell c : values) {
       cells.add(toCell(c));
     }
-    return Result.create(cells, null, proto.getStale());
+    return Result.create(cells, null, proto.getStale(), proto.getPartial());
   }
 
   /**
@@ -1718,6 +1724,26 @@ public final class ProtobufUtil {
     }
   }
 
+  /**
+   * A helper to warmup a region given a region name
+   * using admin protocol
+   *
+   * @param admin
+   * @param regionInfo
+   *
+   */
+  public static void warmupRegion(final AdminService.BlockingInterface admin,
+      final HRegionInfo regionInfo) throws IOException  {
+
+    try {
+      WarmupRegionRequest warmupRegionRequest =
+           RequestConverter.buildWarmupRegionRequest(regionInfo);
+
+      admin.warmupRegion(null, warmupRegionRequest);
+    } catch (ServiceException e) {
+      throw getRemoteException(e);
+    }
+  }
 
   /**
    * A helper to open a region using admin protocol.
@@ -1735,6 +1761,7 @@ public final class ProtobufUtil {
       throw ProtobufUtil.getRemoteException(se);
     }
   }
+
 
   /**
    * A helper to get the all the online regions on a region
@@ -2576,6 +2603,7 @@ public final class ProtobufUtil {
     FlushDescriptor.Builder desc = FlushDescriptor.newBuilder()
         .setAction(action)
         .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
+        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
         .setFlushSequenceNumber(flushSeqId)
         .setTableName(ByteStringer.wrap(hri.getTable().getName()));
 
@@ -2601,6 +2629,7 @@ public final class ProtobufUtil {
         .setEventType(eventType)
         .setTableName(ByteStringer.wrap(hri.getTable().getName()))
         .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
+        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
         .setLogSequenceNumber(seqId)
         .setServer(toServerName(server));
 
@@ -2991,7 +3020,6 @@ public final class ProtobufUtil {
   }
 
 
-
   /**
    * This version of protobuf's mergeDelimitedFrom avoid the hard-coded 64MB limit for decoding
    * buffers
@@ -3070,5 +3098,41 @@ public final class ProtobufUtil {
       }
       return result;
     }
+  }
+
+  public static ReplicationLoadSink toReplicationLoadSink(
+      ClusterStatusProtos.ReplicationLoadSink cls) {
+    return new ReplicationLoadSink(cls.getAgeOfLastAppliedOp(), cls.getTimeStampsOfLastAppliedOp());
+  }
+
+  public static ReplicationLoadSource toReplicationLoadSource(
+      ClusterStatusProtos.ReplicationLoadSource cls) {
+    return new ReplicationLoadSource(cls.getPeerID(), cls.getAgeOfLastShippedOp(),
+        cls.getSizeOfLogQueue(), cls.getTimeStampOfLastShippedOp(), cls.getReplicationLag());
+  }
+
+  public static List<ReplicationLoadSource> toReplicationLoadSourceList(
+      List<ClusterStatusProtos.ReplicationLoadSource> clsList) {
+    ArrayList<ReplicationLoadSource> rlsList = new ArrayList<ReplicationLoadSource>();
+    for (ClusterStatusProtos.ReplicationLoadSource cls : clsList) {
+      rlsList.add(toReplicationLoadSource(cls));
+    }
+    return rlsList;
+  }
+
+  /**
+   * Get a protocol buffer VersionInfo
+   *
+   * @return the converted protocol buffer VersionInfo
+   */
+  public static RPCProtos.VersionInfo getVersionInfo() {
+    RPCProtos.VersionInfo.Builder builder = RPCProtos.VersionInfo.newBuilder();
+    builder.setVersion(VersionInfo.getVersion());
+    builder.setUrl(VersionInfo.getUrl());
+    builder.setRevision(VersionInfo.getRevision());
+    builder.setUser(VersionInfo.getUser());
+    builder.setDate(VersionInfo.getDate());
+    builder.setSrcChecksum(VersionInfo.getSrcChecksum());
+    return builder.build();
   }
 }

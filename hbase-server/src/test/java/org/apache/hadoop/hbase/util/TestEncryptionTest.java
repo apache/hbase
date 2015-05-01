@@ -75,10 +75,12 @@ public class TestEncryptionTest {
   public void testTestCipher() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     try {
-      EncryptionTest.testEncryption(conf, "AES", null);
+      EncryptionTest.testEncryption(conf, algorithm, null);
     } catch (Exception e) {
-      fail("Test for cipher AES should have succeeded");
+      fail("Test for cipher " + algorithm + " should have succeeded");
     }
     try {
       EncryptionTest.testEncryption(conf, "foobar", null);

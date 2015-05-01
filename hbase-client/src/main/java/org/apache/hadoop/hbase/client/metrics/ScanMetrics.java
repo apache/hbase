@@ -22,15 +22,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 import com.google.common.collect.ImmutableMap;
 
 
 /**
- * Provides client-side metrics related to scan operations
+ * Provides client-side metrics related to scan operations.
  * The data can be passed to mapreduce framework or other systems.
  * We use atomic longs so that one thread can increment,
  * while another atomically resets to zero after the values are reported
@@ -40,11 +39,9 @@ import com.google.common.collect.ImmutableMap;
  * However, there is no need for this. So they are defined under scan operation
  * for now.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class ScanMetrics {
-
-
-  private static final Log LOG = LogFactory.getLog(ScanMetrics.class);
 
   /**
    * Hash to hold the String -> Atomic Long mappings.

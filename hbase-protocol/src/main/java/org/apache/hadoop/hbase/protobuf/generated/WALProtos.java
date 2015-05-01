@@ -5522,6 +5522,24 @@ public final class WALProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptorOrBuilder getStoreFlushesOrBuilder(
         int index);
+
+    // optional bytes region_name = 6;
+    /**
+     * <code>optional bytes region_name = 6;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    boolean hasRegionName();
+    /**
+     * <code>optional bytes region_name = 6;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    com.google.protobuf.ByteString getRegionName();
   }
   /**
    * Protobuf type {@code FlushDescriptor}
@@ -5613,6 +5631,11 @@ public final class WALProtos {
               storeFlushes_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.StoreFlushDescriptor.PARSER, extensionRegistry));
               break;
             }
+            case 50: {
+              bitField0_ |= 0x00000010;
+              regionName_ = input.readBytes();
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -5672,6 +5695,14 @@ public final class WALProtos {
        * <code>ABORT_FLUSH = 2;</code>
        */
       ABORT_FLUSH(2, 2),
+      /**
+       * <code>CANNOT_FLUSH = 3;</code>
+       *
+       * <pre>
+       * marker for indicating that a flush has been requested but cannot complete
+       * </pre>
+       */
+      CANNOT_FLUSH(3, 3),
       ;
 
       /**
@@ -5686,6 +5717,14 @@ public final class WALProtos {
        * <code>ABORT_FLUSH = 2;</code>
        */
       public static final int ABORT_FLUSH_VALUE = 2;
+      /**
+       * <code>CANNOT_FLUSH = 3;</code>
+       *
+       * <pre>
+       * marker for indicating that a flush has been requested but cannot complete
+       * </pre>
+       */
+      public static final int CANNOT_FLUSH_VALUE = 3;
 
 
       public final int getNumber() { return value; }
@@ -5695,6 +5734,7 @@ public final class WALProtos {
           case 0: return START_FLUSH;
           case 1: return COMMIT_FLUSH;
           case 2: return ABORT_FLUSH;
+          case 3: return CANNOT_FLUSH;
           default: return null;
         }
       }
@@ -6772,12 +6812,37 @@ public final class WALProtos {
       return storeFlushes_.get(index);
     }
 
+    // optional bytes region_name = 6;
+    public static final int REGION_NAME_FIELD_NUMBER = 6;
+    private com.google.protobuf.ByteString regionName_;
+    /**
+     * <code>optional bytes region_name = 6;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public boolean hasRegionName() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>optional bytes region_name = 6;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public com.google.protobuf.ByteString getRegionName() {
+      return regionName_;
+    }
+
     private void initFields() {
       action_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction.START_FLUSH;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
       encodedRegionName_ = com.google.protobuf.ByteString.EMPTY;
       flushSequenceNumber_ = 0L;
       storeFlushes_ = java.util.Collections.emptyList();
+      regionName_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -6824,6 +6889,9 @@ public final class WALProtos {
       for (int i = 0; i < storeFlushes_.size(); i++) {
         output.writeMessage(5, storeFlushes_.get(i));
       }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(6, regionName_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -6852,6 +6920,10 @@ public final class WALProtos {
       for (int i = 0; i < storeFlushes_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(5, storeFlushes_.get(i));
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, regionName_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -6898,6 +6970,11 @@ public final class WALProtos {
       }
       result = result && getStoreFlushesList()
           .equals(other.getStoreFlushesList());
+      result = result && (hasRegionName() == other.hasRegionName());
+      if (hasRegionName()) {
+        result = result && getRegionName()
+            .equals(other.getRegionName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -6930,6 +7007,10 @@ public final class WALProtos {
       if (getStoreFlushesCount() > 0) {
         hash = (37 * hash) + STORE_FLUSHES_FIELD_NUMBER;
         hash = (53 * hash) + getStoreFlushesList().hashCode();
+      }
+      if (hasRegionName()) {
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -7060,6 +7141,8 @@ public final class WALProtos {
         } else {
           storeFlushesBuilder_.clear();
         }
+        regionName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -7113,6 +7196,10 @@ public final class WALProtos {
         } else {
           result.storeFlushes_ = storeFlushesBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.regionName_ = regionName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -7166,6 +7253,9 @@ public final class WALProtos {
               storeFlushesBuilder_.addAllMessages(other.storeFlushes_);
             }
           }
+        }
+        if (other.hasRegionName()) {
+          setRegionName(other.getRegionName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -7591,6 +7681,58 @@ public final class WALProtos {
           storeFlushes_ = null;
         }
         return storeFlushesBuilder_;
+      }
+
+      // optional bytes region_name = 6;
+      private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes region_name = 6;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public boolean hasRegionName() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional bytes region_name = 6;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public com.google.protobuf.ByteString getRegionName() {
+        return regionName_;
+      }
+      /**
+       * <code>optional bytes region_name = 6;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder setRegionName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        regionName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes region_name = 6;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder clearRegionName() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        regionName_ = getDefaultInstance().getRegionName();
+        onChanged();
+        return this;
       }
 
       // @@protoc_insertion_point(builder_scope:FlushDescriptor)
@@ -9772,6 +9914,24 @@ public final class WALProtos {
      * </pre>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
+
+    // optional bytes region_name = 7;
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    boolean hasRegionName();
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    com.google.protobuf.ByteString getRegionName();
   }
   /**
    * Protobuf type {@code RegionEventDescriptor}
@@ -9874,6 +10034,11 @@ public final class WALProtos {
                 server_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00000010;
+              break;
+            }
+            case 58: {
+              bitField0_ |= 0x00000020;
+              regionName_ = input.readBytes();
               break;
             }
           }
@@ -10135,6 +10300,30 @@ public final class WALProtos {
       return server_;
     }
 
+    // optional bytes region_name = 7;
+    public static final int REGION_NAME_FIELD_NUMBER = 7;
+    private com.google.protobuf.ByteString regionName_;
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public boolean hasRegionName() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>optional bytes region_name = 7;</code>
+     *
+     * <pre>
+     * full region name
+     * </pre>
+     */
+    public com.google.protobuf.ByteString getRegionName() {
+      return regionName_;
+    }
+
     private void initFields() {
       eventType_ = org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType.REGION_OPEN;
       tableName_ = com.google.protobuf.ByteString.EMPTY;
@@ -10142,6 +10331,7 @@ public final class WALProtos {
       logSequenceNumber_ = 0L;
       stores_ = java.util.Collections.emptyList();
       server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      regionName_ = com.google.protobuf.ByteString.EMPTY;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -10197,6 +10387,9 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         output.writeMessage(6, server_);
       }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(7, regionName_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -10229,6 +10422,10 @@ public final class WALProtos {
       if (((bitField0_ & 0x00000010) == 0x00000010)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, server_);
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(7, regionName_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -10280,6 +10477,11 @@ public final class WALProtos {
         result = result && getServer()
             .equals(other.getServer());
       }
+      result = result && (hasRegionName() == other.hasRegionName());
+      if (hasRegionName()) {
+        result = result && getRegionName()
+            .equals(other.getRegionName());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -10316,6 +10518,10 @@ public final class WALProtos {
       if (hasServer()) {
         hash = (37 * hash) + SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getServer().hashCode();
+      }
+      if (hasRegionName()) {
+        hash = (37 * hash) + REGION_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionName().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -10453,6 +10659,8 @@ public final class WALProtos {
           serverBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000020);
+        regionName_ = com.google.protobuf.ByteString.EMPTY;
+        bitField0_ = (bitField0_ & ~0x00000040);
         return this;
       }
 
@@ -10514,6 +10722,10 @@ public final class WALProtos {
         } else {
           result.server_ = serverBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.regionName_ = regionName_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -10570,6 +10782,9 @@ public final class WALProtos {
         }
         if (other.hasServer()) {
           mergeServer(other.getServer());
+        }
+        if (other.hasRegionName()) {
+          setRegionName(other.getRegionName());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -11156,6 +11371,58 @@ public final class WALProtos {
         return serverBuilder_;
       }
 
+      // optional bytes region_name = 7;
+      private com.google.protobuf.ByteString regionName_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public boolean hasRegionName() {
+        return ((bitField0_ & 0x00000040) == 0x00000040);
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public com.google.protobuf.ByteString getRegionName() {
+        return regionName_;
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder setRegionName(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000040;
+        regionName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bytes region_name = 7;</code>
+       *
+       * <pre>
+       * full region name
+       * </pre>
+       */
+      public Builder clearRegionName() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        regionName_ = getDefaultInstance().getRegionName();
+        onChanged();
+        return this;
+      }
+
       // @@protoc_insertion_point(builder_scope:RegionEventDescriptor)
     }
 
@@ -11598,32 +11865,34 @@ public final class WALProtos {
       "n_name\030\002 \002(\014\022\023\n\013family_name\030\003 \002(\014\022\030\n\020com" +
       "paction_input\030\004 \003(\t\022\031\n\021compaction_output" +
       "\030\005 \003(\t\022\026\n\016store_home_dir\030\006 \002(\t\022\023\n\013region" +
-      "_name\030\007 \001(\014\"\353\002\n\017FlushDescriptor\022,\n\006actio" +
+      "_name\030\007 \001(\014\"\222\003\n\017FlushDescriptor\022,\n\006actio" +
       "n\030\001 \002(\0162\034.FlushDescriptor.FlushAction\022\022\n",
       "\ntable_name\030\002 \002(\014\022\033\n\023encoded_region_name" +
       "\030\003 \002(\014\022\035\n\025flush_sequence_number\030\004 \001(\004\022<\n" +
       "\rstore_flushes\030\005 \003(\0132%.FlushDescriptor.S" +
-      "toreFlushDescriptor\032Y\n\024StoreFlushDescrip" +
-      "tor\022\023\n\013family_name\030\001 \002(\014\022\026\n\016store_home_d" +
-      "ir\030\002 \002(\t\022\024\n\014flush_output\030\003 \003(\t\"A\n\013FlushA" +
-      "ction\022\017\n\013START_FLUSH\020\000\022\020\n\014COMMIT_FLUSH\020\001" +
-      "\022\017\n\013ABORT_FLUSH\020\002\"R\n\017StoreDescriptor\022\023\n\013" +
-      "family_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(" +
-      "\t\022\022\n\nstore_file\030\003 \003(\t\"\215\001\n\022BulkLoadDescri",
-      "ptor\022\036\n\ntable_name\030\001 \002(\0132\n.TableName\022\033\n\023" +
-      "encoded_region_name\030\002 \002(\014\022 \n\006stores\030\003 \003(" +
-      "\0132\020.StoreDescriptor\022\030\n\020bulkload_seq_num\030" +
-      "\004 \002(\003\"\212\002\n\025RegionEventDescriptor\0224\n\nevent" +
-      "_type\030\001 \002(\0162 .RegionEventDescriptor.Even" +
-      "tType\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_reg" +
-      "ion_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 " +
-      "\001(\004\022 \n\006stores\030\005 \003(\0132\020.StoreDescriptor\022\033\n" +
-      "\006server\030\006 \001(\0132\013.ServerName\".\n\tEventType\022" +
-      "\017\n\013REGION_OPEN\020\000\022\020\n\014REGION_CLOSE\020\001\"\014\n\nWA",
-      "LTrailer*F\n\tScopeType\022\033\n\027REPLICATION_SCO" +
-      "PE_LOCAL\020\000\022\034\n\030REPLICATION_SCOPE_GLOBAL\020\001" +
-      "B?\n*org.apache.hadoop.hbase.protobuf.gen" +
-      "eratedB\tWALProtosH\001\210\001\000\240\001\001"
+      "toreFlushDescriptor\022\023\n\013region_name\030\006 \001(\014" +
+      "\032Y\n\024StoreFlushDescriptor\022\023\n\013family_name\030" +
+      "\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t\022\024\n\014flush_o" +
+      "utput\030\003 \003(\t\"S\n\013FlushAction\022\017\n\013START_FLUS" +
+      "H\020\000\022\020\n\014COMMIT_FLUSH\020\001\022\017\n\013ABORT_FLUSH\020\002\022\020" +
+      "\n\014CANNOT_FLUSH\020\003\"R\n\017StoreDescriptor\022\023\n\013f" +
+      "amily_name\030\001 \002(\014\022\026\n\016store_home_dir\030\002 \002(\t",
+      "\022\022\n\nstore_file\030\003 \003(\t\"\215\001\n\022BulkLoadDescrip" +
+      "tor\022\036\n\ntable_name\030\001 \002(\0132\n.TableName\022\033\n\023e" +
+      "ncoded_region_name\030\002 \002(\014\022 \n\006stores\030\003 \003(\013" +
+      "2\020.StoreDescriptor\022\030\n\020bulkload_seq_num\030\004" +
+      " \002(\003\"\237\002\n\025RegionEventDescriptor\0224\n\nevent_" +
+      "type\030\001 \002(\0162 .RegionEventDescriptor.Event" +
+      "Type\022\022\n\ntable_name\030\002 \002(\014\022\033\n\023encoded_regi" +
+      "on_name\030\003 \002(\014\022\033\n\023log_sequence_number\030\004 \001" +
+      "(\004\022 \n\006stores\030\005 \003(\0132\020.StoreDescriptor\022\033\n\006" +
+      "server\030\006 \001(\0132\013.ServerName\022\023\n\013region_name",
+      "\030\007 \001(\014\".\n\tEventType\022\017\n\013REGION_OPEN\020\000\022\020\n\014" +
+      "REGION_CLOSE\020\001\"\014\n\nWALTrailer*F\n\tScopeTyp" +
+      "e\022\033\n\027REPLICATION_SCOPE_LOCAL\020\000\022\034\n\030REPLIC" +
+      "ATION_SCOPE_GLOBAL\020\001B?\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\tWALProtosH\001\210" +
+      "\001\000\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11659,7 +11928,7 @@ public final class WALProtos {
           internal_static_FlushDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_FlushDescriptor_descriptor,
-              new java.lang.String[] { "Action", "TableName", "EncodedRegionName", "FlushSequenceNumber", "StoreFlushes", });
+              new java.lang.String[] { "Action", "TableName", "EncodedRegionName", "FlushSequenceNumber", "StoreFlushes", "RegionName", });
           internal_static_FlushDescriptor_StoreFlushDescriptor_descriptor =
             internal_static_FlushDescriptor_descriptor.getNestedTypes().get(0);
           internal_static_FlushDescriptor_StoreFlushDescriptor_fieldAccessorTable = new
@@ -11683,7 +11952,7 @@ public final class WALProtos {
           internal_static_RegionEventDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RegionEventDescriptor_descriptor,
-              new java.lang.String[] { "EventType", "TableName", "EncodedRegionName", "LogSequenceNumber", "Stores", "Server", });
+              new java.lang.String[] { "EventType", "TableName", "EncodedRegionName", "LogSequenceNumber", "Stores", "Server", "RegionName", });
           internal_static_WALTrailer_descriptor =
             getDescriptor().getMessageTypes().get(8);
           internal_static_WALTrailer_fieldAccessorTable = new

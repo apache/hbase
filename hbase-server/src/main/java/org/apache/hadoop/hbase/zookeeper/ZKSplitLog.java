@@ -26,12 +26,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -78,6 +78,19 @@ public class ZKSplitLog {
     return ZKUtil.joinZNode(zkw.splitLogZNode, "RESCAN");
   }
 
+  /**
+   * @param name the last part in path
+   * @return whether the node name represents a rescan node
+   */
+  public static boolean isRescanNode(String name) {
+    return name.startsWith("RESCAN");
+  }
+
+  /**
+   * @param zkw
+   * @param path the absolute path, starts with '/'
+   * @return whether the path represents a rescan node
+   */
   public static boolean isRescanNode(ZooKeeperWatcher zkw, String path) {
     String prefix = getRescanNode(zkw);
     if (path.length() <= prefix.length()) {

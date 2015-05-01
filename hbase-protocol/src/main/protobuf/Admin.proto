@@ -90,6 +90,14 @@ message OpenRegionResponse {
   }
 }
 
+message WarmupRegionRequest {
+
+    required RegionInfo regionInfo = 1;
+}
+
+message WarmupRegionResponse {
+}
+
 /**
  * Closes the specified region and will use or not use ZK during the close
  * according to the specified flag.
@@ -115,11 +123,13 @@ message CloseRegionResponse {
 message FlushRegionRequest {
   required RegionSpecifier region = 1;
   optional uint64 if_older_than_ts = 2;
+  optional bool write_flush_wal_marker = 3; // whether to write a marker to WAL even if not flushed
 }
 
 message FlushRegionResponse {
   required uint64 last_flush_time = 1;
   optional bool flushed = 2;
+  optional bool wrote_flush_wal_marker = 3;
 }
 
 /**
@@ -250,6 +260,9 @@ service AdminService {
 
   rpc OpenRegion(OpenRegionRequest)
     returns(OpenRegionResponse);
+
+  rpc WarmupRegion(WarmupRegionRequest)
+    returns(WarmupRegionResponse);
 
   rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);

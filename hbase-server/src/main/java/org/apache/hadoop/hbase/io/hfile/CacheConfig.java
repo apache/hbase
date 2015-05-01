@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -126,8 +127,25 @@ public class CacheConfig {
    */
   public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.offheapcache.minblocksize";
 
-  // Defaults
+  private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
+  private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
 
+  private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY="hbase.blockcache.external.class";
+
+  /**
+   * Enum of all built in external block caches.
+   * This is used for config.
+   */
+  private static enum ExternalBlockCaches {
+    memcached(MemcachedBlockCache.class);
+    // TODO(eclark): Consider more. Redis, etc.
+    Class<? extends BlockCache> clazz;
+    ExternalBlockCaches(Class<? extends BlockCache> clazz) {
+      this.clazz = clazz;
+    }
+  }
+
+  // Defaults
   public static final boolean DEFAULT_CACHE_DATA_ON_READ = true;
   public static final boolean DEFAULT_CACHE_DATA_ON_WRITE = false;
   public static final boolean DEFAULT_IN_MEMORY = false;
@@ -478,7 +496,44 @@ public class CacheConfig {
    * @return Returns L2 block cache instance (for now it is BucketCache BlockCache all the time)
    * or null if not supposed to be a L2.
    */
-  private static BucketCache getL2(final Configuration c, final MemoryUsage mu) {
+  private static BlockCache getL2(final Configuration c, final MemoryUsage mu) {
+    final boolean useExternal = c.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Trying to use " + (useExternal?" External":" Internal") + " l2 cache");
+    }
+
+    // If we want to use an external block cache then create that.
+    if (useExternal) {
+      return getExternalBlockcache(c);
+    }
+
+    // otherwise use the bucket cache.
+    return getBucketCache(c, mu);
+
+  }
+
+  private static BlockCache getExternalBlockcache(Configuration c) {
+    Class klass = null;
+
+    // Get the class, from the config. s
+    try {
+      klass = ExternalBlockCaches.valueOf(c.get(EXTERNAL_BLOCKCACHE_CLASS_KEY, "memcache")).clazz;
+    } catch (IllegalArgumentException exception) {
+      klass = c.getClass(EXTERNAL_BLOCKCACHE_CLASS_KEY, MemcachedBlockCache.class);
+    }
+
+    // Now try and create an instance of the block cache.
+    try {
+      LOG.info("Creating external block cache of type: " + klass);
+      return (BlockCache) ReflectionUtils.newInstance(klass, c);
+    } catch (Exception e) {
+      LOG.warn("Error creating external block cache", e);
+    }
+    return null;
+
+  }
+
+  private static BlockCache getBucketCache(Configuration c, MemoryUsage mu) {
     // Check for L2.  ioengine name must be non-null.
     String bucketCacheIOEngineName = c.get(BUCKET_CACHE_IOENGINE_KEY, null);
     if (bucketCacheIOEngineName == null || bucketCacheIOEngineName.length() <= 0) return null;
@@ -533,22 +588,27 @@ public class CacheConfig {
     LruBlockCache l1 = getL1(conf, mu);
     // blockCacheDisabled is set as a side-effect of getL1(), so check it again after the call.
     if (blockCacheDisabled) return null;
-    BucketCache l2 = getL2(conf, mu);
+    BlockCache l2 = getL2(conf, mu);
     if (l2 == null) {
       GLOBAL_BLOCK_CACHE_INSTANCE = l1;
     } else {
+      boolean useExternal = conf.getBoolean(EXTERNAL_BLOCKCACHE_KEY, EXTERNAL_BLOCKCACHE_DEFAULT);
       boolean combinedWithLru = conf.getBoolean(BUCKET_CACHE_COMBINED_KEY,
         DEFAULT_BUCKET_CACHE_COMBINED);
-      if (combinedWithLru) {
-        GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(l1, l2);
+      if (useExternal) {
+        GLOBAL_BLOCK_CACHE_INSTANCE = new InclusiveCombinedBlockCache(l1, l2);
       } else {
-        // L1 and L2 are not 'combined'.  They are connected via the LruBlockCache victimhandler
-        // mechanism.  It is a little ugly but works according to the following: when the
-        // background eviction thread runs, blocks evicted from L1 will go to L2 AND when we get
-        // a block from the L1 cache, if not in L1, we will search L2.
-        l1.setVictimCache(l2);
-        GLOBAL_BLOCK_CACHE_INSTANCE = l1;
+        if (combinedWithLru) {
+          GLOBAL_BLOCK_CACHE_INSTANCE = new CombinedBlockCache(l1, l2);
+        } else {
+          // L1 and L2 are not 'combined'.  They are connected via the LruBlockCache victimhandler
+          // mechanism.  It is a little ugly but works according to the following: when the
+          // background eviction thread runs, blocks evicted from L1 will go to L2 AND when we get
+          // a block from the L1 cache, if not in L1, we will search L2.
+          GLOBAL_BLOCK_CACHE_INSTANCE = l1;
+        }
       }
+      l1.setVictimCache(l2);
     }
     return GLOBAL_BLOCK_CACHE_INSTANCE;
   }

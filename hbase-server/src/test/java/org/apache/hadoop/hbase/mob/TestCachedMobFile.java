@@ -25,10 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -45,13 +45,13 @@ public class TestCachedMobFile extends TestCase{
   static final Log LOG = LogFactory.getLog(TestCachedMobFile.class);
   private Configuration conf = HBaseConfiguration.create();
   private CacheConfig cacheConf = new CacheConfig(conf);
-  private final String TABLE = "tableName";
-  private final String FAMILY = "familyName";
-  private final String FAMILY1 = "familyName1";
-  private final String FAMILY2 = "familyName2";
-  private final long EXPECTED_REFERENCE_ZERO = 0;
-  private final long EXPECTED_REFERENCE_ONE = 1;
-  private final long EXPECTED_REFERENCE_TWO = 2;
+  private static final String TABLE = "tableName";
+  private static final String FAMILY = "familyName";
+  private static final String FAMILY1 = "familyName1";
+  private static final String FAMILY2 = "familyName2";
+  private static final long EXPECTED_REFERENCE_ZERO = 0;
+  private static final long EXPECTED_REFERENCE_ONE = 1;
+  private static final long EXPECTED_REFERENCE_TWO = 2;
 
   @Test
   public void testOpenClose() throws Exception {
@@ -121,34 +121,34 @@ public class TestCachedMobFile extends TestCase{
     KeyValue expectedKey =
         new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     KeyValue seekKey = expectedKey.createKeyOnly(false);
-    KeyValue kv = KeyValueUtil.ensureKeyValue(cachedMobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    Cell cell = cachedMobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the end key
     byte[] endKey = Bytes.toBytes("zz");  // The end key bytes
     expectedKey = new KeyValue(endKey, family, qualify, Long.MAX_VALUE, Type.Put, endKey);
     seekKey = expectedKey.createKeyOnly(false);
-    kv = KeyValueUtil.ensureKeyValue(cachedMobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = cachedMobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the random key
     byte[] randomKey = Bytes.toBytes(MobTestUtil.generateRandomString(2));
     expectedKey = new KeyValue(randomKey, family, qualify, Long.MAX_VALUE, Type.Put, randomKey);
     seekKey = expectedKey.createKeyOnly(false);
-    kv = KeyValueUtil.ensureKeyValue(cachedMobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = cachedMobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is less than the start key
     byte[] lowerKey = Bytes.toBytes("a1"); // Smaller than "aa"
     expectedKey = new KeyValue(startKey, family, qualify, Long.MAX_VALUE, Type.Put, startKey);
     seekKey = new KeyValue(lowerKey, family, qualify, Long.MAX_VALUE, Type.Put, lowerKey);
-    kv = KeyValueUtil.ensureKeyValue(cachedMobFile.readCell(seekKey, false));
-    MobTestUtil.assertKeyValuesEquals(expectedKey, kv);
+    cell = cachedMobFile.readCell(seekKey, false);
+    MobTestUtil.assertCellEquals(expectedKey, cell);
 
     // Test the key which is more than the end key
     byte[] upperKey = Bytes.toBytes("z{"); // Bigger than "zz"
     seekKey = new KeyValue(upperKey, family, qualify, Long.MAX_VALUE, Type.Put, upperKey);
-    kv = KeyValueUtil.ensureKeyValue(cachedMobFile.readCell(seekKey, false));
-    Assert.assertNull(kv);
+    cell = cachedMobFile.readCell(seekKey, false);
+    Assert.assertNull(cell);
   }
 }

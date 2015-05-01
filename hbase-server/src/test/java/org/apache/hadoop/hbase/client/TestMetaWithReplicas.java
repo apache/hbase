@@ -19,10 +19,12 @@
 package org.apache.hadoop.hbase.client;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -73,7 +75,7 @@ public class TestMetaWithReplicas {
     TEST_UTIL.getConfiguration().setInt(HConstants.META_REPLICAS_NUM, 3);
     TEST_UTIL.getConfiguration().setInt(
         StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD, 1000);
-    TEST_UTIL.startMiniCluster(3);    
+    TEST_UTIL.startMiniCluster(3);
     // disable the balancer
     LoadBalancerTracker l = new LoadBalancerTracker(TEST_UTIL.getZooKeeperWatcher(),
         new Abortable() {
@@ -84,7 +86,7 @@ public class TestMetaWithReplicas {
       }
       @Override
       public void abort(String why, Throwable e) {
-        aborted = true;        
+        aborted = true;
       }
     });
     l.setBalancerOn(false);
@@ -106,7 +108,7 @@ public class TestMetaWithReplicas {
     assertTrue(TEST_UTIL.getHBaseAdmin().getTableDescriptor(TableName.META_TABLE_NAME)
         .getRegionReplication() == 3);
   }
-  
+
   @Test
   public void testZookeeperNodesForReplicas() throws Exception {
     // Checks all the znodes exist when meta's replicas are enabled
@@ -218,6 +220,23 @@ public class TestMetaWithReplicas {
     htable = c.getTable(TableName.valueOf(TABLE));
     r = htable.get(get);
     assertTrue(Arrays.equals(r.getRow(), row));
+  }
+
+  @Test
+  public void testMetaLookupThreadPoolCreated() throws Exception {
+    byte[] TABLE = Bytes.toBytes("testMetaLookupThreadPoolCreated");
+    byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
+    if (TEST_UTIL.getHBaseAdmin().tableExists(TABLE)) {
+      TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
+      TEST_UTIL.getHBaseAdmin().deleteTable(TABLE);
+    }
+    Table htable = TEST_UTIL.createTable(TABLE, FAMILIES, TEST_UTIL.getConfiguration());
+    byte[] row = "test".getBytes();
+    ConnectionImplementation c = ((ConnectionImplementation)((HTable)htable).connection);
+    // check that metalookup pool would get created
+    c.relocateRegion(TABLE, row);
+    ExecutorService ex = c.getCurrentMetaLookupPool();
+    assert(ex != null);
   }
 
   @Test
@@ -390,7 +409,9 @@ public class TestMetaWithReplicas {
   public void testShutdownOfReplicaHolder() throws Exception {
     // checks that the when the server holding meta replica is shut down, the meta replica
     // can be recovered
-    RegionLocations rl = ConnectionManager.getConnectionInternal(TEST_UTIL.getConfiguration()).
+    ClusterConnection conn = (ClusterConnection)
+      ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    RegionLocations rl = conn.
         locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
     HRegionLocation hrl = rl.getRegionLocation(1);
     ServerName oldServer = hrl.getServerName();
@@ -399,12 +420,12 @@ public class TestMetaWithReplicas {
     do {
       LOG.debug("Waiting for the replica " + hrl.getRegionInfo() + " to come up");
       Thread.sleep(30000); //wait for the detection/recovery
-      rl = ConnectionManager.getConnectionInternal(TEST_UTIL.getConfiguration()).
-          locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
+      rl = conn.locateRegion(TableName.META_TABLE_NAME, Bytes.toBytes(""), false, true);
       hrl = rl.getRegionLocation(1);
       i++;
     } while ((hrl == null || hrl.getServerName().equals(oldServer)) && i < 3);
     assertTrue(i != 3);
+    conn.close();
   }
 
   @Test

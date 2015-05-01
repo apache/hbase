@@ -68,7 +68,7 @@ public class TestMinVersions {
   public void testGetClosestBefore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 1, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -96,8 +96,8 @@ public class TestMinVersions {
       checkResult(r, c0, T4);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       r = region.getClosestRowBefore(T1, c0);
       checkResult(r, c0, T4);
@@ -118,7 +118,7 @@ public class TestMinVersions {
     // keep 3 versions minimum
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
@@ -132,8 +132,8 @@ public class TestMinVersions {
       region.put(p);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       p = new Put(T1, ts);
       p.add(c0, c0, T3);
@@ -173,7 +173,7 @@ public class TestMinVersions {
   public void testDelete() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 3, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -206,8 +206,8 @@ public class TestMinVersions {
       checkResult(r, c0, T3);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       // try again
       g = new Get(T1);
@@ -232,7 +232,7 @@ public class TestMinVersions {
   public void testMemStore() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
 
     // 2s in the past
     long ts = EnvironmentEdgeManager.currentTime() - 2000;
@@ -254,8 +254,8 @@ public class TestMinVersions {
       region.put(p);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       // now put the first version (backdated)
       p = new Put(T1, ts-3);
@@ -308,7 +308,7 @@ public class TestMinVersions {
     // 1 version minimum, 1000 versions maximum, ttl = 1s
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
     try {
 
       // 2s in the past
@@ -361,7 +361,7 @@ public class TestMinVersions {
       checkResult(r, c0, T4,T3);
 
       // now flush
-      region.flushcache();
+      region.flush(true);
 
       // with HBASE-4241 a flush will eliminate the expired rows
       g = new Get(T1);
@@ -370,7 +370,7 @@ public class TestMinVersions {
       assertTrue(r.isEmpty());
 
       // major compaction
-      region.compactStores(true);
+      region.compact(true);
 
       // after compaction the 4th version is still available
       g = new Get(T1);
@@ -400,7 +400,7 @@ public class TestMinVersions {
   public void testFilters() throws Exception {
     HTableDescriptor htd =
         hbu.createTableDescriptor(name.getMethodName(), 2, 1000, 1, KeepDeletedCells.FALSE);
-    HRegion region = hbu.createLocalHRegion(htd, null, null);
+    Region region = hbu.createLocalHRegion(htd, null, null);
     final byte [] c1 = COLUMNS[1];
 
     // 2s in the past
@@ -446,8 +446,8 @@ public class TestMinVersions {
       checkResult(r, c0, T2,T1);
 
       // now flush/compact
-      region.flushcache();
-      region.compactStores(true);
+      region.flush(true);
+      region.compact(true);
 
       g = new Get(T1);
       g.addColumn(c1,c1);

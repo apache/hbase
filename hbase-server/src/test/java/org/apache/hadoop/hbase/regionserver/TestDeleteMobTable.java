@@ -26,12 +26,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -88,20 +83,19 @@ public class TestDeleteMobTable {
     hcd.setMobThreshold(0);
     htd.addFamily(hcd);
     HBaseAdmin admin = null;
-    HTable table = null;
+    Table table = null;
     try {
-      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(htd);
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration()).getTable(tn);
       byte[] value = generateMobValue(10);
 
       byte[] row = Bytes.toBytes("row");
       Put put = new Put(row);
-      put.add(FAMILY, QF, EnvironmentEdgeManager.currentTime(), value);
+      put.addColumn(FAMILY, QF, EnvironmentEdgeManager.currentTime(), value);
       table.put(put);
 
-      table.flushCommits();
-      admin.flush(tableName);
+      admin.flush(tn);
 
       // the mob file exists
       Assert.assertEquals(1, countMobFiles(tn, hcd.getNameAsString()));
@@ -134,20 +128,19 @@ public class TestDeleteMobTable {
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
     htd.addFamily(hcd);
     HBaseAdmin admin = null;
-    HTable table = null;
+    Table table = null;
     try {
-      admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+      admin = TEST_UTIL.getHBaseAdmin();
       admin.createTable(htd);
-      table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+      table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration()).getTable(tn);
       byte[] value = generateMobValue(10);
 
       byte[] row = Bytes.toBytes("row");
       Put put = new Put(row);
-      put.add(FAMILY, QF, EnvironmentEdgeManager.currentTime(), value);
+      put.addColumn(FAMILY, QF, EnvironmentEdgeManager.currentTime(), value);
       table.put(put);
 
-      table.flushCommits();
-      admin.flush(tableName);
+      admin.flush(tn);
       table.close();
 
       // the mob file doesn't exist
@@ -205,7 +198,7 @@ public class TestDeleteMobTable {
     return fs.exists(new Path(storePath, fileName));
   }
 
-  private String assertHasOneMobRow(HTable table, TableName tn, String familyName)
+  private String assertHasOneMobRow(Table table, TableName tn, String familyName)
       throws IOException {
     Scan scan = new Scan();
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));

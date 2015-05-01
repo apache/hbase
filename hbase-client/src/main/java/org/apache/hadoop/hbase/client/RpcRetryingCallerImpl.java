@@ -54,10 +54,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
    * When we started making calls.
    */
   private long globalStartTime;
-  /**
-   * Start and end times for a single call.
-   */
-  private final static int MIN_RPC_TIMEOUT = 2000;
+
   /** How many retries are allowed before we start to log */
   private final int startLogErrorsCnt;
 
@@ -87,11 +84,11 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       if (callTimeout == Integer.MAX_VALUE) return Integer.MAX_VALUE;
       int remainingTime = (int) (callTimeout -
           (EnvironmentEdgeManager.currentTime() - this.globalStartTime));
-      if (remainingTime < MIN_RPC_TIMEOUT) {
+      if (remainingTime < 1) {
         // If there is no time left, we're trying anyway. It's too late.
         // 0 means no timeout, and it's not the intent here. So we secure both cases by
         // resetting to the minimum.
-        remainingTime = MIN_RPC_TIMEOUT;
+        remainingTime = 1;
       }
       return remainingTime;
     }
@@ -222,7 +219,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       }
       // Don't let ServiceException out; its rpc specific.
       t = cause;
-      // t could be a RemoteException so go aaround again.
+      // t could be a RemoteException so go around again.
       translateException(t);
     } else if (t instanceof DoNotRetryIOException) {
       throw (DoNotRetryIOException)t;

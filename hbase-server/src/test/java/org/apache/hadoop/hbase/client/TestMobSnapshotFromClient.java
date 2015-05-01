@@ -149,7 +149,7 @@ public class TestMobSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
     table.close();
 
@@ -185,7 +185,7 @@ public class TestMobSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM, false);
 
     LOG.debug("FS state before disable:");

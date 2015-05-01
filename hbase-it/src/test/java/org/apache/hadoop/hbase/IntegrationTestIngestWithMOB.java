@@ -24,7 +24,8 @@ import java.util.List;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestDataGeneratorWithMOB;
@@ -40,7 +41,7 @@ import org.junit.experimental.categories.Category;
 public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   private static final char COLON = ':';
 
-  private byte[] mobColumnFamily = LoadTestTool.COLUMN_FAMILY;
+  private byte[] mobColumnFamily = LoadTestTool.DEFAULT_COLUMN_FAMILY;
   public static final String THRESHOLD = "threshold";
   public static final String MIN_MOB_DATA_SIZE = "minMobDataSize";
   public static final String MAX_MOB_DATA_SIZE = "maxMobDataSize";
@@ -111,8 +112,8 @@ public class IntegrationTestIngestWithMOB extends IntegrationTestIngest {
   protected void initTable() throws IOException {
     super.initTable();
 
-    byte[] tableName = getTablename().getName();
-    HBaseAdmin admin = new HBaseAdmin(conf);
+    TableName tableName = getTablename();
+    Admin admin = ConnectionFactory.createConnection().getAdmin();
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     LOG.info("Disabling table " + getTablename());
     admin.disableTable(tableName);

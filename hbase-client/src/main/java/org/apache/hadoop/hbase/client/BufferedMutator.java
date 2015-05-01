@@ -60,7 +60,7 @@ import java.util.List;
  * @see Connection
  * @since 1.0.0
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public interface BufferedMutator extends Closeable {
   /**
@@ -122,6 +122,8 @@ public interface BufferedMutator extends Closeable {
   /**
    * Listens for asynchronous exceptions on a {@link BufferedMutator}.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   interface ExceptionListener {
     public void onException(RetriesExhaustedWithDetailsException exception,
         BufferedMutator mutator) throws RetriesExhaustedWithDetailsException;

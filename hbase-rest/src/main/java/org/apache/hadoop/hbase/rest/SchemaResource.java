@@ -37,18 +37,17 @@ import javax.xml.namespace.QName;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
 import org.apache.hadoop.hbase.rest.model.TableSchemaModel;
-import org.apache.hadoop.hbase.util.Bytes;
 
 @InterfaceAudience.Private
 public class SchemaResource extends ResourceBase {
@@ -103,15 +102,15 @@ public class SchemaResource extends ResourceBase {
     } 
   }
 
-  private Response replace(final byte[] name, final TableSchemaModel model,
-      final UriInfo uriInfo, final HBaseAdmin admin) {
+  private Response replace(final TableName name, final TableSchemaModel model,
+      final UriInfo uriInfo, final Admin admin) {
     if (servlet.isReadOnly()) {
       return Response.status(Response.Status.FORBIDDEN)
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
         .build();
     }
     try {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
+      HTableDescriptor htd = new HTableDescriptor(name);
       for (Map.Entry<QName,Object> e: model.getAny().entrySet()) {
         htd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
       }
@@ -143,8 +142,8 @@ public class SchemaResource extends ResourceBase {
     }
   }
 
-  private Response update(final byte[] name, final TableSchemaModel model,
-      final UriInfo uriInfo, final HBaseAdmin admin) {
+  private Response update(final TableName name, final TableSchemaModel model,
+      final UriInfo uriInfo, final Admin admin) {
     if (servlet.isReadOnly()) {
       return Response.status(Response.Status.FORBIDDEN)
         .type(MIMETYPE_TEXT).entity("Forbidden" + CRLF)
@@ -170,7 +169,7 @@ public class SchemaResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Unavailable" + CRLF)
           .build();
       } finally {
-        admin.enableTable(tableResource.getName());
+        admin.enableTable(TableName.valueOf(tableResource.getName()));
       }
       servlet.getMetrics().incrementSucessfulPutRequests(1);
       return Response.ok().build();
@@ -183,8 +182,8 @@ public class SchemaResource extends ResourceBase {
   private Response update(final TableSchemaModel model, final boolean replace,
       final UriInfo uriInfo) {
     try {
-      byte[] name = Bytes.toBytes(tableResource.getName());
-      HBaseAdmin admin = servlet.getAdmin();
+      TableName name = TableName.valueOf(tableResource.getName());
+      Admin admin = servlet.getAdmin();
       if (replace || !admin.tableExists(name)) {
         return replace(name, model, uriInfo, admin);
       } else {
@@ -233,11 +232,11 @@ public class SchemaResource extends ResourceBase {
           .entity("Forbidden" + CRLF).build();
     }
     try {
-      HBaseAdmin admin = servlet.getAdmin();
+      Admin admin = servlet.getAdmin();
       try {
-        admin.disableTable(tableResource.getName());
+        admin.disableTable(TableName.valueOf(tableResource.getName()));
       } catch (TableNotEnabledException e) { /* this is what we want anyway */ }
-      admin.deleteTable(tableResource.getName());
+      admin.deleteTable(TableName.valueOf(tableResource.getName()));
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);
       return Response.ok().build();
     } catch (Exception e) {

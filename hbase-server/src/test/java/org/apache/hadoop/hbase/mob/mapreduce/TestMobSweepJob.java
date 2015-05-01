@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mob.mapreduce;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
@@ -132,7 +133,7 @@ public class TestMobSweepJob {
     List<String> toBeArchived = sweepJob.getUnusedFiles(configuration);
 
     assertEquals(2, toBeArchived.size());
-    assertEquals(new String[] { "4", "6" }, toBeArchived.toArray(new String[0]));
+    assertArrayEquals(new String[]{"4", "6"}, toBeArchived.toArray(new String[0]));
   }
 
   @Test

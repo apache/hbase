@@ -78,13 +78,16 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.MetaScanner;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -97,8 +100,10 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
+import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
@@ -112,6 +117,7 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -150,6 +156,9 @@ public class TestHBaseFsck {
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
+    TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      MasterSyncObserver.class.getName());
+
     conf.setInt("hbase.regionserver.handler.count", 2);
     conf.setInt("hbase.regionserver.metahandler.count", 2);
 
@@ -157,7 +166,7 @@ public class TestHBaseFsck {
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.core", POOL_SIZE);
     conf.setInt("hbase.hbck.close.timeout", 2 * REGION_ONLINE_TIMEOUT);
-    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 2 * REGION_ONLINE_TIMEOUT);
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 8 * REGION_ONLINE_TIMEOUT);
     TEST_UTIL.startMiniCluster(3);
 
     tableExecutorService = new ThreadPoolExecutor(1, POOL_SIZE, 60, TimeUnit.SECONDS,
@@ -173,6 +182,9 @@ public class TestHBaseFsck {
 
     admin = connection.getAdmin();
     admin.setBalancerRunning(false, true);
+
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.META_TABLE_NAME);
+    TEST_UTIL.waitUntilAllRegionsAssigned(TableName.NAMESPACE_TABLE_NAME);
   }
 
   @AfterClass
@@ -183,11 +195,19 @@ public class TestHBaseFsck {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @Before
+  public void setUp() {
+    EnvironmentEdgeManager.reset();
+  }
+
   @Test (timeout=180000)
   public void testHBaseFsck() throws Exception {
     assertNoErrors(doFsck(conf, false));
     TableName table = TableName.valueOf("tableBadMetaAssign");
-    TEST_UTIL.createTable(table, FAM);
+    HTableDescriptor desc = new HTableDescriptor(table);
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+    createTable(TEST_UTIL, desc, null);
 
     // We created 1 table, should be fine
     assertNoErrors(doFsck(conf, false));
@@ -406,7 +426,8 @@ public class TestHBaseFsck {
     desc.setRegionReplication(replicaCount);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-    admin.createTable(desc, SPLITS);
+    createTable(TEST_UTIL, desc, SPLITS);
+
     tbl = (HTable) connection.getTable(tablename, tableExecutorService);
     List<Put> puts = new ArrayList<Put>();
     for (byte[] row : ROWKEYS) {
@@ -437,15 +458,14 @@ public class TestHBaseFsck {
    * @param tablename
    * @throws IOException
    */
-  void cleanupTable(TableName tablename) throws IOException {
+  void cleanupTable(TableName tablename) throws Exception {
     if (tbl != null) {
       tbl.close();
       tbl = null;
     }
 
     ((ClusterConnection) connection).clearRegionCache();
-    TEST_UTIL.deleteTable(tablename);
-
+    deleteTable(TEST_UTIL, tablename);
   }
 
   /**
@@ -555,8 +575,10 @@ public class TestHBaseFsck {
       boolean fail = true;
       @Override
       public HBaseFsck call(){
+        Configuration c = new Configuration(conf);
+        c.setInt("hbase.hbck.lockfile.attempts", 1);
         try{
-          return doFsck(conf, false);
+          return doFsck(c, false);
         } catch(Exception e){
           if (e.getMessage().contains("Duplicate hbck")) {
             fail = false;
@@ -583,6 +605,40 @@ public class TestHBaseFsck {
     if (h2 != null) {
       assert(h2.getRetCode() >= 0);
     }
+  }
+
+  /**
+   * This test makes sure that with 5 retries both parallel instances
+   * of hbck will be completed successfully.
+   *
+   * @throws Exception
+   */
+  @Test (timeout=180000)
+  public void testParallelWithRetriesHbck() throws Exception {
+    final ExecutorService service;
+    final Future<HBaseFsck> hbck1,hbck2;
+
+    class RunHbck implements Callable<HBaseFsck>{
+
+      @Override
+      public HBaseFsck call() throws Exception {
+        return doFsck(conf, false);
+      }
+    }
+    service = Executors.newFixedThreadPool(2);
+    hbck1 = service.submit(new RunHbck());
+    hbck2 = service.submit(new RunHbck());
+    service.shutdown();
+    //wait for 15 seconds, for both hbck calls finish
+    service.awaitTermination(15, TimeUnit.SECONDS);
+    HBaseFsck h1 = hbck1.get();
+    HBaseFsck h2 = hbck2.get();
+    // Both should be successful
+    assertNotNull(h1);
+    assertNotNull(h2);
+    assert(h1.getRetCode() >= 0);
+    assert(h2.getRetCode() >= 0);
+
   }
 
   /**
@@ -960,7 +1016,7 @@ public class TestHBaseFsck {
       // fix the problem.
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setFixAssignments(true);
       fsck.setFixMeta(true);
@@ -1183,8 +1239,9 @@ public class TestHBaseFsck {
     try {
       HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
-      admin.createTable(desc);
-      tbl = new HTable(cluster.getConfiguration(), desc.getTableName());
+      createTable(TEST_UTIL, desc, null);
+
+      tbl = (HTable) connection.getTable(desc.getTableName());
       for (int i = 0; i < 5; i++) {
         Put p1 = new Put(("r" + i).getBytes());
         p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
@@ -1192,10 +1249,12 @@ public class TestHBaseFsck {
       }
       admin.flush(desc.getTableName());
       List<HRegion> regions = cluster.getRegions(desc.getTableName());
-      int serverWith = cluster.getServerWith(regions.get(0).getRegionName());
+      int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
-      cluster.getServerWith(regions.get(0).getRegionName());
-      SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("r3"));
+      cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
+      SplitTransactionImpl st = (SplitTransactionImpl)
+        new SplitTransactionFactory(TEST_UTIL.getConfiguration())
+          .create(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
@@ -1314,8 +1373,8 @@ public class TestHBaseFsck {
       setupTableWithRegionReplica(table, 2);
       assertEquals(ROWKEYS.length, countRows());
       NavigableMap<HRegionInfo, ServerName> map =
-          MetaScanner.allTableRegions(TEST_UTIL.getConnection(),
-          tbl.getName());
+          MetaTableAccessor.allTableRegions(TEST_UTIL.getConnection(),
+              tbl.getName());
       int i = 0;
       // store the HRIs of the regions we will mess up
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
@@ -1347,7 +1406,7 @@ public class TestHBaseFsck {
       i = 0;
       HRegionInfo[] newHris = new HRegionInfo[2];
       // get all table's regions from meta
-      map = MetaScanner.allTableRegions(TEST_UTIL.getConnection(), tbl.getName());
+      map = MetaTableAccessor.allTableRegions(TEST_UTIL.getConnection(), tbl.getName());
       // get the HRIs of the new regions (hbck created new regions for fixing the hdfs mess-up)
       for (Map.Entry<HRegionInfo, ServerName> m : map.entrySet()) {
         if (m.getKey().getStartKey().length > 0 &&
@@ -1632,7 +1691,7 @@ public class TestHBaseFsck {
       // fix lingering split parent
       hbck = new HBaseFsck(conf, hbfsckExecutorService);
       hbck.connect();
-      hbck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       hbck.setTimeLag(0);
       hbck.setFixSplitParents(true);
       hbck.onlineHbck();
@@ -1885,7 +1944,7 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -1896,7 +1955,7 @@ public class TestHBaseFsck {
       // verify that fixAssignments works fine with noHdfsChecking
       fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixAssignments(true);
@@ -1938,7 +1997,7 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking report the same errors
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -1949,7 +2008,7 @@ public class TestHBaseFsck {
       // verify that fixMeta doesn't work with noHdfsChecking
       fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixAssignments(true);
@@ -2004,7 +2063,7 @@ public class TestHBaseFsck {
       // verify that noHdfsChecking can't detect ORPHAN_HDFS_REGION
       HBaseFsck fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.onlineHbck();
@@ -2015,7 +2074,7 @@ public class TestHBaseFsck {
       // verify that fixHdfsHoles doesn't work with noHdfsChecking
       fsck = new HBaseFsck(conf, hbfsckExecutorService);
       fsck.connect();
-      fsck.setDisplayFullReport(); // i.e. -details
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setCheckHdfs(false);
       fsck.setFixHdfsHoles(true);
@@ -2270,10 +2329,10 @@ public class TestHBaseFsck {
       // Mess it up by removing the RegionInfo for one region.
       final List<Delete> deletes = new LinkedList<Delete>();
       Table meta = connection.getTable(TableName.META_TABLE_NAME, hbfsckExecutorService);
-      MetaScanner.metaScan(connection, new MetaScanner.MetaScannerVisitor() {
+      MetaTableAccessor.fullScanRegions(connection, new MetaTableAccessor.Visitor() {
 
         @Override
-        public boolean processRow(Result rowResult) throws IOException {
+        public boolean visit(Result rowResult) throws IOException {
           HRegionInfo hri = MetaTableAccessor.getHRegionInfo(rowResult);
           if (hri != null && !hri.getTable().isSystemTable()) {
             Delete delete = new Delete(rowResult.getRow());
@@ -2281,10 +2340,6 @@ public class TestHBaseFsck {
             deletes.add(delete);
           }
           return true;
-        }
-
-        @Override
-        public void close() throws IOException {
         }
       });
       meta.delete(deletes);
@@ -2418,11 +2473,12 @@ public class TestHBaseFsck {
     assertNoErrors(hbck);
 
     ServerName mockName = ServerName.valueOf("localhost", 60000, 1);
+    final TableName tableName = TableName.valueOf("foo");
 
     // obtain one lock
-    final TableLockManager tableLockManager = TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
-    TableLock writeLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-        "testCheckTableLocks");
+    final TableLockManager tableLockManager =
+      TableLockManager.createTableLockManager(conf, TEST_UTIL.getZooKeeperWatcher(), mockName);
+    TableLock writeLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
     writeLock.acquire();
     hbck = doFsck(conf, false);
     assertNoErrors(hbck); // should not have expired, no problems
@@ -2437,8 +2493,7 @@ public class TestHBaseFsck {
     new Thread() {
       @Override
       public void run() {
-        TableLock readLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-            "testCheckTableLocks");
+        TableLock readLock = tableLockManager.writeLock(tableName, "testCheckTableLocks");
         try {
           latch.countDown();
           readLock.acquire();
@@ -2472,10 +2527,10 @@ public class TestHBaseFsck {
     assertNoErrors(hbck);
 
     // ensure that locks are deleted
-    writeLock = tableLockManager.writeLock(TableName.valueOf("foo"),
-        "should acquire without blocking");
+    writeLock = tableLockManager.writeLock(tableName, "should acquire without blocking");
     writeLock.acquire(); // this should not block.
     writeLock.release(); // release for clean state
+    tableLockManager.tableDeleted(tableName);
   }
 
   @Test (timeout=180000)
@@ -2541,7 +2596,7 @@ public class TestHBaseFsck {
       HTableDescriptor desc = new HTableDescriptor(table);
       HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
       desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
-      admin.createTable(desc);
+      createTable(TEST_UTIL, desc, null);
       tbl = (HTable) connection.getTable(table, tableExecutorService);
 
       // Mess it up by leaving a hole in the assignment, meta, and hdfs data
@@ -2616,11 +2671,14 @@ public class TestHBaseFsck {
     HBaseFsck hbck = doFsck(conf, false);
     assertNoErrors(hbck); // no errors
     try {
+      hbck.connect(); // need connection to have access to META
       hbck.checkRegionBoundaries();
     } catch (IllegalArgumentException e) {
       if (e.getMessage().endsWith("not a valid DFS filename.")) {
         fail("Table directory path is not valid." + e.getMessage());
       }
+    } finally {
+      hbck.close();
     }
   }
 
@@ -2641,5 +2699,63 @@ public class TestHBaseFsck {
     hbck.setIgnorePreCheckPermission(true);
     Assert.assertEquals("shouldIgnorePreCheckPermission", true,
       hbck.shouldIgnorePreCheckPermission());
+  }
+
+  public static class MasterSyncObserver extends BaseMasterObserver {
+    volatile CountDownLatch tableCreationLatch = null;
+    volatile CountDownLatch tableDeletionLatch = null;
+
+    @Override
+    public void postCreateTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      HTableDescriptor desc, HRegionInfo[] regions) throws IOException {
+      // the AccessController test, some times calls only and directly the postCreateTableHandler()
+      if (tableCreationLatch != null) {
+        tableCreationLatch.countDown();
+      }
+    }
+
+    @Override
+    public void postDeleteTableHandler(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                       TableName tableName)
+    throws IOException {
+      // the AccessController test, some times calls only and directly the postDeleteTableHandler()
+      if (tableDeletionLatch != null) {
+        tableDeletionLatch.countDown();
+      }
+    }
+  }
+
+  public static void createTable(HBaseTestingUtility testUtil, HTableDescriptor htd,
+    byte [][] splitKeys) throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableCreationLatch = new CountDownLatch(1);
+    if (splitKeys != null) {
+      admin.createTable(htd, splitKeys);
+    } else {
+      admin.createTable(htd);
+    }
+    observer.tableCreationLatch.await();
+    observer.tableCreationLatch = null;
+    testUtil.waitUntilAllRegionsAssigned(htd.getTableName());
+  }
+
+  public static void deleteTable(HBaseTestingUtility testUtil, TableName tableName)
+    throws Exception {
+    // NOTE: We need a latch because admin is not sync,
+    // so the postOp coprocessor method may be called after the admin operation returned.
+    MasterSyncObserver observer = (MasterSyncObserver)testUtil.getHBaseCluster().getMaster()
+      .getMasterCoprocessorHost().findCoprocessor(MasterSyncObserver.class.getName());
+    observer.tableDeletionLatch = new CountDownLatch(1);
+    try {
+      admin.disableTable(tableName);
+    } catch (Exception e) {
+      LOG.debug("Table: " + tableName + " already disabled, so just deleting it.");
+    }
+    admin.deleteTable(tableName);
+    observer.tableDeletionLatch.await();
+    observer.tableDeletionLatch = null;
   }
 }

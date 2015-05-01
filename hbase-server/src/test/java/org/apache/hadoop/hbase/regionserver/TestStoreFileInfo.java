@@ -18,7 +18,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HBaseTestCase;
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -30,7 +34,7 @@ import org.junit.experimental.categories.Category;
  * Test HStoreFile
  */
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestStoreFileInfo extends HBaseTestCase {
+public class TestStoreFileInfo {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**
@@ -58,6 +62,26 @@ public class TestStoreFileInfo extends HBaseTestCase {
     for (String name: illegalHFileLink) {
       assertFalse("should not be a valid link: " + name, HFileLink.isHFileLink(name));
     }
+  }
+
+  @Test
+  public void testEqualsWithLink() throws IOException {
+    Path origin = new Path("/origin");
+    Path tmp = new Path("/tmp");
+    Path mob = new Path("/mob");
+    Path archive = new Path("/archive");
+    HFileLink link1 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
+      new Path(mob, "f1"), new Path(archive, "f1"));
+    HFileLink link2 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
+      new Path(mob, "f1"), new Path(archive, "f1"));
+
+    StoreFileInfo info1 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), null, link1);
+    StoreFileInfo info2 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), null, link2);
+
+    assertEquals(info1, info2);
+    assertEquals(info1.hashCode(), info2.hashCode());
   }
 }
 

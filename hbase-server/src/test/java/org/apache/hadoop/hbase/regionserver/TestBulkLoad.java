@@ -90,7 +90,7 @@ public class TestBulkLoad {
   private final Expectations callOnce;
   @Rule
   public TestName name = new TestName();
-  
+
   public TestBulkLoad() throws IOException {
     callOnce = new Expectations() {
       {
@@ -130,25 +130,26 @@ public class TestBulkLoad {
     };
     context.checking(expection);
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1)
-        .bulkLoadHFiles(familyPaths, false);
+        .bulkLoadHFiles(familyPaths, false, null);
   }
 
   @Test
   public void bulkHLogShouldThrowNoErrorAndWriteMarkerWithBlankInput() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<Pair<byte[], String>>(), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<Pair<byte[], String>>(),
+      false, null);
   }
 
   @Test
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
     context.checking(callOnce);
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
   }
 
   @Test
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
     context.checking(callOnce);
     testRegionWithFamilies(family1, family2).bulkLoadHFiles(withFamilyPathsFor(family1, family2),
-        false);
+        false, null);
   }
 
   @Test
@@ -156,31 +157,32 @@ public class TestBulkLoad {
     context.checking(callOnce);
     TableName tableName = TableName.valueOf("test", "test");
     testRegionWithFamiliesAndSpecifiedTableName(tableName, family1, family2)
-        .bulkLoadHFiles(withFamilyPathsFor(family1, family2), false);
+        .bulkLoadHFiles(withFamilyPathsFor(family1, family2), false, null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void shouldCrashIfBulkLoadFamiliesNotInTable() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2), false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2), false,
+      null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
       throws IOException {
-    testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false);
+    testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
   }
 
   @Test(expected = DoNotRetryIOException.class)
   public void shouldThrowErrorIfBadFamilySpecifiedAsFamilyPath() throws IOException {
     testRegionWithFamilies()
         .bulkLoadHFiles(asList(withInvalidColumnFamilyButProperHFileLocation(family1)),
-            false);
+            false, null);
   }
 
   @Test(expected = FileNotFoundException.class)
   public void shouldThrowErrorIfHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = asList(withMissingHFileForFamily(family1));
-    testRegionWithFamilies(family1).bulkLoadHFiles(list, false);
+    testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
   }
 
   private Pair<byte[], String> withMissingHFileForFamily(byte[] family) {
@@ -233,17 +235,24 @@ public class TestBulkLoad {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
     // TODO We need a way to do this without creating files
     File hFileLocation = testFolder.newFile();
-    hFileFactory.withOutputStream(new FSDataOutputStream(new FileOutputStream(hFileLocation)));
-    hFileFactory.withFileContext(new HFileContext());
-    HFile.Writer writer = hFileFactory.create();
-
-    writer.append(new KeyValue(CellUtil.createCell(randomBytes,
-        family,
-        randomBytes,
-        0l,
-        KeyValue.Type.Put.getCode(),
-        randomBytes)));
-    writer.close();
+    FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation));
+    try {
+      hFileFactory.withOutputStream(out);
+      hFileFactory.withFileContext(new HFileContext());
+      HFile.Writer writer = hFileFactory.create();
+      try {
+        writer.append(new KeyValue(CellUtil.createCell(randomBytes,
+            family,
+            randomBytes,
+            0l,
+            KeyValue.Type.Put.getCode(),
+            randomBytes)));
+      } finally {
+        writer.close();
+      }
+    } finally {
+      out.close();
+    }
     return hFileLocation.getAbsoluteFile().getAbsolutePath();
   }
 
@@ -286,7 +295,7 @@ public class TestBulkLoad {
       assertNotNull(desc);
 
       if (tableName != null) {
-        assertTrue(Bytes.equals(ProtobufUtil.toTableName(desc.getTableName()).getName(), 
+        assertTrue(Bytes.equals(ProtobufUtil.toTableName(desc.getTableName()).getName(),
           tableName));
       }
 
@@ -296,11 +305,8 @@ public class TestBulkLoad {
         assertTrue(Bytes.equals(store.getFamilyName().toByteArray(), familyName));
         assertTrue(Bytes.equals(Bytes.toBytes(store.getStoreHomeDir()), familyName));
         assertEquals(storeFileNames.size(), store.getStoreFileCount());
-        for (String storeFile : store.getStoreFileList()) {
-          assertTrue(storeFile.equals(storeFileNames.get(index++)));
-        }
       }
-      
+
       return true;
     }
 

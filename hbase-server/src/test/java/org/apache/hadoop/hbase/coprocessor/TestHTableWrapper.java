@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -86,7 +85,7 @@ public class TestHTableWrapper {
   static class DummyRegionObserver extends BaseRegionObserver {
   }
 
-  private HTableInterface hTableInterface;
+  private Table hTableInterface;
   private Table table;
 
   @BeforeClass
@@ -144,10 +143,8 @@ public class TestHTableWrapper {
   private void checkHTableInterfaceMethods() throws Exception {
     checkConf();
     checkNameAndDescriptor();
-    checkAutoFlush();
     checkBufferSize();
     checkExists();
-    checkGetRowOrBefore();
     checkAppend();
     checkPutsAndDeletes();
     checkCheckAndPut();
@@ -159,7 +156,6 @@ public class TestHTableWrapper {
     checkMutateRow();
     checkResultScanner();
 
-    hTableInterface.flushCommits();
     hTableInterface.close();
   }
 
@@ -174,15 +170,6 @@ public class TestHTableWrapper {
     assertEquals(table.getTableDescriptor(), hTableInterface.getTableDescriptor());
   }
 
-  private void checkAutoFlush() {
-    boolean initialAutoFlush = hTableInterface.isAutoFlush();
-    hTableInterface.setAutoFlush(false);
-    assertFalse(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlush(true);
-    assertTrue(hTableInterface.isAutoFlush());
-    hTableInterface.setAutoFlush(initialAutoFlush);
-  }
-
   private void checkBufferSize() throws IOException {
     long initialWriteBufferSize = hTableInterface.getWriteBufferSize();
     hTableInterface.setWriteBufferSize(12345L);
@@ -194,19 +181,12 @@ public class TestHTableWrapper {
     boolean ex = hTableInterface.exists(new Get(ROW_A).addColumn(TEST_FAMILY, qualifierCol1));
     assertTrue(ex);
 
-    Boolean[] exArray = hTableInterface.exists(Arrays.asList(new Get[] {
-        new Get(ROW_A).addColumn(TEST_FAMILY, qualifierCol1),
-        new Get(ROW_B).addColumn(TEST_FAMILY, qualifierCol1),
-        new Get(ROW_C).addColumn(TEST_FAMILY, qualifierCol1),
-        new Get(Bytes.toBytes("does not exist")).addColumn(TEST_FAMILY, qualifierCol1), }));
-    assertArrayEquals(new Boolean[] { Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, Boolean.FALSE },
-        exArray);
-  }
-
-  @SuppressWarnings("deprecation")
-  private void checkGetRowOrBefore() throws IOException {
-    Result rowOrBeforeResult = hTableInterface.getRowOrBefore(ROW_A, TEST_FAMILY);
-    assertArrayEquals(ROW_A, rowOrBeforeResult.getRow());
+    boolean[] exArray = hTableInterface.existsAll(Arrays.asList(new Get[]{
+      new Get(ROW_A).addColumn(TEST_FAMILY, qualifierCol1),
+      new Get(ROW_B).addColumn(TEST_FAMILY, qualifierCol1),
+      new Get(ROW_C).addColumn(TEST_FAMILY, qualifierCol1),
+      new Get(Bytes.toBytes("does not exist")).addColumn(TEST_FAMILY, qualifierCol1),}));
+    assertTrue(Arrays.equals(new boolean[]{true, true, true, false}, exArray));
   }
 
   private void checkAppend() throws IOException {

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -126,12 +127,13 @@ public class DeleteTableHandler extends TableEventHandler {
     LOG.debug("Removing '" + tableName + "' from region states.");
     am.getRegionStates().tableDeleted(tableName);
 
-    // 5. If entry for this table states, remove it.
+
+    // 5.Clean any remaining rows for this table.
+    cleanAnyRemainingRows();
+
+    // 6. If entry for this table states, remove it.
     LOG.debug("Marking '" + tableName + "' as deleted.");
     am.getTableStateManager().setDeletedTable(tableName);
-
-    // 6.Clean any remaining rows for this table.
-    cleanAnyRemainingRows();
   }
 
   /**
@@ -141,9 +143,10 @@ public class DeleteTableHandler extends TableEventHandler {
    * @throws IOException
    */
   private void cleanAnyRemainingRows() throws IOException {
-    Scan tableScan = MetaTableAccessor.getScanForTableName(tableName);
+    ClusterConnection connection = this.masterServices.getConnection();
+    Scan tableScan = MetaTableAccessor.getScanForTableName(connection, tableName);
     try (Table metaTable =
-        this.masterServices.getConnection().getTable(TableName.META_TABLE_NAME)) {
+        connection.getTable(TableName.META_TABLE_NAME)) {
       List<Delete> deletes = new ArrayList<Delete>();
       try (ResultScanner resScanner = metaTable.getScanner(tableScan)) {
         for (Result result : resScanner) {
@@ -153,6 +156,9 @@ public class DeleteTableHandler extends TableEventHandler {
       if (!deletes.isEmpty()) {
         LOG.warn("Deleting some vestigal " + deletes.size() + " rows of " + this.tableName +
           " from " + TableName.META_TABLE_NAME);
+        if (LOG.isDebugEnabled()) {
+          for (Delete d: deletes) LOG.debug("Purging " + d);
+        }
         metaTable.delete(deletes);
       }
     }

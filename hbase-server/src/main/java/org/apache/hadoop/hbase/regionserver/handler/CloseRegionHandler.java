@@ -90,7 +90,7 @@ public class CloseRegionHandler extends EventHandler {
       LOG.debug("Processing close of " + name);
       String encodedRegionName = regionInfo.getEncodedName();
       // Check that this region is being served here
-      HRegion region = this.rsServices.getFromOnlineRegions(encodedRegionName);
+      HRegion region = (HRegion)rsServices.getFromOnlineRegions(encodedRegionName);
       if (region == null) {
         LOG.warn("Received CLOSE for region " + name + " but currently not serving - ignoring");
         // TODO: do better than a simple warning
@@ -119,7 +119,7 @@ public class CloseRegionHandler extends EventHandler {
       rsServices.reportRegionStateTransition(TransitionCode.CLOSED, regionInfo);
 
       // Done!  Region is closed on this RS
-      LOG.debug("Closed " + region.getRegionNameAsString());
+      LOG.debug("Closed " + region.getRegionInfo().getRegionNameAsString());
     } finally {
       this.rsServices.getRegionsInTransitionInRS().
         remove(this.regionInfo.getEncodedNameAsBytes(), Boolean.FALSE);

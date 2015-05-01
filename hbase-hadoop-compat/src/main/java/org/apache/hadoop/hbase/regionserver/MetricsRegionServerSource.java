@@ -88,6 +88,13 @@ public interface MetricsRegionServerSource extends BaseSource {
   void updateReplay(long t);
 
   /**
+   * Update the scan size.
+   *
+   * @param scanSize size of the scan
+   */
+  void updateScannerNext(long scanSize);
+
+  /**
    * Increment the number of slow Puts that have happened.
    */
   void incrSlowPut();
@@ -180,6 +187,9 @@ public interface MetricsRegionServerSource extends BaseSource {
   String PERCENT_FILES_LOCAL = "percentFilesLocal";
   String PERCENT_FILES_LOCAL_DESC =
       "The percent of HFiles that are stored on the local hdfs data node.";
+  String PERCENT_FILES_LOCAL_SECONDARY_REGIONS = "percentFilesLocalSecondaryRegions";
+  String PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC =
+    "The percent of HFiles used by secondary regions that are stored on the local hdfs data node.";
   String SPLIT_QUEUE_LENGTH = "splitQueueLength";
   String SPLIT_QUEUE_LENGTH_DESC = "Length of the queue for splits.";
   String COMPACTION_QUEUE_LENGTH = "compactionQueueLength";
@@ -303,7 +313,7 @@ public interface MetricsRegionServerSource extends BaseSource {
   String SPLIT_KEY = "splitTime";
   String SPLIT_REQUEST_KEY = "splitRequestCount";
   String SPLIT_REQUEST_DESC = "Number of splits requested";
-  String SPLIT_SUCCESS_KEY = "splitSuccessCounnt";
+  String SPLIT_SUCCESS_KEY = "splitSuccessCount";
   String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
   String FLUSH_KEY = "flushTime";
 }

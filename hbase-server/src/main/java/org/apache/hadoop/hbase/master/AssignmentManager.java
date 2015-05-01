@@ -1008,18 +1008,6 @@ public class AssignmentManager {
           regionStates.updateRegionState(region, State.FAILED_OPEN);
           return;
         }
-        // In case of assignment from EnableTableHandler table state is ENABLING. Any how
-        // EnableTableHandler will set ENABLED after assigning all the table regions. If we
-        // try to set to ENABLED directly then client API may think table is enabled.
-        // When we have a case such as all the regions are added directly into hbase:meta and we call
-        // assignRegion then we need to make the table ENABLED. Hence in such case the table
-        // will not be in ENABLING or ENABLED state.
-        TableName tableName = region.getTable();
-        if (!tableStateManager.isTableState(tableName,
-          TableState.State.ENABLED, TableState.State.ENABLING)) {
-          LOG.debug("Setting table " + tableName + " to ENABLED state.");
-          setEnabledTable(tableName);
-        }
         LOG.info("Assigning " + region.getRegionNameAsString() +
             " to " + plan.getDestination().toString());
         // Transition RegionState to PENDING_OPEN
@@ -2058,6 +2046,7 @@ public class AssignmentManager {
    * @param plan Plan to execute.
    */
   public void balance(final RegionPlan plan) {
+
     HRegionInfo hri = plan.getRegionInfo();
     TableName tableName = hri.getTable();
     if (tableStateManager.isTableState(tableName,

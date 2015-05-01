@@ -247,11 +247,11 @@ public class CacheTestUtils {
     assertTrue(toBeTested.getStats().getEvictedCount() > 0);
   }
 
-  private static class ByteArrayCacheable implements Cacheable {
+  public static class ByteArrayCacheable implements Cacheable {
 
-    static final CacheableDeserializer<Cacheable> blockDeserializer = 
+    static final CacheableDeserializer<Cacheable> blockDeserializer =
       new CacheableDeserializer<Cacheable>() {
-      
+
       @Override
       public Cacheable deserialize(ByteBuffer b) throws IOException {
         int len = b.getInt();

@@ -43,8 +43,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Delete;
@@ -56,6 +54,8 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Rule;
 import org.junit.Test;
@@ -99,7 +99,7 @@ public class TestScanner {
 
   private static final long START_CODE = Long.MAX_VALUE;
 
-  private HRegion r;
+  private Region r;
   private HRegionIncommon region;
 
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
@@ -271,7 +271,7 @@ public class TestScanner {
 
       // Close and re-open
 
-      r.close();
+      ((HRegion)r).close();
       r = HRegion.openHRegion(r, null);
       region = new HRegionIncommon(r);
 
@@ -309,7 +309,7 @@ public class TestScanner {
 
       // Close and reopen
 
-      r.close();
+      ((HRegion)r).close();
       r = HRegion.openHRegion(r,null);
       region = new HRegionIncommon(r);
 
@@ -344,7 +344,7 @@ public class TestScanner {
 
       // Close and reopen
 
-      r.close();
+      ((HRegion)r).close();
       r = HRegion.openHRegion(r,null);
       region = new HRegionIncommon(r);
 
@@ -525,17 +525,17 @@ public class TestScanner {
       /* delete column1 of firstRow */
       dc.deleteColumns(fam1, col1);
       r.delete(dc);
-      r.flushcache();
+      r.flush(true);
 
       HBaseTestCase.addContent(hri, Bytes.toString(fam1), Bytes.toString(col1),
           secondRowBytes, thirdRowBytes);
       HBaseTestCase.addContent(hri, Bytes.toString(fam2), Bytes.toString(col1),
           secondRowBytes, thirdRowBytes);
-      r.flushcache();
+      r.flush(true);
 
       InternalScanner s = r.getScanner(new Scan());
       // run a major compact, column1 of firstRow will be cleaned.
-      r.compactStores(true);
+      r.compact(true);
 
       List<Cell> results = new ArrayList<Cell>();
       s.next(results);

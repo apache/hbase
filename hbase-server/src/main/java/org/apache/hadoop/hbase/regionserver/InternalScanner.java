@@ -22,8 +22,8 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Internal scanners differ from client-side scanners in that they operate on
@@ -50,14 +50,13 @@ public interface InternalScanner extends Closeable {
   boolean next(List<Cell> results) throws IOException;
 
   /**
-   * Grab the next row's worth of values with a limit on the number of values
-   * to return.
+   * Grab the next row's worth of values.
    * @param result return output array
-   * @param limit limit on row count to get
+   * @param scannerContext
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean next(List<Cell> result, int limit) throws IOException;
+  boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException;
 
   /**
    * Closes the scanner and releases any resources it has allocated

@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -80,8 +79,7 @@ public class TableRecordReaderImpl {
   public void restart(byte[] firstRow) throws IOException {
     currentScan = new Scan(scan);
     currentScan.setStartRow(firstRow);
-    currentScan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE,
-      Bytes.toBytes(Boolean.TRUE));
+    currentScan.setScanMetricsEnabled(true);
     if (this.scanner != null) {
       if (logScannerActivity) {
         LOG.info("Closing the previously opened scanner object.");
@@ -265,13 +263,10 @@ public class TableRecordReaderImpl {
    * @throws IOException
    */
   private void updateCounters() throws IOException {
-    byte[] serializedMetrics = currentScan.getAttribute(
-        Scan.SCAN_ATTRIBUTES_METRICS_DATA);
-    if (serializedMetrics == null || serializedMetrics.length == 0 ) {
+    ScanMetrics scanMetrics = this.scan.getScanMetrics();
+    if (scanMetrics == null) {
       return;
     }
-
-    ScanMetrics scanMetrics = ProtobufUtil.toScanMetrics(serializedMetrics);
 
     updateCounters(scanMetrics, numRestarts, getCounter, context, numStale);
   }

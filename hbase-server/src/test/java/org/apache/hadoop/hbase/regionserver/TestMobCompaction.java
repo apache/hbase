@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
@@ -196,7 +195,7 @@ public class TestMobCompaction {
 
     Path hbaseRootDir = FSUtils.getRootDir(conf);
     Path basedir = new Path(hbaseRootDir, htd.getNameAsString());
-    List<Pair<byte[], String>> hfiles = new ArrayList<Pair<byte[], String>>(1);
+    List<Pair<byte[], String>> hfiles = new ArrayList<>(1);
     for (int i = 0; i < compactionThreshold; i++) {
       Path hpath = new Path(basedir, "hfile" + i);
       hfiles.add(Pair.newPair(COLUMN_FAMILY, hpath.toString()));
@@ -205,7 +204,7 @@ public class TestMobCompaction {
 
     // The following will bulk load the above generated store files and compact, with 600(fileSize)
     // > 300(threshold)
-    boolean result = region.bulkLoadHFiles(hfiles, true);
+    boolean result = region.bulkLoadHFiles(hfiles, true, null);
     assertTrue("Bulkload result:", result);
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", 0, countMobFiles());
@@ -244,13 +243,14 @@ public class TestMobCompaction {
     assertEquals("Before compaction: number of mob cells", numHfiles, countMobCellsInMetadata());
     // now let's delete some cells that contain mobs
     Delete delete = new Delete(deleteRow);
-    delete.deleteFamily(COLUMN_FAMILY);
+    delete.addFamily(COLUMN_FAMILY);
     region.delete(delete);
     loader.flushcache();
 
     assertEquals("Before compaction: store files", numHfiles + 1, countStoreFiles());
     assertEquals("Before compaction: mob files", numHfiles, countMobFiles());
-    region.compactStores(true);
+    // region.compactStores();
+    region.compact(true);
     assertEquals("After compaction: store files", 1, countStoreFiles());
     // still have original mob hfiles and now added a mob del file
     assertEquals("After compaction: mob files", numHfiles + 1, countMobFiles());
@@ -258,7 +258,7 @@ public class TestMobCompaction {
     Scan scan = new Scan();
     scan.setRaw(true);
     InternalScanner scanner = region.getScanner(scan);
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     scanner.next(results);
     int deleteCount = 0;
     while (!results.isEmpty()) {
@@ -316,7 +316,7 @@ public class TestMobCompaction {
   private Put createPut(int rowIdx, byte[] dummyData) throws IOException {
     Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(rowIdx)));
     p.setDurability(Durability.SKIP_WAL);
-    p.add(COLUMN_FAMILY, Bytes.toBytes("colX"), dummyData);
+    p.addColumn(COLUMN_FAMILY, Bytes.toBytes("colX"), dummyData);
     return p;
   }
 
@@ -345,7 +345,7 @@ public class TestMobCompaction {
     InternalScanner scanner = region.getScanner(scan);
 
     int scannedCount = 0;
-    List<Cell> results = new ArrayList<Cell>();
+    List<Cell> results = new ArrayList<>();
     boolean hasMore = true;
     while (hasMore) {
       hasMore = scanner.next(results);
@@ -391,15 +391,14 @@ public class TestMobCompaction {
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     InternalScanner scanner = region.getScanner(scan);
 
-    List<Cell> kvs = new ArrayList<Cell>();
+    List<Cell> kvs = new ArrayList<>();
     boolean hasMore = true;
     String fileName;
-    Set<String> files = new HashSet<String>();
+    Set<String> files = new HashSet<>();
     do {
       kvs.clear();
       hasMore = scanner.next(kvs);
-      for (Cell c : kvs) {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(c);
+      for (Cell kv : kvs) {
         if (!MobUtils.isMobReferenceCell(kv)) {
           continue;
         }
@@ -432,7 +431,7 @@ public class TestMobCompaction {
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
     Path mobDirPath = new Path(MobUtils.getMobRegionPath(conf, htd.getTableName()),
         hcd.getNameAsString());
-    List<StoreFile> sfs = new ArrayList<StoreFile>();
+    List<StoreFile> sfs = new ArrayList<>();
     int numDelfiles = 0;
     int size = 0;
     if (fs.exists(mobDirPath)) {

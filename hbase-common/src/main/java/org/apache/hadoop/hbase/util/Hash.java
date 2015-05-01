@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * This class represents a common API for hashing functions.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public abstract class Hash {
   /** Constant to denote invalid hash type. */

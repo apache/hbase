@@ -47,11 +47,12 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,7 +67,7 @@ import com.google.common.base.Throwables;
 @Category({FilterTests.class, SmallTests.class})
 public class TestFilter {
   private final static Log LOG = LogFactory.getLog(TestFilter.class);
-  private HRegion region;
+  private Region region;
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   //
@@ -164,7 +165,7 @@ public class TestFilter {
     }
 
     // Flush
-    this.region.flushcache();
+    this.region.flush(true);
 
     // Insert second half (reverse families)
     for(byte [] ROW : ROWS_ONE) {
@@ -241,7 +242,7 @@ public class TestFilter {
       this.region.put(p);
     }
     // Flush
-    this.region.flushcache();
+    this.region.flush(true);
 
     // Insert second half (reverse families)
     for (byte[] ROW : ROWS_THREE) {
@@ -1450,7 +1451,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("TestFilter"));
     htd.addFamily(new HColumnDescriptor(family));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
 
     for(int i=0; i<5; i++) {
@@ -1459,7 +1460,7 @@ public class TestFilter {
       p.add(family, qualifier, Bytes.toBytes(String.valueOf(111+i)));
       testRegion.put(p);
     }
-    testRegion.flushcache();
+    testRegion.flush(true);
 
     // rows starting with "b"
     PrefixFilter pf = new PrefixFilter(new byte[] {'b'}) ;
@@ -1474,7 +1475,7 @@ public class TestFilter {
     InternalScanner scanner = testRegion.getScanner(s1);
     List<Cell> results = new ArrayList<Cell>();
     int resultCount = 0;
-    while(scanner.next(results)) {
+    while (scanner.next(results)) {
       resultCount++;
       byte[] row =  CellUtil.cloneRow(results.get(0));
       LOG.debug("Found row: " + Bytes.toStringBinary(row));
@@ -1485,8 +1486,8 @@ public class TestFilter {
     assertEquals(2, resultCount);
     scanner.close();
 
-    WAL wal = testRegion.getWAL();
-    testRegion.close();
+    WAL wal = ((HRegion)testRegion).getWAL();
+    ((HRegion)testRegion).close();
     wal.close();
   }
 
@@ -1819,7 +1820,7 @@ public class TestFilter {
       p.setDurability(Durability.SKIP_WAL);
       p.add(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
       this.region.put(p);
-      this.region.flushcache();
+      this.region.flush(true);
 
       // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
       KeyValue [] expectedKVs = {
@@ -2010,7 +2011,7 @@ public class TestFilter {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("testNestedFilterListWithSCVF"));
     htd.addFamily(new HColumnDescriptor(FAMILIES[0]));
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
-    HRegion testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
+    Region testRegion = HBaseTestingUtility.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(),
         TEST_UTIL.getConfiguration(), htd);
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
@@ -2018,7 +2019,7 @@ public class TestFilter {
       p.add(FAMILIES[0], columnStatus, Bytes.toBytes(i%2));
       testRegion.put(p);
     }
-    testRegion.flushcache();
+    testRegion.flush(true);
     // 1. got rows > "row4"
     Filter rowFilter = new RowFilter(CompareOp.GREATER,new BinaryComparator(Bytes.toBytes("row4")));
     Scan s1 = new Scan();
@@ -2094,8 +2095,8 @@ public class TestFilter {
       results.clear();
     }
     assertFalse(scanner.next(results));
-    WAL wal = testRegion.getWAL();
-    testRegion.close();
+    WAL wal = ((HRegion)testRegion).getWAL();
+    ((HRegion)testRegion).close();
     wal.close();
   }      
 }

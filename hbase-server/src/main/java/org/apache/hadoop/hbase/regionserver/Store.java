@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,7 +49,7 @@ import org.apache.hadoop.hbase.util.Pair;
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
  * more StoreFiles, which stretch backwards over time.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public interface Store extends HeapSize, StoreConfigInformation, PropagatingConfigurationObserver {
 
@@ -63,7 +64,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   Collection<StoreFile> getStorefiles();
 
   /**
-   * Close all the readers We don't need to worry about subsequent requests because the HRegion
+   * Close all the readers We don't need to worry about subsequent requests because the Region
    * holds a write lock that will prevent any more reads or writes.
    * @return the {@link StoreFile StoreFiles} that were previously being used.
    * @throws IOException on failure
@@ -213,9 +214,13 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * Call to complete a compaction. Its for the case where we find in the WAL a compaction
    * that was not finished.  We could find one recovering a WAL after a regionserver crash.
    * See HBASE-2331.
-   * @param compaction
+   * @param compaction the descriptor for compaction
+   * @param pickCompactionFiles whether or not pick up the new compaction output files and
+   * add it to the store
+   * @param removeFiles whether to remove/archive files from filesystem
    */
-  void completeCompactionMarker(CompactionDescriptor compaction)
+  void replayCompactionMarker(CompactionDescriptor compaction, boolean pickCompactionFiles,
+      boolean removeFiles)
       throws IOException;
 
   // Split oriented methods
@@ -237,13 +242,13 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void assertBulkLoadHFileOk(Path srcPath) throws IOException;
 
   /**
-   * This method should only be called from HRegion. It is assumed that the ranges of values in the
+   * This method should only be called from Region. It is assumed that the ranges of values in the
    * HFile fit within the stores assigned region. (assertBulkLoadHFileOk checks this)
    *
    * @param srcPathStr
    * @param sequenceId sequence Id associated with the HFile
    */
-  void bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
+  Path bulkLoadHFile(String srcPathStr, long sequenceId) throws IOException;
 
   // General accessors into the state of the store
   // TODO abstract some of this out into a metrics class
@@ -265,7 +270,18 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   long getFlushableSize();
 
+  /**
+   * Returns the memstore snapshot size
+   * @return size of the memstore snapshot
+   */
+  long getSnapshotSize();
+
   HColumnDescriptor getFamily();
+
+  /**
+   * @return The maximum sequence id in all store files.
+   */
+  long getMaxSequenceId();
 
   /**
    * @return The maximum memstoreTS in all store files.
@@ -416,4 +432,14 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    * linear formula.
    */
   double getCompactionPressure();
+
+   /**
+    * Replaces the store files that the store has with the given files. Mainly used by
+    * secondary region replicas to keep up to date with
+    * the primary region files.
+    * @throws IOException
+    */
+  void refreshStoreFiles(Collection<String> newFiles) throws IOException;
+
+  void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException;
 }

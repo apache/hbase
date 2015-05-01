@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -67,9 +66,11 @@ public class TestEncryptionKeyRotation {
     SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     rng.nextBytes(keyBytes);
-    initialCFKey = new SecretKeySpec(keyBytes, "AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    initialCFKey = new SecretKeySpec(keyBytes, algorithm);
     rng.nextBytes(keyBytes);
-    secondCFKey = new SecretKeySpec(keyBytes, "AES");
+    secondCFKey = new SecretKeySpec(keyBytes, algorithm);
   }
 
   @BeforeClass
@@ -95,7 +96,9 @@ public class TestEncryptionKeyRotation {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
       "testCFKeyRotation"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
     htd.addFamily(hcd);
 
@@ -154,7 +157,9 @@ public class TestEncryptionKeyRotation {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("default",
       "testMasterKeyRotation"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf, "hbase", initialCFKey));
     htd.addFamily(hcd);
 
@@ -191,9 +196,9 @@ public class TestEncryptionKeyRotation {
 
   private static List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
-    for (HRegion region:
+    for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(tableName)) {
-      for (Store store: region.getStores().values()) {
+      for (Store store: region.getStores()) {
         for (StoreFile storefile: store.getStorefiles()) {
           paths.add(storefile.getPath());
         }

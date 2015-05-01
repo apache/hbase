@@ -34,9 +34,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,35 +93,40 @@ public class Scan extends Query {
 
   private static final String RAW_ATTR = "_raw_";
 
-  /**
-   * EXPERT ONLY.
-   * An integer (not long) indicating to the scanner logic how many times we attempt to retrieve the
-   * next KV before we schedule a reseek.
-   * The right value depends on the size of the average KV. A reseek is more efficient when
-   * it can skip 5-10 KVs or 512B-1KB, or when the next KV is likely found in another HFile block.
-   * Setting this only has any effect when columns were added with
-   * {@link #addColumn(byte[], byte[])}
-   * <pre>{@code
-   * Scan s = new Scan(...);
-   * s.addColumn(...);
-   * s.setAttribute(Scan.HINT_LOOKAHEAD, Bytes.toBytes(2));
-   * }</pre>
-   * Default is 0 (always reseek).
-   */
-  public static final String HINT_LOOKAHEAD = "_look_ahead_";
-
   private byte [] startRow = HConstants.EMPTY_START_ROW;
   private byte [] stopRow  = HConstants.EMPTY_END_ROW;
   private int maxVersions = 1;
   private int batch = -1;
 
+  /**
+   * Partial {@link Result}s are {@link Result}s must be combined to form a complete {@link Result}.
+   * The {@link Result}s had to be returned in fragments (i.e. as partials) because the size of the
+   * cells in the row exceeded max result size on the server. Typically partial results will be
+   * combined client side into complete results before being delivered to the caller. However, if
+   * this flag is set, the caller is indicating that they do not mind seeing partial results (i.e.
+   * they understand that the results returned from the Scanner may only represent part of a
+   * particular row). In such a case, any attempt to combine the partials into a complete result on
+   * the client side will be skipped, and the caller will be able to see the exact results returned
+   * from the server.
+   */
+  private boolean allowPartialResults = false;
+
   private int storeLimit = -1;
   private int storeOffset = 0;
   private boolean getScan;
 
-  // If application wants to collect scan metrics, it needs to
-  // call scan.setAttribute(SCAN_ATTRIBUTES_ENABLE, Bytes.toBytes(Boolean.TRUE))
+  /**
+   * @deprecated since 1.0.0. Use {@link #setScanMetricsEnabled(boolean)}
+   */
+  // Make private or remove.
+  @Deprecated
   static public final String SCAN_ATTRIBUTES_METRICS_ENABLE = "scan.attributes.metrics.enable";
+
+  /**
+   * Use {@link #getScanMetrics()}
+   */
+  // Make this private or remove.
+  @Deprecated
   static public final String SCAN_ATTRIBUTES_METRICS_DATA = "scan.attributes.metrics.data";
 
   // If an application wants to use multiple scans over different tables each scan must
@@ -681,6 +688,27 @@ public class Scan extends Query {
   }
 
   /**
+   * Setting whether the caller wants to see the partial results that may be returned from the
+   * server. By default this value is false and the complete results will be assembled client side
+   * before being delivered to the caller.
+   * @param allowPartialResults
+   * @return this
+   */
+  public Scan setAllowPartialResults(final boolean allowPartialResults) {
+    this.allowPartialResults = allowPartialResults;
+    return this;
+  }
+
+  /**
+   * @return true when the constructor of this scan understands that the results they will see may
+   *         only represent a partial portion of a row. The entire row would be retrieved by
+   *         subsequent calls to {@link ResultScanner#next()}
+   */
+  public boolean getAllowPartialResults() {
+    return allowPartialResults;
+  }
+
+  /**
    * Set the value indicating whether loading CFs on demand should be allowed (cluster
    * default is false). On-demand CF loading doesn't load column families until necessary, e.g.
    * if you filter on one column, the other column family data will be loaded only for the rows
@@ -915,5 +943,32 @@ public class Scan extends Query {
     scan.setReversed(true);
     scan.setCaching(1);
     return scan;
+  }
+
+  /**
+   * Enable collection of {@link ScanMetrics}. For advanced users.
+   * @param enabled Set to true to enable accumulating scan metrics
+   */
+  public Scan setScanMetricsEnabled(final boolean enabled) {
+    setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.valueOf(enabled)));
+    return this;
+  }
+
+  /**
+   * @return True if collection of scan metrics is enabled. For advanced users.
+   */
+  public boolean isScanMetricsEnabled() {
+    byte[] attr = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE);
+    return attr == null ? false : Bytes.toBoolean(attr);
+  }
+
+  /**
+   * @return Metrics on this Scan, if metrics were enabled.
+   * @see #setScanMetricsEnabled(boolean)
+   */
+  public ScanMetrics getScanMetrics() {
+    byte [] bytes = getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA);
+    if (bytes == null) return null;
+    return ProtobufUtil.toScanMetrics(bytes);
   }
 }

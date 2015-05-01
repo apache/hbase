@@ -413,7 +413,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
         }
       } break;
       case PageFilter:
-        filter = new PageFilter(Long.valueOf(value));
+        filter = new PageFilter(Long.parseLong(value));
         break;
       case PrefixFilter:
         filter = new PrefixFilter(Base64.decode(value));

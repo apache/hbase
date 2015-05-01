@@ -44,13 +44,13 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessControlLists;
@@ -308,7 +308,7 @@ public class VisibilityUtils {
     return false;
   }
 
-  public static Filter createVisibilityLabelFilter(HRegion region, Authorizations authorizations)
+  public static Filter createVisibilityLabelFilter(Region region, Authorizations authorizations)
       throws IOException {
     Map<ByteRange, Integer> cfVsMaxVersions = new HashMap<ByteRange, Integer>();
     for (HColumnDescriptor hcd : region.getTableDesc().getFamilies()) {
@@ -326,8 +326,8 @@ public class VisibilityUtils {
    * @throws IOException When there is IOE in getting the system user (During non-RPC handling).
    */
   public static User getActiveUser() throws IOException {
-    User user = RequestContext.getRequestUser();
-    if (!RequestContext.isInRequestContext()) {
+    User user = RpcServer.getRequestUser();
+    if (user == null) {
       user = User.getCurrent();
     }
     if (LOG.isTraceEnabled()) {

@@ -34,11 +34,12 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.io.hfile.HFileWriterV2;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
@@ -146,7 +147,7 @@ public abstract class Compactor {
         fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, r.getSequenceID());
       }
       else {
-        tmp = fileInfo.get(HFileWriterV2.MAX_MEMSTORE_TS_KEY);
+        tmp = fileInfo.get(HFile.Writer.MAX_MEMSTORE_TS_KEY);
         if (tmp != null) {
           fd.maxMVCCReadpoint = Math.max(fd.maxMVCCReadpoint, Bytes.toLong(tmp));
         }
@@ -261,10 +262,13 @@ public abstract class Compactor {
         store.getRegionInfo().getRegionNameAsString() + "#" + store.getFamily().getNameAsString();
     long now = 0;
     boolean hasMore;
+    ScannerContext scannerContext =
+        ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+
     throughputController.start(compactionName);
     try {
       do {
-        hasMore = scanner.next(cells, compactionKVMax);
+        hasMore = scanner.next(cells, scannerContext);
         if (LOG.isDebugEnabled()) {
           now = EnvironmentEdgeManager.currentTime();
         }

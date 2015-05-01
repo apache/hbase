@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -200,9 +201,15 @@ public class RegionLocations {
     // in case of region replication going down, we might have a leak here.
     int max = other.locations.length;
 
+    HRegionInfo regionInfo = null;
     for (int i = 0; i < max; i++) {
       HRegionLocation thisLoc = this.getRegionLocation(i);
       HRegionLocation otherLoc = other.getRegionLocation(i);
+      if (regionInfo == null && otherLoc != null && otherLoc.getRegionInfo() != null) {
+        // regionInfo is the first non-null HRI from other RegionLocations. We use it to ensure that
+        // all replica region infos belong to the same region with same region id.
+        regionInfo = otherLoc.getRegionInfo();
+      }
 
       HRegionLocation selectedLoc = selectRegionLocation(thisLoc,
         otherLoc, true, false);
@@ -215,6 +222,18 @@ public class RegionLocations {
       }
       if (newLocations != null) {
         newLocations[i] = selectedLoc;
+      }
+    }
+
+    // ensure that all replicas share the same start code. Otherwise delete them
+    if (newLocations != null && regionInfo != null) {
+      for (int i=0; i < newLocations.length; i++) {
+        if (newLocations[i] != null) {
+          if (!RegionReplicaUtil.isReplicasForSameRegion(regionInfo,
+            newLocations[i].getRegionInfo())) {
+            newLocations[i] = null;
+          }
+        }
       }
     }
 
@@ -264,6 +283,15 @@ public class RegionLocations {
     HRegionLocation[] newLocations = new HRegionLocation[Math.max(locations.length, replicaId +1)];
     System.arraycopy(locations, 0, newLocations, 0, locations.length);
     newLocations[replicaId] = location;
+    // ensure that all replicas share the same start code. Otherwise delete them
+    for (int i=0; i < newLocations.length; i++) {
+      if (newLocations[i] != null) {
+        if (!RegionReplicaUtil.isReplicasForSameRegion(location.getRegionInfo(),
+          newLocations[i].getRegionInfo())) {
+          newLocations[i] = null;
+        }
+      }
+    }
     return new RegionLocations(newLocations);
   }
 

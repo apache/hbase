@@ -44,11 +44,11 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.Before;
@@ -59,7 +59,7 @@ import org.mockito.Mockito;
 import com.google.common.collect.ImmutableList;
 
 /**
- * Test the {@link RegionMergeTransaction} class against two HRegions (as
+ * Test the {@link RegionMergeTransactionImpl} class against two HRegions (as
  * opposed to running cluster).
  */
 @Category({RegionServerTests.class, SmallTests.class})
@@ -119,14 +119,14 @@ public class TestRegionMergeTransaction {
     prepareOnGoodRegions();
   }
 
-  private RegionMergeTransaction prepareOnGoodRegions() throws IOException {
-    RegionMergeTransaction mt = new RegionMergeTransaction(region_a, region_b,
+  private RegionMergeTransactionImpl prepareOnGoodRegions() throws IOException {
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a, region_b,
         false);
-    RegionMergeTransaction spyMT = Mockito.spy(mt);
+    RegionMergeTransactionImpl spyMT = Mockito.spy(mt);
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_b.getRegionName());
+        region_b.getRegionInfo().getRegionName());
     assertTrue(spyMT.prepare(null));
     return spyMT;
   }
@@ -136,7 +136,7 @@ public class TestRegionMergeTransaction {
    */
   @Test
   public void testPrepareWithSameRegion() throws IOException {
-    RegionMergeTransaction mt = new RegionMergeTransaction(this.region_a,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(this.region_a,
         this.region_a, true);
     assertFalse("should not merge the same region even if it is forcible ",
         mt.prepare(null));
@@ -147,7 +147,7 @@ public class TestRegionMergeTransaction {
    */
   @Test
   public void testPrepareWithRegionsNotAdjacent() throws IOException {
-    RegionMergeTransaction mt = new RegionMergeTransaction(this.region_a,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(this.region_a,
         this.region_c, false);
     assertFalse("should not merge two regions if they are adjacent except it is forcible",
         mt.prepare(null));
@@ -159,13 +159,13 @@ public class TestRegionMergeTransaction {
   @Test
   public void testPrepareWithRegionsNotAdjacentUnderCompulsory()
       throws IOException {
-    RegionMergeTransaction mt = new RegionMergeTransaction(region_a, region_c,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a, region_c,
         true);
-    RegionMergeTransaction spyMT = Mockito.spy(mt);
+    RegionMergeTransactionImpl spyMT = Mockito.spy(mt);
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
-        region_c.getRegionName());
+        region_c.getRegionInfo().getRegionName());
     assertTrue("Since focible is true, should merge two regions even if they are not adjacent",
         spyMT.prepare(null));
   }
@@ -180,7 +180,7 @@ public class TestRegionMergeTransaction {
     when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
     when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
     this.region_a.stores.put(Bytes.toBytes(""), storeMock);
-    RegionMergeTransaction mt = new RegionMergeTransaction(this.region_a,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(this.region_a,
         this.region_b, false);
     assertFalse(
         "a region should not be mergeable if it has instances of store file references",
@@ -190,7 +190,7 @@ public class TestRegionMergeTransaction {
   @Test
   public void testPrepareWithClosedRegion() throws IOException {
     this.region_a.close();
-    RegionMergeTransaction mt = new RegionMergeTransaction(this.region_a,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(this.region_a,
         this.region_b, false);
     assertFalse(mt.prepare(null));
   }
@@ -201,13 +201,13 @@ public class TestRegionMergeTransaction {
    */
   @Test
   public void testPrepareWithRegionsWithMergeReference() throws IOException {
-    RegionMergeTransaction mt = new RegionMergeTransaction(region_a, region_b,
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a, region_b,
         false);
-    RegionMergeTransaction spyMT = Mockito.spy(mt);
+    RegionMergeTransactionImpl spyMT = Mockito.spy(mt);
     doReturn(true).when(spyMT).hasMergeQualifierInMeta(null,
-        region_a.getRegionName());
+        region_a.getRegionInfo().getRegionName());
     doReturn(true).when(spyMT).hasMergeQualifierInMeta(null,
-        region_b.getRegionName());
+        region_b.getRegionInfo().getRegionName());
     assertFalse(spyMT.prepare(null));
   }
 
@@ -220,14 +220,14 @@ public class TestRegionMergeTransaction {
     assertEquals(rowCountOfRegionB, countRows(this.region_b));
 
     // Start transaction.
-    RegionMergeTransaction mt = prepareOnGoodRegions();
+    RegionMergeTransactionImpl mt = prepareOnGoodRegions();
 
     // Run the execute. Look at what it returns.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       TEST_UTIL.getConfiguration());
     Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
-    HRegion mergedRegion = mt.execute(mockServer, null);
+    HRegion mergedRegion = (HRegion)mt.execute(mockServer, null);
     // Do some assertions about execution.
     assertTrue(this.fs.exists(mt.getMergesDir()));
     // Assert region_a and region_b is closed.
@@ -238,10 +238,10 @@ public class TestRegionMergeTransaction {
     // to be under the merged region dirs.
     assertEquals(0, this.fs.listStatus(mt.getMergesDir()).length);
     // Check merged region have correct key span.
-    assertTrue(Bytes.equals(this.region_a.getStartKey(),
-        mergedRegion.getStartKey()));
-    assertTrue(Bytes.equals(this.region_b.getEndKey(),
-        mergedRegion.getEndKey()));
+    assertTrue(Bytes.equals(this.region_a.getRegionInfo().getStartKey(),
+        mergedRegion.getRegionInfo().getStartKey()));
+    assertTrue(Bytes.equals(this.region_b.getRegionInfo().getEndKey(),
+        mergedRegion.getRegionInfo().getEndKey()));
     // Count rows. merged region are already open
     try {
       int mergedRegionRowCount = countRows(mergedRegion);
@@ -264,7 +264,7 @@ public class TestRegionMergeTransaction {
     assertEquals(rowCountOfRegionB, countRows(this.region_b));
 
     // Start transaction.
-    RegionMergeTransaction mt = prepareOnGoodRegions();
+    RegionMergeTransactionImpl mt = prepareOnGoodRegions();
 
     when(mt.createMergedRegionFromMerges(region_a, region_b,
         mt.getMergedRegionInfo())).thenThrow(
@@ -300,7 +300,7 @@ public class TestRegionMergeTransaction {
 
     // Now retry the merge but do not throw an exception this time.
     assertTrue(mt.prepare(null));
-    HRegion mergedRegion = mt.execute(mockServer, null);
+    HRegion mergedRegion = (HRegion)mt.execute(mockServer, null);
     // Count rows. daughters are already open
     // Count rows. merged region are already open
     try {
@@ -324,7 +324,7 @@ public class TestRegionMergeTransaction {
     assertEquals(rowCountOfRegionB, countRows(this.region_b));
 
     // Start transaction.
-    RegionMergeTransaction mt = prepareOnGoodRegions();
+    RegionMergeTransactionImpl mt = prepareOnGoodRegions();
     Mockito.doThrow(new MockedFailedMergedRegionOpen())
         .when(mt)
         .openMergedRegion((Server) Mockito.anyObject(),
@@ -364,31 +364,31 @@ public class TestRegionMergeTransaction {
     byte[] z = Bytes.toBytes("z");
     HRegionInfo r1 = new HRegionInfo(tableName);
     HRegionInfo r2 = new HRegionInfo(tableName, a, z);
-    HRegionInfo m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    HRegionInfo m = RegionMergeTransactionImpl.getMergedRegionInfo(r1, r2);
     assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
         && Bytes.equals(m.getEndKey(), r1.getEndKey()));
 
     r1 = new HRegionInfo(tableName, null, a);
     r2 = new HRegionInfo(tableName, a, z);
-    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    m = RegionMergeTransactionImpl.getMergedRegionInfo(r1, r2);
     assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
         && Bytes.equals(m.getEndKey(), r2.getEndKey()));
 
     r1 = new HRegionInfo(tableName, null, a);
     r2 = new HRegionInfo(tableName, z, null);
-    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    m = RegionMergeTransactionImpl.getMergedRegionInfo(r1, r2);
     assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
         && Bytes.equals(m.getEndKey(), r2.getEndKey()));
 
     r1 = new HRegionInfo(tableName, a, z);
     r2 = new HRegionInfo(tableName, z, null);
-    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    m = RegionMergeTransactionImpl.getMergedRegionInfo(r1, r2);
     assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
       && Bytes.equals(m.getEndKey(), r2.getEndKey()));
 
     r1 = new HRegionInfo(tableName, a, b);
     r2 = new HRegionInfo(tableName, b, z);
-    m = RegionMergeTransaction.getMergedRegionInfo(r1, r2);
+    m = RegionMergeTransactionImpl.getMergedRegionInfo(r1, r2);
     assertTrue(Bytes.equals(m.getStartKey(), r1.getStartKey())
       && Bytes.equals(m.getEndKey(), r2.getEndKey()));
   }
@@ -467,7 +467,7 @@ public class TestRegionMergeTransaction {
         }
       }
       if (flush) {
-        r.flushcache();
+        r.flush(true);
       }
     }
     return rowCount;

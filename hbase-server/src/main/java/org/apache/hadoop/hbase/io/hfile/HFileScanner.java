@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.Cell;
  *
  * <p>A scanner doesn't always have a key/value that it is pointing to
  * when it is first created and before
- * {@link #seekTo()}/{@link #seekTo(byte[])} are called.
+ * {@link #seekTo()}/{@link #seekTo(Cell)} are called.
  * In this case, {@link #getKey()}/{@link #getValue()} returns null.  At most
  * other times, a key and value will be available.  The general pattern is that
  * you position the Scanner using the seekTo variants and then getKey and
@@ -39,69 +39,57 @@ import org.apache.hadoop.hbase.Cell;
 @InterfaceAudience.Private
 public interface HFileScanner {
   /**
-   * SeekTo or just before the passed <code>key</code>.  Examine the return
-   * code to figure whether we found the key or not.
-   * Consider the key stream of all the keys in the file,
-   * <code>k[0] .. k[n]</code>, where there are n keys in the file.
-   * @param key Key to find.
-   * @return -1, if key < k[0], no position;
-   * 0, such that k[i] = key and scanner is left in position i; and
-   * 1, such that k[i] < key, and scanner is left in position i.
-   * The scanner will position itself between k[i] and k[i+1] where
-   * k[i] < key <= k[i+1].
-   * If there is no key k[i+1] greater than or equal to the input key, then the
+   * SeekTo or just before the passed <code>cell</code>.  Examine the return
+   * code to figure whether we found the cell or not.
+   * Consider the cell stream of all the cells in the file,
+   * <code>c[0] .. c[n]</code>, where there are n cells in the file.
+   * @param cell
+   * @return -1, if cell < c[0], no position;
+   * 0, such that c[i] = cell and scanner is left in position i; and
+   * 1, such that c[i] < cell, and scanner is left in position i.
+   * The scanner will position itself between c[i] and c[i+1] where
+   * c[i] < cell <= c[i+1].
+   * If there is no cell c[i+1] greater than or equal to the input cell, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
    * @throws IOException
    */
-  @Deprecated
-  int seekTo(byte[] key) throws IOException;
-  @Deprecated
-  int seekTo(byte[] key, int offset, int length) throws IOException;
+  int seekTo(Cell cell) throws IOException;
 
-  int seekTo(Cell c) throws IOException;
   /**
-   * Reseek to or just before the passed <code>key</code>. Similar to seekTo
+   * Reseek to or just before the passed <code>cell</code>. Similar to seekTo
    * except that this can be called even if the scanner is not at the beginning
    * of a file.
-   * This can be used to seek only to keys which come after the current position
+   * This can be used to seek only to cells which come after the current position
    * of the scanner.
-   * Consider the key stream of all the keys in the file,
-   * <code>k[0] .. k[n]</code>, where there are n keys in the file after
+   * Consider the cell stream of all the cells in the file,
+   * <code>c[0] .. c[n]</code>, where there are n cellc in the file after
    * current position of HFileScanner.
-   * The scanner will position itself between k[i] and k[i+1] where
-   * k[i] < key <= k[i+1].
-   * If there is no key k[i+1] greater than or equal to the input key, then the
+   * The scanner will position itself between c[i] and c[i+1] where
+   * c[i] < cell <= c[i+1].
+   * If there is no cell c[i+1] greater than or equal to the input cell, then the
    * scanner will position itself at the end of the file and next() will return
    * false when it is called.
-   * @param key Key to find (should be non-null)
-   * @return -1, if key < k[0], no position;
-   * 0, such that k[i] = key and scanner is left in position i; and
-   * 1, such that k[i] < key, and scanner is left in position i.
+   * @param cell Cell to find (should be non-null)
+   * @return -1, if cell < c[0], no position;
+   * 0, such that c[i] = cell and scanner is left in position i; and
+   * 1, such that c[i] < cell, and scanner is left in position i.
    * @throws IOException
    */
-  @Deprecated
-  int reseekTo(byte[] key) throws IOException;
-  @Deprecated
-  int reseekTo(byte[] key, int offset, int length) throws IOException;
+  int reseekTo(Cell cell) throws IOException;
 
-  int reseekTo(Cell c) throws IOException;
   /**
-   * Consider the key stream of all the keys in the file,
-   * <code>k[0] .. k[n]</code>, where there are n keys in the file.
-   * @param key Key to find
-   * @return false if key <= k[0] or true with scanner in position 'i' such
-   * that: k[i] < key.  Furthermore: there may be a k[i+1], such that
-   * k[i] < key <= k[i+1] but there may also NOT be a k[i+1], and next() will
+   * Consider the cell stream of all the cells in the file,
+   * <code>c[0] .. c[n]</code>, where there are n cells in the file.
+   * @param cell Cell to find
+   * @return false if cell <= c[0] or true with scanner in position 'i' such
+   * that: c[i] < cell.  Furthermore: there may be a c[i+1], such that
+   * c[i] < cell <= c[i+1] but there may also NOT be a c[i+1], and next() will
    * return false (EOF).
    * @throws IOException
    */
-  @Deprecated
-  boolean seekBefore(byte[] key) throws IOException;
-  @Deprecated
-  boolean seekBefore(byte[] key, int offset, int length) throws IOException;
+  boolean seekBefore(Cell cell) throws IOException;
 
-  boolean seekBefore(Cell kv) throws IOException;
   /**
    * Positions this scanner at the start of the file.
    * @return False if empty file; i.e. a call to next would return false and
@@ -117,14 +105,14 @@ public interface HFileScanner {
   boolean next() throws IOException;
   /**
    * Gets a buffer view to the current key. You must call
-   * {@link #seekTo(byte[])} before this method.
+   * {@link #seekTo(Cell)} before this method.
    * @return byte buffer for the key. The limit is set to the key size, and the
    * position is 0, the start of the buffer view.
    */
   ByteBuffer getKey();
   /**
    * Gets a buffer view to the current value.  You must call
-   * {@link #seekTo(byte[])} before this method.
+   * {@link #seekTo(Cell)} before this method.
    *
    * @return byte buffer for the value. The limit is set to the value size, and
    * the position is 0, the start of the buffer view.
@@ -136,13 +124,13 @@ public interface HFileScanner {
   Cell getKeyValue();
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
-   * bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.
+   * bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
    * @return key as a string
    */
   String getKeyString();
   /**
    * Convenience method to get a copy of the value as a string - interpreting
-   * the bytes as UTF8. You must call {@link #seekTo(byte[])} before this method.
+   * the bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.
    * @return value as a string
    */
   String getValueString();
@@ -152,8 +140,13 @@ public interface HFileScanner {
   HFile.Reader getReader();
   /**
    * @return True is scanner has had one of the seek calls invoked; i.e.
-   * {@link #seekBefore(byte[])} or {@link #seekTo()} or {@link #seekTo(byte[])}.
+   * {@link #seekBefore(Cell)} or {@link #seekTo()} or {@link #seekTo(Cell)}.
    * Otherwise returns false.
    */
   boolean isSeeked();
+
+  /**
+   * @return the next key in the index (the key to seek to the next block)
+   */
+  Cell getNextIndexedKey();
 }

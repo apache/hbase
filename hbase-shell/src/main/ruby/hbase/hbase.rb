@@ -57,15 +57,15 @@ module Hbase
     end
 
     def security_admin(formatter)
-      ::Hbase::SecurityAdmin.new(configuration, formatter)
+      ::Hbase::SecurityAdmin.new(@connection.getAdmin, formatter)
     end
 
     def visibility_labels_admin(formatter)
-      ::Hbase::VisibilityLabelsAdmin.new(configuration, formatter)
+      ::Hbase::VisibilityLabelsAdmin.new(@connection.getAdmin, formatter)
     end
 
     def quotas_admin(formatter)
-      ::Hbase::QuotasAdmin.new(configuration, formatter)
+      ::Hbase::QuotasAdmin.new(@connection.getAdmin, formatter)
     end
     
     def shutdown

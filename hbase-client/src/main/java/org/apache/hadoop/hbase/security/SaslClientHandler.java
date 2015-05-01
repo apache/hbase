@@ -24,10 +24,12 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 
@@ -35,8 +37,10 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 
 /**
@@ -47,6 +51,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
   public static final Log LOG = LogFactory.getLog(SaslClientHandler.class);
 
   private final boolean fallbackAllowed;
+
+  private final UserGroupInformation ticket;
 
   /**
    * Used for client or server's token to send or receive from each other.
@@ -63,6 +69,7 @@ public class SaslClientHandler extends ChannelDuplexHandler {
   /**
    * Constructor
    *
+   * @param ticket                   the ugi
    * @param method                   auth method
    * @param token                    for Sasl
    * @param serverPrincipal          Server's Kerberos principal name
@@ -72,10 +79,11 @@ public class SaslClientHandler extends ChannelDuplexHandler {
    * @param successfulConnectHandler handler for succesful connects
    * @throws java.io.IOException if handler could not be created
    */
-  public SaslClientHandler(AuthMethod method, Token<? extends TokenIdentifier> token,
-      String serverPrincipal, boolean fallbackAllowed, String rpcProtection,
-      SaslExceptionHandler exceptionHandler, SaslSuccessfulConnectHandler successfulConnectHandler)
-      throws IOException {
+  public SaslClientHandler(UserGroupInformation ticket, AuthMethod method,
+      Token<? extends TokenIdentifier> token, String serverPrincipal, boolean fallbackAllowed,
+      String rpcProtection, SaslExceptionHandler exceptionHandler,
+      SaslSuccessfulConnectHandler successfulConnectHandler) throws IOException {
+    this.ticket = ticket;
     this.fallbackAllowed = fallbackAllowed;
 
     this.exceptionHandler = exceptionHandler;
@@ -109,8 +117,9 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     default:
       throw new IOException("Unknown authentication method " + method);
     }
-    if (saslClient == null)
+    if (saslClient == null) {
       throw new IOException("Unable to find SASL client implementation");
+    }
   }
 
   /**
@@ -144,14 +153,26 @@ public class SaslClientHandler extends ChannelDuplexHandler {
             null);
   }
 
-  @Override public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+  @Override
+  public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
     saslClient.dispose();
   }
 
-  @Override public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-    this.saslToken = new byte[0];
+  private byte[] evaluateChallenge(final byte[] challenge) throws Exception {
+    return ticket.doAs(new PrivilegedExceptionAction<byte[]>() {
+
+      @Override
+      public byte[] run() throws Exception {
+        return saslClient.evaluateChallenge(challenge);
+      }
+    });
+  }
+
+  @Override
+  public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
+    saslToken = new byte[0];
     if (saslClient.hasInitialResponse()) {
-      saslToken = saslClient.evaluateChallenge(saslToken);
+      saslToken = evaluateChallenge(saslToken);
     }
     if (saslToken != null) {
       writeSaslToken(ctx, saslToken);
@@ -161,7 +182,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     }
   }
 
-  @Override public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+  @Override
+  public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
     ByteBuf in = (ByteBuf) msg;
 
     // If not complete, try to negotiate
@@ -187,15 +209,17 @@ public class SaslClientHandler extends ChannelDuplexHandler {
           }
         }
         saslToken = new byte[len];
-        if (LOG.isDebugEnabled())
+        if (LOG.isDebugEnabled()) {
           LOG.debug("Will read input token of size " + saslToken.length
               + " for processing by initSASLContext");
+        }
         in.readBytes(saslToken);
 
-        saslToken = saslClient.evaluateChallenge(saslToken);
+        saslToken = evaluateChallenge(saslToken);
         if (saslToken != null) {
-          if (LOG.isDebugEnabled())
+          if (LOG.isDebugEnabled()) {
             LOG.debug("Will send token of size " + saslToken.length + " from initSASLContext.");
+          }
           writeSaslToken(ctx, saslToken);
         }
       }
@@ -246,8 +270,7 @@ public class SaslClientHandler extends ChannelDuplexHandler {
 
   /**
    * Write SASL token
-   *
-   * @param ctx       to write to
+   * @param ctx to write to
    * @param saslToken to write
    */
   private void writeSaslToken(final ChannelHandlerContext ctx, byte[] saslToken) {
@@ -255,7 +278,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     b.writeInt(saslToken.length);
     b.writeBytes(saslToken, 0, saslToken.length);
     ctx.writeAndFlush(b).addListener(new ChannelFutureListener() {
-      @Override public void operationComplete(ChannelFuture future) throws Exception {
+      @Override
+      public void operationComplete(ChannelFuture future) throws Exception {
         if (!future.isSuccess()) {
           exceptionCaught(ctx, future.cause());
         }
@@ -289,7 +313,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
     exceptionHandler.handle(this.retryCount++, this.random, cause);
   }
 
-  @Override public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
+  @Override
+  public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
       throws Exception {
     // If not complete, try to negotiate
     if (!saslClient.isComplete()) {

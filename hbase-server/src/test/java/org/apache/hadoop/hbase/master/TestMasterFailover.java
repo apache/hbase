@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -383,9 +384,9 @@ public class TestMasterFailover {
     // region server should expire (how it can be verified?)
     MetaTableLocator.setMetaLocation(activeMaster.getZooKeeper(),
       rs.getServerName(), State.PENDING_OPEN);
-    HRegion meta = rs.getFromOnlineRegions(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
+    Region meta = rs.getFromOnlineRegions(HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
     rs.removeFromOnlineRegions(meta, null);
-    meta.close();
+    ((HRegion)meta).close();
 
     log("Aborting master");
     activeMaster.abort("test-kill");

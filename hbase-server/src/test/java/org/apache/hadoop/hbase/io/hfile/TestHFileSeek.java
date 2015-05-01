@@ -130,7 +130,7 @@ public class TestHFileSeek extends TestCase {
     try {
       HFileContext context = new HFileContextBuilder()
                             .withBlockSize(options.minBlockSize)
-                            .withCompression(AbstractHFileWriter.compressionByName(options.compress))
+                            .withCompression(HFileWriterImpl.compressionByName(options.compress))
                             .build();
       Writer writer = HFile.getWriterFactoryNoCache(conf)
           .withOutputStream(fout)

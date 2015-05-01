@@ -53,6 +53,8 @@ public class TestRegionServerMetrics {
   private static HBaseTestingUtility TEST_UTIL;
   private static MetricsRegionServer metricsRegionServer;
   private static MetricsRegionServerSource serverSource;
+  private static final int NUM_SCAN_NEXT = 30;
+  private static int numScanNext = 0;
 
   @BeforeClass
   public static void startCluster() throws Exception {
@@ -97,6 +99,7 @@ public class TestRegionServerMetrics {
   @Test
   public void testLocalFiles() throws Exception {
     metricsHelper.assertGauge("percentFilesLocal", 0, serverSource);
+    metricsHelper.assertGauge("percentFilesLocalSecondaryRegions", 0, serverSource);
   }
 
   @Test
@@ -328,7 +331,6 @@ public class TestRegionServerMetrics {
     byte[] qualifier = Bytes.toBytes("qual");
     byte[] val = Bytes.toBytes("One");
 
-
     List<Put> puts = new ArrayList<>();
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
@@ -343,12 +345,13 @@ public class TestRegionServerMetrics {
       s.setCaching(1);
       ResultScanner resultScanners = t.getScanner(s);
 
-      for (int nextCount = 0; nextCount < 30; nextCount++) {
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
         Result result = resultScanners.next();
         assertNotNull(result);
         assertEquals(1, result.size());
       }
     }
+    numScanNext += NUM_SCAN_NEXT;
     try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       for ( HRegionLocation location: locator.getAllRegionLocations()) {
         HRegionInfo i = location.getRegionInfo();
@@ -360,8 +363,63 @@ public class TestRegionServerMetrics {
             "_table_"+tableNameString +
             "_region_" + i.getEncodedName()+
             "_metric";
-        metricsHelper.assertCounter(prefix + "_scanNextNumOps", 30, agg);
+        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
       }
+      metricsHelper.assertCounter("ScanNext_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScanNextForSmallScan() throws IOException {
+    String tableNameString = "testScanNextSmall";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("One");
+
+    List<Put> puts = new ArrayList<>();
+    for (int insertCount =0; insertCount < 100; insertCount++) {
+      Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
+      p.add(cf, qualifier, val);
+      puts.add(p);
+    }
+    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+      t.put(puts);
+
+      Scan s = new Scan();
+      s.setSmall(true);
+      s.setCaching(1);
+      ResultScanner resultScanners = t.getScanner(s);
+
+      for (int nextCount = 0; nextCount < NUM_SCAN_NEXT; nextCount++) {
+        Result result = resultScanners.next();
+        assertNotNull(result);
+        assertEquals(1, result.size());
+      }
+    }
+    numScanNext += NUM_SCAN_NEXT;
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      for ( HRegionLocation location: locator.getAllRegionLocations()) {
+        HRegionInfo i = location.getRegionInfo();
+        MetricsRegionAggregateSource agg = rs.getRegion(i.getRegionName())
+            .getMetrics()
+            .getSource()
+            .getAggregateSource();
+        String prefix = "namespace_"+NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR+
+            "_table_"+tableNameString +
+            "_region_" + i.getEncodedName()+
+            "_metric";
+        metricsHelper.assertCounter(prefix + "_scanNextNumOps", NUM_SCAN_NEXT, agg);
+      }
+      metricsHelper.assertCounter("ScanNext_num_ops", numScanNext, serverSource);
+    }
+    try (Admin admin = TEST_UTIL.getHBaseAdmin()) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
     }
   }
 
@@ -380,7 +438,7 @@ public class TestRegionServerMetrics {
     htd.addFamily(hcd);
     HBaseAdmin admin = new HBaseAdmin(conf);
     HTable t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
-    HRegion region = rs.getOnlineRegions(tableName).get(0);
+    Region region = rs.getOnlineRegions(tableName).get(0);
     t.setAutoFlush(true, true);
     for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
@@ -393,18 +451,20 @@ public class TestRegionServerMetrics {
     Scan scan = new Scan(Bytes.toBytes(0), Bytes.toBytes(2));
     ResultScanner scanner = t.getScanner(scan);
     scanner.next(100);
+    numScanNext++;  // this is an ugly construct
     scanner.close();
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("mobScanCellsCount", 2, serverSource);
     region.getTableDesc().getFamily(cf).setMobThreshold(100);
-    region.initialize();
-    region.compactStores(true);
+    ((HRegion)region).initialize();
+    region.compact(true);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     metricsHelper.assertCounter("mobCompactedFromMobCellsCount", numHfiles,
         serverSource);
     metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 0, serverSource);
     scanner = t.getScanner(scan);
     scanner.next(100);
+    numScanNext++;  // this is an ugly construct
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     // metrics are reset by the region initialization
     metricsHelper.assertCounter("mobScanCellsCount", 0, serverSource);
@@ -416,8 +476,8 @@ public class TestRegionServerMetrics {
       admin.flush(tableName);
     }
     region.getTableDesc().getFamily(cf).setMobThreshold(0);
-    region.initialize();
-    region.compactStores(true);
+    ((HRegion)region).initialize();
+    region.compact(true);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     // metrics are reset by the region initialization
     metricsHelper.assertCounter("mobCompactedFromMobCellsCount", 0, serverSource);

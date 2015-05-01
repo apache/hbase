@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -65,7 +65,7 @@ public class TestPrefixTree {
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
 
-  private HRegion region;
+  private Region region;
 
   @Before
   public void setUp() throws Exception {
@@ -86,21 +86,21 @@ public class TestPrefixTree {
   @Test
   public void testHBASE11728() throws Exception {
     Put put = new Put(Bytes.toBytes("a-b-0-0"));
-    put.add(fam, qual1, Bytes.toBytes("c1-value"));
+    put.addColumn(fam, qual1, Bytes.toBytes("c1-value"));
     region.put(put);
     put = new Put(row1_bytes);
-    put.add(fam, qual1, Bytes.toBytes("c1-value"));
+    put.addColumn(fam, qual1, Bytes.toBytes("c1-value"));
     region.put(put);
     put = new Put(row2_bytes);
-    put.add(fam, qual2, Bytes.toBytes("c2-value"));
+    put.addColumn(fam, qual2, Bytes.toBytes("c2-value"));
     region.put(put);
     put = new Put(row3_bytes);
-    put.add(fam, qual2, Bytes.toBytes("c2-value-2"));
+    put.addColumn(fam, qual2, Bytes.toBytes("c2-value-2"));
     region.put(put);
     put = new Put(row4_bytes);
-    put.add(fam, qual2, Bytes.toBytes("c2-value-3"));
+    put.addColumn(fam, qual2, Bytes.toBytes("c2-value-3"));
     region.put(put);
-    region.flushcache(true);
+    region.flush(true);
     String[] rows = new String[3];
     rows[0] = row1;
     rows[1] = row2;
@@ -135,9 +135,7 @@ public class TestPrefixTree {
     scan.setStopRow(Bytes.toBytes("a-b-A-1:"));
     scanner = region.getScanner(scan);
     for (int i = 1; i < 3; i++) {
-      // assertEquals(i < 2, scanner.next(cells));
-      scanner.next(cells);
-      System.out.println(Result.create(cells));
+      assertEquals(i < 2, scanner.next(cells));
       CellScanner cellScanner = Result.create(cells).cellScanner();
       while (cellScanner.advance()) {
         assertEquals(rows[i], Bytes.toString(cellScanner.current().getRowArray(), cellScanner
@@ -176,13 +174,14 @@ public class TestPrefixTree {
   @Test
   public void testHBASE12817() throws IOException {
     for (int i = 0; i < 100; i++) {
-      region.put(new Put(Bytes.toBytes("obj" + (2900 + i))).add(fam, qual1, Bytes.toBytes(i)));
+      region
+          .put(new Put(Bytes.toBytes("obj" + (2900 + i))).addColumn(fam, qual1, Bytes.toBytes(i)));
     }
-    region.put(new Put(Bytes.toBytes("obj299")).add(fam, qual1, Bytes.toBytes("whatever")));
-    region.put(new Put(Bytes.toBytes("obj29")).add(fam, qual1, Bytes.toBytes("whatever")));
-    region.put(new Put(Bytes.toBytes("obj2")).add(fam, qual1, Bytes.toBytes("whatever")));
-    region.put(new Put(Bytes.toBytes("obj3")).add(fam, qual1, Bytes.toBytes("whatever")));
-    region.flushcache(true);
+    region.put(new Put(Bytes.toBytes("obj299")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
+    region.put(new Put(Bytes.toBytes("obj29")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
+    region.put(new Put(Bytes.toBytes("obj2")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
+    region.put(new Put(Bytes.toBytes("obj3")).addColumn(fam, qual1, Bytes.toBytes("whatever")));
+    region.flush(true);
     Scan scan = new Scan(Bytes.toBytes("obj29995"));
     RegionScanner scanner = region.getScanner(scan);
     List<Cell> cells = new ArrayList<Cell>();

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -91,6 +92,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterSta
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
@@ -486,6 +488,7 @@ public final class RequestConverter {
     builder.setCloseScanner(closeScanner);
     builder.setRegion(region);
     builder.setScan(ProtobufUtil.toScan(scan));
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 
@@ -503,6 +506,7 @@ public final class RequestConverter {
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
     builder.setScannerId(scannerId);
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 
@@ -522,6 +526,7 @@ public final class RequestConverter {
     builder.setCloseScanner(closeScanner);
     builder.setScannerId(scannerId);
     builder.setNextCallSeq(nextCallSeq);
+    builder.setClientHandlesPartials(true);
     return builder.build();
   }
 
@@ -739,10 +744,22 @@ public final class RequestConverter {
   */
  public static FlushRegionRequest
      buildFlushRegionRequest(final byte[] regionName) {
+   return buildFlushRegionRequest(regionName, false);
+ }
+
+ /**
+  * Create a protocol buffer FlushRegionRequest for a given region name
+  *
+  * @param regionName the name of the region to get info
+  * @return a protocol buffer FlushRegionRequest
+  */
+ public static FlushRegionRequest
+     buildFlushRegionRequest(final byte[] regionName, boolean writeFlushWALMarker) {
    FlushRegionRequest.Builder builder = FlushRegionRequest.newBuilder();
    RegionSpecifier region = buildRegionSpecifier(
      RegionSpecifierType.REGION_NAME, regionName);
    builder.setRegion(region);
+   builder.setWriteFlushWalMarker(writeFlushWALMarker);
    return builder.build();
  }
 
@@ -834,6 +851,16 @@ public final class RequestConverter {
     return builder.build();
   }
 
+  /**
+   *  Create a WarmupRegionRequest for a given region name
+   *
+   *  @param regionInfo Region we are warming up
+   */
+  public static WarmupRegionRequest buildWarmupRegionRequest(final HRegionInfo regionInfo) {
+    WarmupRegionRequest.Builder builder = WarmupRegionRequest.newBuilder();
+    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
+    return builder.build();
+  }
  /**
   * Create a CloseRegionRequest for a given encoded region name
   *
@@ -1311,6 +1338,15 @@ public final class RequestConverter {
    */
   public static SetBalancerRunningRequest buildSetBalancerRunningRequest(boolean on, boolean synchronous) {
     return SetBalancerRunningRequest.newBuilder().setOn(on).setSynchronous(synchronous).build();
+  }
+
+  /**
+   * Creates a protocol buffer IsBalancerEnabledRequest
+   *
+   * @return a IsBalancerEnabledRequest
+   */
+  public static IsBalancerEnabledRequest buildIsBalancerEnabledRequest() {
+    return IsBalancerEnabledRequest.newBuilder().build();
   }
 
   /**

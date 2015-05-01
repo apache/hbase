@@ -38,7 +38,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -53,26 +52,26 @@ public class TestMobFileCache extends TestCase {
   private MobCacheConfig mobCacheConf;
   private MobFileCache mobFileCache;
   private Date currentDate = new Date();
-  private final String TEST_CACHE_SIZE = "2";
-  private final int EXPECTED_CACHE_SIZE_ZERO = 0;
-  private final int EXPECTED_CACHE_SIZE_ONE = 1;
-  private final int EXPECTED_CACHE_SIZE_TWO = 2;
-  private final int EXPECTED_CACHE_SIZE_THREE = 3;
-  private final long EXPECTED_REFERENCE_ONE = 1;
-  private final long EXPECTED_REFERENCE_TWO = 2;
+  private static final String TEST_CACHE_SIZE = "2";
+  private static final int EXPECTED_CACHE_SIZE_ZERO = 0;
+  private static final int EXPECTED_CACHE_SIZE_ONE = 1;
+  private static final int EXPECTED_CACHE_SIZE_TWO = 2;
+  private static final int EXPECTED_CACHE_SIZE_THREE = 3;
+  private static final long EXPECTED_REFERENCE_ONE = 1;
+  private static final long EXPECTED_REFERENCE_TWO = 2;
 
-  private final String TABLE = "tableName";
-  private final String FAMILY1 = "family1";
-  private final String FAMILY2 = "family2";
-  private final String FAMILY3 = "family3";
+  private static final String TABLE = "tableName";
+  private static final String FAMILY1 = "family1";
+  private static final String FAMILY2 = "family2";
+  private static final String FAMILY3 = "family3";
 
-  private final byte[] ROW = Bytes.toBytes("row");
-  private final byte[] ROW2 = Bytes.toBytes("row2");
-  private final byte[] VALUE = Bytes.toBytes("value");
-  private final byte[] VALUE2 = Bytes.toBytes("value2");
-  private final byte[] QF1 = Bytes.toBytes("qf1");
-  private final byte[] QF2 = Bytes.toBytes("qf2");
-  private final byte[] QF3 = Bytes.toBytes("qf3");
+  private static final byte[] ROW = Bytes.toBytes("row");
+  private static final byte[] ROW2 = Bytes.toBytes("row2");
+  private static final byte[] VALUE = Bytes.toBytes("value");
+  private static final byte[] VALUE2 = Bytes.toBytes("value2");
+  private static final byte[] QF1 = Bytes.toBytes("qf1");
+  private static final byte[] QF2 = Bytes.toBytes("qf2");
+  private static final byte[] QF3 = Bytes.toBytes("qf3");
 
   @Override
   public void setUp() throws Exception {
@@ -102,7 +101,6 @@ public class TestMobFileCache extends TestCase {
 
   /**
    * Create the mob store file.
-   * @param family
    */
   private Path createMobStoreFile(String family) throws IOException {
     return createMobStoreFile(HBaseConfiguration.create(), family);
@@ -110,26 +108,23 @@ public class TestMobFileCache extends TestCase {
 
   /**
    * Create the mob store file
-   * @param conf
-   * @param family
    */
   private Path createMobStoreFile(Configuration conf, String family) throws IOException {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMaxVersions(4);
     hcd.setMobEnabled(true);
     mobCacheConf = new MobCacheConfig(conf, hcd);
-    return createMobStoreFile(conf, hcd);
+    return createMobStoreFile(hcd);
   }
 
   /**
    * Create the mob store file
-   * @param conf
-   * @param hcd
    */
-  private Path createMobStoreFile(Configuration conf, HColumnDescriptor hcd)
+  private Path createMobStoreFile(HColumnDescriptor hcd)
       throws IOException {
     // Setting up a Store
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    TableName tn = TableName.valueOf(TABLE);
+    HTableDescriptor htd = new HTableDescriptor(tn);
     htd.addFamily(hcd);
     HMobStore mobStore = (HMobStore) region.getStore(hcd.getName());
     KeyValue key1 = new KeyValue(ROW, hcd.getName(), QF1, 1, VALUE);
@@ -137,7 +132,7 @@ public class TestMobFileCache extends TestCase {
     KeyValue key3 = new KeyValue(ROW2, hcd.getName(), QF3, 1, VALUE2);
     KeyValue[] keys = new KeyValue[] { key1, key2, key3 };
     int maxKeyCount = keys.length;
-    HRegionInfo regionInfo = new HRegionInfo();
+    HRegionInfo regionInfo = new HRegionInfo(tn);
     StoreFile.Writer mobWriter = mobStore.createWriterInTmp(currentDate,
         maxKeyCount, hcd.getCompactionCompression(), regionInfo.getStartKey());
     Path mobFilePath = mobWriter.getPath();
@@ -193,7 +188,7 @@ public class TestMobFileCache extends TestCase {
     CachedMobFile cachedMobFile3 = (CachedMobFile) mobFileCache.openFile(
         fs, file3Path, mobCacheConf);
     // Before the evict
-    // Evict the cache, should clost the first file 1
+    // Evict the cache, should close the first file 1
     assertEquals(EXPECTED_CACHE_SIZE_THREE, mobFileCache.getCacheSize());
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile1.getReferenceCount());
     assertEquals(EXPECTED_REFERENCE_TWO, cachedMobFile2.getReferenceCount());

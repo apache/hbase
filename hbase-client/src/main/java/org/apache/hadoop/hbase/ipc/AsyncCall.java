@@ -72,7 +72,7 @@ public class AsyncCall extends DefaultPromise<Message> {
     this.responseDefaultType = responseDefaultType;
 
     this.startTime = EnvironmentEdgeManager.currentTime();
-    this.rpcTimeout = controller.getCallTimeout();
+    this.rpcTimeout = controller.hasCallTimeout() ? controller.getCallTimeout() : 0;
   }
 
   /**
@@ -84,9 +84,10 @@ public class AsyncCall extends DefaultPromise<Message> {
     return this.startTime;
   }
 
-  @Override public String toString() {
-    return "callId: " + this.id + " methodName: " + this.method.getName() + " param {" +
-        (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + "}";
+  @Override
+  public String toString() {
+    return "callId: " + this.id + " methodName: " + this.method.getName() + " param {"
+        + (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + "}";
   }
 
   /**

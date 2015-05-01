@@ -26,7 +26,7 @@
         org.apache.hadoop.hbase.regionserver.HRegionServer;
         org.apache.hadoop.hbase.util.Bytes;
         org.apache.hadoop.hbase.HRegionInfo;
-        org.apache.hadoop.hbase.regionserver.HRegion;
+        org.apache.hadoop.hbase.regionserver.Region;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.HBaseConfiguration;
         org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -254,7 +254,7 @@
 
         <%for HRegionInfo r: onlineRegions %>
         <%java>    
-            HRegion region = regionServer.getFromOnlineRegions(r.getEncodedName());
+            Region region = regionServer.getFromOnlineRegions(r.getEncodedName());
             MetricsRegionWrapper mWrap = region == null ? null: region.getMetrics().getRegionWrapper();
         </%java>
         

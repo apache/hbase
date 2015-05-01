@@ -19,21 +19,19 @@ package org.apache.hadoop.hbase.namespace;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.MetaScanner;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
+import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -125,13 +123,14 @@ class NamespaceStateManager {
       NamespaceTableAndRegionInfo currentStatus;
       currentStatus = getState(nspdesc.getName());
       if ((currentStatus.getTables().size()) >= TableNamespaceManager.getMaxTables(nspdesc)) {
-        throw new DoNotRetryIOException("The table " + table.getNameAsString()
+        throw new QuotaExceededException("The table " + table.getNameAsString()
             + "cannot be created as it would exceed maximum number of tables allowed "
-            + " in the namespace.");
+            + " in the namespace.  The total number of tables permitted is "
+            + TableNamespaceManager.getMaxTables(nspdesc));
       }
       if ((currentStatus.getRegionCount() + numRegions) > TableNamespaceManager
           .getMaxRegions(nspdesc)) {
-        throw new DoNotRetryIOException("The table " + table.getNameAsString()
+        throw new QuotaExceededException("The table " + table.getNameAsString()
             + " is not allowed to have " + numRegions
             + " regions. The total number of regions permitted is only "
             + TableNamespaceManager.getMaxRegions(nspdesc)
@@ -185,30 +184,22 @@ class NamespaceStateManager {
   /**
    * Initialize namespace state cache by scanning meta table.
    */
-  void initialize() {
-    try {
-      List<NamespaceDescriptor> namespaces = this.master.listNamespaceDescriptors();
-      for (NamespaceDescriptor namespace : namespaces) {
-        addNamespace(namespace.getName());
-        List<TableName> tables = this.master.listTableNamesByNamespace(namespace.getName());
-        for (TableName table : tables) {
-          int regionCount = 0;
-          Map<HRegionInfo, ServerName> regions = MetaScanner.allTableRegions(
-            this.master.getConnection(), table);
-          for (HRegionInfo info : regions.keySet()) {
-            if (!info.isSplit()) {
-              regionCount++;
-            }
-          }
-          addTable(table, regionCount);
+  private void initialize() throws IOException {
+    List<NamespaceDescriptor> namespaces = this.master.listNamespaceDescriptors();
+    for (NamespaceDescriptor namespace : namespaces) {
+      addNamespace(namespace.getName());
+      List<TableName> tables = this.master.listTableNamesByNamespace(namespace.getName());
+      for (TableName table : tables) {
+        if (table.isSystemTable()) {
+          continue;
         }
+        List<HRegionInfo> regions =
+            MetaTableAccessor.getTableRegions(this.master.getConnection(), table, true);
+        addTable(table, regions.size());
       }
-      LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
-      initialized = true;
-    } catch (IOException e) {
-      LOG.error("Error while update namespace state.", e);
-      initialized = false;
     }
+    LOG.info("Finished updating state of " + nsStateCache.size() + " namespaces. ");
+    initialized = true;
   }
 
   boolean isInitialized() {

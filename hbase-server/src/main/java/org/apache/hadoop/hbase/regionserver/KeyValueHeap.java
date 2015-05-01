@@ -24,9 +24,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.PriorityQueue;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 
 /**
  * Implements a heap merge across any number of KeyValueScanners.
@@ -125,18 +126,23 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * <p>
    * This method takes care of updating the heap.
    * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
+   * This can ONLY be called when you are using Scanners that implement InternalScanner as well as
+   * KeyValueScanner (a {@link StoreScanner}).
    * @param result
-   * @param limit
-   * @return true if there are more keys, false if all scanners are done
+   * @return true if more rows exist after this one, false if scanner is done
    */
-  public boolean next(List<Cell> result, int limit) throws IOException {
+  @Override
+  public boolean next(List<Cell> result) throws IOException {
+    return next(result, NoLimitScannerContext.getInstance());
+  }
+
+  @Override
+  public boolean next(List<Cell> result, ScannerContext scannerContext) throws IOException {
     if (this.current == null) {
-      return false;
+      return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
     InternalScanner currentAsInternal = (InternalScanner)this.current;
-    boolean mayContainMoreRows = currentAsInternal.next(result, limit);
+    boolean moreCells = currentAsInternal.next(result, scannerContext);
     Cell pee = this.current.peek();
     /*
      * By definition, any InternalScanner must return false only when it has no
@@ -145,27 +151,16 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
      * more efficient to close scanners which are not needed than keep them in
      * the heap. This is also required for certain optimizations.
      */
-    if (pee == null || !mayContainMoreRows) {
+    if (pee == null || !moreCells) {
       this.current.close();
     } else {
       this.heap.add(this.current);
     }
     this.current = pollRealKV();
-    return (this.current != null);
-  }
-
-  /**
-   * Gets the next row of keys from the top-most scanner.
-   * <p>
-   * This method takes care of updating the heap.
-   * <p>
-   * This can ONLY be called when you are using Scanners that implement
-   * InternalScanner as well as KeyValueScanner (a {@link StoreScanner}).
-   * @param result
-   * @return true if there are more keys, false if all scanners are done
-   */
-  public boolean next(List<Cell> result) throws IOException {
-    return next(result, -1);
+    if (this.current == null) {
+      moreCells = scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+    }
+    return moreCells;
   }
 
   protected static class KVScannerComparator implements Comparator<KeyValueScanner> {
@@ -394,5 +389,11 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
   KeyValueScanner getCurrentForTesting() {
     return current;
+  }
+
+  @Override
+  public Cell getNextIndexedKey() {
+    // here we return the next index key from the top scanner
+    return current == null ? null : current.getNextIndexedKey();
   }
 }

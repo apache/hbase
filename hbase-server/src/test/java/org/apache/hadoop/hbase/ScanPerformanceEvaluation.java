@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -39,9 +38,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Counters;
@@ -137,7 +134,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     Scan scan = new Scan(); // default scan settings
     scan.setCacheBlocks(false);
     scan.setMaxVersions(1);
-    scan.setAttribute(Scan.SCAN_ATTRIBUTES_METRICS_ENABLE, Bytes.toBytes(Boolean.TRUE));
+    scan.setScanMetricsEnabled(true);
     if (caching != null) {
       scan.setCaching(Integer.parseInt(caching));
     }
@@ -177,7 +174,7 @@ public class ScanPerformanceEvaluation extends AbstractHBaseTool {
     table.close();
     connection.close();
 
-    ScanMetrics metrics = ProtobufUtil.toScanMetrics(scan.getAttribute(Scan.SCAN_ATTRIBUTES_METRICS_DATA));
+    ScanMetrics metrics = scan.getScanMetrics();
     long totalBytes = metrics.countOfBytesInResults.get();
     double throughput = (double)totalBytes / scanTimer.elapsedTime(TimeUnit.SECONDS);
     double throughputRows = (double)numRows / scanTimer.elapsedTime(TimeUnit.SECONDS);

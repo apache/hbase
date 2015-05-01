@@ -338,7 +338,7 @@ public class TestAsyncProcess {
   /**
    * Returns our async process.
    */
-  static class MyConnectionImpl extends ConnectionManager.HConnectionImplementation {
+  static class MyConnectionImpl extends ConnectionImplementation {
     final AtomicInteger nbThreads = new AtomicInteger(0);
 
 
@@ -798,7 +798,7 @@ public class TestAsyncProcess {
     ClusterConnection conn = new MyConnectionImpl(configuration);
     BufferedMutatorImpl mutator =
         new BufferedMutatorImpl(conn, null, null, new BufferedMutatorParams(DUMMY_TABLE));
-    configuration.setBoolean(ConnectionManager.RETRIES_BY_SERVER_KEY, true);
+    configuration.setBoolean(ConnectionImplementation.RETRIES_BY_SERVER_KEY, true);
 
     MyAsyncProcess ap = new MyAsyncProcess(conn, configuration, true);
     mutator.ap = ap;

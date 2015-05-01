@@ -55,24 +55,27 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -127,6 +130,7 @@ import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.thread.QueuedThreadPool;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -623,7 +627,7 @@ public class ThriftServerRunner implements Runnable {
 
   /**
    * The HBaseHandler is a glue object that connects Thrift RPC calls to the
-   * HBase client API primarily defined in the HBaseAdmin and HTable objects.
+   * HBase client API primarily defined in the Admin and Table objects.
    */
   public static class HBaseHandler implements Hbase.Iface {
     protected Configuration conf;
@@ -636,11 +640,11 @@ public class ThriftServerRunner implements Runnable {
 
     private final ConnectionCache connectionCache;
 
-    private static ThreadLocal<Map<String, HTable>> threadLocalTables =
-        new ThreadLocal<Map<String, HTable>>() {
+    private static ThreadLocal<Map<String, Table>> threadLocalTables =
+        new ThreadLocal<Map<String, Table>>() {
       @Override
-      protected Map<String, HTable> initialValue() {
-        return new TreeMap<String, HTable>();
+      protected Map<String, Table> initialValue() {
+        return new TreeMap<String, Table>();
       }
     };
 
@@ -650,12 +654,12 @@ public class ThriftServerRunner implements Runnable {
     static final String MAX_IDLETIME = "hbase.thrift.connection.max-idletime";
 
     /**
-     * Returns a list of all the column families for a given htable.
+     * Returns a list of all the column families for a given Table.
      *
      * @param table
      * @throws IOException
      */
-    byte[][] getAllColumns(HTable table) throws IOException {
+    byte[][] getAllColumns(Table table) throws IOException {
       HColumnDescriptor[] cds = table.getTableDescriptor().getColumnFamilies();
       byte[][] columns = new byte[cds.length][];
       for (int i = 0; i < cds.length; i++) {
@@ -666,25 +670,25 @@ public class ThriftServerRunner implements Runnable {
     }
 
     /**
-     * Creates and returns an HTable instance from a given table name.
+     * Creates and returns a Table instance from a given table name.
      *
      * @param tableName
      *          name of table
-     * @return HTable object
+     * @return Table object
      * @throws IOException
      * @throws IOError
      */
-    public HTable getTable(final byte[] tableName) throws
+    public Table getTable(final byte[] tableName) throws
         IOException {
       String table = Bytes.toString(tableName);
-      Map<String, HTable> tables = threadLocalTables.get();
+      Map<String, Table> tables = threadLocalTables.get();
       if (!tables.containsKey(table)) {
-        tables.put(table, (HTable)connectionCache.getTable(table));
+        tables.put(table, (Table)connectionCache.getTable(table));
       }
       return tables.get(table);
     }
 
-    public HTable getTable(final ByteBuffer tableName) throws IOException {
+    public Table getTable(final ByteBuffer tableName) throws IOException {
       return getTable(getBytes(tableName));
     }
 
@@ -738,7 +742,7 @@ public class ThriftServerRunner implements Runnable {
     /**
      * Obtain HBaseAdmin. Creates the instance if it is not already created.
      */
-    private HBaseAdmin getHBaseAdmin() throws IOException {
+    private Admin getAdmin() throws IOException {
       return connectionCache.getAdmin();
     }
 
@@ -749,57 +753,63 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public void enableTable(ByteBuffer tableName) throws IOError {
       try{
-        getHBaseAdmin().enableTable(getBytes(tableName));
+        getAdmin().enableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public void disableTable(ByteBuffer tableName) throws IOError{
       try{
-        getHBaseAdmin().disableTable(getBytes(tableName));
+        getAdmin().disableTable(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public boolean isTableEnabled(ByteBuffer tableName) throws IOError {
       try {
-        return HTable.isTableEnabled(this.conf, getBytes(tableName));
+        return this.connectionCache.getAdmin().isTableEnabled(getTableName(tableName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public void compact(ByteBuffer tableNameOrRegionName) throws IOError {
-      try{
-        getHBaseAdmin().compact(getBytes(tableNameOrRegionName));
+      try {
+        // TODO: HBaseAdmin.compact(byte[]) deprecated and not trivial to replace here.
+        // ThriftServerRunner.compact should be deprecated and replaced with methods specific to
+        // table and region.
+        ((HBaseAdmin) getAdmin()).compact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public void majorCompact(ByteBuffer tableNameOrRegionName) throws IOError {
-      try{
-        getHBaseAdmin().majorCompact(getBytes(tableNameOrRegionName));
+      try {
+        // TODO: HBaseAdmin.majorCompact(byte[]) deprecated and not trivial to replace here.
+        // ThriftServerRunner.majorCompact should be deprecated and replaced with methods specific
+        // to table and region.
+        ((HBaseAdmin) getAdmin()).majorCompact(getBytes(tableNameOrRegionName));
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public List<ByteBuffer> getTableNames() throws IOError {
       try {
-        TableName[] tableNames = this.getHBaseAdmin().listTableNames();
+        TableName[] tableNames = this.getAdmin().listTableNames();
         ArrayList<ByteBuffer> list = new ArrayList<ByteBuffer>(tableNames.length);
         for (int i = 0; i < tableNames.length; i++) {
           list.add(ByteBuffer.wrap(tableNames[i].getName()));
@@ -807,7 +817,7 @@ public class ThriftServerRunner implements Runnable {
         return list;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -817,20 +827,12 @@ public class ThriftServerRunner implements Runnable {
     @Override
     public List<TRegionInfo> getTableRegions(ByteBuffer tableName)
     throws IOError {
-      try {
-        HTable table;
-        try {
-          table = getTable(tableName);
-        } catch (TableNotFoundException ex) {
-          return new ArrayList<TRegionInfo>();
-        }
-        Map<HRegionInfo, ServerName> regionLocations =
-            table.getRegionLocations();
+      try (RegionLocator locator = connectionCache.getRegionLocator(getBytes(tableName))) {
+        List<HRegionLocation> regionLocations = locator.getAllRegionLocations();
         List<TRegionInfo> results = new ArrayList<TRegionInfo>();
-        for (Map.Entry<HRegionInfo, ServerName> entry :
-            regionLocations.entrySet()) {
-          HRegionInfo info = entry.getKey();
-          ServerName serverName = entry.getValue();
+        for (HRegionLocation regionLocation : regionLocations) {
+          HRegionInfo info = regionLocation.getRegionInfo();
+          ServerName serverName = regionLocation.getServerName();
           TRegionInfo region = new TRegionInfo();
           region.serverName = ByteBuffer.wrap(
               Bytes.toBytes(serverName.getHostname()));
@@ -848,7 +850,7 @@ public class ThriftServerRunner implements Runnable {
         return Collections.emptyList();
       } catch (IOException e){
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -881,7 +883,7 @@ public class ThriftServerRunner implements Runnable {
                               byte[] qualifier,
                               Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
         if (qualifier == null) {
@@ -893,7 +895,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -923,7 +925,7 @@ public class ThriftServerRunner implements Runnable {
     public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, byte[] family,
         byte[] qualifier, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
         if (null == qualifier) {
@@ -936,7 +938,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -966,7 +968,7 @@ public class ThriftServerRunner implements Runnable {
         byte[] qualifier, long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Get get = new Get(getBytes(row));
         addAttributes(get, attributes);
         if (null == qualifier) {
@@ -980,7 +982,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1014,7 +1016,7 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer tableName, ByteBuffer row, List<ByteBuffer> columns,
         long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         if (columns == null) {
           Get get = new Get(getBytes(row));
           addAttributes(get, attributes);
@@ -1037,7 +1039,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1077,7 +1079,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
         List<Get> gets = new ArrayList<Get>(rows.size());
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         if (metrics != null) {
           metrics.incNumRowKeysInBatchGet(rows.size());
         }
@@ -1102,7 +1104,7 @@ public class ThriftServerRunner implements Runnable {
         return ThriftUtilities.rowResultFromHBase(result);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1121,7 +1123,7 @@ public class ThriftServerRunner implements Runnable {
                             ByteBuffer column,
         long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Delete delete  = new Delete(getBytes(row));
         addAttributes(delete, attributes);
         byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
@@ -1134,7 +1136,7 @@ public class ThriftServerRunner implements Runnable {
 
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1150,13 +1152,13 @@ public class ThriftServerRunner implements Runnable {
         ByteBuffer tableName, ByteBuffer row, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Delete delete  = new Delete(getBytes(row), timestamp);
         addAttributes(delete, attributes);
         table.delete(delete);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1164,40 +1166,44 @@ public class ThriftServerRunner implements Runnable {
     public void createTable(ByteBuffer in_tableName,
         List<ColumnDescriptor> columnFamilies) throws IOError,
         IllegalArgument, AlreadyExists {
-      byte [] tableName = getBytes(in_tableName);
+      TableName tableName = getTableName(in_tableName);
       try {
-        if (getHBaseAdmin().tableExists(tableName)) {
+        if (getAdmin().tableExists(tableName)) {
           throw new AlreadyExists("table name already in use");
         }
-        HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
+        HTableDescriptor desc = new HTableDescriptor(tableName);
         for (ColumnDescriptor col : columnFamilies) {
           HColumnDescriptor colDesc = ThriftUtilities.colDescFromThrift(col);
           desc.addFamily(colDesc);
         }
-        getHBaseAdmin().createTable(desc);
+        getAdmin().createTable(desc);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IllegalArgument(e.getMessage());
+        throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }
+    }
+
+    private static TableName getTableName(ByteBuffer buffer) {
+      return TableName.valueOf(getBytes(buffer));
     }
 
     @Override
     public void deleteTable(ByteBuffer in_tableName) throws IOError {
-      byte [] tableName = getBytes(in_tableName);
+      TableName tableName = getTableName(in_tableName);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteTable: table=" + Bytes.toString(tableName));
+        LOG.debug("deleteTable: table=" + tableName);
       }
       try {
-        if (!getHBaseAdmin().tableExists(tableName)) {
+        if (!getAdmin().tableExists(tableName)) {
           throw new IOException("table does not exist");
         }
-        getHBaseAdmin().deleteTable(tableName);
+        getAdmin().deleteTable(tableName);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1214,7 +1220,7 @@ public class ThriftServerRunner implements Runnable {
         List<Mutation> mutations, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, IllegalArgument {
-      HTable table = null;
+      Table table = null;
       try {
         table = getTable(tableName);
         Put put = new Put(getBytes(row), timestamp);
@@ -1255,10 +1261,10 @@ public class ThriftServerRunner implements Runnable {
           table.put(put);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IllegalArgument(e.getMessage());
+        throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1316,7 +1322,7 @@ public class ThriftServerRunner implements Runnable {
           puts.add(put);
       }
 
-      HTable table = null;
+      Table table = null;
       try {
         table = getTable(tableName);
         if (!puts.isEmpty())
@@ -1326,10 +1332,10 @@ public class ThriftServerRunner implements Runnable {
 
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IllegalArgument(e.getMessage());
+        throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1348,14 +1354,14 @@ public class ThriftServerRunner implements Runnable {
     protected long atomicIncrement(ByteBuffer tableName, ByteBuffer row,
         byte [] family, byte [] qualifier, long amount)
         throws IOError, IllegalArgument, TException {
-      HTable table;
+      Table table;
       try {
         table = getTable(tableName);
         return table.incrementColumnValue(
             getBytes(row), family, qualifier, amount);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1391,7 +1397,7 @@ public class ThriftServerRunner implements Runnable {
         }
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
       return ThriftUtilities.rowResultFromHBase(results, resultScannerWrapper.isColumnSorted());
     }
@@ -1406,7 +1412,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan();
         addAttributes(scan, attributes);
         if (tScan.isSetStartRow()) {
@@ -1445,7 +1451,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), tScan.sortColumns);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1454,7 +1460,7 @@ public class ThriftServerRunner implements Runnable {
         List<ByteBuffer> columns,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow));
         addAttributes(scan, attributes);
         if(columns != null && columns.size() != 0) {
@@ -1470,7 +1476,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1480,7 +1486,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
         addAttributes(scan, attributes);
         if(columns != null && columns.size() != 0) {
@@ -1496,7 +1502,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1507,7 +1513,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan(getBytes(startAndPrefix));
         addAttributes(scan, attributes);
         Filter f = new WhileMatchFilter(
@@ -1526,7 +1532,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1535,7 +1541,7 @@ public class ThriftServerRunner implements Runnable {
         List<ByteBuffer> columns, long timestamp,
         Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow));
         addAttributes(scan, attributes);
         scan.setTimeRange(0, timestamp);
@@ -1552,7 +1558,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1562,7 +1568,7 @@ public class ThriftServerRunner implements Runnable {
         Map<ByteBuffer, ByteBuffer> attributes)
         throws IOError, TException {
       try {
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         Scan scan = new Scan(getBytes(startRow), getBytes(stopRow));
         addAttributes(scan, attributes);
         scan.setTimeRange(0, timestamp);
@@ -1580,7 +1586,7 @@ public class ThriftServerRunner implements Runnable {
         return addScanner(table.getScanner(scan), false);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1591,7 +1597,7 @@ public class ThriftServerRunner implements Runnable {
         TreeMap<ByteBuffer, ColumnDescriptor> columns =
           new TreeMap<ByteBuffer, ColumnDescriptor>();
 
-        HTable table = getTable(tableName);
+        Table table = getTable(tableName);
         HTableDescriptor desc = table.getTableDescriptor();
 
         for (HColumnDescriptor e : desc.getFamilies()) {
@@ -1601,7 +1607,7 @@ public class ThriftServerRunner implements Runnable {
         return columns;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1610,22 +1616,20 @@ public class ThriftServerRunner implements Runnable {
     public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row,
         ByteBuffer family) throws IOError {
       try {
-        HTable table = getTable(getBytes(tableName));
-        Result result = table.getRowOrBefore(getBytes(row), getBytes(family));
+        Result result = getRowOrBefore(getBytes(tableName), getBytes(row), getBytes(family));
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
     @Override
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
-        HTable table = getTable(TableName.META_TABLE_NAME.getName());
         byte[] row = getBytes(searchRow);
-        Result startRowResult = table.getRowOrBefore(
-          row, HConstants.CATALOG_FAMILY);
+        Result startRowResult =
+            getRowOrBefore(TableName.META_TABLE_NAME.getName(), row, HConstants.CATALOG_FAMILY);
 
         if (startRowResult == null) {
           throw new IOException("Cannot find row in "+ TableName.META_TABLE_NAME+", row="
@@ -1655,7 +1659,19 @@ public class ThriftServerRunner implements Runnable {
         return region;
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
+      }
+    }
+
+    private Result getRowOrBefore(byte[] tableName, byte[] row, byte[] family) throws IOException {
+      Scan scan = new Scan(row);
+      scan.setReversed(true);
+      scan.addFamily(family);
+      scan.setStartRow(row);
+
+      Table table = getTable(tableName);
+      try (ResultScanner scanner = table.getScanner(scan)) {
+        return scanner.next();
       }
     }
 
@@ -1676,12 +1692,12 @@ public class ThriftServerRunner implements Runnable {
       }
 
       try {
-        HTable table = getTable(tincrement.getTable());
+        Table table = getTable(tincrement.getTable());
         Increment inc = ThriftUtilities.incrementFromThrift(tincrement);
         table.increment(inc);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1703,13 +1719,13 @@ public class ThriftServerRunner implements Runnable {
       }
 
       try {
-        HTable table = getTable(tappend.getTable());
+        Table table = getTable(tappend.getTable());
         Append append = ThriftUtilities.appendFromThrift(tappend);
         Result result = table.append(append);
         return ThriftUtilities.cellFromHBase(result.rawCells());
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       }
     }
 
@@ -1730,10 +1746,10 @@ public class ThriftServerRunner implements Runnable {
         put.setDurability(mput.writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IllegalArgument(e.getMessage());
+        throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }
 
-      HTable table = null;
+      Table table = null;
       try {
         table = getTable(tableName);
         byte[][] famAndQf = KeyValue.parseColumn(getBytes(column));
@@ -1741,10 +1757,10 @@ public class ThriftServerRunner implements Runnable {
           value != null ? getBytes(value) : HConstants.EMPTY_BYTE_ARRAY, put);
       } catch (IOException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IOError(e.getMessage());
+        throw new IOError(Throwables.getStackTraceAsString(e));
       } catch (IllegalArgumentException e) {
         LOG.warn(e.getMessage(), e);
-        throw new IllegalArgument(e.getMessage());
+        throw new IllegalArgument(Throwables.getStackTraceAsString(e));
       }
     }
   }

@@ -54,23 +54,23 @@ public class CachedEntryQueue {
    */
   public CachedEntryQueue(long maxSize, long blockSize) {
     int initialSize = (int) (maxSize / blockSize);
-    if (initialSize == 0)
+    if (initialSize == 0) {
       initialSize++;
-    queue = MinMaxPriorityQueue
-        .orderedBy(new Comparator<Map.Entry<BlockCacheKey, BucketEntry>>() {
-          public int compare(Entry<BlockCacheKey, BucketEntry> entry1,
-              Entry<BlockCacheKey, BucketEntry> entry2) {
-            return entry1.getValue().compareTo(entry2.getValue());
-          }
+    }
+    queue = MinMaxPriorityQueue.orderedBy(new Comparator<Map.Entry<BlockCacheKey, BucketEntry>>() {
 
-        }).expectedSize(initialSize).create();
+      public int compare(Entry<BlockCacheKey, BucketEntry> entry1,
+          Entry<BlockCacheKey, BucketEntry> entry2) {
+        return BucketEntry.COMPARATOR.compare(entry1.getValue(), entry2.getValue());
+      }
+
+    }).expectedSize(initialSize).create();
     cacheSize = 0;
     this.maxSize = maxSize;
   }
 
   /**
    * Attempt to add the specified entry to this queue.
-   * 
    * <p>
    * If the queue is smaller than the max size, or if the specified element is
    * ordered after the smallest element in the queue, the element will be added
@@ -83,7 +83,7 @@ public class CachedEntryQueue {
       cacheSize += entry.getValue().getLength();
     } else {
       BucketEntry head = queue.peek().getValue();
-      if (entry.getValue().compareTo(head) > 0) {
+      if (BucketEntry.COMPARATOR.compare(entry.getValue(), head) > 0) {
         cacheSize += entry.getValue().getLength();
         cacheSize -= head.getLength();
         if (cacheSize > maxSize) {

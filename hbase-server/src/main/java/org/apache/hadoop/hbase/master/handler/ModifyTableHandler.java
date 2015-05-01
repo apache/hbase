@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public class ModifyTableHandler extends TableEventHandler {
@@ -88,6 +89,10 @@ public class ModifyTableHandler extends TableEventHandler {
         this.htd.getRegionReplication(),
         oldDescriptor.getRegionReplication(),
         this.htd.getTableName());
+    // Setup replication for region replicas if needed
+    if (htd.getRegionReplication() > 1 && oldDescriptor.getRegionReplication() <= 1) {
+      ServerRegionReplicaUtil.setupRegionReplicaReplication(server.getConfiguration());
+    }
     if (cpHost != null) {
       cpHost.postModifyTableHandler(this.tableName, this.htd);
     }
@@ -97,9 +102,9 @@ public class ModifyTableHandler extends TableEventHandler {
       TableName table) throws IOException {
     if (newReplicaCount >= oldReplicaCount) return;
     Set<byte[]> tableRows = new HashSet<byte[]>();
-    Scan scan = MetaTableAccessor.getScanForTableName(table);
-    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     Connection connection = this.masterServices.getConnection();
+    Scan scan = MetaTableAccessor.getScanForTableName(connection, table);
+    scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
     try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
       ResultScanner resScanner = metaTable.getScanner(scan);
       for (Result result : resScanner) {

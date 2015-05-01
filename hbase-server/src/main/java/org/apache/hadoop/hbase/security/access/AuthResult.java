@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
+import com.google.common.base.Joiner;
+
 /**
  * Represents the result of an authorization check for logging and error
  * reporting.
@@ -40,6 +42,7 @@ public class AuthResult {
   private final String request;
   private String reason;
   private final User user;
+  private AuthResult.Params params;
 
   // "family" and "qualifier" should only be used if "families" is null.
   private final byte[] family;
@@ -58,6 +61,7 @@ public class AuthResult {
     this.action = action;
     this.families = null;
     this.namespace = null;
+    this.params = new Params().setTableName(table).setFamily(family).setQualifier(qualifier);
   }
 
   public AuthResult(boolean allowed, String request, String reason, User user,
@@ -73,6 +77,7 @@ public class AuthResult {
     this.action = action;
     this.families = families;
     this.namespace = null;
+    this.params = new Params().setTableName(table).setFamilies(families);
   }
 
   public AuthResult(boolean allowed, String request, String reason, User user,
@@ -87,6 +92,7 @@ public class AuthResult {
     this.family = null;
     this.qualifier = null;
     this.families = null;
+    this.params = new Params().setNamespace(namespace);
   }
 
   public boolean isAllowed() {
@@ -121,6 +127,8 @@ public class AuthResult {
     return request;
   }
 
+  public Params getParams() { return this.params;}
+
   public void setAllowed(boolean allowed) {
     this.allowed = allowed;
   }
@@ -129,7 +137,8 @@ public class AuthResult {
     this.reason = reason;
   }
 
-  String toFamilyString() {
+  private static String toFamiliesString(Map<byte[], ? extends Collection<?>> families,
+      byte[] family, byte[] qual) {
     StringBuilder sb = new StringBuilder();
     if (families != null) {
       boolean first = true;
@@ -164,8 +173,8 @@ public class AuthResult {
       }
     } else if (family != null) {
       sb.append(Bytes.toString(family));
-      if (qualifier != null) {
-        sb.append(":").append(Bytes.toString(qualifier));
+      if (qual != null) {
+        sb.append(":").append(Bytes.toString(qual));
       }
     }
     return sb.toString();
@@ -173,16 +182,24 @@ public class AuthResult {
 
   public String toContextString() {
     StringBuilder sb = new StringBuilder();
+    String familiesString = toFamiliesString(families, family, qualifier);
     sb.append("(user=")
         .append(user != null ? user.getName() : "UNKNOWN")
         .append(", ");
     sb.append("scope=")
-        .append(namespace != null ? namespace : table == null ? "GLOBAL" : table);
-    if(namespace == null) {
-      sb.append(", ")
-        .append("family=")
-        .append(toFamilyString())
+        .append(namespace != null ? namespace :
+            table == null ? "GLOBAL" : table.getNameWithNamespaceInclAsString())
         .append(", ");
+    if(namespace == null && familiesString.length() > 0) {
+      sb.append("family=")
+        .append(familiesString)
+        .append(", ");
+    }
+    String paramsString = params.toString();
+    if(paramsString.length() > 0) {
+      sb.append("params=[")
+          .append(paramsString)
+          .append("],");
     }
     sb.append("action=")
         .append(action != null ? action.toString() : "")
@@ -224,5 +241,53 @@ public class AuthResult {
         Permission.Action action, TableName table,
         Map<byte[], ? extends Collection<?>> families) {
     return new AuthResult(false, request, reason, user, action, table, families);
+  }
+
+  public String toFamilyString() {
+    return toFamiliesString(families, family, qualifier);
+  }
+
+  public static class Params {
+    private String namespace = null;
+    private TableName tableName = null;
+    private Map<byte[], ? extends Collection<?>> families = null;
+    byte[] family = null;
+    byte[] qualifier = null;
+
+    public Params setNamespace(String namespace) {
+      this.namespace = namespace;
+      return this;
+    }
+
+    public Params setTableName(TableName table) {
+      this.tableName = table;
+      return this;
+    }
+
+    public Params setFamilies(Map<byte[], ? extends Collection<?>> families) {
+      this.families = families;
+      return this;
+    }
+
+    public Params setFamily(byte[] family) {
+      this.family = family;
+      return this;
+    }
+
+    public Params setQualifier(byte[] qualifier) {
+      this.qualifier = qualifier;
+      return this;
+    }
+
+    public String toString() {
+      String familiesString = toFamiliesString(families, family, qualifier);
+      String[] params = new String[] {
+          namespace != null ? "namespace=" + namespace : null,
+          tableName != null ? "table=" + tableName.getNameWithNamespaceInclAsString() : null,
+          familiesString.length() > 0 ? "family=" + familiesString : null
+      };
+      return Joiner.on(",").skipNulls().join(params);
+    }
+
   }
 }

@@ -141,5 +141,14 @@ public class TestHQuorumPeer {
     assertEquals(2181, p.get("clientPort"));
   }
 
+  @Test
+  public void testGetZKQuorumServersString() {
+    Configuration config = new Configuration(TEST_UTIL.getConfiguration());
+    config.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, 8888);
+    config.set(HConstants.ZOOKEEPER_QUORUM, "foo:1234,bar:5678,baz,qux:9012");
+
+    String s = ZKConfig.getZKQuorumServersString(config);
+    assertEquals("foo:1234,bar:5678,baz:8888,qux:9012", s);
+  }
 }
 

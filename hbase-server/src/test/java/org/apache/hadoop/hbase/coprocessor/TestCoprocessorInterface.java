@@ -54,10 +54,13 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.SplitTransaction;
+import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -90,20 +93,21 @@ public class TestCoprocessorInterface {
     }
 
     @Override
-    public boolean next(List<Cell> result, int limit) throws IOException {
-      return delegate.next(result, limit);
+    public boolean next(List<Cell> result, ScannerContext scannerContext)
+        throws IOException {
+      return delegate.next(result, scannerContext);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result) 
+    public boolean nextRaw(List<Cell> result)
         throws IOException {
       return delegate.nextRaw(result);
     }
 
     @Override
-    public boolean nextRaw(List<Cell> result, int limit)
+    public boolean nextRaw(List<Cell> result, ScannerContext context)
         throws IOException {
-      return delegate.nextRaw(result, limit);
+      return delegate.nextRaw(result, context);
     }
 
     @Override
@@ -135,6 +139,12 @@ public class TestCoprocessorInterface {
     public long getMvccReadPoint() {
       return delegate.getMvccReadPoint();
     }
+
+    @Override
+    public int getBatch() {
+      return delegate.getBatch();
+    }
+
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {
@@ -214,7 +224,7 @@ public class TestCoprocessorInterface {
       preSplitWithSplitRowCalled = true;
     }
     @Override
-    public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, HRegion l, HRegion r) {
+    public void postSplit(ObserverContext<RegionCoprocessorEnvironment> e, Region l, Region r) {
       postSplitCalled = true;
     }
 
@@ -280,20 +290,19 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
+    Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{}, families);
 
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
-      region.flushcache();
+      region.flush(true);
     }
 
-    region.compactStores();
+    region.compact(false);
 
-    byte [] splitRow = region.checkSplit();
-
+    byte [] splitRow = ((HRegion)region).checkSplit();
     assertNotNull(splitRow);
-    HRegion [] regions = split(region, splitRow);
+    Region [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class, CoprocessorII.class);
     }
@@ -319,7 +328,7 @@ public class TestCoprocessorInterface {
     // now have all Environments fail
     for (int i = 0; i < regions.length; i++) {
       try {
-        byte [] r = regions[i].getStartKey();
+        byte [] r = regions[i].getRegionInfo().getStartKey();
         if (r == null || r.length <= 0) {
           // Its the start row.  Can't ask for null.  Ask for minimal key instead.
           r = new byte [] {0};
@@ -359,19 +368,19 @@ public class TestCoprocessorInterface {
     byte [][] families = { fam1, fam2, fam3 };
 
     Configuration hc = initSplit();
-    HRegion region = initHRegion(tableName, name.getMethodName(), hc,
+    Region region = initHRegion(tableName, name.getMethodName(), hc,
       new Class<?>[]{CoprocessorImpl.class}, families);
     for (int i = 0; i < 3; i++) {
       HBaseTestCase.addContent(region, fam3);
-      region.flushcache();
+      region.flush(true);
     }
 
-    region.compactStores();
+    region.compact(false);
 
-    byte [] splitRow = region.checkSplit();
+    byte [] splitRow = ((HRegion)region).checkSplit();
 
     assertNotNull(splitRow);
-    HRegion [] regions = split(region, splitRow);
+    Region [] regions = split(region, splitRow);
     for (int i = 0; i < regions.length; i++) {
       regions[i] = reopenRegion(regions[i], CoprocessorImpl.class);
     }
@@ -406,10 +415,10 @@ public class TestCoprocessorInterface {
     }
   }
 
-  HRegion reopenRegion(final HRegion closedRegion, Class<?> ... implClasses)
+  Region reopenRegion(final Region closedRegion, Class<?> ... implClasses)
       throws IOException {
     //HRegionInfo info = new HRegionInfo(tableName, null, null, false);
-    HRegion r = HRegion.openHRegion(closedRegion, null);
+    Region r = HRegion.openHRegion(closedRegion, null);
 
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
@@ -417,7 +426,7 @@ public class TestCoprocessorInterface {
     // and set it to region.
     Configuration conf = TEST_UTIL.getConfiguration();
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    r.setCoprocessorHost(host);
+    ((HRegion)r).setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
       host.load(implClass, Coprocessor.PRIORITY_USER, conf);
@@ -433,7 +442,7 @@ public class TestCoprocessorInterface {
     return r;
   }
 
-  HRegion initHRegion (TableName tableName, String callingMethod,
+  Region initHRegion (TableName tableName, String callingMethod,
       Configuration conf, Class<?> [] implClasses, byte [][] families)
       throws IOException {
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -442,11 +451,11 @@ public class TestCoprocessorInterface {
     }
     HRegionInfo info = new HRegionInfo(tableName, null, null, false);
     Path path = new Path(DIR + callingMethod);
-    HRegion r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
+    Region r = HBaseTestingUtility.createRegionAndWAL(info, path, conf, htd);
 
     // this following piece is a hack.
     RegionCoprocessorHost host = new RegionCoprocessorHost(r, null, conf);
-    r.setCoprocessorHost(host);
+    ((HRegion)r).setCoprocessorHost(host);
 
     for (Class<?> implClass : implClasses) {
       host.load(implClass, Coprocessor.PRIORITY_USER, conf);
@@ -480,12 +489,11 @@ public class TestCoprocessorInterface {
     return TEST_UTIL.getConfiguration();
   }
 
-  private HRegion [] split(final HRegion r, final byte [] splitRow)
-      throws IOException {
+  private Region [] split(final Region r, final byte [] splitRow) throws IOException {
+    Region[] regions = new Region[2];
 
-    HRegion[] regions = new HRegion[2];
-
-    SplitTransaction st = new SplitTransaction(r, splitRow);
+    SplitTransaction st = new SplitTransactionFactory(TEST_UTIL.getConfiguration())
+      .create(r, splitRow);
     int i = 0;
 
     if (!st.prepare()) {
@@ -494,20 +502,19 @@ public class TestCoprocessorInterface {
     }
     try {
       Server mockServer = Mockito.mock(Server.class);
-      when(mockServer.getConfiguration()).thenReturn(
-          TEST_UTIL.getConfiguration());
-      PairOfSameType<HRegion> daughters = st.execute(mockServer, null);
-      for (HRegion each_daughter: daughters) {
+      when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+      PairOfSameType<Region> daughters = st.execute(mockServer, null);
+      for (Region each_daughter: daughters) {
         regions[i] = each_daughter;
         i++;
       }
     } catch (IOException ioe) {
-      LOG.info("Split transaction of " + r.getRegionNameAsString() +
+      LOG.info("Split transaction of " + r.getRegionInfo().getRegionNameAsString() +
           " failed:" + ioe.getMessage());
       assertTrue(false);
     } catch (RuntimeException e) {
       LOG.info("Failed rollback of failed split of " +
-          r.getRegionNameAsString() + e.getMessage());
+          r.getRegionInfo().getRegionNameAsString() + e.getMessage());
     }
 
     assertTrue(i == 2);

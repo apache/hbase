@@ -42,24 +42,21 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.MetaScanner;
-import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan.Position;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -192,10 +189,10 @@ public class TestRegionPlacement {
       // kill a random non-meta server carrying at least one region
       killIndex = random.nextInt(SLAVES);
       serverToKill = TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getServerName();
-      Collection<HRegion> regs =
+      Collection<Region> regs =
           TEST_UTIL.getHBaseCluster().getRegionServer(killIndex).getOnlineRegionsLocalContext();
       isNamespaceServer = false;
-      for (HRegion r : regs) {
+      for (Region r : regs) {
         if (r.getRegionInfo().getTable().getNamespaceAsString()
             .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
           isNamespaceServer = true;
@@ -419,8 +416,7 @@ public class TestRegionPlacement {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     for (int i = 0; i < SLAVES; i++) {
       HRegionServer rs = cluster.getRegionServer(i);
-      for (HRegion region: rs.getOnlineRegions(
-          TableName.valueOf("testRegionAssignment"))) {
+      for (Region region: rs.getOnlineRegions(TableName.valueOf("testRegionAssignment"))) {
         InetSocketAddress[] favoredSocketAddress = rs.getFavoredNodesForRegion(
             region.getRegionInfo().getEncodedName());
         List<ServerName> favoredServerList = plan.getAssignmentMap().get(region.getRegionInfo());
@@ -449,7 +445,7 @@ public class TestRegionPlacement {
             assertNotNull(addrFromPlan);
             assertTrue("Region server " + rs.getServerName().getHostAndPort()
                 + " has the " + positions[j] +
-                " for region " + region.getRegionNameAsString() + " is " +
+                " for region " + region.getRegionInfo().getRegionNameAsString() + " is " +
                 addrFromRS + " which is inconsistent with the plan "
                 + addrFromPlan, addrFromRS.equals(addrFromPlan));
           }
@@ -470,11 +466,11 @@ public class TestRegionPlacement {
     final AtomicInteger regionOnPrimaryNum = new AtomicInteger(0);
     final AtomicInteger totalRegionNum = new AtomicInteger(0);
     LOG.info("The start of region placement verification");
-    MetaScannerVisitor visitor = new MetaScannerVisitor() {
-      public boolean processRow(Result result) throws IOException {
+    MetaTableAccessor.Visitor visitor = new MetaTableAccessor.Visitor() {
+      public boolean visit(Result result) throws IOException {
         try {
           @SuppressWarnings("deprecation")
-          HRegionInfo info = MetaScanner.getHRegionInfo(result);
+          HRegionInfo info = MetaTableAccessor.getHRegionInfo(result);
           if(info.getTable().getNamespaceAsString()
               .equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)) {
             return true;
@@ -522,11 +518,8 @@ public class TestRegionPlacement {
           throw e;
         }
       }
-
-      @Override
-      public void close() throws IOException {}
     };
-    MetaScanner.metaScan(CONNECTION, visitor);
+    MetaTableAccessor.fullScanRegions(CONNECTION, visitor);
     LOG.info("There are " + regionOnPrimaryNum.intValue() + " out of " +
         totalRegionNum.intValue() + " regions running on the primary" +
         " region servers" );

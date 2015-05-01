@@ -63,6 +63,8 @@ import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLog
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.CatalogJanitor.SplitParentFirstComparator;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -225,9 +227,10 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void createTable(HTableDescriptor desc, byte[][] splitKeys)
+    public long createTable(HTableDescriptor desc, byte[][] splitKeys)
         throws IOException {
       // no-op
+      return -1;
     }
 
     @Override
@@ -257,6 +260,11 @@ public class TestCatalogJanitor {
 
     @Override
     public MasterQuotaManager getMasterQuotaManager() {
+      return null;
+    }
+
+    @Override
+    public ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
       return null;
     }
 
@@ -420,7 +428,9 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void deleteTable(TableName tableName) throws IOException { }
+    public long deleteTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
     public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException { }
@@ -431,10 +441,14 @@ public class TestCatalogJanitor {
         throws IOException { }
 
     @Override
-    public void enableTable(TableName tableName) throws IOException { }
+    public long enableTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
-    public void disableTable(TableName tableName) throws IOException { }
+    public long disableTable(TableName tableName) throws IOException {
+      return -1;
+    }
 
     @Override
     public void addColumn(TableName tableName, HColumnDescriptor column)
@@ -912,7 +926,7 @@ public class TestCatalogJanitor {
     MasterServices services = new MockMasterServices(server);
 
     // create the janitor
-    
+
     CatalogJanitor janitor = new CatalogJanitor(server, services);
 
     // Create regions.

@@ -744,7 +744,7 @@ class AsyncProcess {
 
     private final Batch.Callback<CResult> callback;
     private final BatchErrors errors;
-    private final ConnectionManager.ServerErrorTracker errorsByServer;
+    private final ConnectionImplementation.ServerErrorTracker errorsByServer;
     private final ExecutorService pool;
     private final Set<MultiServerCallable<Row>> callsInProgress;
 
@@ -1743,8 +1743,8 @@ class AsyncProcess {
    * We may benefit from connection-wide tracking of server errors.
    * @return ServerErrorTracker to use, null if there is no ServerErrorTracker on this connection
    */
-  protected ConnectionManager.ServerErrorTracker createServerErrorTracker() {
-    return new ConnectionManager.ServerErrorTracker(
+  protected ConnectionImplementation.ServerErrorTracker createServerErrorTracker() {
+    return new ConnectionImplementation.ServerErrorTracker(
         this.serverTrackerTimeout, this.numTries);
   }
 

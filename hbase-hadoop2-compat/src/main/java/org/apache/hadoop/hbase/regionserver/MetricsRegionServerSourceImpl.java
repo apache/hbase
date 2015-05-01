@@ -42,6 +42,7 @@ public class MetricsRegionServerSourceImpl
   private final MetricHistogram incrementHisto;
   private final MetricHistogram appendHisto;
   private final MetricHistogram replayHisto;
+  private final MetricHistogram scanNextHisto;
 
   private final MutableCounterLong slowPut;
   private final MutableCounterLong slowDelete;
@@ -76,12 +77,13 @@ public class MetricsRegionServerSourceImpl
     slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0l);
 
     incrementHisto = getMetricsRegistry().newHistogram(INCREMENT_KEY);
-    slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0l);
+    slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0L);
 
     appendHisto = getMetricsRegistry().newHistogram(APPEND_KEY);
     slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
     
     replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
+    scanNextHisto = getMetricsRegistry().newHistogram(SCAN_NEXT_KEY);
 
     splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
     flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
@@ -118,6 +120,11 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void updateReplay(long t) {
     replayHisto.add(t);
+  }
+
+  @Override
+  public void updateScannerNext(long scanSize) {
+    scanNextHisto.add(scanSize);
   }
 
   @Override
@@ -176,8 +183,7 @@ public class MetricsRegionServerSourceImpl
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
 
-    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
 
     // rsWrap can be null because this function is called inside of init.
     if (rsWrap != null) {
@@ -213,6 +219,9 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getDataInMemoryWithoutWAL())
           .addGauge(Interns.info(PERCENT_FILES_LOCAL, PERCENT_FILES_LOCAL_DESC),
               rsWrap.getPercentFileLocal())
+          .addGauge(Interns.info(PERCENT_FILES_LOCAL_SECONDARY_REGIONS,
+              PERCENT_FILES_LOCAL_SECONDARY_REGIONS_DESC),
+              rsWrap.getPercentFileLocalSecondaryRegions())
           .addGauge(Interns.info(SPLIT_QUEUE_LENGTH, SPLIT_QUEUE_LENGTH_DESC),
               rsWrap.getSplitQueueSize())
           .addGauge(Interns.info(COMPACTION_QUEUE_LENGTH, COMPACTION_QUEUE_LENGTH_DESC),

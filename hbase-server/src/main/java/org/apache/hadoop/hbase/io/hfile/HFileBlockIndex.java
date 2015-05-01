@@ -55,8 +55,8 @@ import org.apache.hadoop.util.StringUtils;
  *
  * Examples of how to use the block index writer can be found in
  * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} and
- *  {@link HFileWriterV2}. Examples of how to use the reader can be
- *  found in {@link HFileReaderV2} and TestHFileBlockIndex.
+ *  {@link HFileWriterImpl}. Examples of how to use the reader can be
+ *  found in {@link HFileWriterImpl} and TestHFileBlockIndex.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {
@@ -218,14 +218,14 @@ public class HFileBlockIndex {
       }
 
       // the next indexed key
-      byte[] nextIndexedKey = null;
+      Cell nextIndexedKey = null;
 
       // Read the next-level (intermediate or leaf) index block.
       long currentOffset = blockOffsets[rootLevelIndex];
       int currentOnDiskSize = blockDataSizes[rootLevelIndex];
 
       if (rootLevelIndex < blockKeys.length - 1) {
-        nextIndexedKey = blockKeys[rootLevelIndex + 1];
+        nextIndexedKey = new KeyValue.KeyOnlyKeyValue(blockKeys[rootLevelIndex + 1]);
       } else {
         nextIndexedKey = HConstants.NO_NEXT_INDEXED_KEY;
       }
@@ -298,7 +298,7 @@ public class HFileBlockIndex {
         // Only update next indexed key if there is a next indexed key in the current level
         byte[] tmpNextIndexedKey = getNonRootIndexedKey(buffer, index + 1);
         if (tmpNextIndexedKey != null) {
-          nextIndexedKey = tmpNextIndexedKey;
+          nextIndexedKey = new KeyValue.KeyOnlyKeyValue(tmpNextIndexedKey);
         }
       }
 

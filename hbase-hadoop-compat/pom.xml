@@ -36,27 +36,6 @@
 
     <build>
       <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>default-compile</id>
-            <configuration>
-              <compilerId>${java.default.compiler}</compilerId>
-              <forceJavacCompilerUse>true</forceJavacCompilerUse>
-              <useIncrementalCompilation>false</useIncrementalCompilation>
-            </configuration>
-          </execution>
-          <execution>
-            <id>default-testCompile</id>
-            <configuration>
-              <compilerId>${java.default.compiler}</compilerId>
-              <forceJavacCompilerUse>true</forceJavacCompilerUse>
-              <useIncrementalCompilation>false</useIncrementalCompilation>
-            </configuration>
-          </execution>
-       </executions>
-      </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
@@ -95,6 +74,36 @@
           <artifactId>maven-source-plugin</artifactId>
         </plugin>
         </plugins>
+      <pluginManagement>
+        <plugins>
+          <!--This plugin's configuration is used to store Eclipse m2e settings
+               only. It has no influence on the Maven build itself.-->
+          <plugin>
+            <groupId>org.eclipse.m2e</groupId>
+            <artifactId>lifecycle-mapping</artifactId>
+            <version>1.0.0</version>
+            <configuration>
+              <lifecycleMappingMetadata>
+                <pluginExecutions>
+                  <pluginExecution>
+                    <pluginExecutionFilter>
+                      <groupId>org.apache.maven.plugins</groupId>
+                      <artifactId>maven-compiler-plugin</artifactId>
+                      <versionRange>[3.2,)</versionRange>
+                      <goals>
+                        <goal>compile</goal>
+                      </goals>
+                    </pluginExecutionFilter>
+                    <action>
+                      <ignore></ignore>
+                    </action>
+                  </pluginExecution>
+                </pluginExecutions>
+              </lifecycleMappingMetadata>
+            </configuration>
+          </plugin>
+        </plugins>
+      </pluginManagement>
     </build>
 
     <dependencies>

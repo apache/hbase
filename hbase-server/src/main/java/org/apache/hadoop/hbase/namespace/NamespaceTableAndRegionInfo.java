@@ -24,10 +24,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 
 import com.google.common.base.Joiner;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * NamespaceTableAndRegionInfo is a helper class that contains information

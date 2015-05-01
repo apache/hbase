@@ -155,6 +155,13 @@ public class TestGet {
     Set<byte[]> qualifiers = get.getFamilyMap().get(family);
     Assert.assertEquals(1, qualifiers.size());
   }
+  
+  @Test
+  public void TestGetRowFromGetCopyConstructor() throws Exception {
+    Get get = new Get(ROW);
+    Get copyGet = new Get(get);
+    assertEquals(0, Bytes.compareTo(get.getRow(), copyGet.getRow()));
+  }
 
   @Test
   public void testDynamicFilter() throws Exception {

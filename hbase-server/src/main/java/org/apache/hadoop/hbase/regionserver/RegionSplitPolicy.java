@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -74,11 +74,11 @@ public abstract class RegionSplitPolicy extends Configured {
     if (explicitSplitPoint != null) {
       return explicitSplitPoint;
     }
-    Map<byte[], Store> stores = region.getStores();
+    List<Store> stores = region.getStores();
 
     byte[] splitPointFromLargestStore = null;
     long largestStoreSize = 0;
-    for (Store s : stores.values()) {
+    for (Store s : stores) {
       byte[] splitPoint = s.getSplitPoint();
       long storeSize = s.getSize();
       if (splitPoint != null && largestStoreSize < storeSize) {

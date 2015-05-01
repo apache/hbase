@@ -19,7 +19,8 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,10 +32,17 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueTestUtil;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -65,7 +73,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(table, null, null, false);
     // Set this so that the archiver writes to the temp dir as well.
-    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
     try {
       List<String> rows = generateRandomWords(10, "row");
       List<String> allColumns = generateRandomWords(10, "column");
@@ -116,17 +124,17 @@ public class TestColumnSeeking {
           region.put(p);
           if (Math.random() < flushPercentage) {
             LOG.info("Flushing... ");
-            region.flushcache();
+            region.flush(true);
           }
 
           if (Math.random() < minorPercentage) {
             LOG.info("Minor compacting... ");
-            region.compactStores(false);
+            region.compact(false);
           }
 
           if (Math.random() < majorPercentage) {
             LOG.info("Major compacting... ");
-            region.compactStores(true);
+            region.compact(true);
           }
         }
       }
@@ -177,7 +185,7 @@ public class TestColumnSeeking {
     htd.addFamily(hcd);
 
     HRegionInfo info = new HRegionInfo(table, null, null, false);
-    HRegion region = TEST_UTIL.createLocalHRegion(info, htd);
+    Region region = TEST_UTIL.createLocalHRegion(info, htd);
 
     List<String> rows = generateRandomWords(10, "row");
     List<String> allColumns = generateRandomWords(100, "column");
@@ -229,17 +237,17 @@ public class TestColumnSeeking {
       region.put(p);
       if (Math.random() < flushPercentage) {
         LOG.info("Flushing... ");
-        region.flushcache();
+        region.flush(true);
       }
 
       if (Math.random() < minorPercentage) {
         LOG.info("Minor compacting... ");
-        region.compactStores(false);
+        region.compact(false);
       }
 
       if (Math.random() < majorPercentage) {
         LOG.info("Major compacting... ");
-        region.compactStores(true);
+        region.compact(true);
       }
     }
 

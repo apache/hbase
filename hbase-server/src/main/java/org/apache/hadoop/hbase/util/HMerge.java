@@ -41,9 +41,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HConnectable;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
@@ -106,14 +104,16 @@ class HMerge {
     final TableName tableName, final boolean testMasterRunning)
   throws IOException {
     boolean masterIsRunning = false;
+    HConnection hConnection = null;
     if (testMasterRunning) {
-      masterIsRunning = HConnectionManager
-          .execute(new HConnectable<Boolean>(conf) {
-            @Override
-            public Boolean connect(HConnection connection) throws IOException {
-              return connection.isMasterRunning();
-            }
-          });
+      try {
+        hConnection = (HConnection) ConnectionFactory.createConnection(conf);
+        masterIsRunning = hConnection.isMasterRunning();
+      } finally {
+        if (hConnection != null) {
+          hConnection.close();
+        }
+      }
     }
     if (tableName.equals(TableName.META_TABLE_NAME)) {
       if (masterIsRunning) {
@@ -206,16 +206,17 @@ class HMerge {
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {
           // We merge two adjacent regions if their total size is less than
           // one half of the desired maximum size
-          LOG.info("Merging regions " + currentRegion.getRegionNameAsString() +
-            " and " + nextRegion.getRegionNameAsString());
+          LOG.info("Merging regions " + currentRegion.getRegionInfo().getRegionNameAsString() +
+            " and " + nextRegion.getRegionInfo().getRegionNameAsString());
           HRegion mergedRegion =
             HRegion.mergeAdjacent(currentRegion, nextRegion);
-          updateMeta(currentRegion.getRegionName(), nextRegion.getRegionName(),
-              mergedRegion);
+          updateMeta(currentRegion.getRegionInfo().getRegionName(),
+            nextRegion.getRegionInfo().getRegionName(), mergedRegion);
           break;
         }
-        LOG.info("not merging regions " + Bytes.toStringBinary(currentRegion.getRegionName())
-            + " and " + Bytes.toStringBinary(nextRegion.getRegionName()));
+        LOG.info("not merging regions " +
+          Bytes.toStringBinary(currentRegion.getRegionInfo().getRegionName()) +
+            " and " + Bytes.toStringBinary(nextRegion.getRegionInfo().getRegionName()));
         currentRegion.close();
         currentRegion = nextRegion;
         currentSize = nextSize;
@@ -342,7 +343,7 @@ class HMerge {
 
       if(LOG.isDebugEnabled()) {
         LOG.debug("updated columns in row: "
-            + Bytes.toStringBinary(newRegion.getRegionName()));
+            + Bytes.toStringBinary(newRegion.getRegionInfo().getRegionName()));
       }
     }
   }

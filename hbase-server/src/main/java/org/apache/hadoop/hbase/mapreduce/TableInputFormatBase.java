@@ -62,35 +62,40 @@ import org.apache.hadoop.util.StringUtils;
  * A base for {@link TableInputFormat}s. Receives a {@link Connection}, a {@link TableName},
  * an {@link Scan} instance that defines the input columns etc. Subclasses may use
  * other TableRecordReader implementations.
+ *
+ * Subclasses MUST ensure initializeTable(Connection, TableName) is called for an instance to
+ * function properly. Each of the entry points to this class used by the MapReduce framework,
+ * {@link #createRecordReader(InputSplit, TaskAttemptContext)} and {@link #getSplits(JobContext)},
+ * will call {@link #initialize(JobContext)} as a convenient centralized location to handle
+ * retrieving the necessary configuration information. If your subclass overrides either of these
+ * methods, either call the parent version or call initialize yourself.
+ *
  * <p>
  * An example of a subclass:
  * <pre>
- *   class ExampleTIF extends TableInputFormatBase implements JobConfigurable {
+ *   class ExampleTIF extends TableInputFormatBase {
  *
- *     private JobConf job;
- *
- *     public void configure(JobConf job) {
- *       this.job = job;
- *       Text[] inputColumns = new byte [][] { Bytes.toBytes("cf1:columnA"),
- *         Bytes.toBytes("cf2") };
- *       // mandatory
- *       setInputColumns(inputColumns);
- *       RowFilterInterface exampleFilter = new RegExpRowFilter("keyPrefix.*");
- *       // optional
- *       setRowFilter(exampleFilter);
- *     }
- *     
- *     protected void initialize() {
- *       Connection connection =
- *          ConnectionFactory.createConnection(HBaseConfiguration.create(job));
+ *     {@literal @}Override
+ *     protected void initialize(JobContext context) throws IOException {
+ *       // We are responsible for the lifecycle of this connection until we hand it over in
+ *       // initializeTable.
+ *       Connection connection = ConnectionFactory.createConnection(HBaseConfiguration.create(
+ *              job.getConfiguration()));
  *       TableName tableName = TableName.valueOf("exampleTable");
- *       // mandatory
+ *       // mandatory. once passed here, TableInputFormatBase will handle closing the connection.
  *       initializeTable(connection, tableName);
- *    }
- *
- *     public void validateInput(JobConf job) throws IOException {
+ *       byte[][] inputColumns = new byte [][] { Bytes.toBytes("columnA"),
+ *         Bytes.toBytes("columnB") };
+ *       // optional, by default we'll get everything for the table.
+ *       Scan scan = new Scan();
+ *       for (byte[] family : inputColumns) {
+ *         scan.addFamily(family);
+ *       }
+ *       Filter exampleFilter = new RowFilter(CompareOp.EQUAL, new RegexStringComparator("aa.*"));
+ *       scan.setFilter(exampleFilter);
+ *       setScan(scan);
  *     }
- *  }
+ *   }
  * </pre>
  */
 @InterfaceAudience.Public
@@ -109,6 +114,13 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   public static final String TABLE_ROW_TEXTKEY = "hbase.table.row.textkey";
 
   final Log LOG = LogFactory.getLog(TableInputFormatBase.class);
+
+  private static final String NOT_INITIALIZED = "The input format instance has not been properly " +
+      "initialized. Ensure you call initializeTable either in your constructor or initialize " +
+      "method";
+  private static final String INITIALIZATION_ERROR = "Cannot create a record reader because of a" +
+            " previous error. Please look at the previous logs lines from" +
+            " the task's full log for more details.";
 
   /** Holds the details for the internal scanner.
    *
@@ -146,14 +158,18 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   public RecordReader<ImmutableBytesWritable, Result> createRecordReader(
       InputSplit split, TaskAttemptContext context)
   throws IOException {
+    // Just in case a subclass is relying on JobConfigurable magic.
     if (table == null) {
-      initialize();
+      initialize(context);
     }
-    if (getTable() == null) {
-      // initialize() must not have been implemented in the subclass.
-      throw new IOException("Cannot create a record reader because of a" +
-          " previous error. Please look at the previous logs lines from" +
-          " the task's full log for more details.");
+    // null check in case our child overrides getTable to not throw.
+    try {
+      if (getTable() == null) {
+        // initialize() must not have been implemented in the subclass.
+        throw new IOException(INITIALIZATION_ERROR);
+      }
+    } catch (IllegalStateException exception) {
+      throw new IOException(INITIALIZATION_ERROR, exception);
     }
     TableSplit tSplit = (TableSplit) split;
     LOG.info("Input split length: " + StringUtils.humanReadableInt(tSplit.getLength()) + " bytes.");
@@ -218,14 +234,20 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   public List<InputSplit> getSplits(JobContext context) throws IOException {
     boolean closeOnFinish = false;
 
+    // Just in case a subclass is relying on JobConfigurable magic.
     if (table == null) {
-      initialize();
+      initialize(context);
       closeOnFinish = true;
     }
 
-    if (getTable() == null) {
-      // initialize() wasn't implemented, so the table is null.
-      throw new IOException("No table was provided.");
+    // null check in case our child overrides getTable to not throw.
+    try {
+      if (getTable() == null) {
+        // initialize() must not have been implemented in the subclass.
+        throw new IOException(INITIALIZATION_ERROR);
+      }
+    } catch (IllegalStateException exception) {
+      throw new IOException(INITIALIZATION_ERROR, exception);
     }
 
     try {
@@ -322,6 +344,10 @@ extends InputFormat<ImmutableBytesWritable, Result> {
     }
   }
 
+  /**
+   * @deprecated mistakenly made public in 0.98.7. scope will change to package-private
+   */
+  @Deprecated
   public String reverseDNS(InetAddress ipAddress) throws NamingException, UnknownHostException {
     String hostName = this.reverseDNSCacheMap.get(ipAddress);
     if (hostName == null) {
@@ -354,7 +380,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapreduce.InputFormat#getSplits(
    *   org.apache.hadoop.mapreduce.JobContext)
    */
-  public List<InputSplit> calculateRebalancedSplits(List<InputSplit> list, JobContext context,
+  private List<InputSplit> calculateRebalancedSplits(List<InputSplit> list, JobContext context,
                                                long average) throws IOException {
     List<InputSplit> resultList = new ArrayList<InputSplit>();
     Configuration conf = context.getConfiguration();
@@ -428,6 +454,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    * @param isText It determines to use text key mode or binary key mode
    * @return The split point in the region.
    */
+  @InterfaceAudience.Private
   public static byte[] getSplitKey(byte[] start, byte[] end, boolean isText) {
     byte upperLimitByte;
     byte lowerLimitByte;
@@ -507,8 +534,6 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   *
-   *
    * Test if the given region is to be included in the InputSplit while splitting
    * the regions of a table.
    * <p>
@@ -535,7 +560,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   /**
    * Allows subclasses to get the {@link HTable}.
    *
-   * @deprecated
+   * @deprecated use {@link #getTable()}
    */
   @Deprecated
   protected HTable getHTable() {
@@ -547,7 +572,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   protected RegionLocator getRegionLocator() {
     if (regionLocator == null) {
-      initialize();
+      throw new IllegalStateException(NOT_INITIALIZED);
     }
     return regionLocator;
   }
@@ -557,7 +582,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   protected Table getTable() {
     if (table == null) {
-      initialize();
+      throw new IllegalStateException(NOT_INITIALIZED);
     }
     return table;
   }
@@ -567,13 +592,16 @@ extends InputFormat<ImmutableBytesWritable, Result> {
    */
   protected Admin getAdmin() {
     if (admin == null) {
-      initialize();
+      throw new IllegalStateException(NOT_INITIALIZED);
     }
     return admin;
   }
 
   /**
    * Allows subclasses to set the {@link HTable}.
+   *
+   * Will attempt to reuse the underlying Connection for our own needs, including
+   * retreiving an Admin interface to the HBase cluster.
    *
    * @param table  The table to get the data from.
    * @throws IOException 
@@ -582,19 +610,23 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   @Deprecated
   protected void setHTable(HTable table) throws IOException {
     this.table = table;
-    this.regionLocator = table.getRegionLocator();
     this.connection = table.getConnection();
+    this.regionLocator = table.getRegionLocator();
     this.admin = this.connection.getAdmin();
   }
 
   /**
    * Allows subclasses to initialize the table information.
    *
-   * @param connection  The {@link Connection} to the HBase cluster.
+   * @param connection  The Connection to the HBase cluster. MUST be unmanaged. We will close.
    * @param tableName  The {@link TableName} of the table to process. 
    * @throws IOException 
    */
   protected void initializeTable(Connection connection, TableName tableName) throws IOException {
+    if (this.table != null || this.connection != null) {
+      LOG.warn("initializeTable called multiple times. Overwriting connection and table " +
+          "reference; TableInputFormatBase will not close these old references when done.");
+    }
     this.table = connection.getTable(tableName);
     this.regionLocator = connection.getRegionLocator(tableName);
     this.admin = connection.getAdmin();
@@ -631,12 +663,21 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
   
   /**
-   * This method will be called when any of the following are referenced, but not yet initialized:
-   * admin, regionLocator, table. Subclasses will have the opportunity to call
-   * {@link #initializeTable(Connection, TableName)}
+   * Handle subclass specific set up.
+   * Each of the entry points used by the MapReduce framework,
+   * {@link #createRecordReader(InputSplit, TaskAttemptContext)} and {@link #getSplits(JobContext)},
+   * will call {@link #initialize(JobContext)} as a convenient centralized location to handle
+   * retrieving the necessary configuration information and calling
+   * {@link #initializeTable(Connection, TableName)}.
+   *
+   * Subclasses should implement their initialize call such that it is safe to call multiple times.
+   * The current TableInputFormatBase implementation relies on a non-null table reference to decide
+   * if an initialize call is needed, but this behavior may change in the future. In particular,
+   * it is critical that initializeTable not be called multiple times since this will leak
+   * Connection instances.
+   *
    */
-  protected void initialize() {
-   
+  protected void initialize(JobContext context) throws IOException {
   }
 
   /**

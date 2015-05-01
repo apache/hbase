@@ -82,7 +82,7 @@ public final class ConnectionUtils {
    */
   public static NonceGenerator injectNonceGeneratorForTesting(
       ClusterConnection conn, NonceGenerator cnm) {
-    return ConnectionManager.injectNonceGeneratorForTesting(conn, cnm);
+    return ConnectionImplementation.injectNonceGeneratorForTesting(conn, cnm);
   }
 
   /**
@@ -94,6 +94,7 @@ public final class ConnectionUtils {
    */
   public static void setServerSideHConnectionRetriesConfig(
       final Configuration c, final String sn, final Log log) {
+    // TODO: Fix this. Not all connections from server side should have 10 times the retries.
     int hcRetries = c.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
     // Go big.  Multiply by 10.  If we can't get to meta after this many retries
@@ -145,10 +146,10 @@ public final class ConnectionUtils {
    * Some tests shut down the master. But table availability is a master RPC which is performed on
    * region re-lookups.
    */
-  static class MasterlessConnection extends ConnectionManager.HConnectionImplementation {
-    MasterlessConnection(Configuration conf, boolean managed,
+  static class MasterlessConnection extends ConnectionImplementation {
+    MasterlessConnection(Configuration conf,
       ExecutorService pool, User user) throws IOException {
-      super(conf, managed, pool, user);
+      super(conf, pool, user);
     }
 
     @Override

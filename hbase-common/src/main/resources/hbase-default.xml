@@ -96,6 +96,11 @@ possible configurations would overwhelm and obscure the important.
   </property>
 
   <!--Master configurations-->
+  <property >
+    <name>hbase.master.port</name>
+    <value>16000</value>
+    <description>The port the HBase Master should bind to.</description>
+  </property>
   <property>
     <name>hbase.master.info.port</name>
     <value>16010</value>
@@ -240,14 +245,6 @@ possible configurations would overwhelm and obscure the important.
     in milliseconds.</description>
   </property>
   <property>
-    <name>hbase.regionserver.regionSplitLimit</name>
-    <value>2147483647</value>
-    <description>Limit for the number of regions after which no more region
-    splitting should take place. This is not a hard limit for the number of
-    regions but acts as a guideline for the regionserver to stop splitting after
-    a certain limit. Default is MAX_INT; i.e. do not block splitting.</description>
-  </property>
-  <property>
     <name>hbase.regionserver.logroll.period</name>
     <value>3600000</value>
     <description>Period at which we will roll the commit log regardless
@@ -331,6 +328,15 @@ possible configurations would overwhelm and obscure the important.
       A split policy determines when a region should be split. The various other split policies that
       are available currently are ConstantSizeRegionSplitPolicy, DisabledRegionSplitPolicy,
       DelimitedKeyPrefixRegionSplitPolicy, KeyPrefixRegionSplitPolicy etc.
+    </description>
+  </property>
+  <property>
+    <name>hbase.regionserver.regionSplitLimit</name>
+    <value>1000</value>
+    <description>
+      Limit for the number of regions after which no more region splitting should take place.
+      This is not hard limit for the number of regions but acts as a guideline for the regionserver
+      to stop splitting after a certain limit. Default is set to 1000.
     </description>
   </property>
 
@@ -518,13 +524,19 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.client.scanner.caching</name>
-    <value>100</value>
-    <description>Number of rows that will be fetched when calling next
-    on a scanner if it is not served from (local, client) memory. Higher
-    caching values will enable faster scanners but will eat up more memory
-    and some calls of next may take longer and longer times when the cache is empty.
-    Do not set this value such that the time between invocations is greater
-    than the scanner timeout; i.e. hbase.client.scanner.timeout.period</description>
+    <value>2147483647</value>
+    <description>Number of rows that we try to fetch when calling next
+    on a scanner if it is not served from (local, client) memory. This configuration
+    works together with hbase.client.scanner.max.result.size to try and use the
+    network efficiently. The default value is Integer.MAX_VALUE by default so that
+    the network will fill the chunk size defined by hbase.client.scanner.max.result.size
+    rather than be limited by a particular number of rows since the size of rows varies
+    table to table. If you know ahead of time that you will not require more than a certain
+    number of rows from a scan, this configuration should be set to that row limit via
+    Scan#setCaching. Higher caching values will enable faster scanners but will eat up more
+    memory and some calls of next may take longer and longer times when the cache is empty.
+    Do not set this value such that the time between invocations is greater than the scanner
+    timeout; i.e. hbase.client.scanner.timeout.period</description>
   </property>
   <property>
     <name>hbase.client.keyvalue.maxsize</name>
@@ -906,6 +918,13 @@ possible configurations would overwhelm and obscure the important.
     <description>Set no delay on rpc socket connections.  See
     http://docs.oracle.com/javase/1.5.0/docs/api/java/net/Socket.html#getTcpNoDelay()</description>
   </property>
+  <property>
+    <name>hbase.regionserver.hostname</name>
+    <value></value>
+    <description>This config is for experts: don't set its value unless you really know what you are doing.
+    When set to a non-empty value, this represents the (external facing) hostname for the underlying server.
+    See https://issues.apache.org/jira/browse/HBASE-12954 for details.</description>
+  </property>
   <!-- The following properties configure authentication information for
        HBase processes when using Kerberos security.  There are no default
        values, included here for documentation purposes -->
@@ -983,6 +1002,22 @@ possible configurations would overwhelm and obscure the important.
     <description>When this is set to true the webUI and such will display all start/end keys
                  as part of the table details, region names, etc. When this is set to false,
                  the keys are hidden.</description>
+  </property>
+  <property>
+    <name>hbase.coprocessor.enabled</name>
+    <value>true</value>
+    <description>Enables or disables coprocessor loading. If 'false'
+    (disabled), any other coprocessor related configuration will be ignored.
+    </description>
+  </property>
+  <property>
+    <name>hbase.coprocessor.user.enabled</name>
+    <value>true</value>
+    <description>Enables or disables user (aka. table) coprocessor loading.
+    If 'false' (disabled), any table coprocessor attributes in table
+    descriptors will be ignored. If "hbase.coprocessor.enabled" is 'false'
+    this setting has no effect.
+    </description>
   </property>
   <property>
     <name>hbase.coprocessor.region.classes</name>
@@ -1128,7 +1163,7 @@ possible configurations would overwhelm and obscure the important.
   <property>
    <name>hbase.regionserver.thrift.framed.max_frame_size_in_mb</name>
     <value>2</value>
-    <description>Default frame size when using framed transport</description>
+    <description>Default frame size when using framed transport, in MB</description>
   </property>
   <property>
     <name>hbase.regionserver.thrift.compact</name>
@@ -1265,6 +1300,16 @@ possible configurations would overwhelm and obscure the important.
     Note that when a single row is larger than this limit the row is still returned completely.
     The default value is 2MB, which is good for 1ge networks.
     With faster and/or high latency networks this value should be increased.
+    </description>
+  </property>
+
+  <property>
+    <name>hbase.server.scanner.max.result.size</name>
+    <value>104857600</value>
+    <description>Maximum number of bytes returned when calling a scanner's next method.
+    Note that when a single row is larger than this limit the row is still returned completely.
+    The default value is 100MB.
+    This is a safety setting to protect the server from OOM situations.
     </description>
   </property>
 

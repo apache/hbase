@@ -21,17 +21,17 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * RegionScanner describes iterators over rows in an HRegion.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
-@InterfaceStability.Stable
+@InterfaceStability.Evolving
 public interface RegionScanner extends InternalScanner {
   /**
    * @return The RegionInfo for this scanner.
@@ -68,25 +68,30 @@ public interface RegionScanner extends InternalScanner {
   long getMvccReadPoint();
 
   /**
-   * Grab the next row's worth of values with the default limit on the number of values
-   * to return.
-   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
-   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * Caller should maintain and update metrics.
-   * See {@link #nextRaw(List, int)}
+   * @return The limit on the number of cells to retrieve on each call to next(). See
+   *         {@link org.apache.hadoop.hbase.client.Scan#setBatch(int)}
+   */
+  int getBatch();
+
+  /**
+   * Grab the next row's worth of values. This is a special internal method to be called from
+   * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
+   * close a region operation, an synchronize on the scanner object. Caller should maintain and
+   * update metrics. See {@link #nextRaw(List, ScannerContext)}
    * @param result return output array
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
   boolean nextRaw(List<Cell> result) throws IOException;
-
+  
   /**
-   * Grab the next row's worth of values with a limit on the number of values
-   * to return.
-   * This is a special internal method to be called from coprocessor hooks to avoid expensive setup.
-   * Caller must set the thread's readpoint, start and close a region operation, an synchronize on the scanner object.
-   * Example:
-   * <code><pre>
+   * Grab the next row's worth of values. The {@link ScannerContext} is used to enforce and track
+   * any limits associated with this call. Any progress that exists in the {@link ScannerContext}
+   * prior to calling this method will be LOST if {@link ScannerContext#getKeepProgress()} is false.
+   * Upon returning from this method, the {@link ScannerContext} will contain information about the
+   * progress made towards the limits. This is a special internal method to be called from
+   * coprocessor hooks to avoid expensive setup. Caller must set the thread's readpoint, start and
+   * close a region operation, an synchronize on the scanner object. Example: <code><pre>
    * HRegion region = ...;
    * RegionScanner scanner = ...
    * MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
@@ -102,9 +107,12 @@ public interface RegionScanner extends InternalScanner {
    * }
    * </pre></code>
    * @param result return output array
-   * @param limit limit on row count to get
+   * @param scannerContext The {@link ScannerContext} instance encapsulating all limits that should
+   *          be tracked during calls to this method. The progress towards these limits can be
+   *          tracked within this instance.
    * @return true if more rows exist after this one, false if scanner is done
    * @throws IOException e
    */
-  boolean nextRaw(List<Cell> result, int limit) throws IOException;
+  boolean nextRaw(List<Cell> result, ScannerContext scannerContext)
+      throws IOException;
 }

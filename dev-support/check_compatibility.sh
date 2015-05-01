@@ -65,6 +65,7 @@ a branch (e.g. 0.98), or a particular commit hash. If ref2 is omitted, master
 will be used.
 
 Options:
+  -a, --all                     Do not filter by interface annotations.
   -b, --binary-only             Only run the check for binary compatibility.
   -f, --force-download          Download dependencies (i.e. Java ACC), even if they are
                                 already present.
@@ -88,8 +89,8 @@ __EOF
 GETOPT=${GETOPT:-/usr/bin/env getopt}
 
 # Parse command line arguments and check for proper syntax.
-if ! ARG_LIST=$(${GETOPT} -q -o bfhno:qr:s \
-    -l binary-only,force-download,help,no-checkout,options:,quick,repo:,source-only \
+if ! ARG_LIST=$(${GETOPT} -q -o abfhno:qr:s \
+    -l all,binary-only,force-download,help,no-checkout,options:,quick,repo:,source-only \
     -- "${@}"); then
   usage >&2
   exit 1
@@ -98,6 +99,9 @@ eval set -- "${ARG_LIST[@]}"
 
 while ((${#})); do
   case "${1}" in
+    -a | --all            )
+      ALL=true
+      shift 1 ;;
     -b | --binary-only    )
       JAVA_ACC_COMMAND+=(-binary)
       shift 1 ;;
@@ -244,10 +248,12 @@ fi
 
 # Generate annotation list dynamically; this way, there's no chance the file
 # gets stale and you have better visiblity into what classes are actually analyzed.
+declare -a ANNOTATION_LIST
 ANNOTATION_LIST+=(InterfaceAudience.Public)
+ANNOTATION_LIST+=(InterfaceAudience.LimitedPrivate)
 if ! [ -f ${SCRIPT_DIRECTORY}/target/compatibility/annotations ]; then
   cat > ${SCRIPT_DIRECTORY}/target/compatibility/annotations << __EOF
-$(tr " " "\n" <<< "${ANNOTATION_LIST}")
+$(tr " " "\n" <<< "${ANNOTATION_LIST[@]}")
 __EOF
 fi
 
@@ -257,7 +263,9 @@ JAVA_ACC_COMMAND+=(-v1 ${COMMIT[1]} -v2 ${COMMIT[2]})
 JAVA_ACC_COMMAND+=(-d1 ${JARS[1]} -d2 ${JARS[2]})
 JAVA_ACC_COMMAND+=(-report-path \
     ${SCRIPT_DIRECTORY}/target/compatibility/report/${COMMIT[1]}_${COMMIT[2]}_compat_report.html)
-JAVA_ACC_COMMAND+=(-annotations-list ${SCRIPT_DIRECTORY}/target/compatibility/annotations)
+if [ "${ALL}" != "true" ] ; then
+  JAVA_ACC_COMMAND+=(-annotations-list ${SCRIPT_DIRECTORY}/target/compatibility/annotations)
+fi
 
 # Delete any existing report folder under /dev-support/target/compatibility.
 rm -rf ${SCRIPT_DIRECTORY}/target/compatibility/report

@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.IOException;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -70,10 +71,10 @@ public class MobTestUtil {
   }
 
   /**
-   * Compare two KeyValue only for their row family qualifier value
+   * Compare two Cells only for their row family qualifier value
    */
-  public static void assertKeyValuesEquals(KeyValue firstKeyValue,
-	      KeyValue secondKeyValue) {
+  public static void assertCellEquals(Cell firstKeyValue,
+	      Cell secondKeyValue) {
 		    Assert.assertEquals(Bytes.toString(CellUtil.cloneRow(firstKeyValue)),
 	            Bytes.toString(CellUtil.cloneRow(secondKeyValue)));
 		    Assert.assertEquals(Bytes.toString(CellUtil.cloneFamily(firstKeyValue)),

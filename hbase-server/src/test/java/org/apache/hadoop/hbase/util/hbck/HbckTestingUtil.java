@@ -49,24 +49,27 @@ public class HbckTestingUtil {
       boolean fixReferenceFiles, boolean fixEmptyMetaRegionInfo, boolean fixTableLocks,
       TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
-    fsck.connect();
-    fsck.setDisplayFullReport(); // i.e. -details
-    fsck.setTimeLag(0);
-    fsck.setFixAssignments(fixAssignments);
-    fsck.setFixMeta(fixMeta);
-    fsck.setFixHdfsHoles(fixHdfsHoles);
-    fsck.setFixHdfsOverlaps(fixHdfsOverlaps);
-    fsck.setFixHdfsOrphans(fixHdfsOrphans);
-    fsck.setFixTableOrphans(fixTableOrphans);
-    fsck.setFixVersionFile(fixVersionFile);
-    fsck.setFixReferenceFiles(fixReferenceFiles);
-    fsck.setFixEmptyMetaCells(fixEmptyMetaRegionInfo);
-    fsck.setFixTableLocks(fixTableLocks);
-    if (table != null) {
-      fsck.includeTable(table);
+    try {
+      fsck.connect();
+      HBaseFsck.setDisplayFullReport(); // i.e. -details
+      fsck.setTimeLag(0);
+      fsck.setFixAssignments(fixAssignments);
+      fsck.setFixMeta(fixMeta);
+      fsck.setFixHdfsHoles(fixHdfsHoles);
+      fsck.setFixHdfsOverlaps(fixHdfsOverlaps);
+      fsck.setFixHdfsOrphans(fixHdfsOrphans);
+      fsck.setFixTableOrphans(fixTableOrphans);
+      fsck.setFixVersionFile(fixVersionFile);
+      fsck.setFixReferenceFiles(fixReferenceFiles);
+      fsck.setFixEmptyMetaCells(fixEmptyMetaRegionInfo);
+      fsck.setFixTableLocks(fixTableLocks);
+      if (table != null) {
+        fsck.includeTable(table);
+      }
+      fsck.onlineHbck();
+    } finally {
+      fsck.close();
     }
-    fsck.onlineHbck();
-    fsck.close();
     return fsck;
   }
 

@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
@@ -72,7 +71,7 @@ public class TestCoprocessorEndpoint {
   private static final Log LOG = LogFactory.getLog(TestCoprocessorEndpoint.class);
 
   private static final TableName TEST_TABLE =
-      TableName.valueOf("TestTable");
+      TableName.valueOf("TestCoprocessorEndpoint");
   private static final byte[] TEST_FAMILY = Bytes.toBytes("TestFamily");
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("TestQualifier");
   private static byte[] ROW = Bytes.toBytes("testRow");
@@ -99,12 +98,11 @@ public class TestCoprocessorEndpoint {
     desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
     admin.createTable(desc, new byte[][]{ROWS[rowSeperator1], ROWS[rowSeperator2]});
     util.waitUntilAllRegionsAssigned(TEST_TABLE);
-    admin.close();
 
     Table table = util.getConnection().getTable(TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
+      put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
       table.put(put);
     }
     table.close();

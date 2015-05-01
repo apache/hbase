@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -54,17 +53,14 @@ public class TestMobRestoreSnapshotHelper {
   final Log LOG = LogFactory.getLog(getClass());
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static String TEST_HFILE = "abc";
 
   private Configuration conf;
-  private Path archiveDir;
   private FileSystem fs;
   private Path rootDir;
 
   @Before
   public void setup() throws Exception {
     rootDir = TEST_UTIL.getDataTestDir("testRestore");
-    archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
     fs = TEST_UTIL.getTestFileSystem();
     TEST_UTIL.getConfiguration().setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
     conf = TEST_UTIL.getConfiguration();

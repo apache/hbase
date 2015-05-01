@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Consistency;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -109,7 +111,7 @@ import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 
 /**
- * Like TestSplitTransaction in that we're testing {@link SplitTransaction}
+ * Like TestSplitTransaction in that we're testing {@link SplitTransactionImpl}
  * only the below tests are against a running cluster where TestSplitTransaction
  * is tests against a bare {@link HRegion}.
  */
@@ -199,7 +201,7 @@ public class TestSplitTransactionOnCluster {
         Coprocessor.PRIORITY_USER, region.getBaseConf());
 
       // split async
-      this.admin.split(region.getRegionName(), new byte[] {42});
+      this.admin.split(region.getRegionInfo().getRegionName(), new byte[] {42});
 
       // we have to wait until the SPLITTING state is seen by the master
       FailingSplitRegionObserver observer = (FailingSplitRegionObserver) region
@@ -238,7 +240,7 @@ public class TestSplitTransactionOnCluster {
 
     HRegion region = cluster.getRegions(tableName).get(0);
     Store store = region.getStore(cf);
-    int regionServerIndex = cluster.getServerWith(region.getRegionName());
+    int regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
 
     Table t = TESTING_UTIL.getConnection().getTable(tableName);
@@ -262,7 +264,7 @@ public class TestSplitTransactionOnCluster {
     assertTrue(fileNum > store.getStorefiles().size());
 
     // 3, Split
-    SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row3"));
+    SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row3"));
     assertTrue(st.prepare());
     st.execute(regionServer, regionServer);
     assertEquals(2, cluster.getRegions(tableName).size());
@@ -472,7 +474,6 @@ public class TestSplitTransactionOnCluster {
 
   @Test(timeout = 180000)
   public void testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles() throws Exception {
-    Configuration conf = TESTING_UTIL.getConfiguration();
     TableName userTableName =
         TableName.valueOf("testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles");
     HTableDescriptor htd = new HTableDescriptor(userTableName);
@@ -634,7 +635,8 @@ public class TestSplitTransactionOnCluster {
     List<HRegion> regions = null;
     try {
       regions = cluster.getRegions(tableName);
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionInfo()
+        .getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       insertData(tableName, admin, t);
       // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -646,7 +648,7 @@ public class TestSplitTransactionOnCluster {
       assertEquals("The specified table should present.", true, tableExists);
       final HRegion region = findSplittableRegion(regions);
       assertTrue("not able to find a splittable region", region != null);
-      SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row2"));
+      SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
         st.createDaughters(regionServer, regionServer);
@@ -689,7 +691,8 @@ public class TestSplitTransactionOnCluster {
     } while (oldRegions.size() != 2);
     for (HRegion h : oldRegions) LOG.debug("OLDREGION " + h.getRegionInfo());
     try {
-      int regionServerIndex = cluster.getServerWith(oldRegions.get(0).getRegionName());
+      int regionServerIndex = cluster.getServerWith(oldRegions.get(0).getRegionInfo()
+        .getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       insertData(tableName, admin, t);
       // Turn off balancer so it doesn't cut in and mess up our placements.
@@ -700,10 +703,10 @@ public class TestSplitTransactionOnCluster {
           tableName);
       assertEquals("The specified table should be present.", true, tableExists);
       final HRegion region = findSplittableRegion(oldRegions);
-      regionServerIndex = cluster.getServerWith(region.getRegionName());
+      regionServerIndex = cluster.getServerWith(region.getRegionInfo().getRegionName());
       regionServer = cluster.getRegionServer(regionServerIndex);
       assertTrue("not able to find a splittable region", region != null);
-      SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row2"));
+      SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
         st.execute(regionServer, regionServer);
@@ -779,7 +782,8 @@ public class TestSplitTransactionOnCluster {
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
     ensureTableRegionNotOnSameServerAsMeta(admin, hri);
-    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionInfo()
+      .getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
     // Turn off balancer so it doesn't cut in and mess up our placements.
     this.admin.setBalancerRunning(false, true);
@@ -802,7 +806,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
 
       // Now split.
-      SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
+      SplitTransactionImpl st = new MockedSplitTransaction(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
         st.execute(regionServer, regionServer);
@@ -862,7 +866,8 @@ public class TestSplitTransactionOnCluster {
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
     ensureTableRegionNotOnSameServerAsMeta(admin, hri);
-    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+    int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionInfo()
+      .getRegionName());
     HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
     // Turn off balancer so it doesn't cut in and mess up our placements.
     this.admin.setBalancerRunning(false, true);
@@ -876,7 +881,7 @@ public class TestSplitTransactionOnCluster {
       assertTrue("not able to find a splittable region", region != null);
 
       // Now split.
-      SplitTransaction st = new SplitTransaction(region, Bytes.toBytes("row2"));
+      SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
         st.execute(regionServer, regionServer);
@@ -919,8 +924,8 @@ public class TestSplitTransactionOnCluster {
     if (firstTableRegions.size() == 0 || secondTableRegions.size() == 0) {
       fail("Each table should have at least one region.");
     }
-    ServerName serverName =
-        cluster.getServerHoldingRegion(firstTable, firstTableRegions.get(0).getRegionName());
+    ServerName serverName = cluster.getServerHoldingRegion(firstTable,
+      firstTableRegions.get(0).getRegionInfo().getRegionName());
     admin.move(secondTableRegions.get(0).getRegionInfo().getEncodedNameAsBytes(),
       Bytes.toBytes(serverName.getServerName()));
     Table table1 = null;
@@ -958,7 +963,8 @@ public class TestSplitTransactionOnCluster {
       HTableDescriptor desc = new HTableDescriptor(table);
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
       admin.createTable(desc);
-      HTable hTable = new HTable(cluster.getConfiguration(), desc.getTableName());
+      Connection connection = ConnectionFactory.createConnection(cluster.getConfiguration());
+      HTable hTable = (HTable) connection.getTable(desc.getTableName());
       for(int i = 1; i < 5; i++) {
         Put p1 = new Put(("r"+i).getBytes());
         p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
@@ -966,10 +972,10 @@ public class TestSplitTransactionOnCluster {
       }
       admin.flush(desc.getTableName());
       List<HRegion> regions = cluster.getRegions(desc.getTableName());
-      int serverWith = cluster.getServerWith(regions.get(0).getRegionName());
+      int serverWith = cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(serverWith);
-      cluster.getServerWith(regions.get(0).getRegionName());
-      SplitTransaction st = new SplitTransaction(regions.get(0), Bytes.toBytes("r3"));
+      cluster.getServerWith(regions.get(0).getRegionInfo().getRegionName());
+      SplitTransactionImpl st = new SplitTransactionImpl(regions.get(0), Bytes.toBytes("r3"));
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       Path tableDir =
@@ -1007,13 +1013,14 @@ public class TestSplitTransactionOnCluster {
       List<HRegion> regions = awaitTableRegions(tableName);
       assertTrue("Table not online", cluster.getRegions(tableName).size() != 0);
 
-      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionName());
+      int regionServerIndex = cluster.getServerWith(regions.get(0).getRegionInfo()
+        .getRegionName());
       HRegionServer regionServer = cluster.getRegionServer(regionServerIndex);
       final HRegion region = findSplittableRegion(regions);
       assertTrue("not able to find a splittable region", region != null);
-      SplitTransaction st = new MockedSplitTransaction(region, Bytes.toBytes("row2")) {
+      SplitTransactionImpl st = new MockedSplitTransaction(region, Bytes.toBytes("row2")) {
         @Override
-        public PairOfSameType<HRegion> stepsBeforePONR(final Server server,
+        public PairOfSameType<Region> stepsBeforePONR(final Server server,
             final RegionServerServices services, boolean testing) throws IOException {
           throw new SplittingNodeCreationFailedException ();
         }
@@ -1051,7 +1058,7 @@ public class TestSplitTransactionOnCluster {
         p.add(Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
         region.put(p);
       }
-      region.flushcache();
+      region.flush(true);
       Store store = region.getStore(Bytes.toBytes("f"));
       Collection<StoreFile> storefiles = store.getStorefiles();
       assertEquals(storefiles.size(), 1);
@@ -1072,7 +1079,7 @@ public class TestSplitTransactionOnCluster {
         }
       }
 
-      public static class MockedSplitTransaction extends SplitTransaction {
+      public static class MockedSplitTransaction extends SplitTransactionImpl {
 
         private HRegion currentRegion;
         public MockedSplitTransaction(HRegion region, byte[] splitrow) {
@@ -1310,31 +1317,31 @@ public class TestSplitTransactionOnCluster {
   }
 
   public static class MockedRegionObserver extends BaseRegionObserver {
-    private SplitTransaction st = null;
-    private PairOfSameType<HRegion> daughterRegions = null;
+    private SplitTransactionImpl st = null;
+    private PairOfSameType<Region> daughterRegions = null;
 
     @Override
     public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
         byte[] splitKey, List<Mutation> metaEntries) throws IOException {
       RegionCoprocessorEnvironment environment = ctx.getEnvironment();
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
-      List<HRegion> onlineRegions =
+      List<Region> onlineRegions =
           rs.getOnlineRegions(TableName.valueOf("testSplitHooksBeforeAndAfterPONR_2"));
-      HRegion region = onlineRegions.get(0);
-      for (HRegion r : onlineRegions) {
+      Region region = onlineRegions.get(0);
+      for (Region r : onlineRegions) {
         if (r.getRegionInfo().containsRow(splitKey)) {
           region = r;
           break;
         }
       }
-      st = new SplitTransaction(region, splitKey);
+      st = new SplitTransactionImpl((HRegion) region, splitKey);
       if (!st.prepare()) {
         LOG.error("Prepare for the table " + region.getTableDesc().getNameAsString()
             + " failed. So returning null. ");
         ctx.bypass();
         return;
       }
-      region.forceSplit(splitKey);
+      ((HRegion)region).forceSplit(splitKey);
       daughterRegions = st.stepsBeforePONR(rs, rs, false);
       HRegionInfo copyOfParent = new HRegionInfo(region.getRegionInfo());
       copyOfParent.setOffline(true);

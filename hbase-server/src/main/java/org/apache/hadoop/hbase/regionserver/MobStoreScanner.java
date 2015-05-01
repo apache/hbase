@@ -54,8 +54,8 @@ public class MobStoreScanner extends StoreScanner {
    * from the mob file as the result.
    */
   @Override
-  public boolean next(List<Cell> outResult, int limit) throws IOException {
-    boolean result = super.next(outResult, limit);
+  public boolean next(List<Cell> outResult, ScannerContext ctx) throws IOException {
+    boolean result = super.next(outResult, ctx);
     if (!MobUtils.isRawMobScan(scan)) {
       // retrieve the mob data
       if (outResult.isEmpty()) {

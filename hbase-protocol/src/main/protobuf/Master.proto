@@ -28,6 +28,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "Client.proto";
 import "ClusterStatus.proto";
+import "ErrorHandling.proto";
 import "Quota.proto";
 
 /* Column-level protobufs */
@@ -108,6 +109,7 @@ message CreateTableRequest {
 }
 
 message CreateTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DeleteTableRequest {
@@ -115,6 +117,7 @@ message DeleteTableRequest {
 }
 
 message DeleteTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message TruncateTableRequest {
@@ -130,6 +133,7 @@ message EnableTableRequest {
 }
 
 message EnableTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DisableTableRequest {
@@ -137,6 +141,7 @@ message DisableTableRequest {
 }
 
 message DisableTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ModifyTableRequest {
@@ -230,6 +235,13 @@ message SetBalancerRunningRequest {
 
 message SetBalancerRunningResponse {
   optional bool prev_balance_value = 1;
+}
+
+message IsBalancerEnabledRequest {
+}
+
+message IsBalancerEnabledResponse {
+  required bool enabled = 1;
 }
 
 message RunCatalogScanRequest {
@@ -373,6 +385,24 @@ message IsProcedureDoneResponse {
         optional ProcedureDescription snapshot = 2;
 }
 
+message GetProcedureResultRequest {
+  required uint64 proc_id = 1;
+}
+
+message GetProcedureResultResponse {
+  enum State {
+    NOT_FOUND = 0;
+    RUNNING = 1;
+    FINISHED = 2;
+  }
+
+  required State state = 1;
+  optional uint64 start_time = 2;
+  optional uint64 last_update = 3;
+  optional bytes result = 4;
+  optional ForeignExceptionMessage exception = 5;
+}
+
 message SetQuotaRequest {
   optional string user_name = 1;
   optional string user_group = 2;
@@ -508,6 +538,12 @@ service MasterService {
   rpc SetBalancerRunning(SetBalancerRunningRequest)
     returns(SetBalancerRunningResponse);
 
+  /**
+   * Query whether the Region Balancer is running.
+   */
+  rpc IsBalancerEnabled(IsBalancerEnabledRequest)
+    returns(IsBalancerEnabledResponse);
+
   /** Get a run of the catalog janitor */
   rpc RunCatalogScan(RunCatalogScanRequest)
      returns(RunCatalogScanResponse);
@@ -621,4 +657,7 @@ service MasterService {
   /** Returns the timestamp of the last major compaction */
   rpc getLastMajorCompactionTimestampForRegion(MajorCompactionTimestampForRegionRequest)
     returns(MajorCompactionTimestampResponse);
+
+  rpc getProcedureResult(GetProcedureResultRequest)
+    returns(GetProcedureResultResponse);
 }

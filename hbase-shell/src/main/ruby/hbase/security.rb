@@ -24,11 +24,14 @@ module Hbase
   class SecurityAdmin
     include HBaseConstants
 
-    def initialize(configuration, formatter)
-      @config = configuration
-      @connection = org.apache.hadoop.hbase.client.ConnectionFactory.createConnection(@config)
-      @admin = @connection.getAdmin()
+    def initialize(admin, formatter)
+      @admin = admin
+      @connection = @admin.getConnection()
       @formatter = formatter
+    end
+
+    def close
+      @admin.close
     end
 
     #----------------------------------------------------------------------------------------------
@@ -56,7 +59,7 @@ module Hbase
               namespace_exists?(namespace_name)
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-              @config, namespace_name, user, perm.getActions())
+              @connection, namespace_name, user, perm.getActions())
           else
             # Table should exist
             raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -72,12 +75,12 @@ module Hbase
             qualbytes = qualifier.to_java_bytes if (qualifier != nil)
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-              @config, tableName, user, fambytes, qualbytes, perm.getActions())
+              @connection, tableName, user, fambytes, qualbytes, perm.getActions())
           end
         else
           # invoke cp endpoint to perform access controls
           org.apache.hadoop.hbase.security.access.AccessControlClient.grant(
-            @config, user, perm.getActions())
+            @connection, user, perm.getActions())
         end
       end
     end
@@ -98,7 +101,7 @@ module Hbase
 
             tablebytes=table_name.to_java_bytes
             org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @config, namespace_name, user)
+              @connection, namespace_name, user)
           else
              # Table should exist
              raise(ArgumentError, "Can't find a table: #{table_name}") unless exists?(table_name)
@@ -114,12 +117,12 @@ module Hbase
              qualbytes = qualifier.to_java_bytes if (qualifier != nil)
 
             org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-              @config, tableName, user, fambytes, qualbytes)
+              @connection, tableName, user, fambytes, qualbytes)
           end
         else
           perm = org.apache.hadoop.hbase.security.access.Permission.new(''.to_java_bytes)
           org.apache.hadoop.hbase.security.access.AccessControlClient.revoke(
-            @config, user, perm.getActions())
+            @connection, user, perm.getActions())
         end
       end
     end
@@ -127,7 +130,8 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     def user_permission(table_regex=nil)
       security_available?
-      all_perms = org.apache.hadoop.hbase.security.access.AccessControlClient.getUserPermissions(@config,table_regex)
+      all_perms = org.apache.hadoop.hbase.security.access.AccessControlClient.getUserPermissions(
+        @connection,table_regex)
       res = {}
       count  = 0
       all_perms.each do |value|

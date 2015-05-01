@@ -40,6 +40,7 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private final MutableCounterLong receivedBytes;
   private MutableHistogram queueCallTime;
   private MutableHistogram processCallTime;
+  private MutableHistogram totalCallTime;
 
   public MetricsHBaseServerSourceImpl(String metricsName,
                                       String metricsDescription,
@@ -66,6 +67,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         QUEUE_CALL_TIME_DESC);
     this.processCallTime = this.getMetricsRegistry().newHistogram(PROCESS_CALL_TIME_NAME,
         PROCESS_CALL_TIME_DESC);
+    this.totalCallTime = this.getMetricsRegistry().newHistogram(TOTAL_CALL_TIME_NAME,
+        TOTAL_CALL_TIME_DESC);
   }
 
   @Override
@@ -109,9 +112,13 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
+  public void queuedAndProcessedCall(int totalTime) {
+    totalCallTime.add(totalTime);
+  }
+
+  @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
-    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName)
-        .setContext(metricsContext);
+    MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
 
     if (wrapper != null) {
       mrb.addGauge(Interns.info(QUEUE_SIZE_NAME, QUEUE_SIZE_DESC), wrapper.getTotalQueueSize())

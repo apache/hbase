@@ -210,7 +210,7 @@ checkout () {
 findBranchNameFromPatchName() {
   local patchName=$1
   for LOCAL_BRANCH_NAME in $BRANCH_NAMES; do
-    if [[ $patchName =~ .*$LOCAL_BRANCH_NAME.* ]]; then
+    if [[ $patchName =~ /jira/secure/attachment/[0-9]*/.*$LOCAL_BRANCH_NAME ]]; then
       BRANCH_NAME=$LOCAL_BRANCH_NAME
       break
     fi
@@ -230,12 +230,40 @@ checkoutBranch() {
   echo ""
   if [[ $JENKINS == "true" ]] ; then
     if [[ "$BRANCH_NAME" != "master" ]]; then
-      echo "${GIT} checkout ${BRANCH_NAME}"
-      ${GIT} checkout ${BRANCH_NAME}
+      echo "origin/${BRANCH_NAME} HEAD is commit `${GIT} rev-list origin/${BRANCH_NAME} -1`"
+      echo "${GIT} checkout -f  `${GIT} rev-list origin/${BRANCH_NAME} -1`"
+      ${GIT} checkout -f  `${GIT} rev-list origin/${BRANCH_NAME} -1`
       echo "${GIT} status"
       ${GIT} status
     fi
   fi
+}
+
+###############################################################################
+###  Collect findbugs reports
+collectFindbugsReports() {
+  name=$1
+  basedir=$2
+  patch_dir=$3
+  for file in $(find $basedir -name findbugsXml.xml)
+  do
+    relative_file=${file#$basedir/} # strip leading $basedir prefix
+    if [ ! $relative_file == "target/findbugsXml.xml" ]; then
+      module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
+      module_suffix=`basename ${module_suffix}`
+    fi
+
+    cp $file $patch_dir/${name}FindbugsWarnings${module_suffix}.xml
+    $FINDBUGS_HOME/bin/setBugDatabaseInfo -name $name \
+      $patch_dir/${name}FindbugsWarnings${module_suffix}.xml \
+      $patch_dir/${name}FindbugsWarnings${module_suffix}.xml
+  done
+  xml_file=$patch_dir/${name}FindbugsWarnings.xml
+  html_file=$patch_dir/${name}FindbugsWarnings.html
+  $FINDBUGS_HOME/bin/unionBugs -withMessages \
+	 -output $xml_file $patch_dir/${name}FindbugsWarnings*.xml
+  $FINDBUGS_HOME/bin/convertXmlToText -html $xml_file $html_file
+  file $xml_file $html_file
 }
 
 ###############################################################################
@@ -280,9 +308,8 @@ setup () {
     fi
   fi
   ### exit if warnings are NOT defined in the properties file
-  if [ -z "$OK_FINDBUGS_WARNINGS" ] || [[ -z "$OK_JAVADOC_WARNINGS" ]] || [[ -z $OK_RELEASEAUDIT_WARNINGS ]] ; then
+  if [[ -z "$OK_JAVADOC_WARNINGS" ]] || [[ -z $OK_RELEASEAUDIT_WARNINGS ]] ; then
     echo "Please define the following properties in test-patch.properties file"
-	 echo  "OK_FINDBUGS_WARNINGS"
 	 echo  "OK_RELEASEAUDIT_WARNINGS"
 	 echo  "OK_JAVADOC_WARNINGS"
     cleanupAndExit 1
@@ -296,10 +323,12 @@ setup () {
   echo "======================================================================"
   echo ""
   echo ""
-  echo "$MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
+  echo "$MVN clean package checkstyle:checkstyle-aggregate findbugs:findbugs -DskipTests \
+ -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   # build core and tests
-  $MVN clean package checkstyle:checkstyle-aggregate -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
+  $MVN clean package checkstyle:checkstyle-aggregate findbugs:findbugs -DskipTests \
+	 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
     ERR=`$GREP -A 5 'Compilation failure' $PATCH_DIR/trunkJavacWarnings.txt`
     echo "Trunk compilation is broken?
@@ -307,6 +336,7 @@ setup () {
     cleanupAndExit 1
   fi
   mv target/checkstyle-result.xml $PATCH_DIR/trunkCheckstyle.xml
+  collectFindbugsReports trunk $BASEDIR $PATCH_DIR
 }
 
 ###############################################################################
@@ -360,6 +390,16 @@ checkTests () {
         return 0
       fi
     fi
+    srcReferences=`${GREP} "diff --git" "${PATCH_DIR}/patch" | ${GREP} "src/main" | \
+        ${GREP} -v "src/main/asciidoc" | ${GREP} -v "src/main/site" -c`
+    if [[ $srcReferences == 0 ]] ; then
+      echo "The patch doesn't appear to alter any code that requires tests."
+      JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+0 tests included{color}.  The patch appears to be a documentation, build,
+                        or dev-support patch that doesn't require tests."
+      return 0
+    fi
     JIRA_COMMENT="$JIRA_COMMENT
 
     {color:red}-1 tests included{color}.  The patch doesn't appear to include any new or modified tests.
@@ -377,17 +417,21 @@ checkTests () {
 ### Check there are no compilation errors, passing a file to be parsed.
 checkCompilationErrors() {
   local file=$1
+  hadoopVersion=""
+  if [ "$#" -ne 1 ]; then
+    hadoopVersion="with Hadoop version $2"
+  fi
   COMPILATION_ERROR=false
   eval $(awk '/ERROR/ {print "COMPILATION_ERROR=true"}' $file)
   if $COMPILATION_ERROR ; then
     ERRORS=$($AWK '/ERROR/ { print $0 }' $file)
     echo "======================================================================"
-    echo "There are compilation errors."
+    echo "There are compilation errors $hadoopVersion."
     echo "======================================================================"
     echo "$ERRORS"
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail.
+    {color:red}-1 javac{color}.  The patch appears to cause mvn compile goal to fail $hadoopVersion.
 
     Compilation errors resume:
     $ERRORS
@@ -469,6 +513,29 @@ checkAntiPatterns () {
 }
 
 ###############################################################################
+### Check that there are no incorrect annotations
+checkInterfaceAudience () {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Checking against hadoop InterfaceAudience."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  warnings=`$GREP 'import org.apache.hadoop.classification' $PATCH_DIR/patch`
+  if [[ $warnings != "" ]]; then
+    JIRA_COMMENT="$JIRA_COMMENT
+
+		    {color:red}-1 InterfaceAudience{color}.  The patch appears to contain InterfaceAudience from hadoop rather than hbase:
+             $warnings."
+	  return 1
+  fi
+  return 0
+}
+
+###############################################################################
 ### Check there are no javadoc warnings
 checkJavadocWarnings () {
   echo ""
@@ -501,6 +568,31 @@ $JIRA_COMMENT_FOOTER"
   JIRA_COMMENT="$JIRA_COMMENT
 
     {color:green}+1 javadoc{color}.  The javadoc tool did not generate any warning messages."
+  return 0
+}
+
+checkBuildWithHadoopVersions() {
+  echo ""
+  echo ""
+  echo "======================================================================"
+  echo "======================================================================"
+  echo "    Building with all supported Hadoop versions ."
+  echo "======================================================================"
+  echo "======================================================================"
+  echo ""
+  echo ""
+  export MAVEN_OPTS="${MAVEN_OPTS}"
+  for HADOOP2_VERSION in $HADOOP2_VERSIONS ; do
+	echo "$MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1"
+    $MVN clean install -DskipTests -D${PROJECT_NAME}PatchProcess -Dhadoop-two.version=$HADOOP2_VERSION > $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt 2>&1
+    checkCompilationErrors $PATCH_DIR/patchJavacWithHadoop-$HADOOP2_VERSION.txt $HADOOP2_VERSION
+  done
+
+  # TODO: add Hadoop3 versions and compilation here when we get the hadoop.profile=3.0 working
+
+  JIRA_COMMENT="$JIRA_COMMENT
+
+    {color:green}+1 hadoop versions{color}. The patch compiles with all supported hadoop versions ($HADOOP2_VERSIONS)"
   return 0
 }
 
@@ -596,7 +688,7 @@ checkProtocErrors () {
   checkProtocCompilationErrors $PATCH_DIR/patchProtocErrors.txt
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 javac{color}.  The applied patch does not increase the total number of javac compiler warnings."
+    {color:green}+1 protoc{color}.  The applied patch does not increase the total number of protoc compiler warnings."
   return 0
 }
 
@@ -665,41 +757,36 @@ checkFindbugsWarnings () {
     {color:red}-1 findbugs{color}.  The patch appears to cause Findbugs (version ${findbugs_version}) to fail."
     return 1
   fi
-    
-  findbugsWarnings=0
-  for file in $(find $BASEDIR -name findbugsXml.xml)
-  do
-    relative_file=${file#$BASEDIR/} # strip leading $BASEDIR prefix
-    if [ ! $relative_file == "target/findbugsXml.xml" ]; then
-      module_suffix=${relative_file%/target/findbugsXml.xml} # strip trailing path
-      module_suffix=`basename ${module_suffix}`
-    fi
-    
-    cp $file $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml
-    $FINDBUGS_HOME/bin/setBugDatabaseInfo -timestamp "01/01/2000" \
-      $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml \
-      $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml
-    newFindbugsWarnings=`$FINDBUGS_HOME/bin/filterBugs -first "01/01/2000" $PATCH_DIR/patchFindbugsWarnings${module_suffix}.xml \
-      $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml | $AWK '{print $1}'`
-    echo "Found $newFindbugsWarnings Findbugs warnings ($file)"
-    findbugsWarnings=$((findbugsWarnings+newFindbugsWarnings))
-    echo "$FINDBUGS_HOME/bin/convertXmlToText -html  $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html"
-    $FINDBUGS_HOME/bin/convertXmlToText -html  $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    file $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.xml $PATCH_DIR/newPatchFindbugsWarnings${module_suffix}.html
-    JIRA_COMMENT_FOOTER="Findbugs warnings: $BUILD_URL/artifact/patchprocess/newPatchFindbugsWarnings${module_suffix}.html
-$JIRA_COMMENT_FOOTER"
-  done
 
-  ### if current warnings greater than OK_FINDBUGS_WARNINGS
-  if [[ $findbugsWarnings -gt $OK_FINDBUGS_WARNINGS ]] ; then
+  collectFindbugsReports patch $BASEDIR $PATCH_DIR 
+  #this files are generated by collectFindbugsReports() named with its first argument
+  patch_xml=$PATCH_DIR/patchFindbugsWarnings.xml
+  trunk_xml=$PATCH_DIR/trunkFindbugsWarnings.xml
+  # combine them to one database
+  combined_xml=$PATCH_DIR/combinedFindbugsWarnings.xml
+  new_xml=$PATCH_DIR/newFindbugsWarnings.xml
+  new_html=$PATCH_DIR/newFindbugsWarnings.html
+  $FINDBUGS_HOME/bin/computeBugHistory -useAnalysisTimes -withMessages \
+	-output $combined_xml $trunk_xml $patch_xml
+  findbugsWarnings=$($FINDBUGS_HOME/bin/filterBugs -first patch $combined_xml $new_xml)
+  findbugsFixedWarnings=$($FINDBUGS_HOME/bin/filterBugs -fixed patch $combined_xml $new_xml)
+  $FINDBUGS_HOME/bin/convertXmlToText -html  $new_xml $new_html
+  file $new_xml $new_html
+  JIRA_COMMENT_FOOTER="Release Findbugs (version ${findbugs_version}) \
+	warnings: $BUILD_URL/artifact/patchprocess/newFindbugsWarnings.html
+$JIRA_COMMENT_FOOTER"
+  ### if current warnings greater than 0, fail
+  if [[ $findbugsWarnings -gt 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 findbugs{color}.  The patch appears to introduce `expr $(($findbugsWarnings-$OK_FINDBUGS_WARNINGS))` new Findbugs (version ${findbugs_version}) warnings."
+    {color:red}-1 findbugs{color}.  The patch appears to introduce $findbugsWarnings \
+ new Findbugs (version ${findbugs_version}) warnings."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:green}+1 findbugs{color}.  The patch does not introduce any new Findbugs (version ${findbugs_version}) warnings."
+    {color:green}+1 findbugs{color}.  The patch does not introduce any \
+ new Findbugs (version ${findbugs_version}) warnings."
   return 0
 }
 
@@ -956,6 +1043,8 @@ fi
 
 checkAntiPatterns
 (( RESULT = RESULT + $? ))
+checkBuildWithHadoopVersions
+(( RESULT = RESULT + $? ))
 checkJavacWarnings
 (( RESULT = RESULT + $? ))
 checkProtocErrors
@@ -963,6 +1052,8 @@ checkProtocErrors
 checkJavadocWarnings
 (( RESULT = RESULT + $? ))
 checkCheckstyleErrors
+(( RESULT = RESULT + $? ))
+checkInterfaceAudience
 (( RESULT = RESULT + $? ))
 checkFindbugsWarnings
 (( RESULT = RESULT + $? ))

@@ -83,12 +83,12 @@ echo "Updating Git"
 git checkout master
 git pull
 
-# Generate the site to ~/git/hbase/target/stage
+# Generate the site to ~/git/hbase/target/site
 if [ $INTERACTIVE ]; then
     read -p "Build the site? (y/n)" yn
     case $yn in
         [Yy]* ) 
-    			mvn clean package javadoc:aggregate site site:stage -DskipTests
+    			mvn clean package javadoc:aggregate site post-site site:stage -DskipTests
           status=$?
           if [ $status -ne 0 ]; then
             echo "The website does not build. Aborting."
@@ -101,7 +101,7 @@ if [ $INTERACTIVE ]; then
     esac
 else
   echo "Building the site in auto mode."
-  mvn clean package javadoc:aggregate site site:stage -DskipTests
+  mvn clean package javadoc:aggregate site post-site site:stage -DskipTests
   status=$?
   if [ $status != 0 ]; then
     echo "The website does not build. Aborting."
@@ -151,7 +151,7 @@ fi
 
 # Delete known auto-generated  content from trunk
 echo "Deleting known auto-generated content from SVN"
-rm -rf apidocs devapidocs xref xref-test book book.html java.html
+rm -rf apidocs devapidocs xref xref-test book book.html java.html apache_hbase_reference_guide.pdf*
 
 # Copy generated site to svn -- cp takes different options on Darwin and GNU
 echo "Copying the generated site to SVN"
@@ -161,18 +161,20 @@ elif [ `uname` == "Linux" ]; then
   COPYOPTS='-au'
 fi
 
-cp $COPYOPTS $GIT_DIR/target/site/* .
+cp $COPYOPTS $GIT_DIR/target/staging/* .
 
 # Look for things we need to fix up in svn
 
 echo "Untracked files: svn add"
-svn status |grep '?' |sed -e "s/[[:space:]]//g"|cut -d '?' -f 2|while read i
-  do svn add $i 
+svn status |grep '?' |sed -e "s/[[:space:]]//g"|cut -d '?' -f 2|while read i; do
+  svn add $i
+  echo "Added $i"
 done
 
 echo "Locally deleted files: svn del"
-svn status |grep '!' |sed -e "s/[[:space:]]//g"|cut -d '!' -f 2|while read i
-  do svn del $i 
+svn status |grep '!' |sed -e "s/[[:space:]]//g"|cut -d '!' -f 2|while read i; do
+  svn del $i
+  echo "Deleted $i"
 done
 
 # Display the proposed changes. I filtered out 
@@ -196,12 +198,12 @@ SVN_NUM_DIFF=`expr $SVN_NEW_NUMFILES - $SVN_OLD_NUMFILES|sed 's/-//g'`
 # The whole site is only 500 MB so a difference of 10 MB is huge
 # In this case, we should abort because something is wrong
 # Leaving this commented out for now until we get some benchmarks
-#if [ $SVN_SIZE_DIFF > 10 -o $SVN_NUM_DIFF > 50 ]; then
-#  echo "This commit would cause the website to change sizes by \
-#  $SVN_DIFF MB and $SVN_NUM_DIFF files. There is likely a problem. 
-#  Aborting."
-#  exit 1
-#fi
+if [ $SVN_SIZE_DIFF > 10 -o $SVN_NUM_DIFF > 50 ]; then
+  echo "This commit would cause the website to change sizes by \
+  $SVN_DIFF MB and $SVN_NUM_DIFF files. There is likely a problem.
+  Aborting."
+  exit 1
+fi
 
 
 if [ $INTERACTIVE ]; then

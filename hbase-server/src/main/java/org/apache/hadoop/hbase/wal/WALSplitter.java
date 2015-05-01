@@ -70,11 +70,12 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableState;
@@ -92,11 +93,11 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LastSequenceId;
 // imports for things that haven't moved from regionserver.wal yet.
@@ -326,7 +327,14 @@ public class WALSplitter {
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
             }
           } else if (sequenceIdChecker != null) {
-            lastFlushedSequenceId = sequenceIdChecker.getLastSequenceId(region);
+            RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
+            Map<byte[], Long> maxSeqIdInStores = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
+            for (StoreSequenceId storeSeqId : ids.getStoreSequenceIdList()) {
+              maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
+                storeSeqId.getSequenceId());
+            }
+            regionMaxSeqIdInStores.put(key, maxSeqIdInStores);
+            lastFlushedSequenceId = ids.getLastFlushedSequenceId();
           }
           if (lastFlushedSequenceId == null) {
             lastFlushedSequenceId = -1L;
@@ -1186,12 +1194,18 @@ public class WALSplitter {
      * @return true when there is no error
      * @throws IOException
      */
-    protected boolean finishWriting() throws IOException {
+    protected boolean finishWriting(boolean interrupt) throws IOException {
       LOG.debug("Waiting for split writer threads to finish");
       boolean progress_failed = false;
       for (WriterThread t : writerThreads) {
         t.finish();
       }
+      if (interrupt) {
+        for (WriterThread t : writerThreads) {
+          t.interrupt(); // interrupt the writer threads. We are stopping now.
+        }
+      }
+
       for (WriterThread t : writerThreads) {
         if (!progress_failed && reporter != null && !reporter.progress()) {
           progress_failed = true;
@@ -1260,7 +1274,7 @@ public class WALSplitter {
       boolean isSuccessful = false;
       List<Path> result = null;
       try {
-        isSuccessful = finishWriting();
+        isSuccessful = finishWriting(false);
       } finally {
         result = close();
         List<IOException> thrown = closeLogWriters(null);
@@ -1473,6 +1487,29 @@ public class WALSplitter {
       return (new WriterAndPath(regionedits, w));
     }
 
+    private void filterCellByStore(Entry logEntry) {
+      Map<byte[], Long> maxSeqIdInStores =
+          regionMaxSeqIdInStores.get(Bytes.toString(logEntry.getKey().getEncodedRegionName()));
+      if (maxSeqIdInStores == null || maxSeqIdInStores.isEmpty()) {
+        return;
+      }
+      List<Cell> skippedCells = new ArrayList<Cell>();
+      for (Cell cell : logEntry.getEdit().getCells()) {
+        if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
+          byte[] family = CellUtil.cloneFamily(cell);
+          Long maxSeqId = maxSeqIdInStores.get(family);
+          // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
+          // or the master was crashed before and we can not get the information.
+          if (maxSeqId != null && maxSeqId.longValue() >= logEntry.getKey().getLogSeqNum()) {
+            skippedCells.add(cell);
+          }
+        }
+      }
+      if (!skippedCells.isEmpty()) {
+        logEntry.getEdit().getCells().removeAll(skippedCells);
+      }
+    }
+
     @Override
     public void append(RegionEntryBuffer buffer) throws IOException {
       List<Entry> entries = buffer.entryBuffer;
@@ -1497,7 +1534,10 @@ public class WALSplitter {
               return;
             }
           }
-          wap.w.append(logEntry);
+          filterCellByStore(logEntry);
+          if (!logEntry.getEdit().isEmpty()) {
+            wap.w.append(logEntry);
+          }
           this.updateRegionMaximumEditLogSeqNum(logEntry);
           editsCount++;
         }
@@ -1689,8 +1729,8 @@ public class WALSplitter {
         HConnection hconn = this.getConnectionByTableName(table);
 
         for (Cell cell : cells) {
-          byte[] row = cell.getRow();
-          byte[] family = cell.getFamily();
+          byte[] row = CellUtil.cloneRow(cell);
+          byte[] family = CellUtil.cloneFamily(cell);
           boolean isCompactionEntry = false;
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
             CompactionDescriptor compaction = WALEdit.getCompaction(cell);
@@ -1960,7 +2000,7 @@ public class WALSplitter {
     @Override
     public List<Path> finishWritingAndClose() throws IOException {
       try {
-        if (!finishWriting()) {
+        if (!finishWriting(false)) {
           return null;
         }
         if (hasEditsInDisablingOrDisabledTables) {
@@ -2101,7 +2141,7 @@ public class WALSplitter {
         synchronized (this.tableNameToHConnectionMap) {
           hconn = this.tableNameToHConnectionMap.get(tableName);
           if (hconn == null) {
-            hconn = HConnectionManager.getConnection(conf);
+            hconn = (HConnection) ConnectionFactory.createConnection(conf);
             this.tableNameToHConnectionMap.put(tableName, hconn);
           }
         }

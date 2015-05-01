@@ -30,7 +30,6 @@ import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.lang.mutable.MutableInt;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,17 +37,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SplitLogCounters;
 import org.apache.hadoop.hbase.SplitLogTask;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker;
 import org.apache.hadoop.hbase.regionserver.SplitLogWorker.TaskExecutor;
+import org.apache.hadoop.hbase.regionserver.handler.FinishRegionRecoveringHandler;
 import org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
@@ -444,7 +445,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
           taskReadyLock.wait(checkInterval);
           if (server != null) {
             // check to see if we have stale recovering regions in our internal memory state
-            Map<String, HRegion> recoveringRegions = server.getRecoveringRegions();
+            Map<String, Region> recoveringRegions = server.getRecoveringRegions();
             if (!recoveringRegions.isEmpty()) {
               // Make a local copy to prevent ConcurrentModificationException when other threads
               // modify recoveringRegions
@@ -455,11 +456,8 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
                 String nodePath = ZKUtil.joinZNode(watcher.recoveringRegionsZNode, region);
                 try {
                   if (ZKUtil.checkExists(watcher, nodePath) == -1) {
-                    HRegion r = recoveringRegions.remove(region);
-                    if (r != null) {
-                      r.setRecovering(false);
-                    }
-                    LOG.debug("Mark recovering region:" + region + " up.");
+                    server.getExecutorService().submit(
+                      new FinishRegionRecoveringHandler(server, region, nodePath));
                   } else {
                     // current check is a defensive(or redundant) mechanism to prevent us from
                     // having stale recovering regions in our internal RS memory state while
@@ -583,7 +581,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
    * Next part is related to WALSplitterHandler
    */
   /**
-   * endTask() can fail and the only way to recover out of it is for the 
+   * endTask() can fail and the only way to recover out of it is for the
    * {@link org.apache.hadoop.hbase.master.SplitLogManager} to timeout the task node.
    * @param slt
    * @param ctr

@@ -590,7 +590,7 @@ public class TestHFileBlockIndex {
       }
 
       // Manually compute the mid-key and validate it.
-      HFileReaderV2 reader2 = (HFileReaderV2) reader;
+      HFile.Reader reader2 = reader;
       HFileBlock.FSReader fsReader = reader2.getUncachedBlockReader();
 
       HFileBlock.BlockIterator iter = fsReader.blockRange(0,

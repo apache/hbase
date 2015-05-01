@@ -42,10 +42,10 @@ class RegionMergeRequest implements Runnable {
   private final boolean forcible;
   private TableLock tableLock;
 
-  RegionMergeRequest(HRegion a, HRegion b, HRegionServer hrs, boolean forcible) {
+  RegionMergeRequest(Region a, Region b, HRegionServer hrs, boolean forcible) {
     Preconditions.checkNotNull(hrs);
-    this.region_a = a;
-    this.region_b = b;
+    this.region_a = (HRegion)a;
+    this.region_b = (HRegion)b;
     this.server = hrs;
     this.forcible = forcible;
   }
@@ -65,13 +65,14 @@ class RegionMergeRequest implements Runnable {
     }
     try {
       final long startTime = EnvironmentEdgeManager.currentTime();
-      RegionMergeTransaction mt = new RegionMergeTransaction(region_a,
+      RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a,
           region_b, forcible);
 
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
       tableLock = server.getTableLockManager().readLock(region_a.getTableDesc().getTableName()
-          , "MERGE_REGIONS:" + region_a.getRegionNameAsString() + ", " + region_b.getRegionNameAsString());
+          , "MERGE_REGIONS:" + region_a.getRegionInfo().getRegionNameAsString() + ", " +
+              region_b.getRegionInfo().getRegionNameAsString());
       try {
         tableLock.acquire();
       } catch (IOException ex) {
@@ -134,7 +135,7 @@ class RegionMergeRequest implements Runnable {
         LOG.error("Could not release the table lock (something is really wrong). " 
            + "Aborting this server to avoid holding the lock forever.");
         this.server.abort("Abort; we got an error when releasing the table lock "
-                         + "on " + region_a.getRegionNameAsString());
+                         + "on " + region_a.getRegionInfo().getRegionNameAsString());
       }
     }
   }

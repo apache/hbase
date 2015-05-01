@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WALEntry;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 
 public interface RegionServerObserver extends Coprocessor {
@@ -50,7 +50,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void preMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final HRegion regionA, final HRegion regionB) throws IOException;
+      final Region regionA, final Region regionB) throws IOException;
 
   /**
    * called after the regions merge.
@@ -61,7 +61,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void postMerge(final ObserverContext<RegionServerCoprocessorEnvironment> c,
-      final HRegion regionA, final HRegion regionB, final HRegion mergedRegion) throws IOException;
+      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException;
 
   /**
    * This will be called before PONR step as part of regions merge transaction. Calling
@@ -74,7 +74,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void preMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final HRegion regionA, final HRegion regionB,
+      final Region regionA, final Region regionB,
       @MetaMutationAnnotation List<Mutation> metaEntries) throws IOException;
 
   /**
@@ -86,7 +86,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void postMergeCommit(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final HRegion regionA, final HRegion regionB, final HRegion mergedRegion) throws IOException;
+      final Region regionA, final Region regionB, final Region mergedRegion) throws IOException;
 
   /**
    * This will be called before the roll back of the regions merge.
@@ -96,7 +96,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void preRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final HRegion regionA, final HRegion regionB) throws IOException;
+      final Region regionA, final Region regionB) throws IOException;
 
   /**
    * This will be called after the roll back of the regions merge.
@@ -106,7 +106,7 @@ public interface RegionServerObserver extends Coprocessor {
    * @throws IOException
    */
   void postRollBackMerge(final ObserverContext<RegionServerCoprocessorEnvironment> ctx,
-      final HRegion regionA, final HRegion regionB) throws IOException;
+      final Region regionA, final Region regionB) throws IOException;
 
   /**
    * This will be called before executing user request to roll a region server WAL.

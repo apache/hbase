@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.ScanType;
@@ -143,7 +144,7 @@ public class TestRegionObserverScannerOpenHook {
     }
   }
 
-  HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
+  Region initHRegion(byte[] tableName, String callingMethod, Configuration conf,
       byte[]... families) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     for (byte[] family : families) {
@@ -170,7 +171,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     Configuration conf = HBaseConfiguration.create();
-    HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
+    Region region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromScan.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(EmptyRegionObsever.class, Coprocessor.PRIORITY_USER, conf);
@@ -195,7 +196,7 @@ public class TestRegionObserverScannerOpenHook {
     byte[][] FAMILIES = new byte[][] { A };
 
     Configuration conf = HBaseConfiguration.create();
-    HRegion region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
+    Region region = initHRegion(TABLE, getClass().getName(), conf, FAMILIES);
     RegionCoprocessorHost h = region.getCoprocessorHost();
     h.load(NoDataFromFlush.class, Coprocessor.PRIORITY_HIGHEST, conf);
     h.load(EmptyRegionObsever.class, Coprocessor.PRIORITY_USER, conf);
@@ -204,7 +205,7 @@ public class TestRegionObserverScannerOpenHook {
     Put put = new Put(ROW);
     put.add(A, A, A);
     region.put(put);
-    region.flushcache();
+    region.flush(true);
     Get get = new Get(ROW);
     Result r = region.get(get);
     assertNull(
@@ -272,10 +273,10 @@ public class TestRegionObserverScannerOpenHook {
     table.put(put);
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    List<HRegion> regions = rs.getOnlineRegions(desc.getTableName());
+    List<Region> regions = rs.getOnlineRegions(desc.getTableName());
     assertEquals("More than 1 region serving test table with 1 row", 1, regions.size());
-    HRegion region = regions.get(0);
-    admin.flushRegion(region.getRegionName());
+    Region region = regions.get(0);
+    admin.flushRegion(region.getRegionInfo().getRegionName());
     CountDownLatch latch = ((CompactionCompletionNotifyingRegion)region)
         .getCompactionStateChangeLatch();
 
@@ -283,7 +284,7 @@ public class TestRegionObserverScannerOpenHook {
     put = new Put(Bytes.toBytes("anotherrow"));
     put.add(A, A, A);
     table.put(put);
-    admin.flushRegion(region.getRegionName());
+    admin.flushRegion(region.getRegionInfo().getRegionName());
 
     // run a compaction, which normally would should get rid of the data
     // wait for the compaction checker to complete

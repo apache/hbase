@@ -40,12 +40,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.Before;
@@ -106,7 +106,7 @@ public class TestSeekOptimizations {
   private static final int[] MAX_VERSIONS_VALUES = new int[] { 1, 2 };
 
   // Instance variables
-  private HRegion region;
+  private Region region;
   private Put put;
   private Delete del;
   private Random rand;
@@ -433,7 +433,7 @@ public class TestSeekOptimizations {
       }
     }
 
-    region.flushcache();
+    region.flush(true);
   }
 
   @After

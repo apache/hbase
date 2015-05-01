@@ -264,7 +264,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       if (this.isSeekToRow) {
         // seek to the first kv on this row
         shouldScanKeysValues =
-          (scanner.seekTo(KeyValueUtil.createFirstOnRow(this.row).getKey()) != -1);
+          (scanner.seekTo(KeyValueUtil.createFirstOnRow(this.row)) != -1);
       } else {
         shouldScanKeysValues = scanner.seekTo();
       }

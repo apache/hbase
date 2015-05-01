@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * A convenience to override when customizing method implementations.
  *
  *
- * @see ConnectionUtils#createShortCircuitHConnection(HConnection, ServerName,
+ * @see ConnectionUtils#createShortCircuitHConnection(Connection, ServerName,
  * AdminService.BlockingInterface, ClientService.BlockingInterface) for case where we make
  * Connections skip RPC if request is to local server.
  */
@@ -455,11 +455,6 @@ abstract class ConnectionAdapter implements ClusterConnection {
     return wrappedConnection.getNewRpcRetryingCallerFactory(conf);
   }
   
-  @Override
-  public boolean isManaged() {
-    return wrappedConnection.isManaged();
-  }
-
   @Override
   public ServerStatisticTracker getStatisticsTracker() {
     return wrappedConnection.getStatisticsTracker();

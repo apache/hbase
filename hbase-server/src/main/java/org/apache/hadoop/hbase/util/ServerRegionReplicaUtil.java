@@ -21,8 +21,8 @@ package org.apache.hadoop.hbase.util;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
@@ -54,6 +54,25 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     = "hbase.region.replica.replication.enabled";
   private static final boolean DEFAULT_REGION_REPLICA_REPLICATION = false;
   private static final String REGION_REPLICA_REPLICATION_PEER = "region_replica_replication";
+
+  /**
+   * Enables or disables refreshing store files of secondary region replicas when the memory is
+   * above the global memstore lower limit. Refreshing the store files means that we will do a file
+   * list of the primary regions store files, and pick up new files. Also depending on the store
+   * files, we can drop some memstore contents which will free up memory.
+   */
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH
+    = "hbase.region.replica.storefile.refresh";
+  private static final boolean DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH = true;
+
+  /**
+   * The multiplier to use when we want to refresh a secondary region instead of flushing a primary
+   * region. Default value assumes that for doing the file refresh, the biggest secondary should be
+   * 4 times bigger than the biggest primary.
+   */
+  public static final String REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER
+    = "hbase.region.replica.storefile.refresh.memstore.multiplier";
+  private static final double DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER = 4;
 
   /**
    * Returns the regionInfo object to use for interacting with the file system.
@@ -96,23 +115,24 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @throws IOException
    */
   public static StoreFileInfo getStoreFileInfo(Configuration conf, FileSystem fs,
-      HRegionInfo regionInfo, HRegionInfo regionInfoForFs, String familyName, FileStatus status)
+      HRegionInfo regionInfo, HRegionInfo regionInfoForFs, String familyName, Path path)
       throws IOException {
 
     // if this is a primary region, just return the StoreFileInfo constructed from path
     if (regionInfo.equals(regionInfoForFs)) {
-      return new StoreFileInfo(conf, fs, status);
-    }
-
-    if (StoreFileInfo.isReference(status.getPath())) {
-      Reference reference = Reference.read(fs, status.getPath());
-      return new StoreFileInfo(conf, fs, status, reference);
+      return new StoreFileInfo(conf, fs, path);
     }
 
     // else create a store file link. The link file does not exists on filesystem though.
     HFileLink link = HFileLink.build(conf, regionInfoForFs.getTable(),
-            regionInfoForFs.getEncodedName(), familyName, status.getPath().getName());
-    return new StoreFileInfo(conf, fs, status, link);
+            regionInfoForFs.getEncodedName(), familyName, path.getName());
+
+    if (StoreFileInfo.isReference(path)) {
+      Reference reference = Reference.read(fs, path);
+      return new StoreFileInfo(conf, fs, link.getFileStatus(fs), reference);
+    }
+
+    return new StoreFileInfo(conf, fs, link.getFileStatus(fs), link);
   }
 
   /**
@@ -121,7 +141,7 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
    * @throws IOException
    */
   public static void setupRegionReplicaReplication(Configuration conf) throws IOException {
-    if (!conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY, DEFAULT_REGION_REPLICA_REPLICATION)) {
+    if (!isRegionReplicaReplicationEnabled(conf)) {
       return;
     }
     ReplicationAdmin repAdmin = new ReplicationAdmin(conf);
@@ -137,6 +157,26 @@ public class ServerRegionReplicaUtil extends RegionReplicaUtil {
     } finally {
       repAdmin.close();
     }
+  }
+
+  public static boolean isRegionReplicaReplicationEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_REPLICATION_CONF_KEY,
+      DEFAULT_REGION_REPLICA_REPLICATION);
+  }
+
+  public static boolean isRegionReplicaWaitForPrimaryFlushEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH_CONF_KEY,
+      DEFAULT_REGION_REPLICA_WAIT_FOR_PRIMARY_FLUSH);
+  }
+
+  public static boolean isRegionReplicaStoreFileRefreshEnabled(Configuration conf) {
+    return conf.getBoolean(REGION_REPLICA_STORE_FILE_REFRESH,
+      DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH);
+  }
+
+  public static double getRegionReplicaStoreFileRefreshMultiplier(Configuration conf) {
+    return conf.getDouble(REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER,
+      DEFAULT_REGION_REPLICA_STORE_FILE_REFRESH_MEMSTORE_MULTIPLIER);
   }
 
   /**

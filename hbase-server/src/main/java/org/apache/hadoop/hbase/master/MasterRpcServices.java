@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
@@ -46,6 +45,8 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionReque
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse;
+import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
@@ -92,12 +94,16 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnaps
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetSchemaAlterStatusResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -162,6 +168,7 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 
@@ -276,8 +283,8 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
     byte[] encodedRegionName = request.getRegionName().toByteArray();
-    long seqId = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
-    return ResponseConverter.buildGetLastFlushedSequenceIdResponse(seqId);
+    RegionStoreSequenceIds ids = master.serverManager.getLastFlushedSequenceId(encodedRegionName);
+    return ResponseConverter.buildGetLastFlushedSequenceIdResponse(ids);
   }
 
   @Override
@@ -308,8 +315,9 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       InetAddress ia = master.getRemoteInetAddress(
         request.getPort(), request.getServerStartCode());
-      ServerName rs = master.serverManager.regionServerStartup(ia, request.getPort(),
-        request.getServerStartCode(), request.getServerCurrentTime());
+      // if regionserver passed hostname to use,
+      // then use it instead of doing a reverse DNS lookup
+      ServerName rs = master.serverManager.regionServerStartup(request, ia);
 
       // Send back some config info
       RegionServerStartupResponse.Builder resp = createConfigurationSubset();
@@ -408,11 +416,11 @@ public class MasterRpcServices extends RSRpcServices
     HTableDescriptor hTableDescriptor = HTableDescriptor.convert(req.getTableSchema());
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
-      master.createTable(hTableDescriptor, splitKeys);
+      long procId = master.createTable(hTableDescriptor, splitKeys);
+      return CreateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return CreateTableResponse.newBuilder().build();
   }
 
   @Override
@@ -464,11 +472,11 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteTableResponse deleteTable(RpcController controller,
       DeleteTableRequest request) throws ServiceException {
     try {
-      master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
+      return DeleteTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return DeleteTableResponse.newBuilder().build();
   }
 
   @Override
@@ -487,11 +495,11 @@ public class MasterRpcServices extends RSRpcServices
   public DisableTableResponse disableTable(RpcController controller,
       DisableTableRequest request) throws ServiceException {
     try {
-      master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
+      return DisableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return DisableTableResponse.newBuilder().build();
   }
 
   @Override
@@ -573,11 +581,11 @@ public class MasterRpcServices extends RSRpcServices
   public EnableTableResponse enableTable(RpcController controller,
       EnableTableRequest request) throws ServiceException {
     try {
-      master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
+      return EnableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return EnableTableResponse.newBuilder().build();
   }
 
   @Override
@@ -965,6 +973,44 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  public GetProcedureResultResponse getProcedureResult(RpcController controller,
+      GetProcedureResultRequest request) throws ServiceException {
+    LOG.debug("Checking to see if procedure is done procId=" + request.getProcId());
+    try {
+      master.checkInitialized();
+      GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
+
+      Pair<ProcedureResult, Procedure> v = master.getMasterProcedureExecutor()
+          .getResultOrProcedure(request.getProcId());
+      if (v.getFirst() != null) {
+        ProcedureResult result = v.getFirst();
+        builder.setState(GetProcedureResultResponse.State.FINISHED);
+        builder.setStartTime(result.getStartTime());
+        builder.setLastUpdate(result.getLastUpdate());
+        if (result.isFailed()) {
+          builder.setException(result.getException().convert());
+        }
+        if (result.hasResultData()) {
+          builder.setResult(ByteStringer.wrap(result.getResult()));
+        }
+        master.getMasterProcedureExecutor().removeResult(request.getProcId());
+      } else {
+        Procedure proc = v.getSecond();
+        if (proc == null) {
+          builder.setState(GetProcedureResultResponse.State.NOT_FOUND);
+        } else {
+          builder.setState(GetProcedureResultResponse.State.RUNNING);
+          builder.setStartTime(proc.getStartTime());
+          builder.setLastUpdate(proc.getLastUpdate());
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
   public ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController c,
       ListNamespaceDescriptorsRequest request) throws ServiceException {
     try {
@@ -984,8 +1030,9 @@ public class MasterRpcServices extends RSRpcServices
       ListTableDescriptorsByNamespaceRequest request) throws ServiceException {
     try {
       ListTableDescriptorsByNamespaceResponse.Builder b =
-        ListTableDescriptorsByNamespaceResponse.newBuilder();
-      for(HTableDescriptor htd: master.listTableDescriptorsByNamespace(request.getNamespaceName())) {
+          ListTableDescriptorsByNamespaceResponse.newBuilder();
+      for (HTableDescriptor htd : master
+          .listTableDescriptorsByNamespace(request.getNamespaceName())) {
         b.addTableSchema(htd.convert());
       }
       return b.build();
@@ -1385,7 +1432,7 @@ public class MasterRpcServices extends RSRpcServices
           if (!hcd.isMobEnabled()) {
             LOG.error("Column family " + hcd.getName() + " is not a mob column family");
             throw new DoNotRetryIOException("Column family " + hcd.getName()
-              + " is not a mob column family");
+                    + " is not a mob column family");
           }
           compactedColumns.add(hcd);
         }
@@ -1400,7 +1447,7 @@ public class MasterRpcServices extends RSRpcServices
     if (compactedColumns.isEmpty()) {
       LOG.error("No mob column families are assigned in the mob file compaction");
       throw new DoNotRetryIOException(
-        "No mob column families are assigned in the mob file compaction");
+              "No mob column families are assigned in the mob file compaction");
     }
     if (request.hasMajor() && request.getMajor()) {
       isForceAllFiles = true;
@@ -1408,11 +1455,19 @@ public class MasterRpcServices extends RSRpcServices
     String familyLogMsg = (family != null) ? Bytes.toString(family) : "";
     if (LOG.isTraceEnabled()) {
       LOG.trace("User-triggered mob file compaction requested for table: "
-        + tableName.getNameAsString() + " for column family: " + familyLogMsg);
+              + tableName.getNameAsString() + " for column family: " + familyLogMsg);
     }
     master.mobFileCompactThread.requestMobFileCompaction(master.getConfiguration(),
-      master.getFileSystem(), tableName, compactedColumns,
-      master.getTableLockManager(), isForceAllFiles);
+            master.getFileSystem(), tableName, compactedColumns,
+            master.getTableLockManager(), isForceAllFiles);
     return CompactRegionResponse.newBuilder().build();
+  }
+
+  @Override
+  public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
+      IsBalancerEnabledRequest request) throws ServiceException {
+    IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
+    response.setEnabled(master.isBalancerOn());
+    return response.build();
   }
 }

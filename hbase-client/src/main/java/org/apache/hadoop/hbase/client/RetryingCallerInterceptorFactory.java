@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * Factory implementation to provide the {@link HConnectionImplementation} with
+ * Factory implementation to provide the {@link ConnectionImplementation} with
  * the implementation of the {@link RetryingCallerInterceptor} that we would use
  * to intercept the {@link RpcRetryingCaller} during the course of their calls.
  * 

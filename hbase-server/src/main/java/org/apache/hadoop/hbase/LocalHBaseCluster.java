@@ -168,12 +168,13 @@ public class LocalHBaseCluster {
     return addRegionServer(new Configuration(conf), this.regionThreads.size());
   }
 
+  @SuppressWarnings("unchecked")
   public JVMClusterUtil.RegionServerThread addRegionServer(
       Configuration config, final int index)
   throws IOException {
     // Create each regionserver with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
-    // the guts of HConnectionManager.
+    // the guts of ConnectionManager).
 
     // Also, create separate CoordinatedStateManager instance per Server.
     // This is special case when we have to have more than 1 CoordinatedStateManager
@@ -181,8 +182,9 @@ public class LocalHBaseCluster {
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
 
     JVMClusterUtil.RegionServerThread rst =
-      JVMClusterUtil.createRegionServerThread(config, cp,
-          this.regionServerClass, index);
+        JVMClusterUtil.createRegionServerThread(config, cp, (Class<? extends HRegionServer>) conf
+            .getClass(HConstants.REGION_SERVER_IMPL, this.regionServerClass), index);
+
     this.regionThreads.add(rst);
     return rst;
   }
@@ -206,7 +208,7 @@ public class LocalHBaseCluster {
   throws IOException {
     // Create each master with its own Configuration instance so each has
     // its HConnection instance rather than share (see HBASE_INSTANCES down in
-    // the guts of HConnectionManager.
+    // the guts of ConnectionManager.
 
     // Also, create separate CoordinatedStateManager instance per Server.
     // This is special case when we have to have more than 1 CoordinatedStateManager
@@ -259,6 +261,13 @@ public class LocalHBaseCluster {
       else LOG.info("Not alive " + rst.getName());
     }
     return liveServers;
+  }
+
+  /**
+   * @return the Configuration used by this LocalHBaseCluster
+   */
+  public Configuration getConfiguration() {
+    return this.conf;
   }
 
   /**

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.htrace.Trace;
 
 /**
  * The MemStore holds in-memory modifications to the Store.  Modifications
@@ -206,6 +207,11 @@ public class DefaultMemStore implements MemStore {
   @Override
   public long getFlushableSize() {
     return this.snapshotSize > 0 ? this.snapshotSize : keySize();
+  }
+
+  @Override
+  public long getSnapshotSize() {
+    return this.snapshotSize;
   }
 
   /**
@@ -462,6 +468,7 @@ public class DefaultMemStore implements MemStore {
    * @param now
    * @return  Timestamp
    */
+  @Override
   public long updateColumnValue(byte[] row,
                                 byte[] family,
                                 byte[] qualifier,
@@ -524,7 +531,7 @@ public class DefaultMemStore implements MemStore {
    * atomically.  Scans will only see each KeyValue update as atomic.
    *
    * @param cells
-   * @param readpoint readpoint below which we can safely remove duplicate KVs 
+   * @param readpoint readpoint below which we can safely remove duplicate KVs
    * @return change in memstore size
    */
   @Override
@@ -581,7 +588,7 @@ public class DefaultMemStore implements MemStore {
         // only remove Puts that concurrent scanners cannot possibly see
         if (cur.getTypeByte() == KeyValue.Type.Put.getCode() &&
             cur.getSequenceId() <= readpoint) {
-          if (versionsVisible > 1) {
+          if (versionsVisible >= 1) {
             // if we get here we have seen at least one version visible to the oldest scanner,
             // which means we can prove that no scanner will see this version
 
@@ -730,6 +737,9 @@ public class DefaultMemStore implements MemStore {
       if (snapshotAllocator != null) {
         this.snapshotAllocatorAtCreation = snapshotAllocator;
         this.snapshotAllocatorAtCreation.incScannerCount();
+      }
+      if (Trace.isTracing() && Trace.currentSpan() != null) {
+        Trace.currentSpan().addTimelineAnnotation("Creating MemStoreScanner");
       }
     }
 
@@ -1031,7 +1041,7 @@ public class DefaultMemStore implements MemStore {
   public long size() {
     return heapSize();
   }
- 
+
   /**
    * Code to help figure if our approximation of object heap sizes is close
    * enough.  See hbase-900.  Fills memstores then waits so user can heap

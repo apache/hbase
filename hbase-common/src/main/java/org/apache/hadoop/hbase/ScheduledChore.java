@@ -164,26 +164,19 @@ public abstract class ScheduledChore implements Runnable {
     this.timeUnit = unit;
   }
 
-  synchronized void resetState() {
-    timeOfLastRun = -1;
-    timeOfThisRun = -1;
-    initialChoreComplete = false;
-  }
-
   /**
    * @see java.lang.Thread#run()
    */
   @Override
-  public synchronized void run() {
-    timeOfLastRun = timeOfThisRun;
-    timeOfThisRun = System.currentTimeMillis();
+  public void run() {
+    updateTimeTrackingBeforeRun();
     if (missedStartTime() && isScheduled()) {
-      choreServicer.onChoreMissedStartTime(this);
+      onChoreMissedStartTime();
       if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " missed its start time");
-    } else if (stopper.isStopped() || choreServicer == null || !isScheduled()) {
-      cancel();
+    } else if (stopper.isStopped() || !isScheduled()) {
+      cancel(false);
       cleanup();
-      LOG.info("Chore: " + getName() + " was stopped");
+      if (LOG.isInfoEnabled()) LOG.info("Chore: " + getName() + " was stopped");
     } else {
       try {
         if (!initialChoreComplete) {
@@ -192,13 +185,31 @@ public abstract class ScheduledChore implements Runnable {
           chore();
         }
       } catch (Throwable t) {
-        LOG.error("Caught error", t);
+        if (LOG.isErrorEnabled()) LOG.error("Caught error", t);
         if (this.stopper.isStopped()) {
-          cancel();
+          cancel(false);
           cleanup();
         }
       }
     }
+  }
+
+  /**
+   * Update our time tracking members. Called at the start of an execution of this chore's run()
+   * method so that a correct decision can be made as to whether or not we missed the start time
+   */
+  private synchronized void updateTimeTrackingBeforeRun() {
+    timeOfLastRun = timeOfThisRun;
+    timeOfThisRun = System.currentTimeMillis();
+  }
+
+  /**
+   * Notify the ChoreService that this chore has missed its start time. Allows the ChoreService to
+   * make the decision as to whether or not it would be worthwhile to increase the number of core
+   * pool threads
+   */
+  private synchronized void onChoreMissedStartTime() {
+    if (choreServicer != null) choreServicer.onChoreMissedStartTime(this);
   }
 
   /**
@@ -248,7 +259,7 @@ public abstract class ScheduledChore implements Runnable {
   }
 
   public synchronized void cancel() {
-    cancel(false);
+    cancel(true);
   }
 
   public synchronized void cancel(boolean mayInterruptIfRunning) {
@@ -317,7 +328,7 @@ public abstract class ScheduledChore implements Runnable {
    * Override to run a task before we start looping.
    * @return true if initial chore was successful
    */
-  protected synchronized boolean initialChore() {
+  protected boolean initialChore() {
     // Default does nothing
     return true;
   }

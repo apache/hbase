@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -43,7 +42,7 @@ import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
@@ -52,7 +51,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -78,7 +76,9 @@ public class TestHBaseFsckEncryption {
     SecureRandom rng = new SecureRandom();
     byte[] keyBytes = new byte[AES.KEY_LENGTH];
     rng.nextBytes(keyBytes);
-    cfKey = new SecretKeySpec(keyBytes, "AES");
+    String algorithm =
+        conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    cfKey = new SecretKeySpec(keyBytes,algorithm);
 
     // Start the minicluster
     TEST_UTIL.startMiniCluster(3);
@@ -86,7 +86,7 @@ public class TestHBaseFsckEncryption {
     // Create the table
     htd = new HTableDescriptor(TableName.valueOf("default", "TestHBaseFsckEncryption"));
     HColumnDescriptor hcd = new HColumnDescriptor("cf");
-    hcd.setEncryptionType("AES");
+    hcd.setEncryptionType(algorithm);
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       cfKey));
@@ -140,9 +140,9 @@ public class TestHBaseFsckEncryption {
 
   private List<Path> findStorefilePaths(TableName tableName) throws Exception {
     List<Path> paths = new ArrayList<Path>();
-    for (HRegion region:
+    for (Region region:
         TEST_UTIL.getRSForFirstRegionInTable(tableName).getOnlineRegions(htd.getTableName())) {
-      for (Store store: region.getStores().values()) {
+      for (Store store: region.getStores()) {
         for (StoreFile storefile: store.getStorefiles()) {
           paths.add(storefile.getPath());
         }

@@ -28,16 +28,16 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
+import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -106,10 +106,8 @@ public class TestScannerSelectionUsingTTL {
     HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(hcd);
     HRegionInfo info = new HRegionInfo(TABLE);
-    HRegion region =
-        HBaseTestingUtility.createRegionAndWAL(info,
-            TEST_UTIL.getDataTestDir(info.getEncodedName()),
-            conf, htd);
+    Region region = HBaseTestingUtility.createRegionAndWAL(info,
+      TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, htd);
 
     long ts = EnvironmentEdgeManager.currentTime();
     long version = 0; //make sure each new set of Put's have a new ts
@@ -127,7 +125,7 @@ public class TestScannerSelectionUsingTTL {
         }
         region.put(put);
       }
-      region.flushcache();
+      region.flush(true);
       version++;
     }
 
@@ -155,7 +153,7 @@ public class TestScannerSelectionUsingTTL {
       HStore store = (HStore)region.getStore(FAMILY_BYTES);
       store.compactRecentForTestingAssumingDefaultPolicy(totalNumFiles);
     } else {
-      region.compactStores();
+      region.compact(false);
     }
 
     HBaseTestingUtility.closeRegionAndWAL(region);

@@ -129,8 +129,6 @@ public class ReversedScannerCallable extends ScannerCallable {
     }
 
     // check how often we retry.
-    // HConnectionManager will call instantiateServer with reload==true
-    // if and only if for retries.
     if (reload && this.scanMetrics != null) {
       this.scanMetrics.countOfRPCRetries.incrementAndGet();
       if (isRegionServerRemote) {

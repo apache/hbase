@@ -35,13 +35,9 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
-import org.apache.hadoop.hbase.regionserver.HMobStore;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.util.StringUtils;
 
 /**
  * An implementation of the StoreFlusher. It extends the DefaultStoreFlusher.
@@ -127,8 +123,9 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
       scanner.close();
     }
     LOG.info("Flushed, sequenceid=" + cacheFlushId + ", memsize="
-        + snapshot.getSize() + ", hasBloomFilter=" + writer.hasGeneralBloom()
-        + ", into tmp file " + writer.getPath());
+        + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getSize(), "", 1) +
+        ", hasBloomFilter=" + writer.hasGeneralBloom() +
+        ", into tmp file " + writer.getPath());
     result.add(writer.getPath());
     return result;
   }
@@ -168,8 +165,11 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
           .getName());
       List<Cell> cells = new ArrayList<Cell>();
       boolean hasMore;
+      ScannerContext scannerContext =
+              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+
       do {
-        hasMore = scanner.next(cells, compactionKVMax);
+        hasMore = scanner.next(cells, scannerContext);
         if (!cells.isEmpty()) {
           for (Cell c : cells) {
             // If we know that this KV is going to be included always, then let us

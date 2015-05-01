@@ -103,7 +103,8 @@ public class TestMobCloneSnapshotFromClient {
     // take an empty snapshot
     admin.snapshot(emptySnapshot, tableName);
 
-    HTable table = new HTable(TEST_UTIL.getConfiguration(), tableName);
+    Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    Table table = c.getTable(tableName);
     try {
       // enable table and insert data
       admin.enableTable(tableName);

@@ -53,6 +53,8 @@ import org.apache.hadoop.hbase.util.ClassSize;
 public class Increment extends Mutation implements Comparable<Row> {
   private static final long HEAP_OVERHEAD =  ClassSize.REFERENCE + ClassSize.TIMERANGE;
 
+  private static final String RETURN_RESULTS = "_rr_";
+
   private TimeRange tr = new TimeRange();
 
   /**
@@ -160,6 +162,24 @@ public class Increment extends Mutation implements Comparable<Row> {
   throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
+  }
+  
+  /**
+   * @param returnResults True (default) if the increment operation should return the results. A
+   *          client that is not interested in the result can save network bandwidth setting this
+   *          to false.
+   */
+  public Increment setReturnResults(boolean returnResults) {
+    setAttribute(RETURN_RESULTS, Bytes.toBytes(returnResults));
+    return this;
+  }
+
+  /**
+   * @return current value for returnResults
+   */
+  public boolean isReturnResults() {
+    byte[] v = getAttribute(RETURN_RESULTS);
+    return v == null ? true : Bytes.toBoolean(v);
   }
 
   /**

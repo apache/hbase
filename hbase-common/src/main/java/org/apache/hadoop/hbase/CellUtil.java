@@ -61,6 +61,10 @@ public final class CellUtil {
       cell.getQualifierLength());
   }
 
+  public static ByteRange fillValueRange(Cell cell, ByteRange range) {
+    return range.set(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
+  }
+
   public static ByteRange fillTagRange(Cell cell, ByteRange range) {
     return range.set(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
   }
@@ -562,6 +566,21 @@ public final class CellUtil {
     }
     // TODO: Add sizing of references that hold the row, family, etc., arrays.
     return estimatedSerializedSizeOf(cell);
+  }
+
+  /**
+   * This is a hack that should be removed once we don't care about matching
+   * up client- and server-side estimations of cell size. It needed to be
+   * backwards compatible with estimations done by older clients. We need to
+   * pretend that tags never exist and cells aren't serialized with tag
+   * length included. See HBASE-13262 and HBASE-13303
+   */
+  @Deprecated
+  public static long estimatedHeapSizeOfWithoutTags(final Cell cell) {
+    if (cell instanceof KeyValue) {
+      return ((KeyValue)cell).heapSizeWithoutTags();
+    }
+    return getSumOfCellKeyElementLengths(cell) + cell.getValueLength();
   }
 
   /********************* tags *************************************/

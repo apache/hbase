@@ -24,10 +24,11 @@
 @rem Extra Java CLASSPATH elements.  Optional.
 @rem set HBASE_CLASSPATH=
 
-@rem The maximum amount of heap to use, in MB. Default is 1000.
+@rem The maximum amount of heap to use. Default is left to JVM default.
 @rem set HBASE_HEAPSIZE=1000
 
-@rem Uncomment below if you intend to use off heap cache.
+@rem Uncomment below if you intend to use off heap cache. For example, to allocate 8G of 
+@rem offheap, set the value to "8G".
 @rem set HBASE_OFFHEAPSIZE=1000
 
 @rem For example, to allocate 8G of offheap, to 8G:

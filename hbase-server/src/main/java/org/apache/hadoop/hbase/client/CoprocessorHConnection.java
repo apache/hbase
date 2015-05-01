@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.ConnectionManager.HConnectionImplementation;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
@@ -40,15 +39,15 @@ import org.apache.hadoop.hbase.security.UserProvider;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CoprocessorHConnection extends HConnectionImplementation {
-  private static final NonceGenerator NO_NONCE_GEN = new ConnectionManager.NoNonceGenerator();
+public class CoprocessorHConnection extends ConnectionImplementation {
+  private static final NonceGenerator NO_NONCE_GEN = new NoNonceGenerator();
 
   /**
-   * Create an unmanaged {@link HConnection} based on the environment in which we are running the
+   * Create an {@link HConnection} based on the environment in which we are running the
    * coprocessor. The {@link HConnection} must be externally cleaned up (we bypass the usual HTable
    * cleanup mechanisms since we own everything).
    * @param env environment hosting the {@link HConnection}
-   * @return an unmanaged {@link HConnection}.
+   * @return instance of {@link HConnection}.
    * @throws IOException if we cannot create the connection
    */
   public static ClusterConnection getConnectionForEnvironment(CoprocessorEnvironment env)
@@ -61,7 +60,7 @@ public class CoprocessorHConnection extends HConnectionImplementation {
         return new CoprocessorHConnection((HRegionServer) services);
       }
     }
-    return ConnectionManager.createConnectionInternal(env.getConfiguration());
+    return (ClusterConnection) ConnectionFactory.createConnection(env.getConfiguration());
   }
 
   private final ServerName serverName;
@@ -96,7 +95,7 @@ public class CoprocessorHConnection extends HConnectionImplementation {
    * @throws IOException if we cannot create the connection
    */
   public CoprocessorHConnection(Configuration conf, HRegionServer server) throws IOException {
-    super(conf, false, null, UserProvider.instantiate(conf).getCurrent());
+    super(conf, null, UserProvider.instantiate(conf).getCurrent());
     this.server = server;
     this.serverName = server.getServerName();
   }

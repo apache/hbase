@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.HBaseAdmin
 import org.apache.hadoop.hbase.client.Get
 import org.apache.hadoop.hbase.client.Scan
 import org.apache.hadoop.hbase.client.HTable
-import org.apache.hadoop.hbase.client.HConnectionManager
+import org.apache.hadoop.hbase.client.ConnectionFactory
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -100,7 +100,7 @@ def isSuccessfulScan(admin, r)
   scan = Scan.new(r.getStartKey(), r.getStartKey())
   scan.setBatch(1)
   scan.setCaching(1)
-  scan.setFilter(FilterList.new(FirstKeyOnlyFilter.new(),InclusiveStopFilter().new(r.getStartKey())))
+  scan.setFilter(FilterList.new(FirstKeyOnlyFilter.new(),InclusiveStopFilter.new(r.getStartKey())))
   begin
     table = HTable.new(admin.getConfiguration(), r.getTableName())
     scanner = table.getScanner(scan)
@@ -243,7 +243,7 @@ end
 
 # Now get list of regions on targetServer
 def getRegions(config, servername)
-  connection = HConnectionManager::getConnection(config);
+  connection = ConnectionFactory::createConnection(config);
   return ProtobufUtil::getOnlineRegions(connection.getAdmin(ServerName.valueOf(servername)));
 end
 

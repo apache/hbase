@@ -34,15 +34,8 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.regionserver.HMobStore;
-import org.apache.hadoop.hbase.regionserver.HStore;
-import org.apache.hadoop.hbase.regionserver.InternalScanner;
-import org.apache.hadoop.hbase.regionserver.MobCompactionStoreScanner;
-import org.apache.hadoop.hbase.regionserver.ScanType;
-import org.apache.hadoop.hbase.regionserver.Store;
-import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
-import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -185,8 +178,12 @@ public class DefaultMobCompactor extends DefaultCompactor {
       }
       delFileWriter = mobStore.createDelFileWriterInTmp(new Date(fd.latestPutTs), fd.maxKeyCount,
           store.getFamily().getCompression(), store.getRegionInfo().getStartKey());
+      ScannerContext scannerContext =
+              ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
+
+
       do {
-        hasMore = compactionScanner.next(cells, compactionKVMax);
+        hasMore = compactionScanner.next(cells, scannerContext);
         // output to writer:
         for (Cell c : cells) {
           if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
@@ -212,7 +209,6 @@ public class DefaultMobCompactor extends DefaultCompactor {
                 Cell mobCell = mobStore.resolve(c, false);
                 if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
-                  // KeyValue mobKv = KeyValueUtil.ensureKeyValue(cell);
                   CellUtil.setSequenceId(mobCell, c.getSequenceId());
                   writer.append(mobCell);
                   mobCompactedFromMobCellsCount++;

@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -197,6 +198,8 @@ public class HFile {
 
   /** API required to write an {@link HFile} */
   public interface Writer extends Closeable {
+    /** Max memstore (mvcc) timestamp in FileInfo */
+    public static final byte [] MAX_MEMSTORE_TS_KEY = Bytes.toBytes("MAX_MEMSTORE_TS_KEY");
 
     /** Add an element to the file info map. */
     void appendFileInfo(byte[] key, byte[] value) throws IOException;
@@ -294,7 +297,7 @@ public class HFile {
             "filesystem/path or path");
       }
       if (path != null) {
-        ostream = AbstractHFileWriter.createOutputStream(conf, fs, path, favoredNodes);
+        ostream = HFileWriterImpl.createOutputStream(conf, fs, path, favoredNodes);
       }
       return createWriter(fs, path, ostream,
                    comparator, fileContext);
@@ -333,9 +336,12 @@ public class HFile {
     int version = getFormatVersion(conf);
     switch (version) {
     case 2:
-      return new HFileWriterV2.WriterFactoryV2(conf, cacheConf);
+      throw new IllegalArgumentException("This should never happen. " +
+        "Did you change hfile.format.version to read v2? This version of the software writes v3" +
+        " hfiles only (but it can read v2 files without having to update hfile.format.version " +
+        "in hbase-site.xml)");
     case 3:
-      return new HFileWriterV3.WriterFactoryV3(conf, cacheConf);
+      return new HFileWriterFactory(conf, cacheConf);
     default:
       throw new IllegalArgumentException("Cannot create writer for HFile " +
           "format version " + version);
@@ -440,6 +446,18 @@ public class HFile {
      * Return the file context of the HFile this reader belongs to
      */
     HFileContext getFileContext();
+
+    boolean shouldIncludeMemstoreTS();
+
+    boolean isDecodeMemstoreTS();
+
+    DataBlockEncoding getEffectiveEncodingInCache(boolean isCompaction);
+
+    @VisibleForTesting
+    HFileBlock.FSReader getUncachedBlockReader();
+
+    @VisibleForTesting
+    boolean prefetchComplete();
   }
 
   /**
@@ -463,9 +481,10 @@ public class HFile {
       trailer = FixedFileTrailer.readFromStream(fsdis.getStream(isHBaseChecksum), size);
       switch (trailer.getMajorVersion()) {
       case 2:
-        return new HFileReaderV2(path, trailer, fsdis, size, cacheConf, hfs, conf);
+        LOG.debug("Opening HFile v2 with v3 reader");
+        // Fall through.
       case 3 :
-        return new HFileReaderV3(path, trailer, fsdis, size, cacheConf, hfs, conf);
+        return new HFileReaderImpl(path, trailer, fsdis, size, cacheConf, hfs, conf);
       default:
         throw new IllegalArgumentException("Invalid HFile version " + trailer.getMajorVersion());
       }
@@ -489,6 +508,7 @@ public class HFile {
    * @return A version specific Hfile Reader
    * @throws IOException If file is invalid, will throw CorruptHFileException flavored IOException
    */
+  @SuppressWarnings("resource")
   public static Reader createReader(FileSystem fs, Path path,
       FSDataInputStreamWrapper fsdis, long size, CacheConfig cacheConf, Configuration conf)
       throws IOException {
@@ -530,6 +550,47 @@ public class HFile {
       throws IOException {
     FSDataInputStreamWrapper wrapper = new FSDataInputStreamWrapper(fsdis);
     return pickReaderVersion(path, wrapper, size, cacheConf, null, conf);
+  }
+
+  /**
+   * Returns true if the specified file has a valid HFile Trailer.
+   * @param fs filesystem
+   * @param path Path to file to verify
+   * @return true if the file has a valid HFile Trailer, otherwise false
+   * @throws IOException if failed to read from the underlying stream
+   */
+  public static boolean isHFileFormat(final FileSystem fs, final Path path) throws IOException {
+    return isHFileFormat(fs, fs.getFileStatus(path));
+  }
+
+  /**
+   * Returns true if the specified file has a valid HFile Trailer.
+   * @param fs filesystem
+   * @param fileStatus the file to verify
+   * @return true if the file has a valid HFile Trailer, otherwise false
+   * @throws IOException if failed to read from the underlying stream
+   */
+  public static boolean isHFileFormat(final FileSystem fs, final FileStatus fileStatus)
+      throws IOException {
+    final Path path = fileStatus.getPath();
+    final long size = fileStatus.getLen();
+    FSDataInputStreamWrapper fsdis = new FSDataInputStreamWrapper(fs, path);
+    try {
+      boolean isHBaseChecksum = fsdis.shouldUseHBaseChecksum();
+      assert !isHBaseChecksum; // Initially we must read with FS checksum.
+      FixedFileTrailer.readFromStream(fsdis.getStream(isHBaseChecksum), size);
+      return true;
+    } catch (IllegalArgumentException e) {
+      return false;
+    } catch (IOException e) {
+      throw e;
+    } finally {
+      try {
+        fsdis.close();
+      } catch (Throwable t) {
+        LOG.warn("Error closing fsdis FSDataInputStreamWrapper: " + path, t);
+      }
+    }
   }
 
   /**
@@ -810,6 +871,18 @@ public class HFile {
       throw new IllegalArgumentException("Invalid HFile version: " + version
           + " (expected to be " + "between " + MIN_FORMAT_VERSION + " and "
           + MAX_FORMAT_VERSION + ")");
+    }
+  }
+
+
+  public static void checkHFileVersion(final Configuration c) {
+    int version = c.getInt(FORMAT_VERSION_KEY, MAX_FORMAT_VERSION);
+    if (version < MAX_FORMAT_VERSION || version > MAX_FORMAT_VERSION) {
+      throw new IllegalArgumentException("The setting for " + FORMAT_VERSION_KEY +
+        " (in your hbase-*.xml files) is " + version + " which does not match " +
+        MAX_FORMAT_VERSION +
+        "; are you running with a configuration from an older or newer hbase install (an " +
+        "incompatible hbase-default.xml or hbase-site.xml on your CLASSPATH)?");
     }
   }
 

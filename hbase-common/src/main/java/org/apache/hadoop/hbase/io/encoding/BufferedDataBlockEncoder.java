@@ -677,11 +677,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int seekToKeyInBlock(byte[] key, int offset, int length, boolean seekBefore) {
-      return seekToKeyInBlock(new KeyValue.KeyOnlyKeyValue(key, offset, length), seekBefore);
-    }
-
-    @Override
     public int seekToKeyInBlock(Cell seekCell, boolean seekBefore) {
       int rowCommonPrefix = 0;
       int familyCommonPrefix = 0;

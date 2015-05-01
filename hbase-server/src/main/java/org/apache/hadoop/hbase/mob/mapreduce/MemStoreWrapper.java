@@ -33,8 +33,10 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -70,13 +72,13 @@ public class MemStoreWrapper {
   private SweepPartitionId partitionId;
   private Context context;
   private Configuration conf;
-  private HTable table;
+  private BufferedMutator table;
   private HColumnDescriptor hcd;
   private Path mobFamilyDir;
   private FileSystem fs;
   private CacheConfig cacheConfig;
 
-  public MemStoreWrapper(Context context, FileSystem fs, HTable table, HColumnDescriptor hcd,
+  public MemStoreWrapper(Context context, FileSystem fs, BufferedMutator table, HColumnDescriptor hcd,
       MemStore memstore, CacheConfig cacheConfig) throws IOException {
     this.memstore = memstore;
     this.context = context;
@@ -153,16 +155,16 @@ public class MemStoreWrapper {
     scanner = snapshot.getScanner();
     scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
     cell = null;
-    Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, this.table.getTableName());
+    Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, Bytes.toBytes(this.table.getName().toString()));
     while (null != (cell = scanner.next())) {
       KeyValue reference = MobUtils.createMobRefKeyValue(cell, referenceValue, tableNameTag);
       Put put =
           new Put(reference.getRowArray(), reference.getRowOffset(), reference.getRowLength());
       put.add(reference);
-      table.put(put);
+      table.mutate(put);
       context.getCounter(SweepCounter.RECORDS_UPDATED).increment(1);
     }
-    table.flushCommits();
+    table.flush();
     scanner.close();
   }
 

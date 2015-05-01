@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.security.access;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -38,7 +39,7 @@ import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
-import org.apache.hadoop.hbase.ipc.RequestContext;
+import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -49,7 +50,8 @@ import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBu
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.CleanupBulkLoadResponse;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.SecureBulkLoadProtos.SecureBulkLoadHFilesResponse;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Region.BulkLoadListener;
 import org.apache.hadoop.hbase.security.SecureBulkLoadUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -236,7 +238,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
       return;
     }
 
-    HRegion region = env.getRegion();
+    Region region = env.getRegion();
     boolean bypass = false;
     if (region.getCoprocessorHost() != null) {
       try {
@@ -334,8 +336,8 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
   }
 
   private User getActiveUser() {
-    User user = RequestContext.getRequestUser();
-    if (!RequestContext.isInRequestContext()) {
+    User user = RpcServer.getRequestUser();
+    if (user == null) {
       return null;
     }
 
@@ -353,7 +355,7 @@ public class SecureBulkLoadEndpoint extends SecureBulkLoadService
     return this;
   }
 
-  private static class SecureBulkLoadListener implements HRegion.BulkLoadListener {
+  private static class SecureBulkLoadListener implements BulkLoadListener {
     // Target filesystem
     private FileSystem fs;
     private String stagingDir;

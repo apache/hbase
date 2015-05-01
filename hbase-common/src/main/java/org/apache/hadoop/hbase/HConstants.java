@@ -206,6 +206,10 @@ public final class HConstants {
   public static final String ZOOKEEPER_DATA_DIR =
       ZK_CFG_PROPERTY_PREFIX + "dataDir";
 
+  /** Parameter name for the ZK tick time */
+  public static final String ZOOKEEPER_TICK_TIME =
+      ZK_CFG_PROPERTY_PREFIX + "tickTime";
+
   /** Default limit on concurrent client-side zookeeper connections */
   public static final int DEFAULT_ZOOKEPER_MAX_CLIENT_CNXNS = 300;
 
@@ -387,7 +391,7 @@ public final class HConstants {
 
   /**
    * The hbase:meta table's name.
-   * 
+   *
    */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
@@ -608,12 +612,19 @@ public final class HConstants {
    */
   public static final UUID DEFAULT_CLUSTER_ID = new UUID(0L,0L);
 
-    /**
-     * Parameter name for maximum number of bytes returned when calling a
-     * scanner's next method.
-     */
+  /**
+   * Parameter name for maximum number of bytes returned when calling a scanner's next method.
+   * Controlled by the client.
+   */
   public static final String HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY =
       "hbase.client.scanner.max.result.size";
+
+  /**
+   * Parameter name for maximum number of bytes returned when calling a scanner's next method.
+   * Controlled by the server.
+   */
+  public static final String HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY =
+      "hbase.server.scanner.max.result.size";
 
   /**
    * Maximum number of bytes returned when calling a scanner's next method.
@@ -623,6 +634,16 @@ public final class HConstants {
    * The default value is 2MB.
    */
   public static final long DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE = 2 * 1024 * 1024;
+
+  /**
+   * Maximum number of bytes returned when calling a scanner's next method.
+   * Note that when a single row is larger than this limit the row is still
+   * returned completely.
+   * Safety setting to protect the region server.
+   *
+   * The default value is 100MB. (a client would rarely request larger chunks on purpose)
+   */
+  public static final long DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE = 100 * 1024 * 1024;
 
   /**
    * Parameter name for client pause value, used mostly as value to wait
@@ -698,7 +719,7 @@ public final class HConstants {
   /**
    * Default value for {@link #HBASE_CLIENT_SCANNER_CACHING}
    */
-  public static final int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = 100;
+  public static final int DEFAULT_HBASE_CLIENT_SCANNER_CACHING = Integer.MAX_VALUE;
 
   /**
    * Parameter name for number of rows that will be fetched when calling next on
@@ -939,7 +960,7 @@ public final class HConstants {
    *  NONE: no preference in destination of replicas
    *  ONE_SSD: place only one replica in SSD and the remaining in default storage
    *  and ALL_SSD: place all replica on SSD
-   *  
+   *
    * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
@@ -953,7 +974,7 @@ public final class HConstants {
    * The byte array represents for NO_NEXT_INDEXED_KEY;
    * The actual value is irrelevant because this is always compared by reference.
    */
-  public static final byte [] NO_NEXT_INDEXED_KEY = Bytes.toBytes("NO_NEXT_INDEXED_KEY");
+  public static final Cell NO_NEXT_INDEXED_KEY = new KeyValue();
   /** delimiter used between portions of a region name */
   public static final int DELIMITER = ',';
   public static final String HBASE_CONFIG_READ_ZOOKEEPER_CONFIG =
@@ -1051,6 +1072,9 @@ public final class HConstants {
 
   public static final long NO_NONCE = 0;
 
+  /** Default cipher for encryption */
+  public static final String CIPHER_AES = "AES";
+
   /** Configuration key for the crypto algorithm provider, a class name */
   public static final String CRYPTO_CIPHERPROVIDER_CONF_KEY = "hbase.crypto.cipherprovider";
 
@@ -1073,6 +1097,13 @@ public final class HConstants {
 
   /** Configuration key for the name of the master WAL encryption key for the cluster, a string */
   public static final String CRYPTO_WAL_KEY_NAME_CONF_KEY = "hbase.crypto.wal.key.name";
+
+  /** Configuration key for the algorithm used for creating jks key, a string */
+  public static final String CRYPTO_KEY_ALGORITHM_CONF_KEY = "hbase.crypto.key.algorithm";
+
+  /** Configuration key for the name of the alternate cipher algorithm for the cluster, a string */
+  public static final String CRYPTO_ALTERNATE_KEY_ALGORITHM_CONF_KEY =
+      "hbase.crypto.alternate.key.algorithm";
 
   /** Configuration key for enabling WAL encryption, a boolean */
   public static final String ENABLE_WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
@@ -1126,7 +1157,7 @@ public final class HConstants {
 
   public static final String HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS =
       "hbase.client.fastfail.threshold";
-  
+
   public static final long HBASE_CLIENT_FAST_FAIL_THREASHOLD_MS_DEFAULT =
       60000;
 
@@ -1137,7 +1168,7 @@ public final class HConstants {
       600000;
 
   public static final String HBASE_CLIENT_FAST_FAIL_INTERCEPTOR_IMPL =
-      "hbase.client.fast.fail.interceptor.impl"; 
+      "hbase.client.fast.fail.interceptor.impl";
 
   /** Config key for if the server should send backpressure and if the client should listen to
    * that backpressure from the server */

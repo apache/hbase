@@ -38,10 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.ScannerCallable;
-import org.apache.hadoop.hbase.ipc.RpcClient;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -142,7 +139,7 @@ public class TestMobFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
@@ -181,7 +178,7 @@ public class TestMobFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
@@ -225,7 +222,7 @@ public class TestMobFlushSnapshotFromClient {
     SnapshotTestingUtils.assertNoSnapshots(admin);
 
     // put some stuff in the table
-    HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
     SnapshotTestingUtils.loadData(UTIL, TABLE_NAME, DEFAULT_NUM_ROWS, TEST_FAM);
 
     LOG.debug("FS state before snapshot:");
@@ -425,7 +422,7 @@ public class TestMobFlushSnapshotFromClient {
   /**
    * Demonstrate that we reject snapshot requests if there is a snapshot already running on the
    * same table currently running and that concurrent snapshots on different tables can both
-   * succeed concurretly.
+   * succeed concurrently.
    */
   @Test(timeout=300000)
   public void testConcurrentSnapshottingAttempts() throws IOException, InterruptedException {

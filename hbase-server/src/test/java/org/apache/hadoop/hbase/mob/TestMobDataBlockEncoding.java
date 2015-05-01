@@ -27,12 +27,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -51,7 +46,7 @@ public class TestMobDataBlockEncoding {
   private final static byte [] qf1 = Bytes.toBytes("qualifier1");
   private final static byte [] qf2 = Bytes.toBytes("qualifier2");
   protected final byte[] qf3 = Bytes.toBytes("qualifier3");
-  private static HTable table;
+  private static Table table;
   private static HBaseAdmin admin;
   private static HColumnDescriptor hcd;
   private static HTableDescriptor desc;
@@ -80,9 +75,10 @@ public class TestMobDataBlockEncoding {
     hcd.setMaxVersions(4);
     hcd.setDataBlockEncoding(encoding);
     desc.addFamily(hcd);
-    admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+    admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
-    table = new HTable(TEST_UTIL.getConfiguration(), TN);
+    table = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())
+            .getTable(TableName.valueOf(TN));
   }
 
   /**
@@ -113,13 +109,11 @@ public class TestMobDataBlockEncoding {
     byte[] value = generateMobValue((int) defaultThreshold + 1);
 
     Put put1 = new Put(row1);
-    put1.add(family, qf1, ts3, value);
-    put1.add(family, qf2, ts2, value);
-    put1.add(family, qf3, ts1, value);
+    put1.addColumn(family, qf1, ts3, value);
+    put1.addColumn(family, qf2, ts2, value);
+    put1.addColumn(family, qf3, ts1, value);
     table.put(put1);
-
-    table.flushCommits();
-    admin.flush(TN);
+    admin.flush(TableName.valueOf(TN));
 
     Scan scan = new Scan();
     scan.setMaxVersions(4);

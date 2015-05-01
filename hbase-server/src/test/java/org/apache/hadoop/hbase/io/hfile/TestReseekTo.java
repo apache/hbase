@@ -37,7 +37,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test {@link HFileScanner#reseekTo(byte[])}
+ * Test {@link HFileScanner#reseekTo(org.apache.hadoop.hbase.Cell)}
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestReseekTo {

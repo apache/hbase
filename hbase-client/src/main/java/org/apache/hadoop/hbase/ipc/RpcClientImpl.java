@@ -263,7 +263,10 @@ public class RpcClientImpl extends AbstractRpcClient {
           try {
             Connection.this.tracedWriteRequest(cts.call, cts.priority, cts.span);
           } catch (IOException e) {
-            LOG.warn("call write error for call #" + cts.call.id + ", message =" + e.getMessage());
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("call write error for call #" + cts.call.id
+                + ", message =" + e.getMessage());
+            }
             cts.call.setException(e);
             markClosed(e);
           }
@@ -355,6 +358,7 @@ public class RpcClientImpl extends AbstractRpcClient {
       if (this.compressor != null) {
         builder.setCellBlockCompressorClass(this.compressor.getClass().getCanonicalName());
       }
+      builder.setVersionInfo(ProtobufUtil.getVersionInfo());
       this.header = builder.build();
 
       this.setName("IPC Client (" + socketFactory.hashCode() +") connection to " +
@@ -1133,6 +1137,7 @@ public class RpcClientImpl extends AbstractRpcClient {
    * @throws InterruptedException
    * @throws IOException
    */
+  @Override
   protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc, MethodDescriptor md,
       Message param, Message returnType, User ticket, InetSocketAddress addr)
       throws IOException, InterruptedException {
