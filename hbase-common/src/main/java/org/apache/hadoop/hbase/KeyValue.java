@@ -1053,15 +1053,12 @@ public class KeyValue implements Cell, HeapSize, Cloneable {
     return CellComparator.equals(this, (Cell)other);
   }
 
+  /**
+   * In line with {@link #equals(Object)}, only uses the key portion, not the value.
+   */
   @Override
   public int hashCode() {
-    byte[] b = getBuffer();
-    int start = getOffset(), end = getOffset() + getLength();
-    int h = b[start++];
-    for (int i = start; i < end; i++) {
-      h = (h * 13) ^ b[i];
-    }
-    return h;
+    return CellComparator.hashCodeIgnoreMvcc(this);
   }
 
   //---------------------------------------------------------------------------

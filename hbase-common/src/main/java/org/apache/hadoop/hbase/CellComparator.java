@@ -140,13 +140,32 @@ public class CellComparator implements Comparator<Cell>, Serializable{
 
   /**
    * Returns a hash code that is always the same for two Cells having a matching equals(..) result.
-   * Currently does not guard against nulls, but it could if necessary.
    */
   public static int hashCode(Cell cell){
     if (cell == null) {// return 0 for empty Cell
       return 0;
     }
+    int hash = calculateHashForKeyValue(cell);
+    hash = 31 * hash + (int)cell.getMvccVersion();
+    return hash;
+  }
 
+  /**
+   * Returns a hash code that is always the same for two Cells having a matching
+   * equals(..) result. Note : Ignore mvcc while calculating the hashcode
+   * 
+   * @param cell
+   * @return hashCode
+   */
+  public static int hashCodeIgnoreMvcc(Cell cell) {
+    if (cell == null) {// return 0 for empty Cell
+      return 0;
+    }
+    int hash = calculateHashForKeyValue(cell);
+    return hash;
+  }
+
+  private static int calculateHashForKeyValue(Cell cell) {
     //pre-calculate the 3 hashes made of byte ranges
     int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
     int familyHash =
@@ -159,7 +178,6 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     hash = 31 * hash + qualifierHash;
     hash = 31 * hash + (int)cell.getTimestamp();
     hash = 31 * hash + cell.getTypeByte();
-    hash = 31 * hash + (int)cell.getMvccVersion();
     return hash;
   }
 
