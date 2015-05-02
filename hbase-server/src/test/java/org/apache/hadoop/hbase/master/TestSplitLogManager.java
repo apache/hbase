@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -644,15 +643,16 @@ public class TestSplitLogManager {
   public void testGetPreviousRecoveryMode() throws Exception {
     LOG.info("testGetPreviousRecoveryMode");
     SplitLogCounters.resetCounters();
-    Configuration testConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
-    testConf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
+    // Not actually enabling DLR for the cluster, just for the ZkCoordinatedStateManager to use.
+    // The test is just manipulating ZK manually anyways.
+    conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, true);
 
     zkw.getRecoverableZooKeeper().create(ZKSplitLog.getEncodedNodeName(zkw, "testRecovery"),
       new SplitLogTask.Unassigned(
         ServerName.valueOf("mgr,1,1"), RecoveryMode.LOG_SPLITTING).toByteArray(),
         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
-    slm = new SplitLogManager(ds, testConf, stopper, master, DUMMY_MASTER);
+    slm = new SplitLogManager(ds, conf, stopper, master, DUMMY_MASTER);
     LOG.info("Mode1=" + slm.getRecoveryMode());
     assertTrue(slm.isLogSplitting());
     zkw.getRecoverableZooKeeper().delete(ZKSplitLog.getEncodedNodeName(zkw, "testRecovery"), -1);
