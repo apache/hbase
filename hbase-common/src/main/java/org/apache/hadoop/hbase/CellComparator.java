@@ -244,7 +244,6 @@ public class CellComparator implements Comparator<Cell>, Serializable {
 
   /**
    * Returns a hash code that is always the same for two Cells having a matching equals(..) result.
-   * Currently does not guard against nulls, but it could if necessary.
    */
   public static int hashCode(Cell cell){
     if (cell == null) {// return 0 for empty Cell
@@ -258,9 +257,8 @@ public class CellComparator implements Comparator<Cell>, Serializable {
 
   /**
    * Returns a hash code that is always the same for two Cells having a matching
-   * equals(..) result. Currently does not guard against nulls, but it could if
-   * necessary. Note : Ignore mvcc while calculating the hashcode
-   *
+   * equals(..) result. Note : Ignore mvcc while calculating the hashcode
+   * 
    * @param cell
    * @return hashCode
    */
