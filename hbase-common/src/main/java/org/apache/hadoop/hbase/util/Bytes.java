@@ -1617,6 +1617,24 @@ public class Bytes {
   }
 
   /**
+   * @param arrays all the arrays to concatenate together.
+   * @return New array made from the concatenation of the given arrays.
+   */
+  public static byte [] add(final byte [][] arrays) {
+    int length = 0;
+    for (int i = 0; i < arrays.length; i++) {
+      length += arrays[i].length;
+    }
+    byte [] result = new byte[length];
+    int index = 0;
+    for (int i = 0; i < arrays.length; i++) {
+      System.arraycopy(arrays[i], 0, result, index, arrays[i].length);
+      index += arrays[i].length;
+    }
+    return result;
+  }
+
+  /**
    * @param a array
    * @param length amount of bytes to grab
    * @return First <code>length</code> bytes from <code>a</code>
