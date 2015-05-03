@@ -643,6 +643,11 @@ public class RemoteHTable implements Table {
         LOG.warn(StringUtils.stringifyException(e));
       }
     }
+
+    @Override
+    public boolean renewLease() {
+      throw new RuntimeException("renewLease() not supported");
+    }
   }
 
   @Override

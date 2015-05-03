@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.client;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
@@ -427,6 +428,31 @@ public class TestFromClientSide3 {
     assertTrue(res.isEmpty() == true);
     res = table.get(new Get(ROW_BYTES));
     assertTrue(Arrays.equals(res.getValue(FAMILY, COL_QUAL), VAL_BYTES));
+    table.close();
+  }
+
+  @Test
+  public void testLeaseRenewal() throws Exception {
+    HTable table = TEST_UTIL.createTable(
+      Bytes.toBytes("testLeaseRenewal"), FAMILY);
+    Put p = new Put(ROW_BYTES);
+    p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
+    table.put(p);
+    p = new Put(ANOTHERROW);
+    p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
+    table.put(p);
+    Scan s = new Scan();
+    s.setCaching(1);
+    ResultScanner rs = table.getScanner(s);
+    // make sure that calling renewLease does not impact the scan results
+    assertTrue(rs.renewLease());
+    assertTrue(Arrays.equals(rs.next().getRow(), ANOTHERROW));
+    assertTrue(rs.renewLease());
+    assertTrue(Arrays.equals(rs.next().getRow(), ROW_BYTES));
+    assertTrue(rs.renewLease());
+    assertNull(rs.next());
+    assertFalse(rs.renewLease());
+    rs.close();
     table.close();
   }
 }

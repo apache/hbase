@@ -754,4 +754,21 @@ public class ClientScanner extends AbstractClientScanner {
       return closestFrontRow;
     }
   }
+
+  @Override
+  public boolean renewLease() {
+    if (callable != null) {
+      // do not return any rows, do not advance the scanner
+      callable.setCaching(0);
+      try {
+        this.caller.callWithoutRetries(callable, this.scannerTimeout);
+      } catch (Exception e) {
+        return false;
+      } finally {
+        callable.setCaching(this.caching);
+      }
+      return true;
+    }
+    return false;
+  }
 }
