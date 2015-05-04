@@ -1259,7 +1259,7 @@ public class TestDistributedLogSplitting {
     byte[] family = Bytes.toBytes("family");
     byte[] qualifier = Bytes.toBytes("c1");
     long timeStamp = System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(family));
     final WAL wal = hrs.getWAL(curRegionInfo);
     for (int i = 0; i < NUM_LOG_LINES; i += 1) {

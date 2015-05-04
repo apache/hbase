@@ -973,21 +973,6 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}.
-   */
-  @Deprecated
-  @Override
-  public long incrementColumnValue(final byte [] row, final byte [] family,
-      final byte [] qualifier, final long amount, final boolean writeToWAL)
-  throws IOException {
-    return incrementColumnValue(row, family, qualifier, amount,
-      writeToWAL? Durability.SKIP_WAL: Durability.USE_DEFAULT);
-  }
-
-  /**
    * {@inheritDoc}
    */
   @Override

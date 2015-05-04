@@ -98,7 +98,7 @@ public class TestWALActionsListener {
       KeyValue kv = new KeyValue(b,b,b);
       WALEdit edit = new WALEdit();
       edit.add(kv);
-      HTableDescriptor htd = new HTableDescriptor();
+      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(SOME_BYTES));
       htd.addFamily(new HColumnDescriptor(b));
 
       final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),

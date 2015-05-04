@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
@@ -667,19 +666,6 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     // group regions.
     regionGroups.put(ByteBuffer.wrap(startEndKeys.getFirst()[idx]), item);
     return null;
-  }
-
-  /**
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #tryAtomicRegionLoad(Connection, TableName, byte[], Collection)}.
-   */
-  @Deprecated
-  protected List<LoadQueueItem> tryAtomicRegionLoad(final HConnection conn,
-      final byte [] tableName, final byte[] first, Collection<LoadQueueItem> lqis)
-  throws IOException {
-    return tryAtomicRegionLoad(conn, TableName.valueOf(tableName), first, lqis);
   }
 
   /**

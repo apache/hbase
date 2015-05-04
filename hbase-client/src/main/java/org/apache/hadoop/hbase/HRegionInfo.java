@@ -233,17 +233,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     setHashCode();
   }
 
-  /** Default constructor - creates empty object
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-5453">HBASE-5453</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Used by Writables and Writables are going away.
-   */
-  @Deprecated
-  public HRegionInfo() {
-    super();
-  }
-
   public HRegionInfo(final TableName tableName) {
     this(tableName, null, null);
   }
@@ -487,14 +476,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * Gets the table name from the specified region name.
-   * @param regionName
-   * @return Table name.
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0. Use {@link #getTable(byte[])}.
+   * @param regionName to extract the table name from
+   * @return Table name
    */
-  @Deprecated
-  public static byte [] getTableName(byte[] regionName) {
+  public static TableName getTable(final byte [] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -504,19 +489,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
     byte[] buff  = new byte[offset];
     System.arraycopy(regionName, 0, buff, 0, offset);
-    return buff;
-  }
-
-
-  /**
-   * Gets the table name from the specified region name.
-   * Like {@link #getTableName(byte[])} only returns a {@link TableName} rather than a byte array.
-   * @param regionName
-   * @return Table name
-   * @see #getTableName(byte[])
-   */
-  public static TableName getTable(final byte [] regionName) {
-    return TableName.valueOf(getTableName(regionName));
+    return TableName.valueOf(buff);
   }
 
   /**
@@ -657,24 +630,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * Get current table name of the region
-   * @return byte array of table name
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0. Use {@link #getTable()}.
-   */
-  @Deprecated
-  public byte [] getTableName() {
-    return getTable().toBytes();
-  }
-
-  /**
-   * Get current table name of the region
    * @return TableName
-   * @see #getTableName()
    */
   public TableName getTable() {
     // This method name should be getTableName but there was already a method getTableName
-    // that returned a byte array.  It is unfortunate given everwhere else, getTableName returns
+    // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
     // a TableName instance.
     if (tableName == null || tableName.getName().length == 0) {
       tableName = getTable(getRegionName());
@@ -1052,7 +1012,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Get the end key for display. Optionally hide the real end key. 
+   * Get the end key for display. Optionally hide the real end key.
    * @param hri
    * @param conf
    * @return the endkey
@@ -1064,7 +1024,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Get the start key for display. Optionally hide the real start key. 
+   * Get the start key for display. Optionally hide the real start key.
    * @param hri
    * @param conf
    * @return the startkey
@@ -1123,7 +1083,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         modifiedName[lengthSoFar - 1] = ENC_SEPARATOR;
         System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar,
             encodedRegionName.length);
-        lengthSoFar += encodedRegionName.length; 
+        lengthSoFar += encodedRegionName.length;
         modifiedName[lengthSoFar] = ENC_SEPARATOR;
         return modifiedName;
       } catch (IOException e) {

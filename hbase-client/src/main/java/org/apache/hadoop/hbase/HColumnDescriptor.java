@@ -285,16 +285,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   private int cachedMaxVersions = UNINITIALIZED;
 
   /**
-   * Default constructor.
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-5453">HBASE-5453</a>).
-   *             This will be made private in HBase 2.0.0.
-   *             Used by Writables and Writables are going away.
+   * Default constructor. Must be present for PB deserializations.
    */
-  @Deprecated
-  // Make this private rather than remove after deprecation period elapses.  Its needed by pb
-  // deserializations.
-  public HColumnDescriptor() {
+  private HColumnDescriptor() {
     this.name = null;
   }
 
@@ -317,10 +310,20 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * letter -- and may not contain a <code>:</code>
    */
   public HColumnDescriptor(final byte [] familyName) {
-    this (familyName == null || familyName.length <= 0?
-      HConstants.EMPTY_BYTE_ARRAY: familyName, DEFAULT_VERSIONS,
-      DEFAULT_COMPRESSION, DEFAULT_IN_MEMORY, DEFAULT_BLOCKCACHE,
-      DEFAULT_TTL, DEFAULT_BLOOMFILTER);
+    isLegalFamilyName(familyName);
+    this.name = familyName;
+
+    setMaxVersions(DEFAULT_VERSIONS);
+    setMinVersions(DEFAULT_MIN_VERSIONS);
+    setKeepDeletedCells(DEFAULT_KEEP_DELETED);
+    setInMemory(DEFAULT_IN_MEMORY);
+    setBlockCacheEnabled(DEFAULT_BLOCKCACHE);
+    setTimeToLive(DEFAULT_TTL);
+    setCompressionType(Compression.Algorithm.valueOf(DEFAULT_COMPRESSION.toUpperCase()));
+    setDataBlockEncoding(DataBlockEncoding.valueOf(DEFAULT_DATA_BLOCK_ENCODING.toUpperCase()));
+    setBloomFilterType(BloomType.valueOf(DEFAULT_BLOOMFILTER.toUpperCase()));
+    setBlocksize(DEFAULT_BLOCKSIZE);
+    setScope(DEFAULT_REPLICATION_SCOPE);
   }
 
   /**
@@ -340,148 +343,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
       this.configuration.put(e.getKey(), e.getValue());
     }
     setMaxVersions(desc.getMaxVersions());
-  }
-
-  /**
-   * Constructor
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
-   * @param maxVersions Maximum number of versions to keep
-   * @param compression Compression type
-   * @param inMemory If true, column data should be kept in an HRegionServer's
-   * cache
-   * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param timeToLive Time-to-live of cell contents, in seconds
-   * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Bloom filter type for this column
-   *
-   * @throws IllegalArgumentException if passed a family name that is made of
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
-   * a <code>:</code>
-   * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #HColumnDescriptor(String)} and setters.
-   */
-  @Deprecated
-  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
-      final String compression, final boolean inMemory,
-      final boolean blockCacheEnabled,
-      final int timeToLive, final String bloomFilter) {
-    this(familyName, maxVersions, compression, inMemory, blockCacheEnabled,
-      DEFAULT_BLOCKSIZE, timeToLive, bloomFilter, DEFAULT_REPLICATION_SCOPE);
-  }
-
-  /**
-   * Constructor
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
-   * @param maxVersions Maximum number of versions to keep
-   * @param compression Compression type
-   * @param inMemory If true, column data should be kept in an HRegionServer's
-   * cache
-   * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param blocksize Block size to use when writing out storefiles.  Use
-   * smaller block sizes for faster random-access at expense of larger indices
-   * (more memory consumption).  Default is usually 64k.
-   * @param timeToLive Time-to-live of cell contents, in seconds
-   * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Bloom filter type for this column
-   * @param scope The scope tag for this column
-   *
-   * @throws IllegalArgumentException if passed a family name that is made of
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
-   * a <code>:</code>
-   * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #HColumnDescriptor(String)} and setters.
-   */
-  @Deprecated
-  public HColumnDescriptor(final byte [] familyName, final int maxVersions,
-      final String compression, final boolean inMemory,
-      final boolean blockCacheEnabled, final int blocksize,
-      final int timeToLive, final String bloomFilter, final int scope) {
-    this(familyName, DEFAULT_MIN_VERSIONS, maxVersions, DEFAULT_KEEP_DELETED,
-        compression, DEFAULT_ENCODE_ON_DISK, DEFAULT_DATA_BLOCK_ENCODING,
-        inMemory, blockCacheEnabled, blocksize, timeToLive, bloomFilter,
-        scope);
-  }
-
-  /**
-   * Constructor
-   * @param familyName Column family name. Must be 'printable' -- digit or
-   * letter -- and may not contain a <code>:</code>
-   * @param minVersions Minimum number of versions to keep
-   * @param maxVersions Maximum number of versions to keep
-   * @param keepDeletedCells Whether to retain deleted cells until they expire
-   *        up to maxVersions versions.
-   * @param compression Compression type
-   * @param encodeOnDisk whether to use the specified data block encoding
-   *        on disk. If false, the encoding will be used in cache only.
-   * @param dataBlockEncoding data block encoding
-   * @param inMemory If true, column data should be kept in an HRegionServer's
-   * cache
-   * @param blockCacheEnabled If true, MapFile blocks should be cached
-   * @param blocksize Block size to use when writing out storefiles.  Use
-   * smaller blocksizes for faster random-access at expense of larger indices
-   * (more memory consumption).  Default is usually 64k.
-   * @param timeToLive Time-to-live of cell contents, in seconds
-   * (use HConstants.FOREVER for unlimited TTL)
-   * @param bloomFilter Bloom filter type for this column
-   * @param scope The scope tag for this column
-   *
-   * @throws IllegalArgumentException if passed a family name that is made of
-   * other than 'word' characters: i.e. <code>[a-zA-Z_0-9]</code> or contains
-   * a <code>:</code>
-   * @throws IllegalArgumentException if the number of versions is &lt;= 0
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-">HBASE-</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #HColumnDescriptor(String)} and setters.
-   */
-  @Deprecated
-  public HColumnDescriptor(final byte[] familyName, final int minVersions,
-      final int maxVersions, final KeepDeletedCells keepDeletedCells,
-      final String compression, final boolean encodeOnDisk,
-      final String dataBlockEncoding, final boolean inMemory,
-      final boolean blockCacheEnabled, final int blocksize,
-      final int timeToLive, final String bloomFilter, final int scope) {
-    isLegalFamilyName(familyName);
-    this.name = familyName;
-
-    if (maxVersions <= 0) {
-      // TODO: Allow maxVersion of 0 to be the way you say "Keep all versions".
-      // Until there is support, consider 0 or < 0 -- a configuration error.
-      throw new IllegalArgumentException("Maximum versions must be positive");
-    }
-
-    if (minVersions > 0) {
-      if (timeToLive == HConstants.FOREVER) {
-        throw new IllegalArgumentException("Minimum versions requires TTL.");
-      }
-      if (minVersions >= maxVersions) {
-        throw new IllegalArgumentException("Minimum versions must be < "
-            + "maximum versions.");
-      }
-    }
-
-    setMaxVersions(maxVersions);
-    setMinVersions(minVersions);
-    setKeepDeletedCells(keepDeletedCells);
-    setInMemory(inMemory);
-    setBlockCacheEnabled(blockCacheEnabled);
-    setTimeToLive(timeToLive);
-    setCompressionType(Compression.Algorithm.
-      valueOf(compression.toUpperCase()));
-    setDataBlockEncoding(DataBlockEncoding.
-        valueOf(dataBlockEncoding.toUpperCase()));
-    setBloomFilterType(BloomType.
-      valueOf(bloomFilter.toUpperCase()));
-    setBlocksize(blocksize);
-    setScope(scope);
   }
 
   /**
@@ -684,30 +545,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   }
 
   /**
-   * @return data block encoding algorithm used on disk
-   * @deprecated As of release 0.98
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9870">HBASE-9870</a>).
-   *             This will be removed in HBase 2.0.0. See {@link #getDataBlockEncoding()}}
-   */
-  @Deprecated
-  public DataBlockEncoding getDataBlockEncodingOnDisk() {
-    return getDataBlockEncoding();
-  }
-
-  /**
-   * This method does nothing now. Flag ENCODE_ON_DISK is not used
-   * any more. Data blocks have the same encoding in cache as on disk.
-   * @return this (for chained invocation)
-   * @deprecated As of release 0.98
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9870">HBASE-9870</a>).
-   *             This will be removed in HBase 2.0.0. This method does nothing now.
-   */
-  @Deprecated
-  public HColumnDescriptor setEncodeOnDisk(boolean encodeOnDisk) {
-    return this;
-  }
-
-  /**
    * @return the data block encoding algorithm used in block cache and
    *         optionally on disk
    */
@@ -743,23 +580,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public HColumnDescriptor setCompressTags(boolean compressTags) {
     return setValue(COMPRESS_TAGS, String.valueOf(compressTags));
-  }
-
-  /**
-   * @return Whether KV tags should be compressed along with DataBlockEncoding. When no
-   *         DataBlockEncoding is been used, this is having no effect.
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0. Use {@link #isCompressTags()} instead.
-   */
-  @Deprecated
-  public boolean shouldCompressTags() {
-    String compressTagsStr = getValue(COMPRESS_TAGS);
-    boolean compressTags = DEFAULT_COMPRESS_TAGS;
-    if (compressTagsStr != null) {
-      compressTags = Boolean.parseBoolean(compressTagsStr);
-    }
-    return compressTags;
   }
 
   /**
@@ -823,21 +643,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
       return KeepDeletedCells.valueOf(value.toUpperCase());
     }
     return DEFAULT_KEEP_DELETED;
-  }
-
-  /**
-   * @param keepDeletedCells True if deleted rows should not be collected
-   * immediately.
-   * @return this (for chained invocation)
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-12363">HBASE-12363</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #setKeepDeletedCells(KeepDeletedCells)}.
-   */
-  @Deprecated
-  public HColumnDescriptor setKeepDeletedCells(boolean keepDeletedCells) {
-    return setValue(KEEP_DELETED_CELLS, (keepDeletedCells ? KeepDeletedCells.TRUE
-        : KeepDeletedCells.FALSE).toString());
   }
 
   /**
@@ -943,17 +748,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache data blocks on write
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0. Use {@link #isCacheDataOnWrite()}} instead.
-   */
-  @Deprecated
-  public boolean shouldCacheDataOnWrite() {
-    return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
-  }
-
-  /**
-   * @return true if we should cache data blocks on write
    */
   public boolean isCacheDataOnWrite() {
     return setAndGetBoolean(CACHE_DATA_ON_WRITE, DEFAULT_CACHE_DATA_ON_WRITE);
@@ -965,18 +759,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public HColumnDescriptor setCacheDataOnWrite(boolean value) {
     return setValue(CACHE_DATA_ON_WRITE, Boolean.toString(value));
-  }
-
-  /**
-   * @return true if we should cache data blocks in the L1 cache (if block cache deploy
-   * has more than one tier; e.g. we are using CombinedBlockCache).
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0. Use {@link #isCacheDataInL1()}} instead.
-   */
-  @Deprecated
-  public boolean shouldCacheDataInL1() {
-    return setAndGetBoolean(CACHE_DATA_IN_L1, DEFAULT_CACHE_DATA_IN_L1);
   }
 
   /**
@@ -1006,18 +788,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
 
   /**
    * @return true if we should cache index blocks on write
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #isCacheIndexesOnWrite()} instead.
-   */
-  @Deprecated
-  public boolean shouldCacheIndexesOnWrite() {
-    return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
-  }
-
-  /**
-   * @return true if we should cache index blocks on write
    */
   public boolean isCacheIndexesOnWrite() {
     return setAndGetBoolean(CACHE_INDEX_ON_WRITE, DEFAULT_CACHE_INDEX_ON_WRITE);
@@ -1029,18 +799,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public HColumnDescriptor setCacheIndexesOnWrite(boolean value) {
     return setValue(CACHE_INDEX_ON_WRITE, Boolean.toString(value));
-  }
-
-  /**
-   * @return true if we should cache bloomfilter blocks on write
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #isCacheBloomsOnWrite()}} instead.
-   */
-  @Deprecated
-  public boolean shouldCacheBloomsOnWrite() {
-    return setAndGetBoolean(CACHE_BLOOMS_ON_WRITE, DEFAULT_CACHE_BLOOMS_ON_WRITE);
   }
 
   /**
@@ -1059,19 +817,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   }
 
   /**
-   * @return true if we should evict cached blocks from the blockcache on
-   * close
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #isEvictBlocksOnClose()}} instead.
-   */
-  @Deprecated
-  public boolean shouldEvictBlocksOnClose() {
-    return setAndGetBoolean(EVICT_BLOCKS_ON_CLOSE, DEFAULT_EVICT_BLOCKS_ON_CLOSE);
-  }
-
-  /**
    * @return true if we should evict cached blocks from the blockcache on close
    */
   public boolean isEvictBlocksOnClose() {
@@ -1085,18 +830,6 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public HColumnDescriptor setEvictBlocksOnClose(boolean value) {
     return setValue(EVICT_BLOCKS_ON_CLOSE, Boolean.toString(value));
-  }
-
-  /**
-   * @return true if we should prefetch blocks into the blockcache on open
-   * @deprecated As of release 1.0.0
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-10870">HBASE-10870</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link #isPrefetchBlocksOnOpen()}}} instead.
-   */
-  @Deprecated
-  public boolean shouldPrefetchBlocksOnOpen() {
-    return setAndGetBoolean(PREFETCH_BLOCKS_ON_OPEN, DEFAULT_PREFETCH_BLOCKS_ON_OPEN);
   }
 
   /**

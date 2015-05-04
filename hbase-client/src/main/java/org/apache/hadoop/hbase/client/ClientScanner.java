@@ -163,17 +163,6 @@ public class ClientScanner extends AbstractClientScanner {
       return this.connection;
     }
 
-    /**
-     * @return Table name
-     * @deprecated As of release 0.96
-     *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-     *             This will be removed in HBase 2.0.0. Use {@link #getTable()}.
-     */
-    @Deprecated
-    protected byte [] getTableName() {
-      return this.tableName.getName();
-    }
-
     protected TableName getTable() {
       return this.tableName;
     }
@@ -341,7 +330,7 @@ public class ClientScanner extends AbstractClientScanner {
      *
      * By default, scan metrics are disabled; if the application wants to collect them, this
      * behavior can be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
-     * 
+     *
      * <p>This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
      */
     protected void writeScanMetrics() {

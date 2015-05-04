@@ -46,7 +46,7 @@ implements Writable, Comparable<TableSplit> {
   /** @deprecated LOG variable would be made private. */
   @Deprecated
   public static final Log LOG = LogFactory.getLog(TableSplit.class);
-  
+
   // should be < 0 (@see #readFields(DataInput))
   // version 1 supports Scan data member
   enum Version {
@@ -77,7 +77,7 @@ implements Writable, Comparable<TableSplit> {
       return byCode[code * -1];
     }
   }
-  
+
   private static final Version VERSION = Version.INITIAL;
   private TableName tableName;
   private byte [] startRow;
@@ -90,18 +90,6 @@ implements Writable, Comparable<TableSplit> {
   public TableSplit() {
     this((TableName)null, null, HConstants.EMPTY_BYTE_ARRAY,
       HConstants.EMPTY_BYTE_ARRAY, "");
-  }
-
-  /**
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}.
-   */
-  @Deprecated
-  public TableSplit(final byte [] tableName, Scan scan, byte [] startRow, byte [] endRow,
-      final String location) {
-    this(TableName.valueOf(tableName), scan, startRow, endRow, location);
   }
 
   /**
@@ -141,18 +129,6 @@ implements Writable, Comparable<TableSplit> {
     this.endRow = endRow;
     this.regionLocation = location;
     this.length = length;
-  }
-
-  /**
-   * @deprecated As of release 0.96
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-9508">HBASE-9508</a>).
-   *             This will be removed in HBase 2.0.0.
-   *             Use {@link TableSplit#TableSplit(TableName, byte[], byte[], String)}.
-   */
-  @Deprecated
-  public TableSplit(final byte [] tableName, byte[] startRow, byte[] endRow,
-      final String location) {
-    this(TableName.valueOf(tableName), startRow, endRow, location);
   }
 
   /**

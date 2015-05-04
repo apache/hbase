@@ -1272,16 +1272,6 @@ public class TestAdmin1 {
     }
   }
 
-  /**
-   * HADOOP-2156
-   * @throws IOException
-   */
-  @SuppressWarnings("deprecation")
-  @Test (expected=IllegalArgumentException.class, timeout=300000)
-  public void testEmptyHTableDescriptor() throws IOException {
-    this.admin.createTable(new HTableDescriptor());
-  }
-
   @Test (expected=IllegalArgumentException.class, timeout=300000)
   public void testInvalidHColumnDescriptor() throws IOException {
      new HColumnDescriptor("/cfamily/name");

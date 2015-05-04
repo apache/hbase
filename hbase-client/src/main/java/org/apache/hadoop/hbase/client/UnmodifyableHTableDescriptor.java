@@ -30,7 +30,12 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class UnmodifyableHTableDescriptor extends HTableDescriptor {
-  /** Default constructor */
+  /**
+   * Default constructor.
+   * @deprecated  As of release 2.0.0. This will be removed in HBase 3.0.0.
+   *              Use {@link #UnmodifyableHTableDescriptor(HTableDescriptor)}.
+   */
+  @Deprecated
   public UnmodifyableHTableDescriptor() {
     super();
   }

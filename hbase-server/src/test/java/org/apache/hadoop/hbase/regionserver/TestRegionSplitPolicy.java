@@ -150,7 +150,7 @@ public class TestRegionSplitPolicy {
    */
   @Test
   public void testCustomPolicy() throws IOException {
-    HTableDescriptor myHtd = new HTableDescriptor();
+    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf("foobar"));
     myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
         KeyPrefixRegionSplitPolicy.class.getName());
     myHtd.setValue(KeyPrefixRegionSplitPolicy.PREFIX_LENGTH_KEY, String.valueOf(2));
@@ -259,7 +259,7 @@ public class TestRegionSplitPolicy {
 
   @Test
   public void testDelimitedKeyPrefixRegionSplitPolicy() throws IOException {
-    HTableDescriptor myHtd = new HTableDescriptor();
+    HTableDescriptor myHtd = new HTableDescriptor(TableName.valueOf("foobar"));
     myHtd.setValue(HTableDescriptor.SPLIT_POLICY,
         DelimitedKeyPrefixRegionSplitPolicy.class.getName());
     myHtd.setValue(DelimitedKeyPrefixRegionSplitPolicy.DELIMITER_KEY, ",");

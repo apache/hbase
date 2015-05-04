@@ -245,7 +245,7 @@ public class TestWALFactory {
     try {
       HRegionInfo info = new HRegionInfo(tableName,
                   null,null, false);
-      HTableDescriptor htd = new HTableDescriptor();
+      HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(tableName.getName()));
       final WAL wal = wals.getWAL(info.getEncodedNameAsBytes());
 
@@ -366,7 +366,7 @@ public class TestWALFactory {
     final AtomicLong sequenceId = new AtomicLong(1);
     final int total = 20;
 
-    HTableDescriptor htd = new HTableDescriptor();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor(tableName.getName()));
 
     for (int i = 0; i < total; i++) {
@@ -599,7 +599,7 @@ public class TestWALFactory {
     final DumbWALActionsListener visitor = new DumbWALActionsListener();
     final AtomicLong sequenceId = new AtomicLong(1);
     long timestamp = System.currentTimeMillis();
-    HTableDescriptor htd = new HTableDescriptor();
+    HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("column"));
 
     HRegionInfo hri = new HRegionInfo(tableName,
