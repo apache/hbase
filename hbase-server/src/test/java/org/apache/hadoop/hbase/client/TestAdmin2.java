@@ -738,4 +738,27 @@ public class TestAdmin2 {
       ct.stop();
     }
   }
+
+  @Test(timeout = 30000)
+  public void testBalancer() throws Exception {
+    boolean initialState = admin.isBalancerEnabled();
+
+    // Start the balancer, wait for it.
+    boolean prevState = admin.setBalancerRunning(!initialState, true);
+
+    // The previous state should be the original state we observed
+    assertEquals(initialState, prevState);
+
+    // Current state should be opposite of the original
+    assertEquals(!initialState, admin.isBalancerEnabled());
+
+    // Reset it back to what it was
+    prevState = admin.setBalancerRunning(initialState, true);
+
+    // The previous state should be the opposite of the initial state
+    assertEquals(!initialState, prevState);
+    // Current state should be the original state again
+    assertEquals(initialState, admin.isBalancerEnabled());
+  }
+
 }

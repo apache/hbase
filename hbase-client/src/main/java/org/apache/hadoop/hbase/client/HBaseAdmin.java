@@ -1853,6 +1853,23 @@ public class HBaseAdmin implements Abortable, Closeable {
   }
 
   /**
+   * Query the state of the balancer from the Master. It's not a guarantee that the balancer is
+   * actually running this very moment, but that it will run.
+   *
+   * @return True if the balancer is enabled, false otherwise.
+   */
+  public boolean isBalancerEnabled()
+      throws ServiceException, MasterNotRunningException {
+    MasterKeepAliveConnection stub = connection.getKeepAliveMasterService();
+    try {
+      return stub.isBalancerEnabled(null, RequestConverter.buildIsBalancerEnabledRequest())
+        .getEnabled();
+    } finally {
+      stub.close();
+    }
+  }
+
+  /**
    * Enable/Disable the catalog janitor
    * @param enable if true enables the catalog janitor
    * @return the previous state

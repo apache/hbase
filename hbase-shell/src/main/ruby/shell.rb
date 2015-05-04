@@ -309,6 +309,7 @@ Shell.load_command_group(
     assign
     balancer
     balance_switch
+    balancer_enabled
     close_region
     compact
     flush

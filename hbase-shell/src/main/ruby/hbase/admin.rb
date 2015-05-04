@@ -109,6 +109,13 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Query the current state of the LoadBalancer.
+    # Returns the balancer's state (true is enabled).
+    def balancer_enabled?()
+      @admin.isBalancerEnabled()
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Request a scan of the catalog table (for garbage collection)
     # Returns an int signifying the number of entries cleaned
     def catalogjanitor_run()

@@ -19,15 +19,12 @@
 package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -121,7 +118,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescripti
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -162,6 +158,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableNamesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
@@ -204,10 +202,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
-import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
@@ -3505,6 +3499,35 @@ MasterServices, Server {
       throw new ServiceException(e);
     }
     return TruncateTableResponse.newBuilder().build();
+  }
+
+  @Override
+  public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
+      IsBalancerEnabledRequest request) throws ServiceException {
+    IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
+    response.setEnabled(isBalancerOn());
+    return response.build();
+  }
+
+  /**
+   * Queries the state of the {@link LoadBalancerTracker}. If the balancer is not initialized,
+   * false is returned.
+   *
+   * @return The state of the load balancer, or false if the load balancer isn't defined.
+   */
+  public boolean isBalancerOn() {
+    if (null == loadBalancerTracker) return false;
+    return loadBalancerTracker.isBalancerOn();
+  }
+
+  /**
+   * Fetch the configured {@link LoadBalancer} class name. If none is set, a default is returned.
+   *
+   * @return The name of the {@link LoadBalancer} in use.
+   */
+  public String getLoadBalancerClassName() {
+    return conf.get(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, LoadBalancerFactory
+      .getDefaultLoadBalancerClass().getName());
   }
 
 }
