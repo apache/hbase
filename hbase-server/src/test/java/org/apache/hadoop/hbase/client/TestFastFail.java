@@ -62,7 +62,7 @@ public class TestFastFail {
   private static final Random random = new Random();
   private static int SLAVES = 3;
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
-  private static final int SLEEPTIME = 1000;
+  private static final int SLEEPTIME = 5000;
 
   /**
    * @throws java.lang.Exception
@@ -138,7 +138,7 @@ public class TestFastFail {
      * The number of threads that are going to perform actions against the test
      * table.
      */
-    int nThreads = 200;
+    int nThreads = 100;
     ExecutorService service = Executors.newFixedThreadPool(nThreads);
     final CountDownLatch continueOtherHalf = new CountDownLatch(1);
     final CountDownLatch doneHalfway = new CountDownLatch(nThreads);
@@ -161,8 +161,7 @@ public class TestFastFail {
          */
         public Boolean call() throws Exception {
           try (Table table = connection.getTable(TableName.valueOf(tableName))) {
-            Thread.sleep(Math.abs(random.nextInt()) % 100); // Add some jitter
-                                                            // here
+            Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
             byte[] row = longToByteArrayKey(Math.abs(random.nextLong())
                 % numRows);
             Get g = new Get(row);
