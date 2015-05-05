@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -170,7 +171,7 @@ public class TestHFileBlock {
 
     // sort it and write to stream
     int totalSize = 0;
-    Collections.sort(keyValues, KeyValue.COMPARATOR);
+    Collections.sort(keyValues, CellComparator.COMPARATOR);
 
     for (KeyValue kv : keyValues) {
       totalSize += kv.getLength();

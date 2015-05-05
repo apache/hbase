@@ -27,10 +27,10 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
@@ -59,7 +59,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   int NO_PRIORITY = Integer.MIN_VALUE;
 
   // General Accessors
-  KeyValue.KVComparator getComparator();
+  CellComparator getComparator();
 
   Collection<StoreFile> getStorefiles();
 

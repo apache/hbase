@@ -38,9 +38,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -146,13 +146,13 @@ public class TestHFileWriterV2 {
     
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
     // Comparator class name is stored in the trailer in version 2.
-    KVComparator comparator = trailer.createComparator();
+    CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
         new HFileBlockIndex.BlockIndexReader(comparator,
             trailer.getNumDataIndexLevels());
     HFileBlockIndex.BlockIndexReader metaBlockIndexReader =
         new HFileBlockIndex.BlockIndexReader(
-            KeyValue.RAW_COMPARATOR, 1);
+            null, 1);
 
     HFileBlock.BlockIterator blockIter = blockReader.blockRange(
         trailer.getLoadOnOpenDataOffset(),

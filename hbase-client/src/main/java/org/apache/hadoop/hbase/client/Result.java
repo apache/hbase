@@ -31,6 +31,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -204,14 +205,14 @@ public class Result implements CellScannable, CellScanner {
    * Return the array of Cells backing this Result instance.
    *
    * The array is sorted from smallest -> largest using the
-   * {@link KeyValue#COMPARATOR}.
+   * {@link CellComparator#COMPARATOR}.
    *
    * The array only contains what your Get or Scan specifies and no more.
    * For example if you request column "A" 1 version you will have at most 1
    * Cell in the array. If you request column "A" with 2 version you will
    * have at most 2 Cells, with the first one being the newer timestamp and
    * the second being the older timestamp (this is the sort order defined by
-   * {@link KeyValue#COMPARATOR}).  If columns don't exist, they won't be
+   * {@link CellComparator#COMPARATOR}).  If columns don't exist, they won't be
    * present in the result. Therefore if you ask for 1 version all columns,
    * it is safe to iterate over this array and expect to see 1 Cell for
    * each column and no more.
@@ -237,7 +238,7 @@ public class Result implements CellScannable, CellScanner {
 
   /**
    * Return the Cells for the specific column.  The Cells are sorted in
-   * the {@link KeyValue#COMPARATOR} order.  That implies the first entry in
+   * the {@link CellComparator#COMPARATOR} order.  That implies the first entry in
    * the list is the most recent column.  If the query (Scan or Get) only
    * requested 1 version the list will contain at most 1 entry.  If the column
    * did not exist in the result set (either the column does not exist
@@ -282,7 +283,7 @@ public class Result implements CellScannable, CellScanner {
             family, qualifier);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, KeyValue.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.COMPARATOR);
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;
@@ -327,7 +328,7 @@ public class Result implements CellScannable, CellScanner {
         qualifier, qoffset, qlength);
 
     // pos === ( -(insertion point) - 1)
-    int pos = Arrays.binarySearch(kvs, searchTerm, KeyValue.COMPARATOR);
+    int pos = Arrays.binarySearch(kvs, searchTerm, CellComparator.COMPARATOR);
     // never will exact match
     if (pos < 0) {
       pos = (pos+1) * -1;

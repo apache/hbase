@@ -33,9 +33,11 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -97,7 +99,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private int avgValueLen = -1;
 
   /** Key comparator */
-  private KVComparator comparator = new KVComparator();
+  private CellComparator comparator = CellComparator.COMPARATOR;
 
   /** Size of this file. */
   private final long fileSize;
@@ -190,7 +192,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
         trailer.getNumDataIndexLevels(), this);
     metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
-        KeyValue.RAW_COMPARATOR, 1);
+        null, 1);
 
     // Parse load-on-open data.
 
@@ -356,7 +358,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public byte[] getFirstRowKey() {
     byte[] firstKey = getFirstKey();
-    return firstKey == null? null: KeyValue.createKeyValueFromKey(firstKey).getRow();
+    return firstKey == null? null: KeyValueUtil.createKeyValueFromKey(firstKey).getRow();
   }
 
   /**
@@ -368,7 +370,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public byte[] getLastRowKey() {
     byte[] lastKey = getLastKey();
-    return lastKey == null? null: KeyValue.createKeyValueFromKey(lastKey).getRow();
+    return lastKey == null? null: KeyValueUtil.createKeyValueFromKey(lastKey).getRow();
   }
 
   /** @return number of KV entries in this HFile */
@@ -379,7 +381,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   /** @return comparator */
   @Override
-  public KVComparator getComparator() {
+  public CellComparator getComparator() {
     return comparator;
   }
 
@@ -633,7 +635,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         int keyOffset =
           blockBuffer.arrayOffset() + blockBuffer.position() + (Bytes.SIZEOF_INT * 2);
         keyOnlyKv.setKey(blockBuffer.array(), keyOffset, klen);
-        int comp = reader.getComparator().compareOnlyKeyPortion(key, keyOnlyKv);
+        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, keyOnlyKv);
 
         if (comp == 0) {
           if (seekBefore) {
@@ -706,7 +708,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           // The comparison with no_next_index_key has to be checked
           if (this.nextIndexedKey != null &&
               (this.nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY || reader
-              .getComparator().compareOnlyKeyPortion(key, nextIndexedKey) < 0)) {
+              .getComparator().compareKeyIgnoresMvcc(key, nextIndexedKey) < 0)) {
             // The reader shall continue to scan the current data block instead
             // of querying the
             // block index as long as it knows the target key is strictly
@@ -758,7 +760,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
 
       if (reader.getComparator()
-          .compareOnlyKeyPortion(
+          .compareKeyIgnoresMvcc(
               new KeyValue.KeyOnlyKeyValue(firstKey.array(), firstKey.arrayOffset(),
                   firstKey.limit()), key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
@@ -850,9 +852,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               + KEY_VALUE_LEN_SIZE, currKeyLen).slice();
     }
 
-    public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
-      return comparator.compareFlatKey(key, offset, length, blockBuffer.array(),
-          blockBuffer.arrayOffset() + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
+    public int compareKey(CellComparator comparator, byte[] key, int offset, int length) {
+      // TODO HFileScannerImpl, instance will be used by single thread alone. So we can
+      // have one KeyValue.KeyOnlyKeyValue instance as instance variable and reuse here and in
+      // compareKey(CellComparator comparator, Cell key), seekBefore(Cell key) and
+      // blockSeek(Cell key, boolean seekBefore)
+      KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue(key, offset, length);
+      return comparator.compare(keyOnlyKv, blockBuffer.array(), blockBuffer.arrayOffset()
+          + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
     }
 
     @Override
@@ -1064,8 +1071,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           currValueLen);
     }
 
-    public int compareKey(KVComparator comparator, Cell key) {
-      return comparator.compareOnlyKeyPortion(
+    public int compareKey(CellComparator comparator, Cell key) {
+      return comparator.compareKeyIgnoresMvcc(
           key,
           new KeyValue.KeyOnlyKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
               + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen));
@@ -1516,10 +1523,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return seeker.getKeyDeepCopy();
     }
 
-    public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
-      return seeker.compareKey(comparator, key, offset, length);
-    }
-
     @Override
     public ByteBuffer getValue() {
       assertValidSeek();
@@ -1569,7 +1572,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       return seeker.seekToKeyInBlock(key, seekBefore);
     }
 
-    public int compareKey(KVComparator comparator, Cell key) {
+    public int compareKey(CellComparator comparator, Cell key) {
       return seeker.compareKey(comparator, key);
     }
   }

@@ -29,6 +29,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -112,13 +113,13 @@ public class TestCellCodec {
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());
     Cell c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv1));
+    assertTrue(CellUtil.equals(c, kv1));
     assertTrue(decoder.advance());
     c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv2));
+    assertTrue(CellUtil.equals(c, kv2));
     assertTrue(decoder.advance());
     c = decoder.current();
-    assertTrue(CellComparator.equals(c, kv3));
+    assertTrue(CellUtil.equals(c, kv3));
     assertFalse(decoder.advance());
     dis.close();
     assertEquals(offset, cis.getCount());

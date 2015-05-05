@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.row;
 
 import java.util.List;
 
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
@@ -37,7 +37,7 @@ public abstract class BaseTestRowData implements TestRowData {
     for (int i = 1; i < inputs.size(); ++i) {
       KeyValue lastKv = inputs.get(i - 1);
       KeyValue kv = inputs.get(i);
-      if (!CellComparator.equalsRow(lastKv, kv)) {
+      if (!CellUtil.matchingRow(lastKv, kv)) {
         rowStartIndexes.add(i);
       }
     }

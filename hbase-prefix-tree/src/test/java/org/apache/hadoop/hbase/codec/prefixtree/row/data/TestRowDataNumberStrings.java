@@ -50,7 +50,7 @@ public class TestRowDataNumberStrings extends BaseTestRowData{
 
       d.add(new KeyValue(row, family, column, 0L, Type.Put, value));
     }
-    Collections.sort(d, new CellComparator());
+    Collections.sort(d, CellComparator.COMPARATOR);
   }
 
   @Override

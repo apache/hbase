@@ -24,7 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 
 public class HFileWriterFactory extends HFile.WriterFactory {
   HFileWriterFactory(Configuration conf, CacheConfig cacheConf) {
@@ -33,7 +33,7 @@ public class HFileWriterFactory extends HFile.WriterFactory {
 
   @Override
   public HFile.Writer createWriter(FileSystem fs, Path path, FSDataOutputStream ostream,
-      KVComparator comparator, HFileContext context)
+      CellComparator comparator, HFileContext context)
   throws IOException {
     return new HFileWriterImpl(conf, cacheConf, path, ostream, comparator, context);
   }

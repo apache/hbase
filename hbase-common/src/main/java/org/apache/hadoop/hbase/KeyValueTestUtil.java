@@ -85,7 +85,7 @@ public class KeyValueTestUtil {
     for (Cell kv1 : kvCollection1) {
       boolean found = false;
       for (Cell kv2 : kvCollection2) {
-        if (CellComparator.equalsIgnoreMvccVersion(kv1, kv2)) found = true;
+        if (CellUtil.equalsIgnoreMvccVersion(kv1, kv2)) found = true;
       }
       if (!found) return false;
     }

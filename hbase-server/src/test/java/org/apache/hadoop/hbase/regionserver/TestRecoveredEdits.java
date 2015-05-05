@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -154,14 +155,15 @@ public class TestRecoveredEdits {
         Cell previous = null;
         for (Cell cell: val.getCells()) {
           if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
-          if (previous != null && CellComparator.compareRows(previous, cell) == 0) continue;
+          if (previous != null && CellComparator.COMPARATOR.compareRows(previous, cell) == 0)
+            continue;
           previous = cell;
           Get g = new Get(CellUtil.cloneRow(cell));
           Result r = region.get(g);
           boolean found = false;
           for (CellScanner scanner = r.cellScanner(); scanner.advance();) {
             Cell current = scanner.current();
-            if (CellComparator.compare(cell, current, true) == 0) {
+            if (CellComparator.COMPARATOR.compareKeyIgnoresMvcc(cell, current) == 0) {
               found = true;
               break;
             }

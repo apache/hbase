@@ -139,7 +139,7 @@ public class CompressionTest {
       scanner.seekTo(); // position to the start of file
       // Scanner does not do Cells yet. Do below for now till fixed.
       cc = scanner.getKeyValue();
-      if (CellComparator.compareRows(c, cc) != 0) {
+      if (CellComparator.COMPARATOR.compareRows(c, cc) != 0) {
         throw new Exception("Read back incorrect result: " + c.toString() + " vs " + cc.toString());
       }
     } finally {

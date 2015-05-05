@@ -95,17 +95,23 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
   /**
    * Comparator for plain key/values; i.e. non-catalog table key/values. Works on Key portion
    * of KeyValue only.
+   * @deprecated Use {@link CellComparator#COMPARATOR} instead
    */
+  @Deprecated
   public static final KVComparator COMPARATOR = new KVComparator();
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
+   * @deprecated Use {@link CellComparator#META_COMPARATOR} instead
    */
+  @Deprecated
   public static final KVComparator META_COMPARATOR = new MetaComparator();
 
   /**
    * Needed for Bloom Filters.
+   *    * @deprecated Use {@link Bytes#BYTES_RAWCOMPARATOR} instead
    */
+  @Deprecated
   public static final KVComparator RAW_COMPARATOR = new RawBytesComparator();
 
   /** Size of the key length field in bytes*/
@@ -1061,7 +1067,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     if (!(other instanceof Cell)) {
       return false;
     }
-    return CellComparator.equals(this, (Cell)other);
+    return CellUtil.equals(this, (Cell)other);
   }
 
   /**
@@ -1069,7 +1075,23 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    */
   @Override
   public int hashCode() {
-    return CellComparator.hashCodeIgnoreMvcc(this);
+    return calculateHashForKey(this);
+  }
+
+  private int calculateHashForKey(Cell cell) {
+    // pre-calculate the 3 hashes made of byte ranges
+    int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    int familyHash = Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength());
+    int qualifierHash = Bytes.hashCode(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength());
+
+    // combine the 6 sub-hashes
+    int hash = 31 * rowHash + familyHash;
+    hash = 31 * hash + qualifierHash;
+    hash = 31 * hash + (int) cell.getTimestamp();
+    hash = 31 * hash + cell.getTypeByte();
+    return hash;
   }
 
   //---------------------------------------------------------------------------
@@ -1714,7 +1736,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
   /**
    * A {@link KVComparator} for <code>hbase:meta</code> catalog table
    * {@link KeyValue}s.
+   * @deprecated : {@link CellComparator#META_COMPARATOR} to be used
    */
+  @Deprecated
   public static class MetaComparator extends KVComparator {
     /**
      * Compare key portion of a {@link KeyValue} for keys in <code>hbase:meta</code>
@@ -1722,11 +1746,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      int c = compareRowKey(left, right);
-      if (c != 0) {
-        return c;
-      }
-      return CellComparator.compareWithoutRow(left, right);
+      return CellComparator.META_COMPARATOR.compareKeyIgnoresMvcc(left, right);
     }
 
     @Override
@@ -1831,7 +1851,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * Compare KeyValues.  When we compare KeyValues, we only compare the Key
    * portion.  This means two KeyValues with same Key but different Values are
    * considered the same as far as this Comparator is concerned.
+   * @deprecated : Use {@link CellComparator}.
    */
+  @Deprecated
   public static class KVComparator implements RawComparator<Cell>, SamePrefixComparator<byte[]> {
 
     /**
@@ -1857,7 +1879,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @return 0 if equal, <0 if left smaller, >0 if right smaller
      */
     protected int compareRowKey(final Cell left, final Cell right) {
-      return CellComparator.compareRows(left, right);
+      return CellComparator.COMPARATOR.compareRows(left, right);
     }
 
     /**
@@ -1946,7 +1968,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
     }
 
     public int compareOnlyKeyPortion(Cell left, Cell right) {
-      return CellComparator.compare(left, right, true);
+      return CellComparator.COMPARATOR.compareKeyIgnoresMvcc(left, right);
     }
 
     /**
@@ -1955,7 +1977,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      */
     @Override
     public int compare(final Cell left, final Cell right) {
-      int compare = CellComparator.compare(left, right, false);
+      int compare = CellComparator.COMPARATOR.compare(left, right);
       return compare;
     }
 
@@ -2269,8 +2291,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
      * @param leftKey
      * @param rightKey
      * @return 0 if equal, <0 if left smaller, >0 if right smaller
-     * @deprecated Since 0.99.2; Use
-     *             {@link CellComparator#getMidpoint(KeyValue.KVComparator, Cell, Cell) instead}
+     * @deprecated Since 0.99.2;
      */
     @Deprecated
     public byte[] getShortMidpointKey(final byte[] leftKey, final byte[] rightKey) {
@@ -2556,8 +2577,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
   }
 
   /**
-   * This is a TEST only Comparator used in TestSeekTo and TestReseekTo.
+   * @deprecated  Not to be used for any comparsions
    */
+  @Deprecated
   public static class RawBytesComparator extends KVComparator {
     /**
      * The HFileV2 file format's trailer contains this class name.  We reinterpret this and

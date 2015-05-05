@@ -23,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
@@ -394,7 +394,7 @@ public interface Region extends ConfigurationObserver {
   RegionScanner getScanner(Scan scan) throws IOException;
 
   /** The comparator to be used with the region */
-  KVComparator getCellCompartor();
+  CellComparator getCellCompartor();
 
   /**
    * Perform one or more increment operations on a row.

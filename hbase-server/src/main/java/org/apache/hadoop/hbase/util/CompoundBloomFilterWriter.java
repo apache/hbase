@@ -28,7 +28,7 @@ import java.util.Queue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.InlineBlockWriter;
@@ -89,7 +89,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
    */
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate,
       int hashType, int maxFold, boolean cacheOnWrite,
-      KVComparator comparator) {
+      CellComparator comparator) {
     chunkByteSize = ByteBloomFilter.computeFoldableByteSize(
         chunkByteSizeHint * 8L, maxFold);
 

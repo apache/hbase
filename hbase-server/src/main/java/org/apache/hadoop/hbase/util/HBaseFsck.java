@@ -85,6 +85,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -860,9 +861,9 @@ public class HBaseFsck extends Configured implements Closeable {
           CacheConfig cacheConf = new CacheConfig(getConf());
           hf = HFile.createReader(fs, hfile.getPath(), cacheConf, getConf());
           hf.loadFileInfo();
-          KeyValue startKv = KeyValue.createKeyValueFromKey(hf.getFirstKey());
+          KeyValue startKv = KeyValueUtil.createKeyValueFromKey(hf.getFirstKey());
           start = startKv.getRow();
-          KeyValue endKv = KeyValue.createKeyValueFromKey(hf.getLastKey());
+          KeyValue endKv = KeyValueUtil.createKeyValueFromKey(hf.getLastKey());
           end = endKv.getRow();
         } catch (IOException ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");

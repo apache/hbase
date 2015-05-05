@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
@@ -538,7 +538,7 @@ public class StoreFile {
     private final CacheConfig cacheConf;
     private final FileSystem fs;
 
-    private KeyValue.KVComparator comparator = KeyValue.COMPARATOR;
+    private CellComparator comparator = CellComparator.COMPARATOR;
     private BloomType bloomType = BloomType.NONE;
     private long maxKeyCount = 0;
     private Path dir;
@@ -585,7 +585,7 @@ public class StoreFile {
       return this;
     }
 
-    public WriterBuilder withComparator(KeyValue.KVComparator comparator) {
+    public WriterBuilder withComparator(CellComparator comparator) {
       Preconditions.checkNotNull(comparator);
       this.comparator = comparator;
       return this;
@@ -637,7 +637,7 @@ public class StoreFile {
       }
 
       if (comparator == null) {
-        comparator = KeyValue.COMPARATOR;
+        comparator = CellComparator.COMPARATOR;
       }
       return new Writer(fs, filePath,
           conf, cacheConf, comparator, bloomType, maxKeyCount, favoredNodes, fileContext);
@@ -670,7 +670,7 @@ public class StoreFile {
    * @return The split point row, or null if splitting is not possible, or reader is null.
    */
   @SuppressWarnings("deprecation")
-  byte[] getFileSplitPoint(KVComparator comparator) throws IOException {
+  byte[] getFileSplitPoint(CellComparator comparator) throws IOException {
     if (this.reader == null) {
       LOG.warn("Storefile " + this + " Reader is null; cannot get split point");
       return null;
@@ -680,11 +680,11 @@ public class StoreFile {
     // the row we want to split on as midkey.
     byte [] midkey = this.reader.midkey();
     if (midkey != null) {
-      KeyValue mk = KeyValue.createKeyValueFromKey(midkey, 0, midkey.length);
+      KeyValue mk = KeyValueUtil.createKeyValueFromKey(midkey, 0, midkey.length);
       byte [] fk = this.reader.getFirstKey();
-      KeyValue firstKey = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
+      KeyValue firstKey = KeyValueUtil.createKeyValueFromKey(fk, 0, fk.length);
       byte [] lk = this.reader.getLastKey();
-      KeyValue lastKey = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
+      KeyValue lastKey = KeyValueUtil.createKeyValueFromKey(lk, 0, lk.length);
       // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
       if (comparator.compareRows(mk, firstKey) == 0 || comparator.compareRows(mk, lastKey) == 0) {
         if (LOG.isDebugEnabled()) {
@@ -707,7 +707,7 @@ public class StoreFile {
     private final BloomType bloomType;
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
-    private KVComparator kvComparator;
+    private CellComparator kvComparator;
     private Cell lastCell = null;
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     private Cell lastDeleteFamilyCell = null;
@@ -726,6 +726,7 @@ public class StoreFile {
     boolean isTimeRangeTrackerSet = false;
 
     protected HFile.Writer writer;
+    private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
 
     /**
      * Creates an HFile.Writer that also write helpful meta data.
@@ -743,7 +744,7 @@ public class StoreFile {
     private Writer(FileSystem fs, Path path,
         final Configuration conf,
         CacheConfig cacheConf,
-        final KVComparator comparator, BloomType bloomType, long maxKeys,
+        final CellComparator comparator, BloomType bloomType, long maxKeys,
         InetSocketAddress[] favoredNodes, HFileContext fileContext)
             throws IOException {
       writer = HFile.getWriterFactory(conf, cacheConf)
@@ -761,6 +762,9 @@ public class StoreFile {
 
       if (generalBloomFilterWriter != null) {
         this.bloomType = bloomType;
+        if(this.bloomType ==  BloomType.ROWCOL) {
+          lastBloomKeyOnlyKV = new KeyValue.KeyOnlyKeyValue();
+        }
         if (LOG.isTraceEnabled()) LOG.trace("Bloom filter type for " + path + ": " +
           this.bloomType + ", " + generalBloomFilterWriter.getClass().getSimpleName());
       } else {
@@ -838,10 +842,10 @@ public class StoreFile {
         if (this.lastCell != null) {
           switch(bloomType) {
           case ROW:
-            newKey = ! kvComparator.matchingRows(cell, lastCell);
+            newKey = ! CellUtil.matchingRows(cell, lastCell);
             break;
           case ROWCOL:
-            newKey = ! kvComparator.matchingRowColumn(cell, lastCell);
+            newKey = ! CellUtil.matchingRowColumn(cell, lastCell);
             break;
           case NONE:
             newKey = false;
@@ -885,17 +889,17 @@ public class StoreFile {
           }
           generalBloomFilterWriter.add(bloomKey, bloomKeyOffset, bloomKeyLen);
           if (lastBloomKey != null) {
-            int res = 0;
+            boolean res = false;
             // hbase:meta does not have blooms. So we need not have special interpretation
             // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
             if (bloomType == BloomType.ROW) {
               res = Bytes.BYTES_RAWCOMPARATOR.compare(bloomKey, bloomKeyOffset, bloomKeyLen,
-                  lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen);
+                  lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen) <= 0;
             } else {
-              res = KeyValue.COMPARATOR.compareFlatKey(bloomKey,
-                  bloomKeyOffset, bloomKeyLen, lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen);
+              res = (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, bloomKey,
+                                     bloomKeyOffset, bloomKeyLen) >= 0);
             }
-            if (res <= 0) {
+            if (res) {
               throw new IOException("Non-increasing Bloom keys: "
                   + Bytes.toStringBinary(bloomKey, bloomKeyOffset, bloomKeyLen) + " after "
                   + Bytes.toStringBinary(lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen));
@@ -904,6 +908,9 @@ public class StoreFile {
           lastBloomKey = bloomKey;
           lastBloomKeyOffset = bloomKeyOffset;
           lastBloomKeyLen = bloomKeyLen;
+          if (bloomType == BloomType.ROWCOL) {
+            lastBloomKeyOnlyKV.setKey(bloomKey, bloomKeyOffset, bloomKeyLen);
+          }
           this.lastCell = cell;
         }
       }
@@ -922,7 +929,7 @@ public class StoreFile {
         if (lastDeleteFamilyCell != null) {
           // hbase:meta does not have blooms. So we need not have special interpretation
           // of the hbase:meta cells
-          newKey = !kvComparator.matchingRows(cell, lastDeleteFamilyCell);
+          newKey = !CellUtil.matchingRows(cell, lastDeleteFamilyCell);
         }
         if (newKey) {
           this.deleteFamilyBloomFilterWriter.add(cell.getRowArray(),
@@ -1039,6 +1046,7 @@ public class StoreFile {
     private byte[] lastBloomKey;
     private long deleteFamilyCnt = -1;
     private boolean bulkLoadResult = false;
+    private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
         throws IOException {
@@ -1059,7 +1067,7 @@ public class StoreFile {
       this.reader = null;
     }
 
-    public KVComparator getComparator() {
+    public CellComparator getComparator() {
       return reader.getComparator();
     }
 
@@ -1296,7 +1304,9 @@ public class StoreFile {
             if (bloomFilterType == BloomType.ROW) {
               keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
             } else {
-              keyIsAfterLast = (KeyValue.COMPARATOR.compareFlatKey(key, lastBloomKey)) > 0;
+              // TODO : Convert key to Cell so that we could use compare(Cell, Cell)
+              keyIsAfterLast = (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, key, 0,
+                                   key.length)) < 0;
             }
           }
 
@@ -1307,10 +1317,11 @@ public class StoreFile {
             // required looking only for a row bloom.
             byte[] rowBloomKey = bloomFilter.createBloomKey(row, rowOffset, rowLen,
                 null, 0, 0);
-
+            // hbase:meta does not have blooms. So we need not have special interpretation
+            // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
             if (keyIsAfterLast
-                && KeyValue.COMPARATOR.compareFlatKey(rowBloomKey,
-                    lastBloomKey) > 0) {
+                && (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, rowBloomKey, 0,
+                    rowBloomKey.length)) < 0) {
               exists = false;
             } else {
               exists =
@@ -1357,12 +1368,16 @@ public class StoreFile {
       KeyValue largestScanKeyValue = scan.isReversed() ? KeyValueUtil
           .createLastOnRow(scan.getStartRow()) : KeyValueUtil.createLastOnRow(scan
           .getStopRow());
-      boolean nonOverLapping = (getComparator().compareFlatKey(
-          this.getFirstKey(), largestScanKeyValue.getKey()) > 0 && !Bytes
+      // TODO this is in hot path? Optimize and avoid 2 extra object creations.
+      KeyValue.KeyOnlyKeyValue firstKeyKV = 
+          new KeyValue.KeyOnlyKeyValue(this.getFirstKey(), 0, this.getFirstKey().length);
+      KeyValue.KeyOnlyKeyValue lastKeyKV = 
+          new KeyValue.KeyOnlyKeyValue(this.getLastKey(), 0, this.getLastKey().length);
+      boolean nonOverLapping = ((getComparator().compare(firstKeyKV, largestScanKeyValue)) > 0
+          && !Bytes
           .equals(scan.isReversed() ? scan.getStartRow() : scan.getStopRow(),
               HConstants.EMPTY_END_ROW))
-          || getComparator().compareFlatKey(this.getLastKey(),
-              smallestScanKeyValue.getKey()) < 0;
+          || (getComparator().compare(lastKeyKV, smallestScanKeyValue)) < 0;
       return !nonOverLapping;
     }
 
@@ -1375,6 +1390,9 @@ public class StoreFile {
       }
 
       lastBloomKey = fi.get(LAST_BLOOM_KEY);
+      if(bloomFilterType == BloomType.ROWCOL) {
+        lastBloomKeyOnlyKV = new KeyValue.KeyOnlyKeyValue(lastBloomKey, 0, lastBloomKey.length);
+      }
       byte[] cnt = fi.get(DELETE_FAMILY_COUNT);
       if (cnt != null) {
         deleteFamilyCnt = Bytes.toLong(cnt);

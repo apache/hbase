@@ -591,8 +591,7 @@ public class HRegionFileSystem {
           if (lastKey == null) {
             return null;
           }
-          if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
-            splitKey.getKeyOffset(), splitKey.getKeyLength(), lastKey, 0, lastKey.length) > 0) {
+          if (f.getReader().getComparator().compare(splitKey, lastKey, 0, lastKey.length) > 0) {
             return null;
           }
         } else {
@@ -603,8 +602,7 @@ public class HRegionFileSystem {
           if (firstKey == null) {
             return null;
           }
-          if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
-            splitKey.getKeyOffset(), splitKey.getKeyLength(), firstKey, 0, firstKey.length) < 0) {
+          if (f.getReader().getComparator().compare(splitKey, firstKey, 0, firstKey.length) < 0) {
             return null;
           }
         }

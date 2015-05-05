@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -248,7 +249,7 @@ public class HFileOutputFormat2
                                     
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs)
             .withOutputDir(familydir).withBloomType(bloomType)
-            .withComparator(KeyValue.COMPARATOR)
+            .withComparator(CellComparator.COMPARATOR)
             .withFileContext(hFileContext).build();
 
         this.writers.put(family, wl);

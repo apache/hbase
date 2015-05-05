@@ -25,10 +25,9 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.MetaComparator;
-import org.apache.hadoop.hbase.KeyValue.RawBytesComparator;
+import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.DecoderFactory;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
@@ -58,7 +57,7 @@ import org.apache.hadoop.io.WritableUtils;
  * created and recycled by static PtEncoderFactory and PtDecoderFactory.
  */
 @InterfaceAudience.Private
-public class PrefixTreeCodec implements DataBlockEncoder{
+public class PrefixTreeCodec implements DataBlockEncoder {
 
   /**
    * no-arg constructor for reflection
@@ -150,12 +149,11 @@ public class PrefixTreeCodec implements DataBlockEncoder{
    * the way to this point.
    */
   @Override
-  public EncodedSeeker createSeeker(KVComparator comparator, HFileBlockDecodingContext decodingCtx) {
-    if (comparator instanceof RawBytesComparator){
-      throw new IllegalArgumentException("comparator must be KeyValue.KeyComparator");
-    } else if (comparator instanceof MetaComparator){
-      throw new IllegalArgumentException("DataBlockEncoding.PREFIX_TREE not compatible with hbase:meta "
-          +"table");
+  public EncodedSeeker createSeeker(CellComparator comparator,
+      HFileBlockDecodingContext decodingCtx) {
+    if (comparator instanceof MetaCellComparator) {
+      throw new IllegalArgumentException(
+          "DataBlockEncoding.PREFIX_TREE not compatible with hbase:meta " + "table");
     }
 
     return new PrefixTreeSeeker(decodingCtx.getHFileContext().isIncludesMvcc());

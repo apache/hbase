@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -387,7 +388,7 @@ public class TestOperation {
     Assert.assertEquals(1984L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(VALUE, CellUtil.cloneValue(c.get(0)));
     Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ROW);
     p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
@@ -396,7 +397,7 @@ public class TestOperation {
     Assert.assertEquals(2013L, c.get(0).getTimestamp());
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
     Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW));
     p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
@@ -406,7 +407,7 @@ public class TestOperation {
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
     Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
     Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
-    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW), 1970L);
     p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
@@ -416,7 +417,7 @@ public class TestOperation {
     Assert.assertArrayEquals(new byte[]{}, CellUtil.cloneValue(c.get(0)));
     Assert.assertArrayEquals(ROW, CellUtil.cloneRow(c.get(0)));
     Assert.assertEquals(1970L, p.getTimeStamp());
-    Assert.assertEquals(0, KeyValue.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
+    Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
   }
 
   @Test

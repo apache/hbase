@@ -185,7 +185,7 @@ public class WALEdit implements Writable, HeapSize {
         if (compressionContext != null) {
           this.add(KeyValueCompression.readKV(in, compressionContext));
         } else {
-          this.add(KeyValue.create(in));
+          this.add(KeyValueUtil.create(in));
         }
       }
       int numFamilies = in.readInt();
@@ -202,7 +202,7 @@ public class WALEdit implements Writable, HeapSize {
     } else {
       // this is an old style WAL entry. The int that we just
       // read is actually the length of a single KeyValue
-      this.add(KeyValue.create(versionOrLength, in));
+      this.add(KeyValueUtil.create(versionOrLength, in));
     }
   }
 
@@ -218,7 +218,7 @@ public class WALEdit implements Writable, HeapSize {
       if (compressionContext != null) {
         KeyValueCompression.writeKV(out, kv, compressionContext);
       } else{
-        KeyValue.write(kv, out);
+        KeyValueUtil.write(kv, out);
       }
     }
     if (scopes == null) {

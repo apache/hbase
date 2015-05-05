@@ -53,7 +53,7 @@ public interface BloomFilter extends BloomFilterBase {
    *        is supported.
    * @return true if matched by bloom, false if not
    */
-  boolean contains(byte [] buf, int offset, int length, ByteBuffer bloom);
+  boolean contains(byte[] buf, int offset, int length, ByteBuffer bloom);
 
   /**
    * @return true if this Bloom filter can automatically load its data

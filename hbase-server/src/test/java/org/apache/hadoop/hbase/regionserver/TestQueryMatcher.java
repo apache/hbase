@@ -27,11 +27,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -64,7 +64,7 @@ public class TestQueryMatcher extends HBaseTestCase {
   private Get get;
 
   long ttl = Long.MAX_VALUE;
-  KVComparator rowComparator;
+  CellComparator rowComparator;
   private Scan scan;
 
   @Before
@@ -91,7 +91,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     get.addColumn(fam2, col5);
     this.scan = new Scan(get);
 
-    rowComparator = KeyValue.COMPARATOR;
+    rowComparator = CellComparator.COMPARATOR;
 
   }
 

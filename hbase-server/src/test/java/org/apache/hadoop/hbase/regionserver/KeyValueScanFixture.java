@@ -19,12 +19,12 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
-import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.apache.hadoop.hbase.KeyValue;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 
 /**
  * A fixture that implements and presents a KeyValueScanner.
@@ -33,7 +33,7 @@ import java.util.List;
  * to be a store file scanner.
  */
 public class KeyValueScanFixture extends CollectionBackedScanner {
-  public KeyValueScanFixture(KeyValue.KVComparator comparator,
+  public KeyValueScanFixture(CellComparator comparator,
                              KeyValue... incData) {
     super(comparator, incData);
   }
@@ -41,7 +41,7 @@ public class KeyValueScanFixture extends CollectionBackedScanner {
   public static List<KeyValueScanner> scanFixture(KeyValue[] ... kvArrays) {
     ArrayList<KeyValueScanner> scanners = new ArrayList<KeyValueScanner>();
     for (KeyValue [] kvs : kvArrays) {
-      scanners.add(new KeyValueScanFixture(KeyValue.COMPARATOR, kvs));
+      scanners.add(new KeyValueScanFixture(CellComparator.COMPARATOR, kvs));
     }
     return scanners;
   }

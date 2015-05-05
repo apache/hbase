@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -284,7 +285,7 @@ public class RedundantKVGenerator {
       }
     }
 
-    Collections.sort(result, KeyValue.COMPARATOR);
+    Collections.sort(result, CellComparator.COMPARATOR);
 
     return result;
   }

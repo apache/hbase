@@ -42,6 +42,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -135,7 +137,7 @@ public class TestHFileSeek extends TestCase {
       Writer writer = HFile.getWriterFactoryNoCache(conf)
           .withOutputStream(fout)
           .withFileContext(context)
-          .withComparator(new KeyValue.RawBytesComparator())
+          .withComparator(CellComparator.COMPARATOR)
           .create();
       try {
         BytesWritable key = new BytesWritable();
@@ -195,7 +197,7 @@ public class TestHFileSeek extends TestCase {
       kSampler.next(key);
       byte [] k = new byte [key.getLength()];
       System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
-      if (scanner.seekTo(KeyValue.createKeyValueFromKey(k)) >= 0) {
+      if (scanner.seekTo(KeyValueUtil.createKeyValueFromKey(k)) >= 0) {
         ByteBuffer bbkey = scanner.getKey();
         ByteBuffer bbval = scanner.getValue();
         totalBytes += bbkey.limit();

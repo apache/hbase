@@ -36,8 +36,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -141,7 +144,7 @@ public class TestCompoundBloomFilter {
     List<KeyValue> kvList = new ArrayList<KeyValue>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(TestHFileWriterV2.randomKeyValue(rand));
-    Collections.sort(kvList, KeyValue.COMPARATOR);
+    Collections.sort(kvList, CellComparator.COMPARATOR);
     return kvList;
   }
 
@@ -315,8 +318,8 @@ public class TestCompoundBloomFilter {
       // Validate the key count in the Bloom filter.
       boolean newKey = true;
       if (prev != null) {
-        newKey = !(bt == BloomType.ROW ? KeyValue.COMPARATOR.matchingRows(kv,
-            prev) : KeyValue.COMPARATOR.matchingRowColumn(kv, prev));
+        newKey = !(bt == BloomType.ROW ? CellUtil.matchingRows(kv,
+            prev) : CellUtil.matchingRowColumn(kv, prev));
       }
       if (newKey)
         ++keyCount;
@@ -354,8 +357,8 @@ public class TestCompoundBloomFilter {
         row, 0, 0);
     byte[] rowColKey = cbfb.createBloomKey(row, 0, row.length,
         qualifier, 0, qualifier.length);
-    KeyValue rowKV = KeyValue.createKeyValueFromKey(rowKey);
-    KeyValue rowColKV = KeyValue.createKeyValueFromKey(rowColKey);
+    KeyValue rowKV = KeyValueUtil.createKeyValueFromKey(rowKey);
+    KeyValue rowColKV = KeyValueUtil.createKeyValueFromKey(rowColKey);
     assertEquals(rowKV.getTimestamp(), rowColKV.getTimestamp());
     assertEquals(Bytes.toStringBinary(rowKV.getRow()),
         Bytes.toStringBinary(rowColKV.getRow()));

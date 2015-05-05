@@ -76,6 +76,7 @@ import org.apache.hadoop.io.Writable;
  *      Space/Time Trade-Offs in Hash Coding with Allowable Errors</a>
  */
 @InterfaceAudience.Private
+// TODO : Remove this ByteBloomFilter as an instance of BloomFilter
 public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
 
   /** Current file format version */
@@ -399,8 +400,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
   }
 
   @Override
-  public boolean contains(byte[] buf, int offset, int length,
-      ByteBuffer theBloom) {
+  public boolean contains(byte[] buf, int offset, int length, ByteBuffer theBloom) {
     if (theBloom == null) {
       // In a version 1 HFile Bloom filter data is stored in a separate meta
       // block which is loaded on demand, but in version 2 it is pre-loaded.
@@ -505,7 +505,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
       int newMaxKeys = this.maxKeys;
 
       // while exponentially smaller & folding is lossless
-      while ( (newByteSize & 1) == 0 && newMaxKeys > (this.keyCount<<1) ) {
+      while ((newByteSize & 1) == 0 && newMaxKeys > (this.keyCount<<1) ) {
         pieces <<= 1;
         newByteSize >>= 1;
         newMaxKeys >>= 1;

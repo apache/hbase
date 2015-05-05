@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -83,7 +84,6 @@ import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
@@ -5199,7 +5199,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     private long readPt;
     private long maxResultSize;
     protected HRegion region;
-    protected KVComparator comparator;
+    protected CellComparator comparator;
 
     @Override
     public HRegionInfo getRegionInfo() {
@@ -5716,6 +5716,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected boolean isStopRow(byte[] currentRow, int offset, short length) {
       return currentRow == null ||
           (stopRow != null &&
+          // TODO : currentRow can be tracked as cell rather than byte[]
           comparator.compareRows(stopRow, 0, stopRow.length,
             currentRow, offset, length) <= isScan);
     }
@@ -7833,7 +7834,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   @Override
-  public KVComparator getCellCompartor() {
-    return this.getRegionInfo().isMetaRegion() ? KeyValue.META_COMPARATOR : KeyValue.COMPARATOR;
+  public CellComparator getCellCompartor() {
+    return this.getRegionInfo().isMetaRegion() ? CellComparator.META_COMPARATOR
+        : CellComparator.COMPARATOR;
   }
 }

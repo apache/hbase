@@ -81,20 +81,19 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     if (hash == null) {
       throw new IllegalArgumentException("Invalid hash type: " + hashType);
     }
-
+    // We will pass null for ROW block
     index = new HFileBlockIndex.BlockIndexReader(comparator, 1);
     index.readRootIndex(meta, numChunks);
   }
 
   @Override
-  public boolean contains(byte[] key, int keyOffset, int keyLength,
-      ByteBuffer bloom) {
+  public boolean contains(byte[] key, int keyOffset, int keyLength, ByteBuffer bloom) {
     // We try to store the result in this variable so we can update stats for
     // testing, but when an error happens, we log a message and return.
     boolean result;
 
     int block = index.rootBlockContainingKey(key, keyOffset,
-        keyLength);
+        keyLength, comparator);
     if (block < 0) {
       result = false; // This key is not in the file.
     } else {

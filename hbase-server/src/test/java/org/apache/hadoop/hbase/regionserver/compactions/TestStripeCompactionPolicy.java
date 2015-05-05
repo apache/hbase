@@ -46,6 +46,7 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -575,7 +576,7 @@ public class TestStripeCompactionPolicy {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeStoreFlusher.StripeFlushRequest req = policy.selectFlush(si, input.length);
     StripeMultiFileWriter mw = req.createWriter();
-    mw.init(null, writers, new KeyValue.KVComparator());
+    mw.init(null, writers, CellComparator.COMPARATOR);
     for (KeyValue kv : input) {
       mw.append(kv);
     }

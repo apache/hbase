@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
@@ -78,7 +79,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       "row10\t1\tc1\tc2\n";
 
   protected static final Set<KeyValue> simple_expected =
-      new TreeSet<KeyValue>(KeyValue.COMPARATOR) {
+      new TreeSet<KeyValue>(CellComparator.COMPARATOR) {
     private static final long serialVersionUID = 1L;
     {
       byte[] family = Bytes.toBytes("d");
@@ -157,7 +158,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
           assertTrue(
             format("Scan produced surprising result. expected: <%s>, actual: %s",
               expected, actual),
-            KeyValue.COMPARATOR.compare(expected, actual) == 0);
+            CellComparator.COMPARATOR.compare(expected, actual) == 0);
         }
       }
       assertFalse("Did not consume all expected values.", expectedIt.hasNext());

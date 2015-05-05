@@ -25,6 +25,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Put;
@@ -58,7 +59,7 @@ public class PutSortReducer extends
         "putsortreducer.row.threshold", 1L * (1<<30));
     Iterator<Put> iter = puts.iterator();
     while (iter.hasNext()) {
-      TreeSet<KeyValue> map = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+      TreeSet<KeyValue> map = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
       long curSize = 0;
       // stop at the end or the RAM threshold
       while (iter.hasNext() && curSize < threshold) {

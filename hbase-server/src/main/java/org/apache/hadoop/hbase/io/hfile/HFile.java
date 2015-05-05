@@ -37,6 +37,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -48,9 +49,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -61,7 +61,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -252,7 +251,8 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected KVComparator comparator = KeyValue.COMPARATOR;
+    protected CellComparator comparator = 
+        CellComparator.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
 
@@ -275,7 +275,7 @@ public class HFile {
       return this;
     }
 
-    public WriterFactory withComparator(KVComparator comparator) {
+    public WriterFactory withComparator(CellComparator comparator) {
       Preconditions.checkNotNull(comparator);
       this.comparator = comparator;
       return this;
@@ -305,7 +305,7 @@ public class HFile {
     }
 
     protected abstract Writer createWriter(FileSystem fs, Path path, FSDataOutputStream ostream,
-        KVComparator comparator, HFileContext fileContext) throws IOException;
+        CellComparator comparator, HFileContext fileContext) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -388,7 +388,7 @@ public class HFile {
      */
     String getName();
 
-    KVComparator getComparator();
+    CellComparator getComparator();
 
     HFileScanner getScanner(boolean cacheBlocks, final boolean pread, final boolean isCompaction);
 

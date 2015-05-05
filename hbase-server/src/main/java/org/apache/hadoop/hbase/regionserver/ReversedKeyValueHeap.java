@@ -24,8 +24,8 @@ import java.util.List;
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * ReversedKeyValueHeap is used for supporting reversed scanning. Compared with
@@ -43,7 +43,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
    * @throws IOException
    */
   public ReversedKeyValueHeap(List<? extends KeyValueScanner> scanners,
-      KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     super(scanners, new ReversedKVScannerComparator(comparator));
   }
 
@@ -77,9 +77,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
     KeyValueScanner scanner;
     while ((scanner = heap.poll()) != null) {
       Cell topKey = scanner.peek();
-      if (comparator.getComparator().compareRows(topKey.getRowArray(),
-          topKey.getRowOffset(), topKey.getRowLength(), seekKey.getRowArray(),
-          seekKey.getRowOffset(), seekKey.getRowLength()) < 0) {
+      if (comparator.getComparator().compareRows(topKey, seekKey) < 0) {
         // Row of Top KeyValue is before Seek row.
         heap.add(scanner);
         current = pollRealKV();
@@ -162,7 +160,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
      * Constructor
      * @param kvComparator
      */
-    public ReversedKVScannerComparator(KVComparator kvComparator) {
+    public ReversedKVScannerComparator(CellComparator kvComparator) {
       super(kvComparator);
     }
 

@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class CellSkipListSet implements NavigableSet<Cell> {
   private final ConcurrentNavigableMap<Cell, Cell> delegatee;
 
-  CellSkipListSet(final KeyValue.KVComparator c) {
+  CellSkipListSet(final CellComparator c) {
     this.delegatee = new ConcurrentSkipListMap<Cell, Cell>(c);
   }
 

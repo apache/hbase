@@ -69,12 +69,12 @@ public class TestSerialization {
     KeyValue kv = new KeyValue(row, fam, qf, ts, val);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
-    long l = KeyValue.write(kv, dos);
+    long l = KeyValueUtil.write(kv, dos);
     dos.close();
     byte [] mb = baos.toByteArray();
     ByteArrayInputStream bais = new ByteArrayInputStream(mb);
     DataInputStream dis = new DataInputStream(bais);
-    KeyValue deserializedKv = KeyValue.create(dis);
+    KeyValue deserializedKv = KeyValueUtil.create(dis);
     assertTrue(Bytes.equals(kv.getBuffer(), deserializedKv.getBuffer()));
     assertEquals(kv.getOffset(), deserializedKv.getOffset());
     assertEquals(kv.getLength(), deserializedKv.getLength());
@@ -104,7 +104,7 @@ public class TestSerialization {
     DataInputStream dis = new DataInputStream(bais);
 
     try {
-      KeyValue.create(dis);
+      KeyValueUtil.create(dis);
       assertTrue(kv_0.equals(kv_1));
     } catch (Exception e) {
       fail("Unexpected Exception" + e.getMessage());
@@ -113,7 +113,7 @@ public class TestSerialization {
     // length -1
     try {
       // even if we have a good kv now in dis we will just pass length with -1 for simplicity
-      KeyValue.create(-1, dis);
+      KeyValueUtil.create(-1, dis);
       fail("Expected corrupt stream");
     } catch (Exception e) {
       assertEquals("Failed read -1 bytes, stream corrupt?", e.getMessage());

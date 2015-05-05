@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
@@ -2088,8 +2089,9 @@ public class Bytes implements Comparable<Bytes> {
    *         ranging from -(N + 1) to N - 1.
    */
   public static int binarySearch(byte[][] arr, byte[] key, int offset, int length) {
-    return binarySearch(arr, key, offset, length, Bytes.BYTES_RAWCOMPARATOR);
+    return binarySearch(arr, key, offset, length, (CellComparator) null);
   }
+
   /**
    * Binary search for keys in indexes.
    *
@@ -2109,18 +2111,41 @@ public class Bytes implements Comparable<Bytes> {
   @Deprecated
   public static int binarySearch(byte [][]arr, byte []key, int offset,
       int length, RawComparator<?> comparator) {
-    if(comparator == null) {
-      comparator = Bytes.BYTES_RAWCOMPARATOR;
-    }
+    return binarySearch(arr, key, offset, length, (CellComparator)null);
+  }
+
+  /**
+   * Binary search for keys in indexes.
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param offset the offset in the key you want to find
+   * @param length the length of the key
+   * @param comparator a comparator to compare.
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   */
+  public static int binarySearch(byte [][]arr, byte []key, int offset,
+      int length, CellComparator comparator) {
     int low = 0;
     int high = arr.length - 1;
 
+    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
+    r.setKey(key, offset, length);
     while (low <= high) {
       int mid = (low+high) >>> 1;
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
-      int cmp = comparator.compare(key, offset, length,
-          arr[mid], 0, arr[mid].length);
+      int cmp = 0;
+      if (comparator != null) {
+        cmp = comparator.compare(r, arr[mid], 0, arr[mid].length);
+      } else {
+        cmp = Bytes.BYTES_RAWCOMPARATOR.compare(key, offset, length, arr[mid], 0, arr[mid].length);
+      }
       // key lives above the midpoint
       if (cmp > 0)
         low = mid + 1;
@@ -2618,4 +2643,56 @@ public class Bytes implements Comparable<Bytes> {
     return b;
   }
 
+  /**
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter having started from start of <code>b</code> moving rightward.
+   */
+  public static int searchDelimiterIndex(final byte[] b, int offset, final int length,
+      final int delimiter) {
+    if (b == null) {
+      throw new IllegalArgumentException("Passed buffer is null");
+    }
+    int result = -1;
+    for (int i = offset; i < length + offset; i++) {
+      if (b[i] == delimiter) {
+        result = i;
+        break;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Find index of passed delimiter walking from end of buffer backwards.
+   * 
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter
+   */
+  public static int searchDelimiterIndexInReverse(final byte[] b, final int offset,
+      final int length, final int delimiter) {
+    if (b == null) {
+      throw new IllegalArgumentException("Passed buffer is null");
+    }
+    int result = -1;
+    for (int i = (offset + length) - 1; i >= offset; i--) {
+      if (b[i] == delimiter) {
+        result = i;
+        break;
+      }
+    }
+    return result;
+    }
+  
+    public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
+        int leftOffset, int rightOffset) {
+      int length = Math.min(leftLength, rightLength);
+      int result = 0;
+  
+      while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
+        result++;
+      }
+      return result;
+    }
 }

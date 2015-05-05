@@ -33,8 +33,8 @@ import java.util.Arrays;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
@@ -111,7 +111,7 @@ public class TestStripeStoreEngine {
 
   private static TestStoreEngine createEngine(Configuration conf) throws Exception {
     Store store = mock(Store.class);
-    KVComparator kvComparator = mock(KVComparator.class);
+    CellComparator kvComparator = mock(CellComparator.class);
     return (TestStoreEngine)StoreEngine.create(store, conf, kvComparator);
   }
 

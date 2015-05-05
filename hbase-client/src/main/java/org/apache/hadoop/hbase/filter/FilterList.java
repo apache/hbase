@@ -25,7 +25,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -216,7 +216,7 @@ final public class FilterList extends Filter {
 
   @Override
   public Cell transformCell(Cell c) throws IOException {
-    if (!CellComparator.equals(c, referenceCell)) {
+    if (!CellUtil.equals(c, referenceCell)) {
       throw new IllegalStateException("Reference Cell: " + this.referenceCell + " does not match: "
           + c);
     }
@@ -415,7 +415,7 @@ final public class FilterList extends Filter {
           keyHint = curKeyHint;
           continue;
         }
-        if (KeyValue.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
+        if (CellComparator.COMPARATOR.compare(keyHint, curKeyHint) > 0) {
           keyHint = curKeyHint;
         }
       }

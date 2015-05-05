@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -103,6 +103,7 @@ public final class BloomFilterFactory {
         // This is only possible in a version 1 HFile. We are ignoring the
         // passed comparator because raw byte comparators are always used
         // in version 1 Bloom filters.
+        // TODO:Remove this code - use only CompoundBloomFilter
         return new ByteBloomFilter(meta);
 
       case CompoundBloomFilterBase.VERSION:
@@ -199,7 +200,7 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        bloomType == BloomType.ROWCOL ? KeyValue.COMPARATOR : null);
+        bloomType == BloomType.ROWCOL ? CellComparator.COMPARATOR : null);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }

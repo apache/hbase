@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 
+import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -379,8 +380,10 @@ public final class CellUtil {
   }
 
   public static boolean matchingRow(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(), buf, 0,
-        buf.length);
+    if (buf == null) {
+      return left.getQualifierLength() == 0;
+    }
+    return matchingRow(left, buf, 0, buf.length);
   }
 
   public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
@@ -395,8 +398,10 @@ public final class CellUtil {
   }
 
   public static boolean matchingFamily(final Cell left, final byte[] buf) {
-    return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
-        0, buf.length);
+    if (buf == null) {
+      return left.getFamilyLength() == 0;
+    }
+    return matchingFamily(left, buf, 0, buf.length);
   }
 
   public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
@@ -411,14 +416,29 @@ public final class CellUtil {
         right.getQualifierLength());
   }
 
+  /**
+   * Finds if the qualifier part of the cell and the KV serialized
+   * byte[] are equal
+   * @param left
+   * @param buf the serialized keyvalue format byte[]
+   * @return true if the qualifier matches, false otherwise
+   */
   public static boolean matchingQualifier(final Cell left, final byte[] buf) {
     if (buf == null) {
       return left.getQualifierLength() == 0;
     }
-    return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
-        left.getQualifierLength(), buf, 0, buf.length);
+    return matchingQualifier(left, buf, 0, buf.length);
   }
 
+  /**
+   * Finds if the qualifier part of the cell and the KV serialized
+   * byte[] are equal
+   * @param left
+   * @param buf the serialized keyvalue format byte[]
+   * @param offset the offset of the qualifier in the byte[]
+   * @param length the length of the qualifier in the byte[]
+   * @return true if the qualifier matches, false otherwise
+   */
   public static boolean matchingQualifier(final Cell left, final byte[] buf, final int offset,
       final int length) {
     if (buf == null) {
@@ -901,5 +921,119 @@ public final class CellUtil {
     }
 
     return builder.toString();
+  }
+
+  /***************** special cases ****************************/
+
+  /**
+   * special case for Cell.equals
+   */
+  public static boolean equalsIgnoreMvccVersion(Cell a, Cell b) {
+    // row
+    boolean res = matchingRow(a, b);
+    if (!res)
+      return res;
+
+    // family
+    res = matchingColumn(a, b);
+    if (!res)
+      return res;
+
+    // timestamp: later sorts first
+    if (!matchingTimestamp(a, b))
+      return false;
+
+    // type
+    int c = (0xff & b.getTypeByte()) - (0xff & a.getTypeByte());
+    if (c != 0)
+      return false;
+    else return true;
+  }
+
+  /**************** equals ****************************/
+
+  public static boolean equals(Cell a, Cell b) {
+    return matchingRow(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
+        && matchingTimestamp(a, b) && matchingType(a, b);
+  }
+
+  public static boolean matchingTimestamp(Cell a, Cell b) {
+    return CellComparator.compareTimestamps(a.getTimestamp(), b.getTimestamp()) == 0;
+  }
+
+  public static boolean matchingType(Cell a, Cell b) {
+    return a.getTypeByte() == b.getTypeByte();
+  }
+
+  /**
+   * Compares the row of two keyvalues for equality
+   * 
+   * @param left
+   * @param right
+   * @return True if rows match.
+   */
+  public static boolean matchingRows(final Cell left, final Cell right) {
+    short lrowlength = left.getRowLength();
+    short rrowlength = right.getRowLength();
+    return matchingRows(left, lrowlength, right, rrowlength);
+  }
+
+  /**
+   * @param left
+   * @param lrowlength
+   * @param right
+   * @param rrowlength
+   * @return True if rows match.
+   */
+  private static boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
+      final short rrowlength) {
+    return lrowlength == rrowlength
+        && matchingRows(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
+            right.getRowOffset(), rrowlength);
+  }
+
+  /**
+   * Compare rows. Just calls Bytes.equals, but it's good to have this
+   * encapsulated.
+   * 
+   * @param left
+   *          Left row array.
+   * @param loffset
+   *          Left row offset.
+   * @param llength
+   *          Left row length.
+   * @param right
+   *          Right row array.
+   * @param roffset
+   *          Right row offset.
+   * @param rlength
+   *          Right row length.
+   * @return Whether rows are the same row.
+   */
+  private static boolean matchingRows(final byte[] left, final int loffset, final int llength,
+      final byte[] right, final int roffset, final int rlength) {
+    return Bytes.equals(left, loffset, llength, right, roffset, rlength);
+  }
+
+  /**
+   * Compares the row and column of two keyvalues for equality
+   * 
+   * @param left
+   * @param right
+   * @return True if same row and column.
+   */
+  public static boolean matchingRowColumn(final Cell left, final Cell right) {
+    short lrowlength = left.getRowLength();
+    short rrowlength = right.getRowLength();
+
+    if ((lrowlength + left.getFamilyLength() + left.getQualifierLength()) != (rrowlength
+        + right.getFamilyLength() + right.getQualifierLength())) {
+      return false;
+    }
+
+    if (!matchingRows(left, lrowlength, right, rrowlength)) {
+      return false;
+    }
+    return matchingColumn(left, right);
   }
 }

@@ -344,7 +344,7 @@ public class HFilePerformanceEvaluation {
       writer = HFile.getWriterFactoryNoCache(conf)
           .withPath(fs, mf)
           .withFileContext(hFileContext)
-          .withComparator(new KeyValue.RawBytesComparator())
+          .withComparator(CellComparator.COMPARATOR)
           .create();
     }
     

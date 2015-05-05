@@ -31,11 +31,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -373,7 +373,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
-      KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, comparator);
   }
@@ -523,7 +523,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     Cell cell;
 
     // Only do a sanity-check if store and comparator are available.
-    KeyValue.KVComparator comparator =
+    CellComparator comparator =
         store != null ? store.getComparator() : null;
 
     int count = 0;
@@ -781,7 +781,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @throws IOException
    */
   protected void checkScanOrder(Cell prevKV, Cell kv,
-      KeyValue.KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Check that the heap gives us KVs in an increasing order.
     assert prevKV == null || comparator == null
         || comparator.compare(prevKV, kv) <= 0 : "Key " + prevKV

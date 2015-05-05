@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -101,7 +102,7 @@ public class TestHalfStoreFileReader {
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
     r.loadFileInfo();
     byte [] midkey = r.midkey();
-    KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+    KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
     midkey = midKV.getRow();
 
     //System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
@@ -167,7 +168,7 @@ public class TestHalfStoreFileReader {
       HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
       r.loadFileInfo();
       byte[] midkey = r.midkey();
-      KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+      KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
       midkey = midKV.getRow();
 
       Reference bottom = new Reference(midkey, Reference.Range.bottom);
@@ -176,7 +177,7 @@ public class TestHalfStoreFileReader {
       // Ugly code to get the item before the midkey
       KeyValue beforeMidKey = null;
       for (KeyValue item : items) {
-          if (KeyValue.COMPARATOR.compare(item, midKV) >= 0) {
+          if (CellComparator.COMPARATOR.compare(item, midKV) >= 0) {
               break;
           }
           beforeMidKey = item;

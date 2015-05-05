@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -52,6 +53,6 @@ public class TestPBCell {
     pbr.setPosition(0);
     decoded = CODEC.decode(pbr);
     assertEquals(encodedLength, pbr.getPosition());
-    assertTrue(CellComparator.equals(cell, ProtobufUtil.toCell(decoded)));
+    assertTrue(CellUtil.equals(cell, ProtobufUtil.toCell(decoded)));
   }
 }

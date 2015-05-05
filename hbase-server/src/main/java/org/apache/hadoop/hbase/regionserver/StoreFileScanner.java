@@ -30,6 +30,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -215,9 +216,7 @@ public class StoreFileScanner implements KeyValueScanner {
       hfs.next();
       setCurrentCell(hfs.getKeyValue());
       if (this.stopSkippingKVsIfNextRow
-          && getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
-              cur.getRowLength(), startKV.getRowArray(), startKV.getRowOffset(),
-              startKV.getRowLength()) > 0) {
+          && getComparator().compareRows(cur, startKV) > 0) {
         return false;
       }
     }
@@ -369,7 +368,7 @@ public class StoreFileScanner implements KeyValueScanner {
     return reader;
   }
 
-  KeyValue.KVComparator getComparator() {
+  CellComparator getComparator() {
     return reader.getComparator();
   }
 
@@ -476,9 +475,7 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean backwardSeek(Cell key) throws IOException {
     seek(key);
     if (cur == null
-        || getComparator().compareRows(cur.getRowArray(), cur.getRowOffset(),
-            cur.getRowLength(), key.getRowArray(), key.getRowOffset(),
-            key.getRowLength()) > 0) {
+        || getComparator().compareRows(cur, key) > 0) {
       return seekToPreviousRow(key);
     }
     return true;

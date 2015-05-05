@@ -100,7 +100,7 @@ public class MetaMockingUtil {
     }
 
     //important: sort the kvs so that binary search work
-    Collections.sort(kvs, KeyValue.META_COMPARATOR);
+    Collections.sort(kvs, CellComparator.META_COMPARATOR);
 
     return Result.create(kvs);
   }

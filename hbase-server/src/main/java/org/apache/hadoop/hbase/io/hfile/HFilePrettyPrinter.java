@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
@@ -317,8 +316,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     do {
       Cell cell = scanner.getKeyValue();
       if (row != null && row.length != 0) {
-        int result = CellComparator.compareRows(cell.getRowArray(), cell.getRowOffset(),
-            cell.getRowLength(), row, 0, row.length);
+        int result = CellComparator.COMPARATOR.compareRows(cell, row, 0, row.length);
         if (result > 0) {
           break;
         } else if (result < 0) {
@@ -348,7 +346,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       }
       // check if rows are in order
       if (checkRow && pCell != null) {
-        if (CellComparator.compareRows(pCell, cell) > 0) {
+        if (CellComparator.COMPARATOR.compareRows(pCell, cell) > 0) {
           System.err.println("WARNING, previous row is greater then"
               + " current row\n\tfilename -> " + file + "\n\tprevious -> "
               + CellUtil.getCellKeyAsString(pCell) + "\n\tcurrent  -> "
@@ -468,7 +466,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     public void collect(Cell cell) {
       valLen.update(cell.getValueLength());
       if (prevCell != null &&
-          KeyValue.COMPARATOR.compareRows(prevCell, cell) != 0) {
+          CellComparator.COMPARATOR.compareRows(prevCell, cell) != 0) {
         // new row
         collectRow();
       }

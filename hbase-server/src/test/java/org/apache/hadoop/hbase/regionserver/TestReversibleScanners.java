@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -253,7 +254,7 @@ public class TestReversibleScanners {
 
     ScanType scanType = ScanType.USER_SCAN;
     ScanInfo scanInfo = new ScanInfo(FAMILYNAME, 0, Integer.MAX_VALUE,
-        Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, KeyValue.COMPARATOR);
+        Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, CellComparator.COMPARATOR);
 
     // Case 1.Test a full reversed scan
     Scan scan = new Scan();
@@ -484,7 +485,7 @@ public class TestReversibleScanners {
     List<KeyValueScanner> scanners = getScanners(memstore, sf1, sf2, startRow,
         true, readPoint);
     ReversedKeyValueHeap kvHeap = new ReversedKeyValueHeap(scanners,
-        KeyValue.COMPARATOR);
+        CellComparator.COMPARATOR);
     return kvHeap;
   }
 

@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * As the PrefixTreeArrayScanner moves through the tree bytes, it changes the values in the fields
@@ -33,6 +34,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell> {
+  // Create a reference here?  Can be removed too
+  protected CellComparator comparator = CellComparator.COMPARATOR;
 
   /********************** static **********************/
 
@@ -91,19 +94,35 @@ public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell
       return false;
     }
     //Temporary hack to maintain backwards compatibility with KeyValue.equals
-    return CellComparator.equalsIgnoreMvccVersion(this, (Cell)obj);
+    return CellUtil.equalsIgnoreMvccVersion(this, (Cell)obj);
 
     //TODO return CellComparator.equals(this, (Cell)obj);//see HBASE-6907
   }
 
   @Override
   public int hashCode() {
-    return CellComparator.hashCodeIgnoreMvcc(this);
+    return calculateHashForKey(this);
+  }
+
+  private int calculateHashForKey(Cell cell) {
+    // pre-calculate the 3 hashes made of byte ranges
+    int rowHash = Bytes.hashCode(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    int familyHash = Bytes.hashCode(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength());
+    int qualifierHash = Bytes.hashCode(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength());
+
+    // combine the 6 sub-hashes
+    int hash = 31 * rowHash + familyHash;
+    hash = 31 * hash + qualifierHash;
+    hash = 31 * hash + (int) cell.getTimestamp();
+    hash = 31 * hash + cell.getTypeByte();
+    return hash;
   }
 
   @Override
   public int compareTo(Cell other) {
-    return CellComparator.compare(this, other, false);
+    return comparator.compare(this, other);
   }
 
   @Override

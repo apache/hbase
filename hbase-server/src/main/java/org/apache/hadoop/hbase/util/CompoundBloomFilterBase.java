@@ -20,8 +20,9 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 
 @InterfaceAudience.Private
@@ -51,7 +52,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
   /** Hash function type to use, as defined in {@link Hash} */
   protected int hashType;
   /** Comparator used to compare Bloom filter keys */
-  protected KVComparator comparator;
+  protected CellComparator comparator;
 
   @Override
   public long getMaxKeys() {

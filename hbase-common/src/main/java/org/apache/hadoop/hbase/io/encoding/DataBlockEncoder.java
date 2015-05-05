@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 
@@ -98,7 +98,7 @@ public interface DataBlockEncoder {
    * @param decodingCtx
    * @return A newly created seeker.
    */
-  EncodedSeeker createSeeker(KVComparator comparator, 
+  EncodedSeeker createSeeker(CellComparator comparator, 
       HFileBlockDecodingContext decodingCtx);
 
   /**
@@ -193,12 +193,8 @@ public interface DataBlockEncoder {
      * Compare the given key against the current key
      * @param comparator
      * @param key
-     * @param offset
-     * @param length
      * @return -1 is the passed key is smaller than the current key, 0 if equal and 1 if greater
      */
-    public int compareKey(KVComparator comparator, byte[] key, int offset, int length);
-
-    public int compareKey(KVComparator comparator, Cell key);
+    public int compareKey(CellComparator comparator, Cell key);
   }
 }

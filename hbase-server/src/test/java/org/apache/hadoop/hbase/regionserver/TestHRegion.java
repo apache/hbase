@@ -2700,7 +2700,7 @@ public class TestHRegion {
       res = new ArrayList<Cell>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected1.get(i), res.get(i)));
       }
 
       // Result 2
@@ -2711,7 +2711,7 @@ public class TestHRegion {
       res = new ArrayList<Cell>();
       is.next(res);
       for (int i = 0; i < res.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected2.get(i), res.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -2833,7 +2833,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -2915,7 +2915,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3037,7 +3037,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -3164,7 +3164,7 @@ public class TestHRegion {
 
       // Verify result
       for (int i = 0; i < expected.size(); i++) {
-        assertTrue(CellComparator.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
+        assertTrue(CellUtil.equalsIgnoreMvccVersion(expected.get(i), actual.get(i)));
       }
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);

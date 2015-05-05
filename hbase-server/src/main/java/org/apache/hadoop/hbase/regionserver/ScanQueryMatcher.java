@@ -25,10 +25,10 @@ import java.util.NavigableSet;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -86,7 +86,7 @@ public class ScanQueryMatcher {
   private final Cell startKey;
 
   /** Row comparator for the region this query is for */
-  private final KeyValue.KVComparator rowComparator;
+  private final CellComparator rowComparator;
 
   /* row is not private for tests */
   /** Row the query is on */
@@ -278,8 +278,7 @@ public class ScanQueryMatcher {
     if (filter != null && filter.filterAllRemaining()) {
       return MatchCode.DONE_SCAN;
     }
-    int ret = this.rowComparator.compareRows(row, this.rowOffset, this.rowLength,
-        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    int ret = -(this.rowComparator.compareRows(cell, row, this.rowOffset, this.rowLength));
     if (!this.isReversed) {
       if (ret <= -1) {
         return MatchCode.DONE;
@@ -495,16 +494,14 @@ public class ScanQueryMatcher {
 
   public boolean moreRowsMayExistAfter(Cell kv) {
     if (this.isReversed) {
-      if (rowComparator.compareRows(kv.getRowArray(), kv.getRowOffset(),
-          kv.getRowLength(), stopRow, 0, stopRow.length) <= 0) {
+      if (rowComparator.compareRows(kv, stopRow, 0, stopRow.length) <= 0) {
         return false;
       } else {
         return true;
       }
     }
     if (!Bytes.equals(stopRow , HConstants.EMPTY_END_ROW) &&
-        rowComparator.compareRows(kv.getRowArray(),kv.getRowOffset(),
-            kv.getRowLength(), stopRow, 0, stopRow.length) >= 0) {
+        rowComparator.compareRows(kv, stopRow, 0, stopRow.length) >= 0) {
       // KV >= STOPROW
       // then NO there is nothing left.
       return false;
@@ -584,32 +581,25 @@ public class ScanQueryMatcher {
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
   public int compareKeyForNextRow(Cell nextIndexed, Cell kv) {
-    return rowComparator.compareKey(nextIndexed,
-      kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-      null, 0, 0,
-      null, 0, 0,
-      HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+    return rowComparator.compareKeyBasedOnColHint(nextIndexed, kv, 0, 0, null, 0, 0,
+        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
   }
 
   /**
    * @param nextIndexed the key of the next entry in the block index (if any)
-   * @param kv The Cell we're using to calculate the seek key
+   * @param currentCell The Cell we're using to calculate the seek key
    * @return result of the compare between the indexed key and the key portion of the passed cell
    */
-  public int compareKeyForNextColumn(Cell nextIndexed, Cell kv) {
+  public int compareKeyForNextColumn(Cell nextIndexed, Cell currentCell) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return rowComparator.compareKey(nextIndexed,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-        kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
-        HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
+      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell, 0, 0, null, 0, 0,
+          HConstants.OLDEST_TIMESTAMP, Type.Minimum.getCode());
     } else {
-      return rowComparator.compareKey(nextIndexed,
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-        nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength(),
-        HConstants.LATEST_TIMESTAMP, Type.Maximum.getCode());
+      return rowComparator.compareKeyBasedOnColHint(nextIndexed, currentCell,
+          currentCell.getFamilyOffset(), currentCell.getFamilyLength(), nextColumn.getBuffer(),
+          nextColumn.getOffset(), nextColumn.getLength(), HConstants.LATEST_TIMESTAMP,
+          Type.Maximum.getCode());
     }
   }
 
