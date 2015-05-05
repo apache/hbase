@@ -169,7 +169,7 @@ public class TestReplicaWithCluster {
     HTU.deleteTable(hdt.getTableName());
   }
 
-  @Test (timeout=30000)
+  @Test (timeout=120000)
   public void testChangeTable() throws Exception {
     HTableDescriptor hdt = HTU.createTableDescriptor("testChangeTable");
     hdt.setRegionReplication(NB_SERVERS);
