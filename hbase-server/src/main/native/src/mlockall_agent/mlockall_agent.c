@@ -41,11 +41,11 @@
 #include "jvmti.h"
 
 typedef struct opts {
-  char *setuid_user;
+  char *user;
 } opts_t;
 
 #define PREFIX "mlockall_agent: "
-#define LOG(fmt, ...) { fprintf(stderr, PREFIX fmt, #__VA_ARGS__); }
+#define LOG(format, ...) { fprintf(stderr, PREFIX format,##__VA_ARGS__); }
 
 static int parse_options (const char *options, opts_t *parsed) {
   char *optr, *opts_dup;
@@ -56,6 +56,8 @@ static int parse_options (const char *options, opts_t *parsed) {
   char *tok;
 
   memset(parsed, 0, sizeof(opts_t));
+  if (options == NULL)
+    return 0;  // No options means we'll just try outright
   if ((opts_dup = strdup(options)) == NULL)
     return(-1);
 
@@ -67,7 +69,7 @@ static int parse_options (const char *options, opts_t *parsed) {
     key = strtok_r(tok, "=", &save2);    
     val = strtok_r(NULL, "=", &save2);
     if (!strcmp(key, "user")) {
-      parsed->setuid_user = strdup(val);
+      parsed->user = strdup(val);
     } else {
       LOG("Unknown agent parameter '%s'\n", key);
       ret = 1;
@@ -84,23 +86,17 @@ static void warn_unless_root() {
   }
 }
 
-JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *init_str, void *reserved) {
+JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *options, void *reserved) {
   struct passwd *pwd = NULL;
   opts_t opts;
 
-  if (parse_options(init_str, &opts)) {
-    return(1);
-  }
-
-  // Check that the target user for setuid is specified if current user is root
-  if (opts.setuid_user == NULL) {
-    LOG("Unable to setuid: specify a target username as the agent option user=<username>\n");
+  if (parse_options(options, &opts)) {
     return(1);
   }
 
   // Check that this user exists
-  if ((pwd = getpwnam(opts.setuid_user)) == NULL) {
-    LOG("Unable to setuid: could not find user '%s'\n", opts.setuid_user);
+  if (opts.user && (pwd = getpwnam(opts.user)) == NULL) {
+    LOG("Unable to setuid: could not find user '%s'\n", opts.user);
     return(1);
   }
 
@@ -121,28 +117,32 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *vm, char *init_str, void *reserved) 
     return(1);
   }
 
-  // Drop down to the user's supplemental group list
-  if (initgroups(opts.setuid_user, pwd->pw_gid)) {
-    perror(PREFIX "Unable to initgroups");
-    warn_unless_root();
-    return(1);
-  }
- 
-  // And primary group ID
-  if (setgid(pwd->pw_gid)) {
-    perror(PREFIX "Unable to setgid");
-    warn_unless_root();
-    return(1);
+  LOG("Successfully locked memory\n");
+
+  if (opts.user != NULL) {
+    // Drop down to the user's supplemental group list
+    if (initgroups(opts.user, pwd->pw_gid)) {
+      perror(PREFIX "Unable to initgroups");
+      warn_unless_root();
+      return(1);
+    }
+
+    // And primary group ID
+    if (setgid(pwd->pw_gid)) {
+      perror(PREFIX "Unable to setgid");
+      warn_unless_root();
+      return(1);
+    }
+
+    // And user ID
+    if (setuid(pwd->pw_uid)) {
+      perror(PREFIX "Unable to setuid");
+      warn_unless_root();
+      return(1);
+    }
+    LOG("Successful setuid to %s\n", opts.user);
   }
 
-  // And user ID
-  if (setuid(pwd->pw_uid)) {
-    perror(PREFIX "Unable to setuid");
-    warn_unless_root();
-    return(1);
-  }
-
-  LOG("Successfully locked memory and setuid to %s\n", opts.setuid_user);
   return(0);
 }
 
