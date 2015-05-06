@@ -335,7 +335,9 @@ public class TestHFileOutputFormat  {
 
   @Test
   public void testJobConfiguration() throws Exception {
-    Job job = new Job(util.getConfiguration());
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    conf.set("hbase.fs.tmp.dir", util.getDataTestDir("testJobConfiguration").toString());
+    Job job = new Job(conf);
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     HTableDescriptor tableDescriptor = Mockito.mock(HTableDescriptor.class);
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
@@ -820,6 +822,7 @@ public class TestHFileOutputFormat  {
       // We turn off the sequence file compression, because DefaultCodec
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
+      conf.set("hbase.fs.tmp.dir", dir.toString());
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);

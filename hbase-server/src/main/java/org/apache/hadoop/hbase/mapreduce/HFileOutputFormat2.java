@@ -588,7 +588,7 @@ public class HFileOutputFormat2
     Configuration conf = job.getConfiguration();
     // create the partitions file
     FileSystem fs = FileSystem.get(conf);
-    Path partitionsPath = new Path(conf.get("hadoop.tmp.dir"), "partitions_" + UUID.randomUUID());
+    Path partitionsPath = new Path(conf.get("hbase.fs.tmp.dir"), "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
     writePartitions(conf, partitionsPath, splitPoints);
     fs.deleteOnExit(partitionsPath);
