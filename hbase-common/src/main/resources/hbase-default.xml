@@ -63,6 +63,20 @@ possible configurations would overwhelm and obscure the important.
     machine restart.</description>
   </property>
   <property >
+    <name>hbase.fs.tmp.dir</name>
+    <value>/user/${user.name}/hbase-staging</value>
+    <description>A staging directory in default file system (HDFS)
+    for keeping temporary data.
+    </description>
+  </property>
+  <property >
+    <name>hbase.bulkload.staging.dir</name>
+    <value>${hbase.fs.tmp.dir}</value>
+    <description>A staging directory in default file system (HDFS)
+    for bulk loading.
+    </description>
+  </property>
+  <property >
     <name>hbase.cluster.distributed</name>
     <value>false</value>
     <description>The mode the cluster will be in. Possible values are
