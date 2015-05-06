@@ -98,7 +98,7 @@ public class ZKTableStateManager implements TableStateManager {
   public void setTableState(TableName tableName, ZooKeeperProtos.Table.State state)
   throws CoordinatedStateException {
     synchronized (this.cache) {
-      LOG.warn("Moving table " + tableName + " state from " + this.cache.get(tableName)
+      LOG.info("Moving table " + tableName + " state from " + this.cache.get(tableName)
         + " to " + state);
       try {
         setTableStateInZK(tableName, state);
@@ -239,8 +239,7 @@ public class ZKTableStateManager implements TableStateManager {
   throws CoordinatedStateException {
     synchronized (this.cache) {
       if (this.cache.remove(tableName) == null) {
-        LOG.warn("Moving table " + tableName + " state to deleted but was " +
-          "already deleted");
+        LOG.warn("Moving table " + tableName + " state to deleted but was already deleted");
       }
       try {
         ZKUtil.deleteNodeFailSilent(this.watcher,
