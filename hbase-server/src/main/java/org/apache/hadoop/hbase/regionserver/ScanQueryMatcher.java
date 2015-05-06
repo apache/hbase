@@ -20,6 +20,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -474,7 +475,7 @@ public class ScanQueryMatcher {
     // dropDeletesFromRow is leq current kv, we start dropping deletes and reset
     // dropDeletesFromRow; thus the 2nd "if" starts to apply.
     if ((dropDeletesFromRow != null)
-        && ((dropDeletesFromRow == HConstants.EMPTY_START_ROW)
+        && (Arrays.equals(dropDeletesFromRow, HConstants.EMPTY_START_ROW)
           || (Bytes.compareTo(row, offset, length,
               dropDeletesFromRow, 0, dropDeletesFromRow.length) >= 0))) {
       retainDeletesInOutput = false;
@@ -484,7 +485,7 @@ public class ScanQueryMatcher {
     // drop-deletes range. When dropDeletesToRow is leq current kv, we stop dropping deletes,
     // and reset dropDeletesToRow so that we don't do any more compares.
     if ((dropDeletesFromRow == null)
-        && (dropDeletesToRow != null) && (dropDeletesToRow != HConstants.EMPTY_END_ROW)
+        && (dropDeletesToRow != null) && !Arrays.equals(dropDeletesToRow, HConstants.EMPTY_END_ROW)
         && (Bytes.compareTo(row, offset, length,
             dropDeletesToRow, 0, dropDeletesToRow.length) >= 0)) {
       retainDeletesInOutput = true;

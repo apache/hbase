@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -116,7 +117,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
    */
   protected void sanityCheckLeft(
       byte[] left, Cell cell) throws IOException {
-    if (StripeStoreFileManager.OPEN_KEY != left &&
+    if (!Arrays.equals(StripeStoreFileManager.OPEN_KEY, left) &&
         comparator.compareRows(cell, left, 0, left.length) < 0) {
       String error = "The first row is lower than the left boundary of [" + Bytes.toString(left)
           + "]: [" + Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
@@ -132,7 +133,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
    */
   protected void sanityCheckRight(
       byte[] right, Cell cell) throws IOException {
-    if (StripeStoreFileManager.OPEN_KEY != right &&
+    if (!Arrays.equals(StripeStoreFileManager.OPEN_KEY, right) &&
         comparator.compareRows(cell, right, 0, right.length) >= 0) {
       String error = "The last row is higher or equal than the right boundary of ["
           + Bytes.toString(right) + "]: ["
@@ -178,10 +179,14 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       // must match some target boundaries, let's find them.
       assert  (majorRangeFrom == null) == (majorRangeTo == null);
       if (majorRangeFrom != null) {
-        majorRangeFromIndex = (majorRangeFrom == StripeStoreFileManager.OPEN_KEY) ? 0
-          : Collections.binarySearch(this.boundaries, majorRangeFrom, Bytes.BYTES_COMPARATOR);
-        majorRangeToIndex = (majorRangeTo == StripeStoreFileManager.OPEN_KEY) ? boundaries.size()
-          : Collections.binarySearch(this.boundaries, majorRangeTo, Bytes.BYTES_COMPARATOR);
+        majorRangeFromIndex = Arrays.equals(majorRangeFrom, StripeStoreFileManager.OPEN_KEY)
+                                ? 0
+                                : Collections.binarySearch(boundaries, majorRangeFrom,
+                                                           Bytes.BYTES_COMPARATOR);
+        majorRangeToIndex = Arrays.equals(majorRangeTo, StripeStoreFileManager.OPEN_KEY)
+                              ? boundaries.size()
+                              : Collections.binarySearch(boundaries, majorRangeTo,
+                                                         Bytes.BYTES_COMPARATOR);
         if (this.majorRangeFromIndex < 0 || this.majorRangeToIndex < 0) {
           throw new IOException("Major range does not match writer boundaries: [" +
               Bytes.toString(majorRangeFrom) + "] [" + Bytes.toString(majorRangeTo) + "]; from "
@@ -204,9 +209,8 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     }
 
     private boolean isCellAfterCurrentWriter(Cell cell) {
-      return ((currentWriterEndKey != StripeStoreFileManager.OPEN_KEY) &&
-            (comparator.compareRows(cell,
-                currentWriterEndKey, 0, currentWriterEndKey.length) >= 0));
+      return !Arrays.equals(currentWriterEndKey, StripeStoreFileManager.OPEN_KEY) &&
+            (comparator.compareRows(cell, currentWriterEndKey, 0, currentWriterEndKey.length) >= 0);
     }
 
     @Override
