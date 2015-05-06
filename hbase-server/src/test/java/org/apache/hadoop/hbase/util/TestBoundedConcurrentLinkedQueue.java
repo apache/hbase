@@ -18,20 +18,21 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MiscTests.class, SmallTests.class})
+@Category({ MiscTests.class, SmallTests.class })
 public class TestBoundedConcurrentLinkedQueue {
   private final static int CAPACITY = 16;
 
@@ -40,10 +41,6 @@ public class TestBoundedConcurrentLinkedQueue {
   @Before
   public void setUp() throws Exception {
     this.queue = new BoundedConcurrentLinkedQueue<Long>(CAPACITY);
-  }
-
-  @After
-  public void tearDown() throws Exception {
   }
 
   @Test
@@ -82,5 +79,83 @@ public class TestBoundedConcurrentLinkedQueue {
     assertEquals(null, queue.poll());
     assertEquals(0, queue.size());
     assertEquals(CAPACITY, queue.remainingCapacity());
+  }
+
+  @Test
+  public void testClear() {
+    // Offer
+    for (long i = 1; i <= CAPACITY; ++i) {
+      assertTrue(queue.offer(i));
+      assertEquals(i, queue.size());
+      assertEquals(CAPACITY - i, queue.remainingCapacity());
+    }
+    assertFalse(queue.offer(0L));
+
+    queue.clear();
+    assertEquals(null, queue.poll());
+    assertEquals(0, queue.size());
+    assertEquals(CAPACITY, queue.remainingCapacity());
+  }
+
+  @Test
+  public void testMultiThread() throws InterruptedException {
+    int offerThreadCount = 10;
+    int pollThreadCount = 5;
+    int duration = 5000; // ms
+    final AtomicBoolean stop = new AtomicBoolean(false);
+    Thread[] offerThreads = new Thread[offerThreadCount];
+    for (int i = 0; i < offerThreadCount; i++) {
+      offerThreads[i] = new Thread("offer-thread-" + i) {
+
+        @Override
+        public void run() {
+          Random rand = new Random();
+          while (!stop.get()) {
+            queue.offer(rand.nextLong());
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e) {
+            }
+          }
+        }
+
+      };
+    }
+    Thread[] pollThreads = new Thread[pollThreadCount];
+    for (int i = 0; i < pollThreadCount; i++) {
+      pollThreads[i] = new Thread("poll-thread-" + i) {
+
+        @Override
+        public void run() {
+          while (!stop.get()) {
+            queue.poll();
+            try {
+              Thread.sleep(1);
+            } catch (InterruptedException e) {
+            }
+          }
+        }
+
+      };
+    }
+    for (Thread t : offerThreads) {
+      t.start();
+    }
+    for (Thread t : pollThreads) {
+      t.start();
+    }
+    long startTime = System.currentTimeMillis();
+    while (System.currentTimeMillis() - startTime < duration) {
+      assertTrue(queue.size() <= CAPACITY);
+      Thread.yield();
+    }
+    stop.set(true);
+    for (Thread t : offerThreads) {
+      t.join();
+    }
+    for (Thread t : pollThreads) {
+      t.join();
+    }
+    assertTrue(queue.size() <= CAPACITY);
   }
 }
