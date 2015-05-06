@@ -25,9 +25,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -225,6 +230,22 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
           LOG.trace("High priority scanner request " + TextFormat.shortDebugString(request));
         }
         return HConstants.SYSTEMTABLE_QOS;
+      }
+    }
+
+    // If meta is moving then all the rest of report the report state transitions will be
+    // blocked. We shouldn't be in the same queue.
+    if (methodName.equalsIgnoreCase("ReportRegionStateTransition")) { // Regions are moving
+      ReportRegionStateTransitionRequest tRequest = (ReportRegionStateTransitionRequest) param;
+      for (RegionStateTransition transition : tRequest.getTransitionList()) {
+        if (transition.getRegionInfoList() != null) {
+          for (HBaseProtos.RegionInfo info : transition.getRegionInfoList()) {
+            TableName tn = ProtobufUtil.toTableName(info.getTableName());
+            if (tn.isSystemTable()) {
+              return HConstants.SYSTEMTABLE_QOS;
+            }
+          }
+        }
       }
     }
     return HConstants.NORMAL_QOS;
