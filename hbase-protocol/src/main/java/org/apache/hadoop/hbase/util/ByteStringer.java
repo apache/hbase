@@ -25,7 +25,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.HBaseZeroCopyByteString;
 
 /**
- * Hack to workaround HBASE-1304 issue that keeps bubbling up when a mapreduce context.
+ * Hack to workaround HBASE-10304 issue that keeps bubbling up when a mapreduce context.
  */
 @InterfaceAudience.Private
 public class ByteStringer {
