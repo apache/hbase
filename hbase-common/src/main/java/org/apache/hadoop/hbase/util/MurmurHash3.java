@@ -28,7 +28,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * <p>MurmurHash3 is the successor to MurmurHash2. It comes in 3 variants, and
  * the 32-bit version targets low latency for hash table use.</p>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class MurmurHash3 extends Hash {
   private static MurmurHash3 _instance = new MurmurHash3();
