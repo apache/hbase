@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * <p>The C version of MurmurHash 2.0 found at that site was ported
  * to Java by Andrzej Bialecki (ab at getopt org).</p>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class MurmurHash extends Hash {
   private static MurmurHash _instance = new MurmurHash();
