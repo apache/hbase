@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * @see <a href="http://burtleburtle.net/bob/hash/doobs.html">Has update on the
  * Dr. Dobbs Article</a>
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class JenkinsHash extends Hash {
   private static final int BYTE_MASK = 0xff;

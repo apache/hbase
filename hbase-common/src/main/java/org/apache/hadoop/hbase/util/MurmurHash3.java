@@ -18,6 +18,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+
 /**
  * This is a very fast, non-cryptographic hash suitable for general hash-based
  * lookup.  See http://code.google.com/p/smhasher/wiki/MurmurHash3 for details.
@@ -25,6 +28,8 @@ package org.apache.hadoop.hbase.util;
  * <p>MurmurHash3 is the successor to MurmurHash2. It comes in 3 variants, and
  * the 32-bit version targets low latency for hash table use.</p>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Stable
 public class MurmurHash3 extends Hash {
   private static MurmurHash3 _instance = new MurmurHash3();
 
