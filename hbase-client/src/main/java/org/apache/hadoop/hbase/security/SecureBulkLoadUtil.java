@@ -37,6 +37,6 @@ public class SecureBulkLoadUtil {
   }
 
   public static Path getBaseStagingDir(Configuration conf) {
-    return new Path(conf.get(BULKLOAD_STAGING_DIR, "/tmp/hbase-staging"));
+    return new Path(conf.get(BULKLOAD_STAGING_DIR));
   }
 }
