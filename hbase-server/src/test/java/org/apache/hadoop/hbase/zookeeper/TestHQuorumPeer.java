@@ -18,26 +18,23 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.Map;
 import java.util.Properties;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
-import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import static junit.framework.Assert.assertEquals;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * Test for HQuorumPeer.
@@ -86,51 +83,6 @@ public class TestHQuorumPeer {
     assertEquals("c.foo.bar:2888:3888", properties.get("server.2"));
     assertEquals(null, properties.get("server.3"));
     conf.set(HConstants.ZOOKEEPER_QUORUM, oldValue);
-  }
-
-  @Test public void testConfigInjection() throws Exception {
-    String s =
-      "dataDir=" + this.dataDir.toString() + "\n" +
-      "clientPort=2181\n" +
-      "initLimit=2\n" +
-      "syncLimit=2\n" +
-      "server.0=${hbase.master.hostname}:2888:3888\n" +
-      "server.1=server1:2888:3888\n" +
-      "server.2=server2:2888:3888\n";
-
-    System.setProperty("hbase.master.hostname", "localhost");
-    InputStream is = new ByteArrayInputStream(s.getBytes());
-    Configuration conf = TEST_UTIL.getConfiguration();
-    Properties properties = ZKConfig.parseZooCfg(conf, is);
-
-    assertEquals(this.dataDir.toString(), properties.get("dataDir"));
-    assertEquals(Integer.valueOf(2181),
-      Integer.valueOf(properties.getProperty("clientPort")));
-    assertEquals("localhost:2888:3888", properties.get("server.0"));
-
-    HQuorumPeer.writeMyID(properties);
-    QuorumPeerConfig config = new QuorumPeerConfig();
-    config.parseProperties(properties);
-
-    assertEquals(this.dataDir.toString(), config.getDataDir());
-    assertEquals(2181, config.getClientPortAddress().getPort());
-    Map<Long,QuorumServer> servers = config.getServers();
-    assertEquals(3, servers.size());
-    assertTrue(servers.containsKey(Long.valueOf(0)));
-    QuorumServer server = servers.get(Long.valueOf(0));
-    assertEquals("localhost", server.addr.getHostName());
-
-    // Override with system property.
-    System.setProperty("hbase.master.hostname", "foo.bar");
-    is = new ByteArrayInputStream(s.getBytes());
-    properties = ZKConfig.parseZooCfg(conf, is);
-    assertEquals("foo.bar:2888:3888", properties.get("server.0"));
-
-    config.parseProperties(properties);
-
-    servers = config.getServers();
-    server = servers.get(Long.valueOf(0));
-    assertEquals("foo.bar", server.addr.getHostName());
   }
 
   @Test public void testShouldAssignDefaultZookeeperClientPort() {

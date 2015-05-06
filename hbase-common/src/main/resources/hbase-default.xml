@@ -432,15 +432,7 @@ possible configurations would overwhelm and obscure the important.
     and will not be downgraded.  ZooKeeper versions before 3.4 do not support multi-update and
     will not fail gracefully if multi-update is invoked (see ZOOKEEPER-1495).</description>
   </property>
-  <property>
-    <name>hbase.config.read.zookeeper.config</name>
-    <value>false</value>
-    <description>
-        Set to true to allow HBaseConfiguration to read the
-        zoo.cfg file for ZooKeeper properties. Switching this to true
-        is not recommended, since the functionality of reading ZK
-        properties from a zoo.cfg file has been deprecated.</description>
-  </property>
+
   <!--
   Beginning of properties that are directly mapped from ZooKeeper's zoo.cfg.
   All properties with an "hbase.zookeeper.property." prefix are converted for

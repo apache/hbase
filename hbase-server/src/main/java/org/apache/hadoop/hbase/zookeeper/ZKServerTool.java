@@ -20,12 +20,12 @@
 package org.apache.hadoop.hbase.zookeeper;
 
 import java.util.Properties;
-import java.util.Map.Entry;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Tool for reading ZooKeeper servers from HBase XML configuration and producing
@@ -39,18 +39,15 @@ public class ZKServerTool {
    */
   public static void main(String args[]) {
     Configuration conf = HBaseConfiguration.create();
-    // Note that we do not simply grab the property
-    // HConstants.ZOOKEEPER_QUORUM from the HBaseConfiguration because the
-    // user may be using a zoo.cfg file.
     Properties zkProps = ZKConfig.makeZKProps(conf);
-    for (Entry<Object, Object> entry : zkProps.entrySet()) {
-      String key = entry.getKey().toString().trim();
-      String value = entry.getValue().toString().trim();
-      if (key.startsWith("server.")) {
-        String[] parts = value.split(":");
-        String host = parts[0];
-        System.out.println("ZK host:" + host);
-      }
+    String quorum = zkProps.getProperty(HConstants.ZOOKEEPER_QUORUM);
+
+    String[] values = quorum.split(",");
+    for (String value : values) {
+      String[] parts = value.split(":");
+      String host = parts[0];
+      System.out.println("ZK host:" + host);
     }
+
   }
 }

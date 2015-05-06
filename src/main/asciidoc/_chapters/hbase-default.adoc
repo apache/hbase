@@ -605,21 +605,7 @@ Instructs HBase to make use of ZooKeeper's multi-update functionality.
 .Default
 `true`
 
-  
-[[hbase.config.read.zookeeper.config]]
-*`hbase.config.read.zookeeper.config`*::
-+
-.Description
 
-        Set to true to allow HBaseConfiguration to read the
-        zoo.cfg file for ZooKeeper properties. Switching this to true
-        is not recommended, since the functionality of reading ZK
-        properties from a zoo.cfg file has been deprecated.
-+
-.Default
-`false`
-
-  
 [[hbase.zookeeper.property.initLimit]]
 *`hbase.zookeeper.property.initLimit`*::
 +
@@ -2251,4 +2237,3 @@ The percent of region server RPC threads failed to abort RS.
 .Default
 `0.5`
 
-  

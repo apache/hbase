@@ -50,8 +50,8 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
  * HBase's version of ZooKeeper's QuorumPeer. When HBase is set to manage
  * ZooKeeper, this class is used to start up QuorumPeer instances. By doing
  * things in here rather than directly calling to ZooKeeper, we have more
- * control over the process. This class uses {@link ZKConfig} to parse the
- * zoo.cfg and inject variables from HBase's site.xml configuration in.
+ * control over the process. This class uses {@link ZKConfig} to get settings
+ * from the hbase-site.xml file.
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving

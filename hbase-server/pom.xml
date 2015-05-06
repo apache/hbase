@@ -91,7 +91,6 @@
             <exclude>log4j.properties</exclude>
             <exclude>mapred-queues.xml</exclude>
             <exclude>mapred-site.xml</exclude>
-            <exclude>zoo.cfg</exclude>
           </excludes>
         </configuration>
       </plugin>
