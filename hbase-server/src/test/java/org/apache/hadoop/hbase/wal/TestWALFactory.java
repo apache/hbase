@@ -227,6 +227,7 @@ public class TestWALFactory {
         fail("This version of Hadoop supports neither Syncable.sync() " +
             "nor Syncable.hflush().");
       }
+
     }
     syncMethod.invoke(out, new Object[]{});
     FSDataInputStream in = fs.open(p);
