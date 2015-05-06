@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -187,6 +188,22 @@ public class HFileReaderV3 extends HFileReaderV2 {
         kvBufSize += Bytes.SIZEOF_SHORT + currTagsLen;
       }
       return kvBufSize;
+    }
+
+    @Override
+    public Cell getKeyValue() {
+      if (!isSeeked())
+        return null;
+      if (currTagsLen > 0) {
+        KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+            + blockBuffer.position(), getCellBufSize());
+        if (this.reader.shouldIncludeMemstoreTS()) {
+          ret.setSequenceId(currMemstoreTS);
+        }
+        return ret;
+      } else {
+        return formNoTagsKeyValue();
+      }
     }
 
     protected void setNonSeekedState() {
