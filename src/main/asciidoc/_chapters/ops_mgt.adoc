@@ -1609,6 +1609,283 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 * `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
 * `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
 
+
+[[quota]]
+== HBase Quota
+
+When a work load increases on a cluster due to multiple users or user requests, the system needs to prioritize the users or the user requests for a smooth operation. 
+This is handled by the HBase quota feature. The quota allows the admin to limit the number of tables, regions, or request in a system.
+
+The HBase features three types of quotas, they are:
+
+. Namespace Quota
+. Request Number Quota
+. Request Size Quota
+
+[[enabling.quota]]
+=== Enabling Quota
+
+By default the quota function is disabled. To enable the quota, change the value of parameter `hbase.quota.enabled` to `true` in _hbase-site.xml_ file for all HMaster and HRegionServer machines.
+
+[[quota.cache.refresh]]
+=== Quota Cache Refresh Configuration
+By default quota setting cache refresh time period `'hbase.quota.refresh.period'` is set to 5*60000(5 mins). Which means a user has to wait for maximum of 5 mins to get his quota settings updated.
+
+[[namespace.quota]]
+=== Namespace Quota	
+
+Namespace quota reserves the number of tables or regions allowed in a Namespace. 
+
+Following are the namespace quota:
+
+* Number of tables allowed in a namespace.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| create_namespace 'namespace_name', {'hbase.namespace.quota.maxtables'=>'5'}
+| Creates a namespace with the maximum table quota.
+
+| describe_namespace 'namespace_name'
+| Displays the quota information on the namespace.
+
+| alter_namespace 'namespace_name ', {METHOD => 'set', 'hbase.namespace.quota.maxtables'=>'8'}
+| Modifies the existing namespace and sets the maximum table quota.
+
+| alter_namespace 'namespace_name ', {METHOD => 'unset', NAME=> 'hbase.namespace.quota.maxtables'}
+| Removes the maximum table quota set on a namespace.
+
+|===
+
+* Number of regions allowed in a namespace.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| create_namespace 'namespace_name', {'hbase.namespace.quota.maxregions'=>'10'}	
+| Creates a namespace with the maximum regions quota.
+
+| describe_namespace 'namespace_name '	
+| Displays the quota information on the namespace.
+
+| alter_namespace 'namespace_name ', {METHOD => 'set', 'hbase.namespace.quota.maxregions'=>'20'}
+| Modifies the existing namespace and sets the maximum regions quota.
+
+| alter_namespace 'namespace_name ', {METHOD => 'unset', NAME=> 'hbase.namespace.quota.maxregions'}
+| Removes the maximum regions quota set on a namespace.
+
+|===
+
+[[number.quota]]
+=== Request Number Quota
+
+Request Number Quota reserves the number of requests that is allowed to execute on a particular table or namespace in any given time by a user or users with similar name. 
+
+[NOTE]
+====
+The Request Number Quota uses time units in the command. 
+The valid time units are sec, min, hour, and day. 
+====
+
+Following are the five types of request number quota:
+
+* Number of requests a user can execute in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => 'user_name', LIMIT => '10req/sec'
+| Sets 10req/sec quota for a specified user.
+
+| list_quotas USER => 'user_name'
+| Displays the quota information of the specified user.
+
+| set_quota TYPE => THROTTLE, USER => ' user_name ', LIMIT => NONE
+| Removes the quota of the specified user.
+
+|===
+
+* Number of requests a user can execute on a given table in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => ' user_name ', TABLE => 't1', LIMIT => '10req/sec'
+| Sets 10req/sec quota on a particular table for a specified user.
+
+| list_quotas USER => 'user_name', TABLE => 't1'
+| Displays the quota information of the specified user on a particular table.
+
+| set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't1', LIMIT => NONE
+| Removes the quota on a particular table for a specified user.
+
+|===
+
+* Number of requests a user can execute on a given namespace in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => ' user_name ', NAMESPACE => 'ns1', LIMIT => '10req/sec'
+| Sets 10req/sec quota on a particular namespace for a specified user.
+
+| list_quotas USER => 'user_name', NAMESPACE => 'ns.*'
+| Displays the quota information of the specified user on a particular namespace.
+
+| set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns1', LIMIT => NONE
+| Removes the quota on a particular namespace for a specified user.
+
+|===
+
+* Number of requests that can be allowed on a table in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, TABLE => 't1, LIMIT => '10req/sec'
+| Sets 10req/sec quota on a particular table.
+
+| list_quotas TABLE => 't1'
+| Displays the quota information on a particular table.
+
+| set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => NONE
+| Removes the quota on a particular table.
+
+|===
+
+* Number of requests that can be allowed on a namespace in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/sec'
+| Sets 10req/sec quota on a particular namespace.
+
+| list_quotas NAMESPACE => 'ns1'
+| Displays the quota information on a particular namespace.
+
+| set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => NONE
+| Removes the quota on a particular namespace.
+
+|===
+
+[[size.quota]]
+=== Request Size Quota
+
+Request size quota reserves the size of the requests that is allowed to execute on a particular table or a namespace in any given time by a user or users with similar name.  
+
+[NOTE]
+====
+The Request Size Quota uses time and size unit in the command. 
+The valid size units are B(byte), K(kilobyte), M(megabyte), G(gigabyte), T(terabyte), and P(petabyte).
+====
+
+Following are the five types of request size quota:
+
+* Size of requests a user can execute in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => 'user_name', LIMIT => '5K/min'
+| Sets 5k/sec quota for a specified user.
+
+| list_quotas USER => 'user_name'
+| Displays the quota information of the specified user.
+
+| set_quota TYPE => THROTTLE, USER => ' user_name ', LIMIT => NONE
+| Removes the quota of the specified user.
+
+|===
+
+* Size of requests a user can execute on a given table in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 'table_name', LIMIT => '5K/min'
+| Sets 5k/sec quota on a particular table for a specified user.
+
+| list_quotas USER => 'bob.*', TABLE => 't1'
+| Displays the quota information of the specified user on a particular table.
+
+| set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't1', LIMIT => NONE
+| Removes the quota on a particular table for a specified user.
+
+|===
+
+* Size of requests a user can execute on a given namespace in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns1', LIMIT => '5K/min'
+| Sets 5k/sec quota on a particular namespace for a specified user.
+
+| list_quotas USER => 'bob.*', NAMESPACE => 'ns.*'
+| Displays the quota information of the specified user on a particular namespace.
+
+| set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns1', LIMIT => NONE
+| Removes the quota on a particular namespace for a specified user.
+
+|===
+
+* Size of requests that can be allowed on a table in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '5K/min'
+| Sets 5k/sec quota on a particular table.
+
+| list_quotas TABLE => 'myTable'
+| Displays the quota information on a particular table.
+
+| set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => NONE
+| Removes the quota on a particular table.
+
+|===
+
+* Size of requests that can be allowed on a namespace in a given time.
+
+[cols="1,1", options="header"]
+|===
+| Example
+| Command Description
+
+| set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '5K/min'
+| Sets 5k/sec  quota on a particular namespace.
+
+| list_quotas NAMESPACE => 'ns.*'
+| Displays the quota information on a particular namespace.
+
+| set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => NONE
+| Removes the quota on a particular namespace.
+
+|===
+
 [[ops.backup]]
 == HBase Backup
 
