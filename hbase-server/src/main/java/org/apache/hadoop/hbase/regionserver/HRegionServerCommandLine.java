@@ -88,7 +88,7 @@ public class HRegionServerCommandLine extends ServerCommandLine {
     } else if ("stop".equals(cmd)) {
       System.err.println(
         "To shutdown the regionserver run " +
-        "bin/hbase-daemon.sh stop regionserver or send a kill signal to" +
+        "bin/hbase-daemon.sh stop regionserver or send a kill signal to " +
         "the regionserver pid");
       return 1;
     } else {
