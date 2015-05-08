@@ -700,68 +700,59 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       KeyValue.KeyOnlyKeyValue currentCell = new KeyValue.KeyOnlyKeyValue();
       do {
         int comp;
-        if (comparator != null) {
-          currentCell.setKey(current.keyBuffer, 0, current.keyLength);
-          if (current.lastCommonPrefix != 0) {
-            // The KV format has row key length also in the byte array. The
-            // common prefix
-            // includes it. So we need to subtract to find out the common prefix
-            // in the
-            // row part alone
-            rowCommonPrefix = Math.min(rowCommonPrefix, current.lastCommonPrefix - 2);
-          }
-          if (current.lastCommonPrefix <= 2) {
-            rowCommonPrefix = 0;
-          }
-          rowCommonPrefix += findCommonPrefixInRowPart(seekCell, currentCell,
-              rowCommonPrefix);
-          comp = compareCommonRowPrefix(seekCell, currentCell,
-              rowCommonPrefix);
+        currentCell.setKey(current.keyBuffer, 0, current.keyLength);
+        if (current.lastCommonPrefix != 0) {
+          // The KV format has row key length also in the byte array. The
+          // common prefix
+          // includes it. So we need to subtract to find out the common prefix
+          // in the
+          // row part alone
+          rowCommonPrefix = Math.min(rowCommonPrefix, current.lastCommonPrefix - 2);
+        }
+        if (current.lastCommonPrefix <= 2) {
+          rowCommonPrefix = 0;
+        }
+        rowCommonPrefix += findCommonPrefixInRowPart(seekCell, currentCell, rowCommonPrefix);
+        comp = compareCommonRowPrefix(seekCell, currentCell, rowCommonPrefix);
+        if (comp == 0) {
+          comp = compareTypeBytes(seekCell, currentCell);
           if (comp == 0) {
-            comp = compareTypeBytes(seekCell, currentCell);
+            // Subtract the fixed row key length and the family key fixed length
+            familyCommonPrefix = Math.max(
+                0,
+                Math.min(familyCommonPrefix,
+                    current.lastCommonPrefix - (3 + currentCell.getRowLength())));
+            familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell, currentCell,
+                familyCommonPrefix);
+            comp = compareCommonFamilyPrefix(seekCell, currentCell, familyCommonPrefix);
             if (comp == 0) {
-              // Subtract the fixed row key length and the family key fixed length
-              familyCommonPrefix = Math.max(
+              // subtract the rowkey fixed length and the family key fixed
+              // length
+              qualCommonPrefix = Math.max(
                   0,
-                  Math.min(familyCommonPrefix,
-                      current.lastCommonPrefix - (3 + currentCell.getRowLength())));
-              familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell,
-                  currentCell, familyCommonPrefix);
-              comp = compareCommonFamilyPrefix(seekCell, currentCell,
-                  familyCommonPrefix);
+                  Math.min(
+                      qualCommonPrefix,
+                      current.lastCommonPrefix
+                          - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
+              qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell, currentCell,
+                  qualCommonPrefix);
+              comp = compareCommonQualifierPrefix(seekCell, currentCell, qualCommonPrefix);
               if (comp == 0) {
-                // subtract the rowkey fixed length and the family key fixed
-                // length
-                qualCommonPrefix = Math.max(
-                    0,
-                    Math.min(
-                        qualCommonPrefix,
-                        current.lastCommonPrefix
-                            - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
-                qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell,
-                    currentCell, qualCommonPrefix);
-                comp = compareCommonQualifierPrefix(seekCell, currentCell,
-                    qualCommonPrefix);
+                comp = CellComparator.compareTimestamps(seekCell, currentCell);
                 if (comp == 0) {
-                  comp = CellComparator.compareTimestamps(seekCell, currentCell);
-                  if (comp == 0) {
-                    // Compare types. Let the delete types sort ahead of puts;
-                    // i.e. types
-                    // of higher numbers sort before those of lesser numbers.
-                    // Maximum
-                    // (255)
-                    // appears ahead of everything, and minimum (0) appears
-                    // after
-                    // everything.
-                    comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
-                  }
+                  // Compare types. Let the delete types sort ahead of puts;
+                  // i.e. types
+                  // of higher numbers sort before those of lesser numbers.
+                  // Maximum
+                  // (255)
+                  // appears ahead of everything, and minimum (0) appears
+                  // after
+                  // everything.
+                  comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
                 }
               }
             }
           }
-        } else {
-          Cell r = new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength);
-          comp = comparator.compareKeyIgnoresMvcc(seekCell, r);
         }
         if (comp == 0) { // exact match
           if (seekBefore) {
