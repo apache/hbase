@@ -370,7 +370,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preAddColumn(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName(),
+        ACCESS_CONTROLLER.preAddColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null), TEST_TABLE.getTableName(),
           hcd);
         return null;
       }
@@ -387,7 +387,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preModifyColumn(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preModifyColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_TABLE.getTableName(), hcd);
         return null;
       }
@@ -402,7 +402,7 @@ public class TestAccessController extends SecureTestUtil {
     AccessTestAction action = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        ACCESS_CONTROLLER.preDeleteColumn(ObserverContext.createAndPrepare(CP_ENV, null),
+        ACCESS_CONTROLLER.preDeleteColumnFamily(ObserverContext.createAndPrepare(CP_ENV, null),
           TEST_TABLE.getTableName(), TEST_FAMILY);
         return null;
       }

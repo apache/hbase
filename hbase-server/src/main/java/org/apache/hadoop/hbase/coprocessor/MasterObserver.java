@@ -231,127 +231,361 @@ public interface MasterObserver extends Coprocessor {
    * add column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param column the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #preAddColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void preAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called prior to adding a new column family to the table.  Called as part of
+   * add column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preAddColumn(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void preAddColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called after the new column family has been created.  Called as part of
    * add column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param column the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #postAddColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void postAddColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called after the new column family has been created.  Called as part of
+   * add column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postAddColumn(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void postAddColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called prior to adding a new column family to the table.  Called as part of
    * add column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param column the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>). Use
+   *             {@link #preAddColumnFamilyHandler(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void preAddColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called prior to adding a new column family to the table.  Called as part of
+   * add column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preAddColumnHandler(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void preAddColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
 
   /**
    * Called after the new column family has been created.  Called as part of
    * add column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param column the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>). Use
+   *             {@link #postAddColumnFamilyHandler(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void postAddColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called after the new column family has been created.  Called as part of
+   * add column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postAddColumnHandler(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void postAddColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called prior to modifying a column family's attributes.  Called as part of
    * modify column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param descriptor the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #preModifyColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void preModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called prior to modifying a column family's attributes.  Called as part of
+   * modify column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preModifyColumn(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void preModifyColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called after the column family has been updated.  Called as part of modify
    * column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param descriptor the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #postModifyColumnFamily(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void postModifyColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called after the column family has been updated.  Called as part of modify
+   * column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postModifyColumn(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void postModifyColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called prior to modifying a column family's attributes.  Called as part of
    * modify column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param descriptor the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *       (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *       Use {@link #preModifyColumnFamilyHandler(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void preModifyColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
+
+  /**
+   * Called prior to modifying a column family's attributes.  Called as part of
+   * modify column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preModifyColumnHandler(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void preModifyColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called after the column family has been updated.  Called as part of modify
    * column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param descriptor the HColumnDescriptor
+   * @param columnFamily the HColumnDescriptor
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *      (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *      Use {@link #postModifyColumnFamilyHandler(ObserverContext, TableName, HColumnDescriptor)}.
    */
+  @Deprecated
   void postModifyColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException;
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
+  /**
+   * Called after the column family has been updated.  Called as part of modify
+   * column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postModifyColumnHandler(ObserverContext, TableName, HColumnDescriptor)} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the HColumnDescriptor
+   */
+  void postModifyColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException;
 
   /**
    * Called prior to deleting the entire column family.  Called as part of
    * delete column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param c the column
+   * @param columnFamily the column family
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #preDeleteColumnFamily(ObserverContext, TableName, byte[])}.
    */
+  @Deprecated
   void preDeleteColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final byte[] c) throws IOException;
+      final TableName tableName, final byte[] columnFamily) throws IOException;
+
+  /**
+   * Called prior to deleting the entire column family.  Called as part of
+   * delete column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preDeleteColumn(ObserverContext, TableName, byte[])} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the column
+   */
+  void preDeleteColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final byte[] columnFamily) throws IOException;
 
   /**
    * Called after the column family has been deleted.  Called as part of delete
    * column RPC call.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param c the column
+   * @param columnFamily the column family
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #postDeleteColumnFamily(ObserverContext, TableName, byte[])}.
    */
+  @Deprecated
   void postDeleteColumn(final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final byte[] c) throws IOException;
+      final TableName tableName, final byte[] columnFamily) throws IOException;
+
+  /**
+   * Called after the column family has been deleted.  Called as part of delete
+   * column RPC call.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postDeleteColumn(ObserverContext, TableName, byte[])} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the column family
+   */
+  void postDeleteColumnFamily(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final byte[] columnFamily) throws IOException;
 
   /**
    * Called prior to deleting the entire column family.  Called as part of
    * delete column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param c the column
+   * @param columnFamily the column family
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #preDeleteColumnFamilyHandler(ObserverContext, TableName, byte[])}.
    */
+  @Deprecated
   void preDeleteColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final byte[] c) throws IOException;
+      final TableName tableName, final byte[] columnFamily) throws IOException;
+
+  /**
+   * Called prior to deleting the entire column family.  Called as part of
+   * delete column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #preDeleteColumnHandler(ObserverContext, TableName, byte[])} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the column family
+   */
+  void preDeleteColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final byte[] columnFamily) throws IOException;
 
   /**
    * Called after the column family has been deleted.  Called as part of
    * delete column handler.
    * @param ctx the environment to interact with the framework and master
    * @param tableName the name of the table
-   * @param c the column
+   * @param columnFamily the column family
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13645">HBASE-13645</a>).
+   *             Use {@link #postDeleteColumnFamilyHandler(ObserverContext, TableName, byte[])}.
    */
+  @Deprecated
   void postDeleteColumnHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
-      final TableName tableName, final byte[] c) throws IOException;
+      final TableName tableName, final byte[] columnFamily) throws IOException;
+
+  /**
+   * Called after the column family has been deleted.  Called as part of
+   * delete column handler.
+   *
+   * Implementation note: This replaces the deprecated
+   * {@link #postDeleteColumnHandler(ObserverContext, TableName, byte[])} method.
+   * Make sure to implement only one of the two as both are called.
+   *
+   * @param ctx the environment to interact with the framework and master
+   * @param tableName the name of the table
+   * @param columnFamily the column family
+   */
+  void postDeleteColumnFamilyHandler(
+      final ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final byte[] columnFamily) throws IOException;
 
   /**
    * Called prior to enabling a table.  Called as part of enable table RPC call.

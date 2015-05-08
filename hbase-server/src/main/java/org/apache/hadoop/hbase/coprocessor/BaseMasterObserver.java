@@ -171,70 +171,148 @@ public class BaseMasterObserver implements MasterObserver {
       List<NamespaceDescriptor> descriptors) throws IOException {
   }
 
+  @Deprecated
   @Override
   public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException {
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Override
-  public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor column) throws IOException {
+  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Deprecated
+  @Override
+  public void postAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Override
+  public void postAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void preAddColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor column) throws IOException {
+      HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Override
+  public void preAddColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void postAddColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor column) throws IOException {
+      HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Override
+  public void postAddColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
   }
 
   @Override
-  public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
+  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Deprecated
+  @Override
+  public void postModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Override
+  public void postModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void preModifyColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor descriptor) throws IOException {
+      HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Override
+  public void preModifyColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void postModifyColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor descriptor) throws IOException {
+      HColumnDescriptor columnFamily) throws IOException {
   }
 
+  @Override
+  public void postModifyColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      HColumnDescriptor columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
+      TableName tableName, byte[] columnFamily) throws IOException {
   }
 
   @Override
-  public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
+  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, byte[] columnFamily) throws IOException {
   }
 
+  @Deprecated
+  @Override
+  public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, byte[] columnFamily) throws IOException {
+  }
+
+  @Override
+  public void postDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, byte[] columnFamily) throws IOException {
+  }
+
+  @Deprecated
   @Override
   public void preDeleteColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      byte[] c) throws IOException {
+      byte[] columnFamily) throws IOException {
   }
 
   @Override
+  public void preDeleteColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      byte[] columnFamily) throws IOException {
+  }
+
+  @Deprecated
+  @Override
   public void postDeleteColumnHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      byte[] c) throws IOException {
+      byte[] columnFamily) throws IOException {
+  }
+
+  @Override
+  public void postDeleteColumnFamilyHandler(
+      ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
+      byte[] columnFamily) throws IOException {
   }
 
 

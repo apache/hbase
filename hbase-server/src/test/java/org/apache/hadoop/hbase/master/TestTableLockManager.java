@@ -105,19 +105,19 @@ public class TestTableLockManager {
 
   public static class TestLockTimeoutExceptionMasterObserver extends BaseMasterObserver {
     @Override
-    public void preDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, byte[] c) throws IOException {
+    public void preDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName, byte[] columnFamily) throws IOException {
       deleteColumn.countDown();
     }
     @Override
-    public void postDeleteColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, byte[] c) throws IOException {
+    public void postDeleteColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName, byte[] columnFamily) throws IOException {
       Threads.sleep(10000);
     }
 
     @Override
-    public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor column) throws IOException {
+    public void preAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       fail("Add column should have timeouted out for acquiring the table lock");
     }
   }
@@ -170,15 +170,15 @@ public class TestTableLockManager {
 
   public static class TestAlterAndDisableMasterObserver extends BaseMasterObserver {
     @Override
-    public void preAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor column) throws IOException {
+    public void preAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       LOG.debug("addColumn called");
       addColumn.countDown();
     }
 
     @Override
-    public void postAddColumnHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
-        TableName tableName, HColumnDescriptor column) throws IOException {
+    public void postAddColumnFamilyHandler(ObserverContext<MasterCoprocessorEnvironment> ctx,
+        TableName tableName, HColumnDescriptor columnFamily) throws IOException {
       Threads.sleep(6000);
       try {
         ctx.getEnvironment().getMasterServices().checkTableModifiable(tableName);

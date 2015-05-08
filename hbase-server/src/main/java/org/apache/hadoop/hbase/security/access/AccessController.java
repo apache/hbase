@@ -1119,33 +1119,35 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   @Override
-  public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      HColumnDescriptor column) throws IOException {
-    requireTablePermission("addColumn", tableName, column.getName(), null, Action.ADMIN,
-        Action.CREATE);
+  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                 TableName tableName, HColumnDescriptor columnFamily)
+      throws IOException {
+    requireTablePermission("addColumn", tableName, columnFamily.getName(), null, Action.ADMIN,
+                           Action.CREATE);
   }
 
   @Override
-  public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      HColumnDescriptor descriptor) throws IOException {
-    requirePermission("modifyColumn", tableName, descriptor.getName(), null, Action.ADMIN,
+  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                    TableName tableName, HColumnDescriptor columnFamily)
+      throws IOException {
+    requirePermission("modifyColumn", tableName, columnFamily.getName(), null, Action.ADMIN,
       Action.CREATE);
   }
 
   @Override
-  public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
-      byte[] col) throws IOException {
-    requirePermission("deleteColumn", tableName, col, null, Action.ADMIN, Action.CREATE);
+  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                    TableName tableName, byte[] columnFamily) throws IOException {
+    requirePermission("deleteColumn", tableName, columnFamily, null, Action.ADMIN, Action.CREATE);
   }
 
   @Override
-  public void postDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> c,
-      final TableName tableName, final byte[] col) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
+  public void postDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final TableName tableName, final byte[] columnFamily) throws IOException {
+    final Configuration conf = ctx.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        AccessControlLists.removeTablePermissions(conf, tableName, col);
+        AccessControlLists.removeTablePermissions(conf, tableName, columnFamily);
         return null;
       }
     });

@@ -219,8 +219,9 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   }
 
   @Override
-  public void preAddColumn(ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName,
-      HColumnDescriptor column) throws IOException {
+  public void preAddColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+                                 TableName tableName, HColumnDescriptor columnFamily)
+      throws IOException {
     if (!authorizationEnabled) {
       return;
     }
@@ -230,8 +231,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   }
 
   @Override
-  public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, HColumnDescriptor descriptor) throws IOException {
+  public void preModifyColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, HColumnDescriptor columnFamily) throws IOException {
     if (!authorizationEnabled) {
       return;
     }
@@ -241,8 +242,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   }
 
   @Override
-  public void preDeleteColumn(ObserverContext<MasterCoprocessorEnvironment> ctx,
-      TableName tableName, byte[] c) throws IOException {
+  public void preDeleteColumnFamily(ObserverContext<MasterCoprocessorEnvironment> ctx,
+      TableName tableName, byte[] columnFamily) throws IOException {
     if (!authorizationEnabled) {
       return;
     }
