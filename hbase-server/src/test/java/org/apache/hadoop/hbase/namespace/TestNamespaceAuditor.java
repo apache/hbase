@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Mutation;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
@@ -68,6 +69,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -678,5 +680,132 @@ public class TestNamespaceAuditor {
         new HTableDescriptor(TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2"));
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+  }
+  
+  @Test(expected = QuotaExceededException.class, timeout = 30000)
+  public void testCloneSnapshotQuotaExceed() throws Exception {
+    String nsp = prefix + "_testTableQuotaExceedWithCloneSnapshot";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "1")
+            .build();
+    ADMIN.createNamespace(nspDesc);
+    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
+    TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
+    HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
+    ADMIN.createTable(tableDescOne);
+    String snapshot = "snapshot_testTableQuotaExceedWithCloneSnapshot";
+    ADMIN.snapshot(snapshot, tableName);
+    ADMIN.cloneSnapshot(snapshot, cloneTableName);
+    ADMIN.deleteSnapshot(snapshot);
+  }
+
+  @Test(timeout = 180000)
+  public void testCloneSnapshot() throws Exception {
+    String nsp = prefix + "_testCloneSnapshot";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp).addConfiguration(TableNamespaceManager.KEY_MAX_TABLES, "2")
+            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "20").build();
+    ADMIN.createNamespace(nspDesc);
+    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    TableName tableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
+    TableName cloneTableName = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table2");
+    HTableDescriptor tableDescOne = new HTableDescriptor(tableName);
+
+    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+    String snapshot = "snapshot_testCloneSnapshot";
+    ADMIN.snapshot(snapshot, tableName);
+    ADMIN.cloneSnapshot(snapshot, cloneTableName);
+
+    int tableLength;
+    try (RegionLocator locator = ADMIN.getConnection().getRegionLocator(tableName)) {
+      tableLength = locator.getStartKeys().length;
+    }
+    assertEquals(tableName.getNameAsString() + " should have four regions.", 4, tableLength);
+
+    try (RegionLocator locator = ADMIN.getConnection().getRegionLocator(cloneTableName)) {
+      tableLength = locator.getStartKeys().length;
+    }
+    assertEquals(cloneTableName.getNameAsString() + " should have four regions.", 4, tableLength);
+
+    NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
+    assertEquals("Total tables count should be 2.", 2, nstate.getTables().size());
+    assertEquals("Total regions count should be.", 8, nstate.getRegionCount());
+
+    ADMIN.deleteSnapshot(snapshot);
+  }
+
+  @Test(timeout = 180000)
+  public void testRestoreSnapshot() throws Exception {
+    String nsp = prefix + "_testRestoreSnapshot";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp)
+            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "10").build();
+    ADMIN.createNamespace(nspDesc);
+    assertNotNull("Namespace descriptor found null.", ADMIN.getNamespaceDescriptor(nsp));
+    TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
+    HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
+    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+
+    NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
+    assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
+
+    String snapshot = "snapshot_testRestoreSnapshot";
+    ADMIN.snapshot(snapshot, tableName1);
+
+    List<HRegionInfo> regions = ADMIN.getTableRegions(tableName1);
+    Collections.sort(regions);
+
+    ADMIN.split(tableName1, Bytes.toBytes("JJJ"));
+    Thread.sleep(2000);
+    assertEquals("Total regions count should be 5.", 5, nstate.getRegionCount());
+
+    ADMIN.disableTable(tableName1);
+    ADMIN.restoreSnapshot(snapshot);
+
+    assertEquals("Total regions count should be 4 after restore.", 4, nstate.getRegionCount());
+
+    ADMIN.enableTable(tableName1);
+    ADMIN.deleteSnapshot(snapshot);
+  }
+
+  @Test(timeout = 180000)
+  public void testRestoreSnapshotQuotaExceed() throws Exception {
+    String nsp = prefix + "_testRestoreSnapshotQuotaExceed";
+    NamespaceDescriptor nspDesc =
+        NamespaceDescriptor.create(nsp)
+            .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "10").build();
+    ADMIN.createNamespace(nspDesc);
+    NamespaceDescriptor ndesc = ADMIN.getNamespaceDescriptor(nsp);
+    assertNotNull("Namespace descriptor found null.", ndesc);
+    TableName tableName1 = TableName.valueOf(nsp + TableName.NAMESPACE_DELIM + "table1");
+    HTableDescriptor tableDescOne = new HTableDescriptor(tableName1);
+    ADMIN.createTable(tableDescOne, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
+
+    NamespaceTableAndRegionInfo nstate = getNamespaceState(nsp);
+    assertEquals("Intial region count should be 4.", 4, nstate.getRegionCount());
+
+    String snapshot = "snapshot_testRestoreSnapshotQuotaExceed";
+    ADMIN.snapshot(snapshot, tableName1);
+
+    List<HRegionInfo> regions = ADMIN.getTableRegions(tableName1);
+    Collections.sort(regions);
+
+    ADMIN.split(tableName1, Bytes.toBytes("JJJ"));
+    Thread.sleep(2000);
+    assertEquals("Total regions count should be 5.", 5, nstate.getRegionCount());
+
+    ndesc.setConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "2");
+    ADMIN.modifyNamespace(ndesc);
+
+    ADMIN.disableTable(tableName1);
+    try {
+      ADMIN.restoreSnapshot(snapshot);
+      fail("Region quota is exceeded so QuotaExceededException should be thrown but HBaseAdmin"
+          + " wraps IOException into RestoreSnapshotException");
+    } catch (RestoreSnapshotException ignore) {
+    }
+    ADMIN.enableTable(tableName1);
+    ADMIN.deleteSnapshot(snapshot);
   }
 }

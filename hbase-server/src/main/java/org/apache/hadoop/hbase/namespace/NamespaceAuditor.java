@@ -68,6 +68,20 @@ public class NamespaceAuditor {
       checkTableTypeAndThrowException(tName);
     }
   }
+  
+  /**
+   * Check and update region count quota for an existing table.
+   * @param tName - table name for which region count to be updated.
+   * @param regions - Number of regions that will be added.
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  public void checkQuotaToUpdateRegion(TableName tName, int regions) throws IOException {
+    if (stateManager.isInitialized()) {
+      stateManager.checkAndUpdateNamespaceRegionCount(tName, regions);
+    } else {
+      checkTableTypeAndThrowException(tName);
+    }
+  }
 
   private void checkTableTypeAndThrowException(TableName name) throws IOException {
     if (name.isSystemTable()) {

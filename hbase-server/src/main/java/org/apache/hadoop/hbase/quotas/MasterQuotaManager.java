@@ -326,6 +326,12 @@ public class MasterQuotaManager implements RegionStateListener {
       namespaceQuotaManager.checkQuotaToCreateTable(tName, regions);
     }
   }
+  
+  public void checkAndUpdateNamespaceRegionQuota(TableName tName, int regions) throws IOException {
+    if (enabled) {
+      namespaceQuotaManager.checkQuotaToUpdateRegion(tName, regions);
+    }
+  }
 
   public void onRegionMerged(HRegionInfo hri) throws IOException {
     if (enabled) {
