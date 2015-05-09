@@ -234,6 +234,16 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     return (0xff & rightCell.getTypeByte()) - (0xff & leftCell.getTypeByte());
   }
 
+  /**
+   * Compares cell's timestamps in DESCENDING order.
+   * The below older timestamps sorting ahead of newer timestamps looks
+   * wrong but it is intentional. This way, newer timestamps are first
+   * found when we iterate over a memstore and newer versions are the
+   * first we trip over when reading from a store file.
+   * @return 1 if left's timestamp < right's timestamp
+   *         -1 if left's timestamp > right's timestamp
+   *         0 if both timestamps are equal
+   */
   public static int compareTimestamps(final Cell left, final Cell right) {
     long ltimestamp = left.getTimestamp();
     long rtimestamp = right.getTimestamp();
@@ -258,7 +268,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   /**
    * Returns a hash code that is always the same for two Cells having a matching
    * equals(..) result. Note : Ignore mvcc while calculating the hashcode
-   * 
+   *
    * @param cell
    * @return hashCode
    */
@@ -356,11 +366,17 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     return c;
   }
 
+  /**
+   * Compares timestamps in DESCENDING order.
+   * The below older timestamps sorting ahead of newer timestamps looks
+   * wrong but it is intentional. This way, newer timestamps are first
+   * found when we iterate over a memstore and newer versions are the
+   * first we trip over when reading from a store file.
+   * @return 1 if left timestamp < right timestamp
+   *         -1 if left timestamp > right timestamp
+   *         0 if both timestamps are equal
+   */
   private static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
-    // The below older timestamps sorting ahead of newer timestamps looks
-    // wrong but it is intentional. This way, newer timestamps are first
-    // found when we iterate over a memstore and newer versions are the
-    // first we trip over when reading from a store file.
     if (ltimestamp < rtimestamp) {
       return 1;
     } else if (ltimestamp > rtimestamp) {
