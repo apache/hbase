@@ -23,10 +23,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
@@ -55,6 +57,23 @@ public class VisibilityClient {
   /**
    * Utility method for adding label to the system.
    *
+   * @param conf
+   * @param label
+   * @return VisibilityLabelsResponse
+   * @throws Throwable
+   * @deprecated Use {@link #addLabel(Connection,String)} instead.
+   */
+  @Deprecated
+  public static VisibilityLabelsResponse addLabel(Configuration conf, final String label)
+      throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return addLabels(connection, new String[] { label });
+    }
+  }
+
+  /**
+   * Utility method for adding label to the system.
+   *
    * @param connection
    * @param label
    * @return VisibilityLabelsResponse
@@ -63,6 +82,23 @@ public class VisibilityClient {
   public static VisibilityLabelsResponse addLabel(Connection connection, final String label)
       throws Throwable {
     return addLabels(connection, new String[] { label });
+  }
+
+  /**
+   * Utility method for adding labels to the system.
+   *
+   * @param conf
+   * @param labels
+   * @return VisibilityLabelsResponse
+   * @throws Throwable
+   * @deprecated Use {@link #addLabels(Connection,String[])} instead.
+   */
+  @Deprecated
+  public static VisibilityLabelsResponse addLabels(Configuration conf, final String[] labels)
+      throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return addLabels(connection, labels);
+    }
   }
 
   /**
@@ -111,6 +147,23 @@ public class VisibilityClient {
 
   /**
    * Sets given labels globally authorized for the user.
+   * @param conf
+   * @param auths
+   * @param user
+   * @return VisibilityLabelsResponse
+   * @throws Throwable
+   * @deprecated Use {@link #setAuths(Connection,String[],String)} instead.
+   */
+  @Deprecated
+  public static VisibilityLabelsResponse setAuths(Configuration conf, final String[] auths,
+      final String user) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return setOrClearAuths(connection, auths, user, true);
+    }
+  }
+
+  /**
+   * Sets given labels globally authorized for the user.
    * @param connection
    * @param auths
    * @param user
@@ -120,6 +173,20 @@ public class VisibilityClient {
   public static VisibilityLabelsResponse setAuths(Connection connection, final String[] auths,
       final String user) throws Throwable {
     return setOrClearAuths(connection, auths, user, true);
+  }
+
+  /**
+   * @param conf
+   * @param user
+   * @return labels, the given user is globally authorized for.
+   * @throws Throwable
+   * @deprecated Use {@link #getAuths(Connection,String)} instead.
+   */
+  @Deprecated
+  public static GetAuthsResponse getAuths(Configuration conf, final String user) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return getAuths(connection, user);
+    }
   }
 
   /**
@@ -154,6 +221,22 @@ public class VisibilityClient {
         return result.values().iterator().next(); // There will be exactly one region for labels
         // table and so one entry in result Map.
       }
+  }
+
+  /**
+   * Retrieve the list of visibility labels defined in the system.
+   * @param conf
+   * @param regex  The regular expression to filter which labels are returned.
+   * @return labels The list of visibility labels defined in the system.
+   * @throws Throwable
+   * @deprecated Use {@link #listLabels(Connection,String)} instead.
+   */
+  @Deprecated
+  public static ListLabelsResponse listLabels(Configuration conf, final String regex)
+      throws Throwable {
+    try(Connection connection = ConnectionFactory.createConnection(conf)){
+      return listLabels(connection, regex);
+    }
   }
 
   /**
@@ -202,6 +285,23 @@ public class VisibilityClient {
       if (connection != null) {
         connection.close();
       }
+    }
+  }
+
+  /**
+   * Removes given labels from user's globally authorized list of labels.
+   * @param conf
+   * @param auths
+   * @param user
+   * @return VisibilityLabelsResponse
+   * @throws Throwable
+   * @deprecated Use {@link #clearAuths(Connection,String[],String)} instead.
+   */
+  @Deprecated
+  public static VisibilityLabelsResponse clearAuths(Configuration conf, final String[] auths,
+      final String user) throws Throwable {
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      return setOrClearAuths(connection, auths, user, false);
     }
   }
 
