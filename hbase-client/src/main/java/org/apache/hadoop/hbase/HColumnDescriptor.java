@@ -453,23 +453,26 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     return this;
   }
 
-  /** @return compression type being used for the column family */
+  /**
+   * @return compression type being used for the column family
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>).
+   *             Use {@link #getCompressionType()}.
+   */
+  @Deprecated
   public Compression.Algorithm getCompression() {
-    String n = getValue(COMPRESSION);
-    if (n == null) {
-      return Compression.Algorithm.NONE;
-    }
-    return Compression.Algorithm.valueOf(n.toUpperCase());
+    return getCompressionType();
   }
 
-  /** @return compression type being used for the column family for major
-      compression */
+  /**
+   *  @return compression type being used for the column family for major compaction
+   *  @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13655">HBASE-13655</a>).
+   *             Use {@link #getCompactionCompressionType()}.
+   */
+  @Deprecated
   public Compression.Algorithm getCompactionCompression() {
-    String n = getValue(COMPRESSION_COMPACT);
-    if (n == null) {
-      return getCompression();
-    }
-    return Compression.Algorithm.valueOf(n.toUpperCase());
+    return getCompactionCompressionType();
   }
 
   /** @return maximum number of versions */
@@ -529,7 +532,11 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @return Compression type setting.
    */
   public Compression.Algorithm getCompressionType() {
-    return getCompression();
+    String n = getValue(COMPRESSION);
+    if (n == null) {
+      return Compression.Algorithm.NONE;
+    }
+    return Compression.Algorithm.valueOf(n.toUpperCase());
   }
 
   /**
@@ -599,7 +606,11 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    * @return Compression type setting.
    */
   public Compression.Algorithm getCompactionCompressionType() {
-    return getCompactionCompression();
+    String n = getValue(COMPRESSION_COMPACT);
+    if (n == null) {
+      return getCompressionType();
+    }
+    return Compression.Algorithm.valueOf(n.toUpperCase());
   }
 
   /**

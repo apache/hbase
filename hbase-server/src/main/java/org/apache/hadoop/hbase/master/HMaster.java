@@ -1561,8 +1561,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private void checkCompression(final HColumnDescriptor hcd)
   throws IOException {
     if (!this.masterCheckCompression) return;
-    CompressionTest.testCompression(hcd.getCompression());
-    CompressionTest.testCompression(hcd.getCompactionCompression());
+    CompressionTest.testCompression(hcd.getCompressionType());
+    CompressionTest.testCompression(hcd.getCompactionCompressionType());
   }
 
   private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
