@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.util.ExceptionUtil;
  * A reversed client scanner which support backward scanning
  */
 @InterfaceAudience.Private
-public class ReversedClientScanner extends ClientScanner {
+public class ReversedClientScanner extends ClientSimpleScanner {
   private static final Log LOG = LogFactory.getLog(ReversedClientScanner.class);
 
   /**

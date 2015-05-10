@@ -23,6 +23,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -120,6 +121,15 @@ public class TestClientScanner {
 
     public void setRpcFinished(boolean rpcFinished) {
       this.rpcFinished = rpcFinished;
+    }
+
+    @Override
+    protected void initCache() {
+      initSyncCache();
+    }
+
+    @Override public Result next() throws IOException {
+      return nextWithSyncCache();
     }
   }
 

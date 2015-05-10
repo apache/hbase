@@ -17,23 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClientSmallScanner.SmallScannerCallableFactory;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
@@ -45,6 +31,16 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the ClientSmallReversedScanner.
@@ -178,7 +174,7 @@ public class TestClientSmallReversedScanner {
 
       csrs.loadCache();
 
-      List<Result> results = csrs.cache;
+      Queue<Result> results = csrs.cache;
       Iterator<Result> iter = results.iterator();
       assertEquals(3, results.size());
       for (int i = 3; i >= 1 && iter.hasNext(); i--) {
@@ -248,7 +244,7 @@ public class TestClientSmallReversedScanner {
 
       csrs.loadCache();
 
-      List<Result> results = csrs.cache;
+      Queue<Result> results = csrs.cache;
       Iterator<Result> iter = results.iterator();
       assertEquals(2, results.size());
       for (int i = 3; i >= 2 && iter.hasNext(); i--) {
@@ -264,7 +260,7 @@ public class TestClientSmallReversedScanner {
       csrs.loadCache();
 
       assertEquals(1, results.size());
-      Result result = results.get(0);
+      Result result = results.peek();
       assertEquals("row1", new String(result.getRow(), StandardCharsets.UTF_8));
       assertEquals(1, result.getMap().size());
 

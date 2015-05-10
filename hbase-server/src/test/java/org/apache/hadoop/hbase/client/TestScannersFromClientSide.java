@@ -642,6 +642,55 @@ public class TestScannersFromClientSide {
     verifyResult(result, kvListExp, toLog, "Testing scan on re-opened region");
   }
 
+  /**
+   * Test from client side for async scan
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testAsyncScanner() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testAsyncScan");
+    byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
+    byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
+    byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
+
+    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+
+    Put put;
+    Scan scan;
+    Result result;
+    boolean toLog = true;
+    List<Cell> kvListExp, kvListScan;
+
+    kvListExp = new ArrayList<Cell>();
+
+    for (int r=0; r < ROWS.length; r++) {
+      put = new Put(ROWS[r]);
+      for (int c=0; c < FAMILIES.length; c++) {
+        for (int q=0; q < QUALIFIERS.length; q++) {
+          KeyValue kv = new KeyValue(ROWS[r], FAMILIES[c], QUALIFIERS[q], 1, VALUE);
+          put.add(kv);
+          kvListExp.add(kv);
+        }
+      }
+      ht.put(put);
+    }
+
+    scan = new Scan();
+    scan.setAsyncPrefetch(true);
+    ResultScanner scanner = ht.getScanner(scan);
+    kvListScan = new ArrayList<Cell>();
+    while ((result = scanner.next()) != null) {
+      for (Cell kv : result.listCells()) {
+        kvListScan.add(kv);
+      }
+    }
+    result = Result.create(kvListScan);
+    assertTrue("Not instance of async scanner",scanner instanceof ClientAsyncPrefetchScanner);
+    verifyResult(result, kvListExp, toLog, "Testing async scan");
+
+  }
+
   static void verifyResult(Result result, List<Cell> expKvList, boolean toLog,
       String msg) {
 

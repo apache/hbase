@@ -18,10 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.concurrent.ExecutorService;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.ServiceException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -39,8 +37,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.ServiceException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Client scanner for small scan. Generally, only one RPC is called to fetch the
@@ -50,7 +49,7 @@ import com.google.protobuf.ServiceException;
  * For small scan, it will get better performance than {@link ClientScanner}
  */
 @InterfaceAudience.Private
-public class ClientSmallScanner extends ClientScanner {
+public class ClientSmallScanner extends ClientSimpleScanner {
   private static final Log LOG = LogFactory.getLog(ClientSmallScanner.class);
   private ScannerCallableWithReplicas smallScanCallable = null;
   private SmallScannerCallableFactory callableFactory;
