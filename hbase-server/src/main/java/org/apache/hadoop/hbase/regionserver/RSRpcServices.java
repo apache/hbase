@@ -1536,6 +1536,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     WarmupRegionResponse response = WarmupRegionResponse.getDefaultInstance();
 
     try {
+      checkOpen();
       String encodedName = region.getEncodedName();
       byte[] encodedNameBytes = region.getEncodedNameAsBytes();
       final Region onlineRegion = regionServer.getFromOnlineRegions(encodedName);
