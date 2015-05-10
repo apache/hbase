@@ -89,7 +89,7 @@ public class ThriftUtilities {
     ColumnDescriptor col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY));
     col.maxVersions = in.getMaxVersions();
-    col.compression = in.getCompression().toString();
+    col.compression = in.getCompressionType().toString();
     col.inMemory = in.isInMemory();
     col.blockCacheEnabled = in.isBlockCacheEnabled();
     col.bloomFilterType = in.getBloomFilterType().toString();

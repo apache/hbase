@@ -859,7 +859,7 @@ public class TestHFileOutputFormat  {
           "(reader: " + reader + ")",
           hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
         assertEquals("Incorrect compression used for column family " + familyStr +
-          "(reader: " + reader + ")", hcd.getCompression(), reader.getFileContext().getCompression());
+          "(reader: " + reader + ")", hcd.getCompressionType(), reader.getFileContext().getCompression());
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);

@@ -805,7 +805,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       Map<byte[], byte[]> fileInfo = halfReader.loadFileInfo();
 
       int blocksize = familyDescriptor.getBlocksize();
-      Algorithm compression = familyDescriptor.getCompression();
+      Algorithm compression = familyDescriptor.getCompressionType();
       BloomType bloomFilterType = familyDescriptor.getBloomFilterType();
       HFileContext hFileContext = new HFileContextBuilder()
                                   .withCompression(compression)
