@@ -124,10 +124,22 @@ public class ClusterStatus extends VersionedWritable {
 
   /**
    * @return the number of dead region servers in the cluster
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0
+   *             (<a href="https://issues.apache.org/jira/browse/HBASE-13656">HBASE-13656</a>).
+   *             Use {@link #getDeadServersSize()}.
    */
+  @Deprecated
   public int getDeadServers() {
+    return getDeadServersSize();
+  }
+
+  /**
+   * @return the number of dead region servers in the cluster
+   */
+  public int getDeadServersSize() {
     return deadServers != null ? deadServers.size() : 0;
   }
+
 
   /**
    * @return the average cluster load
@@ -313,7 +325,7 @@ public class ClusterStatus extends VersionedWritable {
       }
     }
 
-    int deadServerSize = getDeadServers();
+    int deadServerSize = getDeadServersSize();
     sb.append("\nNumber of dead region servers: " + deadServerSize);
     if (deadServerSize > 0) {
       for (ServerName serverName: deadServers) {

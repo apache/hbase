@@ -647,7 +647,7 @@ module Hbase
             puts("            %s" % [ region.toString() ])
           end
         end
-        puts("%d dead servers" % [ status.getDeadServers() ])
+        puts("%d dead servers" % [ status.getDeadServersSize() ])
         for server in status.getDeadServerNames()
           puts("    %s" % [ server ])
         end
