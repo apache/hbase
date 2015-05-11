@@ -41,7 +41,7 @@ HBase has two versioning schemes, pre-1.0 and post-1.0. Both are detailed below.
 [[hbase.versioning.post10]]
 === Post 1.0 versions
 
-Starting with the 1.0.0 release, HBase uses link:http://semver.org/[Semantic Versioning] for its release versioning. In summary:
+Starting with the 1.0.0 release, HBase is working towards link:http://semver.org/[Semantic Versioning] for its release versioning. In summary:
 
 .Given a version number MAJOR.MINOR.PATCH, increment the:
 * MAJOR version when you make incompatible API changes,
@@ -72,10 +72,12 @@ In addition to the usual API versioning considerations HBase has other compatibi
 .Client API compatibility
 * Allow changing or removing existing client APIs.
 * An API needs to deprecated for a major version before we will change/remove it.
+* APIs available in a patch version will be available in all later patch versions. However, new APIs may be added which will not be available in earlier patch versions.
 * Example: A user using a newly deprecated api does not need to modify application code with hbase api calls until the next major version.
 
 .Client Binary compatibility
-* Old client code can run unchanged (no recompilation needed) against new jars.
+* Client code written to APIs available in a given patch release can run unchanged (no recompilation needed) against the new jars of later patch versions.
+* Client code written to APIs available in a given patch release might not run against the old jars from an earlier patch version.
 * Example: Old compiled client code will work unchanged with the new jars.
 
 .Server-Side Limited API compatibility (taken from Hadoop)
@@ -93,7 +95,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 * Web page APIs
 
 .Summary
-* A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.]
+* A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.]. Downgrading versions within patch releases may not be compatible.
 
 * A minor upgrade requires no application/client code modification. Ideally it would be a drop-in replacement but client code, coprocessors, filters, etc might have to be recompiled if new jars are used.
 
