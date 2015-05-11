@@ -401,6 +401,16 @@ mvn -DskipTests clean install && mvn -DskipTests package assembly:single
 
 The distribution tarball is built in _hbase-assembly/target/hbase-<version>-bin.tar.gz_.
 
+You can install or deploy the tarball by having the assembly:single goal before install or deploy in the maven command:
+
+----
+mvn -DskipTests package assembly:single install
+----
+----
+mvn -DskipTests package assembly:single deploy
+----
+
+
 [[build.gotchas]]
 ==== Build Gotchas
 
@@ -626,8 +636,7 @@ Release needs to be tagged for the next step.
 
 . Deploy to the Maven Repository.
 +
-Next, deploy HBase to the Apache Maven repository, using the `apache-release` profile instead of the `release` profile when running the +mvn
-                            deploy+ command.
+Next, deploy HBase to the Apache Maven repository, using the `apache-release` profile instead of the `release` profile when running the `mvn deploy` command.
 This profile invokes the Apache pom referenced by our pom files, and also signs your artifacts published to Maven, as long as the _settings.xml_ is configured correctly, as described in <<mvn.settings.file,mvn.settings.file>>.
 +
 [source,bourne]
@@ -638,6 +647,8 @@ $ mvn deploy -DskipTests -Papache-release
 +
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
 More work needs to be done on these maven artifacts to make them generally available. 
++
+We do not release HBase tarball to the Apache Maven repository. To avoid deploying the tarball, do not include the `assembly:single` goal in your `mvn deploy` command. Check the deployed artifacts as described in the next section.
 
 . Make the Release Candidate available.
 +

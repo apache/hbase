@@ -19,18 +19,34 @@
  */
 -->
 
-
 <project xmlns="http://maven.apache.org/DECORATION/1.0.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/DECORATION/1.0.0 http://maven.apache.org/xsd/decoration-1.0.0.xsd">
+  <skin>
+    <groupId>lt.velykis.maven.skins</groupId>
+    <artifactId>reflow-maven-skin</artifactId>
+    <version>1.1.1</version>
+  </skin>
+  <custom>
+    <reflowSkin>
+      <theme>bootswatch-spacelab</theme>
+      <bottomNav maxSpan="9">
+        <column>Apache HBase Project</column>
+        <column>^Documentation</column>
+        <column>0.94 Documentation|ASF</column>
+      </bottomNav>
+    </reflowSkin>
+  </custom>
   <bannerLeft>
     <name>Apache HBase</name>
     <src>images/hbase_logo.png</src>
     <href>http://hbase.apache.org/</href>
   </bannerLeft>
-  <bannerRight />
-  <version position="right" />
-  <publishDate position="right" />
+  <bannerRight>
+    <name>Apache HBase Orca</name>
+    <src>images/hbasecon2015.30percent.png</src>
+    <href>http://hbasecon.com/</href>
+  </bannerRight>
   <body>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
@@ -47,35 +63,31 @@
       <item name="Other resources" href="resources.html" />
     </menu>
     <menu name="Documentation">
-        <item name="Getting Started" href="book/quickstart.html" />
-      <item name="User API" href="apidocs/index.html" />
-      <item name="Developer API" href="devapidocs/index.html" />
+      <item name="Reference Guide" href="book.html" target="_blank" />
+      <item name="Reference Guide (PDF)" href="apache_hbase_reference_guide.pdf" target="_blank" />
+      <item name="Getting Started" href="book.html#quickstart" target="_blank" />
+      <item name="User API" href="apidocs/index.html" target="_blank" />
+      <item name="Developer API" href="devapidocs/index.html" target="_blank" />
       <item name="X-Ref" href="xref/index.html" />
-      <item name="Ref Guide (multi-page)"      href="book/book.html" />
-      <item name="Ref Guide (single-page)"      href="book.html" />
-      <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" />
-      <item name="FAQ" href="book/faq.html" />
-      <item name="Videos/Presentations" href="book.html#other.info" />
-      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" />
-      <item name="ACID Semantics" href="acid-semantics.html" />
-      <item name="Bulk Loads" href="book.html#arch.bulk.load" />
-      <item name="Metrics"      href="metrics.html" />
-      <item name="HBase on Windows"      href="cygwin.html" />
-      <item name="Cluster replication"      href="replication.html" />
+      <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" target="_blank" />
+      <item name="FAQ" href="book.html#faq" target="_blank" />
+      <item name="Videos/Presentations" href="book.html#other.info" target="_blank" />
+      <item name="Wiki" href="http://wiki.apache.org/hadoop/Hbase" target="_blank" />
+      <item name="ACID Semantics" href="acid-semantics.html" target="_blank" />
+      <item name="Bulk Loads" href="book.html#arch.bulk.load" target="_blank" />
+      <item name="Metrics" href="metrics.html" target="_blank" />
+      <item name="HBase on Windows" href="cygwin.html" target="_blank" />
+      <item name="Cluster replication" href="replication.html" target="_blank" />
     </menu>
     <menu name="0.94 Documentation">
-        <item name="API" href="0.94/apidocs/index.html" />
-        <item name="X-Ref" href="0.94/xref/index.html" />
-        <item name="Ref Guide (single-page)"      href="0.94/book.html" />
+      <item name="API" href="0.94/apidocs/index.html" target="_blank" />
+      <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />
+      <item name="Ref Guide (single-page)" href="0.94/book.html" target="_blank" />
     </menu>
     <menu name="ASF">
-        <item name="Apache Software Foundation"      href="http://www.apache.org/foundation/" />
-        <item name="How Apache Works"      href="http://www.apache.org/foundation/how-it-works.html" />
-        <item name="Sponsoring Apache"      href="http://www.apache.org/foundation/sponsorship.html" />
+      <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
+      <item name="How Apache Works" href="http://www.apache.org/foundation/how-it-works.html" target="_blank" />
+      <item name="Sponsoring Apache" href="http://www.apache.org/foundation/sponsorship.html" target="_blank" />
     </menu>
   </body>
-    <skin>
-        <groupId>org.apache.maven.skins</groupId>
-      <artifactId>maven-stylus-skin</artifactId>
-    </skin>
 </project>
