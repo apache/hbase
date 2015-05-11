@@ -67,6 +67,8 @@ public class TestRegionSplitPolicy {
     // Configure IncreasingToUpperBoundRegionSplitPolicy as our split policy
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       IncreasingToUpperBoundRegionSplitPolicy.class.getName());
+    conf.setDouble("hbase.hregion.max.filesize.jitter", 0.25D);
+
     // Now make it so the mock region has a RegionServerService that will
     // return 'online regions'.
     RegionServerServices rss = Mockito.mock(RegionServerServices.class);
@@ -131,6 +133,7 @@ public class TestRegionSplitPolicy {
   @Test
   public void testCreateDefault() throws IOException {
     conf.setLong(HConstants.HREGION_MAX_FILESIZE, 1234L);
+    conf.setDouble("hbase.hregion.max.filesize.jitter", 0.25D);
 
     // Using a default HTD, should pick up the file size from
     // configuration.
