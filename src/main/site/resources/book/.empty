@@ -1,0 +1,1 @@
+# This directory is here so that we can have rewrite rules in our .htaccess to maintain old links. Otherwise we fall under some top-level niceness redirects because we have a file named book.html.

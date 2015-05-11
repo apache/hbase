@@ -1,0 +1,135 @@
+////
+/**
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+////
+
+[[hbase_apis]]
+= Apache HBase APIs
+:doctype: book
+:numbered:
+:toc: left
+:icons: font
+:experimental:
+
+This chapter provides information about performing operations using HBase native APIs.
+This information is not exhaustive, and provides a quick reference in addition to the link:http://hbase.apache.org/apidocs/index.html[User API Reference].
+The examples here are not comprehensive or complete, and should be used for purposes of illustration only.
+
+Apache HBase also works with multiple external APIs.
+See <<external_apis>> for more information.
+
+== Examples
+
+.Create, modify and delete a Table Using Java
+====
+
+[source,java]
+----
+package com.example.hbase.admin;
+
+package util;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+
+public class Example {
+
+  private static final String TABLE_NAME = "MY_TABLE_NAME_TOO";
+  private static final String CF_DEFAULT = "DEFAULT_COLUMN_FAMILY";
+
+  public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
+    if (admin.tableExists(table.getTableName())) {
+      admin.disableTable(table.getTableName());
+      admin.deleteTable(table.getTableName());
+    }
+    admin.createTable(table);
+  }
+
+  public static void createSchemaTables(Configuration config) throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(config);
+         Admin admin = connection.getAdmin()) {
+
+      HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
+      table.addFamily(new HColumnDescriptor(CF_DEFAULT).setCompressionType(Algorithm.SNAPPY));
+
+      System.out.print("Creating table. ");
+      createOrOverwrite(admin, table);
+      System.out.println(" Done.");
+    }
+  }
+
+  public static void modifySchema (Configuration config) throws IOException {
+    try (Connection connection = ConnectionFactory.createConnection(config);
+         Admin admin = connection.getAdmin()) {
+
+      TableName tableName = TableName.valueOf(TABLE_NAME);
+      if (admin.tableExists(tableName)) {
+        System.out.println("Table does not exist.");
+        System.exit(-1);
+      }
+
+      HTableDescriptor table = new HTableDescriptor(tableName);
+
+      // Update existing table
+      HColumnDescriptor newColumn = new HColumnDescriptor("NEWCF");
+      newColumn.setCompactionCompressionType(Algorithm.GZ);
+      newColumn.setMaxVersions(HConstants.ALL_VERSIONS);
+      admin.addColumn(tableName, newColumn);
+
+      // Update existing column family
+      HColumnDescriptor existingColumn = new HColumnDescriptor(CF_DEFAULT);
+      existingColumn.setCompactionCompressionType(Algorithm.GZ);
+      existingColumn.setMaxVersions(HConstants.ALL_VERSIONS);
+      table.modifyFamily(existingColumn);
+      admin.modifyTable(tableName, table);
+
+      // Disable an existing table
+      admin.disableTable(tableName);
+
+      // Delete an existing column family
+      admin.deleteColumn(tableName, CF_DEFAULT.getBytes("UTF-8"));
+
+      // Delete a table (Need to be disabled first)
+      admin.deleteTable(tableName);
+    }
+  }
+
+  public static void main(String... args) throws IOException {
+    Configuration config = HBaseConfiguration.create();
+
+    //Add any necessary configuration files (hbase-site.xml, core-site.xml)
+    config.addResource(new Path(System.getenv("HBASE_CONF_DIR"), "hbase-site.xml"));
+    config.addResource(new Path(System.getenv("HADOOP_CONF_DIR"), "core-site.xml"));
+    createSchemaTables(config);
+    modifySchema(config);
+  }
+}
+----
+====

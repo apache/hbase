@@ -1,0 +1,97 @@
+////
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+////
+
+= Apache HBase (TM) Metrics
+
+== Introduction
+Apache HBase (TM) emits Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+
+== Setup
+
+First read up on Hadoop link:http://hadoop.apache.org/core/docs/current/api/org/apache/hadoop/metrics/package-summary.html[metrics].
+
+If you are using ganglia, the link:http://wiki.apache.org/hadoop/GangliaMetrics[GangliaMetrics] wiki page is useful read.
+
+To have HBase emit metrics, edit `$HBASE_HOME/conf/hadoop-metrics.properties` and enable metric 'contexts' per plugin.  As of this writing, hadoop supports *file* and *ganglia* plugins. Yes, the hbase metrics files is named hadoop-metrics rather than _hbase-metrics_ because currently at least the hadoop metrics system has the properties filename hardcoded. Per metrics _context_, comment out the NullContext and enable one or more plugins instead.
+
+If you enable the _hbase_ context, on regionservers you'll see total requests since last
+metric emission, count of regions and storefiles as well as a count of memstore size.
+On the master, you'll see a count of the cluster's requests.
+
+Enabling the _rpc_ context is good if you are interested in seeing
+metrics on each hbase rpc method invocation (counts and time taken).
+
+The _jvm_ context is useful for long-term stats on running hbase jvms -- memory used, thread counts, etc. As of this writing, if more than one jvm is running emitting metrics, at least in ganglia, the stats are aggregated rather than reported per instance.
+
+== Using with JMX
+
+In addition to the standard output contexts supported by the Hadoop 
+metrics package, you can also export HBase metrics via Java Management 
+Extensions (JMX).  This will allow viewing HBase stats in JConsole or 
+any other JMX client.
+
+=== Enable HBase stats collection
+
+To enable JMX support in HBase, first edit `$HBASE_HOME/conf/hadoop-metrics.properties` to support metrics refreshing. (If you've running 0.94.1 and above, or have already configured `hadoop-metrics.properties` for another output context, you can skip this step).
+[source,bash]
+----
+# Configuration of the "hbase" context for null
+hbase.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+hbase.period=60
+
+# Configuration of the "jvm" context for null
+jvm.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+jvm.period=60
+
+# Configuration of the "rpc" context for null
+rpc.class=org.apache.hadoop.metrics.spi.NullContextWithUpdateThread
+rpc.period=60
+----
+
+=== Setup JMX Remote Access
+
+For remote access, you will need to configure JMX remote passwords and access profiles.  Create the files:
+`$HBASE_HOME/conf/jmxremote.passwd` (set permissions 
+        to 600):: +
+----
+monitorRole monitorpass
+controlRole controlpass
+----
+
+`$HBASE_HOME/conf/jmxremote.access`:: +
+----
+monitorRole readonly
+controlRole readwrite
+----
+
+=== Configure JMX in HBase startup
+
+Finally, edit the `$HBASE_HOME/conf/hbase-env.sh` script to add JMX support:
+[source,bash]
+----
+HBASE_JMX_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.ssl=false"
+HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.password.file=$HBASE_HOME/conf/jmxremote.passwd"
+HBASE_JMX_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.access.file=$HBASE_HOME/conf/jmxremote.access"
+
+export HBASE_MASTER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=10101"
+export HBASE_REGIONSERVER_OPTS="$HBASE_JMX_OPTS -Dcom.sun.management.jmxremote.port=10102"
+----
+
+After restarting the processes you want to monitor, you should now be able to run JConsole (included with the JDK since JDK 5.0) to view the statistics via JMX.  HBase MBeans are exported under the *`hadoop`* domain in JMX.
+
+
+== Understanding HBase Metrics
+
+For more information on understanding HBase metrics, see the link:book.html#hbase_metrics[metrics section] in the Apache HBase Reference Guide. 
+
