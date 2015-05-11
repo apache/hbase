@@ -118,7 +118,7 @@ public class TestEncryptionKeyRotation {
     hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
       conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
       secondCFKey));
-    TEST_UTIL.getHBaseAdmin().modifyColumnFamily(htd.getTableName(), hcd);
+    TEST_UTIL.getHBaseAdmin().modifyColumn(htd.getTableName(), hcd);
     Thread.sleep(5000); // Need a predicate for online schema change
 
     // And major compact

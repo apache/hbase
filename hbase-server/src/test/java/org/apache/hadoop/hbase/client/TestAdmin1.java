@@ -145,7 +145,7 @@ public class TestAdmin1 {
     HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistentColumn);
     Exception exception = null;
     try {
-      this.admin.addColumnFamily(nonexistentTable, nonexistentHcd);
+      this.admin.addColumn(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -161,7 +161,7 @@ public class TestAdmin1 {
 
     exception = null;
     try {
-      this.admin.deleteColumnFamily(nonexistentTable, nonexistentColumn);
+      this.admin.deleteColumn(nonexistentTable, nonexistentColumn);
     } catch (IOException e) {
       exception = e;
     }
@@ -185,7 +185,7 @@ public class TestAdmin1 {
 
     exception = null;
     try {
-      this.admin.modifyColumnFamily(nonexistentTable, nonexistentHcd);
+      this.admin.modifyColumn(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -211,7 +211,7 @@ public class TestAdmin1 {
     try {
       exception = null;
       try {
-        this.admin.deleteColumnFamily(htd.getTableName(), nonexistentHcd.getName());
+        this.admin.deleteColumn(htd.getTableName(), nonexistentHcd.getName());
       } catch (IOException e) {
         exception = e;
       }
@@ -220,7 +220,7 @@ public class TestAdmin1 {
 
       exception = null;
       try {
-        this.admin.modifyColumnFamily(htd.getTableName(), nonexistentHcd);
+        this.admin.modifyColumn(htd.getTableName(), nonexistentHcd);
       } catch (IOException e) {
         exception = e;
       }
@@ -545,7 +545,7 @@ public class TestAdmin1 {
     final byte [] hcdName = hcd.getName();
     expectedException = false;
     try {
-      this.admin.modifyColumnFamily(tableName, hcd);
+      this.admin.modifyColumn(tableName, hcd);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -561,7 +561,7 @@ public class TestAdmin1 {
     xtracol.setValue(xtracolName, xtracolName);
     expectedException = false;
     try {
-      this.admin.addColumnFamily(tableName, xtracol);
+      this.admin.addColumn(tableName, xtracol);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -573,7 +573,7 @@ public class TestAdmin1 {
     assertTrue(hcd.getValue(xtracolName).equals(xtracolName));
 
     // Delete the just-added column.
-    this.admin.deleteColumnFamily(tableName, xtracol.getName());
+    this.admin.deleteColumn(tableName, xtracol.getName());
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     hcd = modifiedHtd.getFamily(xtracol.getName());
     assertTrue(hcd == null);
@@ -1292,10 +1292,10 @@ public class TestAdmin1 {
       //expected
     }
 
-    this.admin.addColumnFamily(tableName, new HColumnDescriptor("col2"));
+    this.admin.addColumn(tableName, new HColumnDescriptor("col2"));
     this.admin.enableTable(tableName);
     try {
-      this.admin.deleteColumnFamily(tableName, Bytes.toBytes("col2"));
+      this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
     } catch (TableNotDisabledException e) {
       LOG.info(e);
     }

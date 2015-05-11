@@ -151,7 +151,7 @@ public class TestTableDeleteFamilyHandler {
 
     // TEST - Disable and delete the column family
     admin.disableTable(TABLENAME);
-    admin.deleteColumnFamily(TABLENAME, Bytes.toBytes("cf2"));
+    admin.deleteColumn(TABLENAME, Bytes.toBytes("cf2"));
 
     // 5 - Check if only 2 column families exist in the descriptor
     HTableDescriptor afterhtd = admin.getTableDescriptor(TABLENAME);
@@ -241,7 +241,7 @@ public class TestTableDeleteFamilyHandler {
     if (admin.isTableEnabled(TABLENAME)) {
       admin.disableTable(TABLENAME);
     }
-    admin.deleteColumnFamily(TABLENAME, Bytes.toBytes(cfToDelete));
+    admin.deleteColumn(TABLENAME, Bytes.toBytes(cfToDelete));
 
     // 5 - Check if the target column family is gone from the FS
     fileStatus = fs.listStatus(tableDir);
@@ -266,7 +266,7 @@ public class TestTableDeleteFamilyHandler {
 
     try {
       // Test: delete again
-      admin.deleteColumnFamily(TABLENAME, Bytes.toBytes(cfToDelete));
+      admin.deleteColumn(TABLENAME, Bytes.toBytes(cfToDelete));
       Assert.fail("Delete a non-exist column family should fail");
     } catch (InvalidFamilyOperationException e) {
       // Expected.

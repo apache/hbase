@@ -652,19 +652,19 @@ public abstract class TestVisibilityLabels {
     }
     try {
       HColumnDescriptor hcd = new HColumnDescriptor("testFamily");
-      admin.addColumnFamily(LABELS_TABLE_NAME, hcd);
+      admin.addColumn(LABELS_TABLE_NAME, hcd);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }
     try {
-      admin.deleteColumnFamily(LABELS_TABLE_NAME, VisibilityConstants.LABELS_TABLE_FAMILY);
+      admin.deleteColumn(LABELS_TABLE_NAME, VisibilityConstants.LABELS_TABLE_FAMILY);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }
     try {
       HColumnDescriptor hcd = new HColumnDescriptor(VisibilityConstants.LABELS_TABLE_FAMILY);
       hcd.setBloomFilterType(BloomType.ROWCOL);
-      admin.modifyColumnFamily(LABELS_TABLE_NAME, hcd);
+      admin.modifyColumn(LABELS_TABLE_NAME, hcd);
       fail("Lables table should not get altered by user.");
     } catch (Exception e) {
     }

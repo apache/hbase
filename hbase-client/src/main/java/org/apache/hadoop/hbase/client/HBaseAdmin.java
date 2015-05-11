@@ -1349,137 +1349,95 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Add a column family to an existing table.
+   * Add a column to an existing table.
    * Asynchronous operation.
    *
-   * @param tableName name of the table to add column family to
-   * @param columnFamily column family descriptor of column family to be added
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #addColumnFamily(TableName, HColumnDescriptor)}.
    */
-  @Deprecated
-  public void addColumn(final byte[] tableName, HColumnDescriptor columnFamily)
+  public void addColumn(final byte[] tableName, HColumnDescriptor column)
   throws IOException {
-    addColumnFamily(TableName.valueOf(tableName), columnFamily);
+    addColumn(TableName.valueOf(tableName), column);
+  }
+
+
+  /**
+   * Add a column to an existing table.
+   * Asynchronous operation.
+   *
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
+   * @throws IOException if a remote or network exception occurs
+   */
+  public void addColumn(final String tableName, HColumnDescriptor column)
+  throws IOException {
+    addColumn(TableName.valueOf(tableName), column);
   }
 
   /**
-   * Add a column family to an existing table.
+   * Add a column to an existing table.
    * Asynchronous operation.
    *
-   * @param tableName name of the table to add column family to
-   * @param columnFamily column family descriptor of column family to be added
+   * @param tableName name of the table to add column to
+   * @param column column descriptor of column to be added
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #addColumnFamily(TableName, HColumnDescriptor)}.
-   */
-  @Deprecated
-  public void addColumn(final String tableName, HColumnDescriptor columnFamily)
-  throws IOException {
-    addColumnFamily(TableName.valueOf(tableName), columnFamily);
-  }
-
-  /**
-   * Add a column family to an existing table.
-   * Asynchronous operation.
-   *
-   * @param tableName name of the table to add column family to
-   * @param columnFamily column family descriptor of column family to be added
-   * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #addColumnFamily(TableName, HColumnDescriptor)}.
    */
   @Override
-  @Deprecated
-  public void addColumn(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    addColumnFamily(tableName, columnFamily);
-  }
-
-  @Override
-  public void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  public void addColumn(final TableName tableName, final HColumnDescriptor column)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, columnFamily);
-        master.addColumn(null, req);
+        AddColumnRequest req = RequestConverter.buildAddColumnRequest(tableName, column);
+        master.addColumn(null,req);
         return null;
       }
     });
   }
 
   /**
-   * Delete a column family from a table.
+   * Delete a column from a table.
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily name of column family to be deleted
+   * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #deleteColumnFamily(TableName, byte[])}.
    */
-  @Deprecated
-  public void deleteColumn(final byte[] tableName, final String columnFamily)
+  public void deleteColumn(final byte[] tableName, final String columnName)
   throws IOException {
-    deleteColumnFamily(TableName.valueOf(tableName), Bytes.toBytes(columnFamily));
+    deleteColumn(TableName.valueOf(tableName), Bytes.toBytes(columnName));
   }
 
   /**
-   * Delete a column family from a table.
+   * Delete a column from a table.
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily name of column family to be deleted
+   * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #deleteColumnFamily(TableName, byte[])}.
    */
-  @Deprecated
-  public void deleteColumn(final String tableName, final String columnFamily)
+  public void deleteColumn(final String tableName, final String columnName)
   throws IOException {
-    deleteColumnFamily(TableName.valueOf(tableName), Bytes.toBytes(columnFamily));
+    deleteColumn(TableName.valueOf(tableName), Bytes.toBytes(columnName));
   }
 
   /**
-   * Delete a column family from a table.
+   * Delete a column from a table.
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily name of column family to be deleted
+   * @param columnName name of column to be deleted
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #deleteColumnFamily(TableName, byte[])}.
    */
   @Override
-  @Deprecated
-  public void deleteColumn(final TableName tableName, final byte[] columnFamily)
-  throws IOException {
-    deleteColumnFamily(tableName, columnFamily);
-  }
-
-  @Override
-  public void deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
+  public void deleteColumn(final TableName tableName, final byte [] columnName)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        DeleteColumnRequest req =
-          RequestConverter.buildDeleteColumnRequest(tableName, columnFamily);
-        master.deleteColumn(null, req);
+        DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(tableName, columnName);
+        master.deleteColumn(null,req);
         return null;
       }
     });
@@ -1490,17 +1448,12 @@ public class HBaseAdmin implements Admin {
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily new column family descriptor to use
+   * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #modifyColumnFamily(TableName, HColumnDescriptor)}.
    */
-  @Deprecated
-  public void modifyColumn(final String tableName, HColumnDescriptor columnFamily)
+  public void modifyColumn(final String tableName, HColumnDescriptor descriptor)
   throws IOException {
-    modifyColumnFamily(TableName.valueOf(tableName), columnFamily);
+    modifyColumn(TableName.valueOf(tableName), descriptor);
   }
 
   /**
@@ -1508,46 +1461,31 @@ public class HBaseAdmin implements Admin {
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily new column family descriptor to use
+   * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #modifyColumnFamily(TableName, HColumnDescriptor)}.
    */
-  @Deprecated
-  public void modifyColumn(final byte[] tableName, HColumnDescriptor columnFamily)
+  public void modifyColumn(final byte[] tableName, HColumnDescriptor descriptor)
   throws IOException {
-    modifyColumnFamily(TableName.valueOf(tableName), columnFamily);
+    modifyColumn(TableName.valueOf(tableName), descriptor);
   }
+
+
 
   /**
    * Modify an existing column family on a table.
    * Asynchronous operation.
    *
    * @param tableName name of table
-   * @param columnFamily new column family descriptor to use
+   * @param descriptor new column descriptor to use
    * @throws IOException if a remote or network exception occurs
-   * @deprecated As of release 2.0.0.
-   *             (<a href="https://issues.apache.org/jira/browse/HBASE-1989">HBASE-1989</a>).
-   *             This will be removed in HBase 3.0.0.
-   *             Use {@link #modifyColumnFamily(TableName, HColumnDescriptor)}.
    */
   @Override
-  @Deprecated
-  public void modifyColumn(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    modifyColumnFamily(tableName, columnFamily);
-  }
-
-  @Override
-  public void modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  public void modifyColumn(final TableName tableName, final HColumnDescriptor descriptor)
   throws IOException {
     executeCallable(new MasterCallable<Void>(getConnection()) {
       @Override
       public Void call(int callTimeout) throws ServiceException {
-        ModifyColumnRequest req =
-          RequestConverter.buildModifyColumnRequest(tableName, columnFamily);
+        ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(tableName, descriptor);
         master.modifyColumn(null,req);
         return null;
       }

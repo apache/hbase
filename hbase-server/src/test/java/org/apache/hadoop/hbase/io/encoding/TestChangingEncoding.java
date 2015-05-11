@@ -180,7 +180,7 @@ public class TestChangingEncoding {
       if (!onlineChange) {
         admin.disableTable(tableName);
       }
-      admin.modifyColumnFamily(tableName, hcd);
+      admin.modifyColumn(tableName, hcd);
       if (!onlineChange) {
         admin.enableTable(tableName);
       }

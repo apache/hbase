@@ -159,9 +159,9 @@ public class SchemaResource extends ResourceBase {
             hcd.setValue(e.getKey().getLocalPart(), e.getValue().toString());
           }
           if (htd.hasFamily(hcd.getName())) {
-            admin.modifyColumnFamily(name, hcd);
+            admin.modifyColumn(name, hcd);
           } else {
-            admin.addColumnFamily(name, hcd);
+            admin.addColumn(name, hcd);
           }
         }
       } catch (IOException e) {

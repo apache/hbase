@@ -1259,14 +1259,14 @@ public class TestMasterObserver {
       cp.wasModifyTableCalled());
 
     // add a column family
-    admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
     assertTrue("New column family shouldn't have been added to test table",
       cp.preAddColumnCalledOnly());
 
     // modify a column family
     HColumnDescriptor hcd1 = new HColumnDescriptor(TEST_FAMILY2);
     hcd1.setMaxVersions(25);
-    admin.modifyColumnFamily(tableName, hcd1);
+    admin.modifyColumn(tableName, hcd1);
     assertTrue("Second column family should be modified",
       cp.preModifyColumnCalledOnly());
 
@@ -1313,7 +1313,7 @@ public class TestMasterObserver {
     assertTrue("Test table should have been modified",
         cp.wasModifyTableCalled());
     // add a column family
-    admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumn(tableName, new HColumnDescriptor(TEST_FAMILY2));
     assertTrue("New column family should have been added to test table",
         cp.wasAddColumnCalled());
     assertTrue("Add column handler should be called.",
@@ -1322,7 +1322,7 @@ public class TestMasterObserver {
     // modify a column family
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAMILY2);
     hcd.setMaxVersions(25);
-    admin.modifyColumnFamily(tableName, hcd);
+    admin.modifyColumn(tableName, hcd);
     assertTrue("Second column family should be modified",
         cp.wasModifyColumnCalled());
     assertTrue("Modify table handler should be called.",
@@ -1346,7 +1346,7 @@ public class TestMasterObserver {
     assertFalse("No column family deleted yet", cp.wasDeleteColumnCalled());
     assertFalse("Delete table column handler should not be called.",
         cp.wasDeleteColumnHandlerCalled());
-    admin.deleteColumnFamily(tableName, TEST_FAMILY2);
+    admin.deleteColumn(tableName, TEST_FAMILY2);
     HTableDescriptor tableDesc = admin.getTableDescriptor(tableName);
     assertNull("'"+Bytes.toString(TEST_FAMILY2)+"' should have been removed",
         tableDesc.getFamily(TEST_FAMILY2));
