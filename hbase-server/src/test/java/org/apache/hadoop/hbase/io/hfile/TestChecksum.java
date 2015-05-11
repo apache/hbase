@@ -22,12 +22,18 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -66,6 +72,73 @@ public class TestChecksum {
   public void setUp() throws Exception {
     fs = HFileSystem.get(TEST_UTIL.getConfiguration());
     hfs = (HFileSystem)fs;
+  }
+
+  @Test
+  public void testNewBlocksHaveDefaultChecksum() throws IOException {
+    Path path = new Path(TEST_UTIL.getDataTestDir(), "default_checksum");
+    FSDataOutputStream os = fs.create(path);
+    HFileContext meta = new HFileContextBuilder().build();
+    HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+    DataOutputStream dos = hbw.startWriting(BlockType.DATA);
+    for (int i = 0; i < 1000; ++i)
+      dos.writeInt(i);
+    hbw.writeHeaderAndData(os);
+    int totalSize = hbw.getOnDiskSizeWithHeader();
+    os.close();
+
+    // Use hbase checksums.
+    assertEquals(true, hfs.useHBaseChecksum());
+
+    FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
+    meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
+    HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
+        is, totalSize, (HFileSystem) fs, path, meta);
+    HFileBlock b = hbr.readBlockData(0, -1, -1, false);
+    assertEquals(b.getChecksumType(), ChecksumType.getDefaultChecksumType().getCode());
+  }
+
+  /**
+   * Test all checksum types by writing and reading back blocks.
+   */
+  @Test
+  public void testAllChecksumTypes() throws IOException {
+    List<ChecksumType> cktypes = new ArrayList<>(Arrays.asList(ChecksumType.values()));
+    for (Iterator<ChecksumType> itr = cktypes.iterator(); itr.hasNext(); ) {
+      ChecksumType cktype = itr.next();
+      Path path = new Path(TEST_UTIL.getDataTestDir(), "checksum" + cktype.getName());
+      FSDataOutputStream os = fs.create(path);
+      HFileContext meta = new HFileContextBuilder()
+          .withChecksumType(cktype).build();
+      HFileBlock.Writer hbw = new HFileBlock.Writer(null, meta);
+      DataOutputStream dos = hbw.startWriting(BlockType.DATA);
+      for (int i = 0; i < 1000; ++i)
+        dos.writeInt(i);
+      hbw.writeHeaderAndData(os);
+      int totalSize = hbw.getOnDiskSizeWithHeader();
+      os.close();
+
+      // Use hbase checksums.
+      assertEquals(true, hfs.useHBaseChecksum());
+
+      FSDataInputStreamWrapper is = new FSDataInputStreamWrapper(fs, path);
+      meta = new HFileContextBuilder().withHBaseCheckSum(true).build();
+      HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
+          is, totalSize, (HFileSystem) fs, path, meta);
+      HFileBlock b = hbr.readBlockData(0, -1, -1, false);
+      ByteBuffer data = b.getBufferWithoutHeader();
+      for (int i = 0; i < 1000; i++) {
+        assertEquals(i, data.getInt());
+      }
+      boolean exception_thrown = false;
+      try {
+        data.getInt();
+      } catch (BufferUnderflowException e) {
+        exception_thrown = true;
+      }
+      assertTrue(exception_thrown);
+      assertEquals(0, HFile.getChecksumFailuresCount());
+    }
   }
 
   /**
@@ -254,16 +327,6 @@ public class TestChecksum {
         assertEquals(0, HFile.getChecksumFailuresCount());
       }
     }
-  }
-
-  /** 
-   * Test to ensure that these is at least one valid checksum implementation
-   */
-  @Test
-  public void testChecksumAlgorithm() throws IOException {
-    ChecksumType type = ChecksumType.CRC32;
-    assertEquals(ChecksumType.nameToType(type.getName()), type);
-    assertEquals(ChecksumType.valueOf(type.toString()), type);
   }
 
   private void validateData(DataInputStream in) throws IOException {

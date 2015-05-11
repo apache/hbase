@@ -62,7 +62,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
@@ -179,9 +178,6 @@ public class HFile {
    * The number of bytes per checksum.
    */
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
-  // TODO: This define is done in three places.  Fix.
-  public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
-
   // For measuring number of checksum failures
   static final AtomicLong checksumFailures = new AtomicLong();
 
