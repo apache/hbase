@@ -36,99 +36,102 @@ See <<external_apis>> for more information.
 
 == Examples
 
-.Create, modify and delete a Table Using Java
+.Create a Table Using Java
 ====
 
 [source,java]
 ----
 package com.example.hbase.admin;
 
-package util;
-
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
+import org.apache.hadoop.conf.Configuration;
 
-public class Example {
+import static com.example.hbase.Constants.*;
 
-  private static final String TABLE_NAME = "MY_TABLE_NAME_TOO";
-  private static final String CF_DEFAULT = "DEFAULT_COLUMN_FAMILY";
+public class CreateSchema {
 
   public static void createOrOverwrite(Admin admin, HTableDescriptor table) throws IOException {
-    if (admin.tableExists(table.getTableName())) {
-      admin.disableTable(table.getTableName());
-      admin.deleteTable(table.getTableName());
+    if (admin.tableExists(table.getName())) {
+      admin.disableTable(table.getName());
+      admin.deleteTable(table.getName());
     }
     admin.createTable(table);
   }
 
-  public static void createSchemaTables(Configuration config) throws IOException {
-    try (Connection connection = ConnectionFactory.createConnection(config);
-         Admin admin = connection.getAdmin()) {
-
+  public static void createSchemaTables (Configuration config) {
+    try {
+      final Admin admin = new Admin(config);
       HTableDescriptor table = new HTableDescriptor(TableName.valueOf(TABLE_NAME));
       table.addFamily(new HColumnDescriptor(CF_DEFAULT).setCompressionType(Algorithm.SNAPPY));
 
       System.out.print("Creating table. ");
       createOrOverwrite(admin, table);
       System.out.println(" Done.");
+
+      admin.close();
+    } catch (Exception e) {
+      e.printStackTrace();
+      System.exit(-1);
     }
   }
 
-  public static void modifySchema (Configuration config) throws IOException {
-    try (Connection connection = ConnectionFactory.createConnection(config);
-         Admin admin = connection.getAdmin()) {
+}
+----
+====
 
-      TableName tableName = TableName.valueOf(TABLE_NAME);
-      if (admin.tableExists(tableName)) {
-        System.out.println("Table does not exist.");
-        System.exit(-1);
-      }
+.Add, Modify, and Delete a Table
+====
 
-      HTableDescriptor table = new HTableDescriptor(tableName);
+[source,java]
+----
+public static void upgradeFrom0 (Configuration config) {
 
-      // Update existing table
-      HColumnDescriptor newColumn = new HColumnDescriptor("NEWCF");
-      newColumn.setCompactionCompressionType(Algorithm.GZ);
-      newColumn.setMaxVersions(HConstants.ALL_VERSIONS);
-      admin.addColumn(tableName, newColumn);
+  try {
+    final Admin admin = new Admin(config);
+    TableName tableName = TableName.valueOf(TABLE_ASSETMETA);
+    HTableDescriptor table_assetmeta = new HTableDescriptor(tableName);
+    table_assetmeta.addFamily(new HColumnDescriptor(CF_DEFAULT).setCompressionType(Algorithm.SNAPPY));
 
-      // Update existing column family
-      HColumnDescriptor existingColumn = new HColumnDescriptor(CF_DEFAULT);
-      existingColumn.setCompactionCompressionType(Algorithm.GZ);
-      existingColumn.setMaxVersions(HConstants.ALL_VERSIONS);
-      table.modifyFamily(existingColumn);
-      admin.modifyTable(tableName, table);
+    // Create a new table.
 
-      // Disable an existing table
-      admin.disableTable(tableName);
+    System.out.print("Creating table_assetmeta. ");
+    admin.createTable(table_assetmeta);
+    System.out.println(" Done.");
 
-      // Delete an existing column family
-      admin.deleteColumn(tableName, CF_DEFAULT.getBytes("UTF-8"));
+    // Update existing table
+    HColumnDescriptor newColumn = new HColumnDescriptor("NEWCF");
+    newColumn.setCompactionCompressionType(Algorithm.GZ);
+    newColumn.setMaxVersions(HConstants.ALL_VERSIONS);
+    admin.addColumn(tableName, newColumn);
 
-      // Delete a table (Need to be disabled first)
-      admin.deleteTable(tableName);
-    }
-  }
+    // Update existing column family
+    HColumnDescriptor existingColumn = new HColumnDescriptor(CF_DEFAULT);
+    existingColumn.setCompactionCompressionType(Algorithm.GZ);
+    existingColumn.setMaxVersions(HConstants.ALL_VERSIONS);
+    table_assetmeta.modifyFamily(existingColumn)
+    admin.modifyTable(tableName, table_assetmeta);
 
-  public static void main(String... args) throws IOException {
-    Configuration config = HBaseConfiguration.create();
+    // Disable an existing table
+    admin.disableTable(tableName);
 
-    //Add any necessary configuration files (hbase-site.xml, core-site.xml)
-    config.addResource(new Path(System.getenv("HBASE_CONF_DIR"), "hbase-site.xml"));
-    config.addResource(new Path(System.getenv("HADOOP_CONF_DIR"), "core-site.xml"));
-    createSchemaTables(config);
-    modifySchema(config);
+    // Delete an existing column family
+    admin.deleteColumn(tableName, CF_DEFAULT);
+
+    // Delete a table (Need to be disabled first)
+    admin.deleteTable(tableName);
+
+
+    admin.close();
+  } catch (Exception e) {
+    e.printStackTrace();
+    System.exit(-1);
   }
 }
 ----
