@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Distributed procedure member's Subprocedure.  A procedure is sarted on a ProcedureCoordinator
@@ -106,8 +107,12 @@ abstract public class Subprocedure implements Callable<Void> {
           LOG.debug("Was remote foreign exception, not redispatching error", ee);
           return;
         }
-
-        // if it is local, then send it to the coordinator
+        // if this is a local KeeperException, don't attempt to notify other members
+        if (ee.getCause() instanceof KeeperException) {
+          LOG.debug("Was KeeperException, not redispatching error", ee);
+          return;
+        }
+        // if it is other local error, then send it to the coordinator
         try {
           rpcs.sendMemberAborted(Subprocedure.this, ee);
         } catch (IOException e) {
