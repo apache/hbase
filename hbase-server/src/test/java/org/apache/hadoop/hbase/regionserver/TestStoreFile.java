@@ -73,7 +73,7 @@ public class TestStoreFile extends HBaseTestCase {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
-  private static final ChecksumType CKTYPE = ChecksumType.CRC32;
+  private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
 

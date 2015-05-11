@@ -432,7 +432,7 @@ public class HStore implements Store {
   public static ChecksumType getChecksumType(Configuration conf) {
     String checksumName = conf.get(HConstants.CHECKSUM_TYPE_NAME);
     if (checksumName == null) {
-      return HFile.DEFAULT_CHECKSUM_TYPE;
+      return ChecksumType.getDefaultChecksumType();
     } else {
       return ChecksumType.nameToType(checksumName);
     }

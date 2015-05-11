@@ -248,7 +248,8 @@ public class TestHFileBlock {
     final String correctTestBlockStr =
         "DATABLK*\\x00\\x00\\x00>\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
             + "\\xFF\\xFF\\xFF\\xFF"
-            + "\\x01\\x00\\x00@\\x00\\x00\\x00\\x00["
+            + "\\x0" + ChecksumType.getDefaultChecksumType().getCode()
+            + "\\x00\\x00@\\x00\\x00\\x00\\x00["
             // gzip-compressed block: http://www.gzip.org/zlib/rfc-gzip.html
             + "\\x1F\\x8B"  // gzip magic signature
             + "\\x08"  // Compression method: 8 = "deflate"

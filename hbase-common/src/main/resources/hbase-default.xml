@@ -1201,7 +1201,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.checksum.algorithm</name>
-    <value>CRC32</value>
+    <value>CRC32C</value>
     <description>
       Name of an algorithm that is used to compute checksums. Possible values
       are NULL, CRC32, CRC32C.

@@ -20,19 +20,21 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.zip.Checksum;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.util.DataChecksum;
 
 /**
  * Utility methods to compute and validate checksums.
  */
 @InterfaceAudience.Private
 public class ChecksumUtil {
+  public static final Log LOG = LogFactory.getLog(ChecksumUtil.class);
 
   /** This is used to reserve space in a byte buffer */
   private static byte[] DUMMY_VALUE = new byte[128 * HFileBlock.CHECKSUM_SIZE];
@@ -60,33 +62,20 @@ public class ChecksumUtil {
    * @param checksumType type of checksum
    * @param bytesPerChecksum number of bytes per checksum value
    */
-  static void generateChecksums(byte[] indata,
-    int startOffset, int endOffset, 
-    byte[] outdata, int outOffset,
-    ChecksumType checksumType,
+  static void generateChecksums(byte[] indata, int startOffset, int endOffset,
+    byte[] outdata, int outOffset, ChecksumType checksumType,
     int bytesPerChecksum) throws IOException {
 
     if (checksumType == ChecksumType.NULL) {
-      return; // No checkums for this block.
+      return; // No checksum for this block.
     }
 
-    Checksum checksum = checksumType.getChecksumObject();
-    int bytesLeft = endOffset - startOffset;
-    int chunkNum = 0;
+    DataChecksum checksum = DataChecksum.newDataChecksum(
+        checksumType.getDataChecksumType(), bytesPerChecksum);
 
-    while (bytesLeft > 0) {
-      // generate the checksum for one chunk
-      checksum.reset();
-      int count = Math.min(bytesLeft, bytesPerChecksum);
-      checksum.update(indata, startOffset, count);
-
-      // write the checksum value to the output buffer.
-      int cksumValue = (int)checksum.getValue();
-      outOffset = Bytes.putInt(outdata, outOffset, cksumValue);
-      chunkNum++;
-      startOffset += count;
-      bytesLeft -= count;
-    }
+    checksum.calculateChunkedSums(
+       ByteBuffer.wrap(indata, startOffset, endOffset - startOffset),
+       ByteBuffer.wrap(outdata, outOffset, outdata.length - outOffset));
   }
 
   /**
@@ -98,7 +87,7 @@ public class ChecksumUtil {
    * The header is extracted from the specified HFileBlock while the
    * data-to-be-verified is extracted from 'data'.
    */
-  static boolean validateBlockChecksum(Path path, HFileBlock block, 
+  static boolean validateBlockChecksum(Path path, HFileBlock block,
     byte[] data, int hdrSize) throws IOException {
 
     // If this is an older version of the block that does not have
@@ -117,65 +106,32 @@ public class ChecksumUtil {
     // always return true.
     ChecksumType cktype = ChecksumType.codeToType(block.getChecksumType());
     if (cktype == ChecksumType.NULL) {
-      return true; // No checkums validations needed for this block.
+      return true; // No checksum validations needed for this block.
     }
-    Checksum checksumObject = cktype.getChecksumObject();
-    checksumObject.reset();
 
     // read in the stored value of the checksum size from the header.
     int bytesPerChecksum = block.getBytesPerChecksum();
 
-    // bytesPerChecksum is always larger than the size of the header
-    if (bytesPerChecksum < hdrSize) {
-      String msg = "Unsupported value of bytesPerChecksum. " +
-                   " Minimum is " + hdrSize + 
-                   " but the configured value is " + bytesPerChecksum;
-      HFile.LOG.warn(msg);
-      return false;   // cannot happen case, unable to verify checksum
+    DataChecksum dataChecksum = DataChecksum.newDataChecksum(
+        cktype.getDataChecksumType(), bytesPerChecksum);
+    assert dataChecksum != null;
+    int sizeWithHeader =  block.getOnDiskDataSizeWithHeader();
+    if (LOG.isTraceEnabled()) {
+      LOG.info("length of data = " + data.length
+          + " OnDiskDataSizeWithHeader = " + sizeWithHeader
+          + " checksum type = " + cktype.getName()
+          + " file =" + path.toString()
+          + " header size = " + hdrSize
+          + " bytesPerChecksum = " + bytesPerChecksum);
     }
-    // Extract the header and compute checksum for the header.
-    ByteBuffer hdr = block.getBufferWithHeader();
-    if (hdr.hasArray()) {
-      checksumObject.update(hdr.array(), hdr.arrayOffset(), hdrSize);
-    } else {
-      checksumObject.update(ByteBufferUtils.toBytes(hdr, 0, hdrSize), 0, hdrSize);
+    try {
+      dataChecksum.verifyChunkedSums(ByteBuffer.wrap(data, 0, sizeWithHeader),
+          ByteBuffer.wrap(data, sizeWithHeader, data.length - sizeWithHeader),
+                          path.toString(), 0);
+    } catch (ChecksumException e) {
+      return false;
     }
-
-    int off = hdrSize;
-    int consumed = hdrSize;
-    int bytesLeft = block.getOnDiskDataSizeWithHeader() - off;
-    int cksumOffset = block.getOnDiskDataSizeWithHeader();
-    
-    // validate each chunk
-    while (bytesLeft > 0) {
-      int thisChunkSize = bytesPerChecksum - consumed;
-      int count = Math.min(bytesLeft, thisChunkSize);
-      checksumObject.update(data, off, count);
-
-      int storedChecksum = Bytes.toInt(data, cksumOffset);
-      if (storedChecksum != (int)checksumObject.getValue()) {
-        String msg = "File " + path +
-                     " Stored checksum value of " + storedChecksum +
-                     " at offset " + cksumOffset +
-                     " does not match computed checksum " +
-                     checksumObject.getValue() +
-                     ", total data size " + data.length +
-                     " Checksum data range offset " + off + " len " + count +
-                     HFileBlock.toStringHeader(block.getBufferReadOnly());
-        HFile.LOG.warn(msg);
-        if (generateExceptions) {
-          throw new IOException(msg); // this is only for unit tests
-        } else {
-          return false;               // checksum validation failure
-        }
-      }
-      cksumOffset += HFileBlock.CHECKSUM_SIZE;
-      bytesLeft -= count; 
-      off += count;
-      consumed = 0;
-      checksumObject.reset();
-    }
-    return true; // checksum is valid
+    return true;  // checksum is valid
   }
 
   /**
