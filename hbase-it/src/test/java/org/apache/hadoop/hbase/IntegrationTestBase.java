@@ -66,8 +66,14 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
         + "monkey properties.");
   }
 
-  @Override
-  protected void processOptions(CommandLine cmd) {
+  /**
+   * This allows tests that subclass children of this base class such as
+   * {@link org.apache.hadoop.hbase.test.IntegrationTestReplication} to
+   * include the base options without having to also include the options from the test.
+   *
+   * @param cmd the command line
+   */
+  protected void processBaseOptions(CommandLine cmd) {
     if (cmd.hasOption(LONG_OPT)) {
       monkeyToUse = cmd.getOptionValue(LONG_OPT);
     }
@@ -84,6 +90,11 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
         }
       }
     }
+  }
+
+  @Override
+  protected void processOptions(CommandLine cmd) {
+    processBaseOptions(cmd);
   }
 
   @Override
