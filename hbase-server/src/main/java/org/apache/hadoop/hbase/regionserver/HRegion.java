@@ -6083,8 +6083,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private void checkCompressionCodecs() throws IOException {
     for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
-      CompressionTest.testCompression(fam.getCompressionType());
-      CompressionTest.testCompression(fam.getCompactionCompressionType());
+      CompressionTest.testCompression(fam.getCompression());
+      CompressionTest.testCompression(fam.getCompactionCompression());
     }
   }
 

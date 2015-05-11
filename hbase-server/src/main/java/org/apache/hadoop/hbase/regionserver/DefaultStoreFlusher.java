@@ -64,7 +64,7 @@ public class DefaultStoreFlusher extends StoreFlusher {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
         writer = store.createWriterInTmp(
-            cellsCount, store.getFamily().getCompressionType(), false, true, true);
+            cellsCount, store.getFamily().getCompression(), false, true, true);
         writer.setTimeRangeTracker(snapshot.getTimeRangeTracker());
         IOException e = null;
         try {

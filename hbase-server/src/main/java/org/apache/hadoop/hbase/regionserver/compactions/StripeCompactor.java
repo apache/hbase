@@ -119,7 +119,7 @@ public class StripeCompactor extends Compactor {
 
       final boolean needMvcc = fd.maxMVCCReadpoint > 0;
 
-      final Compression.Algorithm compression = store.getFamily().getCompactionCompressionType();
+      final Compression.Algorithm compression = store.getFamily().getCompactionCompression();
       StripeMultiFileWriter.WriterFactory factory = new StripeMultiFileWriter.WriterFactory() {
         @Override
         public Writer createWriter() throws IOException {

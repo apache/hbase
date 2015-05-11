@@ -268,7 +268,7 @@ public class TestStore {
     init(name.getMethodName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false, true, false);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));

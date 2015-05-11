@@ -627,7 +627,7 @@ public class HFileOutputFormat2
         familyDescriptor.getNameAsString(), "UTF-8"));
       compressionConfigValue.append('=');
       compressionConfigValue.append(URLEncoder.encode(
-        familyDescriptor.getCompressionType().getName(), "UTF-8"));
+        familyDescriptor.getCompression().getName(), "UTF-8"));
     }
     // Get rid of the last ampersand
     conf.set(COMPRESSION_FAMILIES_CONF_KEY, compressionConfigValue.toString());
