@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master;
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.RegionState.State;
 
 /**
  * Run bulk assign.  Does one RCP per regionserver passing a
@@ -118,31 +116,8 @@ public class GeneralBulkAssigner extends BulkAssigner {
     if (!failedPlans.isEmpty() && !server.isStopped()) {
       reassigningRegions = reassignFailedPlans();
     }
-
-    Configuration conf = server.getConfiguration();
-    long perRegionOpenTimeGuesstimate =
-      conf.getLong("hbase.bulk.assignment.perregion.open.time", 1000);
-    long endTime = Math.max(System.currentTimeMillis(), rpcWaitTime)
-      + perRegionOpenTimeGuesstimate * (reassigningRegions + 1);
-    RegionStates regionStates = assignmentManager.getRegionStates();
-    // We're not synchronizing on regionsInTransition now because we don't use any iterator.
-    while (!regionSet.isEmpty() && !server.isStopped() && endTime > System.currentTimeMillis()) {
-      Iterator<HRegionInfo> regionInfoIterator = regionSet.iterator();
-      while (regionInfoIterator.hasNext()) {
-        HRegionInfo hri = regionInfoIterator.next();
-        if (regionStates.isRegionOnline(hri) || regionStates.isRegionInState(hri,
-            State.SPLITTING, State.SPLIT, State.MERGING, State.MERGED)) {
-          regionInfoIterator.remove();
-        }
-      }
-      if (!waitTillAllAssigned) {
-        // No need to wait, let assignment going on asynchronously
-        break;
-      }
-      if (!regionSet.isEmpty()) {
-        regionStates.waitForUpdate(100);
-      }
-    }
+    assignmentManager.waitForAssignment(regionSet, waitTillAllAssigned,
+      reassigningRegions, Math.max(System.currentTimeMillis(), rpcWaitTime));
 
     if (LOG.isDebugEnabled()) {
       long elapsedTime = System.currentTimeMillis() - startTime;
