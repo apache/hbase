@@ -1115,6 +1115,8 @@
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
     <hadoop-two.version>2.5.1</hadoop-two.version>
+    <!-- minikdc introduced in hadoop-2.3; override when building earlier versions -->
+    <hadoop-two-minikdc.version>${hadoop-two.version}</hadoop-two-minikdc.version>
     <hadoop-three.version>3.0.0-SNAPSHOT</hadoop-three.version>
     <commons-cli.version>1.2</commons-cli.version>
     <commons-codec.version>1.9</commons-codec.version>
@@ -1985,7 +1987,7 @@
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-minikdc</artifactId>
-            <version>${hadoop-two.version}</version>
+            <version>${hadoop-two-minikdc.version}</version>
             <scope>test</scope>
           </dependency>
         </dependencies>
