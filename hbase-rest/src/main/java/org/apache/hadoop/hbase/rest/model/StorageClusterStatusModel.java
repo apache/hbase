@@ -46,7 +46,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  * <li>liveNodes: detailed status of the live region servers</li>
  * <li>deadNodes: the names of region servers declared dead</li>
  * </ul>
- * 
+ *
  * <pre>
  * &lt;complexType name="StorageClusterStatus"&gt;
  *   &lt;sequence&gt;
@@ -64,7 +64,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  *
  * &lt;complexType name="Node"&gt;
  *   &lt;sequence&gt;
- *     &lt;element name="region" type="tns:Region" 
+ *     &lt;element name="region" type="tns:Region"
  *       maxOccurs="unbounded" minOccurs="0"&gt;&lt;/element&gt;
  *   &lt;/sequence&gt;
  *   &lt;attribute name="name" type="string"&gt;&lt;/attribute&gt;
@@ -93,7 +93,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @XmlRootElement(name="ClusterStatus")
 @InterfaceAudience.Private
-public class StorageClusterStatusModel 
+public class StorageClusterStatusModel
     implements Serializable, ProtobufMessageHandler {
   private static final long serialVersionUID = 1L;
 
@@ -181,7 +181,7 @@ public class StorageClusterStatusModel
       }
 
       /**
-       * @return the number of store files 
+       * @return the number of store files
        */
       @XmlAttribute
       public int getStorefiles() {
@@ -253,7 +253,7 @@ public class StorageClusterStatusModel
       }
 
       /**
-       * @return The total number of compacting key-values 
+       * @return The total number of compacting key-values
        */
       @XmlAttribute
       public long getTotalCompactingKVs() {
@@ -367,7 +367,7 @@ public class StorageClusterStatusModel
 
     private String name;
     private long startCode;
-    private int requests;
+    private long requests;
     private int heapSizeMB;
     private int maxHeapSizeMB;
     private List<Region> regions = new ArrayList<Region>();
@@ -380,7 +380,7 @@ public class StorageClusterStatusModel
         int storefileSizeMB, int memstoreSizeMB, int storefileIndexSizeMB,
         long readRequestsCount, long writeRequestsCount, int rootIndexSizeKB,
         int totalStaticIndexSizeKB, int totalStaticBloomSizeKB,
-        long totalCompactingKVs, long currentCompactedKVs) { 
+        long totalCompactingKVs, long currentCompactedKVs) {
       regions.add(new Region(name, stores, storefiles, storefileSizeMB,
         memstoreSizeMB, storefileIndexSizeMB, readRequestsCount,
         writeRequestsCount, rootIndexSizeKB, totalStaticIndexSizeKB,
@@ -454,7 +454,7 @@ public class StorageClusterStatusModel
      * @return the number of requests per second processed by the region server
      */
     @XmlAttribute
-    public int getRequests() {
+    public long getRequests() {
       return requests;
     }
 
@@ -497,7 +497,7 @@ public class StorageClusterStatusModel
      * @param requests the number of requests per second processed by the
      * region server
      */
-    public void setRequests(int requests) {
+    public void setRequests(long requests) {
       this.requests = requests;
     }
   }
@@ -505,7 +505,7 @@ public class StorageClusterStatusModel
   private List<Node> liveNodes = new ArrayList<Node>();
   private List<String> deadNodes = new ArrayList<String>();
   private int regions;
-  private int requests;
+  private long requests;
   private double averageLoad;
 
   /**
@@ -584,7 +584,7 @@ public class StorageClusterStatusModel
    * the last reporting interval
    */
   @XmlAttribute
-  public int getRequests() {
+  public long getRequests() {
     return requests;
   }
 
@@ -639,7 +639,7 @@ public class StorageClusterStatusModel
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(String.format("%d live servers, %d dead servers, " + 
+    sb.append(String.format("%d live servers, %d dead servers, " +
       "%.4f average load%n%n", liveNodes.size(), deadNodes.size(),
       averageLoad));
     if (!liveNodes.isEmpty()) {
@@ -711,7 +711,7 @@ public class StorageClusterStatusModel
     builder.setRequests(requests);
     builder.setAverageLoad(averageLoad);
     for (Node node: liveNodes) {
-      StorageClusterStatus.Node.Builder nodeBuilder = 
+      StorageClusterStatus.Node.Builder nodeBuilder =
         StorageClusterStatus.Node.newBuilder();
       nodeBuilder.setName(node.name);
       nodeBuilder.setStartCode(node.startCode);
@@ -760,10 +760,10 @@ public class StorageClusterStatusModel
     }
     for (StorageClusterStatus.Node node: builder.getLiveNodesList()) {
       long startCode = node.hasStartCode() ? node.getStartCode() : -1;
-      StorageClusterStatusModel.Node nodeModel = 
+      StorageClusterStatusModel.Node nodeModel =
         addLiveNode(node.getName(), startCode, node.getHeapSizeMB(),
           node.getMaxHeapSizeMB());
-      int requests = node.hasRequests() ? node.getRequests() : 0;
+      long requests = node.hasRequests() ? node.getRequests() : 0;
       nodeModel.setRequests(requests);
       for (StorageClusterStatus.Region region: node.getRegionsList()) {
         nodeModel.addRegion(
