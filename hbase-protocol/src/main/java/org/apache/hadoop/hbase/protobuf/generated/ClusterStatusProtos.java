@@ -7769,9 +7769,9 @@ public final class ClusterStatusProtos {
   public interface ServerLoadOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional uint64 number_of_requests = 1;
+    // optional uint32 number_of_requests = 1;
     /**
-     * <code>optional uint64 number_of_requests = 1;</code>
+     * <code>optional uint32 number_of_requests = 1;</code>
      *
      * <pre>
      ** Number of requests since last report. 
@@ -7779,17 +7779,17 @@ public final class ClusterStatusProtos {
      */
     boolean hasNumberOfRequests();
     /**
-     * <code>optional uint64 number_of_requests = 1;</code>
+     * <code>optional uint32 number_of_requests = 1;</code>
      *
      * <pre>
      ** Number of requests since last report. 
      * </pre>
      */
-    long getNumberOfRequests();
+    int getNumberOfRequests();
 
-    // optional uint64 total_number_of_requests = 2;
+    // optional uint32 total_number_of_requests = 2;
     /**
-     * <code>optional uint64 total_number_of_requests = 2;</code>
+     * <code>optional uint32 total_number_of_requests = 2;</code>
      *
      * <pre>
      ** Total Number of requests from the start of the region server. 
@@ -7797,13 +7797,13 @@ public final class ClusterStatusProtos {
      */
     boolean hasTotalNumberOfRequests();
     /**
-     * <code>optional uint64 total_number_of_requests = 2;</code>
+     * <code>optional uint32 total_number_of_requests = 2;</code>
      *
      * <pre>
      ** Total Number of requests from the start of the region server. 
      * </pre>
      */
-    long getTotalNumberOfRequests();
+    int getTotalNumberOfRequests();
 
     // optional uint32 used_heap_MB = 3;
     /**
@@ -8146,12 +8146,12 @@ public final class ClusterStatusProtos {
             }
             case 8: {
               bitField0_ |= 0x00000001;
-              numberOfRequests_ = input.readUInt64();
+              numberOfRequests_ = input.readUInt32();
               break;
             }
             case 16: {
               bitField0_ |= 0x00000002;
-              totalNumberOfRequests_ = input.readUInt64();
+              totalNumberOfRequests_ = input.readUInt32();
               break;
             }
             case 24: {
@@ -8265,11 +8265,11 @@ public final class ClusterStatusProtos {
     }
 
     private int bitField0_;
-    // optional uint64 number_of_requests = 1;
+    // optional uint32 number_of_requests = 1;
     public static final int NUMBER_OF_REQUESTS_FIELD_NUMBER = 1;
-    private long numberOfRequests_;
+    private int numberOfRequests_;
     /**
-     * <code>optional uint64 number_of_requests = 1;</code>
+     * <code>optional uint32 number_of_requests = 1;</code>
      *
      * <pre>
      ** Number of requests since last report. 
@@ -8279,21 +8279,21 @@ public final class ClusterStatusProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional uint64 number_of_requests = 1;</code>
+     * <code>optional uint32 number_of_requests = 1;</code>
      *
      * <pre>
      ** Number of requests since last report. 
      * </pre>
      */
-    public long getNumberOfRequests() {
+    public int getNumberOfRequests() {
       return numberOfRequests_;
     }
 
-    // optional uint64 total_number_of_requests = 2;
+    // optional uint32 total_number_of_requests = 2;
     public static final int TOTAL_NUMBER_OF_REQUESTS_FIELD_NUMBER = 2;
-    private long totalNumberOfRequests_;
+    private int totalNumberOfRequests_;
     /**
-     * <code>optional uint64 total_number_of_requests = 2;</code>
+     * <code>optional uint32 total_number_of_requests = 2;</code>
      *
      * <pre>
      ** Total Number of requests from the start of the region server. 
@@ -8303,13 +8303,13 @@ public final class ClusterStatusProtos {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional uint64 total_number_of_requests = 2;</code>
+     * <code>optional uint32 total_number_of_requests = 2;</code>
      *
      * <pre>
      ** Total Number of requests from the start of the region server. 
      * </pre>
      */
-    public long getTotalNumberOfRequests() {
+    public int getTotalNumberOfRequests() {
       return totalNumberOfRequests_;
     }
 
@@ -8673,8 +8673,8 @@ public final class ClusterStatusProtos {
     }
 
     private void initFields() {
-      numberOfRequests_ = 0L;
-      totalNumberOfRequests_ = 0L;
+      numberOfRequests_ = 0;
+      totalNumberOfRequests_ = 0;
       usedHeapMB_ = 0;
       maxHeapMB_ = 0;
       regionLoads_ = java.util.Collections.emptyList();
@@ -8722,10 +8722,10 @@ public final class ClusterStatusProtos {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeUInt64(1, numberOfRequests_);
+        output.writeUInt32(1, numberOfRequests_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeUInt64(2, totalNumberOfRequests_);
+        output.writeUInt32(2, totalNumberOfRequests_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeUInt32(3, usedHeapMB_);
@@ -8765,11 +8765,11 @@ public final class ClusterStatusProtos {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(1, numberOfRequests_);
+          .computeUInt32Size(1, numberOfRequests_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt64Size(2, totalNumberOfRequests_);
+          .computeUInt32Size(2, totalNumberOfRequests_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -8891,11 +8891,11 @@ public final class ClusterStatusProtos {
       hash = (19 * hash) + getDescriptorForType().hashCode();
       if (hasNumberOfRequests()) {
         hash = (37 * hash) + NUMBER_OF_REQUESTS_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getNumberOfRequests());
+        hash = (53 * hash) + getNumberOfRequests();
       }
       if (hasTotalNumberOfRequests()) {
         hash = (37 * hash) + TOTAL_NUMBER_OF_REQUESTS_FIELD_NUMBER;
-        hash = (53 * hash) + hashLong(getTotalNumberOfRequests());
+        hash = (53 * hash) + getTotalNumberOfRequests();
       }
       if (hasUsedHeapMB()) {
         hash = (37 * hash) + USED_HEAP_MB_FIELD_NUMBER;
@@ -9046,9 +9046,9 @@ public final class ClusterStatusProtos {
 
       public Builder clear() {
         super.clear();
-        numberOfRequests_ = 0L;
+        numberOfRequests_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
-        totalNumberOfRequests_ = 0L;
+        totalNumberOfRequests_ = 0;
         bitField0_ = (bitField0_ & ~0x00000002);
         usedHeapMB_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
@@ -9344,10 +9344,10 @@ public final class ClusterStatusProtos {
       }
       private int bitField0_;
 
-      // optional uint64 number_of_requests = 1;
-      private long numberOfRequests_ ;
+      // optional uint32 number_of_requests = 1;
+      private int numberOfRequests_ ;
       /**
-       * <code>optional uint64 number_of_requests = 1;</code>
+       * <code>optional uint32 number_of_requests = 1;</code>
        *
        * <pre>
        ** Number of requests since last report. 
@@ -9357,30 +9357,30 @@ public final class ClusterStatusProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional uint64 number_of_requests = 1;</code>
+       * <code>optional uint32 number_of_requests = 1;</code>
        *
        * <pre>
        ** Number of requests since last report. 
        * </pre>
        */
-      public long getNumberOfRequests() {
+      public int getNumberOfRequests() {
         return numberOfRequests_;
       }
       /**
-       * <code>optional uint64 number_of_requests = 1;</code>
+       * <code>optional uint32 number_of_requests = 1;</code>
        *
        * <pre>
        ** Number of requests since last report. 
        * </pre>
        */
-      public Builder setNumberOfRequests(long value) {
+      public Builder setNumberOfRequests(int value) {
         bitField0_ |= 0x00000001;
         numberOfRequests_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint64 number_of_requests = 1;</code>
+       * <code>optional uint32 number_of_requests = 1;</code>
        *
        * <pre>
        ** Number of requests since last report. 
@@ -9388,15 +9388,15 @@ public final class ClusterStatusProtos {
        */
       public Builder clearNumberOfRequests() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        numberOfRequests_ = 0L;
+        numberOfRequests_ = 0;
         onChanged();
         return this;
       }
 
-      // optional uint64 total_number_of_requests = 2;
-      private long totalNumberOfRequests_ ;
+      // optional uint32 total_number_of_requests = 2;
+      private int totalNumberOfRequests_ ;
       /**
-       * <code>optional uint64 total_number_of_requests = 2;</code>
+       * <code>optional uint32 total_number_of_requests = 2;</code>
        *
        * <pre>
        ** Total Number of requests from the start of the region server. 
@@ -9406,30 +9406,30 @@ public final class ClusterStatusProtos {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional uint64 total_number_of_requests = 2;</code>
+       * <code>optional uint32 total_number_of_requests = 2;</code>
        *
        * <pre>
        ** Total Number of requests from the start of the region server. 
        * </pre>
        */
-      public long getTotalNumberOfRequests() {
+      public int getTotalNumberOfRequests() {
         return totalNumberOfRequests_;
       }
       /**
-       * <code>optional uint64 total_number_of_requests = 2;</code>
+       * <code>optional uint32 total_number_of_requests = 2;</code>
        *
        * <pre>
        ** Total Number of requests from the start of the region server. 
        * </pre>
        */
-      public Builder setTotalNumberOfRequests(long value) {
+      public Builder setTotalNumberOfRequests(int value) {
         bitField0_ |= 0x00000002;
         totalNumberOfRequests_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional uint64 total_number_of_requests = 2;</code>
+       * <code>optional uint32 total_number_of_requests = 2;</code>
        *
        * <pre>
        ** Total Number of requests from the start of the region server. 
@@ -9437,7 +9437,7 @@ public final class ClusterStatusProtos {
        */
       public Builder clearTotalNumberOfRequests() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        totalNumberOfRequests_ = 0L;
+        totalNumberOfRequests_ = 0;
         onChanged();
         return this;
       }
@@ -14743,8 +14743,8 @@ public final class ClusterStatusProtos {
       "ageOfLastShippedOp\030\002 \002(\004\022\026\n\016sizeOfLogQue" +
       "ue\030\003 \002(\r\022 \n\030timeStampOfLastShippedOp\030\004 \002" +
       "(\004\022\026\n\016replicationLag\030\005 \002(\004\"\346\002\n\nServerLoa" +
-      "d\022\032\n\022number_of_requests\030\001 \001(\004\022 \n\030total_n" +
-      "umber_of_requests\030\002 \001(\004\022\024\n\014used_heap_MB\030" +
+      "d\022\032\n\022number_of_requests\030\001 \001(\r\022 \n\030total_n" +
+      "umber_of_requests\030\002 \001(\r\022\024\n\014used_heap_MB\030" +
       "\003 \001(\r\022\023\n\013max_heap_MB\030\004 \001(\r\022!\n\014region_loa",
       "ds\030\005 \003(\0132\013.RegionLoad\022\"\n\014coprocessors\030\006 " +
       "\003(\0132\014.Coprocessor\022\031\n\021report_start_time\030\007" +

@@ -36,7 +36,7 @@ message StorageClusterStatus {
   message Node {
     required string name = 1;    // name:port
     optional int64 startCode = 2;
-    optional int64 requests = 3;
+    optional int32 requests = 3;
     optional int32 heapSizeMB = 4;
     optional int32 maxHeapSizeMB = 5;
     repeated Region regions = 6;
@@ -46,6 +46,6 @@ message StorageClusterStatus {
   repeated string deadNodes = 2;
   // summary statistics
   optional int32 regions = 3; 
-  optional int64 requests = 4;
+  optional int32 requests = 4; 
   optional double averageLoad = 5;
 }

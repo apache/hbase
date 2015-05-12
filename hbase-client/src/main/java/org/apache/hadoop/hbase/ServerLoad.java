@@ -86,7 +86,7 @@ public class ServerLoad {
   protected ClusterStatusProtos.ServerLoad serverLoad;
 
   /* @return number of requests  since last report. */
-  public long getNumberOfRequests() {
+  public int getNumberOfRequests() {
     return serverLoad.getNumberOfRequests();
   }
   public boolean hasNumberOfRequests() {
@@ -94,7 +94,7 @@ public class ServerLoad {
   }
 
   /* @return total Number of requests from the start of the region server. */
-  public long getTotalNumberOfRequests() {
+  public int getTotalNumberOfRequests() {
     return serverLoad.getTotalNumberOfRequests();
   }
   public boolean hasTotalNumberOfRequests() {

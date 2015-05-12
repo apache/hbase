@@ -94,15 +94,15 @@ public final class StorageClusterStatusMessage {
      */
     int getRegions();
 
-    // optional int64 requests = 4;
+    // optional int32 requests = 4;
     /**
-     * <code>optional int64 requests = 4;</code>
+     * <code>optional int32 requests = 4;</code>
      */
     boolean hasRequests();
     /**
-     * <code>optional int64 requests = 4;</code>
+     * <code>optional int32 requests = 4;</code>
      */
-    long getRequests();
+    int getRequests();
 
     // optional double averageLoad = 5;
     /**
@@ -188,7 +188,7 @@ public final class StorageClusterStatusMessage {
             }
             case 32: {
               bitField0_ |= 0x00000002;
-              requests_ = input.readInt64();
+              requests_ = input.readInt32();
               break;
             }
             case 41: {
@@ -1660,15 +1660,15 @@ public final class StorageClusterStatusMessage {
        */
       long getStartCode();
 
-      // optional int64 requests = 3;
+      // optional int32 requests = 3;
       /**
-       * <code>optional int64 requests = 3;</code>
+       * <code>optional int32 requests = 3;</code>
        */
       boolean hasRequests();
       /**
-       * <code>optional int64 requests = 3;</code>
+       * <code>optional int32 requests = 3;</code>
        */
-      long getRequests();
+      int getRequests();
 
       // optional int32 heapSizeMB = 4;
       /**
@@ -1778,7 +1778,7 @@ public final class StorageClusterStatusMessage {
               }
               case 24: {
                 bitField0_ |= 0x00000004;
-                requests_ = input.readInt64();
+                requests_ = input.readInt32();
                 break;
               }
               case 32: {
@@ -1913,19 +1913,19 @@ public final class StorageClusterStatusMessage {
         return startCode_;
       }
 
-      // optional int64 requests = 3;
+      // optional int32 requests = 3;
       public static final int REQUESTS_FIELD_NUMBER = 3;
-      private long requests_;
+      private int requests_;
       /**
-       * <code>optional int64 requests = 3;</code>
+       * <code>optional int32 requests = 3;</code>
        */
       public boolean hasRequests() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional int64 requests = 3;</code>
+       * <code>optional int32 requests = 3;</code>
        */
-      public long getRequests() {
+      public int getRequests() {
         return requests_;
       }
 
@@ -2000,7 +2000,7 @@ public final class StorageClusterStatusMessage {
       private void initFields() {
         name_ = "";
         startCode_ = 0L;
-        requests_ = 0L;
+        requests_ = 0;
         heapSizeMB_ = 0;
         maxHeapSizeMB_ = 0;
         regions_ = java.util.Collections.emptyList();
@@ -2034,7 +2034,7 @@ public final class StorageClusterStatusMessage {
           output.writeInt64(2, startCode_);
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeInt64(3, requests_);
+          output.writeInt32(3, requests_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           output.writeInt32(4, heapSizeMB_);
@@ -2064,7 +2064,7 @@ public final class StorageClusterStatusMessage {
         }
         if (((bitField0_ & 0x00000004) == 0x00000004)) {
           size += com.google.protobuf.CodedOutputStream
-            .computeInt64Size(3, requests_);
+            .computeInt32Size(3, requests_);
         }
         if (((bitField0_ & 0x00000008) == 0x00000008)) {
           size += com.google.protobuf.CodedOutputStream
@@ -2199,7 +2199,7 @@ public final class StorageClusterStatusMessage {
           bitField0_ = (bitField0_ & ~0x00000001);
           startCode_ = 0L;
           bitField0_ = (bitField0_ & ~0x00000002);
-          requests_ = 0L;
+          requests_ = 0;
           bitField0_ = (bitField0_ & ~0x00000004);
           heapSizeMB_ = 0;
           bitField0_ = (bitField0_ & ~0x00000008);
@@ -2495,35 +2495,35 @@ public final class StorageClusterStatusMessage {
           return this;
         }
 
-        // optional int64 requests = 3;
-        private long requests_ ;
+        // optional int32 requests = 3;
+        private int requests_ ;
         /**
-         * <code>optional int64 requests = 3;</code>
+         * <code>optional int32 requests = 3;</code>
          */
         public boolean hasRequests() {
           return ((bitField0_ & 0x00000004) == 0x00000004);
         }
         /**
-         * <code>optional int64 requests = 3;</code>
+         * <code>optional int32 requests = 3;</code>
          */
-        public long getRequests() {
+        public int getRequests() {
           return requests_;
         }
         /**
-         * <code>optional int64 requests = 3;</code>
+         * <code>optional int32 requests = 3;</code>
          */
-        public Builder setRequests(long value) {
+        public Builder setRequests(int value) {
           bitField0_ |= 0x00000004;
           requests_ = value;
           onChanged();
           return this;
         }
         /**
-         * <code>optional int64 requests = 3;</code>
+         * <code>optional int32 requests = 3;</code>
          */
         public Builder clearRequests() {
           bitField0_ = (bitField0_ & ~0x00000004);
-          requests_ = 0L;
+          requests_ = 0;
           onChanged();
           return this;
         }
@@ -2956,19 +2956,19 @@ public final class StorageClusterStatusMessage {
       return regions_;
     }
 
-    // optional int64 requests = 4;
+    // optional int32 requests = 4;
     public static final int REQUESTS_FIELD_NUMBER = 4;
-    private long requests_;
+    private int requests_;
     /**
-     * <code>optional int64 requests = 4;</code>
+     * <code>optional int32 requests = 4;</code>
      */
     public boolean hasRequests() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional int64 requests = 4;</code>
+     * <code>optional int32 requests = 4;</code>
      */
-    public long getRequests() {
+    public int getRequests() {
       return requests_;
     }
 
@@ -2992,7 +2992,7 @@ public final class StorageClusterStatusMessage {
       liveNodes_ = java.util.Collections.emptyList();
       deadNodes_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       regions_ = 0;
-      requests_ = 0L;
+      requests_ = 0;
       averageLoad_ = 0D;
     }
     private byte memoizedIsInitialized = -1;
@@ -3023,7 +3023,7 @@ public final class StorageClusterStatusMessage {
         output.writeInt32(3, regions_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
-        output.writeInt64(4, requests_);
+        output.writeInt32(4, requests_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeDouble(5, averageLoad_);
@@ -3056,7 +3056,7 @@ public final class StorageClusterStatusMessage {
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(4, requests_);
+          .computeInt32Size(4, requests_);
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -3189,7 +3189,7 @@ public final class StorageClusterStatusMessage {
         bitField0_ = (bitField0_ & ~0x00000002);
         regions_ = 0;
         bitField0_ = (bitField0_ & ~0x00000004);
-        requests_ = 0L;
+        requests_ = 0;
         bitField0_ = (bitField0_ & ~0x00000008);
         averageLoad_ = 0D;
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -3796,35 +3796,35 @@ public final class StorageClusterStatusMessage {
         return this;
       }
 
-      // optional int64 requests = 4;
-      private long requests_ ;
+      // optional int32 requests = 4;
+      private int requests_ ;
       /**
-       * <code>optional int64 requests = 4;</code>
+       * <code>optional int32 requests = 4;</code>
        */
       public boolean hasRequests() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional int64 requests = 4;</code>
+       * <code>optional int32 requests = 4;</code>
        */
-      public long getRequests() {
+      public int getRequests() {
         return requests_;
       }
       /**
-       * <code>optional int64 requests = 4;</code>
+       * <code>optional int32 requests = 4;</code>
        */
-      public Builder setRequests(long value) {
+      public Builder setRequests(int value) {
         bitField0_ |= 0x00000008;
         requests_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional int64 requests = 4;</code>
+       * <code>optional int32 requests = 4;</code>
        */
       public Builder clearRequests() {
         bitField0_ = (bitField0_ & ~0x00000008);
-        requests_ = 0L;
+        requests_ = 0;
         onChanged();
         return this;
       }
@@ -3903,7 +3903,7 @@ public final class StorageClusterStatusMessage {
       "es\030\001 \003(\0132J.org.apache.hadoop.hbase.rest." +
       "protobuf.generated.StorageClusterStatus." +
       "Node\022\021\n\tdeadNodes\030\002 \003(\t\022\017\n\007regions\030\003 \001(\005" +
-      "\022\020\n\010requests\030\004 \001(\003\022\023\n\013averageLoad\030\005 \001(\001\032" +
+      "\022\020\n\010requests\030\004 \001(\005\022\023\n\013averageLoad\030\005 \001(\001\032" +
       "\322\002\n\006Region\022\014\n\004name\030\001 \002(\014\022\016\n\006stores\030\002 \001(\005" +
       "\022\022\n\nstorefiles\030\003 \001(\005\022\027\n\017storefileSizeMB\030" +
       "\004 \001(\005\022\026\n\016memstoreSizeMB\030\005 \001(\005\022\034\n\024storefi",
@@ -3913,7 +3913,7 @@ public final class StorageClusterStatusMessage {
       "izeKB\030\n \001(\005\022\036\n\026totalStaticBloomSizeKB\030\013 " +
       "\001(\005\022\032\n\022totalCompactingKVs\030\014 \001(\003\022\033\n\023curre" +
       "ntCompactedKVs\030\r \001(\003\032\303\001\n\004Node\022\014\n\004name\030\001 " +
-      "\002(\t\022\021\n\tstartCode\030\002 \001(\003\022\020\n\010requests\030\003 \001(\003" +
+      "\002(\t\022\021\n\tstartCode\030\002 \001(\003\022\020\n\010requests\030\003 \001(\005" +
       "\022\022\n\nheapSizeMB\030\004 \001(\005\022\025\n\rmaxHeapSizeMB\030\005 " +
       "\001(\005\022]\n\007regions\030\006 \003(\0132L.org.apache.hadoop" +
       ".hbase.rest.protobuf.generated.StorageCl",

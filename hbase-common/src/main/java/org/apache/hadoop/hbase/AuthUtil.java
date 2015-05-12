@@ -34,7 +34,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 /**
  * Utility methods for helping with security tasks.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class AuthUtil {
   private static final Log LOG = LogFactory.getLog(AuthUtil.class);

@@ -154,10 +154,10 @@ message ReplicationLoadSource {
 
 message ServerLoad {
   /** Number of requests since last report. */
-  optional uint64 number_of_requests = 1;
+  optional uint32 number_of_requests = 1;
 
   /** Total Number of requests from the start of the region server. */
-  optional uint64 total_number_of_requests = 2;
+  optional uint32 total_number_of_requests = 2;
 
   /** the amount of used heap, in MB. */
   optional uint32 used_heap_MB = 3;

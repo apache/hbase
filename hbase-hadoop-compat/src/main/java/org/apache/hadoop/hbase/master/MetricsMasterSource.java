@@ -79,9 +79,9 @@ public interface MetricsMasterSource extends BaseSource {
    *
    * @param inc Ammount to increment the total by.
    */
-  void incRequests(final long inc);
+  void incRequests(final int inc);
 
-
+  
 
 
 }

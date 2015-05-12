@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * Thrown when a procedure WAL is corrupted
  */
-@InterfaceAudience.Private
+@InterfaceAudience.Public
 @InterfaceStability.Stable
 public class CorruptedWALProcedureStoreException extends HBaseIOException {
   /** default constructor */

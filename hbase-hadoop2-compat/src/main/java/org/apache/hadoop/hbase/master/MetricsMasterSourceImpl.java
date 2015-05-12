@@ -61,8 +61,7 @@ public class MetricsMasterSourceImpl
     clusterRequestsCounter = metricsRegistry.newCounter(CLUSTER_REQUESTS_NAME, "", 0l);
   }
 
-  @Override
-  public void incRequests(final long inc) {
+  public void incRequests(final int inc) {
     this.clusterRequestsCounter.incr(inc);
   }
 
