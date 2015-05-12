@@ -138,6 +138,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
         }
       }
     }
+    if (methodName.equalsIgnoreCase("ReportRegionStateTransition")) {
+      return true;
+    }
     return false;
   }
 

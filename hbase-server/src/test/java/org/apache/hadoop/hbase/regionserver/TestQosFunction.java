@@ -18,10 +18,21 @@ package org.apache.hadoop.hbase.regionserver;
 */
 import static org.junit.Assert.assertEquals;
 
+import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -45,6 +56,50 @@ public class TestQosFunction {
     checkMethod("OpenRegion", HConstants.HIGH_QOS, qosFunction);
     // Check multi works.
     checkMethod("Multi", HConstants.NORMAL_QOS, qosFunction, MultiRequest.getDefaultInstance());
+
+  }
+
+  @Test
+  public void testRegionInTransition() {
+    Configuration conf = HBaseConfiguration.create();
+    HRegionServer rs = Mockito.mock(HRegionServer.class);
+    when(rs.getConfiguration()).thenReturn(conf);
+
+    AnnotationReadingPriorityFunction qosFunction = new AnnotationReadingPriorityFunction(rs);
+
+    // Check ReportRegionInTransition
+    HBaseProtos.RegionInfo meta_ri = HRegionInfo.convert(HRegionInfo.FIRST_META_REGIONINFO);
+    HBaseProtos.RegionInfo normal_ri = HRegionInfo.convert(
+        new HRegionInfo(TableName.valueOf("test:table"),
+            Bytes.toBytes("a"), Bytes.toBytes("b"), false));
+
+
+    RegionServerStatusProtos.RegionStateTransition metaTransition = RegionServerStatusProtos
+        .RegionStateTransition.newBuilder()
+        .addRegionInfo(meta_ri)
+        .setTransitionCode(RegionServerStatusProtos.RegionStateTransition.TransitionCode.CLOSED)
+        .build();
+
+    RegionServerStatusProtos.RegionStateTransition normalTransition = RegionServerStatusProtos
+        .RegionStateTransition.newBuilder()
+        .addRegionInfo(normal_ri)
+        .setTransitionCode(RegionServerStatusProtos.RegionStateTransition.TransitionCode.CLOSED)
+        .build();
+
+    RegionServerStatusProtos.ReportRegionStateTransitionRequest metaTransitionRequest =
+        RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
+            .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
+            .addTransition(normalTransition)
+            .addTransition(metaTransition).build();
+
+    RegionServerStatusProtos.ReportRegionStateTransitionRequest normalTransitionRequest =
+        RegionServerStatusProtos.ReportRegionStateTransitionRequest.newBuilder()
+            .setServer(ProtobufUtil.toServerName(ServerName.valueOf("locahost:60020", 100)))
+            .addTransition(normalTransition).build();
+
+    final String reportFuncName = "ReportRegionStateTransition";
+    checkMethod(reportFuncName, HConstants.HIGH_QOS, qosFunction, metaTransitionRequest);
+    checkMethod(reportFuncName, HConstants.NORMAL_QOS, qosFunction, normalTransitionRequest);
   }
 
   private void checkMethod(final String methodName, final int expected,
