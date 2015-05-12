@@ -1653,6 +1653,7 @@ public class AssignmentManager {
       HRegionLocation[] locations = rl.getRegionLocations();
       if (locations == null) continue;
       for (HRegionLocation hrl : locations) {
+        if (hrl == null) continue;
         HRegionInfo regionInfo = hrl.getRegionInfo();
         if (regionInfo == null) continue;
         int replicaId = regionInfo.getReplicaId();
