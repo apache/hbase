@@ -143,7 +143,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       }
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to list children for abort node:"
-          + zkController.getAbortZnode(), new IOException(e));
+          + zkController.getAbortZnode(), e, null);
     }
   }
 
@@ -160,7 +160,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       }
     } catch (KeeperException e) {
       member.controllerConnectionFailure("General failure when watching for new procedures",
-        new IOException(e));
+        e, null);
     }
     if (runningProcedures == null) {
       LOG.debug("No running procedures.");
@@ -192,7 +192,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       }
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to get the abort znode (" + abortZNode
-          + ") for procedure :" + opName, new IOException(e));
+          + ") for procedure :" + opName, e, opName);
       return;
     }
 
@@ -220,7 +220,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       sendMemberAborted(subproc, new ForeignException(getMemberName(), ise));
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to get data for new procedure:" + opName,
-        new IOException(e));
+        e, opName);
     }
   }
 
@@ -248,7 +248,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       }
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to acquire barrier for procedure: "
-          + procName + " and member: " + memberName, new IOException(e));
+          + procName + " and member: " + memberName, e, procName);
     }
   }
 
@@ -265,7 +265,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       ZKUtil.createAndFailSilent(zkController.getWatcher(), joinPath);
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to post zk node:" + joinPath
-          + " to join procedure barrier.", new IOException(e));
+          + " to join procedure barrier.", e, procName);
     }
   }
 
@@ -292,7 +292,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       // that case we should still get an error for that procedure anyways
       zkController.logZKTree(zkController.getBaseZnode());
       member.controllerConnectionFailure("Failed to post zk node:" + procAbortZNode
-          + " to abort procedure", new IOException(e));
+          + " to abort procedure", e, procName);
     }
   }
 
@@ -329,7 +329,7 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       this.member.receiveAbortProcedure(opName, ee);
     } catch (KeeperException e) {
       member.controllerConnectionFailure("Failed to get data for abort znode:" + abortZNode
-          + zkController.getAbortZnode(), new IOException(e));
+          + zkController.getAbortZnode(), e, opName);
     }
   }
 
