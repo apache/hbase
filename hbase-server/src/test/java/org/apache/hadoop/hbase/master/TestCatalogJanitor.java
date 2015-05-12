@@ -438,8 +438,10 @@ public class TestCatalogJanitor {
 
 
     @Override
-    public void modifyTable(TableName tableName, HTableDescriptor descriptor)
-        throws IOException { }
+    public long modifyTable(TableName tableName, HTableDescriptor descriptor)
+        throws IOException {
+      return -1;
+    }
 
     @Override
     public long enableTable(TableName tableName) throws IOException {

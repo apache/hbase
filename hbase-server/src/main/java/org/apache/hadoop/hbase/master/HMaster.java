@@ -1784,7 +1784,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
+  public long modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException {
     checkInitialized();
     sanityCheckTableDescriptor(descriptor);
@@ -1803,6 +1803,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);
     }
+
+    return procId;
   }
 
   @Override

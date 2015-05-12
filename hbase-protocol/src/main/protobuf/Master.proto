@@ -151,6 +151,7 @@ message ModifyTableRequest {
 }
 
 message ModifyTableResponse {
+  optional uint64 proc_id = 1;
 }
 
 /* Namespace-level protobufs */

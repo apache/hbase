@@ -128,6 +128,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTi
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
@@ -641,8 +642,8 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    protected String getDescription() {
-      return "Creating " + desc.getNameAsString();
+    public String getOperationType() {
+      return "CREATE";
     }
 
     @Override
@@ -719,8 +720,8 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    protected String getDescription() {
-      return "Deleting " + getTableName();
+    public String getOperationType() {
+      return "DELETE";
     }
 
     @Override
@@ -847,8 +848,8 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    public String getDescription() {
-      return "Truncating " + getTableName();
+    public String getOperationType() {
+      return "TRUNCATE";
     }
 
     @Override
@@ -1005,8 +1006,8 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    protected String getDescription() {
-      return "Enabling " + getTableName();
+    public String getOperationType() {
+      return "ENABLE";
     }
 
     @Override
@@ -1142,8 +1143,8 @@ public class HBaseAdmin implements Admin {
     }
 
     @Override
-    protected String getDescription() {
-      return "Disabling " + getTableName();
+    public String getOperationType() {
+      return "DISABLE";
     }
 
     @Override
@@ -2371,30 +2372,60 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
-   * Modify an existing table, more IRB friendly version.
-   * Asynchronous operation.  This means that it may be a while before your
-   * schema change is updated across all of the table.
+   * Modify an existing table, more IRB friendly version. Asynchronous operation.
+   * This means that it may be a while before your schema change is updated across all of the
+   * table. You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
    * @param tableName name of table.
    * @param htd modified description of the table
    * @throws IOException if a remote or network exception occurs
+   * @return the result of the async modify. You can use Future.get(long, TimeUnit) to wait on the
+   *     operation to complete.
    */
   @Override
-  public void modifyTable(final TableName tableName, final HTableDescriptor htd)
+  public Future<Void> modifyTable(final TableName tableName, final HTableDescriptor htd)
   throws IOException {
     if (!tableName.equals(htd.getTableName())) {
       throw new IllegalArgumentException("the specified table name '" + tableName +
         "' doesn't match with the HTD one: " + htd.getTableName());
     }
 
-    executeCallable(new MasterCallable<Void>(getConnection()) {
+    ModifyTableResponse response = executeCallable(
+        new MasterCallable<ModifyTableResponse>(getConnection()) {
       @Override
-      public Void call(int callTimeout) throws ServiceException {
+      public ModifyTableResponse call(int callTimeout) throws ServiceException {
         ModifyTableRequest request = RequestConverter.buildModifyTableRequest(tableName, htd);
-        master.modifyTable(null, request);
-        return null;
+        return master.modifyTable(null, request);
       }
     });
+
+    return new ModifyTableFuture(this, tableName, response);
+  }
+
+  private static class ModifyTableFuture extends TableFuture<Void> {
+    public ModifyTableFuture(final HBaseAdmin admin, final TableName tableName,
+        final ModifyTableResponse response) {
+      super(admin, tableName,
+          (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "MODIFY";
+    }
+
+    @Override
+    protected Void postOperationResult(final Void result, final long deadlineTs)
+        throws IOException, TimeoutException {
+      // The modify operation on the table is asynchronous on the server side irrespective
+      // of whether Procedure V2 is supported or not. So, we wait in the client till
+      // all regions get updated.
+      waitForSchemaUpdate(deadlineTs);
+      return result;
+    }
   }
 
   public void modifyTable(final byte[] tableName, final HTableDescriptor htd)
@@ -4262,9 +4293,32 @@ public class HBaseAdmin implements Admin {
     }
 
     /**
+     * @return the operation type like CREATE, DELETE, DISABLE etc.
+     */
+    public abstract String getOperationType();
+
+    /**
      * @return a description of the operation
      */
-    protected abstract String getDescription();
+    protected String getDescription() {
+      return "Operation: " + getOperationType() + ", "
+          + "Table Name: " + tableName.getNameWithNamespaceInclAsString();
+
+    };
+
+    protected abstract class TableWaitForStateCallable implements WaitForStateCallable {
+      @Override
+      public void throwInterruptedException() throws InterruptedIOException {
+        throw new InterruptedIOException("Interrupted while waiting for operation: "
+            + getOperationType() + " on table: " + tableName.getNameWithNamespaceInclAsString());
+      }
+
+      @Override
+      public void throwTimeoutException(long elapsedTime) throws TimeoutException {
+        throw new TimeoutException("The operation: " + getOperationType() + " on table: " +
+            tableName.getNameAsString() + " not completed after " + elapsedTime + "msec");
+      }
+    }
 
     @Override
     protected V postOperationResult(final V result, final long deadlineTs)
@@ -4282,7 +4336,7 @@ public class HBaseAdmin implements Admin {
 
     protected void waitForTableEnabled(final long deadlineTs)
         throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
         @Override
         public boolean checkState(int tries) throws IOException {
           try {
@@ -4290,43 +4344,40 @@ public class HBaseAdmin implements Admin {
               return true;
             }
           } catch (TableNotFoundException tnfe) {
-            LOG.debug("Table " + tableName.getNameAsString()
+            LOG.debug("Table " + tableName.getNameWithNamespaceInclAsString()
                 + " was not enabled, sleeping. tries=" + tries);
           }
           return false;
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table "
-              + tableName.getNameAsString() + " to be enabled");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName.getNameAsString()
-              + " not enabled after " + elapsedTime + "msec");
         }
       });
     }
 
     protected void waitForTableDisabled(final long deadlineTs)
         throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
         @Override
         public boolean checkState(int tries) throws IOException {
           return getAdmin().isTableDisabled(tableName);
         }
+      });
+    }
 
+    protected void waitTableNotFound(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
         @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table to be disabled");
+        public boolean checkState(int tries) throws IOException {
+          return !getAdmin().tableExists(tableName);
         }
+      });
+    }
 
+    protected void waitForSchemaUpdate(final long deadlineTs)
+        throws IOException, TimeoutException {
+      waitForState(deadlineTs, new TableWaitForStateCallable() {
         @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName + " not yet disabled after "
-              + elapsedTime + "msec");
+        public boolean checkState(int tries) throws IOException {
+          return getAdmin().getAlterStatus(tableName).getFirst() == 0;
         }
       });
     }
@@ -4384,27 +4435,6 @@ public class HBaseAdmin implements Admin {
       }
       throw new TimeoutException("Only " + actualRegCount.get() + " of " + numRegs
           + " regions are online; retries exhausted.");
-    }
-
-    protected void waitTableNotFound(final long deadlineTs)
-        throws IOException, TimeoutException {
-      waitForState(deadlineTs, new WaitForStateCallable() {
-        @Override
-        public boolean checkState(int tries) throws IOException {
-          return !getAdmin().tableExists(tableName);
-        }
-
-        @Override
-        public void throwInterruptedException() throws InterruptedIOException {
-          throw new InterruptedIOException("Interrupted when waiting for table to be deleted");
-        }
-
-        @Override
-        public void throwTimeoutException(long elapsedTime) throws TimeoutException {
-          throw new TimeoutException("Table " + tableName + " not yet deleted after "
-              + elapsedTime + "msec");
-        }
-      });
     }
   }
 }

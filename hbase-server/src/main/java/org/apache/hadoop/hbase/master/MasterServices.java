@@ -129,7 +129,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated table descriptor
    * @throws IOException
    */
-  void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
+  long modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException;
 
   /**
