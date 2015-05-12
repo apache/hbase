@@ -1880,7 +1880,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     if (useZKForAssignment) {
       if (r.getRegionInfo().isMetaRegion()) {
         LOG.info("Updating zk with meta location");
-        // The state field is for zk less assignment 
+        // The state field is for zk less assignment
         // For zk assignment, always set it to OPEN
         MetaRegionTracker.setMetaLocation(getZooKeeper(), this.serverNameFromMasterPOV, State.OPEN);
       } else {
@@ -3227,13 +3227,13 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
             rsh = scanners.get(scannerName);
           }
           if (rsh != null) {
-            if (request.getNextCallSeq() != rsh.nextCallSeq) {
-              throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.nextCallSeq
+            if (request.getNextCallSeq() != rsh.getNextCallSeq()) {
+              throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.getNextCallSeq()
                 + " But the nextCallSeq got from client: " + request.getNextCallSeq() +
                 "; request=" + TextFormat.shortDebugString(request));
             }
             // Increment the nextCallSeq value which is the next expected from client.
-            rsh.nextCallSeq++;
+            rsh.incNextCallSeq();
           }
         }
         try {
@@ -3333,6 +3333,14 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           } else {
             addResults(builder, results, controller);
           }
+        } catch (IOException e) {
+          // if we have an exception on scanner next and we are using the callSeq
+          // we should rollback because the client will retry with the same callSeq
+          // and get an OutOfOrderScannerNextException if we don't do so.
+          if (rsh != null && request.hasNextCallSeq()) {
+            rsh.rollbackNextCallSeq();
+          }
+          throw e;
         } finally {
           // We're done. On way out re-add the above removed lease.
           // Adding resets expiration time on lease.
@@ -4855,13 +4863,25 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
    * Holder class which holds the RegionScanner and nextCallSeq together.
    */
   private static class RegionScannerHolder {
+    private AtomicLong nextCallSeq = new AtomicLong(0);
     private RegionScanner s;
-    private long nextCallSeq = 0L;
     private HRegion r;
 
     public RegionScannerHolder(RegionScanner s, HRegion r) {
       this.s = s;
       this.r = r;
+    }
+
+    private long getNextCallSeq() {
+      return nextCallSeq.get();
+    }
+
+    private void incNextCallSeq() {
+      nextCallSeq.incrementAndGet();
+    }
+
+    private void rollbackNextCallSeq() {
+      nextCallSeq.decrementAndGet();
     }
   }
 
