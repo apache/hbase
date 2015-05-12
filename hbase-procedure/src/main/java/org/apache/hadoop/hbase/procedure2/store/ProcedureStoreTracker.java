@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
  * It can be used by the ProcedureStore to identify which procedures are already
  * deleted/completed to avoid the deserialization step on restart.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureStoreTracker {
   private final TreeMap<Long, BitSetNode> map = new TreeMap<Long, BitSetNode>();

@@ -49,8 +49,6 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.AsyncProcess.AsyncRequestFuture;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.client.coprocessor.Batch.Callback;
@@ -107,7 +105,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class HTable implements HTableInterface {
+public class HTable implements HTableInterface, RegionLocator {
   private static final Log LOG = LogFactory.getLog(HTable.class);
   protected ClusterConnection connection;
   private final TableName tableName;
@@ -364,7 +362,7 @@ public class HTable implements HTableInterface {
     multiAp = this.connection.getAsyncProcess();
 
     this.closed = false;
-    
+
     this.locator = new HRegionLocator(tableName, connection);
   }
 
@@ -481,6 +479,7 @@ public class HTable implements HTableInterface {
   /**
    * @deprecated Use {@link RegionLocator#getRegionLocation(byte[])} instead.
    */
+  @Override
   @Deprecated
   public HRegionLocation getRegionLocation(final byte [] row)
   throws IOException {
@@ -490,6 +489,7 @@ public class HTable implements HTableInterface {
   /**
    * @deprecated Use {@link RegionLocator#getRegionLocation(byte[], boolean)} instead.
    */
+  @Override
   @Deprecated
   public HRegionLocation getRegionLocation(final byte [] row, boolean reload)
   throws IOException {
@@ -601,6 +601,7 @@ public class HTable implements HTableInterface {
   /**
    * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
    */
+  @Override
   @Deprecated
   public byte [][] getStartKeys() throws IOException {
     return locator.getStartKeys();
@@ -609,6 +610,7 @@ public class HTable implements HTableInterface {
   /**
    * @deprecated Use {@link RegionLocator#getEndKeys()} instead;
    */
+  @Override
   @Deprecated
   public byte[][] getEndKeys() throws IOException {
     return locator.getEndKeys();
@@ -617,6 +619,7 @@ public class HTable implements HTableInterface {
   /**
    * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
    */
+  @Override
   @Deprecated
   public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
     return locator.getStartEndKeys();
@@ -645,6 +648,7 @@ public class HTable implements HTableInterface {
    *
    * @deprecated Use {@link RegionLocator#getAllRegionLocations()} instead;
    */
+  @Override
   @Deprecated
   public List<HRegionLocation> getAllRegionLocations() throws IOException {
     return locator.getAllRegionLocations();
