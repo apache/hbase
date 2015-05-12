@@ -29,10 +29,10 @@ import org.apache.hadoop.hbase.Chore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -138,9 +138,9 @@ public class ConnectionCache {
   /**
    * Caller closes the table afterwards.
    */
-  public Table getTable(String tableName) throws IOException {
+  public HTableInterface getTable(String tableName) throws IOException {
     ConnectionInfo connInfo = getCurrentConnection();
-    return connInfo.connection.getTable(TableName.valueOf(tableName));
+    return connInfo.connection.getTable(tableName);
   }
 
   /**
@@ -167,7 +167,7 @@ public class ConnectionCache {
             ugi = UserGroupInformation.createProxyUser(userName, realUser);
           }
           User user = userProvider.create(ugi);
-          Connection conn = ConnectionFactory.createConnection(conf, user);
+          HConnection conn = HConnectionManager.createConnection(conf, user);
           connInfo = new ConnectionInfo(conn, userName);
           connections.put(userName, connInfo);
         }
@@ -179,14 +179,14 @@ public class ConnectionCache {
   }
 
   class ConnectionInfo {
-    final Connection connection;
+    final HConnection connection;
     final String userName;
 
     volatile Admin admin;
     private long lastAccessTime;
     private boolean closed;
 
-    ConnectionInfo(Connection conn, String user) {
+    ConnectionInfo(HConnection conn, String user) {
       lastAccessTime = EnvironmentEdgeManager.currentTime();
       connection = conn;
       closed = false;
