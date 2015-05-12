@@ -52,8 +52,8 @@ public class ConstantSizeRegionSplitPolicy extends RegionSplitPolicy {
       this.desiredMaxFileSize = conf.getLong(HConstants.HREGION_MAX_FILESIZE,
         HConstants.DEFAULT_MAX_FILE_SIZE);
     }
-    double jitter = conf.getDouble("hbase.hregion.max.filesize.jitter", Double.NaN);
-    if (!Double.isNaN(jitter)) {
+    float jitter = conf.getFloat("hbase.hregion.max.filesize.jitter", Float.NaN);
+    if (!Float.isNaN(jitter)) {
       this.desiredMaxFileSize += (long)(desiredMaxFileSize * (RANDOM.nextFloat() - 0.5D) * jitter);
     }
   }
