@@ -684,6 +684,10 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (!isSeeked())
         return null;
 
+      return formKeyValue();
+    }
+
+    protected KeyValue formKeyValue() {
       KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
           + blockBuffer.position(), getCellBufSize());
       if (this.reader.shouldIncludeMemstoreTS()) {
