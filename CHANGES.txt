@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.1.0 04/29/2015
+Release Notes - HBase - Version 1.1.0 05/11/2015
 
 ** Sub-task
     * [HBASE-7847] - Use zookeeper multi to clear znodes
@@ -322,6 +322,9 @@ Release Notes - HBase - Version 1.1.0 04/29/2015
     * [HBASE-13585] - HRegionFileSystem#splitStoreFile() finishes without closing the file handle in some situation
     * [HBASE-13589] - [WINDOWS] hbase.cmd script is broken
     * [HBASE-13594] - MultiRowRangeFilter shouldn't call HBaseZeroCopyByteString.wrap() directly
+    * [HBASE-13596] - src assembly does not build
+    * [HBASE-13637] - branch-1.1 does not build against hadoop-2.2.
+    * [HBASE-13661] - Correct binary compatibility issues discovered in 1.1.0RC0
 
 
 
@@ -457,6 +460,7 @@ Release Notes - HBase - Version 1.1.0 04/29/2015
     * [HBASE-13380] - Cherry pick the HBASE-12808 compatibility checker tool back to 0.98+
     * [HBASE-13438] - [branch-1] Backport Basic quota support for namespaces
     * [HBASE-13584] - Disable distributed log replay by default for 1.1
+    * [HBASE-13665] - Fix docs and site building on branch-1
 
 
 ** Test
