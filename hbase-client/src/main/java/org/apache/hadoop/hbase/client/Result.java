@@ -986,6 +986,7 @@ public class Result implements CellScannable, CellScanner {
    * @throws UnsupportedOperationException if invoked on instance of EMPTY_RESULT
    * (which is supposed to be immutable).
    */
+  @InterfaceAudience.Private
   @Deprecated
   public void addResults(ClientProtos.RegionLoadStats loadStats) {
     checkReadonly();
@@ -996,6 +997,7 @@ public class Result implements CellScannable, CellScanner {
    * Set load information about the region to the information about the result
    * @param loadStats statistics about the current region from which this was returned
    */
+  @InterfaceAudience.Private
   public void setStatistics(ClientProtos.RegionLoadStats loadStats) {
     this.stats = loadStats;
   }

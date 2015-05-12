@@ -31,7 +31,7 @@ import com.google.common.annotations.VisibleForTesting;
  * splitting preserve namespace quota. The namespace quota can be specified while namespace
  * creation.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class NamespaceAuditor {
   private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
   static final String NS_AUDITOR_INIT_TIMEOUT = "hbase.namespace.auditor.init.timeout";

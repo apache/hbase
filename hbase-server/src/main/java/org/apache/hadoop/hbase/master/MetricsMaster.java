@@ -52,7 +52,7 @@ public class MetricsMaster {
   /**
    * @param inc How much to add to requests.
    */
-  public void incrementRequests(final int inc) {
+  public void incrementRequests(final long inc) {
     masterSource.incRequests(inc);
   }
 }

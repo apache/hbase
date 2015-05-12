@@ -134,6 +134,14 @@ public class Scan extends Query {
   // scan.setAttribute(Scan.SCAN_ATTRIBUTES_TABLE_NAME, Bytes.toBytes(tableName))
   static public final String SCAN_ATTRIBUTES_TABLE_NAME = "scan.attributes.table.name";
 
+  /**
+   * @deprecated without replacement
+   *             This is now a no-op, SEEKs and SKIPs are optimizated automatically.
+   *             Will be removed in 2.0+
+   */
+  @Deprecated
+  public static final String HINT_LOOKAHEAD = "_look_ahead_";
+
   /*
    * -1 means no caching
    */
