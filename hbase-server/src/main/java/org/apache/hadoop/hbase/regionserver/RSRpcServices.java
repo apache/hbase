@@ -1831,11 +1831,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final ClientProtos.CoprocessorServiceCall serviceCall) throws IOException {
     // ignore the passed in controller (from the serialized call)
     ServerRpcController execController = new ServerRpcController();
-    Message result = region.execService(execController, serviceCall);
-    if (execController.getFailedOn() != null) {
-      throw execController.getFailedOn();
-    }
-    return result;
+    return region.execService(execController, serviceCall);
   }
 
   /**

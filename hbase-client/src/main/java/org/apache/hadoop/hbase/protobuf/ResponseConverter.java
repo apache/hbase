@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.protobuf;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -322,6 +323,25 @@ public final class ResponseConverter {
       }
     }
   }
+
+  /**
+   * Retreivies exception stored during RPC invocation.
+   * @param controller the controller instance provided by the client when calling the service
+   * @return exception if any, or null; Will return DoNotRetryIOException for string represented
+   * failure causes in controller.
+   */
+  @Nullable
+  public static IOException getControllerException(RpcController controller) throws IOException {
+    if (controller != null && controller.failed()) {
+      if (controller instanceof ServerRpcController) {
+        return ((ServerRpcController)controller).getFailedOn();
+      } else {
+        return new DoNotRetryIOException(controller.errorText());
+      }
+    }
+    return null;
+  }
+
 
   /**
    * Create Results from the cells using the cells meta data. 

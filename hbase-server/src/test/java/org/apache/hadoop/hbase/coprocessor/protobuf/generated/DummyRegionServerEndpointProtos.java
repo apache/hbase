@@ -879,6 +879,14 @@ public final class DummyRegionServerEndpointProtos {
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done);
 
+      /**
+       * <code>rpc dummyThrow(.DummyRequest) returns (.DummyResponse);</code>
+       */
+      public abstract void dummyThrow(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -890,6 +898,14 @@ public final class DummyRegionServerEndpointProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
             com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done) {
           impl.dummyCall(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void dummyThrow(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done) {
+          impl.dummyThrow(controller, request, done);
         }
 
       };
@@ -916,6 +932,8 @@ public final class DummyRegionServerEndpointProtos {
           switch(method.getIndex()) {
             case 0:
               return impl.dummyCall(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest)request);
+            case 1:
+              return impl.dummyThrow(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -931,6 +949,8 @@ public final class DummyRegionServerEndpointProtos {
           }
           switch(method.getIndex()) {
             case 0:
+              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
+            case 1:
               return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -948,6 +968,8 @@ public final class DummyRegionServerEndpointProtos {
           switch(method.getIndex()) {
             case 0:
               return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance();
+            case 1:
+              return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -960,6 +982,14 @@ public final class DummyRegionServerEndpointProtos {
      * <code>rpc dummyCall(.DummyRequest) returns (.DummyResponse);</code>
      */
     public abstract void dummyCall(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done);
+
+    /**
+     * <code>rpc dummyThrow(.DummyRequest) returns (.DummyResponse);</code>
+     */
+    public abstract void dummyThrow(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done);
@@ -991,6 +1021,11 @@ public final class DummyRegionServerEndpointProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse>specializeCallback(
               done));
           return;
+        case 1:
+          this.dummyThrow(controller, (org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1007,6 +1042,8 @@ public final class DummyRegionServerEndpointProtos {
       switch(method.getIndex()) {
         case 0:
           return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
+        case 1:
+          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -1022,6 +1059,8 @@ public final class DummyRegionServerEndpointProtos {
       }
       switch(method.getIndex()) {
         case 0:
+          return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance();
+        case 1:
           return org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -1058,6 +1097,21 @@ public final class DummyRegionServerEndpointProtos {
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.class,
             org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance()));
       }
+
+      public  void dummyThrow(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(1),
+          controller,
+          request,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.class,
+            org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -1067,6 +1121,11 @@ public final class DummyRegionServerEndpointProtos {
 
     public interface BlockingInterface {
       public org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse dummyCall(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse dummyThrow(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request)
           throws com.google.protobuf.ServiceException;
@@ -1085,6 +1144,18 @@ public final class DummyRegionServerEndpointProtos {
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse) channel.callBlockingMethod(
           getDescriptor().getMethods().get(0),
+          controller,
+          request,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse dummyThrow(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(1),
           controller,
           request,
           org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse.getDefaultInstance());
@@ -1116,10 +1187,12 @@ public final class DummyRegionServerEndpointProtos {
     java.lang.String[] descriptorData = {
       "\n\037DummyRegionServerEndpoint.proto\"\016\n\014Dum" +
       "myRequest\"\036\n\rDummyResponse\022\r\n\005value\030\001 \002(" +
-      "\t2:\n\014DummyService\022*\n\tdummyCall\022\r.DummyRe" +
-      "quest\032\016.DummyResponseB_\n6org.apache.hado" +
-      "op.hbase.coprocessor.protobuf.generatedB" +
-      "\037DummyRegionServerEndpointProtos\210\001\001\240\001\001"
+      "\t2g\n\014DummyService\022*\n\tdummyCall\022\r.DummyRe" +
+      "quest\032\016.DummyResponse\022+\n\ndummyThrow\022\r.Du" +
+      "mmyRequest\032\016.DummyResponseB_\n6org.apache" +
+      ".hadoop.hbase.coprocessor.protobuf.gener" +
+      "atedB\037DummyRegionServerEndpointProtos\210\001\001" +
+      "\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
