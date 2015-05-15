@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UnsupportedEncodingException;
@@ -3971,7 +3972,13 @@ public class HRegion implements HeapSize { // , Writable{
       for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
           scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+        KeyValueScanner scanner;
+        try {
+          scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+        } catch (FileNotFoundException e) {
+          abortRegionServer(e.getMessage());
+          throw new NotServingRegionException(region.getRegionNameAsString() + " is closing");
+        }
         if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
           || this.filter.isFamilyEssential(entry.getKey())) {
           scanners.add(scanner);
@@ -4105,14 +4112,18 @@ public class HRegion implements HeapSize { // , Writable{
     private KeyValue populateResult(List<Cell> results, KeyValueHeap heap, int limit,
         byte[] currentRow, int offset, short length) throws IOException {
       KeyValue nextKv;
-      do {
-        heap.next(results, limit - results.size());
-        if (limit > 0 && results.size() == limit) {
-          return KV_LIMIT;
-        }
-        nextKv = heap.peek();
-      } while (nextKv != null && nextKv.matchingRow(currentRow, offset, length));
-
+      try {
+        do {
+          heap.next(results, limit - results.size());
+          if (limit > 0 && results.size() == limit) {
+            return KV_LIMIT;
+          }
+          nextKv = heap.peek();
+        } while (nextKv != null && nextKv.matchingRow(currentRow, offset, length));
+      } catch (FileNotFoundException e) {
+        abortRegionServer(e.getMessage());
+        throw new NotServingRegionException(region.getRegionNameAsString() + " is closing");
+      }
       return nextKv;
     }
 
@@ -4336,6 +4347,9 @@ public class HRegion implements HeapSize { // , Writable{
         if (this.joinedHeap != null) {
           result = this.joinedHeap.requestSeek(kv, true, true) || result;
         }
+      } catch (FileNotFoundException e) {
+        abortRegionServer(e.getMessage());
+        throw new NotServingRegionException(region.getRegionNameAsString() + " is closing");
       } finally {
         closeRegionOperation();
       }
@@ -6076,6 +6090,13 @@ public class HRegion implements HeapSize { // , Writable{
   /** @param coprocessorHost the new coprocessor host */
   public void setCoprocessorHost(final RegionCoprocessorHost coprocessorHost) {
     this.coprocessorHost = coprocessorHost;
+  }
+
+  public void abortRegionServer(String msg) throws IOException {
+    RegionServerServices rs = getRegionServerServices();
+    if (rs instanceof HRegionServer) {
+      ((HRegionServer)rs).abort(msg);
+    }
   }
 
   /**
