@@ -3446,6 +3446,10 @@ public class HRegionServer implements HRegionInterface, HBaseRPCErrorHandler,
     return conf;
   }
 
+  public CacheConfig getCacheConfig() {
+    return cacheConfig;
+  }
+
   /** @return the write lock for the server */
   ReentrantReadWriteLock.WriteLock getWriteLock() {
     return lock.writeLock();
