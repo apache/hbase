@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -143,6 +144,8 @@ public class StoreFileScanner implements KeyValueScanner {
           skipKVsNewerThanReadpoint();
         }
       }
+    } catch (FileNotFoundException e) {
+      throw e;
     } catch(IOException e) {
       throw new IOException("Could not iterate " + this, e);
     }
@@ -169,6 +172,8 @@ public class StoreFileScanner implements KeyValueScanner {
       } finally {
         realSeekDone = true;
       }
+    } catch (FileNotFoundException e) {
+      throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not seek " + this + " to key " + key, ioe);
     }
@@ -193,6 +198,8 @@ public class StoreFileScanner implements KeyValueScanner {
       } finally {
         realSeekDone = true;
       }
+    } catch (FileNotFoundException e) {
+      throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not reseek " + this + " to key " + key,
           ioe);
@@ -451,6 +458,8 @@ public class StoreFileScanner implements KeyValueScanner {
       } finally {
         realSeekDone = true;
       }
+    } catch (FileNotFoundException e) {
+      throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not seekToPreviousRow " + this + " to key "
           + key, ioe);
