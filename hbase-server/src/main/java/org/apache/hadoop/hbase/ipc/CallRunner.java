@@ -45,6 +45,7 @@ public class CallRunner {
   private Call call;
   private RpcServerInterface rpcServer;
   private MonitoredRPCHandler status;
+  private volatile boolean sucessful;
 
   /**
    * On construction, adds the size of this call to the running count of outstanding call sizes.
@@ -116,6 +117,10 @@ public class CallRunner {
           traceScope.close();
         }
         RpcServer.CurCall.set(null);
+        if (resultPair != null) {
+          this.rpcServer.addCallSize(call.getSize() * -1);
+          sucessful = true;
+        }
       }
       // Set the response for undelayed calls and delayed calls with
       // undelayed responses.
@@ -146,8 +151,9 @@ public class CallRunner {
       RpcServer.LOG.warn(Thread.currentThread().getName()
           + ": caught: " + StringUtils.stringifyException(e));
     } finally {
-      // regardless if successful or not we need to reset the callQueueSize
-      this.rpcServer.addCallSize(call.getSize() * -1);
+      if (!sucessful) {
+        this.rpcServer.addCallSize(call.getSize() * -1);
+      }
       cleanup();
     }
   }
