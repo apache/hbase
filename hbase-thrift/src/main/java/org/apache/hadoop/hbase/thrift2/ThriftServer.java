@@ -139,6 +139,7 @@ public class ThriftServer {
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("f", "framed", false, "Use framed transport");
     options.addOption("c", "compact", false, "Use the compact protocol");
+    options.addOption("w", "workers", true, "How many worker threads to use.");
     options.addOption("h", "help", false, "Print help information");
     options.addOption(null, "infoport", true, "Port for web UI");
     options.addOption("t", READ_TIMEOUT_OPTION, true,
@@ -249,13 +250,17 @@ public class ThriftServer {
 
   private static TServer getTHsHaServer(TProtocolFactory protocolFactory,
       TProcessor processor, TTransportFactory transportFactory,
+      int workerThreads,
       InetSocketAddress inetSocketAddress, ThriftMetrics metrics)
       throws TTransportException {
     TNonblockingServerTransport serverTransport = new TNonblockingServerSocket(inetSocketAddress);
     log.info("starting HBase HsHA Thrift server on " + inetSocketAddress.toString());
     THsHaServer.Args serverArgs = new THsHaServer.Args(serverTransport);
+    if (workerThreads > 0) {
+      serverArgs.workerThreads(workerThreads);
+    }
     ExecutorService executorService = createExecutor(
-        serverArgs.getWorkerThreads(), metrics);
+        workerThreads, metrics);
     serverArgs.executorService(executorService);
     serverArgs.processor(processor);
     serverArgs.transportFactory(transportFactory);
@@ -270,13 +275,16 @@ public class ThriftServer {
     ThreadFactoryBuilder tfb = new ThreadFactoryBuilder();
     tfb.setDaemon(true);
     tfb.setNameFormat("thrift2-worker-%d");
-    return new ThreadPoolExecutor(workerThreads, workerThreads,
+    ThreadPoolExecutor pool = new ThreadPoolExecutor(workerThreads, workerThreads,
             Long.MAX_VALUE, TimeUnit.SECONDS, callQueue, tfb.build());
+    pool.prestartAllCoreThreads();
+    return pool;
   }
 
   private static TServer getTThreadPoolServer(TProtocolFactory protocolFactory,
                                               TProcessor processor,
                                               TTransportFactory transportFactory,
+                                              int workerThreads,
                                               InetSocketAddress inetSocketAddress,
                                               int clientTimeout)
       throws TTransportException {
@@ -286,6 +294,9 @@ public class ThriftServer {
     serverArgs.processor(processor);
     serverArgs.transportFactory(transportFactory);
     serverArgs.protocolFactory(protocolFactory);
+    if (workerThreads > 0) {
+      serverArgs.maxWorkerThreads(workerThreads);
+    }
     return new TThreadPoolServer(serverArgs);
   }
 
@@ -318,6 +329,7 @@ public class ThriftServer {
     Options options = getOptions();
     Configuration conf = HBaseConfiguration.create();
     CommandLine cmd = parseArguments(conf, options, args);
+    int workerThreads = 0;
 
     /**
      * This is to please both bin/hbase and bin/hbase-daemon. hbase-daemon provides "start" and "stop" arguments hbase
@@ -447,6 +459,10 @@ public class ThriftServer {
       };
     }
 
+    if (cmd.hasOption("w")) {
+      workerThreads = Integer.parseInt(cmd.getOptionValue("w"));
+    }
+
     // check for user-defined info server port setting, if so override the conf
     try {
       if (cmd.hasOption("infoport")) {
@@ -471,13 +487,22 @@ public class ThriftServer {
     }
 
     if (nonblocking) {
-      server = getTNonBlockingServer(protocolFactory, processor, transportFactory, inetSocketAddress);
+      server = getTNonBlockingServer(protocolFactory,
+          processor,
+          transportFactory,
+          inetSocketAddress);
     } else if (hsha) {
-      server = getTHsHaServer(protocolFactory, processor, transportFactory, inetSocketAddress, metrics);
+      server = getTHsHaServer(protocolFactory,
+          processor,
+          transportFactory,
+          workerThreads,
+          inetSocketAddress,
+          metrics);
     } else {
       server = getTThreadPoolServer(protocolFactory,
           processor,
           transportFactory,
+          workerThreads,
           inetSocketAddress,
           readTimeout);
     }
