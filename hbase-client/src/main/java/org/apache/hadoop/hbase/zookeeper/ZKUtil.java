@@ -939,8 +939,13 @@ public class ZKUtil {
     // Detection for embedded HBase client with jaas configuration
     // defined for third party programs.
     try {
-      javax.security.auth.login.Configuration testConfig = javax.security.auth.login.Configuration.getConfiguration();
-      if(testConfig.getAppConfigurationEntry("Client") == null) {
+      javax.security.auth.login.Configuration testConfig =
+          javax.security.auth.login.Configuration.getConfiguration();
+      if (testConfig.getAppConfigurationEntry("Client") == null
+          && testConfig.getAppConfigurationEntry(
+            JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME) == null
+          && testConfig.getAppConfigurationEntry(
+            JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null) {
         return false;
       }
     } catch(Exception e) {
@@ -949,8 +954,7 @@ public class ZKUtil {
     }
 
     // Master & RSs uses hbase.zookeeper.client.*
-    return("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")) &&
-         conf.get("hbase.zookeeper.client.keytab.file") != null);
+    return("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")));
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
