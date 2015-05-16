@@ -71,13 +71,25 @@ public class MobFile {
    * @throws IOException
    */
   public Cell readCell(Cell search, boolean cacheMobBlocks) throws IOException {
+    return readCell(search, cacheMobBlocks, sf.getMaxMemstoreTS());
+  }
+
+  /**
+   * Reads a cell from the mob file.
+   * @param search The cell need to be searched in the mob file.
+   * @param cacheMobBlocks Should this scanner cache blocks.
+   * @param readPt the read point.
+   * @return The cell in the mob file.
+   * @throws IOException
+   */
+  public Cell readCell(Cell search, boolean cacheMobBlocks, long readPt) throws IOException {
     Cell result = null;
     StoreFileScanner scanner = null;
     List<StoreFile> sfs = new ArrayList<StoreFile>();
     sfs.add(sf);
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs,
-          cacheMobBlocks, true, false, null, sf.getMaxMemstoreTS());
+        cacheMobBlocks, true, false, null, readPt);
       if (!sfScanners.isEmpty()) {
         scanner = sfScanners.get(0);
         if (scanner.seek(search)) {

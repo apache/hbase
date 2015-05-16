@@ -196,7 +196,9 @@ public class MobFileCache {
    */
   public MobFile openFile(FileSystem fs, Path path, MobCacheConfig cacheConf) throws IOException {
     if (!isCacheEnabled) {
-      return MobFile.create(fs, path, conf, cacheConf);
+      MobFile mobFile = MobFile.create(fs, path, conf, cacheConf);
+      mobFile.open();
+      return mobFile;
     } else {
       String fileName = path.getName();
       CachedMobFile cached = map.get(fileName);

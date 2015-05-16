@@ -107,7 +107,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean scanUsePread = false;
   protected ReentrantLock lock = new ReentrantLock();
   
-  private final long readPt;
+  protected final long readPt;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {

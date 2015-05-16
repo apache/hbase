@@ -339,6 +339,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
         MobFile file = MobFile.create(fs,
             new Path(familyDir, mobFileName.getFileName()), conf, cacheConfig);
         StoreFileScanner scanner = null;
+        file.open();
         try {
           scanner = file.getScanner();
           scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_BYTE_ARRAY));
@@ -356,6 +357,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
           if (scanner != null) {
             scanner.close();
           }
+          file.close();
         }
         toBeDeleted.add(mobFileStat.getFileStatus().getPath());
       }

@@ -247,7 +247,7 @@ public class HMobStore extends HStore {
       Compression.Algorithm compression) throws IOException {
     final CacheConfig writerCacheConf = mobCacheConfig;
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-        .withIncludesMvcc(false).withIncludesTags(true)
+        .withIncludesMvcc(true).withIncludesTags(true)
         .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
         .withBlockSize(getFamily().getBlocksize())
@@ -305,13 +305,25 @@ public class HMobStore extends HStore {
   }
 
   /**
-   * Reads the cell from the mob file.
+   * Reads the cell from the mob file, and the read point does not count.
    * @param reference The cell found in the HBase, its value is a path to a mob file.
    * @param cacheBlocks Whether the scanner should cache blocks.
    * @return The cell found in the mob file.
    * @throws IOException
    */
   public Cell resolve(Cell reference, boolean cacheBlocks) throws IOException {
+    return resolve(reference, cacheBlocks, -1);
+  }
+
+  /**
+   * Reads the cell from the mob file.
+   * @param reference The cell found in the HBase, its value is a path to a mob file.
+   * @param cacheBlocks Whether the scanner should cache blocks.
+   * @param readPt the read point.
+   * @return The cell found in the mob file.
+   * @throws IOException
+   */
+  public Cell resolve(Cell reference, boolean cacheBlocks, long readPt) throws IOException {
     Cell result = null;
     if (MobUtils.hasValidMobRefCellValue(reference)) {
       String fileName = MobUtils.getMobFileName(reference);
@@ -336,7 +348,7 @@ public class HMobStore extends HStore {
             keyLock.releaseLockEntry(lockEntry);
           }
         }
-        result = readCell(locations, fileName, reference, cacheBlocks);
+        result = readCell(locations, fileName, reference, cacheBlocks, readPt);
       }
     }
     if (result == null) {
@@ -363,18 +375,20 @@ public class HMobStore extends HStore {
    * @param fileName The file to be read.
    * @param search The cell to be searched.
    * @param cacheMobBlocks Whether the scanner should cache blocks.
+   * @param readPt the read point.
    * @return The found cell. Null if there's no such a cell.
    * @throws IOException
    */
-  private Cell readCell(List<Path> locations, String fileName, Cell search, boolean cacheMobBlocks)
-      throws IOException {
+  private Cell readCell(List<Path> locations, String fileName, Cell search, boolean cacheMobBlocks,
+    long readPt) throws IOException {
     FileSystem fs = getFileSystem();
     for (Path location : locations) {
       MobFile file = null;
       Path path = new Path(location, fileName);
       try {
         file = mobCacheConfig.getMobFileCache().openFile(fs, path, mobCacheConfig);
-        return file.readCell(search, cacheMobBlocks);
+        return readPt != -1 ? file.readCell(search, cacheMobBlocks, readPt) : file.readCell(search,
+          cacheMobBlocks);
       } catch (IOException e) {
         mobCacheConfig.getMobFileCache().evictFile(fileName);
         if ((e instanceof FileNotFoundException) ||

@@ -554,7 +554,7 @@ public class MobUtils {
     HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
     Compression.Algorithm compression, CacheConfig cacheConfig) throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-      .withIncludesMvcc(false).withIncludesTags(true).withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+      .withIncludesMvcc(true).withIncludesTags(true).withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
 

@@ -66,7 +66,7 @@ public class ReversedMobStoreScanner extends ReversedStoreScanner {
       for (int i = 0; i < outResult.size(); i++) {
         Cell cell = outResult.get(i);
         if (MobUtils.isMobReferenceCell(cell)) {
-          Cell mobCell = mobStore.resolve(cell, cacheMobBlocks);
+          Cell mobCell = mobStore.resolve(cell, cacheMobBlocks, readPt);
           mobKVCount++;
           mobKVSize += mobCell.getValueLength();
           outResult.set(i, mobCell);
