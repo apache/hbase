@@ -10,30 +10,41 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.regionserver.MemStoreFlusher.FlushRegionEntry;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.After;
-import org.junit.Before;
+import org.apache.hadoop.hbase.regionserver.MemStoreFlusher.FlushRegionEntry;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Category(MediumTests.class)
 public class TestFlushRegionEntry {
-  @Before
-  public void setUp() throws Exception {
+
+  @BeforeClass
+  public static void setUp() throws Exception {
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     edge.setValue(12345);
     EnvironmentEdgeManager.injectEdge(edge);
   }
 
+  @AfterClass
+  public static void teardown() {
+    EnvironmentEdgeManager.reset();
+  }
+
   @Test
-  public void test() {
-    HRegion r = Mockito.mock(HRegion.class);
+  public void testFlushRegionEntryEquality() {
+    HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestTable"));
+    HRegion r = mock(HRegion.class);
+    doReturn(hri.getRegionName()).when(r).getRegionName();
+
     FlushRegionEntry entry = new FlushRegionEntry(r);
     FlushRegionEntry other = new FlushRegionEntry(r);
 
@@ -41,8 +52,4 @@ public class TestFlushRegionEntry {
     assertEquals(entry, other);
   }
 
-  @After
-  public void teardown() {
-    EnvironmentEdgeManager.reset();
-  }
 }
