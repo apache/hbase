@@ -104,10 +104,7 @@ public class ClientAsyncPrefetchScanner extends ClientScanner {
       while (isPrefetchRunning()) {
         // prefetch running or still pending
         if (getCacheCount() > 0) {
-          Result res = cache.poll();
-          long estimatedSize = calcEstimatedSize(res);
-          addEstimatedSize(-estimatedSize);
-          return res;
+          return pollCache();
         } else {
           // (busy) wait for a record - sleep
           Threads.sleep(1);
@@ -115,7 +112,7 @@ public class ClientAsyncPrefetchScanner extends ClientScanner {
       }
 
       if (getCacheCount() > 0) {
-        return cache.poll();
+        return pollCache();
       }
 
       // if we exhausted this scanner before calling close, write out the scan metrics
@@ -209,6 +206,12 @@ public class ClientAsyncPrefetchScanner extends ClientScanner {
     return cacheSizeInBytes.get();
   }
 
+  private Result pollCache() {
+    Result res = cache.poll();
+    long estimatedSize = calcEstimatedSize(res);
+    addEstimatedSize(-estimatedSize);
+    return res;
+  }
 
   private class PrefetchRunnable implements Runnable {
 
