@@ -182,11 +182,11 @@ public class RecoverableZooKeeper {
           switch (e.code()) {
             case NONODE:
               if (isRetry) {
-                LOG.info("Node " + path + " already deleted. Assuming a " +
+                LOG.debug("Node " + path + " already deleted. Assuming a " +
                     "previous attempt succeeded.");
                 return;
               }
-              LOG.info("Node " + path + " already deleted, retry=" + isRetry);
+              LOG.debug("Node " + path + " already deleted, retry=" + isRetry);
               throw e;
 
             case CONNECTIONLOSS:
@@ -273,7 +273,7 @@ public class RecoverableZooKeeper {
 
   private void retryOrThrow(RetryCounter retryCounter, KeeperException e,
       String opName) throws KeeperException {
-    LOG.warn("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
+    LOG.debug("Possibly transient ZooKeeper, quorum=" + quorumServers + ", exception=" + e);
     if (!retryCounter.shouldRetry()) {
       LOG.error("ZooKeeper " + opName + " failed after "
         + retryCounter.getMaxAttempts() + " attempts");
