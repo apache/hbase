@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -34,6 +37,7 @@ import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.OperationWithAttributes;
 import org.apache.hadoop.hbase.client.Put;
@@ -51,12 +55,15 @@ import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TDeleteType;
 import org.apache.hadoop.hbase.thrift2.generated.TDurability;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
+import org.apache.hadoop.hbase.thrift2.generated.THRegionInfo;
+import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
 import org.apache.hadoop.hbase.thrift2.generated.TMutation;
 import org.apache.hadoop.hbase.thrift2.generated.TPut;
 import org.apache.hadoop.hbase.thrift2.generated.TResult;
 import org.apache.hadoop.hbase.thrift2.generated.TRowMutations;
 import org.apache.hadoop.hbase.thrift2.generated.TScan;
+import org.apache.hadoop.hbase.thrift2.generated.TServerName;
 import org.apache.hadoop.hbase.thrift2.generated.TTimeRange;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -465,6 +472,39 @@ public class ThriftUtilities {
     }
 
     return out;
+  }
+
+  public static THRegionLocation regionLocationFromHBase(HRegionLocation hrl) {
+    HRegionInfo hri = hrl.getRegionInfo();
+    ServerName serverName = hrl.getServerName();
+
+    THRegionInfo thRegionInfo = new THRegionInfo();
+    THRegionLocation thRegionLocation = new THRegionLocation();
+    TServerName tServerName = new TServerName();
+
+    tServerName.setHostName(serverName.getHostname());
+    tServerName.setPort(serverName.getPort());
+    tServerName.setStartCode(serverName.getStartcode());
+
+    thRegionInfo.setTableName(hri.getTable().getName());
+    thRegionInfo.setEndKey(hri.getEndKey());
+    thRegionInfo.setStartKey(hri.getStartKey());
+    thRegionInfo.setOffline(hri.isOffline());
+    thRegionInfo.setSplit(hri.isSplit());
+    thRegionInfo.setReplicaId(hri.getReplicaId());
+
+    thRegionLocation.setRegionInfo(thRegionInfo);
+    thRegionLocation.setServerName(tServerName);
+
+    return thRegionLocation;
+  }
+
+  public static List<THRegionLocation> regionLocationsFromHBase(List<HRegionLocation> locations) {
+    List<THRegionLocation> tlocations = new ArrayList<THRegionLocation>(locations.size());
+    for (HRegionLocation hrl:locations) {
+      tlocations.add(regionLocationFromHBase(hrl));
+    }
+    return tlocations;
   }
 
   /**

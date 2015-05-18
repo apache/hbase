@@ -47,7 +47,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -56,6 +58,7 @@ import org.apache.hadoop.hbase.thrift2.generated.TAppend;
 import org.apache.hadoop.hbase.thrift2.generated.TDelete;
 import org.apache.hadoop.hbase.thrift2.generated.TGet;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
+import org.apache.hadoop.hbase.thrift2.generated.THRegionLocation;
 import org.apache.hadoop.hbase.thrift2.generated.TIOError;
 import org.apache.hadoop.hbase.thrift2.generated.TIllegalArgument;
 import org.apache.hadoop.hbase.thrift2.generated.TIncrement;
@@ -137,6 +140,14 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       return connectionCache.getTable(Bytes.toString(byteBufferToByteArray(tableName)));
     } catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private RegionLocator getLocator(ByteBuffer tableName) {
+    try {
+      return connectionCache.getRegionLocator(byteBufferToByteArray(tableName));
+    } catch (IOException ie) {
+      throw new RuntimeException(ie);
     }
   }
 
@@ -384,6 +395,8 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
     return results;
   }
 
+
+
   @Override
   public void closeScanner(int scannerId) throws TIOError, TIllegalArgument, TException {
     LOG.debug("scannerClose: id=" + scannerId);
@@ -408,6 +421,51 @@ public class ThriftHBaseServiceHandler implements THBaseService.Iface {
       throw getTIOError(e);
     } finally {
       closeTable(htable);
+    }
+  }
+
+  @Override
+  public List<THRegionLocation> getAllRegionLocations(ByteBuffer table)
+      throws TIOError, TException {
+    RegionLocator locator = null;
+    try {
+      locator = getLocator(table);
+      return ThriftUtilities.regionLocationsFromHBase(locator.getAllRegionLocations());
+
+    } catch (IOException e) {
+      throw getTIOError(e);
+    } finally {
+      if (locator != null) {
+        try {
+          locator.close();
+        } catch (IOException e) {
+          LOG.warn("Couldn't close the locator.", e);
+        }
+      }
+    }
+  }
+
+  @Override
+  public THRegionLocation getRegionLocation(ByteBuffer table, ByteBuffer row, boolean reload)
+      throws TIOError, TException {
+
+    RegionLocator locator = null;
+    try {
+      locator = getLocator(table);
+      byte[] rowBytes = byteBufferToByteArray(row);
+      HRegionLocation hrl = locator.getRegionLocation(rowBytes, reload);
+      return ThriftUtilities.regionLocationFromHBase(hrl);
+
+    } catch (IOException e) {
+      throw getTIOError(e);
+    } finally {
+      if (locator != null) {
+        try {
+          locator.close();
+        } catch (IOException e) {
+          LOG.warn("Couldn't close the locator.", e);
+        }
+      }
     }
   }
 }
