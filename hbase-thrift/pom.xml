@@ -342,7 +342,7 @@
       Profile for regenerating the thrift java classes.
       The generated files are to be committed to version control.
       Activate using:
-       mvn compile -Dcompile-thrift
+       mvn compile -Pcompile-thrift
     -->
     <profile>
       <id>compile-thrift</id>

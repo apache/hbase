@@ -242,6 +242,27 @@ struct TRowMutations {
   2: required list<TMutation> mutations
 }
 
+struct THRegionInfo {
+  1: required i64 regionId
+  2: required binary tableName
+  3: optional binary startKey
+  4: optional binary endKey
+  5: optional bool offline
+  6: optional bool split
+  7: optional i32 replicaId
+}
+
+struct TServerName {
+  1: required string hostName
+  2: optional i32 port
+  3: optional i64 startCode
+}
+
+struct THRegionLocation {
+  1: required TServerName serverName
+  2: required THRegionInfo regionInfo
+}
+
 //
 // Exceptions
 //
@@ -512,4 +533,27 @@ service THBaseService {
     1: TIOError io
   )
 
+  /**
+   * Given a table and a row get the location of the region that
+   * would contain the given row key.
+   *
+   * reload = true means the cache will be cleared and the location
+   * will be fetched from meta.
+   */
+  THRegionLocation getRegionLocation(
+    1: required binary table,
+    2: required binary row,
+    3: bool reload,
+  ) throws (
+    1: TIOError io
+  )
+
+  /**
+   * Get all of the region locations for a given table.
+   **/
+  list<THRegionLocation> getAllRegionLocations(
+    1: required binary table,
+  ) throws (
+    1: TIOError io
+  )
 }
