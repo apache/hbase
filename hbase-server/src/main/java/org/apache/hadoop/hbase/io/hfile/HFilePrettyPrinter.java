@@ -59,8 +59,8 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
-import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
@@ -424,7 +424,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     System.out.println("Bloom filter:");
     if (bloomFilter != null) {
       System.out.println(FOUR_SPACES + bloomFilter.toString().replaceAll(
-          ByteBloomFilter.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
+          BloomFilterUtil.STATS_RECORD_SEP, "\n" + FOUR_SPACES));
     } else {
       System.out.println(FOUR_SPACES + "Not present");
     }
@@ -438,7 +438,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     System.out.println("Delete Family Bloom filter:");
     if (bloomFilter != null) {
       System.out.println(FOUR_SPACES
-          + bloomFilter.toString().replaceAll(ByteBloomFilter.STATS_RECORD_SEP,
+          + bloomFilter.toString().replaceAll(BloomFilterUtil.STATS_RECORD_SEP,
               "\n" + FOUR_SPACES));
     } else {
       System.out.println(FOUR_SPACES + "Not present");

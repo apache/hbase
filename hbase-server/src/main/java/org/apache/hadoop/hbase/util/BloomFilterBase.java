@@ -41,11 +41,4 @@ public interface BloomFilterBase {
    * @return Size of the bloom, in bytes
    */
   long getByteSize();
-
-  /**
-   * Create a key for a row-column Bloom filter.
-   */
-  byte[] createBloomKey(byte[] rowBuf, int rowOffset, int rowLen,
-      byte[] qualBuf, int qualOffset, int qualLen);
-
 }

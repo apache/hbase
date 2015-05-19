@@ -47,10 +47,10 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     LogFactory.getLog(CompoundBloomFilterWriter.class);
 
   /** The current chunk being written to */
-  private ByteBloomFilter chunk;
+  private BloomFilterChunk chunk;
 
   /** Previous chunk, so that we can create another similar chunk */
-  private ByteBloomFilter prevChunk;
+  private BloomFilterChunk prevChunk;
 
   /** Maximum fold factor */
   private int maxFold;
@@ -62,7 +62,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   private static class ReadyChunk {
     int chunkId;
     byte[] firstKey;
-    ByteBloomFilter chunk;
+    BloomFilterChunk chunk;
   }
 
   private Queue<ReadyChunk> readyChunks = new LinkedList<ReadyChunk>();
@@ -90,7 +90,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate,
       int hashType, int maxFold, boolean cacheOnWrite,
       CellComparator comparator) {
-    chunkByteSize = ByteBloomFilter.computeFoldableByteSize(
+    chunkByteSize = BloomFilterUtil.computeFoldableByteSize(
         chunkByteSizeHint * 8L, maxFold);
 
     this.errorRate = errorRate;
@@ -174,7 +174,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
       if (prevChunk == null) {
         // First chunk
-        chunk = ByteBloomFilter.createBySize(chunkByteSize, errorRate,
+        chunk = BloomFilterUtil.createBySize(chunkByteSize, errorRate,
             hashType, maxFold);
       } else {
         // Use the same parameters as the last chunk, but a new array and
@@ -201,8 +201,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     // again for cache-on-write.
     ReadyChunk readyChunk = readyChunks.peek();
 
-    ByteBloomFilter readyChunkBloom = readyChunk.chunk;
-    readyChunkBloom.getDataWriter().write(out);
+    BloomFilterChunk readyChunkBloom = readyChunk.chunk;
+    readyChunkBloom.writeBloom(out);
   }
 
   @Override
@@ -225,7 +225,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     }
 
     /**
-     * This is modeled after {@link ByteBloomFilter.MetaWriter} for simplicity,
+     * This is modeled after {@link BloomFilterChunk.MetaWriter} for simplicity,
      * although the two metadata formats do not have to be consistent. This
      * does have to be consistent with how {@link
      * CompoundBloomFilter#CompoundBloomFilter(DataInput,
@@ -256,17 +256,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public Writable getMetaWriter() {
-    return new MetaWriter();
-  }
-
-  @Override
   public void compactBloom() {
   }
 
   @Override
-  public void allocBloom() {
-    // Nothing happens here. All allocation happens on demand.
+  public Writable getMetaWriter() {
+    return new MetaWriter();
   }
 
   @Override

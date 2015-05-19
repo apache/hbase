@@ -707,7 +707,6 @@ public class StoreFile {
     private final BloomType bloomType;
     private byte[] lastBloomKey;
     private int lastBloomKeyOffset, lastBloomKeyLen;
-    private CellComparator kvComparator;
     private Cell lastCell = null;
     private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     private Cell lastDeleteFamilyCell = null;
@@ -753,8 +752,6 @@ public class StoreFile {
           .withFavoredNodes(favoredNodes)
           .withFileContext(fileContext)
           .create();
-
-      this.kvComparator = comparator;
 
       generalBloomFilterWriter = BloomFilterFactory.createGeneralBloomAtWrite(
           conf, cacheConf, bloomType,
@@ -864,7 +861,9 @@ public class StoreFile {
            *  1. Row = Row
            *  2. RowCol = Row + Qualifier
            */
-          byte[] bloomKey;
+          byte[] bloomKey = null;
+          // Used with ROW_COL bloom
+          KeyValue bloomKeyKV = null;
           int bloomKeyOffset, bloomKeyLen;
 
           switch (bloomType) {
@@ -877,11 +876,14 @@ public class StoreFile {
             // merge(row, qualifier)
             // TODO: could save one buffer copy in case of compound Bloom
             // filters when this involves creating a KeyValue
-            bloomKey = generalBloomFilterWriter.createBloomKey(cell.getRowArray(),
-                cell.getRowOffset(), cell.getRowLength(), cell.getQualifierArray(),
-                cell.getQualifierOffset(), cell.getQualifierLength());
-            bloomKeyOffset = 0;
-            bloomKeyLen = bloomKey.length;
+            bloomKeyKV = KeyValueUtil.createFirstOnRow(cell.getRowArray(), cell.getRowOffset(),
+                cell.getRowLength(), 
+                HConstants.EMPTY_BYTE_ARRAY, 0, 0, cell.getQualifierArray(),
+                cell.getQualifierOffset(),
+                cell.getQualifierLength());
+            bloomKey = bloomKeyKV.getBuffer();
+            bloomKeyOffset = bloomKeyKV.getKeyOffset();
+            bloomKeyLen = bloomKeyKV.getKeyLength();
             break;
           default:
             throw new IOException("Invalid Bloom filter type: " + bloomType +
@@ -889,17 +891,17 @@ public class StoreFile {
           }
           generalBloomFilterWriter.add(bloomKey, bloomKeyOffset, bloomKeyLen);
           if (lastBloomKey != null) {
-            boolean res = false;
+            int res = 0;
             // hbase:meta does not have blooms. So we need not have special interpretation
             // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
             if (bloomType == BloomType.ROW) {
               res = Bytes.BYTES_RAWCOMPARATOR.compare(bloomKey, bloomKeyOffset, bloomKeyLen,
-                  lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen) <= 0;
+                  lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen);
             } else {
-              res = (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, bloomKey,
-                                     bloomKeyOffset, bloomKeyLen) >= 0);
+              // TODO : Caching of kv components becomes important in these cases
+              res = CellComparator.COMPARATOR.compare(bloomKeyKV, lastBloomKeyOnlyKV);
             }
-            if (res) {
+            if (res <= 0) {
               throw new IOException("Non-increasing Bloom keys: "
                   + Bytes.toStringBinary(bloomKey, bloomKeyOffset, bloomKeyLen) + " after "
                   + Bytes.toStringBinary(lastBloomKey, lastBloomKeyOffset, lastBloomKeyLen));
@@ -1252,7 +1254,10 @@ public class StoreFile {
         return true;
       }
 
-      byte[] key;
+      // Used in ROW bloom
+      byte[] key = null;
+      // Used in ROW_COL bloom
+      KeyValue kvKey = null;
       switch (bloomFilterType) {
         case ROW:
           if (col != null) {
@@ -1267,8 +1272,9 @@ public class StoreFile {
           break;
 
         case ROWCOL:
-          key = bloomFilter.createBloomKey(row, rowOffset, rowLen, col,
-              colOffset, colLen);
+          kvKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen, 
+              HConstants.EMPTY_BYTE_ARRAY, 0, 0, col, colOffset,
+              colLen);
           break;
 
         default:
@@ -1304,9 +1310,7 @@ public class StoreFile {
             if (bloomFilterType == BloomType.ROW) {
               keyIsAfterLast = (Bytes.BYTES_RAWCOMPARATOR.compare(key, lastBloomKey) > 0);
             } else {
-              // TODO : Convert key to Cell so that we could use compare(Cell, Cell)
-              keyIsAfterLast = (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, key, 0,
-                                   key.length)) < 0;
+              keyIsAfterLast = (CellComparator.COMPARATOR.compare(kvKey, lastBloomKeyOnlyKV)) > 0;
             }
           }
 
@@ -1315,19 +1319,17 @@ public class StoreFile {
             // columns, a file might be skipped if using row+col Bloom filter.
             // In order to ensure this file is included an additional check is
             // required looking only for a row bloom.
-            byte[] rowBloomKey = bloomFilter.createBloomKey(row, rowOffset, rowLen,
-                null, 0, 0);
+            KeyValue rowBloomKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen,
+                HConstants.EMPTY_BYTE_ARRAY, 0, 0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
             // hbase:meta does not have blooms. So we need not have special interpretation
             // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
             if (keyIsAfterLast
-                && (CellComparator.COMPARATOR.compare(lastBloomKeyOnlyKV, rowBloomKey, 0,
-                    rowBloomKey.length)) < 0) {
+                && (CellComparator.COMPARATOR.compare(rowBloomKey, lastBloomKeyOnlyKV)) > 0) {
               exists = false;
             } else {
               exists =
-                  bloomFilter.contains(key, 0, key.length, bloom) ||
-                  bloomFilter.contains(rowBloomKey, 0, rowBloomKey.length,
-                      bloom);
+                  bloomFilter.contains(kvKey, bloom) ||
+                  bloomFilter.contains(rowBloomKey, bloom);
             }
           } else {
             exists = !keyIsAfterLast

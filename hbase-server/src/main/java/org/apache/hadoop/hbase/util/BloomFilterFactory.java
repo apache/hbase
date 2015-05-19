@@ -99,13 +99,6 @@ public final class BloomFilterFactory {
       throws IllegalArgumentException, IOException {
     int version = meta.readInt();
     switch (version) {
-      case ByteBloomFilter.VERSION:
-        // This is only possible in a version 1 HFile. We are ignoring the
-        // passed comparator because raw byte comparators are always used
-        // in version 1 Bloom filters.
-        // TODO:Remove this code - use only CompoundBloomFilter
-        return new ByteBloomFilter(meta);
-
       case CompoundBloomFilterBase.VERSION:
         return new CompoundBloomFilter(meta, reader);
 

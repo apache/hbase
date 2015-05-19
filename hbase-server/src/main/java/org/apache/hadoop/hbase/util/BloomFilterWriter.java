@@ -29,12 +29,8 @@ import org.apache.hadoop.io.Writable;
 @InterfaceAudience.Private
 public interface BloomFilterWriter extends BloomFilterBase {
 
-  /** Allocate memory for the bloom filter data. */
-  void allocBloom();
-
   /** Compact the Bloom filter before writing metadata & data to disk. */
   void compactBloom();
-
   /**
    * Get a writable interface into bloom filter meta data.
    *

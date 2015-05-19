@@ -23,6 +23,8 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
@@ -31,7 +33,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 
 /**
- * A Bloom filter implementation built on top of {@link ByteBloomFilter},
+ * A Bloom filter implementation built on top of {@link BloomFilterChunk},
  * encapsulating a set of fixed-size Bloom filters written out at the time of
  * {@link org.apache.hadoop.hbase.io.hfile.HFile} generation into the data
  * block stream, and loaded on demand at query time. This class only provides
@@ -90,10 +92,14 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   public boolean contains(byte[] key, int keyOffset, int keyLength, ByteBuffer bloom) {
     // We try to store the result in this variable so we can update stats for
     // testing, but when an error happens, we log a message and return.
-    boolean result;
 
     int block = index.rootBlockContainingKey(key, keyOffset,
-        keyLength, comparator);
+        keyLength);
+    return checkContains(key, keyOffset, keyLength, block);
+  }
+
+  private boolean checkContains(byte[] key, int keyOffset, int keyLength, int block) {
+    boolean result;
     if (block < 0) {
       result = false; // This key is not in the file.
     } else {
@@ -111,7 +117,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
       }
 
       ByteBuffer bloomBuf = bloomBlock.getBufferReadOnly();
-      result = ByteBloomFilter.contains(key, keyOffset, keyLength,
+      result = BloomFilterUtil.contains(key, keyOffset, keyLength,
           bloomBuf, bloomBlock.headerSize(),
           bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
     }
@@ -124,6 +130,18 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     }
 
     return result;
+  }
+
+  @Override
+  public boolean contains(Cell keyCell, ByteBuffer bloom) {
+    // We try to store the result in this variable so we can update stats for
+    // testing, but when an error happens, we log a message and return.
+    int block = index.rootBlockContainingKey(keyCell);
+    // TODO : Will be true KeyValue for now.
+    // When Offheap comes in we can add an else condition to work
+    // on the bytes in offheap
+    KeyValue kvKey = (KeyValue) keyCell;
+    return checkContains(kvKey.getBuffer(), kvKey.getKeyOffset(), kvKey.getKeyLength(), block);
   }
 
   public boolean supportsAutoLoading() {
@@ -166,10 +184,10 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(ByteBloomFilter.formatStats(this));
-    sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
+    sb.append(BloomFilterUtil.formatStats(this));
+    sb.append(BloomFilterUtil.STATS_RECORD_SEP + 
         "Number of chunks: " + numChunks);
-    sb.append(ByteBloomFilter.STATS_RECORD_SEP + 
+    sb.append(BloomFilterUtil.STATS_RECORD_SEP + 
         ((comparator != null) ? "Comparator: "
         + comparator.getClass().getSimpleName() : "Comparator: "
         + Bytes.BYTES_RAWCOMPARATOR.getClass().getSimpleName()));
