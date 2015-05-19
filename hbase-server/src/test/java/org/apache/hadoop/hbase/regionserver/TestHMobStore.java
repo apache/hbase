@@ -19,7 +19,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.security.Key;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -27,31 +30,43 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.HarFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
+import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.junit.Assert;
 import org.junit.Before;
@@ -469,4 +484,74 @@ public class TestHMobStore {
     storeFlushCtx.flushCache(Mockito.mock(MonitoredTask.class));
     storeFlushCtx.commit(Mockito.mock(MonitoredTask.class));
   }
+
+  @Test
+  public void testMOBStoreEncryption() throws Exception {
+    final Configuration conf = TEST_UTIL.getConfiguration();
+
+    conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
+    conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
+    SecureRandom rng = new SecureRandom();
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    rng.nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key cfKey = new SecretKeySpec(keyBytes, algorithm);
+
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(100);
+    hcd.setMaxVersions(4);
+    hcd.setEncryptionType(algorithm);
+    hcd.setEncryptionKey(EncryptionUtil.wrapKey(conf,
+      conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()), cfKey));
+
+    init(name.getMethodName(), conf, hcd, false);
+
+    this.store.add(new KeyValue(row, family, qf1, 1, value));
+    this.store.add(new KeyValue(row, family, qf2, 1, value));
+    this.store.add(new KeyValue(row, family, qf3, 1, value));
+    flush(1);
+
+    this.store.add(new KeyValue(row, family, qf4, 1, value));
+    this.store.add(new KeyValue(row, family, qf5, 1, value));
+    this.store.add(new KeyValue(row, family, qf6, 1, value));
+    flush(2);
+
+    Collection<StoreFile> storefiles = this.store.getStorefiles();
+    checkMobHFileEncrytption(storefiles);
+
+    // Scan the values
+    Scan scan = new Scan(get);
+    InternalScanner scanner = (InternalScanner) store.getScanner(scan,
+        scan.getFamilyMap().get(store.getFamily().getName()),
+        0);
+
+    List<Cell> results = new ArrayList<Cell>();
+    scanner.next(results);
+    Collections.sort(results, KeyValue.COMPARATOR);
+    scanner.close();
+    Assert.assertEquals(expected.size(), results.size());
+    for(int i=0; i<results.size(); i++) {
+      Assert.assertEquals(expected.get(i), results.get(i));
+    }
+
+    // Trigger major compaction
+    this.store.triggerMajorCompaction();
+    CompactionContext requestCompaction = this.store.requestCompaction(1, null);
+    this.store.compact(requestCompaction, NoLimitCompactionThroughputController.INSTANCE);
+    Assert.assertEquals(1, this.store.getStorefiles().size());
+
+    //Check encryption after compaction
+    checkMobHFileEncrytption(this.store.getStorefiles());
+  }
+
+  private void checkMobHFileEncrytption(Collection<StoreFile> storefiles) {
+    StoreFile storeFile = storefiles.iterator().next();
+    HFile.Reader reader = storeFile.getReader().getHFileReader();
+    byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
+    Assert.assertTrue(null != encryptionKey);
+    Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
+        .equals(HConstants.CIPHER_AES));
+  }
+
 }

@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -251,7 +250,8 @@ public class HMobStore extends HStore {
         .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
         .withBlockSize(getFamily().getBlocksize())
-        .withHBaseCheckSum(true).withDataBlockEncoding(getFamily().getDataBlockEncoding()).build();
+        .withHBaseCheckSum(true).withDataBlockEncoding(getFamily().getDataBlockEncoding())
+        .withEncryptionContext(cryptoContext).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf, region.getFilesystem())
         .withFilePath(new Path(basePath, mobFileName.getFileName()))

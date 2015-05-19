@@ -193,7 +193,7 @@ public class HStore implements Store {
   private long blockingFileCount;
   private int compactionCheckMultiplier;
 
-  private Encryption.Context cryptoContext = Encryption.Context.NONE;
+  protected Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   private volatile long flushedCellsCount = 0;
   private volatile long compactedCellsCount = 0;
