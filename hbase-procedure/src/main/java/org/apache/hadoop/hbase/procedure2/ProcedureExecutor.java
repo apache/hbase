@@ -148,7 +148,9 @@ public class ProcedureExecutor<TEnvironment> {
 
     public void periodicExecute(final TEnvironment env) {
       if (completed.isEmpty()) {
-        LOG.debug("no completed procedures to cleanup");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("No completed procedures to cleanup.");
+        }
         return;
       }
 
@@ -164,7 +166,9 @@ public class ProcedureExecutor<TEnvironment> {
         // TODO: Select TTL based on Procedure type
         if ((result.hasClientAckTime() && (now - result.getClientAckTime()) >= evictAckTtl) ||
             (now - result.getLastUpdate()) >= evictTtl) {
-          LOG.debug("Evict completed procedure " + entry.getKey());
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Evict completed procedure " + entry.getKey());
+          }
           store.delete(entry.getKey());
           it.remove();
         }
@@ -281,8 +285,10 @@ public class ProcedureExecutor<TEnvironment> {
       proc.beforeReplay(getEnvironment());
       procedures.put(proc.getProcId(), proc);
       logMaxProcId = Math.max(logMaxProcId, proc.getProcId());
-      LOG.debug("Loading procedure state=" + proc.getState() +
-                " isFailed=" + proc.hasException() + ": " + proc);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Loading procedure state=" + proc.getState() +
+            " isFailed=" + proc.hasException() + ": " + proc);
+      }
       if (!proc.hasParent() && !proc.isFinished()) {
         rollbackStack.put(proc.getProcId(), new RootProcedureState());
       }
@@ -305,8 +311,10 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       if (!proc.hasParent() && proc.isFinished()) {
-        LOG.debug("The procedure is completed state=" + proc.getState() +
-                  " isFailed=" + proc.hasException() + ": " + proc);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("The procedure is completed state=" + proc.getState() +
+              " isFailed=" + proc.hasException() + ": " + proc);
+        }
         assert !rollbackStack.containsKey(proc.getProcId());
         completed.put(proc.getProcId(), newResultFromProcedure(proc));
         continue;
@@ -514,7 +522,9 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Commit the transaction
     store.insert(proc, null);
-    LOG.debug("procedure " + proc + " added to the store");
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Procedure " + proc + " added to the store.");
+    }
 
     // Create the rollback stack for the procedure
     RootProcedureState stack = new RootProcedureState();
@@ -564,7 +574,9 @@ public class ProcedureExecutor<TEnvironment> {
     ProcedureResult result = completed.get(procId);
     if (result == null) {
       assert !procedures.containsKey(procId) : "procId=" + procId + " is still running";
-      LOG.debug("Procedure procId=" + procId + " already removed by the cleaner");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Procedure procId=" + procId + " already removed by the cleaner.");
+      }
       return;
     }
 
@@ -620,7 +632,7 @@ public class ProcedureExecutor<TEnvironment> {
 
   private void execLoop(Procedure proc) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("trying to start the execution of " + proc);
+      LOG.trace("Trying to start the execution of " + proc);
     }
 
     Long rootProcId = getRootProcedureId(proc);
@@ -673,8 +685,10 @@ public class ProcedureExecutor<TEnvironment> {
 
       if (proc.getProcId() == rootProcId && proc.isSuccess()) {
         // Finalize the procedure state
-        LOG.info("Procedure completed in " +
-            StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Procedure completed in " +
+              StringUtils.humanTimeDiff(proc.elapsedTime()) + ": " + proc);
+        }
         procedureFinished(proc);
         break;
       }
@@ -708,7 +722,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           ((CompletedProcedureCleaner)proc).periodicExecute(getEnvironment());
         } catch (Throwable e) {
-          LOG.error("ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
+          LOG.error("Ignoring CompletedProcedureCleaner exception: " + e.getMessage(), e);
         }
         proc.setStartTime(EnvironmentEdgeManager.currentTime());
         waitingTimeout.add(proc);
@@ -743,7 +757,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     List<Procedure> subprocStack = procStack.getSubprocedures();
-    assert subprocStack != null : "called rollback with no steps executed rootProc=" + rootProc;
+    assert subprocStack != null : "Called rollback with no steps executed rootProc=" + rootProc;
 
     int stackTail = subprocStack.size();
     boolean reuseLock = false;
@@ -793,17 +807,21 @@ public class ProcedureExecutor<TEnvironment> {
     try {
       proc.doRollback(getEnvironment());
     } catch (IOException e) {
-      LOG.debug("rollback attempt failed for " + proc, e);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("rollback attempt failed for " + proc, e);
+      }
       return false;
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
-      LOG.fatal("CODE-BUG: uncatched runtime exception for procedure: " + proc, e);
+      LOG.fatal("CODE-BUG: Uncatched runtime exception for procedure: " + proc, e);
     }
 
     // allows to kill the executor before something is stored to the wal.
     // useful to test the procedure recovery.
     if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
-      LOG.debug("TESTING: Kill before store update");
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("TESTING: Kill before store update");
+      }
       stop();
       return false;
     }
@@ -854,13 +872,13 @@ public class ProcedureExecutor<TEnvironment> {
         }
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("yield procedure: " + procedure);
+          LOG.trace("Yield procedure: " + procedure);
         }
         runnables.yield(procedure);
         return;
       } catch (Throwable e) {
         // Catch NullPointerExceptions or similar errors...
-        String msg = "CODE-BUG: uncatched runtime exception for procedure: " + procedure;
+        String msg = "CODE-BUG: Uncatched runtime exception for procedure: " + procedure;
         LOG.error(msg, e);
         procedure.setFailure(new RemoteProcedureException(msg, e));
       }
@@ -916,7 +934,9 @@ public class ProcedureExecutor<TEnvironment> {
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
       if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
-        LOG.debug("TESTING: Kill before store update");
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("TESTING: Kill before store update");
+        }
         stop();
         return;
       }
@@ -924,12 +944,12 @@ public class ProcedureExecutor<TEnvironment> {
       // Commit the transaction
       if (subprocs != null && !procedure.isFailed()) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("store add " + procedure + " children " + Arrays.toString(subprocs));
+          LOG.trace("Store add " + procedure + " children " + Arrays.toString(subprocs));
         }
         store.insert(procedure, subprocs);
       } else {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("store update " + procedure);
+          LOG.trace("Store update " + procedure);
         }
         store.update(procedure);
       }
@@ -981,7 +1001,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureLoaded(procId);
         } catch (Throwable e) {
-          LOG.error("the listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
@@ -993,7 +1013,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureAdded(procId);
         } catch (Throwable e) {
-          LOG.error("the listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
@@ -1005,7 +1025,7 @@ public class ProcedureExecutor<TEnvironment> {
         try {
           listener.procedureFinished(procId);
         } catch (Throwable e) {
-          LOG.error("the listener " + listener + " had an error: " + e.getMessage(), e);
+          LOG.error("The listener " + listener + " had an error: " + e.getMessage(), e);
         }
       }
     }
