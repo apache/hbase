@@ -57,12 +57,12 @@ import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.jmx.JMXJsonServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.metrics.MetricsServlet;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Shell;
 import org.mortbay.io.Buffer;
 import org.mortbay.jetty.Connector;
@@ -617,8 +617,7 @@ public class HttpServer implements FilterContainer {
 
     FilterInitializer[] initializers = new FilterInitializer[classes.length];
     for(int i = 0; i < classes.length; i++) {
-      initializers[i] = (FilterInitializer)ReflectionUtils.newInstance(
-          classes[i], conf);
+      initializers[i] = (FilterInitializer)ReflectionUtils.newInstance(classes[i]);
     }
     return initializers;
   }
