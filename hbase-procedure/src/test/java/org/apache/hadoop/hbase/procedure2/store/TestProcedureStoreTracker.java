@@ -190,4 +190,51 @@ public class TestProcedureStoreTracker {
       tracker.clear();
     }
   }
+
+  @Test
+  public void testLoad() {
+    final int MAX_PROCS = 1000;
+    final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+    for (int numProcs = 1; numProcs < MAX_PROCS; ++numProcs) {
+      for (int start = 1; start <= numProcs; ++start) {
+        assertTrue(tracker.isEmpty());
+
+        LOG.debug("loading " + numProcs + " procs from start=" + start);
+        for (int i = start; i <= numProcs; ++i) {
+          tracker.setDeleted(i, false);
+        }
+        for (int i = 1; i < start; ++i) {
+          tracker.setDeleted(i, false);
+        }
+
+        tracker.clear();
+      }
+    }
+  }
+
+  @Test
+  public void testDelete() {
+    final ProcedureStoreTracker tracker = new ProcedureStoreTracker();
+
+    long[] procIds = new long[] { 65, 1, 193 };
+    for (int i = 0; i < procIds.length; ++i) {
+      tracker.insert(procIds[i]);
+      tracker.dump();
+    }
+
+    for (int i = 0; i < (64 * 4); ++i) {
+      boolean hasProc = false;
+      for (int j = 0; j < procIds.length; ++j) {
+        if (procIds[j] == i) {
+          hasProc = true;
+          break;
+        }
+      }
+      if (hasProc) {
+        assertEquals(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(i));
+      } else {
+        assertEquals("procId=" + i, ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(i));
+      }
+    }
+  }
 }

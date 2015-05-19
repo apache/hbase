@@ -31,11 +31,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.IsolationLevel;
@@ -56,7 +56,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.Private
 public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
-  static final Log LOG = LogFactory.getLog(StoreScanner.class);
+  private static final Log LOG = LogFactory.getLog(StoreScanner.class);
   protected Store store;
   protected ScanQueryMatcher matcher;
   protected KeyValueHeap heap;
@@ -83,6 +83,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final long now;
   protected final int minVersions;
   protected final long maxRowSize;
+  protected final long cellsPerHeartbeatCheck;
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -99,6 +100,19 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   /** Used during unit testing to ensure that lazy seek does save seek ops */
   protected static boolean lazySeekEnabledGlobally =
       LAZY_SEEK_ENABLED_BY_DEFAULT;
+
+  /**
+   * The number of cells scanned in between timeout checks. Specifying a larger value means that
+   * timeout checks will occur less frequently. Specifying a small value will lead to more frequent
+   * timeout checks.
+   */
+  public static final String HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK =
+      "hbase.cells.scanned.per.heartbeat.check";
+
+  /**
+   * Default value of {@link #HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK}.
+   */
+  public static final long DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK = 10000;
 
   // if heap == null and lastTop != null, you need to reseek given the key below
   protected Cell lastTop = null;
@@ -137,9 +151,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.maxRowSize =
           conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
       this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
+
+      long tmpCellsPerTimeoutCheck =
+          conf.getLong(HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
+            DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
+      this.cellsPerHeartbeatCheck =
+          tmpCellsPerTimeoutCheck > 0 ? tmpCellsPerTimeoutCheck
+              : DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
     } else {
       this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
       this.scanUsePread = scan.isSmall();
+      this.cellsPerHeartbeatCheck = DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
     }
 
     // We look up row-column Bloom filters for multi-column queries as part of
@@ -351,7 +373,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   }
 
   protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
-      KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Combine all seeked scanners with a heap
     heap = new KeyValueHeap(scanners, comparator);
   }
@@ -458,6 +480,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
     lock.lock();
+
     try {
     if (scannerContext == null) {
       throw new IllegalArgumentException("Scanner context cannot be null");
@@ -500,13 +523,21 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     Cell cell;
 
     // Only do a sanity-check if store and comparator are available.
-    KeyValue.KVComparator comparator =
+    CellComparator comparator =
         store != null ? store.getComparator() : null;
 
     int count = 0;
     long totalBytesRead = 0;
 
     LOOP: while((cell = this.heap.peek()) != null) {
+      // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
+      if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
+        scannerContext.updateTimeProgress();
+        if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
+          return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
+        }
+      }
+
       if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevCell, cell, comparator);
       prevCell = cell;
@@ -750,7 +781,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * @throws IOException
    */
   protected void checkScanOrder(Cell prevKV, Cell kv,
-      KeyValue.KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Check that the heap gives us KVs in an increasing order.
     assert prevKV == null || comparator == null
         || comparator.compare(prevKV, kv) <= 0 : "Key " + prevKV

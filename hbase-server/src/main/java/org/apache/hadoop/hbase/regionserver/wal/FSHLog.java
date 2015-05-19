@@ -152,7 +152,7 @@ public class FSHLog implements WAL {
   // synchronization class used to halt the consumer at a safe point --  just after all outstanding
   // syncs and appends have completed -- so the log roller can swap the WAL out under it.
 
-  static final Log LOG = LogFactory.getLog(FSHLog.class);
+  private static final Log LOG = LogFactory.getLog(FSHLog.class);
 
   private static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
   
@@ -491,6 +491,8 @@ public class FSHLog implements WAL {
       throw new IllegalArgumentException("wal suffix must start with '" + WAL_FILE_NAME_DELIMITER +
           "' but instead was '" + suffix + "'");
     }
+    // Now that it exists, set the storage policy for the entire directory of wal files related to
+    // this FSHLog instance
     FSUtils.setStoragePolicy(fs, conf, this.fullPathLogDir, HConstants.WAL_STORAGE_POLICY,
       HConstants.DEFAULT_WAL_STORAGE_POLICY);
     this.logFileSuffix = (suffix == null) ? "" : URLEncoder.encode(suffix, "UTF8");
@@ -1246,7 +1248,9 @@ public class FSHLog implements WAL {
     void offer(final long sequence, final SyncFuture [] syncFutures, final int syncFutureCount) {
       // Set sequence first because the add to the queue will wake the thread if sleeping.
       this.sequence = sequence;
-      this.syncFutures.addAll(Arrays.asList(syncFutures).subList(0, syncFutureCount));
+      for (int i = 0; i < syncFutureCount; ++i) {
+        this.syncFutures.add(syncFutures[i]);
+      }
     }
 
     /**

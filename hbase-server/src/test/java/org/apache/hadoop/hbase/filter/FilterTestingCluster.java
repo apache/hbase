@@ -39,9 +39,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
@@ -61,7 +58,6 @@ import org.junit.experimental.categories.Category;
 @Category({FilterTests.class, MediumTests.class})
 public class FilterTestingCluster {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static Connection connection;
   private static Admin admin = null;
   private static List<TableName> createdTables = new ArrayList<>();
 
@@ -81,7 +77,7 @@ public class FilterTestingCluster {
   }
 
   protected static Table openTable(TableName tableName) throws IOException {
-    Table table = connection.getTable(tableName);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
     assertTrue("Fail to create the table", admin.tableExists(tableName));
     return table;
   }
@@ -105,8 +101,7 @@ public class FilterTestingCluster {
     conf = HBaseConfiguration.create(conf);
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     try {
-      connection = ConnectionFactory.createConnection(conf);
-      admin = connection.getAdmin();
+      admin = TEST_UTIL.getHBaseAdmin();
     } catch (MasterNotRunningException e) {
       assertNull("Master is not running", e);
     } catch (ZooKeeperConnectionException e) {
@@ -128,7 +123,6 @@ public class FilterTestingCluster {
   @AfterClass
   public static void tearDown() throws Exception {
     deleteTables();
-    connection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 }

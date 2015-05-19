@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.Tag;
@@ -134,7 +135,7 @@ public class HStore implements Store {
   public static final int DEFAULT_COMPACTCHECKER_INTERVAL_MULTIPLIER = 1000;
   public static final int DEFAULT_BLOCKING_STOREFILE_COUNT = 7;
 
-  static final Log LOG = LogFactory.getLog(HStore.class);
+  private static final Log LOG = LogFactory.getLog(HStore.class);
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
@@ -179,7 +180,7 @@ public class HStore implements Store {
   private int bytesPerChecksum;
 
   // Comparing KeyValues
-  private final KeyValue.KVComparator comparator;
+  private final CellComparator comparator;
 
   final StoreEngine<?, ?, ?, ?> storeEngine;
 
@@ -233,7 +234,7 @@ public class HStore implements Store {
     this.dataBlockEncoder =
         new HFileDataBlockEncoderImpl(family.getDataBlockEncoding());
 
-    this.comparator = info.getComparator();
+    this.comparator = region.getCellCompartor();
     // used by ScanQueryMatcher
     long timeToPurgeDeletes =
         Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);
@@ -246,7 +247,7 @@ public class HStore implements Store {
     scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
     String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
     this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
-        Configuration.class, KeyValue.KVComparator.class }, new Object[] { conf, this.comparator });
+        Configuration.class, CellComparator.class }, new Object[] { conf, this.comparator });
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
@@ -360,7 +361,7 @@ public class HStore implements Store {
    * @return StoreEngine to use.
    */
   protected StoreEngine<?, ?, ?, ?> createStoreEngine(Store store, Configuration conf,
-      KVComparator kvComparator) throws IOException {
+      CellComparator kvComparator) throws IOException {
     return StoreEngine.create(store, conf, comparator);
   }
 
@@ -454,7 +455,7 @@ public class HStore implements Store {
   public static ChecksumType getChecksumType(Configuration conf) {
     String checksumName = conf.get(HConstants.CHECKSUM_TYPE_NAME);
     if (checksumName == null) {
-      return HFile.DEFAULT_CHECKSUM_TYPE;
+      return ChecksumType.getDefaultChecksumType();
     } else {
       return ChecksumType.nameToType(checksumName);
     }
@@ -745,7 +746,7 @@ public class HStore implements Store {
       Preconditions.checkState(firstKey != null, "First key can not be null");
       byte[] lk = reader.getLastKey();
       Preconditions.checkState(lk != null, "Last key can not be null");
-      byte[] lastKey =  KeyValue.createKeyValueFromKey(lk).getRow();
+      byte[] lastKey =  KeyValueUtil.createKeyValueFromKey(lk).getRow();
 
       LOG.debug("HFile bounds: first=" + Bytes.toStringBinary(firstKey) +
           " last=" + Bytes.toStringBinary(lastKey));
@@ -774,7 +775,7 @@ public class HStore implements Store {
         do {
           Cell cell = scanner.getKeyValue();
           if (prevCell != null) {
-            if (CellComparator.compareRows(prevCell, cell) > 0) {
+            if (comparator.compareRows(prevCell, cell) > 0) {
               throw new InvalidHFileException("Previous row is greater than"
                   + " current row: path=" + srcPath + " previous="
                   + CellUtil.getCellKeyAsString(prevCell) + " current="
@@ -1780,8 +1781,8 @@ public class HStore implements Store {
    * @return true if the cell is expired
    */
   static boolean isCellTTLExpired(final Cell cell, final long oldestTimestamp, final long now) {
-    // Do not create an Iterator or Tag objects unless the cell actually has
-    // tags
+    // Do not create an Iterator or Tag objects unless the cell actually has tags.
+    // TODO: This check for tags is really expensive. We decode an int for key and value. Costs.
     if (cell.getTagsLength() > 0) {
       // Look for a TTL tag first. Use it instead of the family setting if
       // found. If a cell has multiple TTLs, resolve the conflict by using the
@@ -1872,9 +1873,9 @@ public class HStore implements Store {
     // TODO: Cache these keys rather than make each time?
     byte [] fk = r.getFirstKey();
     if (fk == null) return false;
-    KeyValue firstKV = KeyValue.createKeyValueFromKey(fk, 0, fk.length);
+    KeyValue firstKV = KeyValueUtil.createKeyValueFromKey(fk, 0, fk.length);
     byte [] lk = r.getLastKey();
-    KeyValue lastKV = KeyValue.createKeyValueFromKey(lk, 0, lk.length);
+    KeyValue lastKV = KeyValueUtil.createKeyValueFromKey(lk, 0, lk.length);
     KeyValue firstOnRow = state.getTargetKey();
     if (this.comparator.compareRows(lastKV, firstOnRow) < 0) {
       // If last key in file is not of the target table, no candidates in this
@@ -2337,7 +2338,7 @@ public class HStore implements Store {
   }
 
   @Override
-  public KeyValue.KVComparator getComparator() {
+  public CellComparator getComparator() {
     return comparator;
   }
 

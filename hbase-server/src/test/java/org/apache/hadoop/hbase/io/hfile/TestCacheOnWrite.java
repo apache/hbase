@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -379,7 +380,7 @@ public class TestCacheOnWrite {
         .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncoding(encoder.getDataBlockEncoding())
         .withIncludesTags(useTags).build();
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
-        .withOutputDir(storeFileParentDir).withComparator(KeyValue.COMPARATOR)
+        .withOutputDir(storeFileParentDir).withComparator(CellComparator.COMPARATOR)
         .withFileContext(meta)
         .withBloomType(BLOOM_TYPE).withMaxKeyCount(NUM_KV).build();
     byte[] cf = Bytes.toBytes("fam");

@@ -48,7 +48,7 @@ import java.util.Random;
  */
 @InterfaceAudience.Private
 public class SaslClientHandler extends ChannelDuplexHandler {
-  public static final Log LOG = LogFactory.getLog(SaslClientHandler.class);
+  private static final Log LOG = LogFactory.getLog(SaslClientHandler.class);
 
   private final boolean fallbackAllowed;
 

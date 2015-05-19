@@ -138,7 +138,7 @@ public class TestTableLockManager {
       @Override
       public Object call() throws Exception {
         Admin admin = TEST_UTIL.getHBaseAdmin();
-        admin.addColumn(TABLE_NAME, new HColumnDescriptor(NEW_FAMILY));
+        admin.addColumnFamily(TABLE_NAME, new HColumnDescriptor(NEW_FAMILY));
         LOG.info("Added new column family");
         HTableDescriptor tableDesc = admin.getTableDescriptor(TABLE_NAME);
         assertTrue(tableDesc.getFamiliesKeys().contains(NEW_FAMILY));

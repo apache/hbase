@@ -17,14 +17,32 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import org.apache.hadoop.hbase.KeyValue;
+
 @Category({IOTests.class, MediumTests.class})
 public class TestBufferedDataBlockEncoder {
+
+  byte[] row1 = Bytes.toBytes("row1");
+  byte[] row2 = Bytes.toBytes("row2");
+  byte[] row_1_0 = Bytes.toBytes("row10");
+
+  byte[] fam1 = Bytes.toBytes("fam1");
+  byte[] fam2 = Bytes.toBytes("fam2");
+  byte[] fam_1_2 = Bytes.toBytes("fam12");
+
+  byte[] qual1 = Bytes.toBytes("qual1");
+  byte[] qual2 = Bytes.toBytes("qual2");
+
+  byte[] val = Bytes.toBytes("val");
 
   @Test
   public void testEnsureSpaceForKey() {
@@ -39,6 +57,21 @@ public class TestBufferedDataBlockEncoder {
         assertEquals((byte) (j % 0xff), state.keyBuffer[j]);
       }
     }
+  }
+
+  @Test
+  public void testCommonPrefixComparators() {
+    KeyValue kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
+    KeyValue kv2 = new KeyValue(row1, fam_1_2, qual1, 1l, Type.Maximum);
+    assertTrue((BufferedDataBlockEncoder.compareCommonFamilyPrefix(kv1, kv2, 4) < 0));
+
+    kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
+    kv2 = new KeyValue(row_1_0, fam_1_2, qual1, 1l, Type.Maximum);
+    assertTrue((BufferedDataBlockEncoder.compareCommonRowPrefix(kv1, kv2, 4) < 0));
+
+    kv1 = new KeyValue(row1, fam1, qual2, 1l, Type.Put);
+    kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Maximum);
+    assertTrue((BufferedDataBlockEncoder.compareCommonQualifierPrefix(kv1, kv2, 4) > 0));
   }
 
 }

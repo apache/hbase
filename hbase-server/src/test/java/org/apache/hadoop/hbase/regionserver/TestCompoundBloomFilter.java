@@ -36,8 +36,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Scan;
@@ -48,11 +51,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.TestHFileWriterV2;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
-import org.apache.hadoop.hbase.util.ByteBloomFilter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompoundBloomFilter;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterBase;
 import org.apache.hadoop.hbase.util.CompoundBloomFilterWriter;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -141,7 +144,7 @@ public class TestCompoundBloomFilter {
     List<KeyValue> kvList = new ArrayList<KeyValue>(n);
     for (int i = 0; i < n; ++i)
       kvList.add(TestHFileWriterV2.randomKeyValue(rand));
-    Collections.sort(kvList, KeyValue.COMPARATOR);
+    Collections.sort(kvList, CellComparator.COMPARATOR);
     return kvList;
   }
 
@@ -217,7 +220,7 @@ public class TestCompoundBloomFilter {
     // Test for false positives (some percentage allowed). We test in two modes:
     // "fake lookup" which ignores the key distribution, and production mode.
     for (boolean fakeLookupEnabled : new boolean[] { true, false }) {
-      ByteBloomFilter.setFakeLookupMode(fakeLookupEnabled);
+      BloomFilterUtil.setFakeLookupMode(fakeLookupEnabled);
       try {
         String fakeLookupModeStr = ", fake lookup is " + (fakeLookupEnabled ?
             "enabled" : "disabled");
@@ -267,7 +270,7 @@ public class TestCompoundBloomFilter {
         validateFalsePosRate(falsePosRate, nTrials, -2.58, cbf,
             fakeLookupModeStr);
       } finally {
-        ByteBloomFilter.setFakeLookupMode(false);
+        BloomFilterUtil.setFakeLookupMode(false);
       }
     }
 
@@ -315,8 +318,8 @@ public class TestCompoundBloomFilter {
       // Validate the key count in the Bloom filter.
       boolean newKey = true;
       if (prev != null) {
-        newKey = !(bt == BloomType.ROW ? KeyValue.COMPARATOR.matchingRows(kv,
-            prev) : KeyValue.COMPARATOR.matchingRowColumn(kv, prev));
+        newKey = !(bt == BloomType.ROW ? CellUtil.matchingRows(kv,
+            prev) : CellUtil.matchingRowColumn(kv, prev));
       }
       if (newKey)
         ++keyCount;
@@ -334,11 +337,11 @@ public class TestCompoundBloomFilter {
     int bloomBlockByteSize = 4096;
     int bloomBlockBitSize = bloomBlockByteSize * 8;
     double targetErrorRate = 0.01;
-    long maxKeysPerChunk = ByteBloomFilter.idealMaxKeys(bloomBlockBitSize,
+    long maxKeysPerChunk = BloomFilterUtil.idealMaxKeys(bloomBlockBitSize,
         targetErrorRate);
 
     long bloomSize1 = bloomBlockByteSize * 8;
-    long bloomSize2 = ByteBloomFilter.computeBitSize(maxKeysPerChunk,
+    long bloomSize2 = BloomFilterUtil.computeBitSize(maxKeysPerChunk,
         targetErrorRate);
 
     double bloomSizeRatio = (bloomSize2 * 1.0 / bloomSize1);
@@ -347,15 +350,14 @@ public class TestCompoundBloomFilter {
 
   @Test
   public void testCreateKey() {
-    CompoundBloomFilterBase cbfb = new CompoundBloomFilterBase();
     byte[] row = "myRow".getBytes();
     byte[] qualifier = "myQualifier".getBytes();
-    byte[] rowKey = cbfb.createBloomKey(row, 0, row.length,
-        row, 0, 0);
-    byte[] rowColKey = cbfb.createBloomKey(row, 0, row.length,
-        qualifier, 0, qualifier.length);
-    KeyValue rowKV = KeyValue.createKeyValueFromKey(rowKey);
-    KeyValue rowColKV = KeyValue.createKeyValueFromKey(rowColKey);
+    // Mimic what Storefile.createBloomKeyValue() does
+    byte[] rowKey = KeyValueUtil.createFirstOnRow(row, 0, row.length, new byte[0], 0, 0, row, 0, 0).getKey();
+    byte[] rowColKey = KeyValueUtil.createFirstOnRow(row, 0, row.length,
+        new byte[0], 0, 0, qualifier, 0, qualifier.length).getKey();
+    KeyValue rowKV = KeyValueUtil.createKeyValueFromKey(rowKey);
+    KeyValue rowColKV = KeyValueUtil.createKeyValueFromKey(rowColKey);
     assertEquals(rowKV.getTimestamp(), rowColKV.getTimestamp());
     assertEquals(Bytes.toStringBinary(rowKV.getRow()),
         Bytes.toStringBinary(rowColKV.getRow()));

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,7 +28,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -40,7 +42,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
 
   /** Factory that is used to produce single StoreFile.Writer-s */
   protected WriterFactory writerFactory;
-  protected KVComparator comparator;
+  protected CellComparator comparator;
 
   protected List<StoreFile.Writer> existingWriters;
   protected List<byte[]> boundaries;
@@ -60,7 +62,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
    * @param factory Factory used to produce individual file writers.
    * @param comparator Comparator used to compare rows.
    */
-  public void init(StoreScanner sourceScanner, WriterFactory factory, KVComparator comparator)
+  public void init(StoreScanner sourceScanner, WriterFactory factory, CellComparator comparator)
       throws IOException {
     this.writerFactory = factory;
     this.sourceScanner = sourceScanner;
@@ -111,16 +113,15 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
   /**
    * Subclasses can call this method to make sure the first KV is within multi-writer range.
    * @param left The left boundary of the writer.
-   * @param row The row to check.
-   * @param rowOffset Offset for row.
-   * @param rowLength Length for row.
+   * @param cell The cell whose row has to be checked.
    */
   protected void sanityCheckLeft(
-      byte[] left, byte[] row, int rowOffset, int rowLength) throws IOException {
-    if (StripeStoreFileManager.OPEN_KEY != left &&
-        comparator.compareRows(row, rowOffset, rowLength, left, 0, left.length) < 0) {
+      byte[] left, Cell cell) throws IOException {
+    if (!Arrays.equals(StripeStoreFileManager.OPEN_KEY, left) &&
+        comparator.compareRows(cell, left, 0, left.length) < 0) {
       String error = "The first row is lower than the left boundary of [" + Bytes.toString(left)
-        + "]: [" + Bytes.toString(row, rowOffset, rowLength) + "]";
+          + "]: [" + Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
+          + "]";
       LOG.error(error);
       throw new IOException(error);
     }
@@ -129,16 +130,14 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
   /**
    * Subclasses can call this method to make sure the last KV is within multi-writer range.
    * @param right The right boundary of the writer.
-   * @param row The row to check.
-   * @param rowOffset Offset for row.
-   * @param rowLength Length for row.
    */
   protected void sanityCheckRight(
-      byte[] right, byte[] row, int rowOffset, int rowLength) throws IOException {
-    if (StripeStoreFileManager.OPEN_KEY != right &&
-        comparator.compareRows(row, rowOffset, rowLength, right, 0, right.length) >= 0) {
+      byte[] right, Cell cell) throws IOException {
+    if (!Arrays.equals(StripeStoreFileManager.OPEN_KEY, right) &&
+        comparator.compareRows(cell, right, 0, right.length) >= 0) {
       String error = "The last row is higher or equal than the right boundary of ["
-          + Bytes.toString(right) + "]: [" + Bytes.toString(row, rowOffset, rowLength) + "]";
+          + Bytes.toString(right) + "]: ["
+          + Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()) + "]";
       LOG.error(error);
       throw new IOException(error);
     }
@@ -180,10 +179,14 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       // must match some target boundaries, let's find them.
       assert  (majorRangeFrom == null) == (majorRangeTo == null);
       if (majorRangeFrom != null) {
-        majorRangeFromIndex = (majorRangeFrom == StripeStoreFileManager.OPEN_KEY) ? 0
-          : Collections.binarySearch(this.boundaries, majorRangeFrom, Bytes.BYTES_COMPARATOR);
-        majorRangeToIndex = (majorRangeTo == StripeStoreFileManager.OPEN_KEY) ? boundaries.size()
-          : Collections.binarySearch(this.boundaries, majorRangeTo, Bytes.BYTES_COMPARATOR);
+        majorRangeFromIndex = Arrays.equals(majorRangeFrom, StripeStoreFileManager.OPEN_KEY)
+                                ? 0
+                                : Collections.binarySearch(boundaries, majorRangeFrom,
+                                                           Bytes.BYTES_COMPARATOR);
+        majorRangeToIndex = Arrays.equals(majorRangeTo, StripeStoreFileManager.OPEN_KEY)
+                              ? boundaries.size()
+                              : Collections.binarySearch(boundaries, majorRangeTo,
+                                                         Bytes.BYTES_COMPARATOR);
         if (this.majorRangeFromIndex < 0 || this.majorRangeToIndex < 0) {
           throw new IOException("Major range does not match writer boundaries: [" +
               Bytes.toString(majorRangeFrom) + "] [" + Bytes.toString(majorRangeTo) + "]; from "
@@ -197,7 +200,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       if (currentWriter == null && existingWriters.isEmpty()) {
         // First append ever, do a sanity check.
         sanityCheckLeft(this.boundaries.get(0),
-            cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+            cell);
       }
       prepareWriterFor(cell);
       currentWriter.append(cell);
@@ -206,9 +209,8 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
     }
 
     private boolean isCellAfterCurrentWriter(Cell cell) {
-      return ((currentWriterEndKey != StripeStoreFileManager.OPEN_KEY) &&
-            (comparator.compareRows(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-                currentWriterEndKey, 0, currentWriterEndKey.length) >= 0));
+      return !Arrays.equals(currentWriterEndKey, StripeStoreFileManager.OPEN_KEY) &&
+            (comparator.compareRows(cell, currentWriterEndKey, 0, currentWriterEndKey.length) >= 0);
     }
 
     @Override
@@ -219,7 +221,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       }
       if (lastCell != null) {
         sanityCheckRight(boundaries.get(boundaries.size() - 1),
-            lastCell.getRowArray(), lastCell.getRowOffset(), lastCell.getRowLength());
+            lastCell);
       }
     }
 
@@ -326,10 +328,10 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       boolean doCreateWriter = false;
       if (currentWriter == null) {
         // First append ever, do a sanity check.
-        sanityCheckLeft(left, cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        sanityCheckLeft(left, cell);
         doCreateWriter = true;
       } else if (lastRowInCurrentWriter != null
-          && !comparator.matchingRows(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          && !CellUtil.matchingRow(cell,
               lastRowInCurrentWriter, 0, lastRowInCurrentWriter.length)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Stopping to use a writer after [" + Bytes.toString(lastRowInCurrentWriter)
@@ -382,7 +384,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       }
       if (lastCell != null) {
         sanityCheckRight(
-            right, lastCell.getRowArray(), lastCell.getRowOffset(), lastCell.getRowLength());
+            right, lastCell);
       }
 
       // When expired stripes were going to be merged into one, and if no writer was created during

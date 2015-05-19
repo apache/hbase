@@ -120,10 +120,8 @@ public class TestHColumnDescriptorDefaultVersions {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     // Create a table with one family
     HTableDescriptor baseHtd = new HTableDescriptor(TABLE_NAME);
-    HColumnDescriptor hcd =
-        new HColumnDescriptor(FAMILY, 5, HColumnDescriptor.DEFAULT_COMPRESSION,
-            HColumnDescriptor.DEFAULT_IN_MEMORY, HColumnDescriptor.DEFAULT_BLOCKCACHE,
-            HColumnDescriptor.DEFAULT_TTL, HColumnDescriptor.DEFAULT_BLOOMFILTER);
+    HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
+    hcd.setMaxVersions(5);
     baseHtd.addFamily(hcd);
     admin.createTable(baseHtd);
     admin.disableTable(TABLE_NAME);

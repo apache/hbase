@@ -28,7 +28,7 @@ import java.util.Queue;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.InlineBlockWriter;
@@ -43,14 +43,14 @@ import org.apache.hadoop.io.Writable;
 public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     implements BloomFilterWriter, InlineBlockWriter {
 
-  protected static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(CompoundBloomFilterWriter.class);
 
   /** The current chunk being written to */
-  private ByteBloomFilter chunk;
+  private BloomFilterChunk chunk;
 
   /** Previous chunk, so that we can create another similar chunk */
-  private ByteBloomFilter prevChunk;
+  private BloomFilterChunk prevChunk;
 
   /** Maximum fold factor */
   private int maxFold;
@@ -62,7 +62,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   private static class ReadyChunk {
     int chunkId;
     byte[] firstKey;
-    ByteBloomFilter chunk;
+    BloomFilterChunk chunk;
   }
 
   private Queue<ReadyChunk> readyChunks = new LinkedList<ReadyChunk>();
@@ -89,8 +89,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
    */
   public CompoundBloomFilterWriter(int chunkByteSizeHint, float errorRate,
       int hashType, int maxFold, boolean cacheOnWrite,
-      KVComparator comparator) {
-    chunkByteSize = ByteBloomFilter.computeFoldableByteSize(
+      CellComparator comparator) {
+    chunkByteSize = BloomFilterUtil.computeFoldableByteSize(
         chunkByteSizeHint * 8L, maxFold);
 
     this.errorRate = errorRate;
@@ -174,7 +174,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
       if (prevChunk == null) {
         // First chunk
-        chunk = ByteBloomFilter.createBySize(chunkByteSize, errorRate,
+        chunk = BloomFilterUtil.createBySize(chunkByteSize, errorRate,
             hashType, maxFold);
       } else {
         // Use the same parameters as the last chunk, but a new array and
@@ -201,8 +201,8 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     // again for cache-on-write.
     ReadyChunk readyChunk = readyChunks.peek();
 
-    ByteBloomFilter readyChunkBloom = readyChunk.chunk;
-    readyChunkBloom.getDataWriter().write(out);
+    BloomFilterChunk readyChunkBloom = readyChunk.chunk;
+    readyChunkBloom.writeBloom(out);
   }
 
   @Override
@@ -225,7 +225,7 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
     }
 
     /**
-     * This is modeled after {@link ByteBloomFilter.MetaWriter} for simplicity,
+     * This is modeled after {@link BloomFilterChunk.MetaWriter} for simplicity,
      * although the two metadata formats do not have to be consistent. This
      * does have to be consistent with how {@link
      * CompoundBloomFilter#CompoundBloomFilter(DataInput,
@@ -243,8 +243,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
 
       // Fields that don't have equivalents in ByteBloomFilter.
       out.writeInt(numChunks);
-      Bytes.writeByteArray(out,
-          Bytes.toBytes(comparator.getClass().getName()));
+      if (comparator != null) {
+        Bytes.writeByteArray(out, Bytes.toBytes(comparator.getClass().getName()));
+      } else {
+        // Internally writes a 0 vint if the byte[] is null
+        Bytes.writeByteArray(out, null);
+      }
 
       // Write a single-level index without compression or block header.
       bloomBlockIndexWriter.writeSingleLevelIndex(out, "Bloom filter");
@@ -252,17 +256,12 @@ public class CompoundBloomFilterWriter extends CompoundBloomFilterBase
   }
 
   @Override
-  public Writable getMetaWriter() {
-    return new MetaWriter();
-  }
-
-  @Override
   public void compactBloom() {
   }
 
   @Override
-  public void allocBloom() {
-    // Nothing happens here. All allocation happens on demand.
+  public Writable getMetaWriter() {
+    return new MetaWriter();
   }
 
   @Override

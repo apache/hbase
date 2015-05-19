@@ -3438,7 +3438,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     int i;
     for (i = 0; i < minLen
-        && KeyValue.COMPARATOR.compare(expected.get(i), actual.get(i)) == 0;
+        && CellComparator.COMPARATOR.compare(expected.get(i), actual.get(i)) == 0;
         ++i) {}
 
     if (additionalMsg == null) {

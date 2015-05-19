@@ -52,7 +52,7 @@ import com.google.common.collect.Lists;
 @Category({FilterTests.class, MediumTests.class})
 public class TestFuzzyRowAndColumnRangeFilter {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestFuzzyRowAndColumnRangeFilter.class);
 
   /**
    * @throws java.lang.Exception

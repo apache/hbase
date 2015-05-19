@@ -40,11 +40,13 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -424,6 +426,16 @@ public class TestStripeCompactionPolicy {
     si = createStripesWithSizes(6, 2,
         new Long[][] { new Long[] { 10L, 1L, 1L, 1L, 1L }, new Long[] { 12L } });
     verifyCompaction(policy, si, si.getLevel0Files(), null, null, si.getStripeBoundaries());
+    // even if L0 has no file
+    // if all files of stripe aren't selected, delete must not be dropped.
+    stripes = new Long[][] { new Long[] { 100L, 3L, 2L, 2L, 2L }, new Long[] { 6L } };
+    si = createStripesWithSizes(0, 0, stripes);
+    List<StoreFile> compact_file = new ArrayList<StoreFile>();
+    Iterator<StoreFile> iter = si.getStripes().get(0).listIterator(1);
+    while (iter.hasNext()) {
+        compact_file.add(iter.next());
+    }
+    verifyCompaction(policy, si, compact_file, false, 1, null, si.getStartRow(0), si.getEndRow(0), true);
   }
 
   /********* HELPER METHODS ************/
@@ -564,7 +576,7 @@ public class TestStripeCompactionPolicy {
     StoreFileWritersCapture writers = new StoreFileWritersCapture();
     StripeStoreFlusher.StripeFlushRequest req = policy.selectFlush(si, input.length);
     StripeMultiFileWriter mw = req.createWriter();
-    mw.init(null, writers, new KeyValue.KVComparator());
+    mw.init(null, writers, CellComparator.COMPARATOR);
     for (KeyValue kv : input) {
       mw.append(kv);
     }
@@ -778,7 +790,6 @@ public class TestStripeCompactionPolicy {
     public boolean next(List<Cell> results) throws IOException {
       if (kvs.isEmpty()) return false;
       results.add(kvs.remove(0));
-
       return !kvs.isEmpty();
     }
 

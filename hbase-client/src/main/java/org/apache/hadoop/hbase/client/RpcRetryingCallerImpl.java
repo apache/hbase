@@ -49,6 +49,7 @@ import com.google.protobuf.ServiceException;
  */
 @InterfaceAudience.Private
 public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
+  // LOG is being used in TestMultiRowRangeFilter, hence leaving it public
   public static final Log LOG = LogFactory.getLog(RpcRetryingCallerImpl.class);
   /**
    * When we started making calls.

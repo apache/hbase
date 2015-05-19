@@ -36,8 +36,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -83,7 +82,7 @@ public class HFileWriterImpl implements HFile.Writer {
   protected long totalUncompressedBytes = 0;
 
   /** Key comparator. Used to ensure we write in order. */
-  protected final KVComparator comparator;
+  protected final CellComparator comparator;
 
   /** Meta block names. */
   protected List<byte[]> metaNames = new ArrayList<byte[]>();
@@ -154,7 +153,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   public HFileWriterImpl(final Configuration conf, CacheConfig cacheConf, Path path,
       FSDataOutputStream outputStream,
-      KVComparator comparator, HFileContext fileContext) {
+      CellComparator comparator, HFileContext fileContext) {
     this.outputStream = outputStream;
     this.path = path;
     this.name = path != null ? path.getName() : outputStream.toString();
@@ -166,7 +165,7 @@ public class HFileWriterImpl implements HFile.Writer {
       this.blockEncoder = NoOpDataBlockEncoder.INSTANCE;
     }
     this.comparator = comparator != null ? comparator
-        : KeyValue.COMPARATOR;
+        : CellComparator.COMPARATOR;
 
     closeOutputStream = path != null;
     this.cacheConf = cacheConf;
@@ -224,7 +223,7 @@ public class HFileWriterImpl implements HFile.Writer {
       throw new IOException("Key cannot be null or empty");
     }
     if (lastCell != null) {
-      int keyComp = comparator.compareOnlyKeyPortion(lastCell, cell);
+      int keyComp = comparator.compareKeyIgnoresMvcc(lastCell, cell);
 
       if (keyComp > 0) {
         throw new IOException("Added a key not lexically larger than"
@@ -319,13 +318,141 @@ public class HFileWriterImpl implements HFile.Writer {
     fsBlockWriter.writeHeaderAndData(outputStream);
     int onDiskSize = fsBlockWriter.getOnDiskSizeWithHeader();
     Cell indexEntry =
-      CellComparator.getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
+      getMidpoint(this.comparator, lastCellOfPreviousBlock, firstCellInBlock);
     dataBlockIndexWriter.addEntry(CellUtil.getCellKeySerializedAsKeyValueKey(indexEntry),
       lastDataBlockOffset, onDiskSize);
     totalUncompressedBytes += fsBlockWriter.getUncompressedSizeWithHeader();
     if (cacheConf.shouldCacheDataOnWrite()) {
       doCacheOnWrite(lastDataBlockOffset);
     }
+  }
+  
+  /**
+   * Try to return a Cell that falls between <code>left</code> and
+   * <code>right</code> but that is shorter; i.e. takes up less space. This
+   * trick is used building HFile block index. Its an optimization. It does not
+   * always work. In this case we'll just return the <code>right</code> cell.
+   * 
+   * @param comparator
+   *          Comparator to use.
+   * @param left
+   * @param right
+   * @return A cell that sorts between <code>left</code> and <code>right</code>.
+   */
+  public static Cell getMidpoint(final CellComparator comparator, final Cell left,
+      final Cell right) {
+    // TODO: Redo so only a single pass over the arrays rather than one to
+    // compare and then a
+    // second composing midpoint.
+    if (right == null) {
+      throw new IllegalArgumentException("right cell can not be null");
+    }
+    if (left == null) {
+      return right;
+    }
+    // If Cells from meta table, don't mess around. meta table Cells have schema
+    // (table,startrow,hash) so can't be treated as plain byte arrays. Just skip
+    // out without
+    // trying to do this optimization.
+    if (comparator != null && comparator instanceof MetaCellComparator) {
+      return right;
+    }
+    int diff = comparator.compareRows(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left row sorts after right row; left="
+          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      // Left row is < right row.
+      byte[] midRow = getMinimumMidpointArray(left.getRowArray(), left.getRowOffset(),
+          left.getRowLength(), right.getRowArray(), right.getRowOffset(), right.getRowLength());
+      // If midRow is null, just return 'right'. Can't do optimization.
+      if (midRow == null)
+        return right;
+      return CellUtil.createCell(midRow);
+    }
+    // Rows are same. Compare on families.
+    int lFamOffset = left.getFamilyOffset();
+    int rFamOffset = right.getFamilyOffset();
+    int lFamLength = left.getFamilyLength();
+    int rFamLength = right.getFamilyLength();
+    diff = CellComparator.compareFamilies(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left family sorts after right family; left="
+          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      byte[] midRow = getMinimumMidpointArray(left.getFamilyArray(), lFamOffset,
+          lFamLength, right.getFamilyArray(), rFamOffset,
+          rFamLength);
+      // If midRow is null, just return 'right'. Can't do optimization.
+      if (midRow == null)
+        return right;
+      // Return new Cell where we use right row and then a mid sort family.
+      return CellUtil.createCell(right.getRowArray(), right.getRowOffset(), right.getRowLength(),
+          midRow, 0, midRow.length, HConstants.EMPTY_BYTE_ARRAY, 0,
+          HConstants.EMPTY_BYTE_ARRAY.length);
+    }
+    // Families are same. Compare on qualifiers.
+    diff = CellComparator.compareQualifiers(left, right);
+    if (diff > 0) {
+      throw new IllegalArgumentException("Left qualifier sorts after right qualifier; left="
+          + CellUtil.getCellKeyAsString(left) + ", right=" + CellUtil.getCellKeyAsString(right));
+    }
+    if (diff < 0) {
+      byte[] midRow = getMinimumMidpointArray(left.getQualifierArray(), left.getQualifierOffset(),
+          left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+          right.getQualifierLength());
+      // If midRow is null, just return 'right'. Can't do optimization.
+      if (midRow == null)
+        return right;
+      // Return new Cell where we use right row and family and then a mid sort
+      // qualifier.
+      return CellUtil.createCell(right.getRowArray(), right.getRowOffset(), right.getRowLength(),
+          right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength(), midRow, 0,
+          midRow.length);
+    }
+    // No opportunity for optimization. Just return right key.
+    return right;
+  }
+  
+  /**
+   * @param leftArray
+   * @param leftOffset
+   * @param leftLength
+   * @param rightArray
+   * @param rightOffset
+   * @param rightLength
+   * @return Return a new array that is between left and right and minimally
+   *         sized else just return null as indicator that we could not create a
+   *         mid point.
+   */
+  private static byte[] getMinimumMidpointArray(final byte[] leftArray, final int leftOffset,
+      final int leftLength, final byte[] rightArray, final int rightOffset, final int rightLength) {
+    // rows are different
+    int minLength = leftLength < rightLength ? leftLength : rightLength;
+    short diffIdx = 0;
+    while (diffIdx < minLength
+        && leftArray[leftOffset + diffIdx] == rightArray[rightOffset + diffIdx]) {
+      diffIdx++;
+    }
+    byte[] minimumMidpointArray = null;
+    if (diffIdx >= minLength) {
+      // leftKey's row is prefix of rightKey's.
+      minimumMidpointArray = new byte[diffIdx + 1];
+      System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
+    } else {
+      int diffByte = leftArray[leftOffset + diffIdx];
+      if ((0xff & diffByte) < 0xff && (diffByte + 1) < (rightArray[rightOffset + diffIdx] & 0xff)) {
+        minimumMidpointArray = new byte[diffIdx + 1];
+        System.arraycopy(leftArray, leftOffset, minimumMidpointArray, 0, diffIdx);
+        minimumMidpointArray[diffIdx] = (byte) (diffByte + 1);
+      } else {
+        minimumMidpointArray = new byte[diffIdx + 1];
+        System.arraycopy(rightArray, rightOffset, minimumMidpointArray, 0, diffIdx + 1);
+      }
+    }
+    return minimumMidpointArray;
   }
 
   /** Gives inline block writers an opportunity to contribute blocks. */

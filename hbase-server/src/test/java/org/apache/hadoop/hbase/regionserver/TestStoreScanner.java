@@ -31,6 +31,7 @@ import java.util.TreeSet;
 import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,7 +50,7 @@ public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
   private ScanInfo scanInfo = new ScanInfo(CF, 0, Integer.MAX_VALUE,
-      Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, KeyValue.COMPARATOR);
+      Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, CellComparator.COMPARATOR);
   private ScanType scanType = ScanType.USER_SCAN;
 
   public void setUp() throws Exception {
@@ -82,7 +83,7 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(
         new KeyValueScanner[] {
-            new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
+            new KeyValueScanFixture(CellComparator.COMPARATOR, kvs)
     });
     Scan scanSpec = new Scan(Bytes.toBytes(r1));
     scanSpec.setTimeRange(0, 6);
@@ -131,7 +132,7 @@ public class TestStoreScanner extends TestCase {
     };
     List<KeyValueScanner> scanners = Arrays.asList(
         new KeyValueScanner[] {
-            new KeyValueScanFixture(KeyValue.COMPARATOR, kvs)
+            new KeyValueScanFixture(CellComparator.COMPARATOR, kvs)
         });
 
     Scan scanSpec = new Scan(Bytes.toBytes("R1"));
@@ -418,7 +419,7 @@ public class TestStoreScanner extends TestCase {
     Scan scan = new Scan();
     scan.setMaxVersions(1);
     ScanInfo scanInfo = new ScanInfo(CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
-        KeyValue.COMPARATOR);
+        CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner scanner =
       new StoreScanner(scan, scanInfo, scanType,
@@ -489,7 +490,7 @@ public class TestStoreScanner extends TestCase {
     scan.setMaxVersions(1);
     // scanner with ttl equal to 500
     ScanInfo scanInfo = new ScanInfo(CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
-        KeyValue.COMPARATOR);
+        CellComparator.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner scanner =
         new StoreScanner(scan, scanInfo, scanType, null, scanners);
@@ -553,7 +554,7 @@ public class TestStoreScanner extends TestCase {
         2 /* maxVersions */, 500 /* ttl */,
         KeepDeletedCells.FALSE /* keepDeletedCells */,
         200, /* timeToPurgeDeletes */
-        KeyValue.COMPARATOR);
+        CellComparator.COMPARATOR);
       StoreScanner scanner =
         new StoreScanner(scan, scanInfo,
           ScanType.COMPACT_DROP_DELETES, null, scanners,

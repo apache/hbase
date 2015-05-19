@@ -59,7 +59,7 @@ import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
  */
 @InterfaceAudience.Private
 public class HRegionFileSystem {
-  public static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
+  private static final Log LOG = LogFactory.getLog(HRegionFileSystem.class);
 
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
@@ -579,33 +579,37 @@ public class HRegionFileSystem {
       final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
           throws IOException {
 
-    if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck()) {
+    if (splitPolicy == null || !splitPolicy.skipStoreFileRangeCheck(familyName)) {
       // Check whether the split row lies in the range of the store file
       // If it is outside the range, return directly.
-      if (top) {
-        //check if larger than last key.
-        KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
-        byte[] lastKey = f.createReader().getLastKey();
-        // If lastKey is null means storefile is empty.
-        if (lastKey == null) return null;
-        if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
-          splitKey.getKeyOffset(), splitKey.getKeyLength(), lastKey, 0, lastKey.length) > 0) {
-          return null;
+      try {
+        if (top) {
+          //check if larger than last key.
+          KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
+          byte[] lastKey = f.createReader().getLastKey();
+          // If lastKey is null means storefile is empty.
+          if (lastKey == null) {
+            return null;
+          }
+          if (f.getReader().getComparator().compare(splitKey, lastKey, 0, lastKey.length) > 0) {
+            return null;
+          }
+        } else {
+          //check if smaller than first key
+          KeyValue splitKey = KeyValueUtil.createLastOnRow(splitRow);
+          byte[] firstKey = f.createReader().getFirstKey();
+          // If firstKey is null means storefile is empty.
+          if (firstKey == null) {
+            return null;
+          }
+          if (f.getReader().getComparator().compare(splitKey, firstKey, 0, firstKey.length) < 0) {
+            return null;
+          }
         }
-      } else {
-        //check if smaller than first key
-        KeyValue splitKey = KeyValueUtil.createLastOnRow(splitRow);
-        byte[] firstKey = f.createReader().getFirstKey();
-        // If firstKey is null means storefile is empty.
-        if (firstKey == null) return null;
-        if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
-          splitKey.getKeyOffset(), splitKey.getKeyLength(), firstKey, 0, firstKey.length) < 0) {
-          return null;
-        }
+      } finally {
+        f.closeReader(true);
       }
     }
-
-    f.closeReader(true);
 
     Path splitDir = new Path(getSplitsDir(hri), familyName);
     // A reference to the bottom half of the hsf store file.

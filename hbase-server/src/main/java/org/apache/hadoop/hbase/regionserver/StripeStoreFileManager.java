@@ -33,9 +33,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +64,7 @@ import com.google.common.collect.ImmutableList;
 @InterfaceAudience.Private
 public class StripeStoreFileManager
   implements StoreFileManager, StripeCompactionPolicy.StripeInformationProvider {
-  static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
+  private static final Log LOG = LogFactory.getLog(StripeStoreFileManager.class);
 
   /**
    * The file metadata fields that contain the stripe information.
@@ -115,14 +115,14 @@ public class StripeStoreFileManager
    * we use it to compare by reference when we read from the map. */
   private static final byte[] INVALID_KEY_IN_MAP = new byte[0];
 
-  private final KVComparator kvComparator;
+  private final CellComparator cellComparator;
   private StripeStoreConfig config;
 
   private final int blockingFileCount;
 
   public StripeStoreFileManager(
-      KVComparator kvComparator, Configuration conf, StripeStoreConfig config) {
-    this.kvComparator = kvComparator;
+      CellComparator kvComparator, Configuration conf, StripeStoreConfig config) {
+    this.cellComparator = kvComparator;
     this.config = config;
     this.blockingFileCount = conf.getInt(
         HStore.BLOCKING_STOREFILES_KEY, HStore.DEFAULT_BLOCKING_STOREFILE_COUNT);
@@ -256,7 +256,7 @@ public class StripeStoreFileManager
         + newRatio + " configured ratio " + config.getMaxSplitImbalance());
     // Ok, we may get better ratio, get it.
     return StoreUtils.getLargestFile(state.stripeFiles.get(
-        isRightLarger ? rightIndex : leftIndex)).getFileSplitPoint(this.kvComparator);
+        isRightLarger ? rightIndex : leftIndex)).getFileSplitPoint(this.cellComparator);
   }
 
   private byte[] getSplitPointFromAllFiles() throws IOException {
@@ -264,7 +264,7 @@ public class StripeStoreFileManager
     sfs.addSublist(state.level0Files);
     sfs.addAllSublists(state.stripeFiles);
     if (sfs.isEmpty()) return null;
-    return StoreUtils.getLargestFile(sfs).getFileSplitPoint(this.kvComparator);
+    return StoreUtils.getLargestFile(sfs).getFileSplitPoint(this.cellComparator);
   }
 
   private double getMidStripeSplitRatio(long smallerSize, long largerSize, long lastLargerSize) {
@@ -505,6 +505,7 @@ public class StripeStoreFileManager
    * Checks whether the key is invalid (e.g. from an L0 file, or non-stripe-compacted files).
    */
   private static final boolean isInvalid(byte[] key) {
+    // No need to use Arrays.equals because INVALID_KEY is null
     return key == INVALID_KEY;
   }
 
@@ -512,7 +513,7 @@ public class StripeStoreFileManager
    * Compare two keys for equality.
    */
   private final boolean rowEquals(byte[] k1, byte[] k2) {
-    return kvComparator.matchingRows(k1, 0, k1.length, k2, 0, k2.length);
+    return Bytes.equals(k1, 0, k1.length, k2, 0, k2.length);
   }
 
   /**
@@ -520,7 +521,7 @@ public class StripeStoreFileManager
    */
   private final int nonOpenRowCompare(byte[] k1, byte[] k2) {
     assert !isOpen(k1) && !isOpen(k2);
-    return kvComparator.compareRows(k1, 0, k1.length, k2, 0, k2.length);
+    return cellComparator.compareRows(k1, 0, k1.length, k2, 0, k2.length);
   }
 
   /**
@@ -536,8 +537,10 @@ public class StripeStoreFileManager
    * Finds the stripe index for the stripe containing a row provided externally for get/scan.
    */
   private final int findStripeForRow(byte[] row, boolean isStart) {
-    if (isStart && row == HConstants.EMPTY_START_ROW) return 0;
-    if (!isStart && row == HConstants.EMPTY_END_ROW) return state.stripeFiles.size() - 1;
+    if (isStart && Arrays.equals(row, HConstants.EMPTY_START_ROW)) return 0;
+    if (!isStart && Arrays.equals(row, HConstants.EMPTY_END_ROW)) {
+      return state.stripeFiles.size() - 1;
+    }
     // If there's an exact match below, a stripe ends at "row". Stripe right boundary is
     // exclusive, so that means the row is in the next stripe; thus, we need to add one to index.
     // If there's no match, the return value of binarySearch is (-(insertion point) - 1), where
@@ -559,15 +562,25 @@ public class StripeStoreFileManager
 
 
   private byte[] startOf(StoreFile sf) {
-    byte[] result = this.fileStarts.get(sf);
-    return result == null ? sf.getMetadataValue(STRIPE_START_KEY)
-        : (result == INVALID_KEY_IN_MAP ? INVALID_KEY : result);
+    byte[] result = fileStarts.get(sf);
+
+    // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
+    // serves only as a marker and is not to be confused with other empty byte arrays.
+    // See Javadoc of INVALID_KEY_IN_MAP for more information
+    return (result == null)
+             ? sf.getMetadataValue(STRIPE_START_KEY)
+             : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
   }
 
   private byte[] endOf(StoreFile sf) {
-    byte[] result = this.fileEnds.get(sf);
-    return result == null ? sf.getMetadataValue(STRIPE_END_KEY)
-        : (result == INVALID_KEY_IN_MAP ? INVALID_KEY : result);
+    byte[] result = fileEnds.get(sf);
+
+    // result and INVALID_KEY_IN_MAP are compared _only_ by reference on purpose here as the latter
+    // serves only as a marker and is not to be confused with other empty byte arrays.
+    // See Javadoc of INVALID_KEY_IN_MAP for more information
+    return (result == null)
+             ? sf.getMetadataValue(STRIPE_END_KEY)
+             : result == INVALID_KEY_IN_MAP ? INVALID_KEY : result;
   }
 
   /**

@@ -75,7 +75,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestAdmin2 {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestAdmin2.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
 
@@ -85,6 +85,7 @@ public class TestAdmin2 {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
+    TEST_UTIL.getConfiguration().setInt("hbase.regionserver.metahandler.count", 30);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);

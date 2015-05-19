@@ -98,6 +98,7 @@ public class DefaultCompactor extends Compactor {
           smallestReadPoint = Math.min(fd.minSeqIdToKeep, smallestReadPoint);
           cleanSeqId = true;
         }
+
         writer = createTmpWriter(fd, smallestReadPoint);
         boolean finished =
             performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId, throughputController,
@@ -151,12 +152,16 @@ public class DefaultCompactor extends Compactor {
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException
    */
-  protected StoreFile.Writer createTmpWriter(FileDetails fd, long smallestReadPoint)
-      throws IOException {
+  protected StoreFile.Writer createTmpWriter(FileDetails fd, long smallestReadPoint) throws IOException {
+    // When all MVCC readpoints are 0, don't write them.
+    // See HBASE-8166, HBASE-12600, and HBASE-13389.
+
+    // make this writer with tags always because of possible new cells with tags.
     StoreFile.Writer writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
-        true, fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
+            true, fd.maxMVCCReadpoint >= 0, fd.maxTagsLength >0);
     return writer;
   }
+
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to

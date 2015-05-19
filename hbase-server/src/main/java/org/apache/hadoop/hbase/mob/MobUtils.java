@@ -41,14 +41,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -64,10 +57,7 @@ import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.util.*;
 
 /**
  * The mob utilities
@@ -478,12 +468,12 @@ public class MobUtils {
     throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(true)
       .withIncludesTags(true).withCompression(family.getCompactionCompression())
-      .withCompressTags(family.shouldCompressTags()).withChecksumType(HStore.getChecksumType(conf))
+      .withCompressTags(family.isCompressTags()).withChecksumType(HStore.getChecksumType(conf))
       .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
     Path tempPath = new Path(basePath, UUID.randomUUID().toString().replaceAll("-", ""));
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs).withFilePath(tempPath)
-      .withComparator(KeyValue.COMPARATOR).withBloomType(family.getBloomFilterType())
+      .withComparator(CellComparator.COMPARATOR).withBloomType(family.getBloomFilterType())
       .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }
@@ -554,13 +544,14 @@ public class MobUtils {
     HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
     Compression.Algorithm compression, CacheConfig cacheConfig) throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
-      .withIncludesMvcc(true).withIncludesTags(true).withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+      .withIncludesMvcc(true).withIncludesTags(true)
+      .withChecksumType(ChecksumType.getDefaultChecksumType())
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs)
       .withFilePath(new Path(basePath, mobFileName.getFileName()))
-      .withComparator(KeyValue.COMPARATOR).withBloomType(BloomType.NONE)
+      .withComparator(CellComparator.COMPARATOR).withBloomType(BloomType.NONE)
       .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }

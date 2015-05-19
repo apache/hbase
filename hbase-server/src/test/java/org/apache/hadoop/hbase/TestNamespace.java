@@ -57,7 +57,7 @@ import com.google.common.collect.Sets;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestNamespace {
-  protected static final Log LOG = LogFactory.getLog(TestNamespace.class);
+  private static final Log LOG = LogFactory.getLog(TestNamespace.class);
   private static HMaster master;
   protected final static int NUM_SLAVES_BASE = 4;
   private static HBaseTestingUtility TEST_UTIL;

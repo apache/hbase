@@ -631,7 +631,7 @@ public class ThriftServerRunner implements Runnable {
    */
   public static class HBaseHandler implements Hbase.Iface {
     protected Configuration conf;
-    protected final Log LOG = LogFactory.getLog(this.getClass().getName());
+    protected static final Log LOG = LogFactory.getLog(HBaseHandler.class);
 
     // nextScannerId and scannerMap are used to manage scanner state
     protected int nextScannerId = 0;

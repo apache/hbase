@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,7 +87,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class HFileOutputFormat2
     extends FileOutputFormat<ImmutableBytesWritable, Cell> {
-  static Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
+  private static final Log LOG = LogFactory.getLog(HFileOutputFormat2.class);
 
   // The following constants are private since these are used by
   // HFileOutputFormat2 to internally transfer data between job setup and
@@ -248,7 +249,7 @@ public class HFileOutputFormat2
                                     
         wl.writer = new StoreFile.WriterBuilder(conf, new CacheConfig(tempConf), fs)
             .withOutputDir(familydir).withBloomType(bloomType)
-            .withComparator(KeyValue.COMPARATOR)
+            .withComparator(CellComparator.COMPARATOR)
             .withFileContext(hFileContext).build();
 
         this.writers.put(family, wl);
@@ -587,7 +588,7 @@ public class HFileOutputFormat2
     Configuration conf = job.getConfiguration();
     // create the partitions file
     FileSystem fs = FileSystem.get(conf);
-    Path partitionsPath = new Path(conf.get("hadoop.tmp.dir"), "partitions_" + UUID.randomUUID());
+    Path partitionsPath = new Path(conf.get("hbase.fs.tmp.dir"), "partitions_" + UUID.randomUUID());
     fs.makeQualified(partitionsPath);
     writePartitions(conf, partitionsPath, splitPoints);
     fs.deleteOnExit(partitionsPath);
@@ -626,7 +627,7 @@ public class HFileOutputFormat2
         familyDescriptor.getNameAsString(), "UTF-8"));
       compressionConfigValue.append('=');
       compressionConfigValue.append(URLEncoder.encode(
-        familyDescriptor.getCompression().getName(), "UTF-8"));
+        familyDescriptor.getCompressionType().getName(), "UTF-8"));
     }
     // Get rid of the last ampersand
     conf.set(COMPRESSION_FAMILIES_CONF_KEY, compressionConfigValue.toString());

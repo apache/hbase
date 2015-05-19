@@ -37,12 +37,16 @@ public class TableConfiguration {
   private final int metaOperationTimeout;
   private final int operationTimeout;
   private final int scannerCaching;
+  private final long scannerMaxResultSize;
   private final int primaryCallTimeoutMicroSecond;
   private final int replicaCallTimeoutMicroSecondScan;
   private final int retries;
   private final int maxKeyValueSize;
 
-  /**
+    // toggle for async/sync prefetch
+  private final boolean clientScannerAsyncPrefetch;
+
+    /**
    * Constructor
    * @param conf Configuration object
    */
@@ -59,6 +63,10 @@ public class TableConfiguration {
     this.scannerCaching = conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_CACHING, HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
 
+    this.scannerMaxResultSize =
+        conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+
     this.primaryCallTimeoutMicroSecond =
         conf.getInt("hbase.client.primaryCallTimeout.get", 10000); // 10ms
 
@@ -67,6 +75,9 @@ public class TableConfiguration {
 
     this.retries = conf.getInt(
        HConstants.HBASE_CLIENT_RETRIES_NUMBER, HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
+
+    this.clientScannerAsyncPrefetch = conf.getBoolean(
+       Scan.HBASE_CLIENT_SCANNER_ASYNC_PREFETCH, Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH);
 
     this.maxKeyValueSize = conf.getInt(MAX_KEYVALUE_SIZE_KEY, MAX_KEYVALUE_SIZE_DEFAULT);
   }
@@ -82,9 +93,11 @@ public class TableConfiguration {
     this.metaOperationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.operationTimeout = HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT;
     this.scannerCaching = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING;
+    this.scannerMaxResultSize = HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE;
     this.primaryCallTimeoutMicroSecond = 10000;
     this.replicaCallTimeoutMicroSecondScan = 1000000;
     this.retries = HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER;
+    this.clientScannerAsyncPrefetch = Scan.DEFAULT_HBASE_CLIENT_SCANNER_ASYNC_PREFETCH;
     this.maxKeyValueSize = MAX_KEYVALUE_SIZE_DEFAULT;
   }
 
@@ -119,4 +132,13 @@ public class TableConfiguration {
   public int getMaxKeyValueSize() {
     return maxKeyValueSize;
   }
+
+  public long getScannerMaxResultSize() {
+    return scannerMaxResultSize;
+  }
+
+  public boolean isClientScannerAsyncPrefetch() {
+    return clientScannerAsyncPrefetch;
+  }
+
 }

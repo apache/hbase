@@ -63,6 +63,20 @@ possible configurations would overwhelm and obscure the important.
     machine restart.</description>
   </property>
   <property >
+    <name>hbase.fs.tmp.dir</name>
+    <value>/user/${user.name}/hbase-staging</value>
+    <description>A staging directory in default file system (HDFS)
+    for keeping temporary data.
+    </description>
+  </property>
+  <property >
+    <name>hbase.bulkload.staging.dir</name>
+    <value>${hbase.fs.tmp.dir}</value>
+    <description>A staging directory in default file system (HDFS)
+    for bulk loading.
+    </description>
+  </property>
+  <property >
     <name>hbase.cluster.distributed</name>
     <value>false</value>
     <description>The mode the cluster will be in. Possible values are
@@ -905,6 +919,18 @@ possible configurations would overwhelm and obscure the important.
         but will eventually throw a TimeoutException.</description>
   </property>
   <property>
+    <name>hbase.cells.scanned.per.heartbeat.check</name>
+    <value>10000</value>
+    <description>The number of cells scanned in between heartbeat checks. Heartbeat
+        checks occur during the processing of scans to determine whether or not the
+        server should stop scanning in order to send back a heartbeat message to the
+        client. Heartbeat messages are used to keep the client-server connection alive
+        during long running scans. Small values mean that the heartbeat checks will
+        occur more often and thus will provide a tighter bound on the execution time of
+        the scan. Larger values mean that the heartbeat checks occur less frequently
+        </description>
+  </property>
+  <property>
     <name>hbase.rpc.shortoperation.timeout</name>
     <value>10000</value>
     <description>This is another version of "hbase.rpc.timeout". For those RPC operation
@@ -1286,7 +1312,7 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.hstore.checksum.algorithm</name>
-    <value>CRC32</value>
+    <value>CRC32C</value>
     <description>
       Name of an algorithm that is used to compute checksums. Possible values
       are NULL, CRC32, CRC32C.

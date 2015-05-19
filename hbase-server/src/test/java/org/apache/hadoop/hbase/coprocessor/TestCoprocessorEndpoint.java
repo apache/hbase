@@ -87,6 +87,7 @@ public class TestCoprocessorEndpoint {
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
+    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 5000);
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
         org.apache.hadoop.hbase.coprocessor.ColumnAggregationEndpoint.class.getName(),
         ProtobufCoprocessorService.class.getName());

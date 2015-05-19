@@ -495,7 +495,7 @@ For an informative discussion on how deletes and versioning interact, see the th
 
 Also see <<keyvalue,keyvalue>> for more information on the internal KeyValue format.
 
-Delete markers are purged during the next major compaction of the store, unless the `KEEP_DELETED_CELLS` option is set in the column family.
+Delete markers are purged during the next major compaction of the store, unless the `KEEP_DELETED_CELLS` option is set in the column family (See <<cf.keep.deleted>>).
 To keep the deletes for a configurable amount of time, you can set the delete TTL via the +hbase.hstore.time.to.purge.deletes+ property in _hbase-site.xml_.
 If `hbase.hstore.time.to.purge.deletes` is not set, or set to 0, all delete markers, including those with timestamps in the future, are purged during the next major compaction.
 Otherwise, a delete marker with a timestamp in the future is kept until the major compaction which occurs after the time represented by the marker's timestamp plus the value of `hbase.hstore.time.to.purge.deletes`, in milliseconds.

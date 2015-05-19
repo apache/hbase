@@ -53,6 +53,7 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class IPCUtil {
+  // LOG is being used in TestIPCUtil
   public static final Log LOG = LogFactory.getLog(IPCUtil.class);
   /**
    * How much we think the decompressor will expand the original compressed content.

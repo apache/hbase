@@ -27,6 +27,10 @@ public final class StringUtils {
   private StringUtils() {}
 
   public static String humanTimeDiff(long timeDiff) {
+    if (timeDiff < 1000) {
+      return String.format("%dmsec", timeDiff);
+    }
+
     StringBuilder buf = new StringBuilder();
     long hours = timeDiff / (60*60*1000);
     long rem = (timeDiff % (60*60*1000));

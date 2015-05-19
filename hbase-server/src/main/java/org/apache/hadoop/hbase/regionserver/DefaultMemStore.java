@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
@@ -84,7 +85,7 @@ public class DefaultMemStore implements MemStore {
   // Snapshot of memstore.  Made for flusher.
   volatile CellSkipListSet snapshot;
 
-  final KeyValue.KVComparator comparator;
+  final CellComparator comparator;
 
   // Used to track own heapSize
   final AtomicLong size;
@@ -104,7 +105,7 @@ public class DefaultMemStore implements MemStore {
    * Default constructor. Used for tests.
    */
   public DefaultMemStore() {
-    this(HBaseConfiguration.create(), KeyValue.COMPARATOR);
+    this(HBaseConfiguration.create(), CellComparator.COMPARATOR);
   }
 
   /**
@@ -112,7 +113,7 @@ public class DefaultMemStore implements MemStore {
    * @param c Comparator
    */
   public DefaultMemStore(final Configuration conf,
-                  final KeyValue.KVComparator c) {
+                  final CellComparator c) {
     this.conf = conf;
     this.comparator = c;
     this.cellSet = new CellSkipListSet(c);

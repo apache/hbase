@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class TimeToLiveHFileCleaner extends BaseHFileCleanerDelegate {
 
-  public static final Log LOG = LogFactory.getLog(TimeToLiveHFileCleaner.class.getName());
+  private static final Log LOG = LogFactory.getLog(TimeToLiveHFileCleaner.class.getName());
   public static final String TTL_CONF_KEY = "hbase.master.hfilecleaner.ttl";
   // default ttl = 5 minutes
   public static final long DEFAULT_TTL = 60000 * 5;

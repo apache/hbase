@@ -73,11 +73,11 @@ import com.google.common.collect.Lists;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestStoreFile extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestStoreFile.class);
+  private static final Log LOG = LogFactory.getLog(TestStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private CacheConfig cacheConf =  new CacheConfig(TEST_UTIL.getConfiguration());
   private static String ROOT_DIR = TEST_UTIL.getDataTestDir("TestStoreFile").toString();
-  private static final ChecksumType CKTYPE = ChecksumType.CRC32;
+  private static final ChecksumType CKTYPE = ChecksumType.CRC32C;
   private static final int CKBYTES = 512;
   private static String TEST_FAMILY = "cf";
 
@@ -170,9 +170,9 @@ public class TestStoreFile extends HBaseTestCase {
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
-    KeyValue kv = KeyValue.createKeyValueFromKey(reader.midkey());
+    KeyValue kv = KeyValueUtil.createKeyValueFromKey(reader.midkey());
     byte [] midRow = kv.getRow();
-    kv = KeyValue.createKeyValueFromKey(reader.getLastKey());
+    kv = KeyValueUtil.createKeyValueFromKey(reader.getLastKey());
     byte [] finalRow = kv.getRow();
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
@@ -184,7 +184,7 @@ public class TestStoreFile extends HBaseTestCase {
     HFileScanner s = refHsf.createReader().getScanner(false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
       ByteBuffer bb = s.getKey();
-      kv = KeyValue.createKeyValueFromKey(bb);
+      kv = KeyValueUtil.createKeyValueFromKey(bb);
       if (first) {
         assertTrue(Bytes.equals(kv.getRow(), midRow));
         first = false;
@@ -315,7 +315,7 @@ public class TestStoreFile extends HBaseTestCase {
   private void checkHalfHFile(final HRegionFileSystem regionFs, final StoreFile f)
       throws IOException {
     byte [] midkey = f.createReader().midkey();
-    KeyValue midKV = KeyValue.createKeyValueFromKey(midkey);
+    KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
     byte [] midRow = midKV.getRow();
     // Create top split.
     HRegionInfo topHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
@@ -345,8 +345,8 @@ public class TestStoreFile extends HBaseTestCase {
              (topScanner.isSeeked() && topScanner.next())) {
         key = topScanner.getKey();
 
-        if (topScanner.getReader().getComparator().compareFlatKey(key.array(),
-          key.arrayOffset(), key.limit(), midkey, 0, midkey.length) < 0) {
+        if ((topScanner.getReader().getComparator().compare(midKV, key.array(),
+          key.arrayOffset(), key.limit())) > 0) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
               Bytes.toStringBinary(midkey));
         }
@@ -391,14 +391,16 @@ public class TestStoreFile extends HBaseTestCase {
       // Now read from the top.
       first = true;
       topScanner = top.getScanner(false, false);
+      KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           topScanner.next()) {
         key = topScanner.getKey();
-        assertTrue(topScanner.getReader().getComparator().compareFlatKey(key.array(),
-          key.arrayOffset(), key.limit(), badmidkey, 0, badmidkey.length) >= 0);
+        keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
+        assertTrue(topScanner.getReader().getComparator()
+            .compare(keyOnlyKV, badmidkey, 0, badmidkey.length) >= 0);
         if (first) {
           first = false;
-          KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+          KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
           LOG.info("First top when key < bottom: " + keyKV);
           String tmp = Bytes.toString(keyKV.getRow());
           for (int i = 0; i < tmp.length(); i++) {
@@ -406,7 +408,7 @@ public class TestStoreFile extends HBaseTestCase {
           }
         }
       }
-      KeyValue keyKV = KeyValue.createKeyValueFromKey(key);
+      KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last top when key < bottom: " + keyKV);
       String tmp = Bytes.toString(keyKV.getRow());
       for (int i = 0; i < tmp.length(); i++) {
@@ -430,7 +432,7 @@ public class TestStoreFile extends HBaseTestCase {
         key = bottomScanner.getKey();
         if (first) {
           first = false;
-          keyKV = KeyValue.createKeyValueFromKey(key);
+          keyKV = KeyValueUtil.createKeyValueFromKey(key);
           LOG.info("First bottom when key > top: " + keyKV);
           tmp = Bytes.toString(keyKV.getRow());
           for (int i = 0; i < tmp.length(); i++) {
@@ -438,7 +440,7 @@ public class TestStoreFile extends HBaseTestCase {
           }
         }
       }
-      keyKV = KeyValue.createKeyValueFromKey(key);
+      keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
         assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');

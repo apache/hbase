@@ -108,7 +108,7 @@ implements Configurable {
       }
     }
     int pos = Bytes.binarySearch(this.splits, key.get(), key.getOffset(),
-      key.getLength(), Bytes.BYTES_RAWCOMPARATOR);
+      key.getLength());
     // Below code is from hfile index search.
     if (pos < 0) {
       pos++;

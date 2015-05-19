@@ -33,7 +33,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 public class HBaseRESTTestingUtility {
 
-  static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
+  private static final Log LOG = LogFactory.getLog(HBaseRESTTestingUtility.class);
 
   private int testServletPort;
   private Server server;

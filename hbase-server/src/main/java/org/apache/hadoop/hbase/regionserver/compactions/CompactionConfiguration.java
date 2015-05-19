@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 @InterfaceAudience.Private
 public class CompactionConfiguration {
 
-  static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
+  private static final Log LOG = LogFactory.getLog(CompactionConfiguration.class);
 
   public static final String HBASE_HSTORE_COMPACTION_RATIO_KEY = "hbase.hstore.compaction.ratio";
   public static final String HBASE_HSTORE_COMPACTION_RATIO_OFFPEAK_KEY =

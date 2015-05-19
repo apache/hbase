@@ -296,7 +296,7 @@ public class TestSnapshotMetadata {
 
       admin.disableTable(originalTableName);
       HColumnDescriptor hcd = new HColumnDescriptor(newFamilyName);
-      admin.addColumn(originalTableName, hcd);
+      admin.addColumnFamily(originalTableName, hcd);
       assertTrue("New column family was not added.",
         admin.getTableDescriptor(originalTableName).toString().contains(newFamilyNameAsString));
     }

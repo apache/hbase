@@ -26,8 +26,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
@@ -77,6 +75,28 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       }
     }
     return internalDecodeKeyValues(source, 0, 0, decodingCtx);
+  }
+
+  /********************* common prefixes *************************/
+  // Having this as static is fine but if META is having DBE then we should
+  // change this.
+  public static int compareCommonRowPrefix(Cell left, Cell right, int rowCommonPrefix) {
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset() + rowCommonPrefix,
+        left.getRowLength() - rowCommonPrefix, right.getRowArray(), right.getRowOffset()
+            + rowCommonPrefix, right.getRowLength() - rowCommonPrefix);
+  }
+
+  public static int compareCommonFamilyPrefix(Cell left, Cell right, int familyCommonPrefix) {
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset() + familyCommonPrefix,
+        left.getFamilyLength() - familyCommonPrefix, right.getFamilyArray(),
+        right.getFamilyOffset() + familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix);
+  }
+
+  public static int compareCommonQualifierPrefix(Cell left, Cell right, int qualCommonPrefix) {
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset() + qualCommonPrefix,
+        left.getQualifierLength() - qualCommonPrefix, right.getQualifierArray(),
+        right.getQualifierOffset() + qualCommonPrefix, right.getQualifierLength()
+            - qualCommonPrefix);
   }
 
   protected static class SeekerState implements Cell {
@@ -520,17 +540,15 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       BufferedEncodedSeeker<STATE extends SeekerState>
       implements EncodedSeeker {
     protected HFileBlockDecodingContext decodingCtx;
-    protected final KVComparator comparator;
-    protected final SamePrefixComparator<byte[]> samePrefixComparator;
+    protected final CellComparator comparator;
     protected ByteBuffer currentBuffer;
     protected STATE current = createSeekerState(); // always valid
     protected STATE previous = createSeekerState(); // may not be valid
     protected TagCompressionContext tagCompressionContext = null;
 
-    public BufferedEncodedSeeker(KVComparator comparator,
+    public BufferedEncodedSeeker(CellComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
       this.comparator = comparator;
-      this.samePrefixComparator = comparator;
       this.decodingCtx = decodingCtx;
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
@@ -540,7 +558,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
       }
     }
-    
+
     protected boolean includesMvcc() {
       return this.decodingCtx.getHFileContext().isIncludesMvcc();
     }
@@ -550,14 +568,11 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
-      return comparator.compareFlatKey(key, offset, length,
-          current.keyBuffer, 0, current.keyLength);
-    }
-
-    @Override
-    public int compareKey(KVComparator comparator, Cell key) {
-      return comparator.compareOnlyKeyPortion(key,
+    public int compareKey(CellComparator comparator, Cell key) {
+      // TODO BufferedEncodedSeeker, instance will be used by single thread alone. So we can
+      // have one KeyValue.KeyOnlyKeyValue instance as instance variable and reuse here and in
+      // seekToKeyInBlock 
+      return comparator.compareKeyIgnoresMvcc(key,
           new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength));
     }
 
@@ -685,67 +700,59 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       KeyValue.KeyOnlyKeyValue currentCell = new KeyValue.KeyOnlyKeyValue();
       do {
         int comp;
-        if (samePrefixComparator != null) {
-          currentCell.setKey(current.keyBuffer, 0, current.keyLength);
-          if (current.lastCommonPrefix != 0) {
-            // The KV format has row key length also in the byte array. The
-            // common prefix
-            // includes it. So we need to subtract to find out the common prefix
-            // in the
-            // row part alone
-            rowCommonPrefix = Math.min(rowCommonPrefix, current.lastCommonPrefix - 2);
-          }
-          if (current.lastCommonPrefix <= 2) {
-            rowCommonPrefix = 0;
-          }
-          rowCommonPrefix += CellComparator.findCommonPrefixInRowPart(seekCell, currentCell,
-              rowCommonPrefix);
-          comp = CellComparator.compareCommonRowPrefix(seekCell, currentCell, rowCommonPrefix);
+        currentCell.setKey(current.keyBuffer, 0, current.keyLength);
+        if (current.lastCommonPrefix != 0) {
+          // The KV format has row key length also in the byte array. The
+          // common prefix
+          // includes it. So we need to subtract to find out the common prefix
+          // in the
+          // row part alone
+          rowCommonPrefix = Math.min(rowCommonPrefix, current.lastCommonPrefix - 2);
+        }
+        if (current.lastCommonPrefix <= 2) {
+          rowCommonPrefix = 0;
+        }
+        rowCommonPrefix += findCommonPrefixInRowPart(seekCell, currentCell, rowCommonPrefix);
+        comp = compareCommonRowPrefix(seekCell, currentCell, rowCommonPrefix);
+        if (comp == 0) {
+          comp = compareTypeBytes(seekCell, currentCell);
           if (comp == 0) {
-            comp = compareTypeBytes(seekCell, currentCell);
+            // Subtract the fixed row key length and the family key fixed length
+            familyCommonPrefix = Math.max(
+                0,
+                Math.min(familyCommonPrefix,
+                    current.lastCommonPrefix - (3 + currentCell.getRowLength())));
+            familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell, currentCell,
+                familyCommonPrefix);
+            comp = compareCommonFamilyPrefix(seekCell, currentCell, familyCommonPrefix);
             if (comp == 0) {
-              // Subtract the fixed row key length and the family key fixed length
-              familyCommonPrefix = Math.max(
+              // subtract the rowkey fixed length and the family key fixed
+              // length
+              qualCommonPrefix = Math.max(
                   0,
-                  Math.min(familyCommonPrefix,
-                      current.lastCommonPrefix - (3 + currentCell.getRowLength())));
-              familyCommonPrefix += CellComparator.findCommonPrefixInFamilyPart(seekCell,
-                  currentCell, familyCommonPrefix);
-              comp = CellComparator.compareCommonFamilyPrefix(seekCell, currentCell,
-                  familyCommonPrefix);
+                  Math.min(
+                      qualCommonPrefix,
+                      current.lastCommonPrefix
+                          - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
+              qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell, currentCell,
+                  qualCommonPrefix);
+              comp = compareCommonQualifierPrefix(seekCell, currentCell, qualCommonPrefix);
               if (comp == 0) {
-                // subtract the rowkey fixed length and the family key fixed
-                // length
-                qualCommonPrefix = Math.max(
-                    0,
-                    Math.min(
-                        qualCommonPrefix,
-                        current.lastCommonPrefix
-                            - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
-                qualCommonPrefix += CellComparator.findCommonPrefixInQualifierPart(seekCell,
-                    currentCell, qualCommonPrefix);
-                comp = CellComparator.compareCommonQualifierPrefix(seekCell, currentCell,
-                    qualCommonPrefix);
+                comp = CellComparator.compareTimestamps(seekCell, currentCell);
                 if (comp == 0) {
-                  comp = CellComparator.compareTimestamps(seekCell, currentCell);
-                  if (comp == 0) {
-                    // Compare types. Let the delete types sort ahead of puts;
-                    // i.e. types
-                    // of higher numbers sort before those of lesser numbers.
-                    // Maximum
-                    // (255)
-                    // appears ahead of everything, and minimum (0) appears
-                    // after
-                    // everything.
-                    comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
-                  }
+                  // Compare types. Let the delete types sort ahead of puts;
+                  // i.e. types
+                  // of higher numbers sort before those of lesser numbers.
+                  // Maximum
+                  // (255)
+                  // appears ahead of everything, and minimum (0) appears
+                  // after
+                  // everything.
+                  comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
                 }
               }
             }
           }
-        } else {
-          Cell r = new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength);
-          comp = comparator.compareOnlyKeyPortion(seekCell, r);
         }
         if (comp == 0) { // exact match
           if (seekBefore) {
@@ -798,6 +805,27 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       return 0;
     }
 
+    private static int findCommonPrefixInRowPart(Cell left, Cell right, int rowCommonPrefix) {
+      return Bytes.findCommonPrefix(left.getRowArray(), right.getRowArray(), left.getRowLength()
+          - rowCommonPrefix, right.getRowLength() - rowCommonPrefix, left.getRowOffset()
+          + rowCommonPrefix, right.getRowOffset() + rowCommonPrefix);
+    }
+
+    private static int findCommonPrefixInFamilyPart(Cell left, Cell right, int familyCommonPrefix) {
+      return Bytes
+          .findCommonPrefix(left.getFamilyArray(), right.getFamilyArray(), left.getFamilyLength()
+              - familyCommonPrefix, right.getFamilyLength() - familyCommonPrefix,
+              left.getFamilyOffset() + familyCommonPrefix, right.getFamilyOffset()
+                  + familyCommonPrefix);
+    }
+
+    private static int findCommonPrefixInQualifierPart(Cell left, Cell right,
+        int qualifierCommonPrefix) {
+      return Bytes.findCommonPrefix(left.getQualifierArray(), right.getQualifierArray(),
+          left.getQualifierLength() - qualifierCommonPrefix, right.getQualifierLength()
+              - qualifierCommonPrefix, left.getQualifierOffset() + qualifierCommonPrefix,
+          right.getQualifierOffset() + qualifierCommonPrefix);
+    }
 
     private void moveToPrevious() {
       if (!previous.isValid()) {

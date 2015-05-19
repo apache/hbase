@@ -115,8 +115,8 @@ public class IntegrationTestIngestWithVisibilityLabels extends IntegrationTestIn
   
   private void addLabels() throws Exception {
     try {
-      VisibilityClient.addLabels(util.getConfiguration(), LABELS);
-      VisibilityClient.setAuths(util.getConfiguration(), LABELS, User.getCurrent().getName());
+      VisibilityClient.addLabels(util.getConnection(), LABELS);
+      VisibilityClient.setAuths(util.getConnection(), LABELS, User.getCurrent().getName());
     } catch (Throwable t) {
       throw new IOException(t);
     }

@@ -27,10 +27,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -231,14 +231,6 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     // Note: First Meta region replicas names are in old format
     this.regionName = createRegionName(tableName, null, regionId, replicaId, false);
     setHashCode();
-  }
-
-  /** Default constructor - creates empty object
-   * @deprecated Used by Writables and Writables are going away.
-   */
-  @Deprecated
-  public HRegionInfo() {
-    super();
   }
 
   public HRegionInfo(final TableName tableName) {
@@ -484,12 +476,10 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * Gets the table name from the specified region name.
-   * @param regionName
-   * @return Table name.
-   * @deprecated Since 0.96.0; use #getTable(byte[])
+   * @param regionName to extract the table name from
+   * @return Table name
    */
-  @Deprecated
-  public static byte [] getTableName(byte[] regionName) {
+  public static TableName getTable(final byte [] regionName) {
     int offset = -1;
     for (int i = 0; i < regionName.length; i++) {
       if (regionName[i] == HConstants.DELIMITER) {
@@ -499,19 +489,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     }
     byte[] buff  = new byte[offset];
     System.arraycopy(regionName, 0, buff, 0, offset);
-    return buff;
-  }
-
-
-  /**
-   * Gets the table name from the specified region name.
-   * Like {@link #getTableName(byte[])} only returns a {@link TableName} rather than a byte array.
-   * @param regionName
-   * @return Table name
-   * @see #getTableName(byte[])
-   */
-  public static TableName getTable(final byte [] regionName) {
-    return TableName.valueOf(getTableName(regionName));
+    return TableName.valueOf(buff);
   }
 
   /**
@@ -652,22 +630,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * Get current table name of the region
-   * @return byte array of table name
-   * @deprecated Since 0.96.0; use #getTable()
-   */
-  @Deprecated
-  public byte [] getTableName() {
-    return getTable().toBytes();
-  }
-
-  /**
-   * Get current table name of the region
    * @return TableName
-   * @see #getTableName()
    */
   public TableName getTable() {
     // This method name should be getTableName but there was already a method getTableName
-    // that returned a byte array.  It is unfortunate given everwhere else, getTableName returns
+    // that returned a byte array.  It is unfortunate given everywhere else, getTableName returns
     // a TableName instance.
     if (tableName == null || tableName.getName().length == 0) {
       tableName = getTable(getRegionName());
@@ -870,10 +837,12 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
 
   /**
    * @return Comparator to use comparing {@link KeyValue}s.
+   * @deprecated This method should not have been here.  Use Region#getCellComparator()
    */
+  @Deprecated
   public KVComparator getComparator() {
     return isMetaRegion()?
-      KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
+        KeyValue.META_COMPARATOR: KeyValue.COMPARATOR;
   }
 
   /**
@@ -1043,7 +1012,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Get the end key for display. Optionally hide the real end key. 
+   * Get the end key for display. Optionally hide the real end key.
    * @param hri
    * @param conf
    * @return the endkey
@@ -1055,7 +1024,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Get the start key for display. Optionally hide the real start key. 
+   * Get the start key for display. Optionally hide the real start key.
    * @param hri
    * @param conf
    * @return the startkey
@@ -1114,7 +1083,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
         modifiedName[lengthSoFar - 1] = ENC_SEPARATOR;
         System.arraycopy(encodedRegionName, 0, modifiedName, lengthSoFar,
             encodedRegionName.length);
-        lengthSoFar += encodedRegionName.length; 
+        lengthSoFar += encodedRegionName.length;
         modifiedName[lengthSoFar] = ENC_SEPARATOR;
         return modifiedName;
       } catch (IOException e) {
@@ -1253,7 +1222,9 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (in.markSupported()) { //read it with mark()
       in.mark(pblen);
     }
-    int read = in.read(pbuf); //assumption: it should be longer than pblen.
+
+    //assumption: if Writable serialization, it should be longer than pblen.
+    int read = in.read(pbuf);
     if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
     if (ProtobufUtil.isPBMagicPrefix(pbuf)) {
       return convert(HBaseProtos.RegionInfo.parseDelimitedFrom(in));

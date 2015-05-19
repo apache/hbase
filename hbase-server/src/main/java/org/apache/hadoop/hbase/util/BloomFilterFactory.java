@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -99,12 +99,6 @@ public final class BloomFilterFactory {
       throws IllegalArgumentException, IOException {
     int version = meta.readInt();
     switch (version) {
-      case ByteBloomFilter.VERSION:
-        // This is only possible in a version 1 HFile. We are ignoring the
-        // passed comparator because raw byte comparators are always used
-        // in version 1 Bloom filters.
-        return new ByteBloomFilter(meta);
-
       case CompoundBloomFilterBase.VERSION:
         return new CompoundBloomFilter(meta, reader);
 
@@ -199,7 +193,7 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        bloomType == BloomType.ROWCOL ? KeyValue.COMPARATOR : KeyValue.RAW_COMPARATOR);
+        bloomType == BloomType.ROWCOL ? CellComparator.COMPARATOR : null);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }
@@ -230,7 +224,7 @@ public final class BloomFilterFactory {
     // In case of compound Bloom filters we ignore the maxKeys hint.
     CompoundBloomFilterWriter bloomWriter = new CompoundBloomFilterWriter(getBloomBlockSize(conf),
         err, Hash.getHashType(conf), maxFold, cacheConf.shouldCacheBloomsOnWrite(),
-        KeyValue.RAW_COMPARATOR);
+        null);
     writer.addInlineBlockWriter(bloomWriter);
     return bloomWriter;
   }

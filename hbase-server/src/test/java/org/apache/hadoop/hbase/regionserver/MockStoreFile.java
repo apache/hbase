@@ -23,8 +23,8 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -54,7 +54,7 @@ public class MockStoreFile extends StoreFile {
   }
 
   @Override
-  byte[] getFileSplitPoint(KVComparator comparator) throws IOException {
+  byte[] getFileSplitPoint(CellComparator comparator) throws IOException {
     return this.splitPoint;
   }
 

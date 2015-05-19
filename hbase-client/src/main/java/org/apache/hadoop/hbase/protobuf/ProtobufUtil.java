@@ -2584,7 +2584,7 @@ public final class ProtobufUtil {
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
     CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteStringer.wrap(info.getTableName()))
+        .setTableName(ByteStringer.wrap(info.getTable().toBytes()))
         .setEncodedRegionName(ByteStringer.wrap(info.getEncodedNameAsBytes()))
         .setFamilyName(ByteStringer.wrap(family))
         .setStoreHomeDir(storeDir.getName()); //make relative

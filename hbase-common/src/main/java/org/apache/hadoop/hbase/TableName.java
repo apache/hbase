@@ -23,10 +23,10 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * Immutable POJO class for representing a table name.
@@ -513,7 +513,11 @@ public final class TableName implements Comparable<TableName> {
    * Get the appropriate row comparator for this table.
    *
    * @return The comparator.
+   * @deprecated The comparator is an internal property of the table. Should
+   * not have been exposed here
    */
+  @InterfaceAudience.Private
+  @Deprecated
   public KVComparator getRowComparator() {
      if(TableName.META_TABLE_NAME.equals(this)) {
       return KeyValue.META_COMPARATOR;

@@ -116,7 +116,7 @@ import com.yammer.metrics.stats.UniformSample;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class PerformanceEvaluation extends Configured implements Tool {
-  protected static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
+  private static final Log LOG = LogFactory.getLog(PerformanceEvaluation.class.getName());
   private static final ObjectMapper MAPPER = new ObjectMapper();
   static {
     MAPPER.configure(SORT_PROPERTIES_ALPHABETICALLY, true);

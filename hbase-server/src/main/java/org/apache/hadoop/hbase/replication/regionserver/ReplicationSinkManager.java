@@ -140,6 +140,16 @@ public class ReplicationSinkManager {
     }
   }
 
+  /**
+   * Report that a {@code SinkPeer} successfully replicated a chunk of data.
+   *
+   * @param sinkPeer
+   *          The SinkPeer that had a failed replication attempt on it
+   */
+  public void reportSinkSuccess(SinkPeer sinkPeer) {
+    badReportCounts.remove(sinkPeer.getServerName());
+  }
+
   void chooseSinks() {
     List<ServerName> slaveAddresses = endpoint.getRegionServers();
     Collections.shuffle(slaveAddresses, random);

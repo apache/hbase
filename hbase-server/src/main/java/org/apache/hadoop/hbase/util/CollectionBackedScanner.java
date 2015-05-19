@@ -26,7 +26,7 @@ import java.util.SortedSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 
 /**
@@ -36,34 +36,34 @@ import org.apache.hadoop.hbase.regionserver.NonReversedNonLazyKeyValueScanner;
 @InterfaceAudience.Private
 public class CollectionBackedScanner extends NonReversedNonLazyKeyValueScanner {
   final private Iterable<Cell> data;
-  final KeyValue.KVComparator comparator;
+  final CellComparator comparator;
   private Iterator<Cell> iter;
   private Cell current;
 
   public CollectionBackedScanner(SortedSet<Cell> set) {
-    this(set, KeyValue.COMPARATOR);
+    this(set, CellComparator.COMPARATOR);
   }
 
   public CollectionBackedScanner(SortedSet<Cell> set,
-      KeyValue.KVComparator comparator) {
+      CellComparator comparator) {
     this.comparator = comparator;
     data = set;
     init();
   }
 
   public CollectionBackedScanner(List<Cell> list) {
-    this(list, KeyValue.COMPARATOR);
+    this(list, CellComparator.COMPARATOR);
   }
 
   public CollectionBackedScanner(List<Cell> list,
-      KeyValue.KVComparator comparator) {
+      CellComparator comparator) {
     Collections.sort(list, comparator);
     this.comparator = comparator;
     data = list;
     init();
   }
 
-  public CollectionBackedScanner(KeyValue.KVComparator comparator,
+  public CollectionBackedScanner(CellComparator comparator,
       Cell... array) {
     this.comparator = comparator;
 

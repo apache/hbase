@@ -21,9 +21,9 @@ package org.apache.hadoop.hbase.codec.prefixtree;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
@@ -213,13 +213,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   }
 
   @Override
-  public int compareKey(KVComparator comparator, byte[] key, int offset, int length) {
-    // can't optimize this, make a copy of the key
-    ByteBuffer bb = getKeyDeepCopy();
-    return comparator.compareFlatKey(key, offset, length, bb.array(), bb.arrayOffset(), bb.limit());
-  }
-
-  @Override
   public int seekToKeyInBlock(Cell key, boolean forceBeforeOnExactMatch) {
     if (USE_POSITION_BEFORE) {
       return seekToOrBeforeUsingPositionAtOrBefore(key, forceBeforeOnExactMatch);
@@ -229,7 +222,8 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   }
 
   @Override
-  public int compareKey(KVComparator comparator, Cell key) {
+  public int compareKey(CellComparator comparator, Cell key) {
+    // can't optimize this, make a copy of the key
     ByteBuffer bb = getKeyDeepCopy();
     return comparator.compare(key,
         new KeyValue.KeyOnlyKeyValue(bb.array(), bb.arrayOffset(), bb.limit()));

@@ -30,9 +30,23 @@
   </componentDescriptors>
   <moduleSets>
     <moduleSet>
-      <!-- Enable access to all projects in the current multimodule build. Eclipse
-        says this is an error, but builds from the command line just fine. -->
       <useAllReactorProjects>true</useAllReactorProjects>
+      <includes>
+        <include>org.apache.hbase:hbase-annotations</include>
+        <include>org.apache.hbase:hbase-client</include>
+        <include>org.apache.hbase:hbase-common</include>
+        <include>org.apache.hbase:hbase-examples</include>
+        <include>org.apache.hbase:hbase-hadoop2-compat</include>
+        <include>org.apache.hbase:hbase-hadoop-compat</include>
+        <include>org.apache.hbase:hbase-it</include>
+        <include>org.apache.hbase:hbase-prefix-tree</include>
+        <include>org.apache.hbase:hbase-procedure</include>
+        <include>org.apache.hbase:hbase-protocol</include>
+        <include>org.apache.hbase:hbase-rest</include>
+        <include>org.apache.hbase:hbase-server</include>
+        <include>org.apache.hbase:hbase-shell</include>
+        <include>org.apache.hbase:hbase-thrift</include>
+      </includes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->
       <binaries>
         <outputDirectory>lib</outputDirectory>

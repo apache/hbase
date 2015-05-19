@@ -65,7 +65,7 @@ public class TestRegionRebalancing {
   }
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
-  public static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionRebalancing.class);
   private final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private RegionLocator regionLocator;
   private HTableDescriptor desc;

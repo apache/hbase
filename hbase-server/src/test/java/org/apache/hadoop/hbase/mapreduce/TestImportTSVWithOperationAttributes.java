@@ -64,7 +64,7 @@ import org.junit.experimental.categories.Category;
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithOperationAttributes implements Configurable {
 
-  protected static final Log LOG = LogFactory.getLog(TestImportTSVWithOperationAttributes.class);
+  private static final Log LOG = LogFactory.getLog(TestImportTSVWithOperationAttributes.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 

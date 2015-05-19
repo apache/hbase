@@ -47,7 +47,7 @@ import org.apache.log4j.Logger;
  */
 @InterfaceAudience.Private
 public class ConnectionCache {
-  private static Logger LOG = Logger.getLogger(ConnectionCache.class);
+  private static final Logger LOG = Logger.getLogger(ConnectionCache.class);
 
   private final Map<String, ConnectionInfo>
    connections = new ConcurrentHashMap<String, ConnectionInfo>();
@@ -220,6 +220,7 @@ public class ConnectionCache {
       if (EnvironmentEdgeManager.currentTime() > timeoutTime) {
         connections.remove(userName);
         closed = true;
+        return true;
       }
       return false;
     }

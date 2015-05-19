@@ -26,9 +26,9 @@ include Java
 import org.apache.hadoop.hbase.HConstants
 import org.apache.hadoop.hbase.HBaseConfiguration
 import org.apache.hadoop.hbase.client.HBaseAdmin
+import org.apache.hadoop.hbase.TableName
 import org.apache.hadoop.hbase.client.Get
 import org.apache.hadoop.hbase.client.Scan
-import org.apache.hadoop.hbase.client.HTable
 import org.apache.hadoop.hbase.client.ConnectionFactory
 import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
@@ -44,6 +44,18 @@ import org.apache.hadoop.hbase.HRegionInfo
 
 # Name of this script
 NAME = "region_mover"
+# Get configuration instance
+def getConfiguration()
+  config = HBaseConfiguration.create()
+  # No prefetching on hbase:meta This is for versions pre 0.99. Newer versions do not prefetch.
+  config.setInt("hbase.client.prefetch.limit", 1)
+  # Make a config that retries at short intervals many times
+  config.setInt("hbase.client.pause", 500)
+  config.setInt("hbase.client.retries.number", 100)
+  return config
+end
+
+$connection=ConnectionFactory.createConnection(getConfiguration())
 
 # Returns true if passed region is still on 'original' when we look at hbase:meta.
 def isSameServer(admin, r, original)
@@ -62,7 +74,7 @@ end
 # Get servername that is up in hbase:meta; this is hostname + port + startcode comma-delimited.
 # Can return nil
 def getServerNameForRegion(admin, r)
-  return nil unless admin.isTableEnabled(r.getTableName)
+  return nil unless admin.isTableEnabled(r.getTable())
   if r.isMetaRegion()
     # Hack
     zkw = org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher.new(admin.getConfiguration(), "region_mover", nil)
@@ -78,7 +90,7 @@ def getServerNameForRegion(admin, r)
       zkw.close()
     end
   end
-  table = HTable.new(admin.getConfiguration(), HConstants::META_TABLE_NAME)
+  table = $connection.getTable(TableName.valueOf('hbase:meta')) 
   begin
     g = Get.new(r.getRegionName())
     g.addColumn(HConstants::CATALOG_FAMILY, HConstants::SERVER_QUALIFIER)
@@ -102,12 +114,15 @@ def isSuccessfulScan(admin, r)
   scan.setCaching(1)
   scan.setFilter(FilterList.new(FirstKeyOnlyFilter.new(),InclusiveStopFilter.new(r.getStartKey())))
   begin
-    table = HTable.new(admin.getConfiguration(), r.getTableName())
+    table = $connection.getTable(r.getTable())
     scanner = table.getScanner(scan)
     begin
       results = scanner.next() 
       # We might scan into next region, this might be an empty table.
       # But if no exception, presume scanning is working.
+    rescue java.lang.NullPointerException => e
+      $LOG.warn("Unable to scan region=" + r.getRegionNameAsString() + 
+		" start key is empty. " + e.message)
     ensure
       scanner.close()
     end
@@ -169,12 +184,18 @@ end
 # Return array of servernames where servername is hostname+port+startcode
 # comma-delimited
 def getServers(admin)
-  serverInfos = admin.getClusterStatus().getServerInfo()
+  serverInfos = admin.getClusterStatus().getServers()
   servers = []
   for server in serverInfos
     servers << server.getServerName()
   end
   return servers
+end
+
+# Get master hostname
+def getMaster(admin)
+  return admin.getClusterStatus().getMaster().getHostname(), 
+	 admin.getClusterStatus().getMaster().getPort()
 end
 
 # Remove the servername whose hostname portion matches from the passed
@@ -193,13 +214,29 @@ def stripServer(servers, hostname, port)
   return servername
 end
 
+# Removes master from servers list 
+def stripMaster(servers, masterHostname, masterPort)
+  for server in servers
+    hostFromServerName, portFromServerName = getHostPortFromServerName(server)
+    if hostFromServerName == masterHostname and portFromServerName == masterPort.to_s
+      servers.delete(server)
+    end
+  end
+  return servers
+end
+
+
 # Returns a new serverlist that excludes the servername whose hostname portion
 # matches from the passed array of servers.
 def stripExcludes(servers, excludefile)
   excludes = readExcludes(excludefile)
-  servers =  servers.find_all{|server|
-      !excludes.contains(getHostPortFromServerName(server).join(":"))
-  }
+  updatedservers = []
+  servers.each_with_index do |val,indx| 
+     if !excludes.to_a.include? val.split(",")[0].to_s
+       updatedservers << val
+     end
+  end
+  servers = updatedservers
   # return updated servers list
   return servers
 end
@@ -228,17 +265,6 @@ def configureLogging(options)
     logger.setLevel(org.apache.log4j.Level::INFO)
   end
   return apacheLogger
-end
-
-# Get configuration instance
-def getConfiguration()
-  config = HBaseConfiguration.create()
-  # No prefetching on hbase:meta This is for versions pre 0.99. Newer versions do not prefetch.
-  config.setInt("hbase.client.prefetch.limit", 1)
-  # Make a config that retries at short intervals many times
-  config.setInt("hbase.client.pause", 500)
-  config.setInt("hbase.client.retries.number", 100)
-  return config
 end
 
 # Now get list of regions on targetServer
@@ -296,12 +322,13 @@ def unloadRegions(options, hostname, port)
   # Get an admin instance
   admin = HBaseAdmin.new(config)
   servers = getServers(admin)
+  master, masterPort = getMaster(admin)
   # Remove the server we are unloading from from list of servers.
   # Side-effect is the servername that matches this hostname 
   servername = stripServer(servers, hostname, port)
-
   # Remove the servers in our exclude list from list of servers.
   servers = stripExcludes(servers, options[:excludesFile])
+  servers = stripMaster(servers, master, masterPort)
   puts "Valid region move targets: ", servers
   if servers.length == 0
     puts "No regions were moved - there was no server available"
@@ -486,3 +513,5 @@ case ARGV[0]
     puts optparse
     exit 3
 end
+
+$connection.close()

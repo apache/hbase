@@ -20,8 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -75,6 +73,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
+import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
@@ -172,6 +171,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
 import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
@@ -190,6 +190,18 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /** RPC scheduler to use for the region server. */
   public static final String REGION_SERVER_RPC_SCHEDULER_FACTORY_CLASS =
     "hbase.region.server.rpc.scheduler.factory.class";
+
+  /**
+   * Minimum allowable time limit delta (in milliseconds) that can be enforced during scans. This
+   * configuration exists to prevent the scenario where a time limit is specified to be so
+   * restrictive that the time limit is reached immediately (before any cells are scanned).
+   */
+  private static final String REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA =
+      "hbase.region.server.rpc.minimum.scan.time.limit.delta";
+  /**
+   * Default value of {@link RSRpcServices#REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA}
+   */
+  private static final long DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA = 10;
 
   // Request counter. (Includes requests that are not serviced by regions.)
   final Counter requestCount = new Counter();
@@ -213,16 +225,38 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   private final int scannerLeaseTimeoutPeriod;
 
   /**
+   * The RPC timeout period (milliseconds)
+   */
+  private final int rpcTimeout;
+
+  /**
+   * The minimum allowable delta to use for the scan limit
+   */
+  private final long minimumScanTimeLimitDelta;
+
+  /**
    * Holder class which holds the RegionScanner and nextCallSeq together.
    */
   private static class RegionScannerHolder {
+    private AtomicLong nextCallSeq = new AtomicLong(0);
     private RegionScanner s;
-    private long nextCallSeq = 0L;
     private Region r;
 
     public RegionScannerHolder(RegionScanner s, Region r) {
       this.s = s;
       this.r = r;
+    }
+
+    private long getNextCallSeq() {
+      return nextCallSeq.get();
+    }
+
+    private void incNextCallSeq() {
+      nextCallSeq.incrementAndGet();
+    }
+
+    private void rollbackNextCallSeq() {
+      nextCallSeq.decrementAndGet();
     }
   }
 
@@ -553,6 +587,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     .setName(result.getClass().getName())
                     .setValue(result.toByteString())));
           } catch (IOException ioe) {
+            rpcServer.getMetrics().exception(ioe);
             resultOrExceptionBuilder.setException(ResponseConverter.buildException(ioe));
           }
         } else if (action.hasMutation()) {
@@ -602,6 +637,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // case the corresponding ResultOrException instance for the Put or Delete will be added
         // down in the doBatchOp method call rather than up here.
       } catch (IOException ie) {
+        rpcServer.getMetrics().exception(ie);
         resultOrExceptionBuilder = ResultOrException.newBuilder().
           setException(ResponseConverter.buildException(ie));
       }
@@ -798,17 +834,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new IllegalArgumentException(e);
     }
     // Server to handle client requests.
-    String hostname = getHostname(rs.conf);
-    int port = rs.conf.getInt(HConstants.REGIONSERVER_PORT,
-      HConstants.DEFAULT_REGIONSERVER_PORT);
+    InetSocketAddress initialIsa;
+    InetSocketAddress bindAddress;
     if(this instanceof MasterRpcServices) {
-      port = rs.conf.getInt(HConstants.MASTER_PORT,
-          HConstants.DEFAULT_MASTER_PORT);
+      String hostname = getHostname(rs.conf, true);
+      int port = rs.conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
+      // Creation of a HSA will force a resolve.
+      initialIsa = new InetSocketAddress(hostname, port);
+      bindAddress = new InetSocketAddress(rs.conf.get("hbase.master.ipc.address", hostname), port);
+    } else {
+      String hostname = getHostname(rs.conf, false);
+      int port = rs.conf.getInt(HConstants.REGIONSERVER_PORT,
+        HConstants.DEFAULT_REGIONSERVER_PORT);
+      // Creation of a HSA will force a resolve.
+      initialIsa = new InetSocketAddress(hostname, port);
+      bindAddress = new InetSocketAddress(
+        rs.conf.get("hbase.regionserver.ipc.address", hostname), port);
     }
-    // Creation of a HSA will force a resolve.
-    InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
-    InetSocketAddress bindAddress = new InetSocketAddress(
-      rs.conf.get("hbase.regionserver.ipc.address", hostname), port);
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
     }
@@ -827,6 +869,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     maxScannerResultSize = rs.conf.getLong(
       HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_SERVER_SCANNER_MAX_RESULT_SIZE);
+    rpcTimeout = rs.conf.getInt(
+      HConstants.HBASE_RPC_TIMEOUT_KEY,
+      HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    minimumScanTimeLimitDelta = rs.conf.getLong(
+      REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA,
+      DEFAULT_REGION_SERVER_RPC_MINIMUM_SCAN_TIME_LIMIT_DELTA);
 
     // Set our address, however we need the final port that was given to rpcServer
     isa = new InetSocketAddress(initialIsa.getHostName(), rpcServer.getListenerAddress().getPort());
@@ -834,12 +882,15 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     rs.setName(name);
   }
 
-  public static String getHostname(Configuration conf) throws UnknownHostException {
-    String hostname = conf.get(HRegionServer.HOSTNAME_KEY);
+  public static String getHostname(Configuration conf, boolean isMaster)
+      throws UnknownHostException {
+    String hostname = conf.get(isMaster? HRegionServer.MASTER_HOSTNAME_KEY :
+      HRegionServer.RS_HOSTNAME_KEY);
     if (hostname == null || hostname.isEmpty()) {
+      String masterOrRS = isMaster ? "master" : "regionserver";
       return Strings.domainNamePointerToHostName(DNS.getDefaultHost(
-        conf.get("hbase.regionserver.dns.interface", "default"),
-        conf.get("hbase.regionserver.dns.nameserver", "default")));
+        conf.get("hbase." + masterOrRS + ".dns.interface", "default"),
+        conf.get("hbase." + masterOrRS + ".dns.nameserver", "default")));
     } else {
       LOG.info("hostname is configured to be " + hostname);
       return hostname;
@@ -863,7 +914,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     String scannerIdString = Long.toString(scannerId);
     RegionScannerHolder scannerHolder = scanners.get(scannerIdString);
     if (scannerHolder != null) {
-      return scannerHolder.nextCallSeq;
+      return scannerHolder.getNextCallSeq();
     }
     return 0L;
   }
@@ -895,7 +946,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         ProtobufUtil.getRegionEncodedName(regionSpecifier));
   }
 
-  PriorityFunction getPriority() {
+  @VisibleForTesting
+  public PriorityFunction getPriority() {
     return priority;
   }
 
@@ -946,11 +998,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       AdminService.newReflectiveBlockingService(this),
       AdminService.BlockingInterface.class));
     return bssi;
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  protected @interface QosPriority {
-    int priority() default HConstants.NORMAL_QOS;
   }
 
   public InetSocketAddress getSocketAddress() {
@@ -1463,6 +1510,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @param request the request
    * @throws ServiceException
    */
+  @Override
   public WarmupRegionResponse warmupRegion(final RpcController controller,
       final WarmupRegionRequest request) throws ServiceException {
 
@@ -1472,6 +1520,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     WarmupRegionResponse response = WarmupRegionResponse.getDefaultInstance();
 
     try {
+      checkOpen();
       String encodedName = region.getEncodedName();
       byte[] encodedNameBytes = region.getEncodedNameAsBytes();
       final Region onlineRegion = regionServer.getFromOnlineRegions(encodedName);
@@ -1782,11 +1831,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       final ClientProtos.CoprocessorServiceCall serviceCall) throws IOException {
     // ignore the passed in controller (from the serialized call)
     ServerRpcController execController = new ServerRpcController();
-    Message result = region.execService(execController, serviceCall);
-    if (execController.getFailedOn() != null) {
-      throw execController.getFailedOn();
-    }
-    return result;
+    return region.execService(execController, serviceCall);
   }
 
   /**
@@ -1902,6 +1947,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         region = getRegion(regionAction.getRegion());
         quota = getQuotaManager().checkQuota(region, regionAction.getActionList());
       } catch (IOException e) {
+        rpcServer.getMetrics().exception(e);
         regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         responseBuilder.addRegionActionResult(regionActionResultBuilder.build());
         continue;  // For this region it's a failure.
@@ -1932,6 +1978,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             processed = Boolean.TRUE;
           }
         } catch (IOException e) {
+          rpcServer.getMetrics().exception(e);
           // As it's atomic, we may expect it's a global failure.
           regionActionResultBuilder.setException(ResponseConverter.buildException(e));
         }
@@ -2186,13 +2233,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             rsh = scanners.get(scannerName);
           }
           if (rsh != null) {
-            if (request.getNextCallSeq() != rsh.nextCallSeq) {
-              throw new OutOfOrderScannerNextException("Expected nextCallSeq: " + rsh.nextCallSeq
+            if (request.getNextCallSeq() != rsh.getNextCallSeq()) {
+              throw new OutOfOrderScannerNextException(
+                "Expected nextCallSeq: " + rsh.getNextCallSeq()
                 + " But the nextCallSeq got from client: " + request.getNextCallSeq() +
                 "; request=" + TextFormat.shortDebugString(request));
             }
             // Increment the nextCallSeq value which is the next expected from client.
-            rsh.nextCallSeq++;
+            rsh.incNextCallSeq();
           }
         }
         try {
@@ -2226,7 +2274,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             if (maxResultSize <= 0) {
               maxResultSize = maxQuotaResultSize;
             }
-            List<Cell> values = new ArrayList<Cell>();
+            // This is cells inside a row. Default size is 10 so if many versions or many cfs,
+            // then we'll resize. Resizings show in profiler. Set it higher than 10. For now
+            // arbitrary 32. TODO: keep record of general size of results being returned.
+            List<Cell> values = new ArrayList<Cell>(32);
             region.startRegionOperation(Operation.SCAN);
             try {
               int i = 0;
@@ -2234,6 +2285,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 boolean stale = (region.getRegionInfo().getReplicaId() != 0);
                 boolean clientHandlesPartials =
                     request.hasClientHandlesPartials() && request.getClientHandlesPartials();
+                boolean clientHandlesHeartbeats =
+                    request.hasClientHandlesHeartbeats() && request.getClientHandlesHeartbeats();
 
                 // On the server side we must ensure that the correct ordering of partial results is
                 // returned to the client to allow them to properly reconstruct the partial results.
@@ -2245,23 +2298,52 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     clientHandlesPartials && serverGuaranteesOrderOfPartials && !isSmallScan;
                 boolean moreRows = false;
 
+                // Heartbeat messages occur when the processing of the ScanRequest is exceeds a
+                // certain time threshold on the server. When the time threshold is exceeded, the
+                // server stops the scan and sends back whatever Results it has accumulated within
+                // that time period (may be empty). Since heartbeat messages have the potential to
+                // create partial Results (in the event that the timeout occurs in the middle of a
+                // row), we must only generate heartbeat messages when the client can handle both
+                // heartbeats AND partials
+                boolean allowHeartbeatMessages = clientHandlesHeartbeats && allowPartialResults;
+
+                // Default value of timeLimit is negative to indicate no timeLimit should be
+                // enforced.
+                long timeLimit = -1;
+
+                // Set the time limit to be half of the more restrictive timeout value (one of the
+                // timeout values must be positive). In the event that both values are positive, the
+                // more restrictive of the two is used to calculate the limit.
+                if (allowHeartbeatMessages && (scannerLeaseTimeoutPeriod > 0 || rpcTimeout > 0)) {
+                  long timeLimitDelta;
+                  if (scannerLeaseTimeoutPeriod > 0 && rpcTimeout > 0) {
+                    timeLimitDelta = Math.min(scannerLeaseTimeoutPeriod, rpcTimeout);
+                  } else {
+                    timeLimitDelta =
+                        scannerLeaseTimeoutPeriod > 0 ? scannerLeaseTimeoutPeriod : rpcTimeout;
+                  }
+                  // Use half of whichever timeout value was more restrictive... But don't allow
+                  // the time limit to be less than the allowable minimum (could cause an
+                  // immediatate timeout before scanning any data).
+                  timeLimitDelta = Math.max(timeLimitDelta / 2, minimumScanTimeLimitDelta);
+                  timeLimit = System.currentTimeMillis() + timeLimitDelta;
+                }
+
                 final LimitScope sizeScope =
                     allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
+                final LimitScope timeScope =
+                    allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
                 // Configure with limits for this RPC. Set keep progress true since size progress
                 // towards size limit should be kept between calls to nextRaw
                 ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
                 contextBuilder.setSizeLimit(sizeScope, maxResultSize);
                 contextBuilder.setBatchLimit(scanner.getBatch());
+                contextBuilder.setTimeLimit(timeScope, timeLimit);
                 ScannerContext scannerContext = contextBuilder.build();
 
+                boolean limitReached = false;
                 while (i < rows) {
-                  // Stop collecting results if we have exceeded maxResultSize
-                  if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS)) {
-                    builder.setMoreResultsInRegion(true);
-                    break;
-                  }
-
                   // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
                   // batch limit is a limit on the number of cells per Result. Thus, if progress is
                   // being tracked (i.e. scannerContext.keepProgress() is true) then we need to
@@ -2280,14 +2362,31 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     results.add(Result.create(values, null, stale, partial));
                     i++;
                   }
-                  if (!moreRows) {
+
+                  boolean sizeLimitReached = scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS);
+                  boolean timeLimitReached = scannerContext.checkTimeLimit(LimitScope.BETWEEN_ROWS);
+                  boolean rowLimitReached = i >= rows;
+                  limitReached = sizeLimitReached || timeLimitReached || rowLimitReached;
+
+                  if (limitReached || !moreRows) {
+                    if (LOG.isTraceEnabled()) {
+                      LOG.trace("Done scanning. limitReached: " + limitReached + " moreRows: "
+                          + moreRows + " scannerContext: " + scannerContext);
+                    }
+                    // We only want to mark a ScanResponse as a heartbeat message in the event that
+                    // there are more values to be read server side. If there aren't more values,
+                    // marking it as a heartbeat is wasteful because the client will need to issue
+                    // another ScanRequest only to realize that they already have all the values
+                    if (moreRows) {
+                      // Heartbeat messages occur when the time limit has been reached.
+                      builder.setHeartbeatMessage(timeLimitReached);
+                    }
                     break;
                   }
                   values.clear();
                 }
 
-                if (scannerContext.checkSizeLimit(LimitScope.BETWEEN_ROWS) || i >= rows || 
-                    moreRows) {
+                if (limitReached || moreRows) {
                   // We stopped prematurely
                   builder.setMoreResultsInRegion(true);
                 } else {
@@ -2321,6 +2420,14 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           } else {
             addResults(builder, results, controller, RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()));
           }
+        } catch (IOException e) {
+          // if we have an exception on scanner next and we are using the callSeq
+          // we should rollback because the client will retry with the same callSeq
+          // and get an OutOfOrderScannerNextException if we don't do so.
+          if (rsh != null && request.hasNextCallSeq()) {
+            rsh.rollbackNextCallSeq();
+          }
+          throw e;
         } finally {
           // We're done. On way out re-add the above removed lease.
           // Adding resets expiration time on lease.

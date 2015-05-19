@@ -28,6 +28,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -66,10 +68,11 @@ public class TestWithDisabledAuthorization {
 
   private static User SUPERUSER;
   private static User USER_RW;
+  private static Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    Configuration conf = TEST_UTIL.getConfiguration();
+    conf = TEST_UTIL.getConfiguration();
 
     // Set up superuser
     SecureTestUtil.configureSuperuser(conf);
@@ -92,10 +95,10 @@ public class TestWithDisabledAuthorization {
     // Define test labels
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.addLabels(TEST_UTIL.getConfiguration(),
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn,
             new String[] { SECRET, CONFIDENTIAL, PRIVATE });
-          VisibilityClient.setAuths(TEST_UTIL.getConfiguration(),
+          VisibilityClient.setAuths(conn,
             new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
@@ -117,8 +120,8 @@ public class TestWithDisabledAuthorization {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.setAuths(TEST_UTIL.getConfiguration(),
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.setAuths(conn,
             new String[] { SECRET, CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {
@@ -132,8 +135,8 @@ public class TestWithDisabledAuthorization {
       new PrivilegedExceptionAction<List<String>>() {
         public List<String> run() throws Exception {
           GetAuthsResponse authsResponse = null;
-          try {
-            authsResponse = VisibilityClient.getAuths(TEST_UTIL.getConfiguration(),
+          try (Connection conn = ConnectionFactory.createConnection(conf)) {
+            authsResponse = VisibilityClient.getAuths(conn,
               USER_RW.getShortName());
           } catch (Throwable t) {
             fail("Should not have failed");
@@ -153,8 +156,8 @@ public class TestWithDisabledAuthorization {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.clearAuths(TEST_UTIL.getConfiguration(),
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.clearAuths(conn,
             new String[] { SECRET },
             USER_RW.getShortName());
         } catch (Throwable t) {
@@ -170,8 +173,8 @@ public class TestWithDisabledAuthorization {
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       public Void run() throws Exception {
-        try {
-          VisibilityClient.clearAuths(TEST_UTIL.getConfiguration(),
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.clearAuths(conn,
             new String[] { CONFIDENTIAL },
             USER_RW.getShortName());
         } catch (Throwable t) {

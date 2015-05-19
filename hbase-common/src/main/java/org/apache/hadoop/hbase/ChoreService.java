@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -54,7 +53,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class ChoreService implements ChoreServicer {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ChoreService.class);
 
   /**
    * The minimum number of threads in the core pool of the underlying ScheduledThreadPoolExecutor
@@ -298,9 +297,10 @@ public class ChoreService implements ChoreServicer {
    * after this method has been called (i.e. future scheduling attempts will fail).
    */
   public void shutdown() {
-    List<Runnable> ongoing = scheduler.shutdownNow();
+    scheduler.shutdownNow();
     if (LOG.isInfoEnabled()) {
-      LOG.info("Chore service for: " + coreThreadPoolPrefix + " had " + ongoing + " on shutdown");
+      LOG.info("Chore service for: " + coreThreadPoolPrefix + " had " + scheduledChores.keySet()
+          + " on shutdown");
     }
     cancelAllChores(true);
     scheduledChores.clear();

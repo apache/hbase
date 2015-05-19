@@ -41,7 +41,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, SmallTests.class})
 public class TestHTableDescriptor {
-  final static Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
+  private static final Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
 
   @Test
   public void testPb() throws DeserializationException, IOException {

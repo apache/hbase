@@ -85,15 +85,6 @@ public class ClusterStatus extends VersionedWritable {
   private String[] masterCoprocessors;
   private Boolean balancerOn;
 
-  /**
-   * Constructor, for Writable
-   * @deprecated Used by Writables and Writables are going away.
-   */
-  @Deprecated
-  public ClusterStatus() {
-    super();
-  }
-
   public ClusterStatus(final String hbaseVersion, final String clusterid,
       final Map<ServerName, ServerLoad> servers,
       final Collection<ServerName> deadServers,
@@ -216,17 +207,6 @@ public class ClusterStatus extends VersionedWritable {
   //
   // Getters
   //
-
-  /**
-   * Returns detailed region server information: A list of
-   * {@link ServerName}.
-   * @return region server information
-   * @deprecated Use {@link #getServers()}
-   */
-  @Deprecated
-  public Collection<ServerName> getServerInfo() {
-    return getServers();
-  }
 
   public Collection<ServerName> getServers() {
     if (liveServers == null) {

@@ -528,7 +528,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
             throw new IllegalStateException("No live regionservers");
           }
           int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-                                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+              HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
           int totalNumberOfRegions = numberOfServers * regionsPerServer;
           LOG.info("Number of live regionservers: " + numberOfServers + ", " +
               "pre-splitting table into " + totalNumberOfRegions + " regions " +

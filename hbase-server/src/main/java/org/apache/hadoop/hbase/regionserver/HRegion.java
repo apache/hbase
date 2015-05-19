@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompoundConfiguration;
@@ -128,6 +129,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -195,7 +197,7 @@ import com.google.protobuf.TextFormat;
 
 @InterfaceAudience.Private
 public class HRegion implements HeapSize, PropagatingConfigurationObserver, Region {
-  public static final Log LOG = LogFactory.getLog(HRegion.class);
+  private static final Log LOG = LogFactory.getLog(HRegion.class);
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
@@ -290,7 +292,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final HRegionFileSystem fs;
   protected final Configuration conf;
   private final Configuration baseConf;
-  private final KeyValue.KVComparator comparator;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
 
@@ -349,7 +350,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private boolean disallowWritesInRecovering = false;
 
   // when a region is in recovering state, it can only accept writes not reads
-  private volatile boolean isRecovering = false;
+  private volatile boolean recovering = false;
 
   private volatile Optional<ConfigurationManager> configurationManager;
 
@@ -639,7 +640,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       throw new IllegalArgumentException("Need original base configuration");
     }
 
-    this.comparator = fs.getRegionInfo().getComparator();
     this.wal = wal;
     this.fs = fs;
 
@@ -707,7 +707,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Map<String, Region> recoveringRegions = rsServices.getRecoveringRegions();
       String encodedName = getRegionInfo().getEncodedName();
       if (recoveringRegions != null && recoveringRegions.containsKey(encodedName)) {
-        this.isRecovering = true;
+        this.recovering = true;
         recoveringRegions.put(encodedName, this);
       }
     } else {
@@ -837,7 +837,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // overlaps used sequence numbers
     if (this.writestate.writesEnabled) {
       nextSeqid = WALSplitter.writeRegionSequenceIdFile(this.fs.getFileSystem(), this.fs
-          .getRegionDir(), nextSeqid, (this.isRecovering ? (this.flushPerChanges + 10000000) : 1));
+          .getRegionDir(), nextSeqid, (this.recovering ? (this.flushPerChanges + 10000000) : 1));
     } else {
       nextSeqid++;
     }
@@ -1104,7 +1104,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public long getNumMutationsWithoutWAL() {
     return numMutationsWithoutWAL.get();
   }
-  
+
   @Override
   public long getDataInMemoryWithoutWAL() {
     return dataInMemoryWithoutWAL.get();
@@ -1149,7 +1149,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * Reset recovering state of current region
    */
   public void setRecovering(boolean newState) {
-    boolean wasRecovering = this.isRecovering;
+    boolean wasRecovering = this.recovering;
     // before we flip the recovering switch (enabling reads) we should write the region open
     // event to WAL if needed
     if (wal != null && getRegionServerServices() != null && !writestate.readOnly
@@ -1190,8 +1190,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
 
-    this.isRecovering = newState;
-    if (wasRecovering && !isRecovering) {
+    this.recovering = newState;
+    if (wasRecovering && !recovering) {
       // Call only when wal replay is over.
       coprocessorHost.postLogReplay();
     }
@@ -1199,7 +1199,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public boolean isRecovering() {
-    return this.isRecovering;
+    return this.recovering;
   }
 
   @Override
@@ -1642,13 +1642,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
     }
     return size;
-  }
-
-  /**
-   * @return KeyValue Comparator
-   */
-  public KeyValue.KVComparator getComparator() {
-    return this.comparator;
   }
 
   /*
@@ -2368,7 +2361,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     LOG.info(msg);
     status.setStatus(msg);
 
-    return new FlushResultImpl(compactionRequested ? 
+    return new FlushResultImpl(compactionRequested ?
         FlushResult.Result.FLUSHED_COMPACTION_NEEDED :
           FlushResult.Result.FLUSHED_NO_COMPACTION_NEEDED,
         flushOpSeqId);
@@ -2879,6 +2872,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           } else {
             prepareDelete((Delete) mutation);
           }
+          checkRow(mutation.getRow(), "doMiniBatchMutation");
         } catch (NoSuchColumnFamilyException nscf) {
           LOG.warn("No such column family in batch mutation", nscf);
           batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
@@ -2889,6 +2883,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           LOG.warn("Batch Mutation did not pass sanity check", fsce);
           batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
               OperationStatusCode.SANITY_CHECK_FAILURE, fsce.getMessage());
+          lastIndexExclusive++;
+          continue;
+        } catch (WrongRegionException we) {
+          LOG.warn("Batch mutation had a row that does not belong to this region", we);
+          batchOp.retCodeDetails[lastIndexExclusive] = new OperationStatus(
+              OperationStatusCode.SANITY_CHECK_FAILURE, we.getMessage());
           lastIndexExclusive++;
           continue;
         }
@@ -4092,6 +4092,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
         store.replayCompactionMarker(compaction, pickCompactionFiles, removeFiles);
         logRegionFiles();
+      } catch (FileNotFoundException ex) {
+        LOG.warn(getRegionInfo().getEncodedName() + " : "
+            + "At least one of the store files in compaction: "
+            + TextFormat.shortDebugString(compaction)
+            + " doesn't exist any more. Skip loading the file(s)", ex);
       } finally {
         closeRegionOperation(Operation.REPLAY_EVENT);
       }
@@ -4360,15 +4365,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // flushes from ALL stores.
         getMVCC().advanceMemstoreReadPointIfNeeded(flush.getFlushSequenceNumber());
 
-        // C. Finally notify anyone waiting on memstore to clear:
-        // e.g. checkResources().
-        synchronized (this) {
-          notifyAll(); // FindBugs NN_NAKED_NOTIFY
-        }
-      } finally {
+      } catch (FileNotFoundException ex) {
+        LOG.warn(getRegionInfo().getEncodedName() + " : "
+            + "At least one of the store files in flush: " + TextFormat.shortDebugString(flush)
+            + " doesn't exist any more. Skip loading the file(s)", ex);
+      }
+      finally {
         status.cleanup();
         writestate.notifyAll();
       }
+    }
+
+    // C. Finally notify anyone waiting on memstore to clear:
+    // e.g. checkResources().
+    synchronized (this) {
+      notifyAll(); // FindBugs NN_NAKED_NOTIFY
     }
   }
 
@@ -4408,6 +4419,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             + Bytes.toString(family) + " but no associated flush context. Ignoring");
         continue;
       }
+
       ctx.replayFlush(flushFiles, dropMemstoreSnapshot); // replay the flush
 
       // Record latest flush time
@@ -4550,7 +4562,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           long storeSeqId = store.getMaxSequenceId();
           List<String> storeFiles = storeDescriptor.getStoreFileList();
-          store.refreshStoreFiles(storeFiles); // replace the files with the new ones
+          try {
+            store.refreshStoreFiles(storeFiles); // replace the files with the new ones
+          } catch (FileNotFoundException ex) {
+            LOG.warn(getRegionInfo().getEncodedName() + " : "
+                    + "At least one of the store files: " + storeFiles
+                    + " doesn't exist any more. Skip loading the file(s)", ex);
+            continue;
+          }
           if (store.getMaxSequenceId() != storeSeqId) {
             // Record latest flush time if we picked up new files
             lastStoreFlushTimeMap.put(store, EnvironmentEdgeManager.currentTime());
@@ -4713,7 +4732,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public boolean refreshStoreFiles() throws IOException {
-    if (ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
+    return refreshStoreFiles(false);
+  }
+
+  protected boolean refreshStoreFiles(boolean force) throws IOException {
+    if (!force && ServerRegionReplicaUtil.isDefaultReplica(this.getRegionInfo())) {
       return false; // if primary nothing to do
     }
 
@@ -4947,7 +4970,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * started (the calling thread has already acquired the region-close-guard lock).
    */
   protected RowLock getRowLockInternal(byte[] row, boolean waitForLock) throws IOException {
-    checkRow(row, "row lock");
     HashedBytes rowKey = new HashedBytes(row);
     RowLockContext rowLockContext = new RowLockContext(rowKey);
 
@@ -5202,14 +5224,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      * If the joined heap data gathering is interrupted due to scan limits, this will
      * contain the row for which we are populating the values.*/
     protected Cell joinedContinuationRow = null;
-    protected final byte[] stopRow;
-    private final FilterWrapper filter;
-    private ScannerContext defaultScannerContext;
-    protected int isScan;
     private boolean filterClosed = false;
-    private long readPt;
-    private long maxResultSize;
-    protected HRegion region;
+
+    protected final int isScan;
+    protected final byte[] stopRow;
+    protected final HRegion region;
+    protected final CellComparator comparator;
+
+    private final long readPt;
+    private final long maxResultSize;
+    private final ScannerContext defaultScannerContext;
+    private final FilterWrapper filter;
 
     @Override
     public HRegionInfo getRegionInfo() {
@@ -5218,7 +5243,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
         throws IOException {
-
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
       if (scan.hasFilter()) {
@@ -5226,6 +5250,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } else {
         this.filter = null;
       }
+      this.comparator = region.getCellCompartor();
 
       /**
        * By default, calls to next/nextRaw must enforce the batch limit. Thus, construct a default
@@ -5259,10 +5284,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         scanners.addAll(additionalScanners);
       }
 
-      for (Map.Entry<byte[], NavigableSet<byte[]>> entry :
-          scan.getFamilyMap().entrySet()) {
+      for (Map.Entry<byte[], NavigableSet<byte[]>> entry : scan.getFamilyMap().entrySet()) {
         Store store = stores.get(entry.getKey());
-        KeyValueScanner scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+        KeyValueScanner scanner;
+        try {
+          scanner = store.getScanner(scan, entry.getValue(), this.readPt);
+        } catch (FileNotFoundException e) {
+          throw handleFileNotFound(e);
+        }
         if (this.filter == null || !scan.doLoadColumnFamiliesOnDemand()
           || this.filter.isFamilyEssential(entry.getKey())) {
           scanners.add(scanner);
@@ -5276,9 +5305,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected void initializeKVHeap(List<KeyValueScanner> scanners,
         List<KeyValueScanner> joinedScanners, HRegion region)
         throws IOException {
-      this.storeHeap = new KeyValueHeap(scanners, region.comparator);
+      this.storeHeap = new KeyValueHeap(scanners, comparator);
       if (!joinedScanners.isEmpty()) {
-        this.joinedHeap = new KeyValueHeap(joinedScanners, region.comparator);
+        this.joinedHeap = new KeyValueHeap(joinedScanners, comparator);
       }
     }
 
@@ -5316,8 +5345,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     @Override
-    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
-        throws IOException {
+    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext) throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -5406,26 +5434,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       boolean tmpKeepProgress = scannerContext.getKeepProgress();
       // Scanning between column families and thus the scope is between cells
       LimitScope limitScope = LimitScope.BETWEEN_CELLS;
-      do {
-        // We want to maintain any progress that is made towards the limits while scanning across
-        // different column families. To do this, we toggle the keep progress flag on during calls
-        // to the StoreScanner to ensure that any progress made thus far is not wiped away.
-        scannerContext.setKeepProgress(true);
-        heap.next(results, scannerContext);
-        scannerContext.setKeepProgress(tmpKeepProgress);
+      try {
+        do {
+          // We want to maintain any progress that is made towards the limits while scanning across
+          // different column families. To do this, we toggle the keep progress flag on during calls
+          // to the StoreScanner to ensure that any progress made thus far is not wiped away.
+          scannerContext.setKeepProgress(true);
+          heap.next(results, scannerContext);
+          scannerContext.setKeepProgress(tmpKeepProgress);
 
-        nextKv = heap.peek();
-        moreCellsInRow = moreCellsInRow(nextKv, currentRow, offset, length);
+          nextKv = heap.peek();
+          moreCellsInRow = moreCellsInRow(nextKv, currentRow, offset, length);
 
-        if (scannerContext.checkBatchLimit(limitScope)) {
-          return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
-        } else if (scannerContext.checkSizeLimit(limitScope)) {
-          ScannerContext.NextState state =
+          if (scannerContext.checkBatchLimit(limitScope)) {
+            return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
+          } else if (scannerContext.checkSizeLimit(limitScope)) {
+            ScannerContext.NextState state =
               moreCellsInRow ? NextState.SIZE_LIMIT_REACHED_MID_ROW : NextState.SIZE_LIMIT_REACHED;
-          return scannerContext.setScannerState(state).hasMoreValues();
-        }
-      } while (moreCellsInRow);
-
+            return scannerContext.setScannerState(state).hasMoreValues();
+          } else if (scannerContext.checkTimeLimit(limitScope)) {
+            ScannerContext.NextState state =
+              moreCellsInRow ? NextState.TIME_LIMIT_REACHED_MID_ROW : NextState.TIME_LIMIT_REACHED;
+            return scannerContext.setScannerState(state).hasMoreValues();
+          }
+        } while (moreCellsInRow);
+      } catch (FileNotFoundException e) {
+        throw handleFileNotFound(e);
+      }
       return nextKv != null;
     }
 
@@ -5471,6 +5506,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // progress.
       int initialBatchProgress = scannerContext.getBatchProgress();
       long initialSizeProgress = scannerContext.getSizeProgress();
+      long initialTimeProgress = scannerContext.getTimeProgress();
 
       // The loop here is used only when at some point during the next we determine
       // that due to effects of filters or otherwise, we have an empty row in the result.
@@ -5482,7 +5518,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // progress should be kept.
         if (scannerContext.getKeepProgress()) {
           // Progress should be kept. Reset to initial values seen at start of method invocation.
-          scannerContext.setProgress(initialBatchProgress, initialSizeProgress);
+          scannerContext
+              .setProgress(initialBatchProgress, initialSizeProgress, initialTimeProgress);
         } else {
           scannerContext.clearProgress();
         }
@@ -5530,6 +5567,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 + " formed. Changing scope of limits that may create partials");
           }
           scannerContext.setSizeLimitScope(LimitScope.BETWEEN_ROWS);
+          scannerContext.setTimeLimitScope(LimitScope.BETWEEN_ROWS);
         }
 
         // Check if we were getting data from the joinedHeap and hit the limit.
@@ -5565,6 +5603,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
             return true;
           }
+
           Cell nextKv = this.storeHeap.peek();
           stopRow = nextKv == null ||
               isStopRow(nextKv.getRowArray(), nextKv.getRowOffset(), nextKv.getRowLength());
@@ -5578,12 +5617,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             ret = filter.filterRowCellsWithRet(results);
 
             // We don't know how the results have changed after being filtered. Must set progress
-            // according to contents of results now.
+            // according to contents of results now. However, a change in the results should not
+            // affect the time progress. Thus preserve whatever time progress has been made
+            long timeProgress = scannerContext.getTimeProgress();
             if (scannerContext.getKeepProgress()) {
-              scannerContext.setProgress(initialBatchProgress, initialSizeProgress);
+              scannerContext.setProgress(initialBatchProgress, initialSizeProgress,
+                initialTimeProgress);
             } else {
               scannerContext.clearProgress();
             }
+            scannerContext.setTimeProgress(timeProgress);
             scannerContext.incrementBatchProgress(results.size());
             for (Cell cell : results) {
               scannerContext.incrementSizeProgress(CellUtil.estimatedHeapSizeOfWithoutTags(cell));
@@ -5608,14 +5651,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // These values are not needed for filter to work, so we postpone their
           // fetch to (possibly) reduce amount of data loads from disk.
           if (this.joinedHeap != null) {
-            Cell nextJoinedKv = joinedHeap.peek();
-            // If joinedHeap is pointing to some other row, try to seek to a correct one.
-            boolean mayHaveData = (nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv,
-                currentRow, offset, length))
-                || (this.joinedHeap.requestSeek(
-                    KeyValueUtil.createFirstOnRow(currentRow, offset, length), true, true)
-                    && joinedHeap.peek() != null && CellUtil.matchingRow(joinedHeap.peek(),
-                    currentRow, offset, length));
+            boolean mayHaveData = joinedHeapMayHaveData(currentRow, offset, length);
             if (mayHaveData) {
               joinedContinuationRow = current;
               populateFromJoinedHeap(results, scannerContext);
@@ -5659,6 +5695,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     /**
+     * @param currentRow
+     * @param offset
+     * @param length
+     * @return true when the joined heap may have data for the current row
+     * @throws IOException
+     */
+    private boolean joinedHeapMayHaveData(byte[] currentRow, int offset, short length)
+        throws IOException {
+      Cell nextJoinedKv = joinedHeap.peek();
+      boolean matchCurrentRow =
+          nextJoinedKv != null && CellUtil.matchingRow(nextJoinedKv, currentRow, offset, length);
+      boolean matchAfterSeek = false;
+
+      // If the next value in the joined heap does not match the current row, try to seek to the
+      // correct row
+      if (!matchCurrentRow) {
+        Cell firstOnCurrentRow = KeyValueUtil.createFirstOnRow(currentRow, offset, length);
+        boolean seekSuccessful = this.joinedHeap.requestSeek(firstOnCurrentRow, true, true);
+        matchAfterSeek =
+            seekSuccessful && joinedHeap.peek() != null
+                && CellUtil.matchingRow(joinedHeap.peek(), currentRow, offset, length);
+      }
+
+      return matchCurrentRow || matchAfterSeek;
+    }
+
+    /**
      * This function is to maintain backward compatibility for 0.94 filters. HBASE-6429 combines
      * both filterRow & filterRow(List<KeyValue> kvs) functions. While 0.94 code or older, it may
      * not implement hasFilterRow as HBase-6429 expects because 0.94 hasFilterRow() only returns
@@ -5694,6 +5757,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected boolean isStopRow(byte[] currentRow, int offset, short length) {
       return currentRow == null ||
           (stopRow != null &&
+          // TODO : currentRow can be tracked as cell rather than byte[]
           comparator.compareRows(stopRow, 0, stopRow.length,
             currentRow, offset, length) <= isScan);
     }
@@ -5724,17 +5788,41 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       boolean result = false;
       startRegionOperation();
+      KeyValue kv = KeyValueUtil.createFirstOnRow(row);
       try {
-        KeyValue kv = KeyValueUtil.createFirstOnRow(row);
         // use request seek to make use of the lazy seek option. See HBASE-5520
         result = this.storeHeap.requestSeek(kv, true, true);
         if (this.joinedHeap != null) {
           result = this.joinedHeap.requestSeek(kv, true, true) || result;
         }
+      } catch (FileNotFoundException e) {
+        throw handleFileNotFound(e);
       } finally {
         closeRegionOperation();
       }
       return result;
+    }
+
+    private IOException handleFileNotFound(FileNotFoundException fnfe) throws IOException {
+      // tries to refresh the store files, otherwise shutdown the RS.
+      // TODO: add support for abort() of a single region and trigger reassignment.
+      try {
+        region.refreshStoreFiles(true);
+        return new IOException("unable to read store file");
+      } catch (IOException e) {
+        String msg = "a store file got lost: " + fnfe.getMessage();
+        LOG.error("unable to refresh store files", e);
+        abortRegionServer(msg);
+        return new NotServingRegionException(
+          getRegionInfo().getRegionNameAsString() + " is closing");
+      }
+    }
+
+    private void abortRegionServer(String msg) throws IOException {
+      if (rsServices instanceof HRegionServer) {
+        ((HRegionServer)rsServices).abort(msg);
+      }
+      throw new UnsupportedOperationException("not able to abort RS after: " + msg);
     }
   }
 
@@ -6020,7 +6108,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.openSeqNum = initialize(reporter);
     this.setSequenceId(openSeqNum);
     if (wal != null && getRegionServerServices() != null && !writestate.readOnly
-        && !isRecovering) {
+        && !recovering) {
       // Only write the region open event marker to WAL if (1) we are not read-only
       // (2) dist log replay is off or we are not recovering. In case region is
       // recovering, the open event will be written at setRecovering(false)
@@ -6060,8 +6148,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   private void checkCompressionCodecs() throws IOException {
     for (HColumnDescriptor fam: this.htableDescriptor.getColumnFamilies()) {
-      CompressionTest.testCompression(fam.getCompression());
-      CompressionTest.testCompression(fam.getCompactionCompression());
+      CompressionTest.testCompression(fam.getCompressionType());
+      CompressionTest.testCompression(fam.getCompactionCompressionType());
     }
   }
 
@@ -7119,7 +7207,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      45 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      44 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 
@@ -7177,8 +7265,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
      */
     Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
-      LOG.error("Coprocessor service "+serviceDesc.getFullName()+
-          " already registered, rejecting request from "+instance
+      LOG.error("Coprocessor service " + serviceDesc.getFullName() +
+              " already registered, rejecting request from " + instance
       );
       return false;
     }
@@ -7232,6 +7320,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     if (coprocessorHost != null) {
       coprocessorHost.postEndpointInvocation(service, methodName, request, responseBuilder);
+    }
+
+    IOException exception = ResponseConverter.getControllerException(controller);
+    if (exception != null) {
+      throw exception;
     }
 
     return responseBuilder.build();
@@ -7808,5 +7901,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Store s : this.stores.values()) {
       configurationManager.get().deregisterObserver(s);
     }
+  }
+
+  @Override
+  public CellComparator getCellCompartor() {
+    return this.getRegionInfo().isMetaRegion() ? CellComparator.META_COMPARATOR
+        : CellComparator.COMPARATOR;
   }
 }

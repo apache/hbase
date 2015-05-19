@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 class NamespaceStateManager {
 
-  private static Log LOG = LogFactory.getLog(NamespaceStateManager.class);
+  private static final Log LOG = LogFactory.getLog(NamespaceStateManager.class);
   private ConcurrentMap<String, NamespaceTableAndRegionInfo> nsStateCache;
   private MasterServices master;
   private volatile boolean initialized = false;
@@ -104,6 +104,33 @@ class NamespaceStateManager {
       }
     }
     return true;
+  }
+  
+  /**
+   * Check and update region count for an existing table. To handle scenarios like restore snapshot
+   * @param TableName name of the table for region count needs to be checked and updated
+   * @param incr count of regions
+   * @throws QuotaExceededException if quota exceeds for the number of regions allowed in a
+   *           namespace
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  synchronized void checkAndUpdateNamespaceRegionCount(TableName name, int incr) 
+      throws IOException {
+    String namespace = name.getNamespaceAsString();
+    NamespaceDescriptor nspdesc = getNamespaceDescriptor(namespace);
+    if (nspdesc != null) {
+      NamespaceTableAndRegionInfo currentStatus = getState(namespace);
+      int regionCountOfTable = currentStatus.getRegionCountOfTable(name);
+      if ((currentStatus.getRegionCount() - regionCountOfTable + incr) > TableNamespaceManager
+          .getMaxRegions(nspdesc)) {
+        throw new QuotaExceededException("The table " + name.getNameAsString()
+            + " region count cannot be updated as it would exceed maximum number "
+            + "of regions allowed in the namespace.  The total number of regions permitted is "
+            + TableNamespaceManager.getMaxRegions(nspdesc));
+      }
+      currentStatus.removeTable(name);
+      currentStatus.addTable(name, incr);
+    }
   }
 
   private NamespaceDescriptor getNamespaceDescriptor(String namespaceAsString) {

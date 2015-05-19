@@ -51,7 +51,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
@@ -434,17 +433,6 @@ public class DeleteTableProcedure
 
   protected static void deleteTableStates(final MasterProcedureEnv env, final TableName tableName)
       throws IOException {
-    getMasterQuotaManager(env).removeTableFromNamespaceQuota(tableName);
-  }
-
-  private static MasterQuotaManager getMasterQuotaManager(final MasterProcedureEnv env)
-      throws IOException {
-    return ProcedureSyncWait.waitFor(env, "quota manager to be available",
-        new ProcedureSyncWait.Predicate<MasterQuotaManager>() {
-      @Override
-      public MasterQuotaManager evaluate() throws IOException {
-        return env.getMasterServices().getMasterQuotaManager();
-      }
-    });
+    ProcedureSyncWait.getMasterQuotaManager(env).removeTableFromNamespaceQuota(tableName);
   }
 }

@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -185,7 +186,7 @@ public class TestDataBlockEncoders {
                           .withIncludesTags(includesTags)
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(encodedBuffer);
       encodedSeekers.add(seeker);
@@ -251,7 +252,7 @@ public class TestDataBlockEncoders {
                           .withIncludesTags(includesTags)
                           .withCompression(Compression.Algorithm.NONE)
                           .build();
-      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(KeyValue.COMPARATOR,
+      DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
       seeker.setCurrentBuffer(encodedBuffer);
       int i = 0;

@@ -69,7 +69,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestRegionPlacement {
-  final static Log LOG = LogFactory.getLog(TestRegionPlacement.class);
+  private static final Log LOG = LogFactory.getLog(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static int SLAVES = 10;
   private static Connection CONNECTION;

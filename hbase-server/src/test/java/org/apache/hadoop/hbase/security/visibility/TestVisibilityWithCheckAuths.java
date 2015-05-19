@@ -95,8 +95,8 @@ public class TestVisibilityWithCheckAuths {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { TOPSECRET };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }
@@ -112,8 +112,8 @@ public class TestVisibilityWithCheckAuths {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { TOPSECRET },
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
               USER.getShortName());
         } catch (Throwable e) {
         }
@@ -158,8 +158,8 @@ public class TestVisibilityWithCheckAuths {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { TOPSECRET },
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { TOPSECRET },
               USER.getShortName());
         } catch (Throwable e) {
         }

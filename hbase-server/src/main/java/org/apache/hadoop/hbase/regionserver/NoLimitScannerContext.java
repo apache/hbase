@@ -68,12 +68,32 @@ public class NoLimitScannerContext extends ScannerContext {
   }
 
   @Override
-  void setProgress(int batchProgress, long sizeProgress) {
+  void setTimeProgress(long timeProgress) {
+    // Do nothing. NoLimitScannerContext instances are immutable post-construction
+  }
+
+  @Override
+  void updateTimeProgress() {
+    // Do nothing. NoLimitScannerContext instances are immutable post-construction
+  }
+
+  @Override
+  void setProgress(int batchProgress, long sizeProgress, long timeProgress) {
+    // Do nothing. NoLimitScannerContext instances are immutable post-construction
+  }
+
+  @Override
+  void clearProgress() {
     // Do nothing. NoLimitScannerContext instances are immutable post-construction
   }
 
   @Override
   void setSizeLimitScope(LimitScope scope) {
+    // Do nothing. NoLimitScannerContext instances are immutable post-construction
+  }
+
+  @Override
+  void setTimeLimitScope(LimitScope scope) {
     // Do nothing. NoLimitScannerContext instances are immutable post-construction
   }
 
@@ -91,6 +111,12 @@ public class NoLimitScannerContext extends ScannerContext {
 
   @Override
   boolean checkSizeLimit(LimitScope checkerScope) {
+    // No limits can be specified, thus return false to indicate no limit has been reached.
+    return false;
+  }
+
+  @Override
+  boolean checkTimeLimit(LimitScope checkerScope) {
     // No limits can be specified, thus return false to indicate no limit has been reached.
     return false;
   }

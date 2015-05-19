@@ -60,7 +60,7 @@ public class HFilePerformanceEvaluation {
       "WARN");
   }
   
-  static final Log LOG =
+  private static final Log LOG =
     LogFactory.getLog(HFilePerformanceEvaluation.class.getName());
 
   static byte [] format(final int i) {
@@ -344,7 +344,7 @@ public class HFilePerformanceEvaluation {
       writer = HFile.getWriterFactoryNoCache(conf)
           .withPath(fs, mf)
           .withFileContext(hFileContext)
-          .withComparator(new KeyValue.RawBytesComparator())
+          .withComparator(CellComparator.COMPARATOR)
           .create();
     }
     

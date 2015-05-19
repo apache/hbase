@@ -36,7 +36,7 @@ import org.apache.hadoop.net.ScriptBasedMapping;
  */
 @InterfaceAudience.Private
 public class RackManager {
-  static final Log LOG = LogFactory.getLog(RackManager.class);
+  private static final Log LOG = LogFactory.getLog(RackManager.class);
   public static final String UNKNOWN_RACK = "Unknown Rack";
 
   private DNSToSwitchMapping switchMapping;

@@ -109,7 +109,7 @@ implements WALObserver {
       HRegionInfo info, WALKey logKey, WALEdit logEdit) throws IOException {
     boolean bypass = false;
     // check table name matches or not.
-    if (!Bytes.equals(info.getTableName(), this.tableName)) {
+    if (!Bytes.equals(info.getTable().toBytes(), this.tableName)) {
       return bypass;
     }
     preWALWriteCalled = true;

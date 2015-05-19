@@ -337,7 +337,8 @@ public class FuzzyRowFilter extends FilterBase {
    * @return greater byte array than given (row) which satisfies the fuzzy rule if it exists,
    *         null otherwise
    */
-  private static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
+  @VisibleForTesting
+  static byte[] getNextForFuzzyRule(boolean reverse, byte[] row, int offset, int length,
                                             byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     // To find out the next "smallest" byte array that satisfies fuzzy rule and "greater" than
     // the given one we do the following:
@@ -362,7 +363,7 @@ public class FuzzyRowFilter extends FilterBase {
     for (int i = 0; i < result.length; i++) {
       if (i >= fuzzyKeyMeta.length || fuzzyKeyMeta[i] == 1) {
         result[i] = row[offset + i];
-        if (!order.isMax(row[i])) {
+        if (!order.isMax(row[offset + i])) {
           // this is "non-fixed" position and is not at max value, hence we can increase it
           toInc = i;
         }

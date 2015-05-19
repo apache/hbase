@@ -53,7 +53,7 @@ import com.google.common.collect.TreeMultimap;
  */
 @InterfaceAudience.Private
 public class RegionSplitCalculator<R extends KeyRange> {
-  final static Log LOG = LogFactory.getLog(RegionSplitCalculator.class);
+  private static final Log LOG = LogFactory.getLog(RegionSplitCalculator.class);
 
   private final Comparator<R> rangeCmp;
   /**
@@ -115,6 +115,7 @@ public class RegionSplitCalculator<R extends KeyRange> {
     byte[] start = range.getStartKey();
     byte[] end = specialEndKey(range);
 
+    // No need to use Arrays.equals because ENDKEY is null
     if (end != ENDKEY && Bytes.compareTo(start, end) > 0) {
       // don't allow backwards edges
       LOG.debug("attempted to add backwards edge: " + Bytes.toString(start)

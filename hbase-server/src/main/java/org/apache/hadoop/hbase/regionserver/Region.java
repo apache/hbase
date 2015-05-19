@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -391,6 +392,9 @@ public interface Region extends ConfigurationObserver {
    * @throws IOException read exceptions
    */
   RegionScanner getScanner(Scan scan) throws IOException;
+
+  /** The comparator to be used with the region */
+  CellComparator getCellCompartor();
 
   /**
    * Perform one or more increment operations on a row.

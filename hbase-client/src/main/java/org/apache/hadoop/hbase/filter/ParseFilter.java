@@ -32,7 +32,6 @@ import java.util.Stack;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -294,7 +293,7 @@ public class ParseFilter {
  * @return an ArrayList containing the arguments of the filter in the filter string
  */
   public static ArrayList<byte []> getFilterArguments (byte [] filterStringAsByteArray) {
-    int argumentListStartIndex = KeyValue.getDelimiter(filterStringAsByteArray, 0,
+    int argumentListStartIndex = Bytes.searchDelimiterIndex(filterStringAsByteArray, 0,
                                                        filterStringAsByteArray.length,
                                                        ParseConstants.LPAREN);
     if (argumentListStartIndex == -1) {
@@ -818,7 +817,8 @@ public class ParseFilter {
  * @return the parsed arguments of the comparator as a 2D byte array
  */
   public static byte [][] parseComparator (byte [] comparator) {
-    final int index = KeyValue.getDelimiter(comparator, 0, comparator.length, ParseConstants.COLON);
+    final int index = Bytes.searchDelimiterIndex(comparator, 0, comparator.length,
+        ParseConstants.COLON);
     if (index == -1) {
       throw new IllegalArgumentException("Incorrect comparator");
     }

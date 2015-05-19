@@ -80,7 +80,7 @@ import com.google.protobuf.RpcCallback;
  */
 @InterfaceAudience.Private
 public class AsyncRpcChannel {
-  public static final Log LOG = LogFactory.getLog(AsyncRpcChannel.class.getName());
+  private static final Log LOG = LogFactory.getLog(AsyncRpcChannel.class.getName());
 
   private static final int MAX_SASL_RETRIES = 5;
 

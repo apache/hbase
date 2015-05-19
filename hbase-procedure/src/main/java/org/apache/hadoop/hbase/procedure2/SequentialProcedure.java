@@ -35,7 +35,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProc
  * execute() call once the child are finished. which means once the child
  * of a SequentialProcedure are completed the SequentialProcedure is completed too.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class SequentialProcedure<TEnvironment> extends Procedure<TEnvironment> {
   private boolean executed = false;

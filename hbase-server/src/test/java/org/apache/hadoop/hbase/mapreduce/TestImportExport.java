@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -281,7 +282,7 @@ public class TestImportExport {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(EXPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
-        .setKeepDeletedCells(true)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
     Table t = UTIL.getConnection().getTable(desc.getTableName());
@@ -312,7 +313,7 @@ public class TestImportExport {
     desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
-        .setKeepDeletedCells(true)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
     t.close();
@@ -347,7 +348,7 @@ public class TestImportExport {
     HTableDescriptor desc = new HTableDescriptor(EXPORT_TABLE);
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
-        .setKeepDeletedCells(true)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
 
@@ -383,7 +384,7 @@ public class TestImportExport {
     desc = new HTableDescriptor(TableName.valueOf(IMPORT_TABLE));
     desc.addFamily(new HColumnDescriptor(FAMILYA)
         .setMaxVersions(5)
-        .setKeepDeletedCells(true)
+        .setKeepDeletedCells(KeepDeletedCells.TRUE)
     );
     UTIL.getHBaseAdmin().createTable(desc);
 

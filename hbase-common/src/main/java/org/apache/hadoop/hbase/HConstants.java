@@ -284,7 +284,7 @@ public final class HConstants {
     "hbase.client.meta.operation.timeout";
 
   /** Default HBase client operation timeout, which is tantamount to a blocking call */
-  public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
+  public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = 60000;
 
   /** Used to construct the name of the log directory for a region server */
   public static final String HREGION_LOGDIR_NAME = "WALs";
@@ -912,7 +912,7 @@ public final class HConstants {
   //High priority handlers to deal with admin requests and system table operation requests
   public static final String REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT =
       "hbase.regionserver.metahandler.count";
-  public static final int DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT = 10;
+  public static final int DEFAULT_REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT = 20;
 
   public static final String REGION_SERVER_REPLICATION_HANDLER_COUNT =
       "hbase.regionserver.replication.handler.count";
@@ -957,9 +957,9 @@ public final class HConstants {
 
   /** Configuration name of WAL storage policy
    * Valid values are:
-   *  NONE: no preference in destination of replicas
-   *  ONE_SSD: place only one replica in SSD and the remaining in default storage
-   *  and ALL_SSD: place all replica on SSD
+   *  NONE: no preference in destination of block replicas
+   *  ONE_SSD: place only one block replica in SSD and the remaining in default storage
+   *  and ALL_SSD: place all block replicas on SSD
    *
    * See http://hadoop.apache.org/docs/r2.6.0/hadoop-project-dist/hadoop-hdfs/ArchivalStorage.html*/
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
@@ -987,12 +987,13 @@ public final class HConstants {
    * by different set of handlers. For example, HIGH_QOS tagged methods are
    * handled by high priority handlers.
    */
+  // normal_QOS < QOS_threshold < replication_QOS < replay_QOS < admin_QOS < high_QOS
   public static final int NORMAL_QOS = 0;
   public static final int QOS_THRESHOLD = 10;
   public static final int HIGH_QOS = 200;
-  public static final int REPLICATION_QOS = 5; // normal_QOS < replication_QOS < high_QOS
-  public static final int REPLAY_QOS = 6; // REPLICATION_QOS < REPLAY_QOS < high_QOS
-  public static final int ADMIN_QOS = 100; // QOS_THRESHOLD < ADMIN_QOS < high_QOS
+  public static final int REPLICATION_QOS = 5;
+  public static final int REPLAY_QOS = 6;
+  public static final int ADMIN_QOS = 100;
   public static final int SYSTEMTABLE_QOS = HIGH_QOS;
 
   /** Directory under /hbase where archived hfiles are stored */

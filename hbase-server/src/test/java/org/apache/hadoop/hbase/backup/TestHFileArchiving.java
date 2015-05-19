@@ -341,7 +341,7 @@ public class TestHFileArchiving {
     List<String> storeFiles = region.getStoreFileList(columns);
 
     // then delete the table so the hfiles get archived
-    UTIL.getHBaseAdmin().deleteColumn(TABLE_NAME, TEST_FAM);
+    UTIL.getHBaseAdmin().deleteColumnFamily(TABLE_NAME, TEST_FAM);
 
     assertArchiveFiles(fs, storeFiles, 30000);
 

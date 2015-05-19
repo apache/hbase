@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
@@ -67,8 +68,8 @@ public class TestSingleColumnValueExcludeFilter {
     filter.filterRowCells(kvs);
 
     assertEquals("resultSize", kvs.size(), 2);
-    assertTrue("leftKV1", KeyValue.COMPARATOR.compare(kvs.get(0), kv) == 0);
-    assertTrue("leftKV2", KeyValue.COMPARATOR.compare(kvs.get(1), kv) == 0);
+    assertTrue("leftKV1", CellComparator.COMPARATOR.compare(kvs.get(0), kv) == 0);
+    assertTrue("leftKV2", CellComparator.COMPARATOR.compare(kvs.get(1), kv) == 0);
     assertFalse("allRemainingWhenMatch", filter.filterAllRemaining());
 
     // A 'mismatch' situation

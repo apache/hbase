@@ -41,7 +41,7 @@ import org.apache.zookeeper.KeeperException;
 @Deprecated
 @InterfaceAudience.Private
 public class ZKLeaderManager extends ZooKeeperListener {
-  private static Log LOG = LogFactory.getLog(ZKLeaderManager.class);
+  private static final Log LOG = LogFactory.getLog(ZKLeaderManager.class);
 
   private final AtomicBoolean leaderExists = new AtomicBoolean();
   private String leaderZNode;

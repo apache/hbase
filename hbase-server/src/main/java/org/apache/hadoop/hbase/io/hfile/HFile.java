@@ -37,6 +37,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -48,9 +49,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -61,9 +61,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.BloomFilterWriter;
-import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.io.Writable;
 
@@ -135,6 +133,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 public class HFile {
+  // LOG is being used in HFileBlock and CheckSumUtil
   static final Log LOG = LogFactory.getLog(HFile.class);
 
   /**
@@ -179,9 +178,6 @@ public class HFile {
    * The number of bytes per checksum.
    */
   public static final int DEFAULT_BYTES_PER_CHECKSUM = 16 * 1024;
-  // TODO: This define is done in three places.  Fix.
-  public static final ChecksumType DEFAULT_CHECKSUM_TYPE = ChecksumType.CRC32;
-
   // For measuring number of checksum failures
   static final AtomicLong checksumFailures = new AtomicLong();
 
@@ -251,7 +247,8 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected KVComparator comparator = KeyValue.COMPARATOR;
+    protected CellComparator comparator = 
+        CellComparator.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
 
@@ -274,7 +271,7 @@ public class HFile {
       return this;
     }
 
-    public WriterFactory withComparator(KVComparator comparator) {
+    public WriterFactory withComparator(CellComparator comparator) {
       Preconditions.checkNotNull(comparator);
       this.comparator = comparator;
       return this;
@@ -304,7 +301,7 @@ public class HFile {
     }
 
     protected abstract Writer createWriter(FileSystem fs, Path path, FSDataOutputStream ostream,
-        KVComparator comparator, HFileContext fileContext) throws IOException;
+        CellComparator comparator, HFileContext fileContext) throws IOException;
   }
 
   /** The configuration key for HFile version to use for new files */
@@ -387,7 +384,7 @@ public class HFile {
      */
     String getName();
 
-    KVComparator getComparator();
+    CellComparator getComparator();
 
     HFileScanner getScanner(boolean cacheBlocks, final boolean pread, final boolean isCompaction);
 
@@ -832,7 +829,7 @@ public class HFile {
   }
 
   /**
-   * Returns all files belonging to the given region directory. Could return an
+   * Returns all HFiles belonging to the given region directory. Could return an
    * empty list.
    *
    * @param fs  The file system reference.
@@ -842,18 +839,20 @@ public class HFile {
    */
   static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
       throws IOException {
-    List<Path> res = new ArrayList<Path>();
+    List<Path> regionHFiles = new ArrayList<Path>();
     PathFilter dirFilter = new FSUtils.DirFilter(fs);
     FileStatus[] familyDirs = fs.listStatus(regionDir, dirFilter);
     for(FileStatus dir : familyDirs) {
       FileStatus[] files = fs.listStatus(dir.getPath());
       for (FileStatus file : files) {
-        if (!file.isDirectory()) {
-          res.add(file.getPath());
+        if (!file.isDirectory() &&
+            (!file.getPath().toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) &&
+            (!file.getPath().toString().contains(HConstants.RECOVERED_EDITS_DIR))) {
+          regionHFiles.add(file.getPath());
         }
       }
     }
-    return res;
+    return regionHFiles;
   }
 
   /**

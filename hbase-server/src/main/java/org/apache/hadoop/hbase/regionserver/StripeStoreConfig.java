@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
  */
 @InterfaceAudience.Private
 public class StripeStoreConfig {
-  static final Log LOG = LogFactory.getLog(StripeStoreConfig.class);
+  private static final Log LOG = LogFactory.getLog(StripeStoreConfig.class);
 
   /** The maximum number of files to compact within a stripe; same as for regular compaction. */
   public static final String MAX_FILES_KEY = "hbase.store.stripe.compaction.maxFiles";

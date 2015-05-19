@@ -36,7 +36,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 class SplitRequest implements Runnable {
-  static final Log LOG = LogFactory.getLog(SplitRequest.class);
+  private static final Log LOG = LogFactory.getLog(SplitRequest.class);
   private final HRegion parent;
   private final byte[] midKey;
   private final HRegionServer server;

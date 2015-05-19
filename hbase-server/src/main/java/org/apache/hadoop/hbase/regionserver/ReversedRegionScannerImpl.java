@@ -48,17 +48,17 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   @Override
   protected void initializeKVHeap(List<KeyValueScanner> scanners,
       List<KeyValueScanner> joinedScanners, HRegion region) throws IOException {
-    this.storeHeap = new ReversedKeyValueHeap(scanners, region.getComparator());
+    this.storeHeap = new ReversedKeyValueHeap(scanners, comparator);
     if (!joinedScanners.isEmpty()) {
       this.joinedHeap = new ReversedKeyValueHeap(joinedScanners,
-          region.getComparator());
+          comparator);
     }
   }
 
   @Override
   protected boolean isStopRow(byte[] currentRow, int offset, short length) {
     return currentRow == null
-        || (super.stopRow != null && region.getComparator().compareRows(
+        || (super.stopRow != null && comparator.compareRows(
             stopRow, 0, stopRow.length, currentRow, offset, length) >= super.isScan);
   }
 

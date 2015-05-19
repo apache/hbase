@@ -350,8 +350,8 @@ public class TestVisibilityLabelsReplication {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE, UNICODE_VIS_TAG };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }
@@ -365,9 +365,9 @@ public class TestVisibilityLabelsReplication {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { SECRET, CONFIDENTIAL, PRIVATE,
-              TOPSECRET, UNICODE_VIS_TAG }, "user1");
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { SECRET,
+            CONFIDENTIAL, PRIVATE, TOPSECRET, UNICODE_VIS_TAG }, "user1");
         } catch (Throwable e) {
           throw new Exception(e);
         }

@@ -35,7 +35,8 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public abstract class ZooKeeperNodeTracker extends ZooKeeperListener {
-  static final Log LOG = LogFactory.getLog(ZooKeeperNodeTracker.class);
+  // LOG is being used in subclasses, hence keeping it protected
+  protected static final Log LOG = LogFactory.getLog(ZooKeeperNodeTracker.class);
   /** Path of node being tracked */
   protected final String node;
 

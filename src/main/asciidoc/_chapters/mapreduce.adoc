@@ -51,26 +51,37 @@ In the notes below, we refer to o.a.h.h.mapreduce but replace with the o.a.h.h.m
 
 By default, MapReduce jobs deployed to a MapReduce cluster do not have access to either the HBase configuration under `$HBASE_CONF_DIR` or the HBase classes.
 
-To give the MapReduce jobs the access they need, you could add _hbase-site.xml_ to the _$HADOOP_HOME/conf/_ directory and add the HBase JARs to the _HADOOP_HOME/conf/_ directory, then copy these changes across your cluster.
-You could add _hbase-site.xml_ to _$HADOOP_HOME/conf_ and add HBase jars to the _$HADOOP_HOME/lib_ directory.
-You would then need to copy these changes across your cluster or edit _$HADOOP_HOMEconf/hadoop-env.sh_ and add them to the `HADOOP_CLASSPATH` variable.
+To give the MapReduce jobs the access they need, you could add _hbase-site.xml_ to _$HADOOP_HOME/conf_ and add HBase jars to the _$HADOOP_HOME/lib_ directory.
+You would then need to copy these changes across your cluster. Or you can edit _$HADOOP_HOME/conf/hadoop-env.sh_ and add them to the `HADOOP_CLASSPATH` variable.
 However, this approach is not recommended because it will pollute your Hadoop install with HBase references.
 It also requires you to restart the Hadoop cluster before Hadoop can use the HBase data.
 
+The recommended approach is to let HBase add its dependency jars itself and use `HADOOP_CLASSPATH` or `-libjars`.
+
 Since HBase 0.90.x, HBase adds its dependency JARs to the job configuration itself.
 The dependencies only need to be available on the local `CLASSPATH`.
-The following example runs the bundled HBase link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable` If you have not set the environment variables expected in the command (the parts prefixed by a `$` sign and curly braces), you can use the actual system paths instead.
+The following example runs the bundled HBase link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html[RowCounter] MapReduce job against a table named `usertable`.
+If you have not set the environment variables expected in the command (the parts prefixed by a `$` sign and surrounded by curly braces), you can use the actual system paths instead.
 Be sure to use the correct version of the HBase JAR for your system.
-The backticks (``` symbols) cause ths shell to execute the sub-commands, setting the `CLASSPATH` as part of the command.
+The backticks (``` symbols) cause ths shell to execute the sub-commands, setting the output of `hbase classpath` (the command to dump HBase CLASSPATH) to `HADOOP_CLASSPATH`.
 This example assumes you use a BASH-compatible shell.
 
 [source,bash]
 ----
-$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server-VERSION.jar rowcounter usertable
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/lib/hbase-server-VERSION.jar rowcounter usertable
 ----
 
 When the command runs, internally, the HBase JAR finds the dependencies it needs for ZooKeeper, Guava, and its other dependencies on the passed `HADOOP_CLASSPATH` and adds the JARs to the MapReduce job configuration.
 See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done.
+
+The command `hbase mapredcp` can also help you dump the CLASSPATH entries required by MapReduce, which are the same jars `TableMapReduceUtil#addDependencyJars` would add.
+You can add them together with HBase conf directory to `HADOOP_CLASSPATH`.
+For jobs that do not package their dependencies or call `TableMapReduceUtil#addDependencyJars`, the following command structure is necessary:
+
+[source,bash]
+----
+$ HADOOP_CLASSPATH=`${HBASE_HOME}/bin/hbase mapredcp`:${HBASE_HOME}/conf hadoop jar MyApp.jar MyJobMainClass -libjars $(${HBASE_HOME}/bin/hbase mapredcp | tr ':' ',') ...
+----
 
 [NOTE]
 ====
@@ -85,11 +96,11 @@ If this occurs, try modifying the command as follows, so that it uses the HBase 
 
 [source,bash]
 ----
-$ HADOOP_CLASSPATH=${HBASE_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar:`${HBASE_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar rowcounter usertable
+$ HADOOP_CLASSPATH=${HBASE_BUILD_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar:`${HBASE_BUILD_HOME}/bin/hbase classpath` ${HADOOP_HOME}/bin/hadoop jar ${HBASE_BUILD_HOME}/hbase-server/target/hbase-server-VERSION-SNAPSHOT.jar rowcounter usertable
 ----
 ====
 
-.Notice to MapReduce users of HBase 0.96.1 and above
+.Notice to MapReduce users of HBase between 0.96.1 and 0.98.4
 [CAUTION]
 ====
 Some MapReduce jobs that use HBase fail to launch.

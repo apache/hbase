@@ -32,12 +32,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.CellComparator;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -642,7 +644,7 @@ public class TestClientNoCluster extends Configured implements Tool {
    * Comparator for meta row keys.
    */
   private static class MetaRowsComparator implements Comparator<byte []> {
-    private final KeyValue.KVComparator delegate = new KeyValue.MetaComparator();
+    private final CellComparator delegate = CellComparator.META_COMPARATOR;
     @Override
     public int compare(byte[] left, byte[] right) {
       return delegate.compareRows(left, 0, left.length, right, 0, right.length);

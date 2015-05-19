@@ -98,7 +98,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @InterfaceAudience.Private
 class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
-  static final Log LOG = LogFactory.getLog(ConnectionImplementation.class);
+  private static final Log LOG = LogFactory.getLog(ConnectionImplementation.class);
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
 
   private final long pause;
@@ -411,7 +411,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           //the queue is full, a new thread will be started
           this.metaLookupPool = getThreadPool(
              conf.getInt("hbase.hconnection.meta.lookup.threads.max", 128),
-             conf.getInt("hbase.hconnection.meta.lookup.threads.max.core", 10),
+             conf.getInt("hbase.hconnection.meta.lookup.threads.core", 10),
              "-metaLookup-shared-", new LinkedBlockingQueue<Runnable>());
         }
       }

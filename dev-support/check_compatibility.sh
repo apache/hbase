@@ -191,7 +191,7 @@ for ref in 1 2; do
     popd > /dev/null
   fi
 
-  JAR_FIND_EXPRESSION=(-name "hbase*.jar" ! -name "*tests*" ! -name "*sources*")
+  JAR_FIND_EXPRESSION=(-name "hbase*.jar" ! -name "*tests*" ! -name "*sources*" ! -name "*shade*")
   # Create an array of all the HBase JARs matching the find expression.
   JARS=$(find ${SCRIPT_DIRECTORY}/target/compatibility/${ref} "${JAR_FIND_EXPRESSION[@]}")
 

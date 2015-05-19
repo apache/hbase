@@ -77,7 +77,7 @@ import com.google.protobuf.ServiceException;
  */
 @Category({LargeTests.class, ClientTests.class})
 public class TestAdmin1 {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestAdmin1.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Admin admin;
 
@@ -145,7 +145,7 @@ public class TestAdmin1 {
     HColumnDescriptor nonexistentHcd = new HColumnDescriptor(nonexistentColumn);
     Exception exception = null;
     try {
-      this.admin.addColumn(nonexistentTable, nonexistentHcd);
+      this.admin.addColumnFamily(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -161,7 +161,7 @@ public class TestAdmin1 {
 
     exception = null;
     try {
-      this.admin.deleteColumn(nonexistentTable, nonexistentColumn);
+      this.admin.deleteColumnFamily(nonexistentTable, nonexistentColumn);
     } catch (IOException e) {
       exception = e;
     }
@@ -185,7 +185,7 @@ public class TestAdmin1 {
 
     exception = null;
     try {
-      this.admin.modifyColumn(nonexistentTable, nonexistentHcd);
+      this.admin.modifyColumnFamily(nonexistentTable, nonexistentHcd);
     } catch (IOException e) {
       exception = e;
     }
@@ -211,7 +211,7 @@ public class TestAdmin1 {
     try {
       exception = null;
       try {
-        this.admin.deleteColumn(htd.getTableName(), nonexistentHcd.getName());
+        this.admin.deleteColumnFamily(htd.getTableName(), nonexistentHcd.getName());
       } catch (IOException e) {
         exception = e;
       }
@@ -220,7 +220,7 @@ public class TestAdmin1 {
 
       exception = null;
       try {
-        this.admin.modifyColumn(htd.getTableName(), nonexistentHcd);
+        this.admin.modifyColumnFamily(htd.getTableName(), nonexistentHcd);
       } catch (IOException e) {
         exception = e;
       }
@@ -545,7 +545,7 @@ public class TestAdmin1 {
     final byte [] hcdName = hcd.getName();
     expectedException = false;
     try {
-      this.admin.modifyColumn(tableName, hcd);
+      this.admin.modifyColumnFamily(tableName, hcd);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -561,7 +561,7 @@ public class TestAdmin1 {
     xtracol.setValue(xtracolName, xtracolName);
     expectedException = false;
     try {
-      this.admin.addColumn(tableName, xtracol);
+      this.admin.addColumnFamily(tableName, xtracol);
     } catch (TableNotDisabledException re) {
       expectedException = true;
     }
@@ -573,7 +573,7 @@ public class TestAdmin1 {
     assertTrue(hcd.getValue(xtracolName).equals(xtracolName));
 
     // Delete the just-added column.
-    this.admin.deleteColumn(tableName, xtracol.getName());
+    this.admin.deleteColumnFamily(tableName, xtracol.getName());
     modifiedHtd = this.admin.getTableDescriptor(tableName);
     hcd = modifiedHtd.getFamily(xtracol.getName());
     assertTrue(hcd == null);
@@ -1272,16 +1272,6 @@ public class TestAdmin1 {
     }
   }
 
-  /**
-   * HADOOP-2156
-   * @throws IOException
-   */
-  @SuppressWarnings("deprecation")
-  @Test (expected=IllegalArgumentException.class, timeout=300000)
-  public void testEmptyHTableDescriptor() throws IOException {
-    this.admin.createTable(new HTableDescriptor());
-  }
-
   @Test (expected=IllegalArgumentException.class, timeout=300000)
   public void testInvalidHColumnDescriptor() throws IOException {
      new HColumnDescriptor("/cfamily/name");
@@ -1302,10 +1292,10 @@ public class TestAdmin1 {
       //expected
     }
 
-    this.admin.addColumn(tableName, new HColumnDescriptor("col2"));
+    this.admin.addColumnFamily(tableName, new HColumnDescriptor("col2"));
     this.admin.enableTable(tableName);
     try {
-      this.admin.deleteColumn(tableName, Bytes.toBytes("col2"));
+      this.admin.deleteColumnFamily(tableName, Bytes.toBytes("col2"));
     } catch (TableNotDisabledException e) {
       LOG.info(e);
     }

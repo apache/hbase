@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.master.MetricsMasterWrapper;
 @InterfaceStability.Evolving
 @InterfaceAudience.Private
 public class MetricsMaster {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(MetricsMaster.class);
   private MetricsMasterSource masterSource;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
@@ -52,7 +52,7 @@ public class MetricsMaster {
   /**
    * @param inc How much to add to requests.
    */
-  public void incrementRequests(final int inc) {
+  public void incrementRequests(final long inc) {
     masterSource.incRequests(inc);
   }
 }

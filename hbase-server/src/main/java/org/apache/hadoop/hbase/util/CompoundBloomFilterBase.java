@@ -20,9 +20,8 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValueUtil;
+
+import org.apache.hadoop.hbase.CellComparator;
 
 @InterfaceAudience.Private
 public class CompoundBloomFilterBase implements BloomFilterBase {
@@ -50,9 +49,8 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
 
   /** Hash function type to use, as defined in {@link Hash} */
   protected int hashType;
-  
   /** Comparator used to compare Bloom filter keys */
-  protected KVComparator comparator;
+  protected CellComparator comparator;
 
   @Override
   public long getMaxKeys() {
@@ -67,31 +65,6 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
   @Override
   public long getByteSize() {
     return totalByteSize;
-  }
-
-  private static final byte[] DUMMY = new byte[0];
-
-  /**
-   * Prepare an ordered pair of row and qualifier to be compared using
-   * KeyValue.KeyComparator. This is only used for row-column Bloom
-   * filters.
-   */
-  @Override
-  public byte[] createBloomKey(byte[] row, int roffset, int rlength,
-      byte[] qualifier, int qoffset, int qlength) {
-    if (qualifier == null)
-      qualifier = DUMMY;
-
-    // Make sure this does not specify a timestamp so that the default maximum
-    // (most recent) timestamp is used.
-    KeyValue kv = KeyValueUtil.createFirstOnRow(row, roffset, rlength, DUMMY, 0, 0,
-        qualifier, qoffset, qlength);
-    return kv.getKey();
-  }
-
-  @Override
-  public KVComparator getComparator() {
-    return comparator;
   }
 
 }

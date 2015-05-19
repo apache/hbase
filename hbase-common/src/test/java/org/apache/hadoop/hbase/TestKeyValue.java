@@ -23,7 +23,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -34,15 +33,13 @@ import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
-import org.apache.hadoop.hbase.KeyValue.MetaComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import static org.junit.Assert.assertNotEquals;
 
 public class TestKeyValue extends TestCase {
-  private final Log LOG = LogFactory.getLog(this.getClass().getName());
+  private static final Log LOG = LogFactory.getLog(TestKeyValue.class);
 
   public void testColumnCompare() throws Exception {
     final byte [] a = Bytes.toBytes("aaa");
@@ -109,24 +106,24 @@ public class TestKeyValue extends TestCase {
     final byte [] qf = Bytes.toBytes("umn");
     KeyValue aaa = new KeyValue(a, fam, qf, a);
     KeyValue bbb = new KeyValue(b, fam, qf, b);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) < 0);
-    assertTrue(KeyValue.COMPARATOR.compare(bbb, aaa) > 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, bbb) < 0);
+    assertTrue(CellComparator.COMPARATOR.compare(bbb, aaa) > 0);
     // Compare breaks if passed same ByteBuffer as both left and right arguments.
-    assertTrue(KeyValue.COMPARATOR.compare(bbb, bbb) == 0);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
+    assertTrue(CellComparator.COMPARATOR.compare(bbb, bbb) == 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, aaa) == 0);
     // Do compare with different timestamps.
     aaa = new KeyValue(a, fam, qf, 1, a);
     bbb = new KeyValue(a, fam, qf, 2, a);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) > 0);
-    assertTrue(KeyValue.COMPARATOR.compare(bbb, aaa) < 0);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, bbb) > 0);
+    assertTrue(CellComparator.COMPARATOR.compare(bbb, aaa) < 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, aaa) == 0);
     // Do compare with different types.  Higher numbered types -- Delete
     // should sort ahead of lower numbers; i.e. Put
     aaa = new KeyValue(a, fam, qf, 1, KeyValue.Type.Delete, a);
     bbb = new KeyValue(a, fam, qf, 1, a);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, bbb) < 0);
-    assertTrue(KeyValue.COMPARATOR.compare(bbb, aaa) > 0);
-    assertTrue(KeyValue.COMPARATOR.compare(aaa, aaa) == 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, bbb) < 0);
+    assertTrue(CellComparator.COMPARATOR.compare(bbb, aaa) > 0);
+    assertTrue(CellComparator.COMPARATOR.compare(aaa, aaa) == 0);
   }
 
   public void testMoreComparisons() throws Exception {
@@ -137,7 +134,7 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("TestScanMultipleVersions,row_0500,1236020145502"), now);
     KeyValue bbb = new KeyValue(
         Bytes.toBytes("TestScanMultipleVersions,,99999999999999"), now);
-    KVComparator c = new KeyValue.MetaComparator();
+    CellComparator c = CellComparator.META_COMPARATOR;
     assertTrue(c.compare(bbb, aaa) < 0);
 
     KeyValue aaaa = new KeyValue(Bytes.toBytes("TestScanMultipleVersions,,1236023996656"),
@@ -152,13 +149,13 @@ public class TestKeyValue extends TestCase {
         Bytes.toBytes("info"), Bytes.toBytes("regioninfo"), 1236034574912L,
         (byte[])null);
     assertTrue(c.compare(x, y) < 0);
-    comparisons(new KeyValue.MetaComparator());
-    comparisons(new KeyValue.KVComparator());
-    metacomparisons(new KeyValue.MetaComparator());
+    comparisons(CellComparator.META_COMPARATOR);
+    comparisons(CellComparator.COMPARATOR);
+    metacomparisons(CellComparator.META_COMPARATOR);
   }
 
   public void testMetaComparatorTableKeysWithCommaOk() {
-    MetaComparator c = new KeyValue.MetaComparator();
+    CellComparator c = CellComparator.META_COMPARATOR;
     long now = System.currentTimeMillis();
     // meta keys values are not quite right.  A users can enter illegal values
     // from shell when scanning meta.
@@ -179,17 +176,17 @@ public class TestKeyValue extends TestCase {
       Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     KeyValue rowB = new KeyValue(Bytes.toBytes("testtable,www.hbase.org/%20,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
+    assertTrue(CellComparator.META_COMPARATOR.compare(rowA, rowB) < 0);
 
     rowA = new KeyValue(Bytes.toBytes("testtable,,1234"), Bytes.toBytes("fam"),
         Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
     rowB = new KeyValue(Bytes.toBytes("testtable,$www.hbase.org/,99999"),
         Bytes.toBytes("fam"), Bytes.toBytes(""), Long.MAX_VALUE, (byte[])null);
-    assertTrue(KeyValue.META_COMPARATOR.compare(rowA, rowB) < 0);
+    assertTrue(CellComparator.META_COMPARATOR.compare(rowA, rowB) < 0);
 
   }
 
-  private void metacomparisons(final KeyValue.MetaComparator c) {
+  private void metacomparisons(final CellComparator c) {
     long now = System.currentTimeMillis();
     assertTrue(c.compare(new KeyValue(
         Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now),
@@ -206,7 +203,7 @@ public class TestKeyValue extends TestCase {
           Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",a,,0,1"), now)) > 0);
   }
 
-  private void comparisons(final KeyValue.KVComparator c) {
+  private void comparisons(final CellComparator c) {
     long now = System.currentTimeMillis();
     assertTrue(c.compare(new KeyValue(
         Bytes.toBytes(TableName.META_TABLE_NAME.getNameAsString()+",,1"), now),
@@ -223,7 +220,7 @@ public class TestKeyValue extends TestCase {
   }
 
   public void testBinaryKeys() throws Exception {
-    Set<KeyValue> set = new TreeSet<KeyValue>(KeyValue.COMPARATOR);
+    Set<KeyValue> set = new TreeSet<KeyValue>(CellComparator.COMPARATOR);
     final byte [] fam = Bytes.toBytes("col");
     final byte [] qf = Bytes.toBytes("umn");
     final byte [] nb = new byte[0];
@@ -249,7 +246,7 @@ public class TestKeyValue extends TestCase {
     }
     assertTrue(assertion);
     // Make set with good comparator
-    set = new TreeSet<KeyValue>(new KeyValue.MetaComparator());
+    set = new TreeSet<KeyValue>(CellComparator.META_COMPARATOR);
     Collections.addAll(set, keys);
     count = 0;
     for (KeyValue k: set) {
@@ -271,7 +268,7 @@ public class TestKeyValue extends TestCase {
   private final byte[] qualA = Bytes.toBytes("qfA");
   private final byte[] qualB = Bytes.toBytes("qfB");
 
-  private void assertKVLess(KeyValue.KVComparator c,
+  private void assertKVLess(CellComparator c,
                             KeyValue less,
                             KeyValue greater) {
     int cmp = c.compare(less,greater);
@@ -280,20 +277,16 @@ public class TestKeyValue extends TestCase {
     assertTrue(cmp > 0);
   }
 
-  private void assertKVLessWithoutRow(KeyValue.KVComparator c, int common, KeyValue less,
+  private void assertKVLessWithoutRow(CellComparator c, int common, KeyValue less,
       KeyValue greater) {
-    int cmp = c.compareIgnoringPrefix(common, less.getBuffer(), less.getOffset()
-        + KeyValue.ROW_OFFSET, less.getKeyLength(), greater.getBuffer(),
-        greater.getOffset() + KeyValue.ROW_OFFSET, greater.getKeyLength());
+    int cmp = c.compare(less, greater);
     assertTrue(cmp < 0);
-    cmp = c.compareIgnoringPrefix(common, greater.getBuffer(), greater.getOffset()
-        + KeyValue.ROW_OFFSET, greater.getKeyLength(), less.getBuffer(),
-        less.getOffset() + KeyValue.ROW_OFFSET, less.getKeyLength());
+    cmp = c.compare(greater, less);
     assertTrue(cmp > 0);
   }
 
   public void testCompareWithoutRow() {
-    final KeyValue.KVComparator c = KeyValue.COMPARATOR;
+    final CellComparator c = CellComparator.COMPARATOR;
     byte[] row = Bytes.toBytes("row");
 
     byte[] fa = Bytes.toBytes("fa");
@@ -340,7 +333,7 @@ public class TestKeyValue extends TestCase {
   }
 
   public void testFirstLastOnRow() {
-    final KVComparator c = KeyValue.COMPARATOR;
+    final CellComparator c = CellComparator.COMPARATOR;
     long ts = 1;
     byte[] bufferA = new byte[128];
     int offsetA = 0;
@@ -414,7 +407,7 @@ public class TestKeyValue extends TestCase {
     byte[] tmpArr = new byte[initialPadding + endingPadding + keyLen];
     System.arraycopy(kv.getBuffer(), kv.getKeyOffset(), tmpArr,
         initialPadding, keyLen);
-    KeyValue kvFromKey = KeyValue.createKeyValueFromKey(tmpArr, initialPadding,
+    KeyValue kvFromKey = KeyValueUtil.createKeyValueFromKey(tmpArr, initialPadding,
         keyLen);
     assertEquals(keyLen, kvFromKey.getKeyLength());
     assertEquals(KeyValue.ROW_OFFSET + keyLen, kvFromKey.getBuffer().length);
@@ -437,82 +430,6 @@ public class TestKeyValue extends TestCase {
     long time2 = kv.getTimestamp();
     assertEquals(HConstants.LATEST_TIMESTAMP, time1);
     assertEquals(12345L, time2);
-  }
-
-  /**
-   * See HBASE-7845
-   */
-  public void testGetShortMidpointKey() {
-    final KVComparator keyComparator = KeyValue.COMPARATOR;
-    //verify that faked shorter rowkey could be generated
-    long ts = 5;
-    KeyValue kv1 = new KeyValue(Bytes.toBytes("the quick brown fox"), family, qualA, ts, Type.Put);
-    KeyValue kv2 = new KeyValue(Bytes.toBytes("the who test text"), family, qualA, ts, Type.Put);
-    byte[] newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
-    short newRowLength = Bytes.toShort(newKey, 0);
-    byte[] expectedArray = Bytes.toBytes("the r");
-    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
-      expectedArray.length);
-
-    //verify: same with "row + family + qualifier", return rightKey directly
-    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 5, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 0, Type.Put);
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
-    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) == 0);
-    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, -5, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, -10, Type.Put);
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
-    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) == 0);
-
-    // verify: same with row, different with qualifier
-    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, 5, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualB, 5, Type.Put);
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
-    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
-    KeyValue newKeyValue = KeyValue.createKeyValueFromKey(newKey);
-    assertTrue(Arrays.equals(newKeyValue.getFamily(),family));
-    assertTrue(Arrays.equals(newKeyValue.getQualifier(),qualB));
-    assertTrue(newKeyValue.getTimestamp() == HConstants.LATEST_TIMESTAMP);
-    assertTrue(newKeyValue.getTypeByte() == Type.Maximum.getCode());
-
-    //verify metaKeyComparator's getShortMidpointKey output
-    final KVComparator metaKeyComparator = KeyValue.META_COMPARATOR;
-    kv1 = new KeyValue(Bytes.toBytes("ilovehbase123"), family, qualA, 5, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("ilovehbase234"), family, qualA, 0, Type.Put);
-    newKey = metaKeyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(metaKeyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(metaKeyComparator.compareFlatKey(newKey, kv2.getKey()) == 0);
-
-    //verify common fix scenario
-    kv1 = new KeyValue(Bytes.toBytes("ilovehbase"), family, qualA, ts, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("ilovehbaseandhdfs"), family, qualA, ts, Type.Put);
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
-    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
-    newRowLength = Bytes.toShort(newKey, 0);
-    expectedArray = Bytes.toBytes("ilovehbasea");
-    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
-      expectedArray.length);
-    //verify only 1 offset scenario
-    kv1 = new KeyValue(Bytes.toBytes("100abcdefg"), family, qualA, ts, Type.Put);
-    kv2 = new KeyValue(Bytes.toBytes("101abcdefg"), family, qualA, ts, Type.Put);
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), kv2.getKey()) < 0);
-    newKey = keyComparator.getShortMidpointKey(kv1.getKey(), kv2.getKey());
-    assertTrue(keyComparator.compareFlatKey(kv1.getKey(), newKey) < 0);
-    assertTrue(keyComparator.compareFlatKey(newKey, kv2.getKey()) < 0);
-    newRowLength = Bytes.toShort(newKey, 0);
-    expectedArray = Bytes.toBytes("101");
-    Bytes.equals(newKey, KeyValue.ROW_LENGTH_SIZE, newRowLength, expectedArray, 0,
-      expectedArray.length);
   }
 
   public void testKVsWithTags() {
@@ -577,7 +494,7 @@ public class TestKeyValue extends TestCase {
   }
   
   public void testMetaKeyComparator() {
-    MetaComparator c = new KeyValue.MetaComparator();
+    CellComparator c = CellComparator.META_COMPARATOR;
     long now = System.currentTimeMillis();
 
     KeyValue a = new KeyValue(Bytes.toBytes("table1"), now);
@@ -652,9 +569,9 @@ public class TestKeyValue extends TestCase {
     KeyValueUtil.oswrite(mkvA2, os, true);
     DataInputStream is = new DataInputStream(new ByteArrayInputStream(
         byteArrayOutputStream.toByteArray()));
-    KeyValue deSerKV1 = KeyValue.iscreate(is);
+    KeyValue deSerKV1 = KeyValueUtil.iscreate(is);
     assertTrue(kvA1.equals(deSerKV1));
-    KeyValue deSerKV2 = KeyValue.iscreate(is);
+    KeyValue deSerKV2 = KeyValueUtil.iscreate(is);
     assertTrue(kvA2.equals(deSerKV2));
   }
 

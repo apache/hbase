@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestDefaultWALProvider {
-  protected static final Log LOG = LogFactory.getLog(TestDefaultWALProvider.class);
+  private static final Log LOG = LogFactory.getLog(TestDefaultWALProvider.class);
 
   protected static Configuration conf;
   protected static FileSystem fs;

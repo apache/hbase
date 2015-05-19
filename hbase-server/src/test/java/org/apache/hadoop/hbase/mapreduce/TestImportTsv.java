@@ -67,7 +67,7 @@ import org.junit.experimental.categories.Category;
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestImportTsv implements Configurable {
 
-  protected static final Log LOG = LogFactory.getLog(TestImportTsv.class);
+  private static final Log LOG = LogFactory.getLog(TestImportTsv.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 

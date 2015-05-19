@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -85,7 +85,7 @@ public class TestPrefixTreeSearcher {
         // check all 3 permutations of equals()
         Assert.assertEquals(inputCell, outputCell);
         Assert.assertEquals(outputCell, inputCell);
-        Assert.assertTrue(CellComparator.equals(inputCell, outputCell));
+        Assert.assertTrue(CellUtil.equals(inputCell, outputCell));
       }
       Assert.assertEquals(rows.getInputs().size(), i + 1);
     } finally {
@@ -124,7 +124,7 @@ public class TestPrefixTreeSearcher {
         boolean hit = searcher.positionAt(kv);
         Assert.assertTrue(hit);
         Cell foundKv = searcher.current();
-        Assert.assertTrue(CellComparator.equals(kv, foundKv));
+        Assert.assertTrue(CellUtil.equals(kv, foundKv));
       }
     } finally {
       DecoderFactory.checkIn(searcher);

@@ -53,7 +53,7 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
  */
 @InterfaceAudience.Private
 public final class SnapshotReferenceUtil {
-  public static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
+  private static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
 
   public interface StoreFileVisitor {
     void storeFile(final HRegionInfo regionInfo, final String familyName,

@@ -108,7 +108,7 @@ public class TestHFileOutputFormat2  {
 
   private HBaseTestingUtility util = new HBaseTestingUtility();
 
-  private static Log LOG = LogFactory.getLog(TestHFileOutputFormat2.class);
+  private static final Log LOG = LogFactory.getLog(TestHFileOutputFormat2.class);
 
   /**
    * Simple mapper that makes KeyValue output.
@@ -337,7 +337,9 @@ public class TestHFileOutputFormat2  {
 
   @Test
   public void testJobConfiguration() throws Exception {
-    Job job = new Job(util.getConfiguration());
+    Configuration conf = new Configuration(this.util.getConfiguration());
+    conf.set("hbase.fs.tmp.dir", util.getDataTestDir("testJobConfiguration").toString());
+    Job job = new Job(conf);
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     Table table = Mockito.mock(Table.class);
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
@@ -823,6 +825,7 @@ public class TestHFileOutputFormat2  {
       // We turn off the sequence file compression, because DefaultCodec
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
+      conf.set("hbase.fs.tmp.dir", dir.toString());
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
@@ -859,7 +862,7 @@ public class TestHFileOutputFormat2  {
           "(reader: " + reader + ")",
           hcd.getBloomFilterType(), BloomType.valueOf(Bytes.toString(bloomFilter)));
         assertEquals("Incorrect compression used for column family " + familyStr +
-          "(reader: " + reader + ")", hcd.getCompression(), reader.getFileContext().getCompression());
+          "(reader: " + reader + ")", hcd.getCompressionType(), reader.getFileContext().getCompression());
       }
     } finally {
       dir.getFileSystem(conf).delete(dir, true);

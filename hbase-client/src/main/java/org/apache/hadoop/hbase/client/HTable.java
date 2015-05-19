@@ -116,6 +116,7 @@ public class HTable implements HTableInterface {
   private boolean autoFlush = true;
   private boolean closed = false;
   protected int scannerCaching;
+  protected long scannerMaxResultSize;
   private ExecutorService pool;  // For Multi & Scan
   private int operationTimeout;
   private final boolean cleanupPoolOnClose; // shutdown the pool in close()
@@ -217,7 +218,7 @@ public class HTable implements HTableInterface {
     this.operationTimeout = tableName.isSystemTable() ?
         tableConfiguration.getMetaOperationTimeout() : tableConfiguration.getOperationTimeout();
     this.scannerCaching = tableConfiguration.getScannerCaching();
-
+    this.scannerMaxResultSize = tableConfiguration.getScannerMaxResultSize();
     if (this.rpcCallerFactory == null) {
       this.rpcCallerFactory = connection.getNewRpcRetryingCallerFactory(configuration);
     }
@@ -615,6 +616,14 @@ public class HTable implements HTableInterface {
     if (scan.getCaching() <= 0) {
       scan.setCaching(scannerCaching);
     }
+    if (scan.getMaxResultSize() <= 0) {
+      scan.setMaxResultSize(scannerMaxResultSize);
+    }
+
+    Boolean async = scan.isAsyncPrefetch();
+    if (async == null) {
+      async = tableConfiguration.isClientScannerAsyncPrefetch();
+    }
 
     if (scan.isReversed()) {
       if (scan.isSmall()) {
@@ -633,9 +642,15 @@ public class HTable implements HTableInterface {
           this.connection, this.rpcCallerFactory, this.rpcControllerFactory,
           pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
     } else {
-      return new ClientScanner(getConfiguration(), scan, getName(), this.connection,
-          this.rpcCallerFactory, this.rpcControllerFactory,
-          pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
+      if (async) {
+        return new ClientAsyncPrefetchScanner(getConfiguration(), scan, getName(), this.connection,
+            this.rpcCallerFactory, this.rpcControllerFactory,
+            pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
+      } else {
+        return new ClientSimpleScanner(getConfiguration(), scan, getName(), this.connection,
+            this.rpcCallerFactory, this.rpcControllerFactory,
+            pool, tableConfiguration.getReplicaCallTimeoutMicroSecondScan());
+      }
     }
   }
 
@@ -966,18 +981,6 @@ public class HTable implements HTableInterface {
       final byte [] qualifier, final long amount)
   throws IOException {
     return incrementColumnValue(row, family, qualifier, amount, Durability.SYNC_WAL);
-  }
-
-  /**
-   * @deprecated Use {@link #incrementColumnValue(byte[], byte[], byte[], long, Durability)}
-   */
-  @Deprecated
-  @Override
-  public long incrementColumnValue(final byte [] row, final byte [] family,
-      final byte [] qualifier, final long amount, final boolean writeToWAL)
-  throws IOException {
-    return incrementColumnValue(row, family, qualifier, amount,
-      writeToWAL? Durability.SKIP_WAL: Durability.USE_DEFAULT);
   }
 
   /**
@@ -1632,6 +1635,12 @@ public class HTable implements HTableInterface {
       byte[] startKey, byte[] endKey, final R responsePrototype, final Callback<R> callback)
       throws ServiceException, Throwable {
 
+    if (startKey == null) {
+      startKey = HConstants.EMPTY_START_ROW;
+    }
+    if (endKey == null) {
+      endKey = HConstants.EMPTY_END_ROW;
+    }
     // get regions covered by the row range
     Pair<List<byte[]>, List<HRegionLocation>> keysAndRegions =
         getKeysAndRegionsInRange(startKey, endKey, true);

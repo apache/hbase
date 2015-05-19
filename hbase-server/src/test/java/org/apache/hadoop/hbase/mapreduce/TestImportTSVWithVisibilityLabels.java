@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
@@ -74,7 +76,7 @@ import org.junit.experimental.categories.Category;
 @Category({MapReduceTests.class, LargeTests.class})
 public class TestImportTSVWithVisibilityLabels implements Configurable {
 
-  protected static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
+  private static final Log LOG = LogFactory.getLog(TestImportTSVWithVisibilityLabels.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -131,8 +133,8 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
           LOG.info("Added labels ");
         } catch (Throwable t) {
           LOG.error("Error in adding labels" , t);

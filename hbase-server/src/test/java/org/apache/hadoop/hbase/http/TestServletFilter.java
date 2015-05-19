@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestServletFilter extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final Log LOG = LogFactory.getLog(HttpServer.class);
   static volatile String uri = null; 
 
   /** A very simple filter which record the uri filtered. */

@@ -46,6 +46,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.io.RawComparator;
 import org.apache.hadoop.io.WritableComparator;
@@ -55,6 +56,7 @@ import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
+
 import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
@@ -62,6 +64,7 @@ import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeCo
  * comparisons, hash code generation, manufacturing keys for HashMaps or
  * HashSets, and can be used as key in maps or trees.
  */
+@SuppressWarnings("restriction")
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -121,6 +124,11 @@ public class Bytes implements Comparable<Bytes> {
    */
   public static final int SIZEOF_SHORT = Short.SIZE / Byte.SIZE;
 
+  /**
+   * Mask to apply to a long to reveal the lower int only. Use like this:
+   * int i = (int)(0xFFFFFFFF00000000L ^ some_long_value);
+   */
+  public static final long MASK_FOR_LOWER_INT_IN_LONG = 0xFFFFFFFF00000000L;
 
   /**
    * Estimate of size cost to pay beyond payload in jvm for instance of byte [].
@@ -638,12 +646,12 @@ public class Bytes implements Comparable<Bytes> {
     // Just in case we are passed a 'len' that is > buffer length...
     if (off >= b.length) return result.toString();
     if (off + len > b.length) len = b.length - off;
-    for (int i = off; i < off + len ; ++i ) {
+    for (int i = off; i < off + len ; ++i) {
       int ch = b[i] & 0xFF;
       if ( (ch >= '0' && ch <= '9')
           || (ch >= 'A' && ch <= 'Z')
           || (ch >= 'a' && ch <= 'z')
-          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0 ) {
+          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0) {
         result.append((char)ch);
       } else {
         result.append(String.format("\\x%02X", ch));
@@ -665,7 +673,7 @@ public class Bytes implements Comparable<Bytes> {
    * @return The converted hex value as a byte.
    */
   public static byte toBinaryFromHex(byte ch) {
-    if ( ch >= 'A' && ch <= 'F' )
+    if (ch >= 'A' && ch <= 'F')
       return (byte) ((byte)10 + (byte) (ch - 'A'));
     // else
     return (byte) (ch - '0');
@@ -1369,7 +1377,7 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset Offset into array at which vint begins.
    * @throws java.io.IOException e
    * @return deserialized long from buffer.
-   * @deprecated Use {@link #readAsVLong()} instead.
+   * @deprecated Use {@link #readAsVLong(byte[], int)} instead.
    */
   @Deprecated
   public static long readVLong(final byte [] buffer, final int offset)
@@ -1535,24 +1543,45 @@ public class Bytes implements Comparable<Bytes> {
       /**
        * Returns true if x1 is less than x2, when both values are treated as
        * unsigned long.
+       * Both values are passed as is read by Unsafe. When platform is Little Endian, have to
+       * convert to corresponding Big Endian value and then do compare. We do all writes in
+       * Big Endian format.
        */
       static boolean lessThanUnsignedLong(long x1, long x2) {
+        if (littleEndian) {
+          x1 = Long.reverseBytes(x1);
+          x2 = Long.reverseBytes(x2);
+        }
         return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
       }
 
       /**
        * Returns true if x1 is less than x2, when both values are treated as
        * unsigned int.
+       * Both values are passed as is read by Unsafe. When platform is Little Endian, have to
+       * convert to corresponding Big Endian value and then do compare. We do all writes in
+       * Big Endian format.
        */
       static boolean lessThanUnsignedInt(int x1, int x2) {
+        if (littleEndian) {
+          x1 = Integer.reverseBytes(x1);
+          x2 = Integer.reverseBytes(x2);
+        }
         return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
       }
 
       /**
        * Returns true if x1 is less than x2, when both values are treated as
        * unsigned short.
+       * Both values are passed as is read by Unsafe. When platform is Little Endian, have to
+       * convert to corresponding Big Endian value and then do compare. We do all writes in
+       * Big Endian format.
        */
       static boolean lessThanUnsignedShort(short x1, short x2) {
+        if (littleEndian) {
+          x1 = Short.reverseBytes(x1);
+          x2 = Short.reverseBytes(x2);
+        }
         return (x1 & 0xffff) < (x2 & 0xffff);
       }
 
@@ -1596,40 +1625,30 @@ public class Bytes implements Comparable<Bytes> {
          * time is no slower than comparing 4 bytes at a time even on 32-bit.
          * On the other hand, it is substantially faster on 64-bit.
          */
-        for (int i = 0; i < minWords * SIZEOF_LONG; i += SIZEOF_LONG) {
+        // This is the end offset of long parts.
+        int j = minWords << 3; // Same as minWords * SIZEOF_LONG
+        for (int i = 0; i < j; i += SIZEOF_LONG) {
           long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
           long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
           long diff = lw ^ rw;
-          if(littleEndian){
-            lw = Long.reverseBytes(lw);
-            rw = Long.reverseBytes(rw);
-          }
           if (diff != 0) {
               return lessThanUnsignedLong(lw, rw) ? -1 : 1;
           }
         }
-        int offset = minWords * SIZEOF_LONG;
+        int offset = j;
 
         if (minLength - offset >= SIZEOF_INT) {
           int il = theUnsafe.getInt(buffer1, offset1Adj + offset);
           int ir = theUnsafe.getInt(buffer2, offset2Adj + offset);
-          if(littleEndian){
-            il = Integer.reverseBytes(il);
-            ir = Integer.reverseBytes(ir);
-          }
-          if(il != ir){
+          if (il != ir) {
             return lessThanUnsignedInt(il, ir) ? -1: 1;
           }
-           offset += SIZEOF_INT;
+          offset += SIZEOF_INT;
         }
         if (minLength - offset >= SIZEOF_SHORT) {
           short sl = theUnsafe.getShort(buffer1, offset1Adj + offset);
           short sr = theUnsafe.getShort(buffer2, offset2Adj + offset);
-          if(littleEndian){
-            sl = Short.reverseBytes(sl);
-            sr = Short.reverseBytes(sr);
-          }
-          if(sl != sr){
+          if (sl != sr) {
             return lessThanUnsignedShort(sl, sr) ? -1: 1;
           }
           offset += SIZEOF_SHORT;
@@ -1785,6 +1804,24 @@ public class Bytes implements Comparable<Bytes> {
     System.arraycopy(a, 0, result, 0, a.length);
     System.arraycopy(b, 0, result, a.length, b.length);
     System.arraycopy(c, 0, result, a.length + b.length, c.length);
+    return result;
+  }
+
+  /**
+   * @param arrays all the arrays to concatenate together.
+   * @return New array made from the concatenation of the given arrays.
+   */
+  public static byte [] add(final byte [][] arrays) {
+    int length = 0;
+    for (int i = 0; i < arrays.length; i++) {
+      length += arrays[i].length;
+    }
+    byte [] result = new byte[length];
+    int index = 0;
+    for (int i = 0; i < arrays.length; i++) {
+      System.arraycopy(arrays[i], 0, result, index, arrays[i].length);
+      index += arrays[i].length;
+    }
     return result;
   }
 
@@ -2038,6 +2075,46 @@ public class Bytes implements Comparable<Bytes> {
   }
 
   /**
+   * Binary search for keys in indexes using Bytes.BYTES_RAWCOMPARATOR
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param offset the offset in the key you want to find
+   * @param length the length of the key
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   */
+  public static int binarySearch(byte[][] arr, byte[] key, int offset, int length) {
+    return binarySearch(arr, key, offset, length, (CellComparator) null);
+  }
+
+  /**
+   * Binary search for keys in indexes.
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param offset the offset in the key you want to find
+   * @param length the length of the key
+   * @param comparator a comparator to compare.
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   * @deprecated {@link Bytes#binarySearch(byte[][], byte[], int, int)}
+   */
+  @Deprecated
+  public static int binarySearch(byte [][]arr, byte []key, int offset,
+      int length, RawComparator<?> comparator) {
+    return binarySearch(arr, key, offset, length, (CellComparator)null);
+  }
+
+  /**
    * Binary search for keys in indexes.
    *
    * @param arr array of byte arrays to search for
@@ -2053,16 +2130,61 @@ public class Bytes implements Comparable<Bytes> {
    *         ranging from -(N + 1) to N - 1.
    */
   public static int binarySearch(byte [][]arr, byte []key, int offset,
-      int length, RawComparator<?> comparator) {
+      int length, CellComparator comparator) {
     int low = 0;
     int high = arr.length - 1;
 
+    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
+    r.setKey(key, offset, length);
     while (low <= high) {
       int mid = (low+high) >>> 1;
       // we have to compare in this order, because the comparator order
       // has special logic when the 'left side' is a special key.
-      int cmp = comparator.compare(key, offset, length,
-          arr[mid], 0, arr[mid].length);
+      int cmp = 0;
+      if (comparator != null) {
+        cmp = comparator.compare(r, arr[mid], 0, arr[mid].length);
+      } else {
+        cmp = Bytes.BYTES_RAWCOMPARATOR.compare(key, offset, length, arr[mid], 0, arr[mid].length);
+      }
+      // key lives above the midpoint
+      if (cmp > 0)
+        low = mid + 1;
+      // key lives below the midpoint
+      else if (cmp < 0)
+        high = mid - 1;
+      // BAM. how often does this really happen?
+      else
+        return mid;
+    }
+    return - (low+1);
+  }
+
+  /**
+   * Binary search for keys in indexes.
+   *
+   * @param arr array of byte arrays to search for
+   * @param key the key you want to find
+   * @param comparator a comparator to compare.
+   * @return zero-based index of the key, if the key is present in the array.
+   *         Otherwise, a value -(i + 1) such that the key is between arr[i -
+   *         1] and arr[i] non-inclusively, where i is in [0, i], if we define
+   *         arr[-1] = -Inf and arr[N] = Inf for an N-element array. The above
+   *         means that this function can return 2N + 1 different values
+   *         ranging from -(N + 1) to N - 1.
+   * @return the index of the block
+   * @deprecated Use {@link Bytes#binarySearch(byte[][], Cell, Comparator)}
+   */
+  @Deprecated
+  public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
+    int low = 0;
+    int high = arr.length - 1;
+    KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
+    while (low <= high) {
+      int mid = (low+high) >>> 1;
+      // we have to compare in this order, because the comparator order
+      // has special logic when the 'left side' is a special key.
+      r.setKey(arr[mid], 0, arr[mid].length);
+      int cmp = comparator.compare(key, r);
       // key lives above the midpoint
       if (cmp > 0)
         low = mid + 1;
@@ -2090,7 +2212,7 @@ public class Bytes implements Comparable<Bytes> {
    *         ranging from -(N + 1) to N - 1.
    * @return the index of the block
    */
-  public static int binarySearch(byte[][] arr, Cell key, RawComparator<Cell> comparator) {
+  public static int binarySearch(byte[][] arr, Cell key, Comparator<Cell> comparator) {
     int low = 0;
     int high = arr.length - 1;
     KeyValue.KeyOnlyKeyValue r = new KeyValue.KeyOnlyKeyValue();
@@ -2521,4 +2643,56 @@ public class Bytes implements Comparable<Bytes> {
     return b;
   }
 
+  /**
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter having started from start of <code>b</code> moving rightward.
+   */
+  public static int searchDelimiterIndex(final byte[] b, int offset, final int length,
+      final int delimiter) {
+    if (b == null) {
+      throw new IllegalArgumentException("Passed buffer is null");
+    }
+    int result = -1;
+    for (int i = offset; i < length + offset; i++) {
+      if (b[i] == delimiter) {
+        result = i;
+        break;
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Find index of passed delimiter walking from end of buffer backwards.
+   * 
+   * @param b
+   * @param delimiter
+   * @return Index of delimiter
+   */
+  public static int searchDelimiterIndexInReverse(final byte[] b, final int offset,
+      final int length, final int delimiter) {
+    if (b == null) {
+      throw new IllegalArgumentException("Passed buffer is null");
+    }
+    int result = -1;
+    for (int i = (offset + length) - 1; i >= offset; i--) {
+      if (b[i] == delimiter) {
+        result = i;
+        break;
+      }
+    }
+    return result;
+    }
+  
+    public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
+        int leftOffset, int rightOffset) {
+      int length = Math.min(leftLength, rightLength);
+      int result = 0;
+  
+      while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
+        result++;
+      }
+      return result;
+    }
 }

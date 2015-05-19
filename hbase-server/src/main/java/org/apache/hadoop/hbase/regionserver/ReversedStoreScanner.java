@@ -24,10 +24,9 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Scan;
 
 /**
@@ -63,7 +62,7 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
 
   @Override
   protected void resetKVHeap(List<? extends KeyValueScanner> scanners,
-      KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Combine all seeked scanners with a heap
     heap = new ReversedKeyValueHeap(scanners, comparator);
   }
@@ -100,11 +99,11 @@ class ReversedStoreScanner extends StoreScanner implements KeyValueScanner {
 
   @Override
   protected void checkScanOrder(Cell prevKV, Cell kv,
-      KeyValue.KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     // Check that the heap gives us KVs in an increasing order for same row and
     // decreasing order for different rows.
     assert prevKV == null || comparator == null || comparator.compareRows(kv, prevKV) < 0
-        || (comparator.matchingRows(kv, prevKV) && comparator.compare(kv,
+        || (CellUtil.matchingRows(kv, prevKV) && comparator.compare(kv,
             prevKV) >= 0) : "Key " + prevKV
         + " followed by a " + "error order key " + kv + " in cf " + store
         + " in reversed scan";

@@ -36,7 +36,7 @@ import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
  * limits the maximum number of servers that can be down at the same time during rolling restarts.
  */
 public class RollingBatchRestartRsAction extends BatchRestartRsAction {
-  private static Log LOG = LogFactory.getLog(RollingBatchRestartRsAction.class);
+  private static final Log LOG = LogFactory.getLog(RollingBatchRestartRsAction.class);
   protected int maxDeadServers; // number of maximum dead servers at any given time. Defaults to 5
 
   public RollingBatchRestartRsAction(long sleepTime, float ratio) {

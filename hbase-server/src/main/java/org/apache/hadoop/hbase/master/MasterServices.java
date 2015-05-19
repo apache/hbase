@@ -121,7 +121,7 @@ public interface MasterServices extends Server {
    * @param preserveSplits True if the splits should be preserved
    * @throws IOException
    */
-  public void truncateTable(final TableName tableName, boolean preserveSplits) throws IOException;
+  public long truncateTable(final TableName tableName, boolean preserveSplits) throws IOException;
 
   /**
    * Modify the descriptor of an existing table
@@ -129,7 +129,7 @@ public interface MasterServices extends Server {
    * @param descriptor The updated table descriptor
    * @throws IOException
    */
-  void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
+  long modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException;
 
   /**

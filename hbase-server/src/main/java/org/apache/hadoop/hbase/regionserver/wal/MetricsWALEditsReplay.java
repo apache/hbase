@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
  */
 @InterfaceAudience.Private
 public class MetricsWALEditsReplay {
-  static final Log LOG = LogFactory.getLog(MetricsWALEditsReplay.class);
+  private static final Log LOG = LogFactory.getLog(MetricsWALEditsReplay.class);
 
   private final MetricsEditsReplaySource source;
 

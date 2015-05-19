@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
-import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
@@ -35,7 +34,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -55,7 +53,7 @@ import java.util.Random;
  */
 @InterfaceAudience.Private
 public class HBaseFsckRepair {
-  public static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
+  private static final Log LOG = LogFactory.getLog(HBaseFsckRepair.class);
 
   /**
    * Fix multiple assignment by doing silent closes on each RS hosting the region
@@ -123,8 +121,8 @@ public class HBaseFsckRepair {
   public static void waitUntilAssigned(Admin admin,
       HRegionInfo region) throws IOException, InterruptedException {
     long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
-    long expiration = timeout + System.currentTimeMillis();
-    while (System.currentTimeMillis() < expiration) {
+    long expiration = timeout + EnvironmentEdgeManager.currentTime();
+    while (EnvironmentEdgeManager.currentTime() < expiration) {
       try {
         Map<String, RegionState> rits=
             admin.getClusterStatus().getRegionsInTransition();

@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.procedure;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
@@ -39,10 +38,6 @@ import com.google.common.collect.MapMaker;
  * Process to kick off and manage a running {@link Subprocedure} on a member. This is the
  * specialized part of a {@link Procedure} that actually does procedure type-specific work
  * and reports back to the coordinator as it completes each phase.
- * <p>
- * If there is a connection error ({@link #controllerConnectionFailure(String, IOException)}), all
- * currently running subprocedures are notify to failed since there is no longer a way to reach any
- * other members or coordinators since the rpcs are down.
  */
 @InterfaceAudience.Private
 public class ProcedureMember implements Closeable {
@@ -213,16 +208,17 @@ public class ProcedureMember implements Closeable {
    * other members since we cannot reach them anymore.
    * @param message description of the error
    * @param cause the actual cause of the failure
-   *
-   * TODO i'm tempted to just remove this code completely and treat it like any other abort.
-   * Implementation wise, if this happens it is a ZK failure which means the RS will abort.
+   * @param procName the name of the procedure we'd cancel due to the error.
    */
-  public void controllerConnectionFailure(final String message, final IOException cause) {
-    Collection<Subprocedure> toNotify = subprocs.values();
+  public void controllerConnectionFailure(final String message, final Throwable cause,
+      final String procName) {
     LOG.error(message, cause);
-    for (Subprocedure sub : toNotify) {
-      // TODO notify the elements, if they aren't null
-      sub.cancel(message, cause);
+    if (procName == null) {
+      return;
+    }
+    Subprocedure toNotify = subprocs.get(procName);
+    if (toNotify != null) {
+      toNotify.cancel(message, cause);
     }
   }
 

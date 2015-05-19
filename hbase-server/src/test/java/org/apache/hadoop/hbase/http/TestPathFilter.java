@@ -44,7 +44,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestPathFilter extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(HttpServer.class);
+  private static final Log LOG = LogFactory.getLog(HttpServer.class);
   static final Set<String> RECORDS = new TreeSet<String>(); 
 
   /** A very simple filter that records accessed uri's */

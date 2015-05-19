@@ -402,9 +402,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         getChoreService().scheduleChore(clusterStatusPublisherChore);
       }
     }
-    activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
-    int infoPort = putUpJettyServer();
-    startActiveMasterManager(infoPort);
+
+    // Some unit tests don't need a cluster, so no zookeeper at all
+    if (!conf.getBoolean("hbase.testing.nocluster", false)) {
+      activeMasterManager = new ActiveMasterManager(zooKeeper, this.serverName, this);
+      int infoPort = putUpJettyServer();
+      startActiveMasterManager(infoPort);
+    } else {
+      activeMasterManager = null;
+    }
   }
 
   // return the actual infoPort, -1 means disable info server.
@@ -1372,8 +1378,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     HRegionInfo[] newRegions = ModifyRegionUtils.createHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     sanityCheckTableDescriptor(hTableDescriptor);
-    this.quotaManager.checkNamespaceTableAndRegionQuota(hTableDescriptor.getTableName(),
-      newRegions.length);
+
     if (cpHost != null) {
       cpHost.preCreateTable(hTableDescriptor, newRegions);
     }
@@ -1584,8 +1589,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private void checkCompression(final HColumnDescriptor hcd)
   throws IOException {
     if (!this.masterCheckCompression) return;
-    CompressionTest.testCompression(hcd.getCompression());
-    CompressionTest.testCompression(hcd.getCompactionCompression());
+    CompressionTest.testCompression(hcd.getCompressionType());
+    CompressionTest.testCompression(hcd.getCompactionCompressionType());
   }
 
   private void checkEncryption(final Configuration conf, final HTableDescriptor htd)
@@ -1634,7 +1639,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
+  public long truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preTruncateTable(tableName);
@@ -1648,6 +1653,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postTruncateTable(tableName);
     }
+    return procId;
   }
 
   @Override
@@ -1806,7 +1812,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
+  public long modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException {
     checkInitialized();
     sanityCheckTableDescriptor(descriptor);
@@ -1825,6 +1831,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postModifyTable(tableName, descriptor);
     }
+
+    return procId;
   }
 
   @Override

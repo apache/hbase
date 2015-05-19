@@ -28,7 +28,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
 import org.apache.hadoop.hbase.CoordinatedStateManagerFactory;
@@ -37,8 +36,10 @@ import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ServerCommandLine;
@@ -249,12 +250,16 @@ public class HMasterCommandLine extends ServerCommandLine {
 
   @SuppressWarnings("resource")
   private int stopMaster() {
-    Admin adm = null;
-    try {
-      Configuration conf = getConf();
-      // Don't try more than once
-      conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
-      adm = new HBaseAdmin(getConf());
+    Configuration conf = getConf();
+    // Don't try more than once
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      try (Admin admin = connection.getAdmin()) {
+        connection.getAdmin().shutdown();
+      } catch (Throwable t) {
+        LOG.error("Failed to stop master", t);
+        return 1;
+      }
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running");
       return 1;
@@ -263,12 +268,6 @@ public class HMasterCommandLine extends ServerCommandLine {
       return 1;
     } catch (IOException e) {
       LOG.error("Got IOException: " +e.getMessage(), e);
-      return 1;
-    }
-    try {
-      adm.shutdown();
-    } catch (Throwable t) {
-      LOG.error("Failed to stop master", t);
       return 1;
     }
     return 0;

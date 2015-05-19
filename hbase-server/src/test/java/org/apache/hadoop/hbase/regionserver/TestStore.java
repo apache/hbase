@@ -19,7 +19,9 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -48,6 +50,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -55,7 +58,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -97,7 +99,7 @@ import com.google.common.collect.Lists;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestStore {
-  public static final Log LOG = LogFactory.getLog(TestStore.class);
+  private static final Log LOG = LogFactory.getLog(TestStore.class);
   @Rule public TestName name = new TestName();
 
   HStore store;
@@ -266,7 +268,7 @@ public class TestStore {
     init(name.getMethodName(), conf, hcd);
 
     // Test createWriterInTmp()
-    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompression(), false, true, false);
+    StoreFile.Writer writer = store.createWriterInTmp(4, hcd.getCompressionType(), false, true, false);
     Path path = writer.getPath();
     writer.append(new KeyValue(row, family, qf1, Bytes.toBytes(1)));
     writer.append(new KeyValue(row, family, qf2, Bytes.toBytes(2)));
@@ -503,7 +505,7 @@ public class TestStore {
     //this.store.get(get, qualifiers, result);
 
     //Need to sort the result since multiple files
-    Collections.sort(result, KeyValue.COMPARATOR);
+    Collections.sort(result, CellComparator.COMPARATOR);
 
     //Compare
     assertCheck();
@@ -538,7 +540,7 @@ public class TestStore {
         get.getRow(), qualifiers);
 
     //Need to sort the result since multiple files
-    Collections.sort(result, KeyValue.COMPARATOR);
+    Collections.sort(result, CellComparator.COMPARATOR);
 
     //Compare
     assertCheck();
@@ -986,7 +988,7 @@ public class TestStore {
     public static DefaultCompactor lastCreatedCompactor = null;
     @Override
     protected void createComponents(
-        Configuration conf, Store store, KVComparator comparator) throws IOException {
+        Configuration conf, Store store, CellComparator comparator) throws IOException {
       super.createComponents(conf, store, comparator);
       lastCreatedCompactor = this.compactor;
     }

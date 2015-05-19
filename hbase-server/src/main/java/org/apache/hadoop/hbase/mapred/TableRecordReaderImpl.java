@@ -44,7 +44,7 @@ import static org.apache.hadoop.hbase.mapreduce.TableRecordReaderImpl.LOG_PER_RO
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableRecordReaderImpl {
-  static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
+  private static final Log LOG = LogFactory.getLog(TableRecordReaderImpl.class);
 
   private byte [] startRow;
   private byte [] endRow;

@@ -51,7 +51,7 @@ import org.mockito.Mockito;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestRestoreSnapshotHelper {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotHelper.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String TEST_HFILE = "abc";

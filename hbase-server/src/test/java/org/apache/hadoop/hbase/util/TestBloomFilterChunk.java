@@ -29,11 +29,11 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
 
 @Category({MiscTests.class, SmallTests.class})
-public class TestByteBloomFilter extends TestCase {
+public class TestBloomFilterChunk extends TestCase {
 
   public void testBasicBloom() throws Exception {
-    ByteBloomFilter bf1 = new ByteBloomFilter(1000, (float)0.01, Hash.MURMUR_HASH, 0);
-    ByteBloomFilter bf2 = new ByteBloomFilter(1000, (float)0.01, Hash.MURMUR_HASH, 0);
+    BloomFilterChunk bf1 = new BloomFilterChunk(1000, (float)0.01, Hash.MURMUR_HASH, 0);
+    BloomFilterChunk bf2 = new BloomFilterChunk(1000, (float)0.01, Hash.MURMUR_HASH, 0);
     bf1.allocBloom();
     bf2.allocBloom();
 
@@ -44,10 +44,14 @@ public class TestByteBloomFilter extends TestCase {
     bf1.add(key1);
     bf2.add(key2);
 
-    assertTrue(bf1.contains(key1));
-    assertFalse(bf1.contains(key2));
-    assertFalse(bf2.contains(key1));
-    assertTrue(bf2.contains(key2));
+    assertTrue(BloomFilterUtil.contains(key1, 0, key1.length, bf1.bloom, 0, (int) bf1.byteSize,
+        bf1.hash, bf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(key2, 0, key2.length, bf1.bloom, 0, (int) bf1.byteSize,
+        bf1.hash, bf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(key1, 0, key1.length, bf2.bloom, 0, (int) bf2.byteSize,
+        bf2.hash, bf2.hashCount));
+    assertTrue(BloomFilterUtil.contains(key2, 0, key2.length, bf2.bloom, 0, (int) bf2.byteSize,
+        bf2.hash, bf2.hashCount));
 
     byte [] bkey = {1,2,3,4};
     byte [] bval = "this is a much larger byte array".getBytes();
@@ -55,24 +59,32 @@ public class TestByteBloomFilter extends TestCase {
     bf1.add(bkey);
     bf1.add(bval, 1, bval.length-1);
 
-    assertTrue( bf1.contains(bkey) );
-    assertTrue( bf1.contains(bval, 1, bval.length-1) );
-    assertFalse( bf1.contains(bval) );
-    assertFalse( bf1.contains(bval) );
+    assertTrue(BloomFilterUtil.contains(bkey, 0, bkey.length, bf1.bloom, 0, (int) bf1.byteSize,
+        bf1.hash, bf1.hashCount));
+    assertTrue(BloomFilterUtil.contains(bval, 1, bval.length - 1, bf1.bloom, 0, (int) bf1.byteSize,
+        bf1.hash, bf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(bval, 0, bval.length, bf1.bloom, 0, (int) bf1.byteSize,
+        bf1.hash, bf1.hashCount));
 
     // test 2: serialization & deserialization.
     // (convert bloom to byte array & read byte array back in as input)
     ByteArrayOutputStream bOut = new ByteArrayOutputStream();
     bf1.writeBloom(new DataOutputStream(bOut));
     ByteBuffer bb = ByteBuffer.wrap(bOut.toByteArray());
-    ByteBloomFilter newBf1 = new ByteBloomFilter(1000, (float)0.01,
+    BloomFilterChunk newBf1 = new BloomFilterChunk(1000, (float)0.01,
         Hash.MURMUR_HASH, 0);
-    assertTrue(newBf1.contains(key1, bb));
-    assertFalse(newBf1.contains(key2, bb));
-    assertTrue( newBf1.contains(bkey, bb) );
-    assertTrue( newBf1.contains(bval, 1, bval.length-1, bb) );
-    assertFalse( newBf1.contains(bval, bb) );
-    assertFalse( newBf1.contains(bval, bb) );
+    assertTrue(BloomFilterUtil.contains(key1, 0, key1.length, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(key2, 0, key2.length, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
+    assertTrue(BloomFilterUtil.contains(bkey, 0, bkey.length, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
+    assertTrue(BloomFilterUtil.contains(bval, 1, bval.length - 1, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(bval, 0, bval.length, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
+    assertFalse(BloomFilterUtil.contains(bval, 0, bval.length, bb, 0, (int) newBf1.byteSize,
+        newBf1.hash, newBf1.hashCount));
 
     System.out.println("Serialized as " + bOut.size() + " bytes");
     assertTrue(bOut.size() - bf1.byteSize < 10); //... allow small padding
@@ -80,7 +92,7 @@ public class TestByteBloomFilter extends TestCase {
 
   public void testBloomFold() throws Exception {
     // test: foldFactor < log(max/actual)
-    ByteBloomFilter b = new ByteBloomFilter(1003, (float) 0.01,
+    BloomFilterChunk b = new BloomFilterChunk(1003, (float) 0.01,
         Hash.MURMUR_HASH, 2);
     b.allocBloom();
     long origSize = b.getByteSize();
@@ -92,7 +104,9 @@ public class TestByteBloomFilter extends TestCase {
     assertEquals(origSize>>2, b.getByteSize());
     int falsePositives = 0;
     for (int i = 0; i < 25; ++i) {
-      if (b.contains(Bytes.toBytes(i))) {
+      byte[] bytes = Bytes.toBytes(i);
+      if (BloomFilterUtil.contains(bytes, 0, bytes.length, b.bloom, 0, (int) b.byteSize, b.hash,
+          b.hashCount)) {
         if(i >= 12) falsePositives++;
       } else {
         assertFalse(i < 12);
@@ -106,7 +120,7 @@ public class TestByteBloomFilter extends TestCase {
   public void testBloomPerf() throws Exception {
     // add
     float err = (float)0.01;
-    ByteBloomFilter b = new ByteBloomFilter(10*1000*1000, (float)err, Hash.MURMUR_HASH, 3);
+    BloomFilterChunk b = new BloomFilterChunk(10*1000*1000, (float)err, Hash.MURMUR_HASH, 3);
     b.allocBloom();
     long startTime =  System.currentTimeMillis();
     long origSize = b.getByteSize();
@@ -128,7 +142,9 @@ public class TestByteBloomFilter extends TestCase {
     int falsePositives = 0;
     for (int i = 0; i < 2*1000*1000; ++i) {
 
-      if (b.contains(Bytes.toBytes(i))) {
+      byte[] bytes = Bytes.toBytes(i);
+      if (BloomFilterUtil.contains(bytes, 0, bytes.length, b.bloom, 0, (int) b.byteSize, b.hash,
+          b.hashCount)) {
         if(i >= 1*1000*1000) falsePositives++;
       } else {
         assertFalse(i < 1*1000*1000);
@@ -148,20 +164,20 @@ public class TestByteBloomFilter extends TestCase {
 
     // How many keys can we store in a Bloom filter of this size maintaining
     // the given false positive rate, not taking into account that the n
-    long maxKeys = ByteBloomFilter.idealMaxKeys(bitSize, errorRate);
+    long maxKeys = BloomFilterUtil.idealMaxKeys(bitSize, errorRate);
     assertEquals(136570, maxKeys);
 
     // A reverse operation: how many bits would we need to store this many keys
     // and keep the same low false positive rate?
-    long bitSize2 = ByteBloomFilter.computeBitSize(maxKeys, errorRate);
+    long bitSize2 = BloomFilterUtil.computeBitSize(maxKeys, errorRate);
 
     // The bit size comes out a little different due to rounding.
     assertTrue(Math.abs(bitSize2 - bitSize) * 1.0 / bitSize < 1e-5);
   }
 
   public void testFoldableByteSize() {
-    assertEquals(128, ByteBloomFilter.computeFoldableByteSize(1000, 5));
-    assertEquals(640, ByteBloomFilter.computeFoldableByteSize(5001, 4));
+    assertEquals(128, BloomFilterUtil.computeFoldableByteSize(1000, 5));
+    assertEquals(640, BloomFilterUtil.computeFoldableByteSize(5001, 4));
   }
 
 

@@ -101,7 +101,7 @@ public class TestAsyncIPC extends AbstractTestIPC {
 
   private void setConf(Configuration conf) {
     conf.setBoolean(AsyncRpcClient.USE_NATIVE_TRANSPORT, useNativeTransport);
-    conf.setBoolean(AsyncRpcClient.USE_NATIVE_TRANSPORT, useGlobalEventLoopGroup);
+    conf.setBoolean(AsyncRpcClient.USE_GLOBAL_EVENT_LOOP_GROUP, useGlobalEventLoopGroup);
     if (useGlobalEventLoopGroup && AsyncRpcClient.GLOBAL_EVENT_LOOP_GROUP != null) {
       if (useNativeTransport
           && !(AsyncRpcClient.GLOBAL_EVENT_LOOP_GROUP.getFirst() instanceof EpollEventLoopGroup)

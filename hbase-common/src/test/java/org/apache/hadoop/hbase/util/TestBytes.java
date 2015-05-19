@@ -49,6 +49,19 @@ public class TestBytes extends TestCase {
     assertNotNull(ee);
   }
 
+  public void testAdd () throws Exception {
+    byte[] a = {0,0,0,0,0,0,0,0,0,0};
+    byte[] b = {1,1,1,1,1,1,1,1,1,1,1};
+    byte[] c = {2,2,2,2,2,2,2,2,2,2,2,2};
+    byte[] d = {3,3,3,3,3,3,3,3,3,3,3,3,3};
+    byte[] result1 = Bytes.add (a, b, c);
+    byte[] result2 = Bytes.add (new byte[][] {a, b, c});
+    assertEquals(0, Bytes.compareTo(result1, result2));
+    byte[] result4 = Bytes.add (result1, d);
+    byte[] result5 = Bytes.add (new byte[][] {result1, d});
+    assertEquals(0, Bytes.compareTo(result1, result2));
+  }
+
   public void testSplit() throws Exception {
     byte [] lowest = Bytes.toBytes("AAA");
     byte [] middle = Bytes.toBytes("CCC");
@@ -272,33 +285,25 @@ public class TestBytes extends TestCase {
     byte [] key4 = {0};
     byte [] key5 = {2};
 
-    assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(1, Bytes.binarySearch(arr, key1, 0, 1));
+    assertEquals(0, Bytes.binarySearch(arr, key1, 1, 1));
     assertEquals(-(2+1), Arrays.binarySearch(arr, key2_2,
       Bytes.BYTES_COMPARATOR));
-    assertEquals(-(2+1), Bytes.binarySearch(arr, key2, 0, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(4, Bytes.binarySearch(arr, key2, 1, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(2, Bytes.binarySearch(arr, key3, 0, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
-    assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1,
-      Bytes.BYTES_RAWCOMPARATOR));
+    assertEquals(-(2+1), Bytes.binarySearch(arr, key2, 0, 1));
+    assertEquals(4, Bytes.binarySearch(arr, key2, 1, 1));
+    assertEquals(2, Bytes.binarySearch(arr, key3, 0, 1));
+    assertEquals(5, Bytes.binarySearch(arr, key3, 1, 1));
     assertEquals(-1,
-      Bytes.binarySearch(arr, key4, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
+      Bytes.binarySearch(arr, key4, 0, 1));
     assertEquals(-2,
-      Bytes.binarySearch(arr, key5, 0, 1, Bytes.BYTES_RAWCOMPARATOR));
+      Bytes.binarySearch(arr, key5, 0, 1));
 
     // Search for values to the left and to the right of each item in the array.
     for (int i = 0; i < arr.length; ++i) {
       assertEquals(-(i + 1), Bytes.binarySearch(arr,
-          new byte[] { (byte) (arr[i][0] - 1) }, 0, 1,
-          Bytes.BYTES_RAWCOMPARATOR));
+          new byte[] { (byte) (arr[i][0] - 1) }, 0, 1));
       assertEquals(-(i + 2), Bytes.binarySearch(arr,
-          new byte[] { (byte) (arr[i][0] + 1) }, 0, 1,
-          Bytes.BYTES_RAWCOMPARATOR));
+          new byte[] { (byte) (arr[i][0] + 1) }, 0, 1));
     }
   }
 

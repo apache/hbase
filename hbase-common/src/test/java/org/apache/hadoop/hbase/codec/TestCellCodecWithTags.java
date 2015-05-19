@@ -29,7 +29,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
@@ -76,7 +76,7 @@ public class TestCellCodecWithTags {
     Codec.Decoder decoder = codec.getDecoder(dis);
     assertTrue(decoder.advance());
     Cell c = decoder.current();
-    assertTrue(CellComparator.equals(c, cell1));
+    assertTrue(CellUtil.equals(c, cell1));
     List<Tag> tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
     assertEquals(2, tags.size());
     Tag tag = tags.get(0);
@@ -87,7 +87,7 @@ public class TestCellCodecWithTags {
     assertTrue(Bytes.equals(Bytes.toBytes("teststring2"), tag.getValue()));
     assertTrue(decoder.advance());
     c = decoder.current();
-    assertTrue(CellComparator.equals(c, cell2));
+    assertTrue(CellUtil.equals(c, cell2));
     tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
     assertEquals(1, tags.size());
     tag = tags.get(0);
@@ -95,7 +95,7 @@ public class TestCellCodecWithTags {
     assertTrue(Bytes.equals(Bytes.toBytes("teststring3"), tag.getValue()));
     assertTrue(decoder.advance());
     c = decoder.current();
-    assertTrue(CellComparator.equals(c, cell3));
+    assertTrue(CellUtil.equals(c, cell3));
     tags = Tag.asList(c.getTagsArray(), c.getTagsOffset(), c.getTagsLength());
     assertEquals(3, tags.size());
     tag = tags.get(0);

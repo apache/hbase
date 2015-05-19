@@ -1780,8 +1780,8 @@ public class TestVisibilityLabelsWithDeletes {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
               SUPERUSER.getShortName());
         } catch (Throwable e) {
         }
@@ -1931,8 +1931,9 @@ public class TestVisibilityLabelsWithDeletes {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET },
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL,
+            PRIVATE, SECRET },
               SUPERUSER.getShortName());
         } catch (Throwable e) {
         }
@@ -2460,8 +2461,9 @@ public class TestVisibilityLabelsWithDeletes {
         new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
-        try {
-          return VisibilityClient.setAuths(conf, new String[] { CONFIDENTIAL, PRIVATE, SECRET,
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          return VisibilityClient.setAuths(conn, new String[] { CONFIDENTIAL,
+            PRIVATE, SECRET,
               TOPSECRET }, SUPERUSER.getShortName());
         } catch (Throwable e) {
         }
@@ -2867,8 +2869,8 @@ public class TestVisibilityLabelsWithDeletes {
       @Override
       public VisibilityLabelsResponse run() throws Exception {
         String[] labels = { SECRET, TOPSECRET, CONFIDENTIAL, PUBLIC, PRIVATE };
-        try {
-          VisibilityClient.addLabels(conf, labels);
+        try (Connection conn = ConnectionFactory.createConnection(conf)) {
+          VisibilityClient.addLabels(conn, labels);
         } catch (Throwable t) {
           throw new IOException(t);
         }

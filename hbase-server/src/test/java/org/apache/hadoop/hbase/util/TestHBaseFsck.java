@@ -103,7 +103,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionFactory;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl;
 import org.apache.hadoop.hbase.regionserver.TestEndToEndSplitTransaction;
-import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
@@ -132,8 +131,7 @@ import com.google.common.collect.Multimap;
 @Category({MiscTests.class, LargeTests.class})
 public class TestHBaseFsck {
   static final int POOL_SIZE = 7;
-
-  final static Log LOG = LogFactory.getLog(TestHBaseFsck.class);
+  private static final Log LOG = LogFactory.getLog(TestHBaseFsck.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static Configuration conf = TEST_UTIL.getConfiguration();
   private final static String FAM_STR = "fam";
@@ -160,7 +158,7 @@ public class TestHBaseFsck {
       MasterSyncObserver.class.getName());
 
     conf.setInt("hbase.regionserver.handler.count", 2);
-    conf.setInt("hbase.regionserver.metahandler.count", 2);
+    conf.setInt("hbase.regionserver.metahandler.count", 30);
 
     conf.setInt("hbase.htable.threads.max", POOL_SIZE);
     conf.setInt("hbase.hconnection.threads.max", 2 * POOL_SIZE);
@@ -608,7 +606,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * This test makes sure that with 5 retries both parallel instances
+   * This test makes sure that with 10 retries both parallel instances
    * of hbck will be completed successfully.
    *
    * @throws Exception
@@ -622,7 +620,10 @@ public class TestHBaseFsck {
 
       @Override
       public HBaseFsck call() throws Exception {
-        return doFsck(conf, false);
+        // Increase retry attempts to make sure the non-active hbck doesn't get starved
+        Configuration c = new Configuration(conf);
+        c.setInt("hbase.hbck.lockfile.attempts", 10);
+        return doFsck(c, false);
       }
     }
     service = Executors.newFixedThreadPool(2);
@@ -630,7 +631,7 @@ public class TestHBaseFsck {
     hbck2 = service.submit(new RunHbck());
     service.shutdown();
     //wait for 15 seconds, for both hbck calls finish
-    service.awaitTermination(15, TimeUnit.SECONDS);
+    service.awaitTermination(25, TimeUnit.SECONDS);
     HBaseFsck h1 = hbck1.get();
     HBaseFsck h2 = hbck2.get();
     // Both should be successful

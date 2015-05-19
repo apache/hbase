@@ -68,7 +68,7 @@ import org.junit.rules.TestName;
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestScanner {
   @Rule public TestName name = new TestName();
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private static final byte [] FIRST_ROW = HConstants.EMPTY_START_ROW;

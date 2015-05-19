@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -107,9 +107,10 @@ public class HFileBlockIndex {
    */
   public static class BlockIndexReader implements HeapSize {
     /** Needed doing lookup on blocks. */
-    private final KVComparator comparator;
+    private final CellComparator comparator;
 
     // Root-level data.
+    // TODO : Convert these to Cells (ie) KeyValue.KeyOnlyKV
     private byte[][] blockKeys;
     private long[] blockOffsets;
     private int[] blockDataSizes;
@@ -132,14 +133,15 @@ public class HFileBlockIndex {
     /** A way to read {@link HFile} blocks at a given offset */
     private CachingBlockReader cachingBlockReader;
 
-    public BlockIndexReader(final KVComparator c, final int treeLevel,
+    public BlockIndexReader(final CellComparator c, final int treeLevel,
         final CachingBlockReader cachingBlockReader) {
       this(c, treeLevel);
       this.cachingBlockReader = cachingBlockReader;
     }
 
-    public BlockIndexReader(final KVComparator c, final int treeLevel)
+    public BlockIndexReader(final CellComparator c, final int treeLevel)
     {
+      // Can be null for METAINDEX block
       comparator = c;
       searchTreeLevel = treeLevel;
     }
@@ -388,15 +390,21 @@ public class HFileBlockIndex {
 
     /**
      * Finds the root-level index block containing the given key.
-     *
+     * 
      * @param key
      *          Key to find
+     * @param comp
+     *          the comparator to be used
      * @return Offset of block containing <code>key</code> (between 0 and the
      *         number of blocks - 1) or -1 if this file does not contain the
      *         request.
      */
-    public int rootBlockContainingKey(final byte[] key, int offset, int length) {
-      int pos = Bytes.binarySearch(blockKeys, key, offset, length, comparator);
+    // When we want to find the meta index block or bloom block for ROW bloom
+    // type Bytes.BYTES_RAWCOMPARATOR would be enough. For the ROW_COL bloom case we need the
+    // CellComparator.
+    public int rootBlockContainingKey(final byte[] key, int offset, int length,
+        CellComparator comp) {
+      int pos = Bytes.binarySearch(blockKeys, key, offset, length, comp);
       // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
       // binarySearch's javadoc.
 
@@ -421,8 +429,26 @@ public class HFileBlockIndex {
      *
      * @param key
      *          Key to find
+     * @return Offset of block containing <code>key</code> (between 0 and the
+     *         number of blocks - 1) or -1 if this file does not contain the
+     *         request.
+     */
+    // When we want to find the meta index block or bloom block for ROW bloom
+    // type
+    // Bytes.BYTES_RAWCOMPARATOR would be enough. For the ROW_COL bloom case we
+    // need the CellComparator.
+    public int rootBlockContainingKey(final byte[] key, int offset, int length) {
+      return rootBlockContainingKey(key, offset, length, comparator);
+    }
+
+    /**
+     * Finds the root-level index block containing the given key.
+     *
+     * @param key
+     *          Key to find
      */
     public int rootBlockContainingKey(final Cell key) {
+      // Here the comparator should not be null as this happens for the root-level block
       int pos = Bytes.binarySearch(blockKeys, key, comparator);
       // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
       // binarySearch's javadoc.
@@ -487,6 +513,7 @@ public class HFileBlockIndex {
       int targetKeyLength = nonRootIndex.getInt(Bytes.SIZEOF_INT * (i + 2)) -
         targetKeyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
 
+      // TODO check whether we can make BB backed Cell here? So can avoid bytes copy.
       return ByteBufferUtils.toBytes(nonRootIndex, targetKeyOffset, targetKeyLength);
     }
 
@@ -507,7 +534,7 @@ public class HFileBlockIndex {
      * @throws IOException
      */
     static int binarySearchNonRootIndex(Cell key, ByteBuffer nonRootIndex,
-        KVComparator comparator) {
+        CellComparator comparator) {
 
       int numEntries = nonRootIndex.getInt(0);
       int low = 0;
@@ -544,9 +571,10 @@ public class HFileBlockIndex {
         // has special logic when the 'left side' is a special key.
         // TODO make KeyOnlyKeyValue to be Buffer backed and avoid array() call. This has to be
         // done after HBASE-12224 & HBASE-12282
+        // TODO avaoid array call.
         nonRootIndexKV.setKey(nonRootIndex.array(),
             nonRootIndex.arrayOffset() + midKeyOffset, midLength);
-        int cmp = comparator.compareOnlyKeyPortion(key, nonRootIndexKV);
+        int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexKV);
 
         // key lives above the midpoint
         if (cmp > 0)
@@ -596,7 +624,7 @@ public class HFileBlockIndex {
      *
      */
     static int locateNonRootIndexEntry(ByteBuffer nonRootBlock, Cell key,
-        KVComparator comparator) {
+        CellComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {
@@ -641,7 +669,7 @@ public class HFileBlockIndex {
         }
       }
     }
-    
+
     /**
      * Read in the root-level index from the given input stream. Must match
      * what was written into the root level by

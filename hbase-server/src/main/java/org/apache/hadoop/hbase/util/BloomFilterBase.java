@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 
 /**
  * Common methods Bloom filter methods required at read and write time.
@@ -42,16 +41,4 @@ public interface BloomFilterBase {
    * @return Size of the bloom, in bytes
    */
   long getByteSize();
-
-  /**
-   * Create a key for a row-column Bloom filter.
-   */
-  byte[] createBloomKey(byte[] rowBuf, int rowOffset, int rowLen,
-      byte[] qualBuf, int qualOffset, int qualLen);
-
-  /**
-   * @return Bloom key comparator
-   */
-  KVComparator getComparator();
-
 }

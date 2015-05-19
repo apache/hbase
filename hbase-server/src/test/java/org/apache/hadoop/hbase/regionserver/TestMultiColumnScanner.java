@@ -223,7 +223,7 @@ public class TestMultiColumnScanner {
       region.flush(true);
     }
 
-    Collections.sort(kvs, KeyValue.COMPARATOR);
+    Collections.sort(kvs, CellComparator.COMPARATOR);
     for (int maxVersions = 1; maxVersions <= TIMESTAMPS.length; ++maxVersions) {
       for (int columnBitMask = 1; columnBitMask <= MAX_COLUMN_BIT_MASK; ++columnBitMask) {
         Scan scan = new Scan();
@@ -266,7 +266,7 @@ public class TestMultiColumnScanner {
             assertTrue("Scanner returned additional key/value: " + kv + ", "
                 + queryInfo + deleteInfo + ";", kvPos < kvs.size());
             assertTrue("Scanner returned wrong key/value; " + queryInfo
-                + deleteInfo + ";", CellComparator.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
+                + deleteInfo + ";", CellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), (kv)));
             ++kvPos;
             ++numResults;
           }

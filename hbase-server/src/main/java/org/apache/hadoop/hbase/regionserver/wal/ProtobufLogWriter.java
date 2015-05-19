@@ -44,7 +44,7 @@ import static org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader.DEFAULT
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
 public class ProtobufLogWriter extends WriterBase {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ProtobufLogWriter.class);
   protected FSDataOutputStream output;
   protected Codec.Encoder cellEncoder;
   protected WALCellCodec.ByteStringCompressor compressor;

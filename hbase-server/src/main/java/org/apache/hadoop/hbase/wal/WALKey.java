@@ -70,7 +70,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
 //       purposes. They need to be merged into WALEntry.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
 public class WALKey implements SequenceId, Comparable<WALKey> {
-  public static final Log LOG = LogFactory.getLog(WALKey.class);
+  private static final Log LOG = LogFactory.getLog(WALKey.class);
 
   // should be < 0 (@see HLogKey#readFields(DataInput))
   // version 2 supports WAL compression

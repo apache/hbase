@@ -50,7 +50,7 @@ optparse.parse!
 # Return array of servernames where servername is hostname+port+startcode
 # comma-delimited
 def getServers(admin)
-  serverInfos = admin.getClusterStatus().getServerInfo()
+  serverInfos = admin.getClusterStatus().getServers()
   servers = []
   for server in serverInfos
     servers << server.getServerName()

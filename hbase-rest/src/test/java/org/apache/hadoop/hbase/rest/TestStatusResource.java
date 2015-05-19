@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({RestTests.class, MediumTests.class})
 public class TestStatusResource {
-  public static Log LOG = LogFactory.getLog(TestStatusResource.class);
+  private static final Log LOG = LogFactory.getLog(TestStatusResource.class);
 
   private static final byte[] META_REGION_NAME = Bytes.toBytes(TableName.META_TABLE_NAME + ",,1");
 

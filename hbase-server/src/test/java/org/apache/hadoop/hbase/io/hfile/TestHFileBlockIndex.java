@@ -42,9 +42,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -204,7 +206,7 @@ public class TestHFileBlockIndex {
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
         new HFileBlockIndex.BlockIndexReader(
-            KeyValue.RAW_COMPARATOR, numLevels, brw);
+            CellComparator.COMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
         fileSize).nextBlockWithBlockType(BlockType.ROOT_INDEX), numRootEntries);
@@ -217,10 +219,12 @@ public class TestHFileBlockIndex {
     for (byte[] key : keys) {
       assertTrue(key != null);
       assertTrue(indexReader != null);
+      KeyValue.KeyOnlyKeyValue keyOnlyKey = new KeyValue.KeyOnlyKeyValue(key, 0, key.length);
       HFileBlock b =
-          indexReader.seekToDataBlock(new KeyValue.KeyOnlyKeyValue(key, 0, key.length), null, true,
+          indexReader.seekToDataBlock(keyOnlyKey, null, true,
             true, false, null);
-      if (KeyValue.COMPARATOR.compareFlatKey(key, firstKeyInFile) < 0) {
+      if (CellComparator.COMPARATOR.compare(keyOnlyKey, firstKeyInFile,
+          0, firstKeyInFile.length) < 0) {
         assertTrue(b == null);
         ++i;
         continue;
@@ -364,7 +368,7 @@ public class TestHFileBlockIndex {
 
     // Make sure the keys are increasing.
     for (int i = 0; i < keys.size() - 1; ++i)
-      assertTrue(KeyValue.COMPARATOR.compare(
+      assertTrue(CellComparator.COMPARATOR.compare(
           new KeyValue.KeyOnlyKeyValue(keys.get(i), 0, keys.get(i).length),
           new KeyValue.KeyOnlyKeyValue(keys.get(i + 1), 0, keys.get(i + 1).length)) < 0);
 
@@ -403,7 +407,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue cell = new KeyValue.KeyOnlyKeyValue(
           arrayHoldingKey, searchKey.length / 2, searchKey.length);
       int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
-          nonRootIndex, KeyValue.COMPARATOR);
+          nonRootIndex, CellComparator.COMPARATOR);
       String lookupFailureMsg = "Failed to look up key #" + i + " ("
           + Bytes.toStringBinary(searchKey) + ")";
 
@@ -429,7 +433,7 @@ public class TestHFileBlockIndex {
       // higher-level API function.s
       boolean locateBlockResult =
           (BlockIndexReader.locateNonRootIndexEntry(nonRootIndex, cell,
-          KeyValue.COMPARATOR) != -1);
+          CellComparator.COMPARATOR) != -1);
 
       if (i == 0) {
         assertFalse(locateBlockResult);
@@ -489,7 +493,7 @@ public class TestHFileBlockIndex {
     long expected = ClassSize.estimateBase(cl, false);
 
     HFileBlockIndex.BlockIndexReader bi =
-        new HFileBlockIndex.BlockIndexReader(KeyValue.RAW_COMPARATOR, 1);
+        new HFileBlockIndex.BlockIndexReader(null, 1);
     long actual = bi.heapSize();
 
     // Since the arrays in BlockIndex(byte [][] blockKeys, long [] blockOffsets,
@@ -557,8 +561,8 @@ public class TestHFileBlockIndex {
           values[i] = CellUtil.cloneValue(kv);
           keyStrSet.add(Bytes.toStringBinary(k));
           if (i > 0) {
-            assertTrue(KeyValue.COMPARATOR.compareFlatKey(keys[i - 1],
-                keys[i]) < 0);
+            assertTrue((CellComparator.COMPARATOR.compare(kv, keys[i - 1],
+                0, keys[i - 1].length)) > 0);
           }
         }
 
@@ -640,7 +644,7 @@ public class TestHFileBlockIndex {
   private void checkSeekTo(byte[][] keys, HFileScanner scanner, int i)
       throws IOException {
     assertEquals("Failed to seek to key #" + i + " (" + Bytes.toStringBinary(keys[i]) + ")", 0,
-        scanner.seekTo(KeyValue.createKeyValueFromKey(keys[i])));
+        scanner.seekTo(KeyValueUtil.createKeyValueFromKey(keys[i])));
   }
 
   private void assertArrayEqualsBuffer(String msgPrefix, byte[] arr,

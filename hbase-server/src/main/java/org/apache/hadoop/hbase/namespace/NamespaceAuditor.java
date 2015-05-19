@@ -38,9 +38,9 @@ import com.google.common.annotations.VisibleForTesting;
  * and region splitting preserve namespace quota. The namespace quota can be specified
  * while namespace creation.
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 public class NamespaceAuditor {
-  private static Log LOG = LogFactory.getLog(NamespaceAuditor.class);
+  private static final Log LOG = LogFactory.getLog(NamespaceAuditor.class);
   static final String NS_AUDITOR_INIT_TIMEOUT = "hbase.namespace.auditor.init.timeout";
   static final int DEFAULT_NS_AUDITOR_INIT_TIMEOUT = 120000;
   private NamespaceStateManager stateManager;
@@ -74,6 +74,20 @@ public class NamespaceAuditor {
         throw new TableExistsException(tName);
       }
       stateManager.checkAndUpdateNamespaceTableCount(tName, regions);
+    } else {
+      checkTableTypeAndThrowException(tName);
+    }
+  }
+  
+  /**
+   * Check and update region count quota for an existing table.
+   * @param tName - table name for which region count to be updated.
+   * @param regions - Number of regions that will be added.
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  public void checkQuotaToUpdateRegion(TableName tName, int regions) throws IOException {
+    if (stateManager.isInitialized()) {
+      stateManager.checkAndUpdateNamespaceRegionCount(tName, regions);
     } else {
       checkTableTypeAndThrowException(tName);
     }

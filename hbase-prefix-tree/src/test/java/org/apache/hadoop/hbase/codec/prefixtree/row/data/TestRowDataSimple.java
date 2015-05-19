@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.row.BaseTestRowData;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
@@ -73,11 +73,11 @@ public class TestRowDataSimple extends BaseTestRowData {
       throw new RuntimeException(e);
     }
     Cell first = searcher.current();
-    Assert.assertTrue(CellComparator.equals(d.get(0), first));
+    Assert.assertTrue(CellUtil.equals(d.get(0), first));
 
     // test first cell in second row
     Assert.assertTrue(searcher.positionAt(d.get(3)));
-    Assert.assertTrue(CellComparator.equals(d.get(3), searcher.current()));
+    Assert.assertTrue(CellUtil.equals(d.get(3), searcher.current()));
 
     Cell between4And5 = new KeyValue(rowB, cf, cq1, ts - 2, v0);
 
@@ -87,12 +87,12 @@ public class TestRowDataSimple extends BaseTestRowData {
     // test atOrBefore
     p = searcher.positionAtOrBefore(between4And5);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(4)));
+    Assert.assertTrue(CellUtil.equals(searcher.current(), d.get(4)));
 
     // test atOrAfter
     p = searcher.positionAtOrAfter(between4And5);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(5)));
+    Assert.assertTrue(CellUtil.equals(searcher.current(), d.get(5)));
 
     // test when key falls before first key in block
     Cell beforeFirst = new KeyValue(Bytes.toBytes("A"), cf, cq0, ts, v0);
@@ -101,7 +101,7 @@ public class TestRowDataSimple extends BaseTestRowData {
     Assert.assertEquals(CellScannerPosition.BEFORE_FIRST, p);
     p = searcher.positionAtOrAfter(beforeFirst);
     Assert.assertEquals(CellScannerPosition.AFTER, p);
-    Assert.assertTrue(CellComparator.equals(searcher.current(), d.get(0)));
+    Assert.assertTrue(CellUtil.equals(searcher.current(), d.get(0)));
     Assert.assertEquals(d.get(0), searcher.current());
 
     // test when key falls after last key in block
@@ -111,7 +111,7 @@ public class TestRowDataSimple extends BaseTestRowData {
     Assert.assertEquals(CellScannerPosition.AFTER_LAST, p);
     p = searcher.positionAtOrBefore(afterLast);
     Assert.assertEquals(CellScannerPosition.BEFORE, p);
-    Assert.assertTrue(CellComparator.equals(searcher.current(), CollectionUtils.getLast(d)));
+    Assert.assertTrue(CellUtil.equals(searcher.current(), CollectionUtils.getLast(d)));
   }
 
 }

@@ -21,7 +21,9 @@
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.master.HMaster"
-  import="org.apache.hadoop.hbase.client.HBaseAdmin"
+  import="org.apache.hadoop.hbase.client.Admin"
+  import="org.apache.hadoop.hbase.client.Connection"
+  import="org.apache.hadoop.hbase.client.ConnectionFactory"
   import="org.apache.hadoop.hbase.HTableDescriptor"
   import="org.apache.hadoop.hbase.HBaseConfiguration" %>
 <%
@@ -81,7 +83,14 @@
         </div>
     </div>
 
-<% HTableDescriptor[] tables = new HBaseAdmin(conf).listTables();
+<% HTableDescriptor[] tables;
+   Connection connection = master.getConnection();
+   Admin admin = connection.getAdmin();
+   try {
+     tables = admin.listTables();
+   } finally {
+     admin.close();
+   }
    if(tables != null && tables.length > 0) { %>
 <table class="table table-striped">
 <tr>

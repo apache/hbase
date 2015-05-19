@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
@@ -97,10 +97,10 @@ public abstract class StoreEngine<SF extends StoreFlusher,
    * Create the StoreEngine's components.
    */
   protected abstract void createComponents(
-      Configuration conf, Store store, KVComparator kvComparator) throws IOException;
+      Configuration conf, Store store, CellComparator kvComparator) throws IOException;
 
   private void createComponentsOnce(
-      Configuration conf, Store store, KVComparator kvComparator) throws IOException {
+      Configuration conf, Store store, CellComparator kvComparator) throws IOException {
     assert compactor == null && compactionPolicy == null
         && storeFileManager == null && storeFlusher == null;
     createComponents(conf, store, kvComparator);
@@ -117,7 +117,7 @@ public abstract class StoreEngine<SF extends StoreFlusher,
    * @return StoreEngine to use.
    */
   public static StoreEngine<?, ?, ?, ?> create(
-      Store store, Configuration conf, KVComparator kvComparator) throws IOException {
+      Store store, Configuration conf, CellComparator kvComparator) throws IOException {
     String className = conf.get(STORE_ENGINE_CLASS_KEY, DEFAULT_STORE_ENGINE_CLASS.getName());
     try {
       StoreEngine<?,?,?,?> se = ReflectionUtils.instantiateWithCustomCtor(

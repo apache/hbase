@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -194,7 +195,7 @@ import com.google.protobuf.ServiceException;
 public class HRegionServer extends HasThread implements
     RegionServerServices, LastSequenceId {
 
-  public static final Log LOG = LogFactory.getLog(HRegionServer.class);
+  private static final Log LOG = LogFactory.getLog(HRegionServer.class);
 
   /**
    * For testing only!  Set to true to skip notifying region assignment to master .
@@ -411,7 +412,9 @@ public class HRegionServer extends HasThread implements
   // key to the config parameter of server hostname
   // the specification of server hostname is optional. The hostname should be resolvable from
   // both master and region server
-  final static String HOSTNAME_KEY = "hbase.regionserver.hostname";
+  final static String RS_HOSTNAME_KEY = "hbase.regionserver.hostname";
+
+  final static String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
 
   /**
    * This servers startcode.
@@ -531,7 +534,11 @@ public class HRegionServer extends HasThread implements
 
     rpcServices = createRpcServices();
     this.startcode = System.currentTimeMillis();
-    useThisHostnameInstead = conf.get(HOSTNAME_KEY);
+    if (this instanceof HMaster) {
+      useThisHostnameInstead = conf.get(MASTER_HOSTNAME_KEY);
+    } else {
+      useThisHostnameInstead = conf.get(RS_HOSTNAME_KEY);
+    }
     String hostName = shouldUseThisHostnameInstead() ? useThisHostnameInstead :
       rpcServices.isa.getHostName();
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
@@ -1740,13 +1747,16 @@ public class HRegionServer extends HasThread implements
   private int putUpWebUI() throws IOException {
     int port = this.conf.getInt(HConstants.REGIONSERVER_INFO_PORT,
       HConstants.DEFAULT_REGIONSERVER_INFOPORT);
+    String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
+
     if(this instanceof HMaster) {
       port = conf.getInt(HConstants.MASTER_INFO_PORT,
           HConstants.DEFAULT_MASTER_INFOPORT);
+      addr = this.conf.get("hbase.master.info.bindAddress", "0.0.0.0");
     }
     // -1 is for disabling info server
     if (port < 0) return port;
-    String addr = this.conf.get("hbase.regionserver.info.bindAddress", "0.0.0.0");
+
     if (!Addressing.isLocalAddress(InetAddress.getByName(addr))) {
       String msg =
           "Failed to start http info server. Address " + addr
@@ -3198,10 +3208,11 @@ public class HRegionServer extends HasThread implements
     return result;
   }
 
-  public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
+  public CoprocessorServiceResponse execRegionServerService(
+      @SuppressWarnings("UnusedParameters") final RpcController controller,
       final CoprocessorServiceRequest serviceRequest) throws ServiceException {
     try {
-      ServerRpcController execController = new ServerRpcController();
+      ServerRpcController serviceController = new ServerRpcController();
       CoprocessorServiceCall call = serviceRequest.getCall();
       String serviceName = call.getServiceName();
       String methodName = call.getMethodName();
@@ -3221,7 +3232,7 @@ public class HRegionServer extends HasThread implements
               .build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
-      service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+      service.callMethod(methodDesc, serviceController, request, new RpcCallback<Message>() {
         @Override
         public void run(Message message) {
           if (message != null) {
@@ -3229,10 +3240,11 @@ public class HRegionServer extends HasThread implements
           }
         }
       });
-      Message execResult = responseBuilder.build();
-      if (execController.getFailedOn() != null) {
-        throw execController.getFailedOn();
+      IOException exception = ResponseConverter.getControllerException(serviceController);
+      if (exception != null) {
+        throw exception;
       }
+      Message execResult = responseBuilder.build();
       ClientProtos.CoprocessorServiceResponse.Builder builder =
           ClientProtos.CoprocessorServiceResponse.newBuilder();
       builder.setRegion(RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,

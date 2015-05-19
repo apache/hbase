@@ -31,7 +31,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({SmallTests.class, ClientTests.class})
 public class TestConfigurationManager {
-  public static final Log LOG = LogFactory.getLog(TestConfigurationManager.class);
+  private static final Log LOG = LogFactory.getLog(TestConfigurationManager.class);
 
   class DummyConfigurationObserver implements ConfigurationObserver {
     private boolean notifiedOnChange = false;

@@ -54,7 +54,7 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceStability.Evolving
 public class TokenUtil {
   // This class is referenced indirectly by User out in common; instances are created by reflection
-  private static Log LOG = LogFactory.getLog(TokenUtil.class);
+  private static final Log LOG = LogFactory.getLog(TokenUtil.class);
 
   /**
    * Obtain and return an authentication token for the current user.

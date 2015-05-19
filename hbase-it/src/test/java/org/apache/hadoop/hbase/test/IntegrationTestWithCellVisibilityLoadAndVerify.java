@@ -33,7 +33,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
@@ -140,10 +141,10 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
 
   private void addLabelsAndAuths() throws Exception {
     try {
-      VisibilityClient.addLabels(util.getConfiguration(), LABELS);
-      VisibilityClient.setAuths(util.getConfiguration(), new String[] { CONFIDENTIAL, TOPSECRET,
+      VisibilityClient.addLabels(util.getConnection(), LABELS);
+      VisibilityClient.setAuths(util.getConnection(), new String[] { CONFIDENTIAL, TOPSECRET,
           SECRET, PRIVATE }, USER1.getName());
-      VisibilityClient.setAuths(util.getConfiguration(), new String[] { PUBLIC },
+      VisibilityClient.setAuths(util.getConnection(), new String[] { PUBLIC },
           USER2.getName());
     } catch (Throwable t) {
       throw new IOException(t);
@@ -370,11 +371,9 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     HTableDescriptor htd = new HTableDescriptor(getTablename());
     htd.addFamily(new HColumnDescriptor(TEST_FAMILY));
 
-    Admin admin = new HBaseAdmin(getConf());
-    try {
+    try (Connection conn = ConnectionFactory.createConnection(getConf());
+        Admin admin = conn.getAdmin()) {
       admin.createTable(htd, Bytes.toBytes(0L), Bytes.toBytes(-1L), numPresplits);
-    } finally {
-      admin.close();
     }
     doLoad(getConf(), htd);
     doVerify(getConf(), htd);
@@ -382,6 +381,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     return 0;
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   protected void processOptions(CommandLine cmd) {
     List args = cmd.getArgList();

@@ -17,8 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
@@ -26,15 +25,15 @@ import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyRequest;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
 import org.apache.hadoop.hbase.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
+import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.AfterClass;
@@ -45,8 +44,12 @@ import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 @Category({CoprocessorTests.class, MediumTests.class})
 public class TestRegionServerCoprocessorEndpoint {
+  public static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
   private static HBaseTestingUtility TEST_UTIL = null;
   private static Configuration CONF = null;
   private static final String DUMMY_VALUE = "val";
@@ -75,11 +78,28 @@ public class TestRegionServerCoprocessorEndpoint {
         ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
           TEST_UTIL.getHBaseAdmin().coprocessorService(serverName));
     service.dummyCall(controller,
-      DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
+        DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
     assertEquals(DUMMY_VALUE, rpcCallback.get().getValue());
     if (controller.failedOnException()) {
       throw controller.getFailedOn();
     }
+  }
+
+  @Test
+  public void testEndpointExceptions() throws Exception {
+    final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
+    final ServerRpcController controller = new ServerRpcController();
+    final BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse> rpcCallback =
+        new BlockingRpcCallback<DummyRegionServerEndpointProtos.DummyResponse>();
+    DummyRegionServerEndpointProtos.DummyService service =
+        ProtobufUtil.newServiceStub(DummyRegionServerEndpointProtos.DummyService.class,
+            TEST_UTIL.getHBaseAdmin().coprocessorService(serverName));
+    service.dummyThrow(controller,
+        DummyRegionServerEndpointProtos.DummyRequest.getDefaultInstance(), rpcCallback);
+    assertEquals(null, rpcCallback.get());
+    assertTrue(controller.failedOnException());
+    assertEquals(WHAT_TO_THROW.getClass().getName().trim(),
+        ((RemoteWithExtrasException) controller.getFailedOn().getCause()).getClassName().trim());
   }
 
   static class DummyRegionServerEndpoint extends DummyService implements Coprocessor, SingletonCoprocessorService {
@@ -103,6 +123,14 @@ public class TestRegionServerCoprocessorEndpoint {
     public void dummyCall(RpcController controller, DummyRequest request,
         RpcCallback<DummyResponse> callback) {
       callback.run(DummyResponse.newBuilder().setValue(DUMMY_VALUE).build());
+    }
+
+    @Override
+    public void dummyThrow(RpcController controller,
+        DummyRequest request,
+        RpcCallback<DummyResponse> done) {
+      ResponseConverter.setControllerException(controller, WHAT_TO_THROW);
+
     }
   }
 }

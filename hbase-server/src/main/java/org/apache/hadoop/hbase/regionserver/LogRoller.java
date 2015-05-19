@@ -50,7 +50,7 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceAudience.Private
 @VisibleForTesting
 public class LogRoller extends HasThread {
-  static final Log LOG = LogFactory.getLog(LogRoller.class);
+  private static final Log LOG = LogFactory.getLog(LogRoller.class);
   private final ReentrantLock rollLock = new ReentrantLock();
   private final AtomicBoolean rollLog = new AtomicBoolean(false);
   private final ConcurrentHashMap<WAL, Boolean> walNeedsRoll =

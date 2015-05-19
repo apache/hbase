@@ -47,7 +47,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MediumTests.class, ClientTests.class})
 public class TestTimestampsFilter {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestTimestampsFilter.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   /**

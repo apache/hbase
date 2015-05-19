@@ -199,6 +199,29 @@ public class TestInterfaceAudienceAnnotations {
   }
 
   /**
+   * Selects classes that appear to be source instrumentation from Clover.
+   * Clover generates instrumented code in order to calculate coverage. Part of the
+   * generated source is a static inner class on each source class.
+   *
+   * - has an enclosing class
+   * - enclosing class is not an interface
+   * - name starts with "__CLR"
+   */
+  class CloverInstrumentationFilter implements ClassFinder.ClassFilter {
+    @Override
+    public boolean isCandidateClass(Class<?> clazz) {
+      boolean clover = false;
+      final Class<?> enclosing = clazz.getEnclosingClass();
+      if (enclosing != null) {
+        if (!(enclosing.isInterface())) {
+          clover = clazz.getSimpleName().startsWith("__CLR");
+        }
+      }
+      return clover;
+    }
+  }
+
+  /**
    * Checks whether all the classes in client and common modules contain
    * {@link InterfaceAudience} annotations.
    */
@@ -212,6 +235,7 @@ public class TestInterfaceAudienceAnnotations {
     // NOT test classes
     // AND NOT generated classes
     // AND are NOT annotated with InterfaceAudience
+    // AND are NOT from Clover rewriting sources
     ClassFinder classFinder = new ClassFinder(
       new MainCodeResourcePathFilter(),
       new Not((FileNameFilter)new TestFileNameFilter()),
@@ -219,7 +243,8 @@ public class TestInterfaceAudienceAnnotations {
               new Not(new TestClassFilter()),
               new Not(new GeneratedClassFilter()),
               new Not(new IsInterfaceStabilityClassFilter()),
-              new Not(new InterfaceAudienceAnnotatedClassFilter()))
+              new Not(new InterfaceAudienceAnnotatedClassFilter()),
+              new Not(new CloverInstrumentationFilter()))
     );
 
     Set<Class<?>> classes = classFinder.findClasses(false);

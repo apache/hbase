@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -458,7 +459,7 @@ public class TestFilterList {
     // Should take the min if given two hints
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
 
     // Should have no hint if any filter has no hint
@@ -473,7 +474,7 @@ public class TestFilterList {
     // Should give max hint if its the only one
     filterList = new FilterList(Operator.MUST_PASS_ONE,
         Arrays.asList(new Filter [] { filterMaxHint, filterMaxHint } ));
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
 
     // MUST PASS ALL
@@ -482,13 +483,13 @@ public class TestFilterList {
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterMaxHint, filterMinHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
 
     // Should have first hint even if a filter has no hint
@@ -496,17 +497,17 @@ public class TestFilterList {
         Arrays.asList(
             new Filter [] { filterNoHint, filterMinHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMaxHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         maxKeyValue));
     filterList = new FilterList(Operator.MUST_PASS_ALL,
         Arrays.asList(new Filter [] { filterNoHint, filterMinHint } ));
     filterList.filterKeyValue(null);
-    assertEquals(0, KeyValue.COMPARATOR.compare(filterList.getNextCellHint(null),
+    assertEquals(0, CellComparator.COMPARATOR.compare(filterList.getNextCellHint(null),
         minKeyValue));
   }
 

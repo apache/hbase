@@ -23,6 +23,9 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 import com.google.protobuf.RpcCallback;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -101,6 +104,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @InterfaceAudience.Private
 public class RpcClientImpl extends AbstractRpcClient {
+  private static final Log LOG = LogFactory.getLog(RpcClientImpl.class);
   protected final AtomicInteger callIdCnt = new AtomicInteger();
 
   protected final PoolMap<ConnectionId, Connection> connections;

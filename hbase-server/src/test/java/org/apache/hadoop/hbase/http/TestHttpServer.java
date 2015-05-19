@@ -75,7 +75,7 @@ import org.mortbay.util.ajax.JSON;
 
 @Category({MiscTests.class, SmallTests.class})
 public class TestHttpServer extends HttpServerFunctionalTest {
-  static final Log LOG = LogFactory.getLog(TestHttpServer.class);
+  private static final Log LOG = LogFactory.getLog(TestHttpServer.class);
   private static HttpServer server;
   private static URL baseUrl;
   private static final int MAX_THREADS = 10;

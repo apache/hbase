@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -119,7 +120,7 @@ import org.junit.experimental.categories.Category;
 @Category({LargeTests.class, ClientTests.class})
 @SuppressWarnings ("deprecation")
 public class TestFromClientSide {
-  final Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(TestFromClientSide.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte [] ROW = Bytes.toBytes("testRow");
   private static byte [] FAMILY = Bytes.toBytes("testFamily");
@@ -182,7 +183,8 @@ public class TestFromClientSide {
      final byte[] T2 = Bytes.toBytes("T2");
      final byte[] T3 = Bytes.toBytes("T3");
      HColumnDescriptor hcd = new HColumnDescriptor(FAMILY)
-         .setKeepDeletedCells(true).setMaxVersions(3);
+         .setKeepDeletedCells(KeepDeletedCells.TRUE)
+         .setMaxVersions(3);
 
      HTableDescriptor desc = new HTableDescriptor(TABLENAME);
      desc.addFamily(hcd);
@@ -5003,6 +5005,39 @@ public class TestFromClientSide {
     ScanMetrics scanMetrics = scan2.getScanMetrics();
     assertEquals("Did not access all the regions in the table", numOfRegions,
         scanMetrics.countOfRegions.get());
+
+    // check byte counters
+    scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(1);
+    scanner = ht.getScanner(scan2);
+    int numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    scanner.close();
+    scanMetrics = scan2.getScanMetrics();
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
+
+    // check byte counters on a small scan
+    scan2 = new Scan();
+    scan2.setScanMetricsEnabled(true);
+    scan2.setCaching(1);
+    scan2.setSmall(true);
+    scanner = ht.getScanner(scan2);
+    numBytes = 0;
+    for (Result result : scanner.next(1)) {
+      for (Cell cell: result.listCells()) {
+        numBytes += CellUtil.estimatedSerializedSizeOf(cell);
+      }
+    }
+    scanner.close();
+    scanMetrics = scan2.getScanMetrics();
+    assertEquals("Did not count the result bytes", numBytes,
+      scanMetrics.countOfBytesInResults.get());
 
     // now, test that the metrics are still collected even if you don't call close, but do
     // run past the end of all the records

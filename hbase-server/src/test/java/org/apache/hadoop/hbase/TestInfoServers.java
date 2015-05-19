@@ -42,7 +42,7 @@ import org.junit.experimental.categories.Category;
  */
 @Category({MiscTests.class, MediumTests.class})
 public class TestInfoServers {
-  static final Log LOG = LogFactory.getLog(TestInfoServers.class);
+  private static final Log LOG = LogFactory.getLog(TestInfoServers.class);
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   @BeforeClass

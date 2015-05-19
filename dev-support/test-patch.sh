@@ -805,7 +805,7 @@ checkLineLengths () {
   #see http://en.wikipedia.org/wiki/Diff#Unified_format
 
   MAX_LINE_LENGTH_PATCH=`expr $MAX_LINE_LENGTH + 1`
-  lines=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | grep -v "org.apache.thrift." | grep -v "com.google.protobuf." | grep -v "hbase.protobuf.generated" | awk -v len="$MAX_LINE_LENGTH_PATCH" 'length ($0) > len' | head -n 10`
+  lines=`cat $PATCH_DIR/patch | grep "^+" | grep -v "^@@" | grep -v "^+++" | grep -v "import" | grep -v "org.apache.thrift." | grep -v "com.google.protobuf." | grep -v "protobuf.generated" | awk -v len="$MAX_LINE_LENGTH_PATCH" 'length ($0) > len' | head -n 10`
   ll=`echo "$lines" | wc -l`
   if [[ "$ll" -gt "1" ]]; then
     JIRA_COMMENT="$JIRA_COMMENT

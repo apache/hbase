@@ -32,7 +32,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 public class DummyFilter implements Filter {
-  private Log LOG = LogFactory.getLog(getClass());
+  private static final Log LOG = LogFactory.getLog(DummyFilter.class);
 
   @Override
   public void destroy() {

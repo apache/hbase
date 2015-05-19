@@ -47,7 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 @InterfaceAudience.Private
 public final class Compression {
-  static final Log LOG = LogFactory.getLog(Compression.class);
+  private static final Log LOG = LogFactory.getLog(Compression.class);
 
   /**
    * Prevent the instantiation of class.

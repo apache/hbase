@@ -61,7 +61,6 @@ import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.yammer.metrics.core.MetricsRegistry;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -70,7 +69,7 @@ import com.yammer.metrics.core.MetricsRegistry;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class TableMapReduceUtil {
-  static Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
+  private static final Log LOG = LogFactory.getLog(TableMapReduceUtil.class);
 
   /**
    * Use this before submitting a TableMap job. It will appropriately set up
@@ -335,7 +334,6 @@ public class TableMapReduceUtil {
     TableSnapshotInputFormat.setInput(job, snapshotName, tmpRestoreDir);
     initTableMapperJob(snapshotName, scan, mapper, outputKeyClass,
         outputValueClass, job, addDependencyJars, false, TableSnapshotInputFormat.class);
-    addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
     resetCacheConfig(job.getConfiguration());
   }
 
@@ -728,7 +726,8 @@ public class TableMapReduceUtil {
       io.netty.channel.Channel.class,
       com.google.protobuf.Message.class,
       com.google.common.collect.Lists.class,
-      org.apache.htrace.Trace.class);
+      org.apache.htrace.Trace.class,
+      com.yammer.metrics.core.MetricsRegistry.class);
   }
 
   /**

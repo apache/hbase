@@ -79,7 +79,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     assertAllOnLine(t);
 
     admin.disableTable(TABLE);
-    admin.modifyColumn(TABLE, hcd);
+    admin.modifyColumnFamily(TABLE, hcd);
 
     System.err.println("\nRe-enabling table\n");
     admin.enableTable(TABLE);

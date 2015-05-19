@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -270,7 +271,7 @@ public class TestReplicationWALEntryFilters {
     List<Cell> cells2 = e2.getEdit().getCells();
     Assert.assertEquals(cells1.size(), cells2.size());
     for (int i = 0; i < cells1.size(); i++) {
-      KeyValue.COMPARATOR.compare(cells1.get(i), cells2.get(i));
+      CellComparator.COMPARATOR.compare(cells1.get(i), cells2.get(i));
     }
   }
 }

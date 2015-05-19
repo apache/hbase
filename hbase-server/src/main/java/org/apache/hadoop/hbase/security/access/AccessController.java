@@ -155,7 +155,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     implements RegionServerObserver,
       AccessControlService.Interface, CoprocessorService, EndpointObserver, BulkLoadObserver {
 
-  public static final Log LOG = LogFactory.getLog(AccessController.class);
+  private static final Log LOG = LogFactory.getLog(AccessController.class);
 
   private static final Log AUDITLOG =
     LogFactory.getLog("SecurityLogger."+AccessController.class.getName());
@@ -2053,6 +2053,8 @@ public class AccessController extends BaseMasterAndRegionObserver
    * the checks performed in preScannerOpen()
    */
   private void requireScannerOwner(InternalScanner s) throws AccessDeniedException {
+    if (!RpcServer.isInRpcCallContext())
+      return;
     String requestUserName = RpcServer.getRequestUserName();
     String owner = scannerOwners.get(s);
     if (authorizationEnabled && owner != null && !owner.equals(requestUserName)) {

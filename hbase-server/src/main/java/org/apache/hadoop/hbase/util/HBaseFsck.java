@@ -62,7 +62,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultimap;
 import com.google.protobuf.ServiceException;
-
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -86,6 +85,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -97,10 +97,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -211,7 +211,7 @@ public class HBaseFsck extends Configured implements Closeable {
   private Table meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
   protected ExecutorService executor;
-  private long startMillis = System.currentTimeMillis();
+  private long startMillis = EnvironmentEdgeManager.currentTime();
   private HFileCorruptionChecker hfcc;
   private int retcode = 0;
   private Path HBCK_LOCK_PATH;
@@ -294,6 +294,7 @@ public class HBaseFsck extends Configured implements Closeable {
       new HashMap<TableName, TableState>();
   private final RetryCounterFactory lockFileRetryCounterFactory;
 
+  private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
 
   /**
    * Constructor
@@ -556,6 +557,7 @@ public class HBaseFsck extends Configured implements Closeable {
     errors.clear();
     tablesInfo.clear();
     orphanHdfsDirs.clear();
+    skippedRegions.clear();
   }
 
   /**
@@ -861,9 +863,9 @@ public class HBaseFsck extends Configured implements Closeable {
           CacheConfig cacheConf = new CacheConfig(getConf());
           hf = HFile.createReader(fs, hfile.getPath(), cacheConf, getConf());
           hf.loadFileInfo();
-          KeyValue startKv = KeyValue.createKeyValueFromKey(hf.getFirstKey());
+          KeyValue startKv = KeyValueUtil.createKeyValueFromKey(hf.getFirstKey());
           start = startKv.getRow();
-          KeyValue endKv = KeyValue.createKeyValueFromKey(hf.getLastKey());
+          KeyValue endKv = KeyValueUtil.createKeyValueFromKey(hf.getLastKey());
           end = endKv.getRow();
         } catch (IOException ioe) {
           LOG.warn("Problem reading orphan file " + hfile + ", skipping");
@@ -1717,7 +1719,7 @@ public class HBaseFsck extends Configured implements Closeable {
         return false;
       }
       ServerName sn = metaLocation.getServerName();
-      MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, System.currentTimeMillis());
+      MetaEntry m = new MetaEntry(metaLocation.getRegionInfo(), sn, EnvironmentEdgeManager.currentTime());
       HbckInfo hbckInfo = regionInfoMap.get(metaLocation.getRegionInfo().getEncodedName());
       if (hbckInfo == null) {
         regionInfoMap.put(metaLocation.getRegionInfo().getEncodedName(), new HbckInfo(m));
@@ -1817,6 +1819,17 @@ public class HBaseFsck extends Configured implements Closeable {
     checkRegionConsistencyConcurrently(replicaWorkItems);
     setCheckHdfs(prevHdfsCheck);
 
+    // If some regions is skipped during checkRegionConsistencyConcurrently() phase, we might
+    // not get accurate state of the hbase if continuing. The config here allows users to tune
+    // the tolerance of number of skipped region.
+    // TODO: evaluate the consequence to continue the hbck operation without config.
+    int terminateThreshold =  getConf().getInt("hbase.hbck.skipped.regions.limit", 0);
+    int numOfSkippedRegions = skippedRegions.size();
+    if (numOfSkippedRegions > 0 && numOfSkippedRegions > terminateThreshold) {
+      throw new IOException(numOfSkippedRegions
+        + " region(s) could not be checked or repaired.  See logs for detail.");
+    }
+
     if (shouldCheckHdfs()) {
       checkAndFixTableStates();
     }
@@ -1862,9 +1875,30 @@ public class HBaseFsck extends Configured implements Closeable {
 
     @Override
     public synchronized Void call() throws Exception {
-      checkRegionConsistency(key, hbi);
+      try {
+        checkRegionConsistency(key, hbi);
+      } catch (Exception e) {
+        // If the region is non-META region, skip this region and send warning/error message; if
+        // the region is META region, we should not continue.
+        LOG.warn("Unable to complete check or repair the region '" + hbi.getRegionNameAsString()
+          + "'.", e);
+        if (hbi.getHdfsHRI().isMetaRegion()) {
+          throw e;
+        }
+        LOG.warn("Skip region '" + hbi.getRegionNameAsString() + "'");
+        addSkippedRegion(hbi);
+      }
       return null;
     }
+  }
+
+  private void addSkippedRegion(final HbckInfo hbi) {
+    Set<String> skippedRegionNames = skippedRegions.get(hbi.getTableName());
+    if (skippedRegionNames == null) {
+      skippedRegionNames = new HashSet<String>();
+    }
+    skippedRegionNames.add(hbi.getRegionNameAsString());
+    skippedRegions.put(hbi.getTableName(), skippedRegionNames);
   }
 
   /**
@@ -2156,7 +2190,7 @@ public class HBaseFsck extends Configured implements Closeable {
         inMeta && hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
     boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry.getTable());
     boolean recentlyModified = inHdfs &&
-      hbi.getModTime() + timelag > System.currentTimeMillis();
+      hbi.getModTime() + timelag > EnvironmentEdgeManager.currentTime();
 
     // ========== First the healthy cases =============
     if (hbi.containsOnlyHdfsEdits()) {
@@ -3161,7 +3195,7 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   HTableDescriptor[] getTables(AtomicInteger numSkipped) {
     List<TableName> tableNames = new ArrayList<TableName>();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTime();
 
     for (HbckInfo hbi : regionInfoMap.values()) {
       MetaEntry info = hbi.metaEntry;
@@ -3181,21 +3215,12 @@ public class HBaseFsck extends Configured implements Closeable {
 
   HTableDescriptor[] getHTableDescriptors(List<TableName> tableNames) {
     HTableDescriptor[] htd = new HTableDescriptor[0];
-    Admin admin = null;
-    try {
       LOG.info("getHTableDescriptors == tableNames => " + tableNames);
-      admin = new HBaseAdmin(getConf());
+    try (Connection conn = ConnectionFactory.createConnection(getConf());
+        Admin admin = conn.getAdmin()) {
       htd = admin.getTableDescriptorsByTableName(tableNames);
     } catch (IOException e) {
       LOG.debug("Exception getting table descriptors", e);
-    } finally {
-      if (admin != null) {
-        try {
-          admin.close();
-        } catch (IOException e) {
-          LOG.debug("Exception closing HBaseAdmin", e);
-        }
-      }
     }
     return htd;
   }
@@ -3706,14 +3731,30 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   private void printTableSummary(SortedMap<TableName, TableInfo> tablesInfo) {
     StringBuilder sb = new StringBuilder();
+    int numOfSkippedRegions;
     errors.print("Summary:");
     for (TableInfo tInfo : tablesInfo.values()) {
+      numOfSkippedRegions = (skippedRegions.containsKey(tInfo.getName())) ?
+          skippedRegions.get(tInfo.getName()).size() : 0;
+
       if (errors.tableHasErrors(tInfo)) {
         errors.print("Table " + tInfo.getName() + " is inconsistent.");
-      } else {
-        errors.print("  " + tInfo.getName() + " is okay.");
+      } else if (numOfSkippedRegions > 0){
+        errors.print("Table " + tInfo.getName() + " is okay (with "
+          + numOfSkippedRegions + " skipped regions).");
+      }
+      else {
+        errors.print("Table " + tInfo.getName() + " is okay.");
       }
       errors.print("    Number of regions: " + tInfo.getNumRegions());
+      if (numOfSkippedRegions > 0) {
+        Set<String> skippedRegionStrings = skippedRegions.get(tInfo.getName());
+        System.out.println("    Number of skipped regions: " + numOfSkippedRegions);
+        System.out.println("      List of skipped regions:");
+        for(String sr : skippedRegionStrings) {
+          System.out.println("        " + sr);
+        }
+      }
       sb.setLength(0); // clear out existing buffer, if any.
       sb.append("    Deployed on: ");
       for (ServerName server : tInfo.deployedOn) {

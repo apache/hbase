@@ -60,7 +60,7 @@ import org.junit.BeforeClass;
  */
 public abstract class TestTableInputFormatScanBase {
 
-  static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
+  private static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   static final byte[] TABLE_NAME = Bytes.toBytes("scantest");

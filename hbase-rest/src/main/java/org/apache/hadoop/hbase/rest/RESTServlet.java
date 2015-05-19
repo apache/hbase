@@ -36,7 +36,7 @@ import org.apache.log4j.Logger;
  */
 @InterfaceAudience.Private
 public class RESTServlet implements Constants {
-  private static Logger LOG = Logger.getLogger(RESTServlet.class);
+  private static final Logger LOG = Logger.getLogger(RESTServlet.class);
   private static RESTServlet INSTANCE;
   private final Configuration conf;
   private final MetricsREST metrics = new MetricsREST();

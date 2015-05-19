@@ -38,7 +38,7 @@ import org.junit.experimental.categories.Category;
 
 @Category(SmallTests.class)
 public class TestChoreService {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestChoreService.class);
 
   /**
    * A few ScheduledChore samples that are useful for testing with ChoreService
@@ -241,23 +241,27 @@ public class TestChoreService {
 
     final int period = 100;
     final int failureThreshold = 5;
-    ScheduledChore chore = new FailInitialChore("chore", period, failureThreshold);
-    service.scheduleChore(chore);
 
-    int loopCount = 0;
-    boolean brokeOutOfLoop = false;
+    try {
+      ScheduledChore chore = new FailInitialChore("chore", period, failureThreshold);
+      service.scheduleChore(chore);
 
-    while (!chore.isInitialChoreComplete() && chore.isScheduled()) {
-      Thread.sleep(failureThreshold * period);
-      loopCount++;
-      if (loopCount > 3) {
-        brokeOutOfLoop = true;
-        break;
-      }
+      int loopCount = 0;
+      boolean brokeOutOfLoop = false;
+
+     while (!chore.isInitialChoreComplete() && chore.isScheduled()) {
+       Thread.sleep(failureThreshold * period);
+       loopCount++;
+       if (loopCount > 3) {
+         brokeOutOfLoop = true;
+         break;
+       }
     }
 
     assertFalse(brokeOutOfLoop);
-    shutdownService(service);
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -265,14 +269,16 @@ public class TestChoreService {
     final int period = 100;
     ScheduledChore chore1 = new DoNothingChore("chore1", period);
     ChoreService service = ChoreService.getInstance("testCancelChore");
+    try {
+      service.scheduleChore(chore1);
+      assertTrue(chore1.isScheduled());
 
-    service.scheduleChore(chore1);
-    assertTrue(chore1.isScheduled());
-
-    chore1.cancel(true);
-    assertFalse(chore1.isScheduled());
-    assertTrue(service.getNumberOfScheduledChores() == 0);
-    shutdownService(service);
+      chore1.cancel(true);
+      assertFalse(chore1.isScheduled());
+      assertTrue(service.getNumberOfScheduledChores() == 0);
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -314,18 +320,25 @@ public class TestChoreService {
     final int defaultCorePoolSize = ChoreService.MIN_CORE_POOL_SIZE;
 
     ChoreService customInit = new ChoreService("testChoreServiceConstruction_custom", corePoolSize);
-    assertEquals(corePoolSize, customInit.getCorePoolSize());
+    try {
+      assertEquals(corePoolSize, customInit.getCorePoolSize());
+    } finally {
+      shutdownService(customInit);
+    }
 
     ChoreService defaultInit = new ChoreService("testChoreServiceConstruction_default");
-    assertEquals(defaultCorePoolSize, defaultInit.getCorePoolSize());
+    try {
+      assertEquals(defaultCorePoolSize, defaultInit.getCorePoolSize());
+    } finally {
+      shutdownService(defaultInit);
+    }
 
     ChoreService invalidInit = new ChoreService("testChoreServiceConstruction_invalid", -10);
-    assertEquals(defaultCorePoolSize, invalidInit.getCorePoolSize());
-
-    shutdownService(customInit);
-    shutdownService(defaultInit);
+    try {
+      assertEquals(defaultCorePoolSize, invalidInit.getCorePoolSize());
+    } finally {
     shutdownService(invalidInit);
-
+    }
   }
 
   @Test (timeout=20000)
@@ -335,15 +348,17 @@ public class TestChoreService {
     final int delta = 5;
     ChoreService service = ChoreService.getInstance("testFrequencyOfChores");
     CountingChore chore = new CountingChore("countingChore", period);
-    service.scheduleChore(chore);
+    try {
+      service.scheduleChore(chore);
 
-    Thread.sleep(10 * period + delta);
-    assertTrue(chore.getCountOfChoreCalls() == 11);
+      Thread.sleep(10 * period + delta);
+      assertTrue(chore.getCountOfChoreCalls() == 11);
 
-    Thread.sleep(10 * period);
-    assertTrue(chore.getCountOfChoreCalls() == 21);
-
-    shutdownService(service);
+      Thread.sleep(10 * period);
+      assertTrue(chore.getCountOfChoreCalls() == 21);
+    } finally {
+      shutdownService(service);
+    }
   }
 
   public void shutdownService(ChoreService service) throws InterruptedException {
@@ -359,68 +374,73 @@ public class TestChoreService {
     final int delta = 5;
     ChoreService service = ChoreService.getInstance("testForceTrigger");
     CountingChore chore = new CountingChore("countingChore", period);
-    service.scheduleChore(chore);
-    Thread.sleep(10 * period + delta);
+    try {
+      service.scheduleChore(chore);
+      Thread.sleep(10 * period + delta);
 
-    assertTrue(chore.getCountOfChoreCalls() == 11);
+      assertTrue(chore.getCountOfChoreCalls() == 11);
 
-    // Force five runs of the chore to occur, sleeping between triggers to ensure the
-    // chore has time to run
-    chore.triggerNow();
-    Thread.sleep(delta);
-    chore.triggerNow();
-    Thread.sleep(delta);
-    chore.triggerNow();
-    Thread.sleep(delta);
-    chore.triggerNow();
-    Thread.sleep(delta);
-    chore.triggerNow();
-    Thread.sleep(delta);
+      // Force five runs of the chore to occur, sleeping between triggers to ensure the
+      // chore has time to run
+      chore.triggerNow();
+      Thread.sleep(delta);
+      chore.triggerNow();
+      Thread.sleep(delta);
+      chore.triggerNow();
+      Thread.sleep(delta);
+      chore.triggerNow();
+      Thread.sleep(delta);
+      chore.triggerNow();
+      Thread.sleep(delta);
 
-    assertTrue(chore.getCountOfChoreCalls() == 16);
+      assertTrue(chore.getCountOfChoreCalls() == 16);
 
-    Thread.sleep(10 * period + delta);
+      Thread.sleep(10 * period + delta);
 
-    assertTrue(chore.getCountOfChoreCalls() == 26);
-
-    shutdownService(service);
+      assertTrue(chore.getCountOfChoreCalls() == 26);
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
   public void testCorePoolIncrease() throws InterruptedException {
     final int initialCorePoolSize = 3;
     ChoreService service = new ChoreService("testCorePoolIncrease", initialCorePoolSize);
-    assertEquals("Should have a core pool of size: " + initialCorePoolSize, initialCorePoolSize,
+
+    try {
+      assertEquals("Should have a core pool of size: " + initialCorePoolSize, initialCorePoolSize,
         service.getCorePoolSize());
 
-    final int slowChorePeriod = 100;
-    SlowChore slowChore1 = new SlowChore("slowChore1", slowChorePeriod);
-    SlowChore slowChore2 = new SlowChore("slowChore2", slowChorePeriod);
-    SlowChore slowChore3 = new SlowChore("slowChore3", slowChorePeriod);
+      final int slowChorePeriod = 100;
+      SlowChore slowChore1 = new SlowChore("slowChore1", slowChorePeriod);
+      SlowChore slowChore2 = new SlowChore("slowChore2", slowChorePeriod);
+      SlowChore slowChore3 = new SlowChore("slowChore3", slowChorePeriod);
 
-    service.scheduleChore(slowChore1);
-    service.scheduleChore(slowChore2);
-    service.scheduleChore(slowChore3);
+      service.scheduleChore(slowChore1);
+      service.scheduleChore(slowChore2);
+      service.scheduleChore(slowChore3);
 
-    Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Should not create more pools than scheduled chores", 3,
-      service.getCorePoolSize());
+      Thread.sleep(slowChorePeriod * 10);
+      assertEquals("Should not create more pools than scheduled chores", 3,
+        service.getCorePoolSize());
 
-    SlowChore slowChore4 = new SlowChore("slowChore4", slowChorePeriod);
-    service.scheduleChore(slowChore4);
+      SlowChore slowChore4 = new SlowChore("slowChore4", slowChorePeriod);
+      service.scheduleChore(slowChore4);
 
-    Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size", 4,
-      service.getCorePoolSize());
+      Thread.sleep(slowChorePeriod * 10);
+      assertEquals("Chores are missing their start time. Should expand core pool size", 4,
+        service.getCorePoolSize());
 
-    SlowChore slowChore5 = new SlowChore("slowChore5", slowChorePeriod);
-    service.scheduleChore(slowChore5);
+      SlowChore slowChore5 = new SlowChore("slowChore5", slowChorePeriod);
+      service.scheduleChore(slowChore5);
 
-    Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size", 5,
-      service.getCorePoolSize());
-
-    shutdownService(service);
+      Thread.sleep(slowChorePeriod * 10);
+      assertEquals("Chores are missing their start time. Should expand core pool size", 5,
+        service.getCorePoolSize());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test(timeout = 30000)
@@ -428,67 +448,68 @@ public class TestChoreService {
     final int initialCorePoolSize = 3;
     ChoreService service = new ChoreService("testCorePoolDecrease", initialCorePoolSize);
     final int chorePeriod = 100;
+    try {
+      // Slow chores always miss their start time and thus the core pool size should be at least as
+      // large as the number of running slow chores
+      SlowChore slowChore1 = new SlowChore("slowChore1", chorePeriod);
+      SlowChore slowChore2 = new SlowChore("slowChore2", chorePeriod);
+      SlowChore slowChore3 = new SlowChore("slowChore3", chorePeriod);
 
-    // Slow chores always miss their start time and thus the core pool size should be at least as
-    // large as the number of running slow chores
-    SlowChore slowChore1 = new SlowChore("slowChore1", chorePeriod);
-    SlowChore slowChore2 = new SlowChore("slowChore2", chorePeriod);
-    SlowChore slowChore3 = new SlowChore("slowChore3", chorePeriod);
+      service.scheduleChore(slowChore1);
+      service.scheduleChore(slowChore2);
+      service.scheduleChore(slowChore3);
 
-    service.scheduleChore(slowChore1);
-    service.scheduleChore(slowChore2);
-    service.scheduleChore(slowChore3);
+      Thread.sleep(chorePeriod * 10);
+      assertEquals("Should not create more pools than scheduled chores",
+        service.getNumberOfScheduledChores(), service.getCorePoolSize());
 
-    Thread.sleep(chorePeriod * 10);
-    assertEquals("Should not create more pools than scheduled chores",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
+      SlowChore slowChore4 = new SlowChore("slowChore4", chorePeriod);
+      service.scheduleChore(slowChore4);
+      Thread.sleep(chorePeriod * 10);
+      assertEquals("Chores are missing their start time. Should expand core pool size",
+        service.getNumberOfScheduledChores(), service.getCorePoolSize());
 
-    SlowChore slowChore4 = new SlowChore("slowChore4", chorePeriod);
-    service.scheduleChore(slowChore4);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
+      SlowChore slowChore5 = new SlowChore("slowChore5", chorePeriod);
+      service.scheduleChore(slowChore5);
+      Thread.sleep(chorePeriod * 10);
+      assertEquals("Chores are missing their start time. Should expand core pool size",
+        service.getNumberOfScheduledChores(), service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 5);
 
-    SlowChore slowChore5 = new SlowChore("slowChore5", chorePeriod);
-    service.scheduleChore(slowChore5);
-    Thread.sleep(chorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 5);
+      // Now we begin to cancel the chores that caused an increase in the core thread pool of the
+      // ChoreService. These cancellations should cause a decrease in the core thread pool.
+      slowChore5.cancel();
+      Thread.sleep(chorePeriod * 10);
+      assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
+        service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 4);
 
-    // Now we begin to cancel the chores that caused an increase in the core thread pool of the
-    // ChoreService. These cancellations should cause a decrease in the core thread pool.
-    slowChore5.cancel();
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 4);
+      slowChore4.cancel();
+      Thread.sleep(chorePeriod * 10);
+      assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
+        service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 3);
 
-    slowChore4.cancel();
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 3);
+      slowChore3.cancel();
+      Thread.sleep(chorePeriod * 10);
+      assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
+        service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
 
-    slowChore3.cancel();
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 2);
+      slowChore2.cancel();
+      Thread.sleep(chorePeriod * 10);
+      assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
+        service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 1);
 
-    slowChore2.cancel();
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 1);
-
-    slowChore1.cancel();
-    Thread.sleep(chorePeriod * 10);
-    assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
-      service.getCorePoolSize());
-    assertEquals(service.getNumberOfChoresMissingStartTime(), 0);
-
-    shutdownService(service);
+      slowChore1.cancel();
+      Thread.sleep(chorePeriod * 10);
+      assertEquals(Math.max(ChoreService.MIN_CORE_POOL_SIZE, service.getNumberOfScheduledChores()),
+        service.getCorePoolSize());
+      assertEquals(service.getNumberOfChoresMissingStartTime(), 0);
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -498,36 +519,38 @@ public class TestChoreService {
     final int period = 100;
     final int sleepTime = 5;
 
-    DoNothingChore dn1 = new DoNothingChore("dn1", period);
-    DoNothingChore dn2 = new DoNothingChore("dn2", period);
-    DoNothingChore dn3 = new DoNothingChore("dn3", period);
-    DoNothingChore dn4 = new DoNothingChore("dn4", period);
-    DoNothingChore dn5 = new DoNothingChore("dn5", period);
+    try {
+      DoNothingChore dn1 = new DoNothingChore("dn1", period);
+      DoNothingChore dn2 = new DoNothingChore("dn2", period);
+      DoNothingChore dn3 = new DoNothingChore("dn3", period);
+      DoNothingChore dn4 = new DoNothingChore("dn4", period);
+      DoNothingChore dn5 = new DoNothingChore("dn5", period);
 
-    service.scheduleChore(dn1);
-    service.scheduleChore(dn2);
-    service.scheduleChore(dn3);
-    service.scheduleChore(dn4);
-    service.scheduleChore(dn5);
+      service.scheduleChore(dn1);
+      service.scheduleChore(dn2);
+      service.scheduleChore(dn3);
+      service.scheduleChore(dn4);
+      service.scheduleChore(dn5);
 
-    Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 5, service.getNumberOfScheduledChores());
+      Thread.sleep(sleepTime);
+      assertEquals("Scheduled chore mismatch", 5, service.getNumberOfScheduledChores());
 
-    dn1.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 4, service.getNumberOfScheduledChores());
+      dn1.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals("Scheduled chore mismatch", 4, service.getNumberOfScheduledChores());
 
-    dn2.cancel();
-    dn3.cancel();
-    dn4.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 1, service.getNumberOfScheduledChores());
+      dn2.cancel();
+      dn3.cancel();
+      dn4.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals("Scheduled chore mismatch", 1, service.getNumberOfScheduledChores());
 
-    dn5.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 0, service.getNumberOfScheduledChores());
-
-    shutdownService(service);
+      dn5.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals("Scheduled chore mismatch", 0, service.getNumberOfScheduledChores());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -537,38 +560,40 @@ public class TestChoreService {
     final int period = 100;
     final int sleepTime = 5 * period;
 
-    // Slow chores sleep for a length of time LONGER than their period. Thus, SlowChores
-    // ALWAYS miss their start time since their execution takes longer than their period
-    SlowChore sc1 = new SlowChore("sc1", period);
-    SlowChore sc2 = new SlowChore("sc2", period);
-    SlowChore sc3 = new SlowChore("sc3", period);
-    SlowChore sc4 = new SlowChore("sc4", period);
-    SlowChore sc5 = new SlowChore("sc5", period);
+    try {
+      // Slow chores sleep for a length of time LONGER than their period. Thus, SlowChores
+      // ALWAYS miss their start time since their execution takes longer than their period
+      SlowChore sc1 = new SlowChore("sc1", period);
+      SlowChore sc2 = new SlowChore("sc2", period);
+      SlowChore sc3 = new SlowChore("sc3", period);
+      SlowChore sc4 = new SlowChore("sc4", period);
+      SlowChore sc5 = new SlowChore("sc5", period);
 
-    service.scheduleChore(sc1);
-    service.scheduleChore(sc2);
-    service.scheduleChore(sc3);
-    service.scheduleChore(sc4);
-    service.scheduleChore(sc5);
+      service.scheduleChore(sc1);
+      service.scheduleChore(sc2);
+      service.scheduleChore(sc3);
+      service.scheduleChore(sc4);
+      service.scheduleChore(sc5);
 
-    Thread.sleep(sleepTime);
-    assertEquals(5, service.getNumberOfChoresMissingStartTime());
+      Thread.sleep(sleepTime);
+      assertEquals(5, service.getNumberOfChoresMissingStartTime());
 
-    sc1.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals(4, service.getNumberOfChoresMissingStartTime());
+      sc1.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals(4, service.getNumberOfChoresMissingStartTime());
 
-    sc2.cancel();
-    sc3.cancel();
-    sc4.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals(1, service.getNumberOfChoresMissingStartTime());
+      sc2.cancel();
+      sc3.cancel();
+      sc4.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals(1, service.getNumberOfChoresMissingStartTime());
 
-    sc5.cancel();
-    Thread.sleep(sleepTime);
-    assertEquals(0, service.getNumberOfChoresMissingStartTime());
-
-    shutdownService(service);
+      sc5.cancel();
+      Thread.sleep(sleepTime);
+      assertEquals(0, service.getNumberOfChoresMissingStartTime());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   /**
@@ -583,42 +608,44 @@ public class TestChoreService {
     final int period = 100;
     final int sleepTime = 5 * period;
 
-    // Slow chores sleep for a length of time LONGER than their period. Thus, SlowChores
-    // ALWAYS miss their start time since their execution takes longer than their period.
-    // Chores that miss their start time will trigger the onChoreMissedStartTime callback
-    // in the ChoreService. This callback will try to increase the number of core pool
-    // threads.
-    SlowChore sc1 = new SlowChore("sc1", period);
-    SlowChore sc2 = new SlowChore("sc2", period);
-    SlowChore sc3 = new SlowChore("sc3", period);
-    SlowChore sc4 = new SlowChore("sc4", period);
-    SlowChore sc5 = new SlowChore("sc5", period);
+    try {
+      // Slow chores sleep for a length of time LONGER than their period. Thus, SlowChores
+      // ALWAYS miss their start time since their execution takes longer than their period.
+      // Chores that miss their start time will trigger the onChoreMissedStartTime callback
+      // in the ChoreService. This callback will try to increase the number of core pool
+      // threads.
+      SlowChore sc1 = new SlowChore("sc1", period);
+      SlowChore sc2 = new SlowChore("sc2", period);
+      SlowChore sc3 = new SlowChore("sc3", period);
+      SlowChore sc4 = new SlowChore("sc4", period);
+      SlowChore sc5 = new SlowChore("sc5", period);
 
-    service.scheduleChore(sc1);
-    service.scheduleChore(sc2);
-    service.scheduleChore(sc3);
-    service.scheduleChore(sc4);
-    service.scheduleChore(sc5);
+      service.scheduleChore(sc1);
+      service.scheduleChore(sc2);
+      service.scheduleChore(sc3);
+      service.scheduleChore(sc4);
+      service.scheduleChore(sc5);
 
-    Thread.sleep(sleepTime);
-    assertTrue(service.getCorePoolSize() <= service.getNumberOfScheduledChores());
+      Thread.sleep(sleepTime);
+      assertTrue(service.getCorePoolSize() <= service.getNumberOfScheduledChores());
 
-    SlowChore sc6 = new SlowChore("sc6", period);
-    SlowChore sc7 = new SlowChore("sc7", period);
-    SlowChore sc8 = new SlowChore("sc8", period);
-    SlowChore sc9 = new SlowChore("sc9", period);
-    SlowChore sc10 = new SlowChore("sc10", period);
+      SlowChore sc6 = new SlowChore("sc6", period);
+      SlowChore sc7 = new SlowChore("sc7", period);
+      SlowChore sc8 = new SlowChore("sc8", period);
+      SlowChore sc9 = new SlowChore("sc9", period);
+      SlowChore sc10 = new SlowChore("sc10", period);
 
-    service.scheduleChore(sc6);
-    service.scheduleChore(sc7);
-    service.scheduleChore(sc8);
-    service.scheduleChore(sc9);
-    service.scheduleChore(sc10);
+      service.scheduleChore(sc6);
+      service.scheduleChore(sc7);
+      service.scheduleChore(sc8);
+      service.scheduleChore(sc9);
+      service.scheduleChore(sc10);
 
-    Thread.sleep(sleepTime);
-    assertTrue(service.getCorePoolSize() <= service.getNumberOfScheduledChores());
-
-    shutdownService(service);
+      Thread.sleep(sleepTime);
+      assertTrue(service.getCorePoolSize() <= service.getNumberOfScheduledChores());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -629,33 +656,35 @@ public class TestChoreService {
     ChoreService service2 = new ChoreService("testChangingChoreServices_2");
     ScheduledChore chore = new DoNothingChore("sample", period);
 
-    assertFalse(chore.isScheduled());
-    assertFalse(service1.isChoreScheduled(chore));
-    assertFalse(service2.isChoreScheduled(chore));
-    assertTrue(chore.getChoreServicer() == null);
+    try {
+      assertFalse(chore.isScheduled());
+      assertFalse(service1.isChoreScheduled(chore));
+      assertFalse(service2.isChoreScheduled(chore));
+      assertTrue(chore.getChoreServicer() == null);
 
-    service1.scheduleChore(chore);
-    Thread.sleep(sleepTime);
-    assertTrue(chore.isScheduled());
-    assertTrue(service1.isChoreScheduled(chore));
-    assertFalse(service2.isChoreScheduled(chore));
-    assertFalse(chore.getChoreServicer() == null);
+      service1.scheduleChore(chore);
+      Thread.sleep(sleepTime);
+      assertTrue(chore.isScheduled());
+      assertTrue(service1.isChoreScheduled(chore));
+      assertFalse(service2.isChoreScheduled(chore));
+      assertFalse(chore.getChoreServicer() == null);
 
-    service2.scheduleChore(chore);
-    Thread.sleep(sleepTime);
-    assertTrue(chore.isScheduled());
-    assertFalse(service1.isChoreScheduled(chore));
-    assertTrue(service2.isChoreScheduled(chore));
-    assertFalse(chore.getChoreServicer() == null);
+      service2.scheduleChore(chore);
+      Thread.sleep(sleepTime);
+      assertTrue(chore.isScheduled());
+      assertFalse(service1.isChoreScheduled(chore));
+      assertTrue(service2.isChoreScheduled(chore));
+      assertFalse(chore.getChoreServicer() == null);
 
-    chore.cancel();
-    assertFalse(chore.isScheduled());
-    assertFalse(service1.isChoreScheduled(chore));
-    assertFalse(service2.isChoreScheduled(chore));
-    assertTrue(chore.getChoreServicer() == null);
-
-    shutdownService(service1);
-    shutdownService(service2);
+      chore.cancel();
+      assertFalse(chore.isScheduled());
+      assertFalse(service1.isChoreScheduled(chore));
+      assertFalse(service2.isChoreScheduled(chore));
+      assertTrue(chore.getChoreServicer() == null);
+    } finally {
+      shutdownService(service1);
+      shutdownService(service2);
+    }
   }
 
   @Test (timeout=20000)
@@ -666,23 +695,25 @@ public class TestChoreService {
     ChoreService service = new ChoreService("testTriggerNowFailsWhenNotScheduled");
     CountingChore chore = new CountingChore("dn", period);
 
-    assertFalse(chore.triggerNow());
-    assertTrue(chore.getCountOfChoreCalls() == 0);
+    try {
+      assertFalse(chore.triggerNow());
+      assertTrue(chore.getCountOfChoreCalls() == 0);
 
-    service.scheduleChore(chore);
-    Thread.sleep(sleep);
-    assertEquals(1, chore.getCountOfChoreCalls());
-    Thread.sleep(period);
-    assertEquals(2, chore.getCountOfChoreCalls());
-    assertTrue(chore.triggerNow());
-    Thread.sleep(sleep);
-    assertTrue(chore.triggerNow());
-    Thread.sleep(sleep);
-    assertTrue(chore.triggerNow());
-    Thread.sleep(sleep);
-    assertEquals(5, chore.getCountOfChoreCalls());
-
-    shutdownService(service);
+      service.scheduleChore(chore);
+      Thread.sleep(sleep);
+      assertEquals(1, chore.getCountOfChoreCalls());
+      Thread.sleep(period);
+      assertEquals(2, chore.getCountOfChoreCalls());
+      assertTrue(chore.triggerNow());
+      Thread.sleep(sleep);
+      assertTrue(chore.triggerNow());
+      Thread.sleep(sleep);
+      assertTrue(chore.triggerNow());
+      Thread.sleep(sleep);
+      assertEquals(5, chore.getCountOfChoreCalls());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -693,49 +724,51 @@ public class TestChoreService {
     final int period = 100;
     final int delta = 10;
 
-    ScheduledChore chore1_group1 = new DoNothingChore("c1g1", stopperForGroup1, period);
-    ScheduledChore chore2_group1 = new DoNothingChore("c2g1", stopperForGroup1, period);
-    ScheduledChore chore3_group1 = new DoNothingChore("c3g1", stopperForGroup1, period);
+    try {
+      ScheduledChore chore1_group1 = new DoNothingChore("c1g1", stopperForGroup1, period);
+      ScheduledChore chore2_group1 = new DoNothingChore("c2g1", stopperForGroup1, period);
+      ScheduledChore chore3_group1 = new DoNothingChore("c3g1", stopperForGroup1, period);
 
-    ScheduledChore chore1_group2 = new DoNothingChore("c1g2", stopperForGroup2, period);
-    ScheduledChore chore2_group2 = new DoNothingChore("c2g2", stopperForGroup2, period);
-    ScheduledChore chore3_group2 = new DoNothingChore("c3g2", stopperForGroup2, period);
+      ScheduledChore chore1_group2 = new DoNothingChore("c1g2", stopperForGroup2, period);
+      ScheduledChore chore2_group2 = new DoNothingChore("c2g2", stopperForGroup2, period);
+      ScheduledChore chore3_group2 = new DoNothingChore("c3g2", stopperForGroup2, period);
 
-    service.scheduleChore(chore1_group1);
-    service.scheduleChore(chore2_group1);
-    service.scheduleChore(chore3_group1);
-    service.scheduleChore(chore1_group2);
-    service.scheduleChore(chore2_group2);
-    service.scheduleChore(chore3_group2);
+      service.scheduleChore(chore1_group1);
+      service.scheduleChore(chore2_group1);
+      service.scheduleChore(chore3_group1);
+      service.scheduleChore(chore1_group2);
+      service.scheduleChore(chore2_group2);
+      service.scheduleChore(chore3_group2);
 
-    Thread.sleep(delta);
-    Thread.sleep(10 * period);
-    assertTrue(chore1_group1.isScheduled());
-    assertTrue(chore2_group1.isScheduled());
-    assertTrue(chore3_group1.isScheduled());
-    assertTrue(chore1_group2.isScheduled());
-    assertTrue(chore2_group2.isScheduled());
-    assertTrue(chore3_group2.isScheduled());
+      Thread.sleep(delta);
+      Thread.sleep(10 * period);
+      assertTrue(chore1_group1.isScheduled());
+      assertTrue(chore2_group1.isScheduled());
+      assertTrue(chore3_group1.isScheduled());
+      assertTrue(chore1_group2.isScheduled());
+      assertTrue(chore2_group2.isScheduled());
+      assertTrue(chore3_group2.isScheduled());
 
-    stopperForGroup1.stop("test stopping group 1");
-    Thread.sleep(period);
-    assertFalse(chore1_group1.isScheduled());
-    assertFalse(chore2_group1.isScheduled());
-    assertFalse(chore3_group1.isScheduled());
-    assertTrue(chore1_group2.isScheduled());
-    assertTrue(chore2_group2.isScheduled());
-    assertTrue(chore3_group2.isScheduled());
+      stopperForGroup1.stop("test stopping group 1");
+      Thread.sleep(period);
+      assertFalse(chore1_group1.isScheduled());
+      assertFalse(chore2_group1.isScheduled());
+      assertFalse(chore3_group1.isScheduled());
+      assertTrue(chore1_group2.isScheduled());
+      assertTrue(chore2_group2.isScheduled());
+      assertTrue(chore3_group2.isScheduled());
 
-    stopperForGroup2.stop("test stopping group 2");
-    Thread.sleep(period);
-    assertFalse(chore1_group1.isScheduled());
-    assertFalse(chore2_group1.isScheduled());
-    assertFalse(chore3_group1.isScheduled());
-    assertFalse(chore1_group2.isScheduled());
-    assertFalse(chore2_group2.isScheduled());
-    assertFalse(chore3_group2.isScheduled());
-
-    shutdownService(service);
+      stopperForGroup2.stop("test stopping group 2");
+      Thread.sleep(period);
+      assertFalse(chore1_group1.isScheduled());
+      assertFalse(chore2_group1.isScheduled());
+      assertFalse(chore3_group1.isScheduled());
+      assertFalse(chore1_group2.isScheduled());
+      assertFalse(chore2_group2.isScheduled());
+      assertFalse(chore3_group2.isScheduled());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -746,14 +779,16 @@ public class TestChoreService {
     ScheduledChore successChore2 = new DoNothingChore("sc2", period);
     ScheduledChore successChore3 = new DoNothingChore("sc3", period);
 
-    assertTrue(service.scheduleChore(successChore1));
-    assertTrue(successChore1.isScheduled());
-    assertTrue(service.scheduleChore(successChore2));
-    assertTrue(successChore2.isScheduled());
-    assertTrue(service.scheduleChore(successChore3));
-    assertTrue(successChore3.isScheduled());
-
-    shutdownService(service);
+    try {
+      assertTrue(service.scheduleChore(successChore1));
+      assertTrue(successChore1.isScheduled());
+      assertTrue(service.scheduleChore(successChore2));
+      assertTrue(successChore2.isScheduled());
+      assertTrue(service.scheduleChore(successChore3));
+      assertTrue(successChore3.isScheduled());
+    } finally {
+      shutdownService(service);
+    }
 
     assertFalse(successChore1.isScheduled());
     assertFalse(successChore2.isScheduled());
@@ -768,23 +803,24 @@ public class TestChoreService {
     ScheduledChore slowChore1 = new SleepingChore("sc1", period, sleep);
     ScheduledChore slowChore2 = new SleepingChore("sc2", period, sleep);
     ScheduledChore slowChore3 = new SleepingChore("sc3", period, sleep);
+    try {
+      assertTrue(service.scheduleChore(slowChore1));
+      assertTrue(service.scheduleChore(slowChore2));
+      assertTrue(service.scheduleChore(slowChore3));
 
-    assertTrue(service.scheduleChore(slowChore1));
-    assertTrue(service.scheduleChore(slowChore2));
-    assertTrue(service.scheduleChore(slowChore3));
+      Thread.sleep(sleep / 2);
+      shutdownService(service);
 
-    Thread.sleep(sleep / 2);
-    shutdownService(service);
+      assertFalse(slowChore1.isScheduled());
+      assertFalse(slowChore2.isScheduled());
+      assertFalse(slowChore3.isScheduled());
+      assertTrue(service.isShutdown());
 
-    assertFalse(slowChore1.isScheduled());
-    assertFalse(slowChore2.isScheduled());
-    assertFalse(slowChore3.isScheduled());
-    assertTrue(service.isShutdown());
-
-    Thread.sleep(5);
-    assertTrue(service.isTerminated());
-
-    shutdownService(service);
+      Thread.sleep(5);
+      assertTrue(service.isTerminated());
+    } finally {
+      shutdownService(service);
+    }
   }
 
   @Test (timeout=20000)
@@ -798,14 +834,16 @@ public class TestChoreService {
     ScheduledChore failChore2 = new DoNothingChore("fc2", period);
     ScheduledChore failChore3 = new DoNothingChore("fc3", period);
 
-    assertTrue(service.scheduleChore(successChore1));
-    assertTrue(successChore1.isScheduled());
-    assertTrue(service.scheduleChore(successChore2));
-    assertTrue(successChore2.isScheduled());
-    assertTrue(service.scheduleChore(successChore3));
-    assertTrue(successChore3.isScheduled());
-
-    shutdownService(service);
+    try {
+      assertTrue(service.scheduleChore(successChore1));
+      assertTrue(successChore1.isScheduled());
+      assertTrue(service.scheduleChore(successChore2));
+      assertTrue(successChore2.isScheduled());
+      assertTrue(service.scheduleChore(successChore3));
+      assertTrue(successChore3.isScheduled());
+    } finally {
+      shutdownService(service);
+    }
 
     assertFalse(service.scheduleChore(failChore1));
     assertFalse(failChore1.isScheduled());

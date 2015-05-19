@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -82,9 +83,9 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -1049,6 +1050,7 @@ public class TestSplitTransactionOnCluster {
     try {
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("f"));
+      htd.addFamily(new HColumnDescriptor("i_f"));
       htd.setRegionSplitPolicyClassName(CustomSplitPolicy.class.getName());
       admin.createTable(htd);
       List<HRegion> regions = awaitTableRegions(tableName);
@@ -1056,6 +1058,7 @@ public class TestSplitTransactionOnCluster {
       for(int i = 3;i<9;i++) {
         Put p = new Put(Bytes.toBytes("row"+i));
         p.add(Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
+        p.add(Bytes.toBytes("i_f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
         region.put(p);
       }
       region.flush(true);
@@ -1063,8 +1066,13 @@ public class TestSplitTransactionOnCluster {
       Collection<StoreFile> storefiles = store.getStorefiles();
       assertEquals(storefiles.size(), 1);
       assertFalse(region.hasReferences());
-      Path referencePath = region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
-        storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      Path referencePath =
+          region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "f",
+            storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
+      assertNull(referencePath);
+      referencePath =
+          region.getRegionFileSystem().splitStoreFile(region.getRegionInfo(), "i_f",
+            storefiles.iterator().next(), Bytes.toBytes("row1"), false, region.getSplitPolicy());
       assertNotNull(referencePath);
     } finally {
       TESTING_UTIL.deleteTable(tableName);
@@ -1379,8 +1387,12 @@ public class TestSplitTransactionOnCluster {
     }
 
     @Override
-    public boolean skipStoreFileRangeCheck() {
-      return true;
+    public boolean skipStoreFileRangeCheck(String familyName) {
+      if(familyName.startsWith("i_")) {
+        return true;
+      } else {
+        return false;
+      }
     }
   }
 }

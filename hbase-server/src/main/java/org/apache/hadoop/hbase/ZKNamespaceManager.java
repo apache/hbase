@@ -48,7 +48,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
  */
 @InterfaceAudience.Private
 public class ZKNamespaceManager extends ZooKeeperListener {
-  private static Log LOG = LogFactory.getLog(ZKNamespaceManager.class);
+  private static final Log LOG = LogFactory.getLog(ZKNamespaceManager.class);
   private final String nsZNode;
   private volatile NavigableMap<String,NamespaceDescriptor> cache;
 

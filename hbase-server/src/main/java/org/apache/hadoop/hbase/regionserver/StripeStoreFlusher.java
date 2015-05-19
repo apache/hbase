@@ -109,7 +109,7 @@ public class StripeStoreFlusher extends StoreFlusher {
       @Override
       public Writer createWriter() throws IOException {
         StoreFile.Writer writer = store.createWriterInTmp(
-            kvCount, store.getFamily().getCompression(), false, true, true);
+            kvCount, store.getFamily().getCompressionType(), false, true, true);
         writer.setTimeRangeTracker(tracker);
         return writer;
       }

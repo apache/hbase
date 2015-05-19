@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 
@@ -67,7 +67,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
    * @param comparator
    */
   public KeyValueHeap(List<? extends KeyValueScanner> scanners,
-      KVComparator comparator) throws IOException {
+      CellComparator comparator) throws IOException {
     this(scanners, new KVScannerComparator(comparator));
   }
 
@@ -144,6 +144,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     InternalScanner currentAsInternal = (InternalScanner)this.current;
     boolean moreCells = currentAsInternal.next(result, scannerContext);
     Cell pee = this.current.peek();
+
     /*
      * By definition, any InternalScanner must return false only when it has no
      * further rows to be fetched. So, we can close a scanner if it returns
@@ -151,6 +152,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
      * more efficient to close scanners which are not needed than keep them in
      * the heap. This is also required for certain optimizations.
      */
+
     if (pee == null || !moreCells) {
       this.current.close();
     } else {
@@ -164,12 +166,12 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   }
 
   protected static class KVScannerComparator implements Comparator<KeyValueScanner> {
-    protected KVComparator kvComparator;
+    protected CellComparator kvComparator;
     /**
      * Constructor
      * @param kvComparator
      */
-    public KVScannerComparator(KVComparator kvComparator) {
+    public KVScannerComparator(CellComparator kvComparator) {
       this.kvComparator = kvComparator;
     }
     public int compare(KeyValueScanner left, KeyValueScanner right) {
@@ -202,7 +204,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     /**
      * @return KVComparator
      */
-    public KVComparator getComparator() {
+    public CellComparator getComparator() {
       return this.kvComparator;
     }
   }

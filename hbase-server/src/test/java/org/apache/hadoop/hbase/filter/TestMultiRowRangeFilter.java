@@ -45,7 +45,7 @@ import org.junit.experimental.categories.Category;
 public class TestMultiRowRangeFilter {
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(TestMultiRowRangeFilter.class);
   private byte[] family = Bytes.toBytes("family");
   private byte[] qf = Bytes.toBytes("qf");
   private byte[] value = Bytes.toBytes("val");

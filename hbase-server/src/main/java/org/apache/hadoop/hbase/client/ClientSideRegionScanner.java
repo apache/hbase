@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.NoLimitScannerContext;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.mortbay.log.Log;
 
@@ -72,8 +71,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   @Override
   public Result next() throws IOException {
     values.clear();
-
-    scanner.nextRaw(values, NoLimitScannerContext.getInstance());
+    scanner.nextRaw(values);
     if (values.isEmpty()) {
       //we are done
       return null;
@@ -110,5 +108,10 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
         Log.warn("Exception while closing region", ex);
       }
     }
+  }
+
+  @Override
+  public boolean renewLease() {
+    throw new UnsupportedOperationException();
   }
 }

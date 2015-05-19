@@ -52,4 +52,10 @@ public interface ResultScanner extends Closeable, Iterable<Result> {
    */
   @Override
   void close();
+
+  /**
+   * Allow the client to renew the scanner's lease on the server.
+   * @return true if the lease was successfully renewed, false otherwise.
+   */
+  boolean renewLease();
 }

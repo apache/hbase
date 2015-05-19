@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -108,7 +109,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
-      new KeyValueHeap(scanners, KeyValue.COMPARATOR);
+      new KeyValueHeap(scanners, CellComparator.COMPARATOR);
 
     List<Cell> actual = new ArrayList<Cell>();
     while(kvh.peek() != null){
@@ -126,7 +127,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Check if result is sorted according to Comparator
     for(int i=0; i<actual.size()-1; i++){
-      int ret = KeyValue.COMPARATOR.compare(actual.get(i), actual.get(i+1));
+      int ret = CellComparator.COMPARATOR.compare(actual.get(i), actual.get(i+1));
       assertTrue(ret < 0);
     }
 
@@ -162,7 +163,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
 
     //Creating KeyValueHeap
     KeyValueHeap kvh =
-      new KeyValueHeap(scanners, KeyValue.COMPARATOR);
+      new KeyValueHeap(scanners, CellComparator.COMPARATOR);
 
     KeyValue seekKv = new KeyValue(row2, fam1, null, null);
     kvh.seek(seekKv);
@@ -208,7 +209,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
     scanners.add(new Scanner(l4));
 
     //Creating KeyValueHeap
-    KeyValueHeap kvh = new KeyValueHeap(scanners, KeyValue.COMPARATOR);
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
 
     while(kvh.next() != null);
 

@@ -27,13 +27,15 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.protobuf.generated.HFileProtos;
 import org.apache.hadoop.hbase.util.Bytes;
+
 
 /**
  * The {@link HFile} has a fixed trailer which contains offsets to other
@@ -107,7 +109,8 @@ public class FixedFileTrailer {
   private long lastDataBlockOffset;
 
   /** Raw key comparator class name in version 3 */
-  private String comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
+  // We could write the actual class name from 2.0 onwards and handle BC
+  private String comparatorClassName = CellComparator.COMPARATOR.getClass().getName();
 
   /** The encryption key */
   private byte[] encryptionKey;
@@ -200,7 +203,7 @@ public class FixedFileTrailer {
       .setNumDataIndexLevels(numDataIndexLevels)
       .setFirstDataBlockOffset(firstDataBlockOffset)
       .setLastDataBlockOffset(lastDataBlockOffset)
-      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have 
+      // TODO this is a classname encoded into an  HFile's trailer. We are going to need to have
       // some compat code here.
       .setComparatorClassName(comparatorClassName)
       .setCompressionCodec(compressionCodec.ordinal());
@@ -536,56 +539,53 @@ public class FixedFileTrailer {
     return minorVersion;
   }
 
-  public void setComparatorClass(Class<? extends KVComparator> klass) {
+  public void setComparatorClass(Class<? extends CellComparator> klass) {
     // Is the comparator instantiable?
     try {
-      KVComparator comp = klass.newInstance();
-
-      // HFile V2 legacy comparator class names.
-      if (KeyValue.COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.COMPARATOR.getLegacyKeyComparatorName();
-      } else if (KeyValue.META_COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.META_COMPARATOR.getLegacyKeyComparatorName();
-      } else if (KeyValue.RAW_COMPARATOR.getClass().equals(klass)) {
-        comparatorClassName = KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName();
-      } else {
-        // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
+      // If null, it should be the Bytes.BYTES_RAWCOMPARATOR
+      if (klass != null) {
+        CellComparator comp = klass.newInstance();
+        // if the name wasn't one of the legacy names, maybe its a legit new
+        // kind of comparator.
         comparatorClassName = klass.getName();
       }
 
     } catch (Exception e) {
-      throw new RuntimeException("Comparator class " + klass.getName() +
-        " is not instantiable", e);
+      throw new RuntimeException("Comparator class " + klass.getName() + " is not instantiable", e);
     }
-
   }
 
   @SuppressWarnings("unchecked")
-  private static Class<? extends KVComparator> getComparatorClass(
-      String comparatorClassName) throws IOException {
-    try {
-      // HFile V2 legacy comparator class names.
-      if (comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())) {
-        comparatorClassName = KeyValue.COMPARATOR.getClass().getName();
-      } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())) {
-        comparatorClassName = KeyValue.META_COMPARATOR.getClass().getName();
-      } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
-        comparatorClassName = KeyValue.RAW_COMPARATOR.getClass().getName();
-      }
-
+  private static Class<? extends CellComparator> getComparatorClass(String comparatorClassName)
+      throws IOException {
+    Class<? extends CellComparator> comparatorKlass;
+    if (comparatorClassName.equals(KeyValue.COMPARATOR.getLegacyKeyComparatorName())
+        || comparatorClassName.equals(KeyValue.COMPARATOR.getClass().getName())) {
+      comparatorKlass = CellComparator.class;
+    } else if (comparatorClassName.equals(KeyValue.META_COMPARATOR.getLegacyKeyComparatorName())
+        || comparatorClassName.equals(KeyValue.META_COMPARATOR.getClass().getName())) {
+      comparatorKlass = MetaCellComparator.class;
+    } else if (comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getClass().getName())
+        || comparatorClassName.equals(KeyValue.RAW_COMPARATOR.getLegacyKeyComparatorName())) {
+      // When the comparator to be used is Bytes.BYTES_RAWCOMPARATOR, we just return null from here
+      // Bytes.BYTES_RAWCOMPARATOR is not a CellComparator
+      comparatorKlass = null;
+    } else {
       // if the name wasn't one of the legacy names, maybe its a legit new kind of comparator.
-
-      return (Class<? extends KVComparator>)
-          Class.forName(comparatorClassName);
-    } catch (ClassNotFoundException ex) {
-      throw new IOException(ex);
+      try {
+        comparatorKlass = (Class<? extends CellComparator>) Class.forName(comparatorClassName);
+      } catch (ClassNotFoundException e) {
+        throw new IOException(e);
+      }
     }
+    return comparatorKlass;
   }
 
-  public static KVComparator createComparator(
+  public static CellComparator createComparator(
       String comparatorClassName) throws IOException {
     try {
-      return getComparatorClass(comparatorClassName).newInstance();
+      Class<? extends CellComparator> comparatorClass = getComparatorClass(comparatorClassName);
+      return comparatorClass != null ? comparatorClass.newInstance() : null;
     } catch (InstantiationException e) {
       throw new IOException("Comparator class " + comparatorClassName +
         " is not instantiable", e);
@@ -595,7 +595,7 @@ public class FixedFileTrailer {
     }
   }
 
-  KVComparator createComparator() throws IOException {
+  CellComparator createComparator() throws IOException {
     expectAtLeastMajorVersion(2);
     return createComparator(comparatorClassName);
   }

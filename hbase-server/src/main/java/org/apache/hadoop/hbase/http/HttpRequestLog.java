@@ -33,7 +33,7 @@ import org.mortbay.jetty.RequestLog;
  */
 public class HttpRequestLog {
 
-  public static final Log LOG = LogFactory.getLog(HttpRequestLog.class);
+  private static final Log LOG = LogFactory.getLog(HttpRequestLog.class);
   private static final HashMap<String, String> serverToComponent;
 
   static {

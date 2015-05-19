@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -79,7 +80,7 @@ public class TestSeekTo extends HBaseTestCase {
         .withIncludesTags(true).build();
     HFile.Writer writer = HFile.getWriterFactoryNoCache(conf).withOutputStream(fout)
         .withFileContext(context)
-        .withComparator(KeyValue.COMPARATOR).create();
+        .withComparator(CellComparator.COMPARATOR).create();
     // 4 bytes * 3 * 2 for each key/value +
     // 3 for keys, 15 for values = 42 (woot)
     writer.append(toKV("c", tagUsage));

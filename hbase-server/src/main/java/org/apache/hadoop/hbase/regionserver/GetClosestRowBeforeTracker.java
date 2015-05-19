@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -45,7 +44,7 @@ class GetClosestRowBeforeTracker {
   private final long now;
   private final long oldestUnexpiredTs;
   private Cell candidate = null;
-  private final KVComparator kvcomparator;
+  private final CellComparator cellComparator;
   // Flag for whether we're doing getclosest on a metaregion.
   private final boolean metaregion;
   // Offset and length into targetkey demarking table name (if in a metaregion).
@@ -62,7 +61,7 @@ class GetClosestRowBeforeTracker {
    * @param ttl Time to live in ms for this Store
    * @param metaregion True if this is hbase:meta or -ROOT- region.
    */
-  GetClosestRowBeforeTracker(final KVComparator c, final KeyValue kv,
+  GetClosestRowBeforeTracker(final CellComparator c, final KeyValue kv,
       final long ttl, final boolean metaregion) {
     super();
     this.metaregion = metaregion;
@@ -72,13 +71,13 @@ class GetClosestRowBeforeTracker {
     this.rowoffset = kv.getRowOffset();
     int l = -1;
     if (metaregion) {
-      l = KeyValue.getDelimiter(kv.getRowArray(), rowoffset, kv.getRowLength(),
+      l = Bytes.searchDelimiterIndex(kv.getRowArray(), rowoffset, kv.getRowLength(),
         HConstants.DELIMITER) - this.rowoffset;
     }
     this.tablenamePlusDelimiterLength = metaregion? l + 1: -1;
     this.now = System.currentTimeMillis();
     this.oldestUnexpiredTs = now - ttl;
-    this.kvcomparator = c;
+    this.cellComparator = c;
     this.deletes = new TreeMap<Cell, NavigableSet<Cell>>(new CellComparator.RowComparator());
   }
 
@@ -89,7 +88,7 @@ class GetClosestRowBeforeTracker {
   private void addDelete(final Cell kv) {
     NavigableSet<Cell> rowdeletes = this.deletes.get(kv);
     if (rowdeletes == null) {
-      rowdeletes = new TreeSet<Cell>(this.kvcomparator);
+      rowdeletes = new TreeSet<Cell>(this.cellComparator);
       this.deletes.put(kv, rowdeletes);
     }
     rowdeletes.add(kv);
@@ -109,8 +108,8 @@ class GetClosestRowBeforeTracker {
 
   boolean isBetterCandidate(final Cell contender) {
     return this.candidate == null ||
-      (this.kvcomparator.compareRows(this.candidate, contender) < 0 &&
-        this.kvcomparator.compareRows(contender, this.targetkey) <= 0);
+      (this.cellComparator.compareRows(this.candidate, contender) < 0 &&
+        this.cellComparator.compareRows(contender, this.targetkey) <= 0);
   }
 
   /*
@@ -231,7 +230,7 @@ class GetClosestRowBeforeTracker {
    * @return True if we went too far, past the target key.
    */
   boolean isTooFar(final Cell kv, final Cell firstOnRow) {
-    return this.kvcomparator.compareRows(kv, firstOnRow) > 0;
+    return this.cellComparator.compareRows(kv, firstOnRow) > 0;
   }
 
   boolean isTargetTable(final Cell kv) {

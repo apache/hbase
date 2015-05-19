@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -43,8 +44,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import java.util.List;
-
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
@@ -59,6 +58,7 @@ public class TestSnapshotCloneIndependence {
   private static final String TEST_FAM_STR = "fam";
   private static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
   private static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
+  private static final int CLEANER_INTERVAL = 10;
 
   /**
    * Setup the config for the cluster and start it
@@ -88,6 +88,13 @@ public class TestSnapshotCloneIndependence {
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
+    // Execute cleaner frequently to induce failures
+    conf.setInt("hbase.master.cleaner.interval", CLEANER_INTERVAL);
+    conf.setInt("hbase.master.hfilecleaner.plugins.snapshot.period", CLEANER_INTERVAL);
+    // Effectively disable TimeToLiveHFileCleaner. Don't want to fully disable it because that
+    // will even trigger races between creating the directory containing back references and
+    // the back reference itself.
+    conf.setInt("hbase.master.hfilecleaner.ttl", CLEANER_INTERVAL);
   }
 
   @Before
@@ -163,6 +170,16 @@ public class TestSnapshotCloneIndependence {
   @Test (timeout=300000)
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(true);
+  }
+
+  @Test (timeout=300000)
+  public void testOfflineSnapshotDeleteIndependent() throws Exception {
+    runTestSnapshotDeleteIndependent(false);
+  }
+
+  @Test (timeout=300000)
+  public void testOnlineSnapshotDeleteIndependent() throws Exception {
+    runTestSnapshotDeleteIndependent(true);
   }
 
   private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
@@ -338,7 +355,7 @@ public class TestSnapshotCloneIndependence {
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
 
     admin.disableTable(localTableName);
-    admin.addColumn(localTableName, hcd);
+    admin.addColumnFamily(localTableName, hcd);
 
     // Verify that it is not in the snapshot
     admin.enableTable(localTableName);
@@ -358,5 +375,55 @@ public class TestSnapshotCloneIndependence {
       originalTableDescriptor.hasFamily(TEST_FAM_2));
     Assert.assertTrue("The new family was not found. ",
       !clonedTableDescriptor.hasFamily(TEST_FAM_2));
+  }
+
+  /*
+   * Take a snapshot of a table, add data, and verify that deleting the snapshot does not affect
+   * either table.
+   * @param online - Whether the table is online or not during the snapshot
+   */
+  private void runTestSnapshotDeleteIndependent(boolean online) throws Exception {
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+
+    final Admin admin = UTIL.getHBaseAdmin();
+    final long startTime = System.currentTimeMillis();
+    final TableName localTableName =
+        TableName.valueOf(STRING_TABLE_NAME + startTime);
+
+    try (Table original = UTIL.createTable(localTableName, TEST_FAM)) {
+      UTIL.loadTable(original, TEST_FAM);
+    }
+
+    // Take a snapshot
+    final String snapshotNameAsString = "snapshot_" + localTableName;
+    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
+
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, localTableName, TEST_FAM_STR,
+        snapshotNameAsString, rootDir, fs, online);
+
+    if (!online) {
+      admin.enableTable(localTableName);
+    }
+    TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
+    admin.cloneSnapshot(snapshotName, cloneTableName);
+
+    // Ensure the original table does not reference the HFiles anymore
+    admin.majorCompact(localTableName);
+
+    // Deleting the snapshot used to break the cloned table by deleting in-use HFiles
+    admin.deleteSnapshot(snapshotName);
+
+    // Wait for cleaner run and DFS heartbeats so that anything that is deletable is fully deleted
+    Thread.sleep(10000);
+
+    try (Table original = UTIL.getConnection().getTable(localTableName)) {
+      try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
+        // Verify that all regions of both tables are readable
+        final int origTableRowCount = UTIL.countRows(original);
+        final int clonedTableRowCount = UTIL.countRows(clonedTable);
+        Assert.assertEquals(origTableRowCount, clonedTableRowCount);
+      }
+    }
   }
 }

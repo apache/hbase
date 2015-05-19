@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 final class ClientIdGenerator {
-  static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
+  private static final Log LOG = LogFactory.getLog(ClientIdGenerator.class);
 
   private ClientIdGenerator() {}
 

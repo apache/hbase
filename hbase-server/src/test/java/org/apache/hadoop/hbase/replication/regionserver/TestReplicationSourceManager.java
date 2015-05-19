@@ -202,7 +202,7 @@ public class TestReplicationSourceManager {
     final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes());
     final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();
-    HTableDescriptor htd = new HTableDescriptor();
+    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
     htd.addFamily(new HColumnDescriptor(f1));
     // Testing normal log rolling every 20
     for(long i = 1; i < 101; i++) {

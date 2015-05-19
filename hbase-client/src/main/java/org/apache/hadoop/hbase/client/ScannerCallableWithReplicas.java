@@ -60,7 +60,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
-  private final Log LOG = LogFactory.getLog(this.getClass());
+  private static final Log LOG = LogFactory.getLog(ScannerCallableWithReplicas.class);
   volatile ScannerCallable currentScannerCallable;
   AtomicBoolean replicaSwitched = new AtomicBoolean(false);
   final ClusterConnection cConnection;
@@ -271,6 +271,16 @@ class ScannerCallableWithReplicas implements RetryingCallable<Result[]> {
    */
   public boolean switchedToADifferentReplica() {
     return replicaSwitched.get();
+  }
+
+  /**
+   * @return true when the most recent RPC response indicated that the response was a heartbeat
+   *         message. Heartbeat messages are sent back from the server when the processing of the
+   *         scan request exceeds a certain time threshold. Heartbeats allow the server to avoid
+   *         timeouts during long running scan operations.
+   */
+  public boolean isHeartbeatMessage() {
+    return currentScannerCallable != null && currentScannerCallable.isHeartbeatMessage();
   }
 
   private int addCallsForCurrentReplica(

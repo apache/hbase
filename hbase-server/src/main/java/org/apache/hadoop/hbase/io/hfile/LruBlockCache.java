@@ -97,7 +97,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 @JsonIgnoreProperties({"encodingCountsForTest"})
 public class LruBlockCache implements ResizableBlockCache, HeapSize {
 
-  static final Log LOG = LogFactory.getLog(LruBlockCache.class);
+  private static final Log LOG = LogFactory.getLog(LruBlockCache.class);
 
   /**
    * Percentage of total size that eviction will evict until; e.g. if set to .8, then we will keep

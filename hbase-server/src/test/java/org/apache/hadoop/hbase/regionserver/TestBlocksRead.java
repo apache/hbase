@@ -55,7 +55,7 @@ import org.junit.experimental.categories.Category;
 
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestBlocksRead extends HBaseTestCase {
-  static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
+  private static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
       BloomType.ROW, BloomType.NONE };
 

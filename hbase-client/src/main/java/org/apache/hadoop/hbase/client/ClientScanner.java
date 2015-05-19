@@ -17,14 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.io.IOException;
-import java.io.InterruptedIOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -45,7 +38,14 @@ import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ExecutorService;
 
 /**
  * Implements the scanner interface for the HBase client.
@@ -53,8 +53,8 @@ import com.google.common.annotations.VisibleForTesting;
  * through them all.
  */
 @InterfaceAudience.Private
-public class ClientScanner extends AbstractClientScanner {
-    private final Log LOG = LogFactory.getLog(this.getClass());
+public abstract class ClientScanner extends AbstractClientScanner {
+    private static final Log LOG = LogFactory.getLog(ClientScanner.class);
     // A byte array in which all elements are the max byte, and it is used to
     // construct closest front row
     static byte[] MAX_BYTE_ARRAY = Bytes.createMaxByteArray(9);
@@ -64,7 +64,7 @@ public class ClientScanner extends AbstractClientScanner {
     // wonky: e.g. if it splits on us.
     protected HRegionInfo currentRegion = null;
     protected ScannerCallableWithReplicas callable = null;
-    protected final LinkedList<Result> cache = new LinkedList<Result>();
+    protected Queue<Result> cache;
     /**
      * A list of partial results that have been returned from the server. This list should only
      * contain results if this scanner does not have enough partial results to form the complete
@@ -151,8 +151,11 @@ public class ClientScanner extends AbstractClientScanner {
       this.rpcControllerFactory = controllerFactory;
 
       this.conf = conf;
+      initCache();
       initializeScannerInConstruction();
     }
+
+    protected abstract void initCache();
 
     protected void initializeScannerInConstruction() throws IOException{
       // initialize the scanner
@@ -161,15 +164,6 @@ public class ClientScanner extends AbstractClientScanner {
 
     protected ClusterConnection getConnection() {
       return this.connection;
-    }
-
-    /**
-     * @return Table name
-     * @deprecated Since 0.96.0; use {@link #getTable()}
-     */
-    @Deprecated
-    protected byte [] getTableName() {
-      return this.tableName.getName();
     }
 
     protected TableName getTable() {
@@ -206,6 +200,11 @@ public class ClientScanner extends AbstractClientScanner {
 
     protected long getTimestamp() {
       return lastNext;
+    }
+
+    @VisibleForTesting
+    protected long getMaxResultSize() {
+      return maxScannerResultSize;
     }
 
     // returns true if the passed region endKey
@@ -334,7 +333,7 @@ public class ClientScanner extends AbstractClientScanner {
      *
      * By default, scan metrics are disabled; if the application wants to collect them, this
      * behavior can be turned on by calling calling {@link Scan#setScanMetricsEnabled(boolean)}
-     * 
+     *
      * <p>This invocation clears the scan metrics. Metrics are aggregated in the Scan instance.
      */
     protected void writeScanMetrics() {
@@ -346,8 +345,11 @@ public class ClientScanner extends AbstractClientScanner {
       scanMetricsPublished = true;
     }
 
-    @Override
-    public Result next() throws IOException {
+    protected void initSyncCache() {
+    cache = new LinkedList<Result>();
+  }
+
+    protected Result nextWithSyncCache() throws IOException {
       // If the scanner is closed and there's nothing left in the cache, next is a no-op.
       if (cache.size() == 0 && this.closed) {
         return null;
@@ -374,6 +376,8 @@ public class ClientScanner extends AbstractClientScanner {
    * Contact the servers to load more {@link Result}s in the cache.
    */
   protected void loadCache() throws IOException {
+    // check if scanner was closed during previous prefetch
+    if (closed) return;
     Result[] values = null;
     long remainingResultSize = maxScannerResultSize;
     int countdown = this.caching;
@@ -393,7 +397,6 @@ public class ClientScanner extends AbstractClientScanner {
         // returns an empty array if scanning is to go on and we've just
         // exhausted current region.
         values = call(callable, caller, scannerTimeout);
-
         // When the replica switch happens, we need to do certain operations
         // again. The callable will openScanner with the right startkey
         // but we need to pick up from there. Bypass the rest of the loop
@@ -482,18 +485,31 @@ public class ClientScanner extends AbstractClientScanner {
       // Groom the array of Results that we received back from the server before adding that
       // Results to the scanner's cache. If partial results are not allowed to be seen by the
       // caller, all book keeping will be performed within this method.
-      List<Result> resultsToAddToCache = getResultsToAddToCache(values);
+      List<Result> resultsToAddToCache =
+          getResultsToAddToCache(values, callable.isHeartbeatMessage());
       if (!resultsToAddToCache.isEmpty()) {
         for (Result rs : resultsToAddToCache) {
           cache.add(rs);
-          // We don't make Iterator here
-          for (Cell cell : rs.rawCells()) {
-            remainingResultSize -= CellUtil.estimatedHeapSizeOf(cell);
-          }
+          long estimatedHeapSizeOfResult = calcEstimatedSize(rs);
           countdown--;
+          remainingResultSize -= estimatedHeapSizeOfResult;
+          addEstimatedSize(estimatedHeapSizeOfResult);
           this.lastResult = rs;
         }
       }
+
+      // Caller of this method just wants a Result. If we see a heartbeat message, it means
+      // processing of the scan is taking a long time server side. Rather than continue to
+      // loop until a limit (e.g. size or caching) is reached, break out early to avoid causing
+      // unnecesary delays to the caller
+      if (callable.isHeartbeatMessage() && cache.size() > 0) {
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Heartbeat message received and cache contains Results."
+              + " Breaking out of scan loop");
+        }
+        break;
+      }
+
       // We expect that the server won't have more results for us when we exhaust
       // the size (bytes or count) of the results returned. If the server *does* inform us that
       // there are more results, we want to avoid possiblyNextScanner(...). Only when we actually
@@ -507,8 +523,38 @@ public class ClientScanner extends AbstractClientScanner {
       // !partialResults.isEmpty() means that we are still accumulating partial Results for a
       // row. We should not change scanners before we receive all the partial Results for that
       // row.
-    } while (remainingResultSize > 0 && countdown > 0 && !serverHasMoreResults
+    } while (doneWithRegion(remainingResultSize, countdown, serverHasMoreResults)
         && (!partialResults.isEmpty() || possiblyNextScanner(countdown, values == null)));
+  }
+
+  /**
+   * @param remainingResultSize
+   * @param remainingRows
+   * @param regionHasMoreResults
+   * @return true when the current region has been exhausted. When the current region has been
+   *         exhausted, the region must be changed before scanning can continue
+   */
+  private boolean doneWithRegion(long remainingResultSize, int remainingRows,
+      boolean regionHasMoreResults) {
+    return remainingResultSize > 0 && remainingRows > 0 && !regionHasMoreResults;
+  }
+
+  protected long calcEstimatedSize(Result rs) {
+    long estimatedHeapSizeOfResult = 0;
+    // We don't make Iterator here
+    for (Cell cell : rs.rawCells()) {
+      estimatedHeapSizeOfResult += CellUtil.estimatedHeapSizeOf(cell);
+    }
+    return estimatedHeapSizeOfResult;
+  }
+
+  protected void addEstimatedSize(long estimatedHeapSizeOfResult) {
+    return;
+  }
+
+  @VisibleForTesting
+  public int getCacheCount() {
+    return cache != null ? cache.size() : 0;
   }
 
   /**
@@ -517,10 +563,16 @@ public class ClientScanner extends AbstractClientScanner {
    * not contain errors. We return a list of results that should be added to the cache. In general,
    * this list will contain all NON-partial results from the input array (unless the client has
    * specified that they are okay with receiving partial results)
+   * @param resultsFromServer The array of {@link Result}s returned from the server
+   * @param heartbeatMessage Flag indicating whether or not the response received from the server
+   *          represented a complete response, or a heartbeat message that was sent to keep the
+   *          client-server connection alive
    * @return the list of results that should be added to the cache.
    * @throws IOException
    */
-  protected List<Result> getResultsToAddToCache(Result[] resultsFromServer) throws IOException {
+  protected List<Result>
+      getResultsToAddToCache(Result[] resultsFromServer, boolean heartbeatMessage)
+          throws IOException {
     int resultSize = resultsFromServer != null ? resultsFromServer.length : 0;
     List<Result> resultsToAddToCache = new ArrayList<Result>(resultSize);
 
@@ -538,10 +590,14 @@ public class ClientScanner extends AbstractClientScanner {
       return resultsToAddToCache;
     }
 
-    // If no results were returned it indicates that we have the all the partial results necessary
-    // to construct the complete result.
+    // If no results were returned it indicates that either we have the all the partial results
+    // necessary to construct the complete result or the server had to send a heartbeat message
+    // to the client to keep the client-server connection alive
     if (resultsFromServer == null || resultsFromServer.length == 0) {
-      if (!partialResults.isEmpty()) {
+      // If this response was an empty heartbeat message, then we have not exhausted the region
+      // and thus there may be more partials server side that still need to be added to the partial
+      // list before we form the complete Result
+      if (!partialResults.isEmpty() && !heartbeatMessage) {
         resultsToAddToCache.add(Result.createCompleteResult(partialResults));
         clearPartialResults();
       }
@@ -711,5 +767,22 @@ public class ClientScanner extends AbstractClientScanner {
       closestFrontRow = Bytes.add(closestFrontRow, MAX_BYTE_ARRAY);
       return closestFrontRow;
     }
+  }
+
+  @Override
+  public boolean renewLease() {
+    if (callable != null) {
+      // do not return any rows, do not advance the scanner
+      callable.setCaching(0);
+      try {
+        this.caller.callWithoutRetries(callable, this.scannerTimeout);
+      } catch (Exception e) {
+        return false;
+      } finally {
+        callable.setCaching(this.caching);
+      }
+      return true;
+    }
+    return false;
   }
 }

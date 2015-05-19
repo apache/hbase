@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination;
 import org.apache.hadoop.hbase.coordination.SplitLogManagerCoordination.SplitLogManagerDetails;
@@ -433,12 +432,16 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException { }
+    public long truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
+      return -1;
+    }
 
 
     @Override
-    public void modifyTable(TableName tableName, HTableDescriptor descriptor)
-        throws IOException { }
+    public long modifyTable(TableName tableName, HTableDescriptor descriptor)
+        throws IOException {
+      return -1;
+    }
 
     @Override
     public long enableTable(TableName tableName) throws IOException {

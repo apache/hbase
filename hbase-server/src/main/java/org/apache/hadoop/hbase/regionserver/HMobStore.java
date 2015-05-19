@@ -27,18 +27,15 @@ import java.util.NavigableSet;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HColumnDescriptor;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
@@ -58,6 +55,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 
@@ -79,7 +77,7 @@ import org.apache.hadoop.hbase.util.IdLock;
  */
 @InterfaceAudience.Private
 public class HMobStore extends HStore {
-
+  private static final Log LOG = LogFactory.getLog(HMobStore.class);
   private MobCacheConfig mobCacheConfig;
   private Path homePath;
   private Path mobFamilyPath;
@@ -161,9 +159,9 @@ public class HMobStore extends HStore {
    */
   @Override
   protected StoreEngine<?, ?, ?, ?> createStoreEngine(Store store, Configuration conf,
-      KVComparator kvComparator) throws IOException {
+      CellComparator cellComparator) throws IOException {
     MobStoreEngine engine = new MobStoreEngine();
-    engine.createComponents(conf, store, kvComparator);
+    engine.createComponents(conf, store, cellComparator);
     return engine;
   }
 
@@ -247,7 +245,7 @@ public class HMobStore extends HStore {
     final CacheConfig writerCacheConf = mobCacheConfig;
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
         .withIncludesMvcc(true).withIncludesTags(true)
-        .withChecksumType(HFile.DEFAULT_CHECKSUM_TYPE)
+        .withChecksumType(ChecksumType.getDefaultChecksumType())
         .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
         .withBlockSize(getFamily().getBlocksize())
         .withHBaseCheckSum(true).withDataBlockEncoding(getFamily().getDataBlockEncoding())
@@ -255,7 +253,7 @@ public class HMobStore extends HStore {
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf, region.getFilesystem())
         .withFilePath(new Path(basePath, mobFileName.getFileName()))
-        .withComparator(KeyValue.COMPARATOR).withBloomType(BloomType.NONE)
+        .withComparator(CellComparator.COMPARATOR).withBloomType(BloomType.NONE)
         .withMaxKeyCount(maxKeyCount).withFileContext(hFileContext).build();
     return w;
   }

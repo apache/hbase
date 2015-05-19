@@ -53,7 +53,7 @@ import org.junit.rules.TestName;
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestMinorCompaction {
   @Rule public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestMinorCompaction.class.getName());
+  private static final Log LOG = LogFactory.getLog(TestMinorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   

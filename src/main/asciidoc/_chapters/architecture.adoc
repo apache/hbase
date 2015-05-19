@@ -2327,6 +2327,20 @@ Instead you can change the number of region replicas per table to increase or de
     The period (in milliseconds) for refreshing the store files for the secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region. But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting.
   </description>
 </property>
+<property>
+  <name>hbase.region.replica.replication.memstore.enabled</name>
+  <value>true</value>
+  <description>
+    If you set this to `false`, replicas do not receive memstore updates from
+    the primary RegionServer. If you set this to `true`, you can still disable
+    memstore replication on a per-table basis, by setting the table's
+    `REGION_MEMSTORE_REPLICATION` configuration property to `false`. If
+    memstore replication is disabled, the secondaries will only receive
+    updates for events like flushes and bulkloads, and will not have access to
+    data which the primary has not yet flushed. This preserves the guarantee
+    of row-level consistency, even when the read requests `Consistency.TIMELINE`.
+  </description>
+</property>
 ----
 
 One thing to keep in mind also is that, region replica placement policy is only enforced by the `StochasticLoadBalancer` which is the default balancer.

@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.CellComparator;
 
 /**
  * A cache implementation for region locations from meta.
@@ -85,7 +86,7 @@ public class MetaCache {
     // checking is actually the last region in the table.
     byte[] endKey = possibleRegion.getRegionLocation().getRegionInfo().getEndKey();
     if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-        tableName.getRowComparator().compareRows(
+        getRowComparator(tableName).compareRows(
             endKey, 0, endKey.length, row, 0, row.length) > 0) {
       return possibleRegion;
     }
@@ -94,6 +95,10 @@ public class MetaCache {
     return null;
   }
 
+  private CellComparator getRowComparator(TableName tableName) {
+    return TableName.META_TABLE_NAME.equals(tableName) ? CellComparator.META_COMPARATOR
+        : CellComparator.COMPARATOR;
+  }
   /**
    * Put a newly discovered HRegionLocation into the cache.
    * @param tableName The table name.

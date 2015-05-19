@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -187,7 +188,7 @@ import com.google.protobuf.ServiceException;
 @SuppressWarnings("deprecation")
 public class MasterRpcServices extends RSRpcServices
       implements MasterService.BlockingInterface, RegionServerStatusService.BlockingInterface {
-  protected static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
+  private static final Log LOG = LogFactory.getLog(MasterRpcServices.class.getName());
 
   private final HMaster master;
 
@@ -275,6 +276,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public GetLastFlushedSequenceIdResponse getLastFlushedSequenceId(RpcController controller,
       GetLastFlushedSequenceIdRequest request) throws ServiceException {
     try {
@@ -288,6 +290,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public RegionServerReportResponse regionServerReport(
       RpcController controller, RegionServerReportRequest request) throws ServiceException {
     try {
@@ -308,6 +311,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public RegionServerStartupResponse regionServerStartup(
       RpcController controller, RegionServerStartupRequest request) throws ServiceException {
     // Register with server manager
@@ -333,6 +337,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public ReportRSFatalErrorResponse reportRSFatalError(
       RpcController controller, ReportRSFatalErrorRequest request) throws ServiceException {
     String errorText = request.getErrorMessage();
@@ -483,12 +488,13 @@ public class MasterRpcServices extends RSRpcServices
   public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
       throws ServiceException {
     try {
-      master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
-        request.getPreserveSplits());
+      long procId =
+          master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
+            request.getPreserveSplits());
+      return TruncateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return TruncateTableResponse.newBuilder().build();
   }
 
   @Override
@@ -1288,6 +1294,7 @@ public class MasterRpcServices extends RSRpcServices
   }
 
   @Override
+  @QosPriority(priority=HConstants.ADMIN_QOS)
   public ReportRegionStateTransitionResponse reportRegionStateTransition(RpcController c,
       ReportRegionStateTransitionRequest req) throws ServiceException {
     try {

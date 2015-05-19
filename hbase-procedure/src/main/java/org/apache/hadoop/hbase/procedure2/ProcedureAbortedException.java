@@ -24,7 +24,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 /**
  * Thrown when a procedure is aborted
  */
-@InterfaceAudience.Public
+@InterfaceAudience.Private
 @InterfaceStability.Stable
 public class ProcedureAbortedException extends ProcedureException {
   /** default constructor */

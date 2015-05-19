@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.column.ColumnReader;
@@ -60,7 +59,6 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected boolean nubCellsRemain;
   protected int currentCellIndex;
-
 
   /*********************** construct ******************************/
 
@@ -420,7 +418,7 @@ public class PrefixTreeArrayScanner extends PrefixTreeCell implements CellScanne
 
   protected int populateNonRowFieldsAndCompareTo(int cellNum, Cell key) {
     populateNonRowFields(cellNum);
-    return CellComparator.compare(this, key, true);
+    return comparator.compareKeyIgnoresMvcc(this, key);
   }
 
   protected void populateFirstNonRowFields() {

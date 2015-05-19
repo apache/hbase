@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  */
 @InterfaceAudience.Private
 public class StoreFileInfo {
-  public static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
+  private static final Log LOG = LogFactory.getLog(StoreFileInfo.class);
 
   /**
    * A non-capture group, for hfiles, so that this can be embedded.
@@ -436,7 +436,10 @@ public class StoreFileInfo {
     // Tabledir is up two directories from where Reference was written.
     Path tableDir = p.getParent().getParent().getParent();
     String nameStrippedOfSuffix = m.group(1);
-    LOG.debug("reference '" + p + "' to region=" + otherRegion + " hfile=" + nameStrippedOfSuffix);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("reference '" + p + "' to region=" + otherRegion
+        + " hfile=" + nameStrippedOfSuffix);
+    }
 
     // Build up new path with the referenced region in place of our current
     // region in the reference path.  Also strip regionname suffix from name.

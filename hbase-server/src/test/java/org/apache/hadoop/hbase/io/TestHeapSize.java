@@ -64,7 +64,7 @@ import static org.junit.Assert.assertEquals;
  */
 @Category({IOTests.class, SmallTests.class})
 public class TestHeapSize  {
-  static final Log LOG = LogFactory.getLog(TestHeapSize.class);
+  private static final Log LOG = LogFactory.getLog(TestHeapSize.class);
   // List of classes implementing HeapSize
   // BatchOperation, BatchUpdate, BlockIndex, Entry, Entry<K,V>, HStoreKey
   // KeyValue, LruBlockCache, LruHashMap<K,V>, Put, WALKey

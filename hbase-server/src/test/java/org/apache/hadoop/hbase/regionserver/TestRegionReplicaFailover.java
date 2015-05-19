@@ -111,6 +111,7 @@ public class TestRegionReplicaFailover {
     conf.setInt("replication.stats.thread.period.seconds", 5);
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
     conf.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, distributedLogReplay);
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 60);
 
     HTU.startMiniCluster(NB_SERVERS);
     htd = HTU.createTableDescriptor(

@@ -55,7 +55,7 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class Merge extends Configured implements Tool {
-  static final Log LOG = LogFactory.getLog(Merge.class);
+  private static final Log LOG = LogFactory.getLog(Merge.class);
   private Path rootdir;
   private volatile MetaUtils utils;
   private TableName tableName;               // Name of table

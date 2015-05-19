@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.Serialization;
 import org.apache.hadoop.io.serializer.Serializer;
@@ -55,7 +56,7 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
     @Override
     public KeyValue deserialize(KeyValue ignore) throws IOException {
       // I can't overwrite the passed in KV, not from a proto kv, not just yet.  TODO
-      return KeyValue.create(this.dis);
+      return KeyValueUtil.create(this.dis);
     }
 
     @Override
@@ -79,7 +80,7 @@ public class KeyValueSerialization implements Serialization<KeyValue> {
 
     @Override
     public void serialize(KeyValue kv) throws IOException {
-      KeyValue.write(kv, this.dos);
+      KeyValueUtil.write(kv, this.dos);
     }
   }
 }

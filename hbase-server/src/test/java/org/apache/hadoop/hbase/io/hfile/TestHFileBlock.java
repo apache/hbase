@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -170,7 +171,7 @@ public class TestHFileBlock {
 
     // sort it and write to stream
     int totalSize = 0;
-    Collections.sort(keyValues, KeyValue.COMPARATOR);
+    Collections.sort(keyValues, CellComparator.COMPARATOR);
 
     for (KeyValue kv : keyValues) {
       totalSize += kv.getLength();
@@ -249,7 +250,8 @@ public class TestHFileBlock {
     final String correctTestBlockStr =
         "DATABLK*\\x00\\x00\\x00>\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
             + "\\xFF\\xFF\\xFF\\xFF"
-            + "\\x01\\x00\\x00@\\x00\\x00\\x00\\x00["
+            + "\\x0" + ChecksumType.getDefaultChecksumType().getCode()
+            + "\\x00\\x00@\\x00\\x00\\x00\\x00["
             // gzip-compressed block: http://www.gzip.org/zlib/rfc-gzip.html
             + "\\x1F\\x8B"  // gzip magic signature
             + "\\x08"  // Compression method: 8 = "deflate"
