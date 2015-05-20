@@ -505,7 +505,7 @@ public abstract class FSUtils {
 
   /**
    * We use reflection because {@link DistributedFileSystem#setSafeMode(
-   * FSConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
+   * HdfsConstants.SafeModeAction action, boolean isChecked)} is not in hadoop 1.1
    *
    * @param dfs
    * @return whether we're in safe mode
@@ -515,15 +515,15 @@ public abstract class FSUtils {
     boolean inSafeMode = false;
     try {
       Method m = DistributedFileSystem.class.getMethod("setSafeMode", new Class<?> []{
-          org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.class, boolean.class});
+          org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.class, boolean.class});
       inSafeMode = (Boolean) m.invoke(dfs,
-        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET, true);
+        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET, true);
     } catch (Exception e) {
       if (e instanceof IOException) throw (IOException) e;
 
       // Check whether dfs is on safemode.
       inSafeMode = dfs.setSafeMode(
-        org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction.SAFEMODE_GET);
+        org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction.SAFEMODE_GET);
     }
     return inSafeMode;
   }

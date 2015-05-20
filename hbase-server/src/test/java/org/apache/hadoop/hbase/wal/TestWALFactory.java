@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hdfs.protocol.FSConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -383,7 +383,7 @@ public class TestWALFactory {
     // Stop the cluster.  (ensure restart since we're sharing MiniDFSCluster)
     try {
       DistributedFileSystem dfs = (DistributedFileSystem) cluster.getFileSystem();
-      dfs.setSafeMode(FSConstants.SafeModeAction.SAFEMODE_ENTER);
+      dfs.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER);
       TEST_UTIL.shutdownMiniDFSCluster();
       try {
         // wal.writer.close() will throw an exception,
