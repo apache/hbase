@@ -407,8 +407,6 @@ EOF
 
     def _hash_to_scan(args)
       if args.any?
-        enablemetrics = args["ALL_METRICS"].nil? ? false : args["ALL_METRICS"]
-        enablemetrics = enablemetrics || !args["METRICS"].nil?
         filter = args["FILTER"]
         startrow = args["STARTROW"] || ''
         stoprow = args["STOPROW"]
@@ -456,7 +454,6 @@ EOF
           scan.setFilter(org.apache.hadoop.hbase.filter.ParseFilter.new.parseFilterString(filter))
         end
 
-        scan.setScanMetricsEnabled(enablemetrics) if enablemetrics
         scan.setTimeStamp(timestamp) if timestamp
         scan.setCacheBlocks(cache_blocks)
         scan.setReversed(reversed)
@@ -481,10 +478,8 @@ EOF
 
     #----------------------------------------------------------------------------------------------
     # Scans whole table or a range of keys and returns rows matching specific criteria
-    def _scan_internal(args = {}, scan = nil)
-      raise(ArgumentError, "Args should be a Hash") unless args.kind_of?(Hash)
-      raise(ArgumentError, "Scan argument should be org.apache.hadoop.hbase.client.Scan") \
-        unless scan == nil || scan.kind_of?(org.apache.hadoop.hbase.client.Scan)
+    def _scan_internal(args = {})
+      raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
 
       limit = args["LIMIT"] || -1
       maxlength = args.delete("MAXLENGTH") || -1
@@ -494,8 +489,7 @@ EOF
       @converters.clear()
 
       # Start the scanner
-      scan = scan == nil ? _hash_to_scan(args) : scan
-      scanner = @table.getScanner(scan)
+      scanner = @table.getScanner(_hash_to_scan(args))
       iter = scanner.iterator
 
       # Iterate results
@@ -525,7 +519,6 @@ EOF
           break
         end
       end
-      scanner.close()
 
       return ((block_given?) ? count : res)
     end

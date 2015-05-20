@@ -28,7 +28,6 @@ import "HBase.proto";
 import "Filter.proto";
 import "Cell.proto";
 import "Comparator.proto";
-import "MapReduce.proto";
 
 /**
  * The protocol buffer version of Authorizations.
@@ -277,7 +276,6 @@ message ScanRequest {
   optional uint64 next_call_seq = 6;
   optional bool client_handles_partials = 7;
   optional bool client_handles_heartbeats = 8;
-  optional bool track_scan_metrics = 9;
 }
 
 /**
@@ -316,17 +314,12 @@ message ScanResponse {
   // reasons such as the size in bytes or quantity of results accumulated. This field
   // will true when more results exist in the current region.
   optional bool more_results_in_region = 8;
-  
+
   // This field is filled in if the server is sending back a heartbeat message.
   // Heartbeat messages are sent back to the client to prevent the scanner from
   // timing out. Seeing a heartbeat message communicates to the Client that the
   // server would have continued to scan had the time limit not been reached.
   optional bool heartbeat_message = 9;
-  
-  // This field is filled in if the client has requested that scan metrics be tracked.
-  // The metrics tracked here are sent back to the client to be tracked together with 
-  // the existing client side metrics.
-  optional ScanMetrics scan_metrics = 10;
 }
 
 /**

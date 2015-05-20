@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeSet;
@@ -142,11 +141,9 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ResultOrException;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
-import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -2337,16 +2334,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 final LimitScope timeScope =
                     allowHeartbeatMessages ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
 
-                boolean trackMetrics =
-                    request.hasTrackScanMetrics() && request.getTrackScanMetrics();
-
                 // Configure with limits for this RPC. Set keep progress true since size progress
                 // towards size limit should be kept between calls to nextRaw
                 ScannerContext.Builder contextBuilder = ScannerContext.newBuilder(true);
                 contextBuilder.setSizeLimit(sizeScope, maxResultSize);
                 contextBuilder.setBatchLimit(scanner.getBatch());
                 contextBuilder.setTimeLimit(timeScope, timeLimit);
-                contextBuilder.setTrackMetrics(trackMetrics);
                 ScannerContext scannerContext = contextBuilder.build();
 
                 boolean limitReached = false;
@@ -2399,22 +2392,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 } else {
                   // We didn't get a single batch
                   builder.setMoreResultsInRegion(false);
-                }
-
-                // Check to see if the client requested that we track metrics server side. If the
-                // client requested metrics, retrieve the metrics from the scanner context.
-                if (trackMetrics) {
-                  Map<String, Long> metrics = scannerContext.getMetrics().getMetricsMap();
-                  ScanMetrics.Builder metricBuilder = ScanMetrics.newBuilder();
-                  NameInt64Pair.Builder pairBuilder = NameInt64Pair.newBuilder();
-
-                  for (Entry<String, Long> entry : metrics.entrySet()) {
-                    pairBuilder.setName(entry.getKey());
-                    pairBuilder.setValue(entry.getValue());
-                    metricBuilder.addMetrics(pairBuilder.build());
-                  }
-
-                  builder.setScanMetrics(metricBuilder.build());
                 }
               }
               region.updateReadRequestsCount(i);

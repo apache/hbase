@@ -20,9 +20,7 @@ package org.apache.hadoop.hbase.protobuf;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -50,8 +48,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair;
-import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos.ScanMetrics;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
@@ -398,27 +394,5 @@ public final class ResponseConverter {
       }
     }
     return results;
-  }
-
-  public static Map<String, Long> getScanMetrics(ScanResponse response) {
-    Map<String, Long> metricMap = new HashMap<String, Long>();
-    if (response == null || !response.hasScanMetrics() || response.getScanMetrics() == null) {
-      return metricMap;
-    }
-    
-    ScanMetrics metrics = response.getScanMetrics();
-    int numberOfMetrics = metrics.getMetricsCount();
-    for (int i = 0; i < numberOfMetrics; i++) {
-      NameInt64Pair metricPair = metrics.getMetrics(i);
-      if (metricPair != null) {
-        String name = metricPair.getName();
-        Long value = metricPair.getValue();
-        if (name != null && value != null) {
-          metricMap.put(name, value);
-        }
-      }
-    }
-
-    return metricMap;
   }
 }

@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetOnlineRegionRequest;
@@ -60,7 +61,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.SplitRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.RegionUpdateInfo;
-import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
@@ -478,8 +478,9 @@ public final class RequestConverter {
    * @return a scan request
    * @throws IOException
    */
-  public static ScanRequest buildScanRequest(final byte[] regionName, final Scan scan,
-      final int numberOfRows, final boolean closeScanner) throws IOException {
+  public static ScanRequest buildScanRequest(final byte[] regionName,
+      final Scan scan, final int numberOfRows,
+        final boolean closeScanner) throws IOException {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     RegionSpecifier region = buildRegionSpecifier(
       RegionSpecifierType.REGION_NAME, regionName);
@@ -489,7 +490,6 @@ public final class RequestConverter {
     builder.setScan(ProtobufUtil.toScan(scan));
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
-    builder.setTrackScanMetrics(scan != null && scan.isScanMetricsEnabled());
     return builder.build();
   }
 
@@ -501,15 +501,14 @@ public final class RequestConverter {
    * @param closeScanner
    * @return a scan request
    */
-  public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
-      final boolean closeScanner, final boolean trackMetrics) {
+  public static ScanRequest buildScanRequest(final long scannerId,
+      final int numberOfRows, final boolean closeScanner) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
     builder.setScannerId(scannerId);
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
-    builder.setTrackScanMetrics(trackMetrics);
     return builder.build();
   }
 
@@ -523,7 +522,7 @@ public final class RequestConverter {
    * @return a scan request
    */
   public static ScanRequest buildScanRequest(final long scannerId, final int numberOfRows,
-      final boolean closeScanner, final long nextCallSeq, final boolean trackMetrics) {
+      final boolean closeScanner, final long nextCallSeq) {
     ScanRequest.Builder builder = ScanRequest.newBuilder();
     builder.setNumberOfRows(numberOfRows);
     builder.setCloseScanner(closeScanner);
@@ -531,7 +530,6 @@ public final class RequestConverter {
     builder.setNextCallSeq(nextCallSeq);
     builder.setClientHandlesPartials(true);
     builder.setClientHandlesHeartbeats(true);
-    builder.setTrackScanMetrics(trackMetrics);
     return builder.build();
   }
 
