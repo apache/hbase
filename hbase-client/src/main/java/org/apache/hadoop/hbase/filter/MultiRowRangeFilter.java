@@ -102,7 +102,7 @@ public class MultiRowRangeFilter extends FilterBase {
       } else {
         range = rangeList.get(0);
       }
-      if(EXCLUSIVE) {
+      if (EXCLUSIVE) {
         EXCLUSIVE = false;
         currentReturnCode = ReturnCode.NEXT_ROW;
         return false;
@@ -115,7 +115,9 @@ public class MultiRowRangeFilter extends FilterBase {
         }
         initialized = true;
       } else {
-        currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
+        if (range.contains(buffer, offset, length)) {
+          currentReturnCode = ReturnCode.INCLUDE;
+        } else currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
       }
     } else {
       currentReturnCode = ReturnCode.INCLUDE;
