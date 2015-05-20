@@ -59,8 +59,7 @@ public class ChangeVersionsAction extends Action {
 
     int versions =  random.nextInt(3) + 1;
     for(HColumnDescriptor descriptor:columnDescriptors) {
-      descriptor.setMaxVersions(versions);
-      descriptor.setMinVersions(versions);
+      descriptor.setVersions(versions, versions);
     }
     LOG.debug("Performing action: Changing versions on " + tableName.getNameAsString());
     admin.modifyTable(tableName, tableDescriptor);
