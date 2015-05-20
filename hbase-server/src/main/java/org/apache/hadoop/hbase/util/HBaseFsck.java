@@ -62,6 +62,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultimap;
 import com.google.protobuf.ServiceException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -134,7 +135,6 @@ import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -435,7 +435,7 @@ public class HBaseFsck extends Configured implements Closeable {
       RetryCounter retryCounter = lockFileRetryCounterFactory.create();
       do {
         try {
-          IOUtils.closeStream(hbckOutFd);
+          IOUtils.closeQuietly(hbckOutFd);
           FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()),
               HBCK_LOCK_PATH, true);
           return;
@@ -483,7 +483,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Runtime.getRuntime().addShutdownHook(new Thread() {
       @Override
       public void run() {
-        IOUtils.closeStream(HBaseFsck.this);
+        IOUtils.closeQuietly(HBaseFsck.this);
         unlockHbck();
       }
     });
@@ -711,8 +711,11 @@ public class HBaseFsck extends Configured implements Closeable {
       unlockHbck();
     } catch (Exception io) {
       LOG.warn(io);
+    } finally {
+      IOUtils.closeQuietly(admin);
+      IOUtils.closeQuietly(meta);
+      IOUtils.closeQuietly(connection);
     }
-    IOUtils.cleanup(null, admin, meta, connection);
   }
 
   private static class RegionBoundariesInformation {
@@ -4660,7 +4663,7 @@ public class HBaseFsck extends Configured implements Closeable {
         setRetCode(code);
       }
     } finally {
-      IOUtils.cleanup(null, this);
+      IOUtils.closeQuietly(this);
     }
     return this;
   }
