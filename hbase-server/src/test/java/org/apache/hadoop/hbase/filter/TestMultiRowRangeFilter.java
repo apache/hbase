@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -66,6 +67,24 @@ public class TestMultiRowRangeFilter {
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testOutOfOrderScannerNextException() throws Exception {
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(Arrays.asList(
+            new MultiRowRangeFilter.RowRange(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true),
+            new MultiRowRangeFilter.RowRange(Bytes.toBytes("d"), true, Bytes.toBytes("e"), true)
+    ));
+    filter.filterRowKey(Bytes.toBytes("a"), 0, 1);
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+    filter.filterRowKey(Bytes.toBytes("b"), 0, 1);
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    filter.filterRowKey(Bytes.toBytes("c"), 0, 1);
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    filter.filterRowKey(Bytes.toBytes("d"), 0, 1);
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
+    filter.filterRowKey(Bytes.toBytes("e"), 0, 1);
+    assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
   }
 
   @Test
