@@ -641,6 +641,30 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   }
 
   /**
+   * Set minimum and maximum versions to keep
+   *
+   * @param minVersions minimal number of versions
+   * @param maxVersions maximum number of versions
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setVersions(int minVersions, int maxVersions) {
+    if (minVersions <= 0) {
+      // TODO: Allow minVersion and maxVersion of 0 to be the way you say "Keep all versions".
+      // Until there is support, consider 0 or < 0 -- a configuration error.
+      throw new IllegalArgumentException("Minimum versions must be positive");
+    }
+
+    if (maxVersions < minVersions) {
+      throw new IllegalArgumentException("Unable to set MaxVersion to " + maxVersions
+        + " and set MinVersion to " + minVersions
+        + ", as maximum versions must be >= minimum versions.");
+    }
+    setMinVersions(minVersions);
+    setMaxVersions(maxVersions);
+    return this;
+  }
+
+  /**
    * @return The storefile/hfile blocksize for this column family.
    */
   public synchronized int getBlocksize() {
