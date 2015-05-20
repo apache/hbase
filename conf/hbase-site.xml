@@ -42,15 +42,15 @@
     	<value>192.168.56.101:2181</value>
   </property>
   <property>
-    <name>dfs.permissions</name>
-    <value>false</value>
-  </property>
-  <property>
     <name>hbase.regionserver.port</name>
-    <value>60021</value>
+    <value>60020</value>
   </property>
   <property>
     <name>hbase.regionserver.info.port</name>
-    <value>60031</value>
+    <value>60030</value>
   </property>
+	<property>
+		<name>hbase.master.loadbalancer.class</name>
+		<value>org.apache.hadoop.hbase.master.balancer.GroupLoadBalancer</value>
+	</property>
 </configuration>
