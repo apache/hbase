@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -158,6 +159,9 @@ public class TestBoundedRegionGroupingProvider {
     WALFactory wals = null;
     try {
       conf.setInt(NUM_REGION_GROUPS, temp*4);
+      // Set HDFS root directory for storing WAL
+      FSUtils.setRootDir(conf, TEST_UTIL.getDataTestDirOnTestFS());
+
       wals = new WALFactory(conf, null, currentTest.getMethodName());
       final Set<WAL> seen = new HashSet<WAL>(temp*4);
       final Random random = new Random();
