@@ -1539,7 +1539,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
               t.getMessage()
-                  .contains("org/apache/hadoop/hdfs/protocol/FSConstants$SafeModeAction")) {
+                  .contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
             // improved error message for this special case
             abort("HBase is having a problem with its Hadoop jars.  You may need to "
               + "recompile HBase against Hadoop version "
