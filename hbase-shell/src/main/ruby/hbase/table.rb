@@ -418,6 +418,7 @@ EOF
         authorizations = args[AUTHORIZATIONS]
         # Normalize column names
         columns = [columns] if columns.class == String
+        limit = args["LIMIT"] || -1
         unless columns.kind_of?(Array)
           raise ArgumentError.new("COLUMNS must be specified as a String or an Array")
         end
@@ -450,6 +451,7 @@ EOF
         scan.setMaxVersions(versions) if versions > 1
         scan.setTimeRange(timerange[0], timerange[1]) if timerange
         scan.setRaw(raw)
+        scan.setCaching(limit) if limit > 0
         set_attributes(scan, attributes) if attributes
         set_authorizations(scan, authorizations) if authorizations
       else
@@ -468,7 +470,7 @@ EOF
     def _scan_internal(args = {})
       raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
 
-      limit = args.delete("LIMIT") || -1
+      limit = args["LIMIT"] || -1
       maxlength = args.delete("MAXLENGTH") || -1
       count = 0
       res = {}
@@ -481,10 +483,6 @@ EOF
 
       # Iterate results
       while iter.hasNext
-        if limit > 0 && count >= limit
-          break
-        end
-
         row = iter.next
         key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
 
@@ -505,6 +503,10 @@ EOF
 
         # One more row processed
         count += 1
+        if limit > 0 && count >= limit
+          # If we reached the limit, exit before the next call to hasNext
+          break
+        end
       end
 
       return ((block_given?) ? count : res)
