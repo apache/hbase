@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * Utility methods related to BloomFilters 
  */
 @InterfaceAudience.Private
-public class BloomFilterUtil {
+public final class BloomFilterUtil {
 
   /** Record separator for the Bloom filter statistics human-readable string */
   public static final String STATS_RECORD_SEP = "; ";
@@ -54,6 +54,13 @@ public class BloomFilterUtil {
     (byte) 0x40,
     (byte) 0x80
   };
+
+  /**
+   * Private constructor to keep this class from being instantiated.
+   */
+  private BloomFilterUtil() {
+  }
+
   /**
    * @param maxKeys
    * @param errorRate
@@ -188,11 +195,6 @@ public class BloomFilterUtil {
   /** Should only be used in tests */
   public static boolean contains(byte[] buf, int offset, int length, ByteBuffer bloom) {
     return contains(buf, offset, length, bloom);
-  }
-
-  /** Should only be used in tests */
-  boolean contains(byte[] buf, ByteBuffer bloom) {
-    return contains(buf, 0, buf.length, bloom);
   }
 
   public static boolean contains(byte[] buf, int offset, int length,
