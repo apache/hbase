@@ -59,8 +59,11 @@ public class ChangeVersionsAction extends Action {
 
     int versions =  random.nextInt(3) + 1;
     for(HColumnDescriptor descriptor:columnDescriptors) {
-      descriptor.setMaxVersions(versions);
+      // The update order has to be min versions first and then max versions. See HBASE-13711
+      //
+      // Note: This change is only for 1.1.x release; 1.2+ releases have more complete change.
       descriptor.setMinVersions(versions);
+      descriptor.setMaxVersions(versions);
     }
     LOG.debug("Performing action: Changing versions on " + tableName.getNameAsString());
     admin.modifyTable(tableName, tableDescriptor);
