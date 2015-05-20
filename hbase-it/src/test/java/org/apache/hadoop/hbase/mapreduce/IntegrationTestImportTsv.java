@@ -31,7 +31,7 @@ import java.util.UUID;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -49,7 +49,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
@@ -61,7 +60,7 @@ import org.junit.experimental.categories.Category;
  * Validate ImportTsv + LoadIncrementalHFiles on a distributed cluster.
  */
 @Category(IntegrationTests.class)
-public class IntegrationTestImportTsv implements Configurable, Tool {
+public class IntegrationTestImportTsv extends Configured implements Tool {
 
   private static final String NAME = IntegrationTestImportTsv.class.getSimpleName();
   private static final Log LOG = LogFactory.getLog(IntegrationTestImportTsv.class);
@@ -103,7 +102,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
   }
 
   public void setConf(Configuration conf) {
-    throw new IllegalArgumentException("setConf not supported");
+    LOG.debug("Ignoring setConf call.");
   }
 
   @BeforeClass
@@ -217,7 +216,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
       System.err.println(format("%s [genericOptions]", NAME));
       System.err.println("  Runs ImportTsv integration tests against a distributed cluster.");
       System.err.println();
-      GenericOptionsParser.printGenericCommandUsage(System.err);
+      ToolRunner.printGenericCommandUsage(System.err);
       return 1;
     }
 
@@ -234,9 +233,7 @@ public class IntegrationTestImportTsv implements Configurable, Tool {
     Configuration conf = HBaseConfiguration.create();
     IntegrationTestingUtility.setUseDistributedCluster(conf);
     util = new IntegrationTestingUtility(conf);
-    // not using ToolRunner to avoid unnecessary call to setConf()
-    args = new GenericOptionsParser(conf, args).getRemainingArgs();
-    int status = new IntegrationTestImportTsv().run(args);
+    int status = ToolRunner.run(conf, new IntegrationTestImportTsv(), args);
     System.exit(status);
   }
 }

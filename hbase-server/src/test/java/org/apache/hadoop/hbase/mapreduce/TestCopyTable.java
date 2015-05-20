@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -79,40 +79,40 @@ public class TestCopyTable {
     final byte[] FAMILY = Bytes.toBytes("family");
     final byte[] COLUMN1 = Bytes.toBytes("c1");
 
-    Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
-    Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);
+    try (Table t1 = TEST_UTIL.createTable(TABLENAME1, FAMILY);
+         Table t2 = TEST_UTIL.createTable(TABLENAME2, FAMILY);) {
+      // put rows into the first table
+      for (int i = 0; i < 10; i++) {
+        Put p = new Put(Bytes.toBytes("row" + i));
+        p.add(FAMILY, COLUMN1, COLUMN1);
+        t1.put(p);
+      }
 
-    // put rows into the first table
-    for (int i = 0; i < 10; i++) {
-      Put p = new Put(Bytes.toBytes("row" + i));
-      p.add(FAMILY, COLUMN1, COLUMN1);
-      t1.put(p);
+      CopyTable copy = new CopyTable();
+
+      int code;
+      if (bulkload) {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
+            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+            "--bulkload", TABLENAME1.getNameAsString() });
+      } else {
+        code = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
+            copy, new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
+            TABLENAME1.getNameAsString() });
+      }
+      assertEquals("copy job failed", 0, code);
+
+      // verify the data was copied into table 2
+      for (int i = 0; i < 10; i++) {
+        Get g = new Get(Bytes.toBytes("row" + i));
+        Result r = t2.get(g);
+        assertEquals(1, r.size());
+        assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
+      }
+    } finally {
+      TEST_UTIL.deleteTable(TABLENAME1);
+      TEST_UTIL.deleteTable(TABLENAME2);
     }
-
-    CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
-
-    int code;
-    if (bulkload) {
-      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-          "--bulkload", TABLENAME1.getNameAsString() });
-    } else {
-      code = copy.run(new String[] { "--new.name=" + TABLENAME2.getNameAsString(),
-          TABLENAME1.getNameAsString() });
-    }
-    assertEquals("copy job failed", 0, code);
-
-    // verify the data was copied into table 2
-    for (int i = 0; i < 10; i++) {
-      Get g = new Get(Bytes.toBytes("row" + i));
-      Result r = t2.get(g);
-      assertEquals(1, r.size());
-      assertTrue(CellUtil.matchingQualifier(r.rawCells()[0], COLUMN1));
-    }
-    
-    t1.close();
-    t2.close();
-    TEST_UTIL.deleteTable(TABLENAME1);
-    TEST_UTIL.deleteTable(TABLENAME2);
   }
 
   /**
@@ -156,10 +156,11 @@ public class TestCopyTable {
     p.add(FAMILY, COLUMN1, COLUMN1);
     t1.put(p);
 
-    CopyTable copy = new CopyTable(TEST_UTIL.getConfiguration());
+    CopyTable copy = new CopyTable();
     assertEquals(
       0,
-      copy.run(new String[] { "--new.name=" + TABLENAME2, "--startrow=row1",
+      ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()),
+          copy, new String[] { "--new.name=" + TABLENAME2, "--startrow=row1",
           "--stoprow=row2", TABLENAME1.getNameAsString() }));
 
     // verify the data was copied into table 2
@@ -253,14 +254,9 @@ public class TestCopyTable {
     assertTrue(data.toString().contains("Usage:"));
   }
 
-  private boolean runCopy(String[] args) throws IOException, InterruptedException,
-      ClassNotFoundException {
-    GenericOptionsParser opts = new GenericOptionsParser(
-        new Configuration(TEST_UTIL.getConfiguration()), args);
-    Configuration configuration = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = new CopyTable(configuration).createSubmittableJob(args);
-    job.waitForCompletion(false);
-    return job.isSuccessful();
+  private boolean runCopy(String[] args) throws Exception {
+    int status = ToolRunner.run(new Configuration(TEST_UTIL.getConfiguration()), new CopyTable(),
+        args);
+    return status == 0;
   }
 }

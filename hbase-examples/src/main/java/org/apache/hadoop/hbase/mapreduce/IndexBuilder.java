@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.TreeMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -30,7 +31,8 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Example map/reduce job to construct index tables that can be used to quickly
@@ -62,7 +64,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * This code was written against HBase 0.21 trunk.
  * </p>
  */
-public class IndexBuilder {
+public class IndexBuilder extends Configured implements Tool {
   /** the column family containing the indexed row key */
   public static final byte[] INDEX_COLUMN = Bytes.toBytes("INDEX");
   /** the qualifier containing the indexed row key */
@@ -135,15 +137,19 @@ public class IndexBuilder {
     return job;
   }
 
-  public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
-    if(otherArgs.length < 3) {
-      System.err.println("Only " + otherArgs.length + " arguments supplied, required: 3");
+  public int run(String[] args) throws Exception {
+    Configuration conf = HBaseConfiguration.create(getConf());
+    if(args.length < 3) {
+      System.err.println("Only " + args.length + " arguments supplied, required: 3");
       System.err.println("Usage: IndexBuilder <TABLE_NAME> <COLUMN_FAMILY> <ATTR> [<ATTR> ...]");
       System.exit(-1);
     }
-    Job job = configureJob(conf, otherArgs);
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    Job job = configureJob(conf, args);
+    return (job.waitForCompletion(true) ? 0 : 1);
+  }
+
+  public static void main(String[] args) throws Exception {
+    int result = ToolRunner.run(new Configuration(), new IndexBuilder(), args);
+    System.exit(result);
   }
 }

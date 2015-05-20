@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
@@ -33,7 +34,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 /**
  * Sample Uploader MapReduce
@@ -57,7 +59,7 @@ import org.apache.hadoop.util.GenericOptionsParser;
  * <p>
  * This code was written against HBase 0.21 trunk.
  */
-public class SampleUploader {
+public class SampleUploader extends Configured implements Tool {
 
   private static final String NAME = "SampleUploader";
 
@@ -130,18 +132,21 @@ public class SampleUploader {
   /**
    * Main entry point.
    *
-   * @param args  The command line parameters.
+   * @param otherArgs  The command line parameters after ToolRunner handles standard.
    * @throws Exception When running the job fails.
    */
-  public static void main(String[] args) throws Exception {
-    Configuration conf = HBaseConfiguration.create();
-    String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
+  public int run(String[] otherArgs) throws Exception {
     if(otherArgs.length != 2) {
       System.err.println("Wrong number of arguments: " + otherArgs.length);
       System.err.println("Usage: " + NAME + " <input> <tablename>");
-      System.exit(-1);
+      return -1;
     }
-    Job job = configureJob(conf, otherArgs);
-    System.exit(job.waitForCompletion(true) ? 0 : 1);
+    Job job = configureJob(getConf(), otherArgs);
+    return (job.waitForCompletion(true) ? 0 : 1);
+  }
+
+  public static void main(String[] args) throws Exception {
+    int status = ToolRunner.run(HBaseConfiguration.create(), new SampleUploader(), args);
+    System.exit(status);
   }
 }

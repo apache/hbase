@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -35,9 +37,9 @@ import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.FirstKeyValueMatchingQualifiersFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -49,10 +51,13 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceStability.Stable
 public class RowCounter extends Configured implements Tool {
 
+  private static final Log LOG = LogFactory.getLog(RowCounter.class);
+
   /** Name of this 'program'. */
   static final String NAME = "rowcounter";
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
+  private final static String EXPECTED_COUNT_KEY = RowCounter.class.getName() + ".expected_count";
 
   /**
    * Mapper that runs the count.
@@ -103,6 +108,7 @@ public class RowCounter extends Configured implements Tool {
     final String rangeSwitch = "--range=";
     final String startTimeArgKey = "--starttime=";
     final String endTimeArgKey = "--endtime=";
+    final String expectedCountArg = "--expected-count=";
 
     // First argument is table name, starting from second
     for (int i = 1; i < args.length; i++) {
@@ -126,6 +132,11 @@ public class RowCounter extends Configured implements Tool {
       }
       if (args[i].startsWith(endTimeArgKey)) {
         endTime = Long.parseLong(args[i].substring(endTimeArgKey.length()));
+        continue;
+      }
+      if (args[i].startsWith(expectedCountArg)) {
+        conf.setLong(EXPECTED_COUNT_KEY,
+            Long.parseLong(args[i].substring(expectedCountArg.length())));
         continue;
       }
       else {
@@ -183,8 +194,9 @@ public class RowCounter extends Configured implements Tool {
     printUsage();
   }
 
-  /*
-   * Prints usage without error message
+  /**
+   * Prints usage without error message.
+   * Note that we don't document --expected-count, because it's intended for test.
    */
   private static void printUsage() {
     System.err.println("Usage: RowCounter [options] <tablename> " +
@@ -197,16 +209,25 @@ public class RowCounter extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 1) {
+    if (args.length < 1) {
       printUsage("Wrong number of parameters: " + args.length);
       return -1;
     }
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(getConf(), args);
     if (job == null) {
       return -1;
     }
-    return (job.waitForCompletion(true) ? 0 : 1);
+    boolean success = job.waitForCompletion(true);
+    final long expectedCount = getConf().getLong(EXPECTED_COUNT_KEY, -1);
+    if (success && expectedCount != -1) {
+      final Counter counter = job.getCounters().findCounter(RowCounterMapper.Counters.ROWS);
+      success = expectedCount == counter.getValue();
+      if (!success) {
+        LOG.error("Failing job because count of '" + counter.getValue() +
+            "' does not match expected count of '" + expectedCount + "'");
+      }
+    }
+    return (success ? 0 : 1);
   }
 
   /**

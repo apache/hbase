@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -231,17 +230,12 @@ public class TestCellCounter {
   }
 
 
-  private boolean runCount(String[] args) throws IOException, InterruptedException,
-      ClassNotFoundException {
+  private boolean runCount(String[] args) throws Exception {
     // need to make a copy of the configuration because to make sure
     // different temp dirs are used.
-    GenericOptionsParser opts = new GenericOptionsParser(
-        new Configuration(UTIL.getConfiguration()), args);
-    Configuration configuration = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = CellCounter.createSubmittableJob(configuration, args);
-    job.waitForCompletion(false);
-    return job.isSuccessful();
+    int status = ToolRunner.run(new Configuration(UTIL.getConfiguration()), new CellCounter(),
+        args);
+    return status == 0;
   }
 
   /**

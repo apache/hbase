@@ -46,7 +46,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -271,8 +270,7 @@ public class CellCounter extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 2) {
+    if (args.length < 2) {
       System.err.println("ERROR: Wrong number of parameters: " + args.length);
       System.err.println("Usage: CellCounter ");
       System.err.println("       <tablename> <outputDir> <reportSeparator> [^[regex pattern] or " +
@@ -287,7 +285,7 @@ public class CellCounter extends Configured implements Tool {
           "operation to a limited subset of rows from the table based on regex or prefix pattern.");
       return -1;
     }
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(getConf(), args);
     return (job.waitForCompletion(true) ? 0 : 1);
   }
 

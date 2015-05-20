@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -72,9 +71,6 @@ public class CopyTable extends Configured implements Tool {
 
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
-  public CopyTable(Configuration conf) {
-    super(conf);
-  }
   /**
    * Sets up the actual job.
    *
@@ -338,14 +334,13 @@ public class CopyTable extends Configured implements Tool {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new CopyTable(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(HBaseConfiguration.create(), new CopyTable(), args);
     System.exit(ret);
   }
 
   @Override
   public int run(String[] args) throws Exception {
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    Job job = createSubmittableJob(otherArgs);
+    Job job = createSubmittableJob(args);
     if (job == null) return 1;
     if (!job.waitForCompletion(true)) {
       LOG.info("Map-reduce job failed!");

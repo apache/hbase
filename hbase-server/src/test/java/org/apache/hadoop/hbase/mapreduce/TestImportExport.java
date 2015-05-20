@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -68,14 +70,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper.Context;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -84,6 +88,7 @@ import org.mockito.stubbing.Answer;
  */
 @Category({VerySlowMapReduceTests.class, MediumTests.class})
 public class TestImportExport {
+  private static final Log LOG = LogFactory.getLog(TestImportExport.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
@@ -111,6 +116,14 @@ public class TestImportExport {
     UTIL.shutdownMiniCluster();
   }
 
+  @Rule
+  public final TestName name = new TestName();
+
+  @Before
+  public void announce() {
+    LOG.info("Running " + name.getMethodName());
+  }
+
   @Before
   @After
   public void cleanup() throws Exception {
@@ -126,14 +139,10 @@ public class TestImportExport {
    * @throws InterruptedException
    * @throws ClassNotFoundException
    */
-  boolean runExport(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+  boolean runExport(String[] args) throws Exception {
     // need to make a copy of the configuration because to make sure different temp dirs are used.
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
-    Configuration conf = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = Export.createSubmittableJob(conf, args);
-    job.waitForCompletion(false);
-    return job.isSuccessful();
+    int status = ToolRunner.run(new Configuration(UTIL.getConfiguration()), new Export(), args);
+    return status == 0;
   }
 
   /**
@@ -144,14 +153,10 @@ public class TestImportExport {
    * @throws InterruptedException
    * @throws ClassNotFoundException
    */
-  boolean runImport(String[] args) throws IOException, InterruptedException, ClassNotFoundException {
+  boolean runImport(String[] args) throws Exception {
     // need to make a copy of the configuration because to make sure different temp dirs are used.
-    GenericOptionsParser opts = new GenericOptionsParser(new Configuration(UTIL.getConfiguration()), args);
-    Configuration conf = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = Import.createSubmittableJob(conf, args);
-    job.waitForCompletion(false);
-    return job.isSuccessful();
+    int status = ToolRunner.run(new Configuration(UTIL.getConfiguration()), new Import(), args);
+    return status == 0;
   }
 
   /**
@@ -617,7 +622,7 @@ public class TestImportExport {
   }
 
   @Test
-  public void testDurability() throws IOException, InterruptedException, ClassNotFoundException {
+  public void testDurability() throws Exception {
     // Create an export table.
     String exportTableName = "exporttestDurability";
     Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);
@@ -687,7 +692,7 @@ public class TestImportExport {
 
     @Override
     public void visitLogEntryBeforeWrite(HTableDescriptor htd, WALKey logKey, WALEdit logEdit) {
-      if (tableName.equalsIgnoreCase(htd.getNameAsString())) {
+      if (tableName.equalsIgnoreCase(htd.getNameAsString()) && (!logEdit.isMetaEdit())) {
         isVisited = true;
       }
     }

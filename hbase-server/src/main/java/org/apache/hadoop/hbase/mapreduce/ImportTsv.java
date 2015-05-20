@@ -30,7 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -54,7 +53,6 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -649,10 +647,8 @@ public class ImportTsv extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    setConf(HBaseConfiguration.create(getConf()));
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 2) {
-      usage("Wrong number of arguments: " + otherArgs.length);
+    if (args.length < 2) {
+      usage("Wrong number of arguments: " + args.length);
       return -1;
     }
 
@@ -717,12 +713,12 @@ public class ImportTsv extends Configured implements Tool {
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
 
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(getConf(), args);
     return job.waitForCompletion(true) ? 0 : 1;
   }
 
   public static void main(String[] args) throws Exception {
-    int status = ToolRunner.run(new ImportTsv(), args);
+    int status = ToolRunner.run(new Configuration(), new ImportTsv(), args);
     System.exit(status);
   }
 }

@@ -51,7 +51,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
@@ -229,12 +228,16 @@ public class Import extends Configured implements Tool {
 
     @Override
     public void setup(Context context) {
+      LOG.info("Setting up " + getClass() + " mapper.");
       Configuration conf = context.getConfiguration();
       cfRenameMap = createCfRenameMap(conf);
       filter = instantiateFilter(conf);
       String durabilityStr = conf.get(WAL_DURABILITY);
       if(durabilityStr != null){
         durability = Durability.valueOf(durabilityStr.toUpperCase());
+        LOG.info("setting WAL durability to " + durability);
+      } else {
+        LOG.info("setting WAL durability to default.");
       }
       // TODO: This is kind of ugly doing setup of ZKW just to read the clusterid.
       ZooKeeperWatcher zkw = null;
@@ -452,6 +455,7 @@ public class Import extends Configured implements Tool {
     }
 
     if (hfileOutPath != null) {
+      LOG.info("writing to hfiles for bulk load.");
       job.setMapperClass(KeyValueImporter.class);
       try (Connection conn = ConnectionFactory.createConnection(conf); 
           Table table = conn.getTable(tableName);
@@ -466,6 +470,7 @@ public class Import extends Configured implements Tool {
             com.google.common.base.Preconditions.class);
       }
     } else {
+      LOG.info("writing directly to table from Mapper.");
       // No reducers.  Just write straight to table.  Call initTableReducerJob
       // because it sets up the TableOutputFormat.
       job.setMapperClass(Importer.class);
@@ -522,6 +527,7 @@ public class Import extends Configured implements Tool {
     // Need to flush if the data is written to hbase and skip wal is enabled.
     if (conf.get(BULK_OUTPUT_CONF_KEY) == null && durability != null
         && Durability.SKIP_WAL.name().equalsIgnoreCase(durability)) {
+      LOG.info("Flushing all data that skipped the WAL.");
       try {
         connection = ConnectionFactory.createConnection(conf);
         hAdmin = connection.getAdmin();
@@ -539,16 +545,15 @@ public class Import extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 2) {
-      usage("Wrong number of arguments: " + otherArgs.length);
+    if (args.length < 2) {
+      usage("Wrong number of arguments: " + args.length);
       return -1;
     }
     String inputVersionString = System.getProperty(ResultSerialization.IMPORT_FORMAT_VER);
     if (inputVersionString != null) {
       getConf().set(ResultSerialization.IMPORT_FORMAT_VER, inputVersionString);
     }
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(getConf(), args);
     boolean isJobSuccessful = job.waitForCompletion(true);
     if(isJobSuccessful){
       // Flush all the regions of the table

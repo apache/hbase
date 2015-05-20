@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -113,12 +114,13 @@ public class TestWALPlayer {
         .getRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
 
     Configuration configuration= TEST_UTIL.getConfiguration();
-    WALPlayer player = new WALPlayer(configuration);
+    WALPlayer player = new WALPlayer();
     String optionName="_test_.name";
     configuration.set(optionName, "1000");
     player.setupTime(configuration, optionName);
     assertEquals(1000,configuration.getLong(optionName,0));
-    assertEquals(0, player.run(new String[] {walInputDir, TABLENAME1.getNameAsString(),
+    assertEquals(0, ToolRunner.run(configuration, player,
+        new String[] {walInputDir, TABLENAME1.getNameAsString(),
         TABLENAME2.getNameAsString() }));
 
     

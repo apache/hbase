@@ -203,7 +203,7 @@ public class TestMergeTool extends HBaseTestCase {
   private HRegion mergeAndVerify(final String msg, final String regionName1,
     final String regionName2, final WAL log, final int upperbound)
   throws Exception {
-    Merge merger = new Merge(this.conf);
+    Merge merger = new Merge();
     LOG.info(msg);
     LOG.info("fs2=" + this.conf.get("fs.defaultFS"));
     int errCode = ToolRunner.run(this.conf, merger,

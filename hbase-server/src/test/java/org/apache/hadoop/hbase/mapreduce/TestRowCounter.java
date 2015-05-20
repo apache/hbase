@@ -42,9 +42,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mapreduce.RowCounter.RowCounterMapper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -207,16 +205,9 @@ public class TestRowCounter {
    * @throws Exception
    */
   private void runRowCount(String[] args, int expectedCount) throws Exception {
-    GenericOptionsParser opts = new GenericOptionsParser(
-        TEST_UTIL.getConfiguration(), args);
-    Configuration conf = opts.getConfiguration();
-    args = opts.getRemainingArgs();
-    Job job = RowCounter.createSubmittableJob(conf, args);
-    job.waitForCompletion(true);
-    assertTrue(job.isSuccessful());
-    Counter counter = job.getCounters().findCounter(
-        RowCounterMapper.Counters.ROWS);
-    assertEquals(expectedCount, counter.getValue());
+    final RowCounter counter = new RowCounter();
+    assertEquals("job failed either due to failure or miscount (see log output).", 0,
+        ToolRunner.run(TEST_UTIL.getConfiguration(), counter, args));
   }
 
   /**

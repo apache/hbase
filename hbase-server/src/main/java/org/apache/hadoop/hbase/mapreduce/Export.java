@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -181,12 +180,11 @@ public class Export extends Configured implements Tool {
 
   @Override
   public int run(String[] args) throws Exception {
-    String[] otherArgs = new GenericOptionsParser(getConf(), args).getRemainingArgs();
-    if (otherArgs.length < 2) {
-      usage("Wrong number of arguments: " + otherArgs.length);
+    if (args.length < 2) {
+      usage("Wrong number of arguments: " + args.length);
       return -1;
     }
-    Job job = createSubmittableJob(getConf(), otherArgs);
+    Job job = createSubmittableJob(getConf(), args);
     return (job.waitForCompletion(true) ? 0 : 1);
   }
 

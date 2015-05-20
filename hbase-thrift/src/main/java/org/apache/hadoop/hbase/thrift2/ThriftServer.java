@@ -49,6 +49,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
@@ -63,7 +64,8 @@ import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.SaslRpcServer.SaslGssCallbackHandler;
-import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 import org.apache.thrift.TException;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -91,7 +93,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @SuppressWarnings({ "rawtypes", "unchecked" })
-public class ThriftServer {
+public class ThriftServer extends Configured implements Tool {
   private static final Log log = LogFactory.getLog(ThriftServer.class);
 
   /**
@@ -142,10 +144,8 @@ public class ThriftServer {
 
   private static CommandLine parseArguments(Configuration conf, Options options, String[] args)
       throws ParseException, IOException {
-    GenericOptionsParser genParser = new GenericOptionsParser(conf, args);
-    String[] remainingArgs = genParser.getRemainingArgs();
     CommandLineParser parser = new PosixParser();
-    return parser.parse(options, remainingArgs);
+    return parser.parse(options, args);
   }
 
   private static TProtocolFactory getTProtocolFactory(boolean isCompact) {
@@ -304,13 +304,19 @@ public class ThriftServer {
 
   /**
    * Start up the Thrift2 server.
-   *
-   * @param args
    */
   public static void main(String[] args) throws Exception {
+    final Configuration conf = HBaseConfiguration.create();
+    // for now, only time we return is on an argument error.
+    final int status = ToolRunner.run(conf, new ThriftServer(), args);
+    System.exit(status);
+  }
+
+  @Override
+  public int run(String[] args) throws Exception {
+    final Configuration conf = getConf();
     TServer server = null;
     Options options = getOptions();
-    Configuration conf = HBaseConfiguration.create();
     CommandLine cmd = parseArguments(conf, options, args);
     int workerThreads = 0;
 
@@ -321,7 +327,7 @@ public class ThriftServer {
     List<?> argList = cmd.getArgList();
     if (cmd.hasOption("help") || !argList.contains("start") || argList.contains("stop")) {
       printUsage();
-      System.exit(1);
+      return 1;
     }
 
     // Get address to bind
@@ -485,5 +491,7 @@ public class ThriftServer {
           return null;
         }
       });
+    // when tserver.stop eventually happens we'll get here.
+    return 0;
   }
 }
