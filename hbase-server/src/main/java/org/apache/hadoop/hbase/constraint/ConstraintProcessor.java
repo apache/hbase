@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.Put;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /***
@@ -88,5 +90,12 @@ public class ConstraintProcessor extends BaseRegionObserver {
       c.check(put);
     }
     // if we made it here, then the Put is valid
+  }
+
+  @Override
+  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
+    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    return hasMore;
   }
 }

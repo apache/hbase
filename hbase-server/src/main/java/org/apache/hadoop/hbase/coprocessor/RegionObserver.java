@@ -1078,11 +1078,35 @@ public interface RegionObserver extends Coprocessor {
    * @param hasMore the 'has more' indication
    * @return whether more rows are available for the scanner or not
    * @throws IOException
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   * Instead use {@link #postScannerFilterRow(ObserverContext, InternalScanner, Cell, boolean)}
    */
+  @Deprecated
   boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> c,
       final InternalScanner s, final byte[] currentRow, final int offset, final short length,
       final boolean hasMore) throws IOException;
-  
+
+  /**
+   * This will be called by the scan flow when the current scanned row is being filtered out by the
+   * filter. The filter may be filtering out the row via any of the below scenarios
+   * <ol>
+   * <li>
+   * <code>boolean filterRowKey(byte [] buffer, int offset, int length)</code> returning true</li>
+   * <li>
+   * <code>boolean filterRow()</code> returning true</li>
+   * <li>
+   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from the passed List</li>
+   * </ol>
+   * @param c the environment provided by the region server
+   * @param s the scanner
+   * @param curRowCell The cell in the current row which got filtered out
+   * @param hasMore the 'has more' indication
+   * @return whether more rows are available for the scanner or not
+   * @throws IOException
+   */
+  boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> c,
+      final InternalScanner s, Cell curRowCell, final boolean hasMore) throws IOException;
+
   /**
    * Called before the client closes a scanner.
    * <p>

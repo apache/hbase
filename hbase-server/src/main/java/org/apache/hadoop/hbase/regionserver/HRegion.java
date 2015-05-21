@@ -5556,7 +5556,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Check if rowkey filter wants to exclude this row. If so, loop to next.
           // Technically, if we hit limits before on this row, we don't need this call.
           if (filterRowKey(currentRow, offset, length)) {
-            boolean moreRows = nextRow(currentRow, offset, length);
+            boolean moreRows = nextRow(current);
             if (!moreRows) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
@@ -5607,7 +5607,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           if ((isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE) || filterRow()) {
             results.clear();
-            boolean moreRows = nextRow(currentRow, offset, length);
+            boolean moreRows = nextRow(current);
             if (!moreRows) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
@@ -5650,7 +5650,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Double check to prevent empty rows from appearing in result. It could be
         // the case when SingleColumnValueExcludeFilter is used.
         if (results.isEmpty()) {
-          boolean moreRows = nextRow(currentRow, offset, length);
+          boolean moreRows = nextRow(current);
           if (!moreRows) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
@@ -5712,18 +5712,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           && filter.filterRowKey(row, offset, length);
     }
 
-    protected boolean nextRow(byte [] currentRow, int offset, short length) throws IOException {
+    protected boolean nextRow(Cell curRowCell) throws IOException {
       assert this.joinedContinuationRow == null: "Trying to go to next row during joinedHeap read.";
       Cell next;
       while ((next = this.storeHeap.peek()) != null &&
-             CellUtil.matchingRow(next, currentRow, offset, length)) {
+             CellUtil.matchingRow(next, curRowCell)) {
         this.storeHeap.next(MOCKED_LIST);
       }
       resetFilters();
       // Calling the hook in CP which allows it to do a fast forward
       return this.region.getCoprocessorHost() == null
           || this.region.getCoprocessorHost()
-              .postScannerFilterRow(this, currentRow, offset, length);
+              .postScannerFilterRow(this, curRowCell);
     }
 
     protected boolean isStopRow(byte[] currentRow, int offset, short length) {

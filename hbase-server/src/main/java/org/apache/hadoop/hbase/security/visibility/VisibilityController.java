@@ -772,6 +772,13 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     return VisibilityLabelsProtos.VisibilityLabelsService.newReflectiveService(this);
   }
 
+  @Override
+  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
+    // Impl in BaseRegionObserver might do unnecessary copy for Off heap backed Cells.
+    return hasMore;
+  }
+
   /****************************** VisibilityEndpoint service related methods ******************************/
   @Override
   public synchronized void addLabels(RpcController controller, VisibilityLabelsRequest request,
