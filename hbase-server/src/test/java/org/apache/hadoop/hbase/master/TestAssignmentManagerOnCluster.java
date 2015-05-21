@@ -238,7 +238,7 @@ public class TestAssignmentManagerOnCluster {
       MetaTableAccessor.addRegionToMeta(meta, hri);
       // Add some dummy server for the region entry
       MetaTableAccessor.updateRegionLocation(TEST_UTIL.getHBaseCluster().getMaster().getConnection(), hri,
-        ServerName.valueOf("example.org", 1234, System.currentTimeMillis()), 0);
+        ServerName.valueOf("example.org", 1234, System.currentTimeMillis()), 0, -1);
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       int i = TEST_UTIL.getHBaseCluster().getServerWithMeta();
       HRegionServer rs = TEST_UTIL.getHBaseCluster().getRegionServer(i == 0 ? 1 : 0);

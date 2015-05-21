@@ -155,7 +155,7 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(HConnection connection, 
+  public static void closeRegionSilentlyAndWait(HConnection connection,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     long timeout = connection.getConfiguration()
       .getLong("hbase.hbck.close.timeout", 120000);
@@ -180,7 +180,7 @@ public class HBaseFsckRepair {
         // see the additional replicas when it is asked to assign. The
         // final value of these columns will be different and will be updated
         // by the actual regionservers that start hosting the respective replicas
-        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), i);
+        MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, i);
       }
     }
     meta.put(put);

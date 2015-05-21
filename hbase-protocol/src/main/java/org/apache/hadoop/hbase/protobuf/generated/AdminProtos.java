@@ -3874,6 +3874,24 @@ public final class AdminProtos {
      * </pre>
      */
     long getServerStartCode();
+
+    // optional uint64 master_system_time = 5;
+    /**
+     * <code>optional uint64 master_system_time = 5;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    boolean hasMasterSystemTime();
+    /**
+     * <code>optional uint64 master_system_time = 5;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    long getMasterSystemTime();
   }
   /**
    * Protobuf type {@code OpenRegionRequest}
@@ -3937,6 +3955,11 @@ public final class AdminProtos {
             case 16: {
               bitField0_ |= 0x00000001;
               serverStartCode_ = input.readUInt64();
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000002;
+              masterSystemTime_ = input.readUInt64();
               break;
             }
           }
@@ -5195,9 +5218,34 @@ public final class AdminProtos {
       return serverStartCode_;
     }
 
+    // optional uint64 master_system_time = 5;
+    public static final int MASTER_SYSTEM_TIME_FIELD_NUMBER = 5;
+    private long masterSystemTime_;
+    /**
+     * <code>optional uint64 master_system_time = 5;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    public boolean hasMasterSystemTime() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional uint64 master_system_time = 5;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    public long getMasterSystemTime() {
+      return masterSystemTime_;
+    }
+
     private void initFields() {
       openInfo_ = java.util.Collections.emptyList();
       serverStartCode_ = 0L;
+      masterSystemTime_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -5223,6 +5271,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeUInt64(2, serverStartCode_);
       }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeUInt64(5, masterSystemTime_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5239,6 +5290,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt64Size(2, serverStartCode_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(5, masterSystemTime_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -5270,6 +5325,11 @@ public final class AdminProtos {
         result = result && (getServerStartCode()
             == other.getServerStartCode());
       }
+      result = result && (hasMasterSystemTime() == other.hasMasterSystemTime());
+      if (hasMasterSystemTime()) {
+        result = result && (getMasterSystemTime()
+            == other.getMasterSystemTime());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -5290,6 +5350,10 @@ public final class AdminProtos {
       if (hasServerStartCode()) {
         hash = (37 * hash) + SERVERSTARTCODE_FIELD_NUMBER;
         hash = (53 * hash) + hashLong(getServerStartCode());
+      }
+      if (hasMasterSystemTime()) {
+        hash = (37 * hash) + MASTER_SYSTEM_TIME_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getMasterSystemTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -5409,6 +5473,8 @@ public final class AdminProtos {
         }
         serverStartCode_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000002);
+        masterSystemTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000004);
         return this;
       }
 
@@ -5450,6 +5516,10 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.serverStartCode_ = serverStartCode_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.masterSystemTime_ = masterSystemTime_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -5494,6 +5564,9 @@ public final class AdminProtos {
         }
         if (other.hasServerStartCode()) {
           setServerStartCode(other.getServerStartCode());
+        }
+        if (other.hasMasterSystemTime()) {
+          setMasterSystemTime(other.getMasterSystemTime());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -5813,6 +5886,55 @@ public final class AdminProtos {
       public Builder clearServerStartCode() {
         bitField0_ = (bitField0_ & ~0x00000002);
         serverStartCode_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 master_system_time = 5;
+      private long masterSystemTime_ ;
+      /**
+       * <code>optional uint64 master_system_time = 5;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public boolean hasMasterSystemTime() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>optional uint64 master_system_time = 5;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public long getMasterSystemTime() {
+        return masterSystemTime_;
+      }
+      /**
+       * <code>optional uint64 master_system_time = 5;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public Builder setMasterSystemTime(long value) {
+        bitField0_ |= 0x00000004;
+        masterSystemTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 master_system_time = 5;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public Builder clearMasterSystemTime() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        masterSystemTime_ = 0L;
         onChanged();
         return this;
       }
@@ -23249,87 +23371,88 @@ public final class AdminProtos {
       "FileResponse\022\022\n\nstore_file\030\001 \003(\t\"\030\n\026GetO" +
       "nlineRegionRequest\";\n\027GetOnlineRegionRes" +
       "ponse\022 \n\013region_info\030\001 \003(\0132\013.RegionInfo\"" +
-      "\374\001\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
+      "\230\002\n\021OpenRegionRequest\0224\n\topen_info\030\001 \003(\013" +
       "2!.OpenRegionRequest.RegionOpenInfo\022\027\n\017s" +
-      "erverStartCode\030\002 \001(\004\032\227\001\n\016RegionOpenInfo\022" +
-      "\033\n\006region\030\001 \002(\0132\013.RegionInfo\022\037\n\027version_" +
-      "of_offline_node\030\002 \001(\r\022\"\n\rfavored_nodes\030\003" +
-      " \003(\0132\013.ServerName\022#\n\033openForDistributedL",
-      "ogReplay\030\004 \001(\010\"\235\001\n\022OpenRegionResponse\022=\n" +
-      "\ropening_state\030\001 \003(\0162&.OpenRegionRespons" +
-      "e.RegionOpeningState\"H\n\022RegionOpeningSta" +
-      "te\022\n\n\006OPENED\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FA" +
-      "ILED_OPENING\020\002\"6\n\023WarmupRegionRequest\022\037\n" +
-      "\nregionInfo\030\001 \002(\0132\013.RegionInfo\"\026\n\024Warmup" +
-      "RegionResponse\"\271\001\n\022CloseRegionRequest\022 \n" +
-      "\006region\030\001 \002(\0132\020.RegionSpecifier\022\037\n\027versi" +
-      "on_of_closing_node\030\002 \001(\r\022\036\n\020transition_i" +
-      "n_ZK\030\003 \001(\010:\004true\022\'\n\022destination_server\030\004",
-      " \001(\0132\013.ServerName\022\027\n\017serverStartCode\030\005 \001" +
-      "(\004\"%\n\023CloseRegionResponse\022\016\n\006closed\030\001 \002(" +
-      "\010\"p\n\022FlushRegionRequest\022 \n\006region\030\001 \002(\0132" +
-      "\020.RegionSpecifier\022\030\n\020if_older_than_ts\030\002 " +
-      "\001(\004\022\036\n\026write_flush_wal_marker\030\003 \001(\010\"_\n\023F" +
-      "lushRegionResponse\022\027\n\017last_flush_time\030\001 " +
-      "\002(\004\022\017\n\007flushed\030\002 \001(\010\022\036\n\026wrote_flush_wal_" +
-      "marker\030\003 \001(\010\"K\n\022SplitRegionRequest\022 \n\006re" +
-      "gion\030\001 \002(\0132\020.RegionSpecifier\022\023\n\013split_po" +
-      "int\030\002 \001(\014\"\025\n\023SplitRegionResponse\"W\n\024Comp",
-      "actRegionRequest\022 \n\006region\030\001 \002(\0132\020.Regio" +
-      "nSpecifier\022\r\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(" +
-      "\014\"\027\n\025CompactRegionResponse\"\262\001\n\031UpdateFav" +
-      "oredNodesRequest\022@\n\013update_info\030\001 \003(\0132+." +
-      "UpdateFavoredNodesRequest.RegionUpdateIn" +
-      "fo\032S\n\020RegionUpdateInfo\022\033\n\006region\030\001 \002(\0132\013" +
-      ".RegionInfo\022\"\n\rfavored_nodes\030\002 \003(\0132\013.Ser" +
-      "verName\".\n\032UpdateFavoredNodesResponse\022\020\n" +
-      "\010response\030\001 \001(\r\"v\n\023MergeRegionsRequest\022\"" +
-      "\n\010region_a\030\001 \002(\0132\020.RegionSpecifier\022\"\n\010re",
-      "gion_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010forcib" +
-      "le\030\003 \001(\010:\005false\"\026\n\024MergeRegionsResponse\"" +
-      "X\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n\017key" +
-      "_value_bytes\030\002 \003(\014\022\035\n\025associated_cell_co" +
-      "unt\030\003 \001(\005\"4\n\030ReplicateWALEntryRequest\022\030\n" +
-      "\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWALE" +
-      "ntryResponse\"\026\n\024RollWALWriterRequest\"0\n\025" +
-      "RollWALWriterResponse\022\027\n\017region_to_flush" +
-      "\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reason\030\001 " +
-      "\002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServerIn",
-      "foRequest\"B\n\nServerInfo\022 \n\013server_name\030\001" +
-      " \002(\0132\013.ServerName\022\022\n\nwebui_port\030\002 \001(\r\"9\n" +
-      "\025GetServerInfoResponse\022 \n\013server_info\030\001 " +
-      "\002(\0132\013.ServerInfo\"\034\n\032UpdateConfigurationR" +
-      "equest\"\035\n\033UpdateConfigurationResponse2\325\010" +
-      "\n\014AdminService\022>\n\rGetRegionInfo\022\025.GetReg" +
-      "ionInfoRequest\032\026.GetRegionInfoResponse\022;" +
-      "\n\014GetStoreFile\022\024.GetStoreFileRequest\032\025.G" +
-      "etStoreFileResponse\022D\n\017GetOnlineRegion\022\027" +
-      ".GetOnlineRegionRequest\032\030.GetOnlineRegio",
-      "nResponse\0225\n\nOpenRegion\022\022.OpenRegionRequ" +
-      "est\032\023.OpenRegionResponse\022;\n\014WarmupRegion" +
-      "\022\024.WarmupRegionRequest\032\025.WarmupRegionRes" +
-      "ponse\0228\n\013CloseRegion\022\023.CloseRegionReques" +
-      "t\032\024.CloseRegionResponse\0228\n\013FlushRegion\022\023" +
-      ".FlushRegionRequest\032\024.FlushRegionRespons" +
-      "e\0228\n\013SplitRegion\022\023.SplitRegionRequest\032\024." +
-      "SplitRegionResponse\022>\n\rCompactRegion\022\025.C" +
-      "ompactRegionRequest\032\026.CompactRegionRespo" +
-      "nse\022;\n\014MergeRegions\022\024.MergeRegionsReques",
-      "t\032\025.MergeRegionsResponse\022J\n\021ReplicateWAL" +
-      "Entry\022\031.ReplicateWALEntryRequest\032\032.Repli" +
-      "cateWALEntryResponse\022?\n\006Replay\022\031.Replica" +
-      "teWALEntryRequest\032\032.ReplicateWALEntryRes" +
-      "ponse\022>\n\rRollWALWriter\022\025.RollWALWriterRe" +
-      "quest\032\026.RollWALWriterResponse\022>\n\rGetServ" +
-      "erInfo\022\025.GetServerInfoRequest\032\026.GetServe" +
-      "rInfoResponse\0225\n\nStopServer\022\022.StopServer" +
-      "Request\032\023.StopServerResponse\022M\n\022UpdateFa" +
-      "voredNodes\022\032.UpdateFavoredNodesRequest\032\033",
-      ".UpdateFavoredNodesResponse\022P\n\023UpdateCon" +
-      "figuration\022\033.UpdateConfigurationRequest\032" +
-      "\034.UpdateConfigurationResponseBA\n*org.apa" +
-      "che.hadoop.hbase.protobuf.generatedB\013Adm" +
-      "inProtosH\001\210\001\001\240\001\001"
+      "erverStartCode\030\002 \001(\004\022\032\n\022master_system_ti" +
+      "me\030\005 \001(\004\032\227\001\n\016RegionOpenInfo\022\033\n\006region\030\001 " +
+      "\002(\0132\013.RegionInfo\022\037\n\027version_of_offline_n" +
+      "ode\030\002 \001(\r\022\"\n\rfavored_nodes\030\003 \003(\0132\013.Serve",
+      "rName\022#\n\033openForDistributedLogReplay\030\004 \001" +
+      "(\010\"\235\001\n\022OpenRegionResponse\022=\n\ropening_sta" +
+      "te\030\001 \003(\0162&.OpenRegionResponse.RegionOpen" +
+      "ingState\"H\n\022RegionOpeningState\022\n\n\006OPENED" +
+      "\020\000\022\022\n\016ALREADY_OPENED\020\001\022\022\n\016FAILED_OPENING" +
+      "\020\002\"6\n\023WarmupRegionRequest\022\037\n\nregionInfo\030" +
+      "\001 \002(\0132\013.RegionInfo\"\026\n\024WarmupRegionRespon" +
+      "se\"\271\001\n\022CloseRegionRequest\022 \n\006region\030\001 \002(" +
+      "\0132\020.RegionSpecifier\022\037\n\027version_of_closin" +
+      "g_node\030\002 \001(\r\022\036\n\020transition_in_ZK\030\003 \001(\010:\004",
+      "true\022\'\n\022destination_server\030\004 \001(\0132\013.Serve" +
+      "rName\022\027\n\017serverStartCode\030\005 \001(\004\"%\n\023CloseR" +
+      "egionResponse\022\016\n\006closed\030\001 \002(\010\"p\n\022FlushRe" +
+      "gionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpec" +
+      "ifier\022\030\n\020if_older_than_ts\030\002 \001(\004\022\036\n\026write" +
+      "_flush_wal_marker\030\003 \001(\010\"_\n\023FlushRegionRe" +
+      "sponse\022\027\n\017last_flush_time\030\001 \002(\004\022\017\n\007flush" +
+      "ed\030\002 \001(\010\022\036\n\026wrote_flush_wal_marker\030\003 \001(\010" +
+      "\"K\n\022SplitRegionRequest\022 \n\006region\030\001 \002(\0132\020" +
+      ".RegionSpecifier\022\023\n\013split_point\030\002 \001(\014\"\025\n",
+      "\023SplitRegionResponse\"W\n\024CompactRegionReq" +
+      "uest\022 \n\006region\030\001 \002(\0132\020.RegionSpecifier\022\r" +
+      "\n\005major\030\002 \001(\010\022\016\n\006family\030\003 \001(\014\"\027\n\025Compact" +
+      "RegionResponse\"\262\001\n\031UpdateFavoredNodesReq" +
+      "uest\022@\n\013update_info\030\001 \003(\0132+.UpdateFavore" +
+      "dNodesRequest.RegionUpdateInfo\032S\n\020Region" +
+      "UpdateInfo\022\033\n\006region\030\001 \002(\0132\013.RegionInfo\022" +
+      "\"\n\rfavored_nodes\030\002 \003(\0132\013.ServerName\".\n\032U" +
+      "pdateFavoredNodesResponse\022\020\n\010response\030\001 " +
+      "\001(\r\"v\n\023MergeRegionsRequest\022\"\n\010region_a\030\001",
+      " \002(\0132\020.RegionSpecifier\022\"\n\010region_b\030\002 \002(\013" +
+      "2\020.RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005fa" +
+      "lse\"\026\n\024MergeRegionsResponse\"X\n\010WALEntry\022" +
+      "\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n\017key_value_bytes" +
+      "\030\002 \003(\014\022\035\n\025associated_cell_count\030\003 \001(\005\"4\n" +
+      "\030ReplicateWALEntryRequest\022\030\n\005entry\030\001 \003(\013" +
+      "2\t.WALEntry\"\033\n\031ReplicateWALEntryResponse" +
+      "\"\026\n\024RollWALWriterRequest\"0\n\025RollWALWrite" +
+      "rResponse\022\027\n\017region_to_flush\030\001 \003(\014\"#\n\021St" +
+      "opServerRequest\022\016\n\006reason\030\001 \002(\t\"\024\n\022StopS",
+      "erverResponse\"\026\n\024GetServerInfoRequest\"B\n" +
+      "\nServerInfo\022 \n\013server_name\030\001 \002(\0132\013.Serve" +
+      "rName\022\022\n\nwebui_port\030\002 \001(\r\"9\n\025GetServerIn" +
+      "foResponse\022 \n\013server_info\030\001 \002(\0132\013.Server" +
+      "Info\"\034\n\032UpdateConfigurationRequest\"\035\n\033Up" +
+      "dateConfigurationResponse2\325\010\n\014AdminServi" +
+      "ce\022>\n\rGetRegionInfo\022\025.GetRegionInfoReque" +
+      "st\032\026.GetRegionInfoResponse\022;\n\014GetStoreFi" +
+      "le\022\024.GetStoreFileRequest\032\025.GetStoreFileR" +
+      "esponse\022D\n\017GetOnlineRegion\022\027.GetOnlineRe",
+      "gionRequest\032\030.GetOnlineRegionResponse\0225\n" +
+      "\nOpenRegion\022\022.OpenRegionRequest\032\023.OpenRe" +
+      "gionResponse\022;\n\014WarmupRegion\022\024.WarmupReg" +
+      "ionRequest\032\025.WarmupRegionResponse\0228\n\013Clo" +
+      "seRegion\022\023.CloseRegionRequest\032\024.CloseReg" +
+      "ionResponse\0228\n\013FlushRegion\022\023.FlushRegion" +
+      "Request\032\024.FlushRegionResponse\0228\n\013SplitRe" +
+      "gion\022\023.SplitRegionRequest\032\024.SplitRegionR" +
+      "esponse\022>\n\rCompactRegion\022\025.CompactRegion" +
+      "Request\032\026.CompactRegionResponse\022;\n\014Merge",
+      "Regions\022\024.MergeRegionsRequest\032\025.MergeReg" +
+      "ionsResponse\022J\n\021ReplicateWALEntry\022\031.Repl" +
+      "icateWALEntryRequest\032\032.ReplicateWALEntry" +
+      "Response\022?\n\006Replay\022\031.ReplicateWALEntryRe" +
+      "quest\032\032.ReplicateWALEntryResponse\022>\n\rRol" +
+      "lWALWriter\022\025.RollWALWriterRequest\032\026.Roll" +
+      "WALWriterResponse\022>\n\rGetServerInfo\022\025.Get" +
+      "ServerInfoRequest\032\026.GetServerInfoRespons" +
+      "e\0225\n\nStopServer\022\022.StopServerRequest\032\023.St" +
+      "opServerResponse\022M\n\022UpdateFavoredNodes\022\032",
+      ".UpdateFavoredNodesRequest\032\033.UpdateFavor" +
+      "edNodesResponse\022P\n\023UpdateConfiguration\022\033" +
+      ".UpdateConfigurationRequest\032\034.UpdateConf" +
+      "igurationResponseBA\n*org.apache.hadoop.h" +
+      "base.protobuf.generatedB\013AdminProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -23377,7 +23500,7 @@ public final class AdminProtos {
           internal_static_OpenRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_OpenRegionRequest_descriptor,
-              new java.lang.String[] { "OpenInfo", "ServerStartCode", });
+              new java.lang.String[] { "OpenInfo", "ServerStartCode", "MasterSystemTime", });
           internal_static_OpenRegionRequest_RegionOpenInfo_descriptor =
             internal_static_OpenRegionRequest_descriptor.getNestedTypes().get(0);
           internal_static_OpenRegionRequest_RegionOpenInfo_fieldAccessorTable = new

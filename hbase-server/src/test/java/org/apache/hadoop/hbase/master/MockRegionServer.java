@@ -328,7 +328,7 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   public TableLockManager getTableLockManager() {
     return new NullTableLockManager();
   }
-  
+
   @Override
   public RegionServerQuotaManager getRegionServerQuotaManager() {
     return null;
@@ -336,6 +336,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
 
   @Override
   public void postOpenDeployTasks(Region r) throws KeeperException, IOException {
+    // TODO Auto-generated method stub
+  }
+
+  @Override
+  public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
+      IOException {
     // TODO Auto-generated method stub
   }
 
@@ -606,6 +612,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(RegionStateTransitionContext context) {
     return false;
   }
 
