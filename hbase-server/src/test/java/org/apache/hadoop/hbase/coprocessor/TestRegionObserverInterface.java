@@ -80,6 +80,7 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -589,6 +590,7 @@ public class TestRegionObserverInterface {
     }
   }
 
+  @Ignore // TODO: HBASE-13391 to fix flaky test
   @Test (timeout=300000)
   public void testRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testRecovery");
@@ -639,6 +641,7 @@ public class TestRegionObserverInterface {
     }
   }
 
+  @Ignore // TODO: HBASE-13391 to fix flaky test
   @Test (timeout=300000)
   public void testLegacyRecovery() throws Exception {
     LOG.info(TestRegionObserverInterface.class.getName() +".testLegacyRecovery");
