@@ -112,6 +112,37 @@ module Shell
         @row_count += 1
       end
 
+      # Output the scan metrics. Can be filtered to output only those metrics whose keys exists
+      # in the metric_filter
+      def scan_metrics(scan_metrics = nil, metric_filter = [])
+        return if scan_metrics == nil
+        raise(ArgumentError, \
+          "Argument should be org.apache.hadoop.hbase.client.metrics.ScanMetrics") \
+            unless scan_metrics.kind_of?(org.apache.hadoop.hbase.client.metrics.ScanMetrics)
+        # prefix output with empty line
+        @out.puts
+        # save row count to restore after printing metrics
+        # (metrics should not count towards row count)
+        saved_row_count = @row_count
+        iter = scan_metrics.getMetricsMap().entrySet().iterator()
+        metric_hash = Hash.new()
+        # put keys in hash so they can be sorted easily
+        while iter.hasNext
+          metric = iter.next
+          metric_hash[metric.getKey.to_s] = metric.getValue.to_s
+        end
+        # print in alphabetical order
+        row(["METRIC", "VALUE"], false)
+        metric_hash.sort.map do |key, value|
+          if (not metric_filter or metric_filter.length == 0 or metric_filter.include?(key))
+            row([key, value])
+          end
+        end
+
+        @row_count = saved_row_count
+        return
+      end
+
       def split(width, str)
         if width == 0
           return [str]

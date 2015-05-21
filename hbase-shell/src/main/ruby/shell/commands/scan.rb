@@ -25,7 +25,7 @@ module Shell
 Scan a table; pass table name and optionally a dictionary of scanner
 specifications.  Scanner specifications may include one or more of:
 TIMERANGE, FILTER, LIMIT, STARTROW, STOPROW, ROWPREFIXFILTER, TIMESTAMP,
-MAXLENGTH or COLUMNS, CACHE or RAW, VERSIONS
+MAXLENGTH or COLUMNS, CACHE or RAW, VERSIONS, ALL_METRICS or METRICS
 
 If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
@@ -36,6 +36,11 @@ The filter can be specified in two ways:
 Filter Language document attached to the HBASE-4176 JIRA
 2. Using the entire package name of the filter.
 
+If you wish to see metrics regarding the execution of the scan, the
+ALL_METRICS boolean should be set to true. Alternatively, if you would
+prefer to see only a subset of the metrics, the METRICS array can be 
+defined to include the names of only the metrics you care about.
+
 Some examples:
 
   hbase> scan 'hbase:meta'
@@ -44,6 +49,8 @@ Some examples:
   hbase> scan 't1', {COLUMNS => ['c1', 'c2'], LIMIT => 10, STARTROW => 'xyz'}
   hbase> scan 't1', {COLUMNS => 'c1', TIMERANGE => [1303668804, 1303668904]}
   hbase> scan 't1', {REVERSED => true}
+  hbase> scan 't1', {ALL_METRICS => true}
+  hbase> scan 't1', {METRICS => ['RPC_RETRIES', 'ROWS_FILTERED']}
   hbase> scan 't1', {ROWPREFIXFILTER => 'row2', FILTER => "
     (QualifierFilter (>=, 'binary:xyz')) AND (TimestampsFilter ( 123, 456))"}
   hbase> scan 't1', {FILTER =>
@@ -100,12 +107,18 @@ EOF
         now = Time.now
         formatter.header(["ROW", "COLUMN+CELL"])
 
+        scan = table._hash_to_scan(args)
         #actually do the scanning
-        count = table._scan_internal(args) do |row, cells|
+        count = table._scan_internal(args, scan) do |row, cells|
           formatter.row([ row, cells ])
         end
 
         formatter.footer(now, count)
+
+        # if scan metrics were enabled, print them after the results
+        if (scan != nil && scan.isScanMetricsEnabled())
+          formatter.scan_metrics(scan.getScanMetrics(), args["METRICS"])
+        end
       end
     end
   end
