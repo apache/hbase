@@ -70,6 +70,8 @@ message OpenRegionRequest {
   repeated RegionOpenInfo open_info = 1;
   // the intended server for this RPC.
   optional uint64 serverStartCode = 2;
+  // wall clock time from master
+  optional uint64 master_system_time = 5;
 
   message RegionOpenInfo {
     required RegionInfo region = 1;

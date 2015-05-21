@@ -209,7 +209,7 @@ public class RegionStateStore {
       if (openSeqNum >= 0) {
         Preconditions.checkArgument(state == State.OPEN
           && serverName != null, "Open region should be on a server");
-        MetaTableAccessor.addLocation(put, serverName, openSeqNum, replicaId);
+        MetaTableAccessor.addLocation(put, serverName, openSeqNum, -1, replicaId);
         info.append("&openSeqNum=").append(openSeqNum);
         info.append("&server=").append(serverName);
       }

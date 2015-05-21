@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -39,12 +40,15 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import com.google.common.collect.Lists;
 
 /**
  * Test {@link org.apache.hadoop.hbase.MetaTableAccessor}.
@@ -337,20 +341,20 @@ public class TestMetaTableAccessor {
 
     Table meta = MetaTableAccessor.getMetaHTable(connection);
     try {
-      MetaTableAccessor.updateRegionLocation(connection, primary, serverName0, seqNum0);
+      MetaTableAccessor.updateRegionLocation(connection, primary, serverName0, seqNum0, -1);
 
       // assert that the server, startcode and seqNum columns are there for the primary region
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
 
       // add replica = 1
-      MetaTableAccessor.updateRegionLocation(connection, replica1, serverName1, seqNum1);
+      MetaTableAccessor.updateRegionLocation(connection, replica1, serverName1, seqNum1, -1);
       // check whether the primary is still there
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
       // now check for replica 1
       assertMetaLocation(meta, primary.getRegionName(), serverName1, seqNum1, 1, true);
 
       // add replica = 1
-      MetaTableAccessor.updateRegionLocation(connection, replica100, serverName100, seqNum100);
+      MetaTableAccessor.updateRegionLocation(connection, replica100, serverName100, seqNum100, -1);
       // check whether the primary is still there
       assertMetaLocation(meta, primary.getRegionName(), serverName0, seqNum0, 0, true);
       // check whether the replica 1 is still there
@@ -376,6 +380,43 @@ public class TestMetaTableAccessor {
       assertTrue(Bytes.equals(
         result.getValue(HConstants.CATALOG_FAMILY, MetaTableAccessor.getSeqNumColumn(replicaId)),
         Bytes.toBytes(seqNum)));
+    }
+  }
+
+  @Test
+  public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo regionInfo = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 0);
+
+    ServerName sn = ServerName.valueOf("bar", 0, 0);
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(regionInfo);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos);
+
+      long masterSystemTime = EnvironmentEdgeManager.currentTime() + 123456789;
+      MetaTableAccessor.updateRegionLocation(connection, regionInfo, sn, 1, masterSystemTime);
+
+      Get get = new Get(regionInfo.getRegionName());
+      Result result = meta.get(get);
+      Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(0));
+      Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        MetaTableAccessor.getStartCodeColumn(0));
+      Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        MetaTableAccessor.getSeqNumColumn(0));
+      assertNotNull(serverCell);
+      assertNotNull(startCodeCell);
+      assertNotNull(seqNumCell);
+      assertTrue(serverCell.getValueLength() > 0);
+      assertTrue(startCodeCell.getValueLength() > 0);
+      assertTrue(seqNumCell.getValueLength() > 0);
+      assertEquals(masterSystemTime, serverCell.getTimestamp());
+      assertEquals(masterSystemTime, startCodeCell.getTimestamp());
+      assertEquals(masterSystemTime, seqNumCell.getTimestamp());
+    } finally {
+      meta.close();
     }
   }
 }

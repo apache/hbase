@@ -113,6 +113,12 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public void postOpenDeployTasks(PostOpenDeployContext context) throws KeeperException,
+      IOException {
+    addToOnlineRegions(context.getRegion());
+  }
+
+  @Override
   public boolean isStopping() {
     return this.stopping;
   }
@@ -259,6 +265,11 @@ public class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean reportRegionStateTransition(TransitionCode code,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(RegionStateTransitionContext context) {
     return false;
   }
 

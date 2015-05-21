@@ -1805,6 +1805,14 @@ public class HRegionServer extends HasThread implements
   @Override
   public void postOpenDeployTasks(final HRegion r)
   throws KeeperException, IOException {
+    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
+  }
+
+  @Override
+  public void postOpenDeployTasks(final PostOpenDeployContext context)
+      throws KeeperException, IOException {
+    HRegion r = context.getRegion();
+    long masterSystemTime = context.getMasterSystemTime();
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionNameAsString());
     // Do checks to see if we need to compact (references or too many files)
@@ -1828,10 +1836,10 @@ public class HRegionServer extends HasThread implements
       MetaTableLocator.setMetaLocation(getZooKeeper(), serverName, State.OPEN);
     } else if (useZKForAssignment) {
       MetaTableAccessor.updateRegionLocation(getConnection(), r.getRegionInfo(),
-        this.serverName, openSeqNum);
+        this.serverName, openSeqNum, masterSystemTime);
     }
-    if (!useZKForAssignment && !reportRegionStateTransition(
-        TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+    if (!useZKForAssignment && !reportRegionStateTransition(new RegionStateTransitionContext(
+        TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionNameAsString());
     }
@@ -1847,6 +1855,17 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    return reportRegionStateTransition(
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
+    TransitionCode code = context.getCode();
+    long openSeqNum = context.getOpenSeqNum();
+    long masterSystemTime = context.getMasterSystemTime();
+    HRegionInfo[] hris = context.getHris();
+
     ReportRegionStateTransitionRequest.Builder builder =
       ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));

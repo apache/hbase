@@ -1329,6 +1329,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       }
     }
+
+    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
       OpenRegionCoordination coordination = regionServer.getCoordinatedStateManager().
@@ -1420,12 +1423,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             regionServer.service.submit(new OpenMetaHandler(
-              regionServer, regionServer, region, htd, coordination, ord));
+              regionServer, regionServer, region, htd, masterSystemTime, coordination, ord));
           } else {
             regionServer.updateRegionFavoredNodesMapping(region.getEncodedName(),
               regionOpenInfo.getFavoredNodesList());
             regionServer.service.submit(new OpenRegionHandler(
-              regionServer, regionServer, region, htd, coordination, ord));
+              regionServer, regionServer, region, htd, masterSystemTime, coordination, ord));
           }
         }
 

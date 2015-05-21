@@ -150,7 +150,7 @@ public class HBaseFsckRepair {
    * (default 120s) to close the region.  This bypasses the active hmaster.
    */
   @SuppressWarnings("deprecation")
-  public static void closeRegionSilentlyAndWait(HConnection connection, 
+  public static void closeRegionSilentlyAndWait(HConnection connection,
       ServerName server, HRegionInfo region) throws IOException, InterruptedException {
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     try {

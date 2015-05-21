@@ -241,7 +241,7 @@ public class TestCloseRegionHandler {
        OpenRegionCoordination.OpenRegionDetails ord =
          coordination.getDetailsForNonCoordinatedOpening();
        OpenRegionHandler openHandler =
-         new OpenRegionHandler(server, rss, hri, htd, coordination, ord);
+         new OpenRegionHandler(server, rss, hri, htd, -1, coordination, ord);
        rss.getRegionsInTransitionInRS().put(hri.getEncodedNameAsBytes(), Boolean.TRUE);
        openHandler.process();
        // This parse is not used?
