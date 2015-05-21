@@ -109,7 +109,7 @@ public class TestOpenRegionHandler {
       zkCrd.setServerName(server.getServerName());
 
       OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri,
-        htd, csm.getOpenRegionCoordination(), zkCrd) {
+        htd, -1, csm.getOpenRegionCoordination(), zkCrd) {
         HRegion openRegion() {
           // Open region first, then remove znode as though it'd been hijacked.
           HRegion region = super.openRegion();
@@ -191,7 +191,7 @@ public class TestOpenRegionHandler {
       };
 
       OpenRegionHandler handler = new OpenRegionHandler(server, rss, hri, htd,
-        openRegionCoordination, zkCrd);
+        -1, openRegionCoordination, zkCrd);
       rss.getRegionsInTransitionInRS().put(
         hri.getEncodedNameAsBytes(), Boolean.TRUE);
       // Call process without first creating OFFLINE region in zk, see if
@@ -231,7 +231,7 @@ public class TestOpenRegionHandler {
 
     // Create the handler
     OpenRegionHandler handler =
-      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
+      new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD, -1,
         csm.getOpenRegionCoordination(), zkCrd) {
         @Override
         HRegion openRegion() {
@@ -267,9 +267,9 @@ public class TestOpenRegionHandler {
     zkCrd.setServerName(server.getServerName());
 
     OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
-      csm.getOpenRegionCoordination(), zkCrd) {
+      -1, csm.getOpenRegionCoordination(), zkCrd) {
         @Override
-        boolean updateMeta(final HRegion r) {
+        boolean updateMeta(final HRegion r, long masterSystemTime) {
           // Fake failure of updating META
           return false;
         }
@@ -300,9 +300,9 @@ public class TestOpenRegionHandler {
     zkCrd.setServerName(server.getServerName());
 
     OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
-      csm.getOpenRegionCoordination(), zkCrd) {
+      -1, csm.getOpenRegionCoordination(), zkCrd) {
       @Override
-      boolean updateMeta(HRegion r) {
+      boolean updateMeta(HRegion r, long masterSystemTime) {
         return false;
       };
 
@@ -347,7 +347,7 @@ public class TestOpenRegionHandler {
     };
 
     OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD,
-      openRegionCoordination, zkCrd);
+      -1, openRegionCoordination, zkCrd);
     rsServices.getRegionsInTransitionInRS().put(TEST_HRI.getEncodedNameAsBytes(), Boolean.TRUE);
 
     handler.process();

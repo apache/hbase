@@ -1870,6 +1870,14 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void postOpenDeployTasks(final Region r) throws KeeperException, IOException {
+    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
+  }
+
+  @Override
+  public void postOpenDeployTasks(final PostOpenDeployContext context)
+      throws KeeperException, IOException {
+    Region r = context.getRegion();
+    long masterSystemTime = context.getMasterSystemTime();
     Preconditions.checkArgument(r instanceof HRegion, "r must be an HRegion");
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
@@ -1896,10 +1904,10 @@ public class HRegionServer extends HasThread implements
          State.OPEN);
     } else if (useZKForAssignment) {
       MetaTableAccessor.updateRegionLocation(getConnection(), r.getRegionInfo(),
-        this.serverName, openSeqNum);
+        this.serverName, openSeqNum, masterSystemTime);
     }
-    if (!useZKForAssignment && !reportRegionStateTransition(
-        TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+    if (!useZKForAssignment && !reportRegionStateTransition(new RegionStateTransitionContext(
+        TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionInfo().getRegionNameAsString());
     }
@@ -1917,6 +1925,17 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    return reportRegionStateTransition(
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
+    TransitionCode code = context.getCode();
+    long openSeqNum = context.getOpenSeqNum();
+    long masterSystemTime = context.getMasterSystemTime();
+    HRegionInfo[] hris = context.getHris();
+
     ReportRegionStateTransitionRequest.Builder builder =
       ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));

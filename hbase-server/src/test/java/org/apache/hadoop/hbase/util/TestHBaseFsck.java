@@ -765,7 +765,7 @@ public class TestHBaseFsck {
       ServerName sn = TEST_UTIL.getHBaseAdmin().getClusterStatus().getServers()
           .toArray(new ServerName[0])[0];
       //add a location with replicaId as 2 (since we already have replicas with replicaid 0 and 1)
-      MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), 2);
+      MetaTableAccessor.addLocation(put, sn, sn.getStartcode(), -1, 2);
       meta.put(put);
       meta.flushCommits();
       // assign the new replica
