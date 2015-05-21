@@ -24,6 +24,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 
 /**
  * ScannerContext instances encapsulate limit tracking AND progress towards those limits during
@@ -96,7 +97,12 @@ public class ScannerContext {
   boolean keepProgress;
   private static boolean DEFAULT_KEEP_PROGRESS = false;
 
-  ScannerContext(boolean keepProgress, LimitFields limitsToCopy) {
+  /**
+   * Tracks the relevant server side metrics during scans. null when metrics should not be tracked
+   */
+  final ServerSideScanMetrics metrics;
+
+  ScannerContext(boolean keepProgress, LimitFields limitsToCopy, boolean trackMetrics) {
     this.limits = new LimitFields();
     if (limitsToCopy != null) this.limits.copy(limitsToCopy);
 
@@ -105,6 +111,21 @@ public class ScannerContext {
 
     this.keepProgress = keepProgress;
     this.scannerState = DEFAULT_STATE;
+    this.metrics = trackMetrics ? new ServerSideScanMetrics() : null;
+  }
+
+  boolean isTrackingMetrics() {
+    return this.metrics != null;
+  }
+
+  /**
+   * Get the metrics instance. Should only be called after a call to {@link #isTrackingMetrics()}
+   * has been made to confirm that metrics are indeed being tracked.
+   * @return {@link ServerSideScanMetrics} instance that is tracking metrics for this scan
+   */
+  ServerSideScanMetrics getMetrics() {
+    assert isTrackingMetrics();
+    return this.metrics;
   }
 
   /**
@@ -331,6 +352,7 @@ public class ScannerContext {
 
   public static final class Builder {
     boolean keepProgress = DEFAULT_KEEP_PROGRESS;
+    boolean trackMetrics = false;
     LimitFields limits = new LimitFields();
 
     private Builder() {
@@ -342,6 +364,11 @@ public class ScannerContext {
 
     public Builder setKeepProgress(boolean keepProgress) {
       this.keepProgress = keepProgress;
+      return this;
+    }
+
+    public Builder setTrackMetrics(boolean trackMetrics) {
+      this.trackMetrics = trackMetrics;
       return this;
     }
 
@@ -363,7 +390,7 @@ public class ScannerContext {
     }
 
     public ScannerContext build() {
-      return new ScannerContext(keepProgress, limits);
+      return new ScannerContext(keepProgress, limits, trackMetrics);
     }
   }
 

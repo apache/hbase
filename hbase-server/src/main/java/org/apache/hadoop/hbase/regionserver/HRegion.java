@@ -5417,7 +5417,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           nextKv = heap.peek();
           moreCellsInRow = moreCellsInRow(nextKv, currentRow, offset, length);
-
+          if (!moreCellsInRow) incrementCountOfRowsScannedMetric(scannerContext);
           if (scannerContext.checkBatchLimit(limitScope)) {
             return scannerContext.setScannerState(NextState.BATCH_LIMIT_REACHED).hasMoreValues();
           } else if (scannerContext.checkSizeLimit(limitScope)) {
@@ -5490,8 +5490,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // progress should be kept.
         if (scannerContext.getKeepProgress()) {
           // Progress should be kept. Reset to initial values seen at start of method invocation.
-          scannerContext
-              .setProgress(initialBatchProgress, initialSizeProgress, initialTimeProgress);
+          scannerContext.setProgress(initialBatchProgress, initialSizeProgress,
+            initialTimeProgress);
         } else {
           scannerContext.clearProgress();
         }
@@ -5556,7 +5556,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           // Check if rowkey filter wants to exclude this row. If so, loop to next.
           // Technically, if we hit limits before on this row, we don't need this call.
           if (filterRowKey(current)) {
-            boolean moreRows = nextRow(current);
+            incrementCountOfRowsFilteredMetric(scannerContext);
+            // Typically the count of rows scanned is incremented inside #populateResult. However,
+            // here we are filtering a row based purely on its row key, preventing us from calling
+            // #populateResult. Thus, perform the necessary increment here to rows scanned metric
+            incrementCountOfRowsScannedMetric(scannerContext);
+            boolean moreRows = nextRow(scannerContext, current);
             if (!moreRows) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
@@ -5605,9 +5610,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             }
           }
 
-          if ((isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE) || filterRow()) {
+          if (isEmptyRow || ret == FilterWrapper.FilterRowRetCode.EXCLUDE || filterRow()) {
+            incrementCountOfRowsFilteredMetric(scannerContext);
             results.clear();
-            boolean moreRows = nextRow(current);
+            boolean moreRows = nextRow(scannerContext, current);
             if (!moreRows) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
             }
@@ -5650,20 +5656,32 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // Double check to prevent empty rows from appearing in result. It could be
         // the case when SingleColumnValueExcludeFilter is used.
         if (results.isEmpty()) {
-          boolean moreRows = nextRow(current);
+          incrementCountOfRowsFilteredMetric(scannerContext);
+          boolean moreRows = nextRow(scannerContext, current);
           if (!moreRows) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
           if (!stopRow) continue;
         }
 
-        // We are done. Return the result.
         if (stopRow) {
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
         } else {
           return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
         }
       }
+    }
+
+    protected void incrementCountOfRowsFilteredMetric(ScannerContext scannerContext) {
+      if (scannerContext == null || !scannerContext.isTrackingMetrics()) return;
+
+      scannerContext.getMetrics().countOfRowsFiltered.incrementAndGet();
+    }
+
+    protected void incrementCountOfRowsScannedMetric(ScannerContext scannerContext) {
+      if (scannerContext == null || !scannerContext.isTrackingMetrics()) return;
+
+      scannerContext.getMetrics().countOfRowsScanned.incrementAndGet();
     }
 
     /**
@@ -5711,7 +5729,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return filter != null && filter.filterRowKey(current);
     }
 
-    protected boolean nextRow(Cell curRowCell) throws IOException {
+    protected boolean nextRow(ScannerContext scannerContext, Cell curRowCell) throws IOException {
       assert this.joinedContinuationRow == null: "Trying to go to next row during joinedHeap read.";
       Cell next;
       while ((next = this.storeHeap.peek()) != null &&
@@ -5719,6 +5737,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.storeHeap.next(MOCKED_LIST);
       }
       resetFilters();
+
       // Calling the hook in CP which allows it to do a fast forward
       return this.region.getCoprocessorHost() == null
           || this.region.getCoprocessorHost()

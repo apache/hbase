@@ -65,7 +65,7 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   }
 
   @Override
-  protected boolean nextRow(Cell curRowCell)
+  protected boolean nextRow(ScannerContext scannerContext, Cell curRowCell)
       throws IOException {
     assert super.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
     byte[] row = new byte[curRowCell.getRowLength()];

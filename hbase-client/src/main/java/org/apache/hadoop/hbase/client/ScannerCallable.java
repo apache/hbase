@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.UnknownHostException;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -202,7 +204,9 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
         setHeartbeatMessage(false);
         try {
           incRPCcallsMetrics();
-          request = RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq);
+          request =
+              RequestConverter.buildScanRequest(scannerId, caching, false, nextCallSeq,
+                this.scanMetrics != null);
           ScanResponse response = null;
           controller = controllerFactory.newController();
           controller.setPriority(getTableName());
@@ -232,6 +236,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
                   + rows + " rows from scanner=" + scannerId);
               }
             }
+            updateServerSideMetrics(response);
             // moreResults is only used for the case where a filter exhausts all elements
             if (response.hasMoreResults() && !response.getMoreResults()) {
               scannerId = -1L;
@@ -341,6 +346,21 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     }
   }
 
+  /**
+   * Use the scan metrics returned by the server to add to the identically named counters in the
+   * client side metrics. If a counter does not exist with the same name as the server side metric,
+   * the attempt to increase the counter will fail.
+   * @param response
+   */
+  private void updateServerSideMetrics(ScanResponse response) {
+    if (this.scanMetrics == null || response == null || !response.hasScanMetrics()) return;
+
+    Map<String, Long> serverMetrics = ResponseConverter.getScanMetrics(response);
+    for (Entry<String, Long> entry : serverMetrics.entrySet()) {
+      this.scanMetrics.addToCounter(entry.getKey(), entry.getValue());
+    }
+  }
+
   private void close() {
     if (this.scannerId == -1L) {
       return;
@@ -348,7 +368,7 @@ public class ScannerCallable extends RegionServerCallable<Result[]> {
     try {
       incRPCcallsMetrics();
       ScanRequest request =
-        RequestConverter.buildScanRequest(this.scannerId, 0, true);
+          RequestConverter.buildScanRequest(this.scannerId, 0, true, this.scanMetrics != null);
       try {
         getStub().scan(null, request);
       } catch (ServiceException se) {
