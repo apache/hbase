@@ -289,10 +289,6 @@ public class MiniZooKeeperCluster {
    * @throws IOException
    */
   public void shutdown() throws IOException {
-    if (!started) {
-      return;
-    }
-
     // shut down all the zk servers
     for (int i = 0; i < standaloneServerFactoryList.size(); i++) {
       NIOServerCnxnFactory standaloneServerFactory =
@@ -304,19 +300,21 @@ public class MiniZooKeeperCluster {
         throw new IOException("Waiting for shutdown of standalone server");
       }
     }
+    standaloneServerFactoryList.clear();
+
     for (ZooKeeperServer zkServer: zooKeeperServers) {
       //explicitly close ZKDatabase since ZookeeperServer does not close them
       zkServer.getZKDatabase().close();
     }
-
-    // clear everything
-    started = false;
-    activeZKServerIndex = 0;
-    standaloneServerFactoryList.clear();
-    clientPortList.clear();
     zooKeeperServers.clear();
 
-    LOG.info("Shutdown MiniZK cluster with all ZK servers");
+    // clear everything
+    if (started) {
+      started = false;
+      activeZKServerIndex = 0;
+      clientPortList.clear();
+      LOG.info("Shutdown MiniZK cluster with all ZK servers");
+    }
   }
 
   /**@return clientPort return clientPort if there is another ZK backup can run
