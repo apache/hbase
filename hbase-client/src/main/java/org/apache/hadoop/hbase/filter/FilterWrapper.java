@@ -102,7 +102,13 @@ final public class FilterWrapper extends Filter {
 
   @Override
   public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException {
+    // No call to this.
     return this.filter.filterRowKey(buffer, offset, length);
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    return this.filter.filterRowKey(cell);
   }
 
   @Override

@@ -83,14 +83,17 @@ public class MultiRowRangeFilter extends FilterBase {
   }
 
   @Override
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+  public boolean filterRowKey(Cell firstRowCell) {
     // If it is the first time of running, calculate the current range index for
     // the row key. If index is out of bound which happens when the start row
     // user sets is after the largest stop row of the ranges, stop the scan.
     // If row key is after the current range, find the next range and update index.
-    if (!initialized || !range.contains(buffer, offset, length)) {
+    int length = firstRowCell.getRowLength();
+    int offset = firstRowCell.getRowOffset();
+    if (!initialized
+        || !range.contains(firstRowCell.getRowArray(), offset, length)) {
       byte[] rowkey = new byte[length];
-      System.arraycopy(buffer, offset, rowkey, 0, length);
+      System.arraycopy(firstRowCell.getRowArray(), firstRowCell.getRowOffset(), rowkey, 0, length);
       index = getNextRangeIndex(rowkey);
       if (index >= rangeList.size()) {
         done = true;
@@ -115,7 +118,7 @@ public class MultiRowRangeFilter extends FilterBase {
         }
         initialized = true;
       } else {
-        if (range.contains(buffer, offset, length)) {
+        if (range.contains(firstRowCell.getRowArray(), offset, length)) {
           currentReturnCode = ReturnCode.INCLUDE;
         } else currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
       }

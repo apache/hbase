@@ -50,6 +50,12 @@ class VisibilityLabelFilter extends FilterBase {
   }
 
   @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
+  }
+
+  @Override
   public ReturnCode filterKeyValue(Cell cell) throws IOException {
     if (curFamily.getBytes() == null
         || (Bytes.compareTo(curFamily.getBytes(), curFamily.getOffset(), curFamily.getLength(),

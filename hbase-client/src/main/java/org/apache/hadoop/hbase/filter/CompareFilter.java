@@ -19,8 +19,10 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -95,6 +97,12 @@ public abstract class CompareFilter extends FilterBase {
    */
   public ByteArrayComparable getComparator() {
     return comparator;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   protected boolean doCompare(final CompareOp compareOp,

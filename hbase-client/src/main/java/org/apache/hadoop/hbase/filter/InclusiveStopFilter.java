@@ -58,17 +58,10 @@ public class InclusiveStopFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    if (buffer == null) {
-      //noinspection RedundantIfStatement
-      if (this.stopRowKey == null) {
-        return true; //filter...
-      }
-      return false;
-    }
+  public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
     int cmp = Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
-      buffer, offset, length);
+        firstRowCell.getRowArray(), firstRowCell.getRowOffset(), firstRowCell.getRowLength());
 
     if(cmp < 0) {
       done = true;

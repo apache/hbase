@@ -115,7 +115,7 @@ public class TestFilterList {
     /* Will pass both */
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
     for (int i = 0; i < MAX_PAGES - 1; i++) {
-      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
         Bytes.toBytes(i));
       assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -124,7 +124,7 @@ public class TestFilterList {
 
     /* Only pass PageFilter */
     rowkey = Bytes.toBytes("z");
-    assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    assertFalse(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -132,7 +132,7 @@ public class TestFilterList {
 
     /* reach MAX_PAGES already, should filter any rows */
     rowkey = Bytes.toBytes("yyy");
-    assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    assertTrue(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(0),
         Bytes.toBytes(0));
     assertFalse(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -140,7 +140,7 @@ public class TestFilterList {
 
     /* We should filter any row */
     rowkey = Bytes.toBytes("z");
-    assertTrue(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+    assertTrue(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     assertTrue(filterMPONE.filterAllRemaining());
   }
 
@@ -179,14 +179,14 @@ public class TestFilterList {
     assertFalse(filterMPALL.filterAllRemaining());
     byte [] rowkey = Bytes.toBytes("yyyyyyyyy");
     for (int i = 0; i < MAX_PAGES - 1; i++) {
-      assertFalse(filterMPALL.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPALL.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
         Bytes.toBytes(i));
       assertTrue(Filter.ReturnCode.INCLUDE == filterMPALL.filterKeyValue(kv));
     }
     filterMPALL.reset();
     rowkey = Bytes.toBytes("z");
-    assertTrue(filterMPALL.filterRowKey(rowkey, 0, rowkey.length));
+    assertTrue(filterMPALL.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
     // Should fail here; row should be filtered out.
     KeyValue kv = new KeyValue(rowkey, rowkey, rowkey, rowkey);
     assertTrue(Filter.ReturnCode.NEXT_ROW == filterMPALL.filterKeyValue(kv));
@@ -229,7 +229,7 @@ public class TestFilterList {
     /* We should be able to fill MAX_PAGES without incrementing page counter */
     byte [] rowkey = Bytes.toBytes("yyyyyyyy");
     for (int i = 0; i < MAX_PAGES; i++) {
-      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
           Bytes.toBytes(i));
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -239,7 +239,7 @@ public class TestFilterList {
     /* Now let's fill the page filter */
     rowkey = Bytes.toBytes("xxxxxxx");
     for (int i = 0; i < MAX_PAGES; i++) {
-      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
           Bytes.toBytes(i));
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -249,7 +249,7 @@ public class TestFilterList {
     /* We should still be able to include even though page filter is at max */
     rowkey = Bytes.toBytes("yyy");
     for (int i = 0; i < MAX_PAGES; i++) {
-      assertFalse(filterMPONE.filterRowKey(rowkey, 0, rowkey.length));
+      assertFalse(filterMPONE.filterRowKey(KeyValueUtil.createFirstOnRow(rowkey)));
       KeyValue kv = new KeyValue(rowkey, rowkey, Bytes.toBytes(i),
           Bytes.toBytes(i));
         assertTrue(Filter.ReturnCode.INCLUDE == filterMPONE.filterKeyValue(kv));
@@ -269,23 +269,23 @@ public class TestFilterList {
   
     FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new PrefixFilter(r1));
-    flist.filterRowKey(r1, 0, r1.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
     assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
     assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
 
     flist.reset();
-    flist.filterRowKey(r2, 0, r2.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r2));
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   
     flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new AlwaysNextColFilter());
     flist.addFilter(new PrefixFilter(r1));
-    flist.filterRowKey(r1, 0, r1.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
     assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
     assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
 
     flist.reset();
-    flist.filterRowKey(r2, 0, r2.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r2));
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   }
 
@@ -302,12 +302,12 @@ public class TestFilterList {
     FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new AlwaysNextColFilter());
     flist.addFilter(new InclusiveStopFilter(r1));
-    flist.filterRowKey(r1, 0, r1.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
     assertEquals(flist.filterKeyValue(new KeyValue(r1,r1,r1)), ReturnCode.INCLUDE);
     assertEquals(flist.filterKeyValue(new KeyValue(r11,r11,r11)), ReturnCode.INCLUDE);
 
     flist.reset();
-    flist.filterRowKey(r2, 0, r2.length);
+    flist.filterRowKey(KeyValueUtil.createFirstOnRow(r2));
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
   }
 

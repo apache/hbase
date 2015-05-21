@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
@@ -44,6 +45,12 @@ public class FirstKeyOnlyFilter extends FilterBase {
 
   public void reset() {
     foundKV = false;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   @Override

@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -75,15 +76,15 @@ public class TestMultiRowRangeFilter {
             new MultiRowRangeFilter.RowRange(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true),
             new MultiRowRangeFilter.RowRange(Bytes.toBytes("d"), true, Bytes.toBytes("e"), true)
     ));
-    filter.filterRowKey(Bytes.toBytes("a"), 0, 1);
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("a")));
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
-    filter.filterRowKey(Bytes.toBytes("b"), 0, 1);
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("b")));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
-    filter.filterRowKey(Bytes.toBytes("c"), 0, 1);
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("c")));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
-    filter.filterRowKey(Bytes.toBytes("d"), 0, 1);
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("d")));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
-    filter.filterRowKey(Bytes.toBytes("e"), 0, 1);
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("e")));
     assertEquals(Filter.ReturnCode.INCLUDE, filter.filterKeyValue(null));
   }
 

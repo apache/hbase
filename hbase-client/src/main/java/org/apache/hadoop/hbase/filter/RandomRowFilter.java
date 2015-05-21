@@ -89,7 +89,7 @@ public class RandomRowFilter extends FilterBase {
   }
 
   @Override
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
+  public boolean filterRowKey(Cell firstRowCell) {
     if (chance < 0) {
       // with a zero chance, the rows is always excluded
       filterOutRow = true;

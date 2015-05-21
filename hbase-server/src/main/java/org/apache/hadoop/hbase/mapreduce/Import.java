@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -108,7 +107,9 @@ public class Import extends Configured implements Tool {
           LOG.trace("Considering the row."
               + Bytes.toString(row.get(), row.getOffset(), row.getLength()));
         }
-        if (filter == null || !filter.filterRowKey(row.get(), row.getOffset(), row.getLength())) {
+        if (filter == null
+            || !filter.filterRowKey(KeyValueUtil.createFirstOnRow(row.get(), row.getOffset(),
+                (short) row.getLength()))) {
           for (Cell kv : value.rawCells()) {
             kv = filterKv(filter, kv);
             // skip if we filtered it out
@@ -163,7 +164,9 @@ public class Import extends Configured implements Tool {
         LOG.trace("Considering the row."
             + Bytes.toString(key.get(), key.getOffset(), key.getLength()));
       }
-      if (filter == null || !filter.filterRowKey(key.get(), key.getOffset(), key.getLength())) {
+      if (filter == null
+          || !filter.filterRowKey(KeyValueUtil.createFirstOnRow(key.get(), key.getOffset(),
+              (short) key.getLength()))) {
         processKV(key, result, context, put, delete);
       }
     }

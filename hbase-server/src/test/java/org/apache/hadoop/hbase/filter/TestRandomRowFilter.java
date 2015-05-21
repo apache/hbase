@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,8 +48,7 @@ public class TestRandomRowFilter {
     int included = 0;
     int max = 1000000;
     for (int i = 0; i < max; i++) {
-      if (!quarterChanceFilter.filterRowKey(Bytes.toBytes("row"), 0, Bytes
-          .toBytes("row").length)) {
+      if (!quarterChanceFilter.filterRowKey(KeyValueUtil.createFirstOnRow(Bytes.toBytes("row")))) {
         included++;
       }
     }

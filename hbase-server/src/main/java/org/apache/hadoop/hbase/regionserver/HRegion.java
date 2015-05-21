@@ -5555,7 +5555,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
           // Check if rowkey filter wants to exclude this row. If so, loop to next.
           // Technically, if we hit limits before on this row, we don't need this call.
-          if (filterRowKey(currentRow, offset, length)) {
+          if (filterRowKey(current)) {
             boolean moreRows = nextRow(current);
             if (!moreRows) {
               return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
@@ -5707,9 +5707,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           && filter.filterRow();
     }
 
-    private boolean filterRowKey(byte[] row, int offset, short length) throws IOException {
-      return filter != null
-          && filter.filterRowKey(row, offset, length);
+    private boolean filterRowKey(Cell current) throws IOException {
+      return filter != null && filter.filterRowKey(current);
     }
 
     protected boolean nextRow(Cell curRowCell) throws IOException {

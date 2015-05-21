@@ -73,6 +73,13 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    boolean value = filter.filterRowKey(cell);
+    changeFAR(value);
+    return value;
+  }
+
+  @Override
   public ReturnCode filterKeyValue(Cell v) throws IOException {
     ReturnCode c = filter.filterKeyValue(v);
     changeFAR(c != ReturnCode.INCLUDE);

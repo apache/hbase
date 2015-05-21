@@ -50,6 +50,12 @@ public class KeyOnlyFilter extends FilterBase {
   public KeyOnlyFilter(boolean lenAsVal) { this.lenAsVal = lenAsVal; }
 
   @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
+  }
+
+  @Override
   public Cell transformCell(Cell cell) {
     return createKeyOnlyCell(cell);
   }

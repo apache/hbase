@@ -22,8 +22,6 @@ package org.apache.hadoop.hbase.filter;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -71,7 +69,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class SingleColumnValueFilter extends FilterBase {
-  private static final Log LOG = LogFactory.getLog(SingleColumnValueFilter.class);
 
   protected byte [] columnFamily;
   protected byte [] columnQualifier;
@@ -166,6 +163,12 @@ public class SingleColumnValueFilter extends FilterBase {
    */
   public byte[] getQualifier() {
     return columnQualifier;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   @Override

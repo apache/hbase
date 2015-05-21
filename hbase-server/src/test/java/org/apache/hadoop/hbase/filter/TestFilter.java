@@ -628,7 +628,7 @@ public class TestFilter {
   /**
    * Tests the the {@link WhileMatchFilter} works in combination with a
    * {@link Filter} that uses the
-   * {@link Filter#filterRowKey(byte[], int, int)} method.
+   * {@link Filter#filterRowKey(Cell)} method.
    *
    * See HBASE-2258.
    *

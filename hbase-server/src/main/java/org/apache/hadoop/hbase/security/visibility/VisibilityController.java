@@ -1072,6 +1072,12 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     }
 
     @Override
+    public boolean filterRowKey(Cell cell) throws IOException {
+      // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+      return false;
+    }
+
+    @Override
     public ReturnCode filterKeyValue(Cell cell) throws IOException {
       List<Tag> putVisTags = new ArrayList<Tag>();
       Byte putCellVisTagsFormat = VisibilityUtils.extractVisibilityTags(cell, putVisTags);

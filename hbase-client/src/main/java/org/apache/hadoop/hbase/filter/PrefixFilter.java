@@ -50,16 +50,16 @@ public class PrefixFilter extends FilterBase {
     return prefix;
   }
 
-  public boolean filterRowKey(byte[] buffer, int offset, int length) {
-    if (buffer == null || this.prefix == null)
+  public boolean filterRowKey(Cell firstRowCell) {
+    if (firstRowCell == null || this.prefix == null)
       return true;
-    if (length < prefix.length)
-      return true;
+    int length = firstRowCell.getRowLength();
+    if (length < prefix.length) return true;
     // if they are equal, return false => pass row
     // else return true, filter row
     // if we are passed the prefix, set flag
-    int cmp = Bytes.compareTo(buffer, offset, this.prefix.length, this.prefix, 0,
-        this.prefix.length);
+    int cmp = Bytes.compareTo(firstRowCell.getRowArray(), firstRowCell.getRowOffset(),
+        this.prefix.length, this.prefix, 0, this.prefix.length);
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;
     }

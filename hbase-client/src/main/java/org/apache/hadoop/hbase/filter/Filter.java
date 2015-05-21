@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
  * <ul>
  *   <li> {@link #reset()} : reset the filter state before filtering a new row. </li>
  *   <li> {@link #filterAllRemaining()}: true means row scan is over; false means keep going. </li>
- *   <li> {@link #filterRowKey(byte[],int,int)}: true means drop this row; false means include.</li>
+ *   <li> {@link #filterRowKey(Cell)}: true means drop this row; false means include.</li>
  *   <li> {@link #filterKeyValue(Cell)}: decides whether to include or exclude this Cell.
  *        See {@link ReturnCode}. </li>
  *   <li> {@link #transformCell(Cell)}: if the Cell is included, let the filter transform the
@@ -78,8 +78,24 @@ public abstract class Filter {
    * @param length length of the row key
    * @return true, remove entire row, false, include the row (maybe).
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Instead use {@link #filterRowKey(Cell)}
    */
+  @Deprecated
   abstract public boolean filterRowKey(byte[] buffer, int offset, int length) throws IOException;
+
+  /**
+   * Filters a row based on the row key. If this returns true, the entire row will be excluded. If
+   * false, each KeyValue in the row will be passed to {@link #filterKeyValue(Cell)} below.
+   *
+   * Concrete implementers can signal a failure condition in their code by throwing an
+   * {@link IOException}.
+   *
+   * @param firstRowCell The first cell coming in the new row
+   * @return true, remove entire row, false, include the row (maybe).
+   * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
+   */
+  abstract public boolean filterRowKey(Cell firstRowCell) throws IOException;
 
   /**
    * If this returns true, the scan will terminate.

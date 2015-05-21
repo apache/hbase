@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.apache.hadoop.hbase.util.Bytes.len;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
@@ -113,6 +114,12 @@ public class ColumnRangeFilter extends FilterBase {
    */
   public boolean getMaxColumnInclusive() {
     return this.maxColumnInclusive;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   @Override

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -61,6 +62,12 @@ public class MultipleColumnPrefixFilter extends FilterBase {
       temp [count++] = prefixes;
     }
     return temp;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   @Override

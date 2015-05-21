@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -71,16 +72,14 @@ public class TestInclusiveStopFilter {
 
   private void stopRowTests(Filter filter) throws Exception {
     assertFalse("Filtering on " + Bytes.toString(GOOD_ROW),
-      filter.filterRowKey(GOOD_ROW, 0, GOOD_ROW.length));
+      filter.filterRowKey(KeyValueUtil.createFirstOnRow(GOOD_ROW)));
     assertFalse("Filtering on " + Bytes.toString(STOP_ROW),
-      filter.filterRowKey(STOP_ROW, 0, STOP_ROW.length));
+      filter.filterRowKey(KeyValueUtil.createFirstOnRow(STOP_ROW)));
     assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW),
-      filter.filterRowKey(PAST_STOP_ROW, 0, PAST_STOP_ROW.length));
+      filter.filterRowKey(KeyValueUtil.createFirstOnRow(PAST_STOP_ROW)));
 
     assertTrue("FilterAllRemaining", filter.filterAllRemaining());
     assertFalse("FilterNotNull", filter.filterRow());
-
-    assertFalse("Filter a null", filter.filterRowKey(null, 0, 0));
   }
 
 }

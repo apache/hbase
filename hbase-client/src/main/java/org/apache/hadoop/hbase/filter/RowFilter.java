@@ -74,8 +74,9 @@ public class RowFilter extends CompareFilter {
   }
 
   @Override
-  public boolean filterRowKey(byte[] data, int offset, int length) {
-    if(doCompare(this.compareOp, this.comparator, data, offset, length)) {
+  public boolean filterRowKey(Cell firstRowCell) {
+    if (doCompare(this.compareOp, this.comparator, firstRowCell.getRowArray(),
+        firstRowCell.getRowOffset(), firstRowCell.getRowLength())) {
       this.filterOutRow = true;
     }
     return this.filterOutRow;

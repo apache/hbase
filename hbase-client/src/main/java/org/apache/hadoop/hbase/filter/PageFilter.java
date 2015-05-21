@@ -61,6 +61,12 @@ public class PageFilter extends FilterBase {
   }
 
   @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
+  }
+
+  @Override
   public ReturnCode filterKeyValue(Cell ignored) throws IOException {
     return ReturnCode.INCLUDE;
   }

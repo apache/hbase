@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
@@ -40,8 +41,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class ColumnPaginationFilter extends FilterBase
-{
+public class ColumnPaginationFilter extends FilterBase {
+
   private int limit = 0;
   private int offset = -1;
   private byte[] columnOffset = null;
@@ -102,6 +103,12 @@ public class ColumnPaginationFilter extends FilterBase
    */
   public byte[] getColumnOffset() {
     return columnOffset;
+  }
+
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    // Impl in FilterBase might do unnecessary copy for Off heap backed Cells.
+    return false;
   }
 
   @Override
