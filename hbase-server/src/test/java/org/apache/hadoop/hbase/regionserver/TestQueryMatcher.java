@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -113,7 +114,7 @@ public class TestQueryMatcher extends HBaseTestCase {
 
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
     KeyValue k = memstore.get(0);
-    qm.setRow(k.getRowArray(), k.getRowOffset(), k.getRowLength());
+    qm.setToNewRow(k);
 
     for (KeyValue kv : memstore){
       actual.add(qm.match(kv));
@@ -178,7 +179,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     List<ScanQueryMatcher.MatchCode> actual = new ArrayList<ScanQueryMatcher.MatchCode>();
 
     KeyValue k = memstore.get(0);
-    qm.setRow(k.getRowArray(), k.getRowOffset(), k.getRowLength());
+    qm.setToNewRow(k);
 
     for(KeyValue kv : memstore) {
       actual.add(qm.match(kv));
@@ -232,7 +233,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     };
 
     KeyValue k = kvs[0];
-    qm.setRow(k.getRowArray(), k.getRowOffset(), k.getRowLength());
+    qm.setToNewRow(k);
 
     List<MatchCode> actual = new ArrayList<MatchCode>(kvs.length);
     for (KeyValue kv : kvs) {
@@ -286,7 +287,7 @@ public class TestQueryMatcher extends HBaseTestCase {
         new KeyValue(row2, fam1, col1, now-10, data)
     };
     KeyValue k = kvs[0];
-    qm.setRow(k.getRowArray(), k.getRowOffset(), k.getRowLength());
+    qm.setToNewRow(k);
 
     List<ScanQueryMatcher.MatchCode> actual =
         new ArrayList<ScanQueryMatcher.MatchCode>(kvs.length);
@@ -340,7 +341,7 @@ public class TestQueryMatcher extends HBaseTestCase {
     byte[] prevRow = null;
     for (byte[] row : rows) {
       if (prevRow == null || !Bytes.equals(prevRow, row)) {
-        qm.setRow(row, 0, (short)row.length);
+        qm.setToNewRow(KeyValueUtil.createFirstOnRow(row));
         prevRow = row;
       }
       actual.add(qm.match(new KeyValue(row, fam2, null, now, Type.Delete)));

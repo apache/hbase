@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
@@ -504,17 +503,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
     // only call setRow if the row changes; avoids confusing the query matcher
     // if scanning intra-row
-    byte[] row = peeked.getRowArray();
-    int offset = peeked.getRowOffset();
-    short length = peeked.getRowLength();
 
     // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
     // rows. Else it is possible we are still traversing the same row so we must perform the row
     // comparison.
-    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.row == null ||
-        !Bytes.equals(row, offset, length, matcher.row, matcher.rowOffset, matcher.rowLength)) {
+    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null ||
+        !CellUtil.matchingRow(peeked, matcher.curCell)) {
       this.countPerRow = 0;
-      matcher.setRow(row, offset, length);
+      matcher.setToNewRow(peeked);
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
@@ -758,18 +754,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Reset the state of the Query Matcher and set to top row.
     // Only reset and call setRow if the row changes; avoids confusing the
     // query matcher if scanning intra-row.
-    Cell kv = heap.peek();
-    if (kv == null) {
-      kv = lastTopKey;
+    Cell cell = heap.peek();
+    if (cell == null) {
+      cell = lastTopKey;
     }
-    byte[] row = kv.getRowArray();
-    int offset = kv.getRowOffset();
-    short length = kv.getRowLength();
-    if ((matcher.row == null) || !Bytes.equals(row, offset, length, matcher.row,
-        matcher.rowOffset, matcher.rowLength)) {
+    if ((matcher.curCell == null) || !CellUtil.matchingRows(cell, matcher.curCell)) {
       this.countPerRow = 0;
       matcher.reset();
-      matcher.setRow(row, offset, length);
+      matcher.setToNewRow(cell);
     }
   }
 

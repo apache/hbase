@@ -22,6 +22,8 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
@@ -32,9 +34,7 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class ScanWildcardColumnTracker implements ColumnTracker {
-  private byte [] columnBuffer = null;
-  private int columnOffset = 0;
-  private int columnLength = 0;
+  private Cell columnCell = null;
   private int currentCount = 0;
   private int maxVersions;
   private int minVersions;
@@ -64,8 +64,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * This receives puts *and* deletes.
    */
   @Override
-  public MatchCode checkColumn(byte[] bytes, int offset, int length, byte type)
-      throws IOException {
+  public MatchCode checkColumn(Cell cell, byte type) throws IOException {
     return MatchCode.INCLUDE;
   }
 
@@ -75,18 +74,17 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
    * take the version of the previous put (so eventually all but the last can be reclaimed).
    */
   @Override
-  public ScanQueryMatcher.MatchCode checkVersions(byte[] bytes, int offset, int length,
+  public ScanQueryMatcher.MatchCode checkVersions(Cell cell,
       long timestamp, byte type, boolean ignoreCount) throws IOException {
 
-    if (columnBuffer == null) {
+    if (columnCell == null) {
       // first iteration.
-      resetBuffer(bytes, offset, length);
+      resetCell(cell);
       if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
       // do not count a delete marker as another version
       return checkVersion(type, timestamp);
     }
-    int cmp = Bytes.compareTo(bytes, offset, length,
-        columnBuffer, columnOffset, columnLength);
+    int cmp = CellComparator.compareQualifiers(cell, this.columnCell);
     if (cmp == 0) {
       if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
 
@@ -102,7 +100,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     // new col > old col
     if (cmp > 0) {
       // switched columns, lets do something.x
-      resetBuffer(bytes, offset, length);
+      resetCell(cell);
       if (ignoreCount) return ScanQueryMatcher.MatchCode.INCLUDE;
       return checkVersion(type, timestamp);
     }
@@ -114,13 +112,11 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     throw new IOException(
         "ScanWildcardColumnTracker.checkColumn ran into a column actually " +
         "smaller than the previous column: " +
-        Bytes.toStringBinary(bytes, offset, length));
+        Bytes.toStringBinary(CellUtil.cloneQualifier(cell)));
   }
 
-  private void resetBuffer(byte[] bytes, int offset, int length) {
-    columnBuffer = bytes;
-    columnOffset = offset;
-    columnLength = length;
+  private void resetCell(Cell columnCell) {
+    this.columnCell = columnCell;
     currentCount = 0;
   }
 
@@ -152,7 +148,7 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
 
   @Override
   public void reset() {
-    columnBuffer = null;
+    columnCell = null;
     resetTSAndType();
   }
 
@@ -194,8 +190,8 @@ public class ScanWildcardColumnTracker implements ColumnTracker {
     return false;
   }
 
-  public MatchCode getNextRowOrNextColumn(byte[] bytes, int offset,
-      int qualLength) {
+  @Override
+  public MatchCode getNextRowOrNextColumn(Cell cell) {
     return MatchCode.SEEK_NEXT_COL;
   }
 
