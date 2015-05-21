@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -64,6 +65,14 @@ public class TestReplicationAdmin {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(HConstants.REPLICATION_ENABLE_KEY, HConstants.REPLICATION_ENABLE_DEFAULT);
     admin = new ReplicationAdmin(conf);
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    if (admin != null) {
+      admin.close();
+    }
+    TEST_UTIL.shutdownMiniZKCluster();
   }
 
   /**
