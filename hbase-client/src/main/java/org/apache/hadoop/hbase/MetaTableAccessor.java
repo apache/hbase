@@ -1563,7 +1563,7 @@ public class MetaTableAccessor {
     Put put = new Put(regionInfo.getRegionName(), now);
     addRegionInfo(put, regionInfo);
     if (sn != null) {
-      addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
+      addLocation(put, sn, openSeqNum, -1, regionInfo.getReplicaId());
     }
     putToMetaTable(connection, put);
     LOG.info("Added daughter " + regionInfo.getEncodedName() +
@@ -1600,7 +1600,7 @@ public class MetaTableAccessor {
       Delete deleteB = makeDeleteFromRegionInfo(regionB);
 
       // The merged is a new region, openSeqNum = 1 is fine.
-      addLocation(putOfMerged, sn, 1, mergedRegion.getReplicaId());
+      addLocation(putOfMerged, sn, 1, -1, mergedRegion.getReplicaId());
 
       // Add empty locations for region replicas of the merged region so that number of replicas can
       // be cached whenever the primary region is looked up from meta
@@ -1644,8 +1644,8 @@ public class MetaTableAccessor {
       Put putA = makePutFromRegionInfo(splitA);
       Put putB = makePutFromRegionInfo(splitB);
 
-      addLocation(putA, sn, 1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
-      addLocation(putB, sn, 1, splitB.getReplicaId());
+      addLocation(putA, sn, 1, -1, splitA.getReplicaId()); //new regions, openSeqNum = 1 is fine.
+      addLocation(putB, sn, 1, -1, splitB.getReplicaId());
 
       // Add empty locations for region replicas of daughters so that number of replicas can be
       // cached whenever the primary region is looked up from meta
@@ -1742,13 +1742,16 @@ public class MetaTableAccessor {
    *
    * @param connection connection we're using
    * @param regionInfo region to update location of
+   * @param openSeqNum the latest sequence number obtained when the region was open
    * @param sn Server name
+   * @param masterSystemTime wall clock time from master if passed in the open region RPC or -1
    * @throws IOException
    */
   public static void updateRegionLocation(Connection connection,
-                                          HRegionInfo regionInfo, ServerName sn, long updateSeqNum)
+                                          HRegionInfo regionInfo, ServerName sn, long openSeqNum,
+                                          long masterSystemTime)
     throws IOException {
-    updateLocation(connection, regionInfo, sn, updateSeqNum);
+    updateLocation(connection, regionInfo, sn, openSeqNum, masterSystemTime);
   }
 
   /**
@@ -1761,16 +1764,21 @@ public class MetaTableAccessor {
    * @param regionInfo region to update location of
    * @param sn Server name
    * @param openSeqNum the latest sequence number obtained when the region was open
+   * @param masterSystemTime wall clock time from master if passed in the open region RPC or -1
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
   private static void updateLocation(final Connection connection,
-                                     HRegionInfo regionInfo, ServerName sn, long openSeqNum)
+                                     HRegionInfo regionInfo, ServerName sn, long openSeqNum,
+                                     long masterSystemTime)
     throws IOException {
+
+    // use the maximum of what master passed us vs local time.
+    long time = Math.max(EnvironmentEdgeManager.currentTime(), masterSystemTime);
+
     // region replicas are kept in the primary region's row
-    long time = EnvironmentEdgeManager.currentTime();
     Put put = new Put(getMetaKeyForRegion(regionInfo), time);
-    addLocation(put, sn, openSeqNum, regionInfo.getReplicaId());
+    addLocation(put, sn, openSeqNum, time, regionInfo.getReplicaId());
     putToMetaTable(connection, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
@@ -1886,15 +1894,16 @@ public class MetaTableAccessor {
     return p;
   }
 
-  public static Put addLocation(final Put p, final ServerName sn, long openSeqNum, int replicaId){
-    // using regionserver's local time as the timestamp of Put.
-    // See: HBASE-11536
-    long now = EnvironmentEdgeManager.currentTime();
-    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), now,
+  public static Put addLocation(final Put p, final ServerName sn, long openSeqNum,
+      long time, int replicaId){
+    if (time <= 0) {
+      time = EnvironmentEdgeManager.currentTime();
+    }
+    p.addImmutable(getCatalogFamily(), getServerColumn(replicaId), time,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), now,
+    p.addImmutable(getCatalogFamily(), getStartCodeColumn(replicaId), time,
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), now,
+    p.addImmutable(getCatalogFamily(), getSeqNumColumn(replicaId), time,
       Bytes.toBytes(openSeqNum));
     return p;
   }

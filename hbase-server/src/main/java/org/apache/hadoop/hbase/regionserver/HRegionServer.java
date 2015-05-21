@@ -1875,6 +1875,14 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public void postOpenDeployTasks(final Region r) throws KeeperException, IOException {
+    postOpenDeployTasks(new PostOpenDeployContext(r, -1));
+  }
+
+  @Override
+  public void postOpenDeployTasks(final PostOpenDeployContext context)
+      throws KeeperException, IOException {
+    Region r = context.getRegion();
+    long masterSystemTime = context.getMasterSystemTime();
     Preconditions.checkArgument(r instanceof HRegion, "r must be an HRegion");
     rpcServices.checkOpen();
     LOG.info("Post open deploy tasks for " + r.getRegionInfo().getRegionNameAsString());
@@ -1896,8 +1904,8 @@ public class HRegionServer extends HasThread implements
     updateRecoveringRegionLastFlushedSequenceId(r);
 
     // Notify master
-    if (!reportRegionStateTransition(
-        TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+    if (!reportRegionStateTransition(new RegionStateTransitionContext(
+        TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
         + r.getRegionInfo().getRegionNameAsString());
     }
@@ -1915,6 +1923,17 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean reportRegionStateTransition(
       TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    return reportRegionStateTransition(
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(final RegionStateTransitionContext context) {
+    TransitionCode code = context.getCode();
+    long openSeqNum = context.getOpenSeqNum();
+    long masterSystemTime = context.getMasterSystemTime();
+    HRegionInfo[] hris = context.getHris();
+
     if (TEST_SKIP_REPORTING_TRANSITION) {
       // This is for testing only in case there is no master
       // to handle the region transition report at all.
@@ -1931,7 +1950,7 @@ public class HRegionServer extends HasThread implements
         } else {
           try {
             MetaTableAccessor.updateRegionLocation(clusterConnection,
-              hris[0], serverName, openSeqNum);
+              hris[0], serverName, openSeqNum, masterSystemTime);
           } catch (IOException e) {
             LOG.info("Failed to update meta", e);
             return false;

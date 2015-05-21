@@ -259,7 +259,7 @@ public class TestRegionServerNoMaster {
     // Let's start the open handler
     HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
 
-    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd));
+    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, -1));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed(HTU, getRS(), hri);

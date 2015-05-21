@@ -106,6 +106,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionReq
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 
 import com.google.protobuf.ByteString;
@@ -785,6 +786,8 @@ public final class RequestConverter {
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
+   // send the master's wall clock time as well, so that the RS can refer to it
+   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
    return builder.build();
  }
 
@@ -806,6 +809,7 @@ public final class RequestConverter {
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
+   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
    return builder.build();
  }
 
