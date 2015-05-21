@@ -44,7 +44,7 @@ public class MobConstants {
   public static final byte[] MOB_REGION_NAME_BYTES = Bytes.toBytes(MOB_REGION_NAME);
 
   public static final String MOB_CLEANER_PERIOD = "hbase.master.mob.ttl.cleaner.period";
-  public static final int DEFAULT_MOB_CLEANER_PERIOD = 24 * 60 * 60 * 1000; // one day
+  public static final int DEFAULT_MOB_CLEANER_PERIOD = 24 * 60 * 60; // one day
 
   public static final String MOB_SWEEP_TOOL_COMPACTION_START_DATE =
       "hbase.mob.sweep.tool.compaction.start.date";
@@ -106,7 +106,7 @@ public class MobConstants {
   public static final String MOB_FILE_COMPACTION_CHORE_PERIOD =
     "hbase.mob.file.compaction.chore.period";
   public static final int DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD =
-    24 * 60 * 60 * 1000 * 7; // a week
+    24 * 60 * 60 * 7; // a week
   public static final String MOB_FILE_COMPACTOR_CLASS_KEY = "hbase.mob.file.compactor.class";
   /**
    * The max number of threads used in MobFileCompactor.

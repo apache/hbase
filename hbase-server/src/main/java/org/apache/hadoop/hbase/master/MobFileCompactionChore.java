@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,9 +45,11 @@ public class MobFileCompactionChore extends ScheduledChore {
   private ExecutorService pool;
 
   public MobFileCompactionChore(HMaster master) {
-    super(master.getServerName() + "-MobFileCompactChore", master,
-        master.getConfiguration().getInt(MobConstants.MOB_FILE_COMPACTION_CHORE_PERIOD,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD));
+    super(master.getServerName() + "-MobFileCompactChore", master, master.getConfiguration()
+      .getInt(MobConstants.MOB_FILE_COMPACTION_CHORE_PERIOD,
+        MobConstants.DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD), master.getConfiguration().getInt(
+      MobConstants.MOB_FILE_COMPACTION_CHORE_PERIOD,
+      MobConstants.DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD), TimeUnit.SECONDS);
     this.master = master;
     this.tableLockManager = master.getTableLockManager();
     this.pool = MobUtils.createMobFileCompactorThreadPool(master.getConfiguration());

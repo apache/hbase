@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,9 +48,10 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
   private ExpiredMobFileCleaner cleaner;
 
   public ExpiredMobFileCleanerChore(HMaster master) {
-    super(master.getServerName() + "-ExpiredMobFileCleanerChore", master,
-        master.getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
-                MobConstants.DEFAULT_MOB_CLEANER_PERIOD));
+    super(master.getServerName() + "-ExpiredMobFileCleanerChore", master, master.getConfiguration()
+      .getInt(MobConstants.MOB_CLEANER_PERIOD, MobConstants.DEFAULT_MOB_CLEANER_PERIOD), master
+      .getConfiguration().getInt(MobConstants.MOB_CLEANER_PERIOD,
+        MobConstants.DEFAULT_MOB_CLEANER_PERIOD), TimeUnit.SECONDS);
     this.master = master;
     this.tableLockManager = master.getTableLockManager();
     cleaner = new ExpiredMobFileCleaner();

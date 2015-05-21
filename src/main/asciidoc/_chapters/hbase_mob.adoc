@@ -166,10 +166,10 @@ HBase MOB currently relies on a MapReduce job called the Sweeper tool for optimi
     </description>
 </property>
 <property>
-    <name>hbase.mob.cleaner.interval</name>
-    <value>86400000</value>
+    <name>hbase.master.mob.ttl.cleaner.period</name>
+    <value>86400</value>
     <description>
-      The period that ExpiredMobFileCleaner runs. The unit is millisecond.
+      The period that ExpiredMobFileCleanerChore runs. The unit is second.
       The default value is one day.
     </description>
 </property>

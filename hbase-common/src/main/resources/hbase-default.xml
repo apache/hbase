@@ -1598,9 +1598,9 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.master.mob.ttl.cleaner.period</name>
-    <value>86400000</value>
+    <value>86400</value>
     <description>
-      The period that ExpiredMobFileCleanerChore runs. The unit is millisecond.
+      The period that ExpiredMobFileCleanerChore runs. The unit is second.
       The default value is one day.
     </description>
   </property>
@@ -1635,9 +1635,9 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.mob.file.compaction.chore.period</name>
-    <value>604800000</value>
+    <value>604800</value>
     <description>
-      The period that MobFileCompactionChore runs. The unit is millisecond.
+      The period that MobFileCompactionChore runs. The unit is second.
       The default value is one week.
     </description>
   </property>
