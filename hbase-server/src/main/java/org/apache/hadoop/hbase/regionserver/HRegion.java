@@ -1942,10 +1942,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * Should the memstore be flushed now
    */
-  boolean shouldFlush() {
+  boolean shouldFlush(final StringBuffer whyFlush) {
+    whyFlush.setLength(0);
     // This is a rough measure.
     if (this.maxFlushedSeqId > 0
           && (this.maxFlushedSeqId + this.flushPerChanges < this.sequenceId.get())) {
+      whyFlush.append("more than max edits, " + this.flushPerChanges + ", since last flush");
       return true;
     }
     long modifiedFlushCheckInterval = flushCheckInterval;
@@ -1966,6 +1968,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     for (Store s : getStores()) {
       if (s.timeOfOldestEdit() < now - modifiedFlushCheckInterval) {
         // we have an old enough edit in the memstore, flush
+        whyFlush.append(s.toString() + " has an old edit so flush to free WALs");
         return true;
       }
     }
