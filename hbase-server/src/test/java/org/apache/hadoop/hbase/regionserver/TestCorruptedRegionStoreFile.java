@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -54,6 +55,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 @Category(LargeTests.class)
+@Ignore("See HBASE-13744")
 public class TestCorruptedRegionStoreFile {
   private static final Log LOG = LogFactory.getLog(TestCorruptedRegionStoreFile.class);
 
