@@ -361,12 +361,10 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       do {
         hasMore = scanner.next(cells, scannerContext);
         for (Cell cell : cells) {
-          // TODO remove this after the new code are introduced.
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
           // write the mob cell to the mob file.
-          writer.append(kv);
+          writer.append(cell);
           // write the new reference cell to the store file.
-          KeyValue reference = MobUtils.createMobRefKeyValue(kv, fileName, tableNameTag);
+          KeyValue reference = MobUtils.createMobRefKeyValue(cell, fileName, tableNameTag);
           refFileWriter.append(reference);
           mobCells++;
         }
@@ -468,9 +466,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       do {
         hasMore = scanner.next(cells, scannerContext);
         for (Cell cell : cells) {
-          // TODO remove this after the new code are introduced.
-          KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-          writer.append(kv);
+          writer.append(cell);
         }
         cells.clear();
       } while (hasMore);

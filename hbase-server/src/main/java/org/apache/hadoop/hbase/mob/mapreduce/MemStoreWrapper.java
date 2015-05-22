@@ -34,9 +34,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.BufferedMutator;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -140,8 +138,7 @@ public class MemStoreWrapper {
     KeyValueScanner scanner = snapshot.getScanner();
     Cell cell = null;
     while (null != (cell = scanner.next())) {
-      KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-      mobFileWriter.append(kv);
+      mobFileWriter.append(cell);
     }
     scanner.close();
     // Write out the log sequence number that corresponds to this output

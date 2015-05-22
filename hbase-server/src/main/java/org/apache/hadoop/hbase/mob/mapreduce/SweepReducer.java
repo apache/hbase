@@ -73,8 +73,8 @@ import org.apache.zookeeper.KeeperException;
  * This reducer merges the small mob files into bigger ones, and write visited
  * names of mob files to a sequence file which is used by the sweep job to delete
  * the unused mob files.
- * The key of the input is a file name, the value is a collection of KeyValue where
- * the KeyValue is the actual cell (its format is valueLength + fileName) in HBase.
+ * The key of the input is a file name, the value is a collection of KeyValues
+ * (the value format of KeyValue is valueLength + fileName) in HBase.
  * In this reducer, we could know how many cells exist in HBase for a mob file.
  * If the existCellSize/mobFileSize < compactionRatio, this mob
  * file needs to be merged.

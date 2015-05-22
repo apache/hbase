@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -175,19 +174,18 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
             // If we know that this KV is going to be included always, then let us
             // set its memstoreTS to 0. This will help us save space when writing to
             // disk.
-            KeyValue kv = KeyValueUtil.ensureKeyValue(c);
-            if (kv.getValueLength() <= mobCellValueSizeThreshold || MobUtils.isMobReferenceCell(kv)
-                || kv.getTypeByte() != KeyValue.Type.Put.getCode()) {
-              writer.append(kv);
+            if (c.getValueLength() <= mobCellValueSizeThreshold || MobUtils.isMobReferenceCell(c)
+                || c.getTypeByte() != KeyValue.Type.Put.getCode()) {
+              writer.append(c);
             } else {
               // append the original keyValue in the mob file.
-              mobFileWriter.append(kv);
-              mobSize += kv.getValueLength();
+              mobFileWriter.append(c);
+              mobSize += c.getValueLength();
               mobCount++;
 
               // append the tags to the KeyValue.
               // The key is same, the value is the filename of the mob file
-              KeyValue reference = MobUtils.createMobRefKeyValue(kv, fileName, tableNameTag);
+              KeyValue reference = MobUtils.createMobRefKeyValue(c, fileName, tableNameTag);
               writer.append(reference);
             }
           }
