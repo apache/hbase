@@ -929,9 +929,10 @@ public class TestDefaultMemStore extends TestCase {
       edge.setCurrentTimeMillis(1234);
       s.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
       edge.setCurrentTimeMillis(1234 + 100);
-      assertTrue(region.shouldFlush() == false);
+      StringBuffer sb = new StringBuffer();
+      assertTrue(region.shouldFlush(sb) == false);
       edge.setCurrentTimeMillis(1234 + 10000);
-      assertTrue(region.shouldFlush() == expected);
+      assertTrue(region.shouldFlush(sb) == expected);
     } finally {
       EnvironmentEdgeManager.reset();
     }
@@ -962,9 +963,10 @@ public class TestDefaultMemStore extends TestCase {
             wFactory.getWAL(hri.getEncodedNameAsBytes()));
     HRegion.addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
-    assertTrue(meta.shouldFlush() == false);
+    StringBuffer sb = new StringBuffer();
+    assertTrue(meta.shouldFlush(sb) == false);
     edge.setCurrentTimeMillis(edge.currentTime() + HRegion.META_CACHE_FLUSH_INTERVAL + 1);
-    assertTrue(meta.shouldFlush() == true);
+    assertTrue(meta.shouldFlush(sb) == true);
   }
 
   private class EnvironmentEdgeForMemstoreTest implements EnvironmentEdge {
