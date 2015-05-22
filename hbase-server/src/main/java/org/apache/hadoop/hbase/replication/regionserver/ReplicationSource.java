@@ -131,8 +131,6 @@ public class ReplicationSource extends Thread
   private ReplicationEndpoint replicationEndpoint;
   // A filter (or a chain of filters) for the WAL entries.
   private WALEntryFilter walEntryFilter;
-  // Context for ReplicationEndpoint#replicate()
-  private ReplicationEndpoint.ReplicateContext replicateContext;
   // throttler
   private ReplicationThrottler throttler;
 
@@ -187,8 +185,6 @@ public class ReplicationSource extends Thread
     this.peerId = this.replicationQueueInfo.getPeerId();
     this.logQueueWarnThreshold = this.conf.getInt("replication.source.log.queue.warn", 2);
     this.replicationEndpoint = replicationEndpoint;
-
-    this.replicateContext = new ReplicationEndpoint.ReplicateContext();
   }
 
   private void decorateConf() {
@@ -689,6 +685,8 @@ public class ReplicationSource extends Thread
             this.throttler.resetStartTick();
           }
         }
+        // create replicateContext here, so the entries can be GC'd upon return from this call stack
+        ReplicationEndpoint.ReplicateContext replicateContext = new ReplicationEndpoint.ReplicateContext();
         replicateContext.setEntries(entries).setSize(currentSize);
 
         long startTimeNs = System.nanoTime();
