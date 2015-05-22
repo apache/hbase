@@ -91,6 +91,8 @@ import org.apache.hadoop.util.ToolRunner;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ExportSnapshot extends Configured implements Tool {
+  public static final String NAME = "exportsnapshot";
+
   private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
 
   private static final String MR_NUM_MAPS = "mapreduce.job.maps";
