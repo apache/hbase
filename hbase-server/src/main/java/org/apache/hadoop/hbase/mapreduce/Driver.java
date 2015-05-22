@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.mapreduce.replication.VerifyReplication;
+import org.apache.hadoop.hbase.snapshot.ExportSnapshot;
 import org.apache.hadoop.util.ProgramDriver;
 
 /**
@@ -37,21 +38,26 @@ public class Driver {
    */
   public static void main(String[] args) throws Throwable {
     ProgramDriver pgd = new ProgramDriver();
+
     pgd.addClass(RowCounter.NAME, RowCounter.class,
-      "Count rows in HBase table");
+      "Count rows in HBase table.");
     pgd.addClass(CellCounter.NAME, CellCounter.class,
-      "Count cells in HBase table");
+      "Count cells in HBase table.");
     pgd.addClass(Export.NAME, Export.class, "Write table data to HDFS.");
     pgd.addClass(Import.NAME, Import.class, "Import data written by Export.");
     pgd.addClass(ImportTsv.NAME, ImportTsv.class, "Import data in TSV format.");
     pgd.addClass(LoadIncrementalHFiles.NAME, LoadIncrementalHFiles.class,
                  "Complete a bulk data load.");
     pgd.addClass(CopyTable.NAME, CopyTable.class,
-        "Export a table from local cluster to peer cluster");
+        "Export a table from local cluster to peer cluster.");
     pgd.addClass(VerifyReplication.NAME, VerifyReplication.class, "Compare" +
         " the data from tables in two different clusters. WARNING: It" +
         " doesn't work for incrementColumnValues'd cells since the" +
         " timestamp is changed after being appended to the log.");
+    pgd.addClass(WALPlayer.NAME, WALPlayer.class, "Replay WAL files.");
+    pgd.addClass(ExportSnapshot.NAME, ExportSnapshot.class, "Export" +
+        " the specific snapshot to a given FileSystem.");
+
     ProgramDriver.class.getMethod("driver", new Class [] {String[].class}).
       invoke(pgd, new Object[]{args});
   }
