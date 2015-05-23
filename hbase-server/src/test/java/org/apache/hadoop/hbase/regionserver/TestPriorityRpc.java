@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -90,12 +91,13 @@ public class TestPriorityRpc {
     RSRpcServices mockRpc = Mockito.mock(RSRpcServices.class);
     Mockito.when(mockRS.getRSRpcServices()).thenReturn(mockRpc);
     HRegionInfo mockRegionInfo = Mockito.mock(HRegionInfo.class);
-    Mockito.when(mockRpc.getRegion((RegionSpecifier)Mockito.any())).thenReturn(mockRegion);
+    Mockito.when(mockRpc.getRegion((RegionSpecifier) Mockito.any())).thenReturn(mockRegion);
     Mockito.when(mockRegion.getRegionInfo()).thenReturn(mockRegionInfo);
     Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(true);
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
-    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, getRequest));
+    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, getRequest,
+      User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
   }
 
   @Test
@@ -108,7 +110,28 @@ public class TestPriorityRpc {
     headerBuilder.setMethodName("foo");
     RequestHeader header = headerBuilder.build();
     PriorityFunction qosFunc = regionServer.rpcServices.getPriority();
-    assertEquals(HConstants.NORMAL_QOS, qosFunc.getPriority(header, null));
+    assertEquals(HConstants.NORMAL_QOS, qosFunc.getPriority(header, null,
+      User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
+  }
+
+  @Test
+  public void testQosFunctionForRequestCalledBySuperUser() throws Exception {
+    RequestHeader.Builder headerBuilder = RequestHeader.newBuilder();
+    headerBuilder.setMethodName("foo");
+    RequestHeader header = headerBuilder.build();
+    PriorityFunction qosFunc = regionServer.rpcServices.getPriority();
+
+    //test superusers
+    ((AnnotationReadingPriorityFunction) qosFunc).superUsers.add("samplesuperuser");
+    assertEquals(HConstants.ADMIN_QOS, qosFunc.getPriority(header, null,
+      User.createUserForTesting(regionServer.conf, "samplesuperuser",
+        new String[]{"somegroup"})));
+
+    //test supergroups
+    ((AnnotationReadingPriorityFunction) qosFunc).superGroups.add("samplesupergroup");
+    assertEquals(HConstants.ADMIN_QOS, qosFunc.getPriority(header, null,
+      User.createUserForTesting(regionServer.conf, "regularuser",
+        new String[]{"samplesupergroup"})));
   }
 
   @Test
@@ -130,7 +153,8 @@ public class TestPriorityRpc {
     Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(false);
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
-    int qos = priority.getPriority(header, scanRequest);
+    int qos = priority.getPriority(header, scanRequest,
+      User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"}));
     assertTrue ("" + qos, qos == HConstants.NORMAL_QOS);
 
     //build a scan request with scannerID
@@ -148,10 +172,12 @@ public class TestPriorityRpc {
     // Presume type.
     ((AnnotationReadingPriorityFunction)priority).setRegionServer(mockRS);
 
-    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, scanRequest));
+    assertEquals(HConstants.SYSTEMTABLE_QOS, priority.getPriority(header, scanRequest,
+      User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
 
     //the same as above but with non-meta region
     Mockito.when(mockRegionInfo.isSystemTable()).thenReturn(false);
-    assertEquals(HConstants.NORMAL_QOS, priority.getPriority(header, scanRequest));
+    assertEquals(HConstants.NORMAL_QOS, priority.getPriority(header, scanRequest,
+      User.createUserForTesting(regionServer.conf, "someuser", new String[]{"somegroup"})));
   }
 }

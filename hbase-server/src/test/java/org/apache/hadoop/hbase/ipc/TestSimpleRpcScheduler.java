@@ -27,6 +27,7 @@ import com.google.protobuf.Message;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
@@ -125,7 +126,8 @@ public class TestSimpleRpcScheduler {
     scheduler.init(CONTEXT);
     scheduler.start();
     for (CallRunner task : tasks) {
-      when(qosFunction.getPriority((RPCProtos.RequestHeader) anyObject(), (Message) anyObject()))
+      when(qosFunction.getPriority((RPCProtos.RequestHeader) anyObject(),
+        (Message) anyObject(), (User) anyObject()))
           .thenReturn(qos.get(task));
       scheduler.dispatch(task);
     }
@@ -157,7 +159,8 @@ public class TestSimpleRpcScheduler {
     schedConf.set(SimpleRpcScheduler.CALL_QUEUE_TYPE_CONF_KEY, queueType);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RequestHeader.class), any(Message.class)))
+    when(priority.getPriority(any(RequestHeader.class),
+      any(Message.class), any(User.class)))
       .thenReturn(HConstants.NORMAL_QOS);
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 1, 1, 1, priority,
@@ -235,8 +238,8 @@ public class TestSimpleRpcScheduler {
     schedConf.setFloat(SimpleRpcScheduler.CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
 
     PriorityFunction priority = mock(PriorityFunction.class);
-    when(priority.getPriority(any(RequestHeader.class), any(Message.class)))
-      .thenReturn(HConstants.NORMAL_QOS);
+    when(priority.getPriority(any(RequestHeader.class), any(Message.class),
+      any(User.class))).thenReturn(HConstants.NORMAL_QOS);
 
     RpcScheduler scheduler = new SimpleRpcScheduler(schedConf, 3, 1, 1, priority,
                                                     HConstants.QOS_THRESHOLD);

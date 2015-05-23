@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Function to figure priority of incoming request.
@@ -34,9 +35,10 @@ public interface PriorityFunction {
    * The returned value is mainly used to select the dispatch queue.
    * @param header
    * @param param
+   * @param user
    * @return Priority of this request.
    */
-  int getPriority(RequestHeader header, Message param);
+  int getPriority(RequestHeader header, Message param, User user);
 
   /**
    * Returns the deadline of the specified request.

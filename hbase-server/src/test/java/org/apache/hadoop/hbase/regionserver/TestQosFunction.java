@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
@@ -55,11 +56,12 @@ public class TestQosFunction {
       new AnnotationReadingPriorityFunction(rpcServices, RSRpcServices.class);
 
     // Set method name in pb style with the method name capitalized.
-    checkMethod("ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);
+    checkMethod(conf, "ReplicateWALEntry", HConstants.REPLICATION_QOS, qosFunction);
     // Set method name in pb style with the method name capitalized.
-    checkMethod("OpenRegion", HConstants.ADMIN_QOS, qosFunction);
+    checkMethod(conf, "OpenRegion", HConstants.ADMIN_QOS, qosFunction);
     // Check multi works.
-    checkMethod("Multi", HConstants.NORMAL_QOS, qosFunction, MultiRequest.getDefaultInstance());
+    checkMethod(conf, "Multi", HConstants.NORMAL_QOS, qosFunction,
+        MultiRequest.getDefaultInstance());
 
   }
 
@@ -103,19 +105,21 @@ public class TestQosFunction {
             .addTransition(normalTransition).build();
 
     final String reportFuncName = "ReportRegionStateTransition";
-    checkMethod(reportFuncName, HConstants.SYSTEMTABLE_QOS, qosFunction, metaTransitionRequest);
-    checkMethod(reportFuncName, HConstants.NORMAL_QOS, qosFunction, normalTransitionRequest);
+    checkMethod(conf, reportFuncName, HConstants.SYSTEMTABLE_QOS, qosFunction,
+        metaTransitionRequest);
+    checkMethod(conf, reportFuncName, HConstants.NORMAL_QOS, qosFunction, normalTransitionRequest);
   }
 
-  private void checkMethod(final String methodName, final int expected,
+  private void checkMethod(Configuration conf, final String methodName, final int expected,
       final AnnotationReadingPriorityFunction qosf) {
-    checkMethod(methodName, expected, qosf, null);
+    checkMethod(conf, methodName, expected, qosf, null);
   }
 
-  private void checkMethod(final String methodName, final int expected,
+  private void checkMethod(Configuration conf, final String methodName, final int expected,
       final AnnotationReadingPriorityFunction qosf, final Message param) {
     RequestHeader.Builder builder = RequestHeader.newBuilder();
     builder.setMethodName(methodName);
-    assertEquals(methodName, expected, qosf.getPriority(builder.build(), param));
+    assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,
+      User.createUserForTesting(conf, "someuser", new String[]{"somegroup"})));
   }
 }
