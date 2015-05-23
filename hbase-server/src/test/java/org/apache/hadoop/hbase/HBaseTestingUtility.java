@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
+import org.apache.hadoop.hbase.client.HConnectionManager;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -2763,10 +2764,13 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // online in the regionserver is the very last thing done and can take a little while to happen.
     // Below we do a get.  The get will retry if a NotServeringRegionException or a
     // RegionOpeningException.  It is crass but when done all will be online.
+    HConnection connection = HConnectionManager.createConnection(conf);
     try {
-      Canary.sniff(admin, TableName.valueOf(table));
+      Canary.sniff(connection, TableName.valueOf(table));
     } catch (Exception e) {
       throw new IOException(e);
+    } finally {
+      connection.close();
     }
   }
 

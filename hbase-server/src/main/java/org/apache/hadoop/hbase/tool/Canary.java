@@ -591,7 +591,7 @@ public final class Canary implements Tool {
             String[] tables = generateMonitorTables(this.targets);
             this.initialized = true;
             for (String table : tables) {
-              taskFutures.addAll(Canary.sniff(admin, sink, table, executor));
+              taskFutures.addAll(Canary.sniff(connection, sink, table, executor));
             }
           } else {
             taskFutures.addAll(sniff());
@@ -655,7 +655,7 @@ public final class Canary implements Tool {
       List<Future<Void>> taskFutures = new LinkedList<Future<Void>>();
       for (HTableDescriptor table : admin.listTables()) {
         if (admin.isTableEnabled(table.getTableName())) {
-          taskFutures.addAll(Canary.sniff(admin, sink, table, executor));
+          taskFutures.addAll(Canary.sniff(connection, sink, table.getTableName(), executor));
         }
       }
       return taskFutures;
@@ -666,9 +666,9 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  public static void sniff(final HBaseAdmin admin, TableName tableName) throws Exception {
+  public static void sniff(final HConnection connection, TableName tableName) throws Exception {
     List<Future<Void>> taskFutures =
-        Canary.sniff(admin, new StdOutSink(), tableName.getNameAsString(),
+        Canary.sniff(connection, new StdOutSink(), tableName.getNameAsString(),
           new ScheduledThreadPoolExecutor(1));
     for (Future<Void> future : taskFutures) {
       future.get();
@@ -679,32 +679,36 @@ public final class Canary implements Tool {
    * Canary entry point for specified table.
    * @throws Exception
    */
-  private static List<Future<Void>> sniff(final HBaseAdmin admin, final Sink sink, String tableName,
-      ExecutorService executor) throws Exception {
-    if (admin.isTableEnabled(TableName.valueOf(tableName))) {
-      return Canary.sniff(admin, sink, admin.getTableDescriptor(TableName.valueOf(tableName)),
-        executor);
-    } else {
-      LOG.warn(String.format("Table %s is not enabled", tableName));
+  private static List<Future<Void>> sniff(final HConnection connection, final Sink sink,
+    String tableName, ExecutorService executor) throws Exception {
+    HBaseAdmin admin = new HBaseAdmin(connection);
+    try {
+      if (admin.isTableEnabled(TableName.valueOf(tableName))) {
+        return Canary.sniff(connection, sink, TableName.valueOf(tableName), executor);
+      } else {
+        LOG.warn(String.format("Table %s is not enabled", tableName));
+      }
+      return new LinkedList<Future<Void>>();
+    } finally {
+      admin.close();
     }
-    return new LinkedList<Future<Void>>();
   }
 
   /*
    * Loops over regions that owns this table, and output some information abouts the state.
    */
-  private static List<Future<Void>> sniff(final HBaseAdmin admin, final Sink sink,
-      HTableDescriptor tableDesc, ExecutorService executor) throws Exception {
+  private static List<Future<Void>> sniff(final HConnection connection, final Sink sink,
+      TableName tableName, ExecutorService executor) throws Exception {
     HTableInterface table = null;
     try {
-      table = admin.getConnection().getTable(tableDesc.getTableName());
+      table = connection.getTable(tableName);
     } catch (TableNotFoundException e) {
       return new ArrayList<Future<Void>>();
     }
     List<RegionTask> tasks = new ArrayList<RegionTask>();
     try {
-      for (HRegionInfo region : admin.getTableRegions(tableDesc.getTableName())) {
-        tasks.add(new RegionTask(admin.getConnection(), region, sink));
+      for (HRegionInfo region : ((HTable)table).getRegionLocations().keySet()) {
+        tasks.add(new RegionTask(connection, region, sink));
       }
     } finally {
       table.close();
