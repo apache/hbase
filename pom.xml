@@ -595,6 +595,13 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
+        <dependencies>
+          <dependency>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>extra-enforcer-rules</artifactId>
+            <version>${extra.enforcer.version}</version>
+          </dependency>
+        </dependencies>
         <!-- version set by parent -->
         <configuration>
           <rules>
@@ -618,6 +625,16 @@
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
               </message>
             </requireJavaVersion>
+            <enforceBytecodeVersion>
+              <maxJdkVersion>${compileSource}</maxJdkVersion>
+              <message>HBase has unsupported dependencies.
+  HBase requires that all dependencies be compiled with version ${compileSource} or earlier
+  of the JDK to properly build from source.  You appear to be using a newer dependency. You can use
+  either "mvn -version" or "mvn enforcer:display-info" to verify what version is active.
+  Non-release builds can temporarily build with a newer JDK version by setting the
+  'compileSource' property (eg. mvn -DcompileSource=1.8 clean package).
+              </message>
+            </enforceBytecodeVersion>
           </rules>
         </configuration>
         <executions>
@@ -1132,6 +1149,7 @@
     <surefire.secondPartGroups>org.apache.hadoop.hbase.MediumTests</surefire.secondPartGroups>
     <test.output.tofile>true</test.output.tofile>
     <surefire.timeout>900</surefire.timeout>
+    <extra.enforcer.version>1.0-beta-3</extra.enforcer.version>
   </properties>
 
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
