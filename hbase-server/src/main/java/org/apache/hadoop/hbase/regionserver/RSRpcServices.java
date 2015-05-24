@@ -165,6 +165,7 @@ import org.apache.hadoop.hbase.regionserver.handler.OpenMetaHandler;
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1010,8 +1011,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   }
 
   @Override
-  public int getPriority(RequestHeader header, Message param) {
-    return priority.getPriority(header, param);
+  public int getPriority(RequestHeader header, Message param, User user) {
+    return priority.getPriority(header, param, user);
   }
 
   @Override

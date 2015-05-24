@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,6 +43,7 @@ import com.google.common.collect.Sets;
 public class TestMasterPriorityRpc {
   private HMaster master = null;
   private PriorityFunction priority = null;
+  private User user = null;
 
   private final Set<String> ADMIN_METHODS = Sets.newHashSet("GetLastFlushedSequenceId",
       "RegionServerReport", "RegionServerStartup", "ReportRSFatalError",
@@ -57,6 +59,7 @@ public class TestMasterPriorityRpc {
     CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(conf);
     master = HMaster.constructMaster(HMaster.class, conf, cp);
     priority = master.getMasterRpcServices().getPriority();
+    user = User.createUserForTesting(conf, "someuser", new String[]{"somegroup"});
   }
 
   /**
@@ -68,8 +71,8 @@ public class TestMasterPriorityRpc {
    *          The expected priority.
    */
   private void assertPriority(String methodName, int expectedPriority) {
-    assertEquals(methodName + " had unexpected priority", expectedPriority,
-        priority.getPriority(RequestHeader.newBuilder().setMethodName(methodName).build(), null));
+    assertEquals(methodName + " had unexpected priority", expectedPriority, priority.getPriority(
+        RequestHeader.newBuilder().setMethodName(methodName).build(), null, user));
   }
 
   @Test
