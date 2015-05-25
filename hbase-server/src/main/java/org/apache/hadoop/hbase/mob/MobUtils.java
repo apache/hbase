@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -72,7 +71,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -493,7 +492,8 @@ public class MobUtils {
       .withCompressTags(family.isCompressTags()).withChecksumType(HStore.getChecksumType(conf))
       .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
-      .withEncryptionContext(cryptoContext).build();
+      .withEncryptionContext(cryptoContext).withCreateTime(EnvironmentEdgeManager.currentTime())
+      .build();
     Path tempPath = new Path(basePath, UUID.randomUUID().toString().replaceAll("-", ""));
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs).withFilePath(tempPath)
       .withComparator(CellComparator.COMPARATOR).withBloomType(family.getBloomFilterType())
@@ -574,10 +574,12 @@ public class MobUtils {
     throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
       .withIncludesMvcc(true).withIncludesTags(true)
-      .withChecksumType(ChecksumType.getDefaultChecksumType())
-      .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).withBlockSize(family.getBlocksize())
+      .withCompressTags(family.isCompressTags())
+      .withChecksumType(HStore.getChecksumType(conf))
+      .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
       .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
-      .withEncryptionContext(cryptoContext).build();
+      .withEncryptionContext(cryptoContext)
+      .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs)
       .withFilePath(new Path(basePath, mobFileName.getFileName()))

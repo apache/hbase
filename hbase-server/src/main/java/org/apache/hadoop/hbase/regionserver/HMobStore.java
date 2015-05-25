@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.TableLockManager;
@@ -60,7 +59,7 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 
@@ -250,11 +249,13 @@ public class HMobStore extends HStore {
     final CacheConfig writerCacheConf = mobCacheConfig;
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
         .withIncludesMvcc(true).withIncludesTags(true)
-        .withChecksumType(ChecksumType.getDefaultChecksumType())
-        .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
-        .withBlockSize(getFamily().getBlocksize())
+        .withCompressTags(family.isCompressTags())
+        .withChecksumType(checksumType)
+        .withBytesPerCheckSum(bytesPerChecksum)
+        .withBlockSize(blocksize)
         .withHBaseCheckSum(true).withDataBlockEncoding(getFamily().getDataBlockEncoding())
-        .withEncryptionContext(cryptoContext).build();
+        .withEncryptionContext(cryptoContext)
+        .withCreateTime(EnvironmentEdgeManager.currentTime()).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf, region.getFilesystem())
         .withFilePath(new Path(basePath, mobFileName.getFileName()))

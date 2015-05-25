@@ -172,12 +172,12 @@ public class HStore implements Store {
   private final Set<ChangedReadersObserver> changedReaderObservers =
     Collections.newSetFromMap(new ConcurrentHashMap<ChangedReadersObserver, Boolean>());
 
-  private final int blocksize;
+  protected final int blocksize;
   private HFileDataBlockEncoder dataBlockEncoder;
 
   /** Checksum configuration */
-  private ChecksumType checksumType;
-  private int bytesPerChecksum;
+  protected ChecksumType checksumType;
+  protected int bytesPerChecksum;
 
   // Comparing KeyValues
   private final CellComparator comparator;
