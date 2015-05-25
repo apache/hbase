@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
@@ -1673,12 +1672,13 @@ public class WALSplitter {
       int maxSize = 0;
       List<Pair<HRegionLocation, Entry>> maxQueue = null;
       synchronized (this.serverToBufferQueueMap) {
-        for (String key : this.serverToBufferQueueMap.keySet()) {
-          List<Pair<HRegionLocation, Entry>> curQueue = this.serverToBufferQueueMap.get(key);
+        for (Map.Entry<String, List<Pair<HRegionLocation, Entry>>> entry :
+            this.serverToBufferQueueMap.entrySet()) {
+          List<Pair<HRegionLocation, Entry>> curQueue = entry.getValue();
           if (curQueue.size() > maxSize) {
             maxSize = curQueue.size();
             maxQueue = curQueue;
-            maxLocKey = key;
+            maxLocKey = entry.getKey();
           }
         }
         if (maxSize < minBatchSize
@@ -1969,11 +1969,12 @@ public class WALSplitter {
       int curSize = 0;
       List<Pair<HRegionLocation, Entry>> curQueue = null;
       synchronized (this.serverToBufferQueueMap) {
-        for (String locationKey : this.serverToBufferQueueMap.keySet()) {
-          curQueue = this.serverToBufferQueueMap.get(locationKey);
+        for (Map.Entry<String, List<Pair<HRegionLocation, Entry>>> entry :
+                this.serverToBufferQueueMap.entrySet()) {
+          curQueue = entry.getValue();
           if (!curQueue.isEmpty()) {
             curSize = curQueue.size();
-            curLoc = locationKey;
+            curLoc = entry.getKey();
             break;
           }
         }
@@ -2043,12 +2044,12 @@ public class WALSplitter {
           }
         } finally {
           synchronized (writers) {
-            for (String locationKey : writers.keySet()) {
-              RegionServerWriter tmpW = writers.get(locationKey);
+            for (Map.Entry<String, RegionServerWriter> entry : writers.entrySet()) {
+              RegionServerWriter tmpW = entry.getValue();
               try {
                 tmpW.close();
               } catch (IOException ioe) {
-                LOG.error("Couldn't close writer for region server:" + locationKey, ioe);
+                LOG.error("Couldn't close writer for region server:" + entry.getKey(), ioe);
                 result.add(ioe);
               }
             }
@@ -2056,8 +2057,9 @@ public class WALSplitter {
 
           // close connections
           synchronized (this.tableNameToHConnectionMap) {
-            for (TableName tableName : this.tableNameToHConnectionMap.keySet()) {
-              HConnection hconn = this.tableNameToHConnectionMap.get(tableName);
+            for (Map.Entry<TableName,HConnection> entry :
+                    this.tableNameToHConnectionMap.entrySet()) {
+              HConnection hconn = entry.getValue();
               try {
                 hconn.clearRegionCache();
                 hconn.close();

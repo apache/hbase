@@ -677,8 +677,8 @@ public class ServerManager {
       LOG.info("AssignmentManager hasn't finished failover cleanup; waiting");
     }
 
-    for(ServerName tmpServerName : requeuedDeadServers.keySet()){
-      processDeadServer(tmpServerName, requeuedDeadServers.get(tmpServerName));
+    for (Map.Entry<ServerName, Boolean> entry : requeuedDeadServers.entrySet()) {
+      processDeadServer(entry.getKey(), entry.getValue());
     }
     requeuedDeadServers.clear();
   }

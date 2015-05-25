@@ -886,16 +886,16 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     // step 1: set partitioning and pruning
     Set<Bytes> reservedKeys = new TreeSet<Bytes>();
     Set<Bytes> userKeys = new TreeSet<Bytes>();
-    for (Bytes k : values.keySet()) {
-      if (k == null || k.get() == null) continue;
-      String key = Bytes.toString(k.get());
+    for (Map.Entry<Bytes, Bytes> entry : values.entrySet()) {
+      if (entry.getKey() == null || entry.getKey().get() == null) continue;
+      String key = Bytes.toString(entry.getKey().get());
       // in this section, print out reserved keywords + coprocessor info
-      if (!RESERVED_KEYWORDS.contains(k) && !key.startsWith("coprocessor$")) {
-        userKeys.add(k);
+      if (!RESERVED_KEYWORDS.contains(entry.getKey()) && !key.startsWith("coprocessor$")) {
+        userKeys.add(entry.getKey());
         continue;
       }
       // only print out IS_ROOT/IS_META if true
-      String value = Bytes.toString(values.get(k).get());
+      String value = Bytes.toString(entry.getValue().get());
       if (key.equalsIgnoreCase(IS_ROOT) || key.equalsIgnoreCase(IS_META)) {
         if (Boolean.valueOf(value) == false) continue;
       }
@@ -903,7 +903,7 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       if (printDefaults
           || !DEFAULT_VALUES.containsKey(key)
           || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
-        reservedKeys.add(k);
+        reservedKeys.add(entry.getKey());
       }
     }
 

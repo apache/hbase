@@ -920,13 +920,13 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     boolean hasConfigKeys = false;
 
     // print all reserved keys first
-    for (Bytes k : values.keySet()) {
-      if (!RESERVED_KEYWORDS.contains(k)) {
+    for (Map.Entry<Bytes, Bytes> entry : values.entrySet()) {
+      if (!RESERVED_KEYWORDS.contains(entry.getKey())) {
         hasConfigKeys = true;
         continue;
       }
-      String key = Bytes.toString(k.get());
-      String value = Bytes.toStringBinary(values.get(k).get());
+      String key = Bytes.toString(entry.getKey().get());
+      String value = Bytes.toStringBinary(entry.getValue().get());
       if (printDefaults
           || !DEFAULT_VALUES.containsKey(key)
           || !DEFAULT_VALUES.get(key).equalsIgnoreCase(value)) {
