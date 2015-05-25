@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -2825,6 +2826,111 @@ public class TestVisibilityLabelsWithDeletes {
           current.getRowLength(), row1, 0, row1.length));
       assertEquals(current.getTimestamp(), 123l);
     }
+  }
+
+  @Test
+  public void testDeleteWithNoVisibilitiesForPutsAndDeletes() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    Put p = new Put (Bytes.toBytes("row1"));
+    p.addColumn(fam, qual, value);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    table.put(p);
+    p = new Put (Bytes.toBytes("row1"));
+    p.addColumn(fam, qual1, value);
+    table.put(p);
+    p = new Put (Bytes.toBytes("row2"));
+    p.addColumn(fam, qual, value);
+    table.put(p);
+    p = new Put (Bytes.toBytes("row2"));
+    p.addColumn(fam, qual1, value);
+    table.put(p);
+    Delete d = new Delete(Bytes.toBytes("row1"));
+    table.delete(d);
+    Get g = new Get(Bytes.toBytes("row1"));
+    g.setMaxVersions();
+    g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+    Result result = table.get(g);
+    assertEquals(0, result.rawCells().length);
+
+    p = new Put (Bytes.toBytes("row1"));
+    p.addColumn(fam, qual, value);
+    table.put(p);
+    result = table.get(g);
+    assertEquals(1, result.rawCells().length);
+  }
+
+  @Test
+  public void testDeleteWithFamilyDeletesOfSameTsButDifferentVisibilities() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    Admin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    Table table = TEST_UTIL.getConnection().getTable(tableName);
+    long t1 = 1234L;
+    CellVisibility cellVisibility1 = new CellVisibility(SECRET);
+    CellVisibility cellVisibility2 = new CellVisibility(PRIVATE);
+    // Cell row1:info:qual:1234 with visibility SECRET
+    Put p = new Put(row1);
+    p.addColumn(fam, qual, t1, value);
+    p.setCellVisibility(cellVisibility1);
+    table.put(p);
+
+    // Cell row1:info:qual1:1234 with visibility PRIVATE
+    p = new Put(row1);
+    p.addColumn(fam, qual1, t1, value);
+    p.setCellVisibility(cellVisibility2);
+    table.put(p);
+
+    Delete d = new Delete(row1);
+    d.addFamily(fam, t1);
+    d.setCellVisibility(cellVisibility2);
+    table.delete(d);
+    d = new Delete(row1);
+    d.addFamily(fam, t1);
+    d.setCellVisibility(cellVisibility1);
+    table.delete(d);
+
+    Get g = new Get(row1);
+    g.setMaxVersions();
+    g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+    Result result = table.get(g);
+    assertEquals(0, result.rawCells().length);
+
+    // Cell row2:info:qual:1234 with visibility SECRET
+    p = new Put(row2);
+    p.addColumn(fam, qual, t1, value);
+    p.setCellVisibility(cellVisibility1);
+    table.put(p);
+
+    // Cell row2:info:qual1:1234 with visibility PRIVATE
+    p = new Put(row2);
+    p.addColumn(fam, qual1, t1, value);
+    p.setCellVisibility(cellVisibility2);
+    table.put(p);
+
+    d = new Delete(row2);
+    d.addFamilyVersion(fam, t1);
+    d.setCellVisibility(cellVisibility2);
+    table.delete(d);
+    d = new Delete(row2);
+    d.addFamilyVersion(fam, t1);
+    d.setCellVisibility(cellVisibility1);
+    table.delete(d);
+
+    g = new Get(row2);
+    g.setMaxVersions();
+    g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+    result = table.get(g);
+    assertEquals(0, result.rawCells().length);
   }
 
   public static Table createTableAndWriteDataWithLabels(TableName tableName, String... labelExps)
