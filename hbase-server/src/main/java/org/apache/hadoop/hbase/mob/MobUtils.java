@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.Key;
+import java.security.KeyException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -41,11 +43,21 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.crypto.Cipher;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -57,7 +69,13 @@ import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
-import org.apache.hadoop.hbase.util.*;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ChecksumType;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
+import org.apache.hadoop.hbase.util.Threads;
 
 /**
  * The mob utilities
@@ -439,17 +457,19 @@ public class MobUtils {
    * @param compression The compression algorithm.
    * @param startKey The hex string of the start key.
    * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFile.Writer createWriter(Configuration conf, FileSystem fs,
       HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
-      Compression.Algorithm compression, String startKey, CacheConfig cacheConfig)
+      Compression.Algorithm compression, String startKey, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext)
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID().toString()
         .replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig);
+      cacheConfig, cryptoContext);
   }
 
   /**
@@ -460,17 +480,20 @@ public class MobUtils {
    * @param basePath The basic path for a temp directory.
    * @param maxKeyCount The key count.
    * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFile.Writer createRefFileWriter(Configuration conf, FileSystem fs,
-    HColumnDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig)
+    HColumnDescriptor family, Path basePath, long maxKeyCount, CacheConfig cacheConfig,
+    Encryption.Context cryptoContext)
     throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(true)
       .withIncludesTags(true).withCompression(family.getCompactionCompression())
       .withCompressTags(family.isCompressTags()).withChecksumType(HStore.getChecksumType(conf))
       .withBytesPerCheckSum(HStore.getBytesPerChecksum(conf)).withBlockSize(family.getBlocksize())
-      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
+      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
+      .withEncryptionContext(cryptoContext).build();
     Path tempPath = new Path(basePath, UUID.randomUUID().toString().replaceAll("-", ""));
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs).withFilePath(tempPath)
       .withComparator(CellComparator.COMPARATOR).withBloomType(family.getBloomFilterType())
@@ -489,17 +512,19 @@ public class MobUtils {
    * @param compression The compression algorithm.
    * @param startKey The start key.
    * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
    * @return The writer for the mob file.
    * @throws IOException
    */
   public static StoreFile.Writer createWriter(Configuration conf, FileSystem fs,
       HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig)
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext)
       throws IOException {
     MobFileName mobFileName = MobFileName.create(startKey, date, UUID.randomUUID().toString()
         .replaceAll("-", ""));
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig);
+      cacheConfig, cryptoContext);
   }
 
   /**
@@ -513,18 +538,20 @@ public class MobUtils {
    * @param compression The compression algorithm.
    * @param startKey The start key.
    * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
    * @return The writer for the del file.
    * @throws IOException
    */
   public static StoreFile.Writer createDelFileWriter(Configuration conf, FileSystem fs,
       HColumnDescriptor family, String date, Path basePath, long maxKeyCount,
-      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig)
+      Compression.Algorithm compression, byte[] startKey, CacheConfig cacheConfig,
+      Encryption.Context cryptoContext)
       throws IOException {
     String suffix = UUID
       .randomUUID().toString().replaceAll("-", "") + "_del";
     MobFileName mobFileName = MobFileName.create(startKey, date, suffix);
     return createWriter(conf, fs, family, mobFileName, basePath, maxKeyCount, compression,
-      cacheConfig);
+      cacheConfig, cryptoContext);
   }
 
   /**
@@ -537,17 +564,20 @@ public class MobUtils {
    * @param maxKeyCount The key count.
    * @param compression The compression algorithm.
    * @param cacheConfig The current cache config.
+   * @param cryptoContext The encryption context.
    * @return The writer for the mob file.
    * @throws IOException
    */
   private static StoreFile.Writer createWriter(Configuration conf, FileSystem fs,
     HColumnDescriptor family, MobFileName mobFileName, Path basePath, long maxKeyCount,
-    Compression.Algorithm compression, CacheConfig cacheConfig) throws IOException {
+    Compression.Algorithm compression, CacheConfig cacheConfig, Encryption.Context cryptoContext)
+    throws IOException {
     HFileContext hFileContext = new HFileContextBuilder().withCompression(compression)
       .withIncludesMvcc(true).withIncludesTags(true)
       .withChecksumType(ChecksumType.getDefaultChecksumType())
       .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM).withBlockSize(family.getBlocksize())
-      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding()).build();
+      .withHBaseCheckSum(true).withDataBlockEncoding(family.getDataBlockEncoding())
+      .withEncryptionContext(cryptoContext).build();
 
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, cacheConfig, fs)
       .withFilePath(new Path(basePath, mobFileName.getFileName()))
@@ -738,5 +768,73 @@ public class MobUtils {
       });
     ((ThreadPoolExecutor) pool).allowCoreThreadTimeOut(true);
     return pool;
+  }
+
+  /**
+   * Creates the encyption context.
+   * @param conf The current configuration.
+   * @param family The current column descriptor.
+   * @return The encryption context.
+   * @throws IOException
+   */
+  public static Encryption.Context createEncryptionContext(Configuration conf,
+    HColumnDescriptor family) throws IOException {
+    // TODO the code is repeated, and needs to be unified.
+    Encryption.Context cryptoContext = Encryption.Context.NONE;
+    String cipherName = family.getEncryptionType();
+    if (cipherName != null) {
+      Cipher cipher;
+      Key key;
+      byte[] keyBytes = family.getEncryptionKey();
+      if (keyBytes != null) {
+        // Family provides specific key material
+        String masterKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User
+          .getCurrent().getShortName());
+        try {
+          // First try the master key
+          key = EncryptionUtil.unwrapKey(conf, masterKeyName, keyBytes);
+        } catch (KeyException e) {
+          // If the current master key fails to unwrap, try the alternate, if
+          // one is configured
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Unable to unwrap key with current master key '" + masterKeyName + "'");
+          }
+          String alternateKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
+          if (alternateKeyName != null) {
+            try {
+              key = EncryptionUtil.unwrapKey(conf, alternateKeyName, keyBytes);
+            } catch (KeyException ex) {
+              throw new IOException(ex);
+            }
+          } else {
+            throw new IOException(e);
+          }
+        }
+        // Use the algorithm the key wants
+        cipher = Encryption.getCipher(conf, key.getAlgorithm());
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + key.getAlgorithm() + "' is not available");
+        }
+        // Fail if misconfigured
+        // We use the encryption type specified in the column schema as a sanity check on
+        // what the wrapped key is telling us
+        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
+          throw new RuntimeException("Encryption for family '" + family.getNameAsString()
+            + "' configured with type '" + cipherName + "' but key specifies algorithm '"
+            + cipher.getName() + "'");
+        }
+      } else {
+        // Family does not provide key material, create a random key
+        cipher = Encryption.getCipher(conf, cipherName);
+        if (cipher == null) {
+          throw new RuntimeException("Cipher '" + cipherName + "' is not available");
+        }
+        key = cipher.getRandomKey();
+      }
+      cryptoContext = Encryption.newContext(conf);
+      cryptoContext.setCipher(cipher);
+      cryptoContext.setKey(key);
+    }
+    return cryptoContext;
   }
 }

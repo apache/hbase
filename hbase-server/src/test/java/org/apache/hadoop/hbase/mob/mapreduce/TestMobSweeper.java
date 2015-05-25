@@ -20,26 +20,40 @@ package org.apache.hadoop.hbase.mob.mapreduce;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.security.Key;
+import java.security.SecureRandom;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+
+import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -48,7 +62,7 @@ import org.junit.experimental.categories.Category;
 @Category(MediumTests.class)
 public class TestMobSweeper {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private String tableName;
+  private TableName tableName;
   private final static String row = "row_";
   private final static String family = "family";
   private final static String column = "column";
@@ -61,9 +75,14 @@ public class TestMobSweeper {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
-    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 15); // avoid major compactions
-    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.max", 30); // avoid major compactions
+    // avoid major compactions
+    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.min", 15);
+    // avoid major compactions
+    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compaction.max", 30);
     TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+      KeyProviderForTesting.class.getName());
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 
     TEST_UTIL.startMiniCluster();
 
@@ -76,36 +95,34 @@ public class TestMobSweeper {
     TEST_UTIL.shutdownMiniMapReduceCluster();
   }
 
-  @SuppressWarnings("deprecation")
   @Before
   public void setUp() throws Exception {
     long tid = System.currentTimeMillis();
-    tableName = "testSweeper" + tid;
+    tableName = TableName.valueOf("testSweeper" + tid);
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
+    hcd.setMobThreshold(0);
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
 
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc);
     Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
-    TableName tn = TableName.valueOf(tableName);
-    table = c.getTable(tn);
-    bufMut = c.getBufferedMutator(tn);
+    table = c.getTable(tableName);
+    bufMut = c.getBufferedMutator(tableName);
   }
 
   @After
   public void tearDown() throws Exception {
-    admin.disableTable(TableName.valueOf(tableName));
-    admin.deleteTable(TableName.valueOf(tableName));
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
     admin.close();
   }
 
-  private Path getMobFamilyPath(Configuration conf, String tableNameStr,
+  private Path getMobFamilyPath(Configuration conf, TableName tableName,
                                 String familyName) {
-    Path p = new Path(MobUtils.getMobRegionPath(conf, TableName.valueOf(tableNameStr)),
+    Path p = new Path(MobUtils.getMobRegionPath(conf, tableName),
             familyName);
     return p;
   }
@@ -117,7 +134,7 @@ public class TestMobSweeper {
     return sb.toString();
   }
 
-  private void generateMobTable(Admin admin, BufferedMutator table, String tableName, int count,
+  private void generateMobTable(Admin admin, BufferedMutator table, TableName tableName, int count,
     int flushStep) throws IOException, InterruptedException {
     if (count <= 0 || flushStep <= 0)
       return;
@@ -131,11 +148,11 @@ public class TestMobSweeper {
       table.mutate(put);
       if (index++ % flushStep == 0) {
         table.flush();
-        admin.flush(TableName.valueOf(tableName));
+        admin.flush(tableName);
       }
     }
     table.flush();
-    admin.flush(TableName.valueOf(tableName));
+    admin.flush(tableName);
   }
 
   @Test
@@ -173,7 +190,7 @@ public class TestMobSweeper {
     conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 24 * 60 * 60 * 1000);
 
     String[] args = new String[2];
-    args[0] = tableName;
+    args[0] = tableName.getNameAsString();
     args[1] = family;
     assertEquals(0, ToolRunner.run(conf, new Sweeper(), args));
 
@@ -208,8 +225,8 @@ public class TestMobSweeper {
             .equalsIgnoreCase(mobFilesSet.iterator().next()));
   }
 
-  private void testCompactionDelaySweeperInternal(Table table, BufferedMutator bufMut, String tableName)
-    throws Exception {
+  private void testCompactionDelaySweeperInternal(Table table, BufferedMutator bufMut,
+    TableName tableName, boolean encrypted) throws Exception {
     int count = 10;
     //create table and generate 10 mob files
     generateMobTable(admin, bufMut, tableName, count, 1);
@@ -242,7 +259,7 @@ public class TestMobSweeper {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setLong(SweepJob.MOB_SWEEP_JOB_DELAY, 0);
     String[] args = new String[2];
-    args[0] = tableName;
+    args[0] = tableName.getNameAsString();
     args[1] = family;
     assertEquals(0, ToolRunner.run(conf, new Sweeper(), args));
 
@@ -268,18 +285,61 @@ public class TestMobSweeper {
     assertEquals(1, mobFilesScannedAfterJob.size());
 
     fileStatuses = TEST_UTIL.getTestFileSystem().listStatus(mobFamilyPath);
+    Path lastFilePath = null;
     mobFilesSet = new TreeSet<String>();
     for (FileStatus status : fileStatuses) {
       mobFilesSet.add(status.getPath().getName());
+      lastFilePath = status.getPath();
     }
     assertEquals(1, mobFilesSet.size());
     assertEquals(true, mobFilesScannedAfterJob.iterator().next()
             .equalsIgnoreCase(mobFilesSet.iterator().next()));
+    if (encrypted) {
+      // assert the encryption context
+      CacheConfig cacheConf = new CacheConfig(conf);
+      StoreFile sf = new StoreFile(TEST_UTIL.getTestFileSystem(), lastFilePath, conf, cacheConf,
+        BloomType.NONE);
+      HFile.Reader reader = sf.createReader().getHFileReader();
+      byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
+      Assert.assertTrue(null != encryptionKey);
+      Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
+        .equals(HConstants.CIPHER_AES));
+    }
+  }
+
+  @Test
+  public void testCompactionDelaySweeperWithEncryption() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    SecureRandom rng = new SecureRandom();
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    rng.nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key cfKey = new SecretKeySpec(keyBytes, algorithm);
+    byte[] encryptionKey = EncryptionUtil.wrapKey(conf,
+      conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()), cfKey);
+    String tableNameAsString = "testCompactionDelaySweeperWithEncryption";
+    TableName tableName = TableName.valueOf(tableNameAsString);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(family);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(0);
+    hcd.setMaxVersions(4);
+    hcd.setEncryptionType(algorithm);
+    hcd.setEncryptionKey(encryptionKey);
+    desc.addFamily(hcd);
+    admin.createTable(desc);
+    Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
+    BufferedMutator bufMut = c.getBufferedMutator(tableName);
+    Table table = c.getTable(tableName);
+    testCompactionDelaySweeperInternal(table, bufMut, tableName, true);
+    table.close();
+    admin.disableTable(tableName);
+    admin.deleteTable(tableName);
   }
 
   @Test
   public void testCompactionDelaySweeper() throws Exception {
-    testCompactionDelaySweeperInternal(table, bufMut, tableName);
+    testCompactionDelaySweeperInternal(table, bufMut, tableName, false);
   }
 
   @Test
@@ -292,14 +352,14 @@ public class TestMobSweeper {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMobEnabled(true);
-    hcd.setMobThreshold(3L);
+    hcd.setMobThreshold(0);
     hcd.setMaxVersions(4);
     desc.addFamily(hcd);
     admin.createTable(desc);
     Connection c = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     BufferedMutator bufMut = c.getBufferedMutator(tableName);
     Table table = c.getTable(tableName);
-    testCompactionDelaySweeperInternal(table, bufMut, tableNameAsString);
+    testCompactionDelaySweeperInternal(table, bufMut, tableName, false);
     table.close();
     admin.disableTable(tableName);
     admin.deleteTable(tableName);

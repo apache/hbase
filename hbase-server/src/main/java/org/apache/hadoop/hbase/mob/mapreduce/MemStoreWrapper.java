@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -75,6 +76,7 @@ public class MemStoreWrapper {
   private Path mobFamilyDir;
   private FileSystem fs;
   private CacheConfig cacheConfig;
+  private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public MemStoreWrapper(Context context, FileSystem fs, BufferedMutator table, HColumnDescriptor hcd,
       MemStore memstore, CacheConfig cacheConfig) throws IOException {
@@ -88,6 +90,7 @@ public class MemStoreWrapper {
     flushSize = this.conf.getLong(MobConstants.MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE,
         MobConstants.DEFAULT_MOB_SWEEP_TOOL_COMPACTION_MEMSTORE_FLUSH_SIZE);
     mobFamilyDir = MobUtils.getMobFamilyPath(conf, table.getName(), hcd.getNameAsString());
+    cryptoContext = MobUtils.createEncryptionContext(conf, hcd);
   }
 
   public void setPartitionId(SweepPartitionId partitionId) {
@@ -127,9 +130,9 @@ public class MemStoreWrapper {
     }
     // generate the files into a temp directory.
     String tempPathString = context.getConfiguration().get(SweepJob.WORKING_FILES_DIR_KEY);
-    StoreFile.Writer mobFileWriter = MobUtils.createWriter(conf, fs, hcd,
-        partitionId.getDate(), new Path(tempPathString), snapshot.getCellsCount(),
-        hcd.getCompactionCompression(), partitionId.getStartKey(), cacheConfig);
+    StoreFile.Writer mobFileWriter = MobUtils.createWriter(conf, fs, hcd, partitionId.getDate(),
+      new Path(tempPathString), snapshot.getCellsCount(), hcd.getCompactionCompression(),
+      partitionId.getStartKey(), cacheConfig, cryptoContext);
 
     String relativePath = mobFileWriter.getPath().getName();
     LOG.info("Create files under a temp directory " + mobFileWriter.getPath().toString());

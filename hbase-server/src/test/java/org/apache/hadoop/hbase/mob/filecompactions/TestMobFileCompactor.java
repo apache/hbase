@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase.mob.filecompactions;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.security.Key;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +34,8 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,22 +44,42 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.client.*;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.io.crypto.aes.AES;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -91,7 +115,11 @@ public class TestMobFileCompactor {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
-    TEST_UTIL.getConfiguration().setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, 5000);
+    TEST_UTIL.getConfiguration()
+      .setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, 5000);
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+      KeyProviderForTesting.class.getName());
+    TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     TEST_UTIL.startMiniCluster(1);
     pool = createThreadPool(TEST_UTIL.getConfiguration());
     conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), pool);
@@ -208,6 +236,57 @@ public class TestMobFileCompactor {
     assertEquals("After compaction: mob file count", regionNum,
       countFiles(tableName, true, family1));
     assertEquals("After compaction: del file count", 0, countFiles(tableName, false, family1));
+  }
+
+  @Test
+  public void testCompactionWithoutDelFilesAndWithEncryption() throws Exception {
+    resetConf();
+    Configuration conf = TEST_UTIL.getConfiguration();
+    SecureRandom rng = new SecureRandom();
+    byte[] keyBytes = new byte[AES.KEY_LENGTH];
+    rng.nextBytes(keyBytes);
+    String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
+    Key cfKey = new SecretKeySpec(keyBytes, algorithm);
+    byte[] encryptionKey = EncryptionUtil.wrapKey(conf,
+      conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()), cfKey);
+    String tableNameAsString = "testCompactionWithoutDelFilesAndWithEncryption";
+    TableName tableName = TableName.valueOf(tableNameAsString);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(family1);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(0);
+    hcd.setMaxVersions(4);
+    hcd.setEncryptionType(algorithm);
+    hcd.setEncryptionKey(encryptionKey);
+    HColumnDescriptor hcd2 = new HColumnDescriptor(family2);
+    hcd2.setMobEnabled(true);
+    hcd2.setMobThreshold(0);
+    hcd2.setMaxVersions(4);
+    desc.addFamily(hcd);
+    desc.addFamily(hcd2);
+    admin.createTable(desc, getSplitKeys());
+    Table hTable = conn.getTable(tableName);
+    BufferedMutator bufMut = conn.getBufferedMutator(tableName);
+    int count = 4;
+    // generate mob files
+    loadData(admin, bufMut, tableName, count, rowNumPerFile);
+    int rowNumPerRegion = count*rowNumPerFile;
+
+    assertEquals("Before compaction: mob rows count", regionNum*rowNumPerRegion,
+        countMobRows(hTable));
+    assertEquals("Before compaction: mob file count", regionNum * count,
+      countFiles(tableName, true, family1));
+    assertEquals("Before compaction: del file count", 0, countFiles(tableName, false, family1));
+
+    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd, pool);
+    compactor.compact();
+
+    assertEquals("After compaction: mob rows count", regionNum*rowNumPerRegion,
+        countMobRows(hTable));
+    assertEquals("After compaction: mob file count", regionNum,
+      countFiles(tableName, true, family1));
+    assertEquals("After compaction: del file count", 0, countFiles(tableName, false, family1));
+    Assert.assertTrue(verifyEncryption(tableName, family1));
   }
 
   @Test
@@ -630,6 +709,27 @@ public class TestMobFileCompactor {
       }
     }
     return count;
+  }
+
+  private boolean verifyEncryption(TableName tableName, String familyName) throws IOException {
+    Path mobDirPath = MobUtils.getMobFamilyPath(MobUtils.getMobRegionPath(conf, tableName),
+      familyName);
+    boolean hasFiles = false;
+    if (fs.exists(mobDirPath)) {
+      FileStatus[] files = fs.listStatus(mobDirPath);
+      hasFiles = files != null && files.length > 0;
+      Assert.assertTrue(hasFiles);
+      Path path = files[0].getPath();
+      CacheConfig cacheConf = new CacheConfig(conf);
+      StoreFile sf = new StoreFile(TEST_UTIL.getTestFileSystem(), path, conf, cacheConf,
+        BloomType.NONE);
+      HFile.Reader reader = sf.createReader().getHFileReader();
+      byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
+      Assert.assertTrue(null != encryptionKey);
+      Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
+        .equals(HConstants.CIPHER_AES));
+    }
+    return hasFiles;
   }
 
   /**

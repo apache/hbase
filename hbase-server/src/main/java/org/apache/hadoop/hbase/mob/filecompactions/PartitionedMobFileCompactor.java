@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.mob.MobConstants;
@@ -72,9 +73,10 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
   private Path bulkloadPath;
   private CacheConfig compactionCacheConfig;
   private Tag tableNameTag;
+  private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   public PartitionedMobFileCompactor(Configuration conf, FileSystem fs, TableName tableName,
-    HColumnDescriptor column, ExecutorService pool) {
+    HColumnDescriptor column, ExecutorService pool) throws IOException {
     super(conf, fs, tableName, column, pool);
     mergeableSize = conf.getLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD,
       MobConstants.DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD);
@@ -92,6 +94,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     compactionCacheConfig = new CacheConfig(copyOfConf);
     tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, tableName.getName());
+    cryptoContext = MobUtils.createEncryptionContext(copyOfConf, column);
   }
 
   @Override
@@ -347,12 +350,12 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
     try {
       writer = MobUtils.createWriter(conf, fs, column, partition.getPartitionId().getDate(),
         tempPath, Long.MAX_VALUE, column.getCompactionCompression(), partition.getPartitionId()
-          .getStartKey(), compactionCacheConfig);
+          .getStartKey(), compactionCacheConfig, cryptoContext);
       filePath = writer.getPath();
       byte[] fileName = Bytes.toBytes(filePath.getName());
       // create a temp file and open a writer for it in the bulkloadPath
       refFileWriter = MobUtils.createRefFileWriter(conf, fs, column, bulkloadColumnPath, fileInfo
-        .getSecond().longValue(), compactionCacheConfig);
+        .getSecond().longValue(), compactionCacheConfig, cryptoContext);
       refFilePath = refFileWriter.getPath();
       List<Cell> cells = new ArrayList<Cell>();
       boolean hasMore = false;
@@ -457,7 +460,8 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
     try {
       writer = MobUtils.createDelFileWriter(conf, fs, column,
         MobUtils.formatDate(new Date(request.selectionTime)), tempPath, Long.MAX_VALUE,
-        column.getCompactionCompression(), HConstants.EMPTY_START_ROW, compactionCacheConfig);
+        column.getCompactionCompression(), HConstants.EMPTY_START_ROW, compactionCacheConfig,
+        cryptoContext);
       filePath = writer.getPath();
       List<Cell> cells = new ArrayList<Cell>();
       boolean hasMore = false;
