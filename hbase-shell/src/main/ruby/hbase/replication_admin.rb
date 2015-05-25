@@ -108,7 +108,7 @@ module Hbase
     def list_replicated_tables(regex = ".*")
       pattern = java.util.regex.Pattern.compile(regex)
       list = @replication_admin.listReplicated()
-      list.select {|s| pattern.match(s.get(ReplicationAdmin.TNAME))}
+      list.select {|s| pattern.match(s.get(ReplicationAdmin::TNAME))}
     end
 
     #----------------------------------------------------------------------------------------------
