@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
@@ -2970,6 +2971,119 @@ public class TestVisibilityLabelsWithDeletes {
       if (table != null) {
         table.close();
       }
+    }
+  }
+
+  @Test
+  public void testDeleteWithNoVisibilitiesForPutsAndDeletes() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    HTable table = new HTable(conf, tableName);
+    try {
+      Put p = new Put(Bytes.toBytes("row1"));
+      p.add(fam, qual, value);
+      table.put(p);
+      p = new Put(Bytes.toBytes("row1"));
+      p.add(fam, qual1, value);
+      table.put(p);
+      p = new Put(Bytes.toBytes("row2"));
+      p.add(fam, qual, value);
+      table.put(p);
+      p = new Put(Bytes.toBytes("row2"));
+      p.add(fam, qual1, value);
+      table.put(p);
+      Delete d = new Delete(Bytes.toBytes("row1"));
+      table.delete(d);
+      Get g = new Get(Bytes.toBytes("row1"));
+      g.setMaxVersions();
+      g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+      Result result = table.get(g);
+      assertEquals(0, result.rawCells().length);
+
+      p = new Put(Bytes.toBytes("row1"));
+      p.add(fam, qual, value);
+      table.put(p);
+      result = table.get(g);
+      assertEquals(1, result.rawCells().length);
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
+  public void testDeleteWithFamilyDeletesOfSameTsButDifferentVisibilities() throws Exception {
+    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HBaseAdmin hBaseAdmin = TEST_UTIL.getHBaseAdmin();
+    HColumnDescriptor colDesc = new HColumnDescriptor(fam);
+    colDesc.setMaxVersions(5);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(colDesc);
+    hBaseAdmin.createTable(desc);
+    HTable table = new HTable(conf, tableName);
+    long t1 = 1234L;
+    CellVisibility cellVisibility1 = new CellVisibility(SECRET);
+    CellVisibility cellVisibility2 = new CellVisibility(PRIVATE);
+    try {
+      // Cell row1:info:qual:1234 with visibility SECRET
+      Put p = new Put(row1);
+      p.add(fam, qual, t1, value);
+      p.setCellVisibility(cellVisibility1);
+      table.put(p);
+
+      // Cell row1:info:qual1:1234 with visibility PRIVATE
+      p = new Put(row1);
+      p.add(fam, qual1, t1, value);
+      p.setCellVisibility(cellVisibility2);
+      table.put(p);
+
+      Delete d = new Delete(row1);
+      d.deleteFamily(fam, t1);
+      d.setCellVisibility(cellVisibility2);
+      table.delete(d);
+      d = new Delete(row1);
+      d.deleteFamily(fam, t1);
+      d.setCellVisibility(cellVisibility1);
+      table.delete(d);
+
+      Get g = new Get(row1);
+      g.setMaxVersions();
+      g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+      Result result = table.get(g);
+      assertEquals(0, result.rawCells().length);
+
+      // Cell row2:info:qual:1234 with visibility SECRET
+      p = new Put(row2);
+      p.add(fam, qual, t1, value);
+      p.setCellVisibility(cellVisibility1);
+      table.put(p);
+
+      // Cell row2:info:qual1:1234 with visibility PRIVATE
+      p = new Put(row2);
+      p.add(fam, qual1, t1, value);
+      p.setCellVisibility(cellVisibility2);
+      table.put(p);
+
+      d = new Delete(row2);
+      d.deleteFamilyVersion(fam, t1);
+      d.setCellVisibility(cellVisibility2);
+      table.delete(d);
+      d = new Delete(row2);
+      d.deleteFamilyVersion(fam, t1);
+      d.setCellVisibility(cellVisibility1);
+      table.delete(d);
+
+      g = new Get(row2);
+      g.setMaxVersions();
+      g.setAuthorizations(new Authorizations(SECRET, PRIVATE));
+      result = table.get(g);
+      assertEquals(0, result.rawCells().length);
+    } finally {
+      table.close();
     }
   }
 
