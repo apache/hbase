@@ -118,8 +118,8 @@ public class TestReplicationSink {
    */
   @Before
   public void setUp() throws Exception {
-    table1 = TEST_UTIL.truncateTable(TABLE_NAME1);
-    table2 = TEST_UTIL.truncateTable(TABLE_NAME2);
+    table1 = TEST_UTIL.deleteTableData(TABLE_NAME1);
+    table2 = TEST_UTIL.deleteTableData(TABLE_NAME2);
   }
 
   /**
