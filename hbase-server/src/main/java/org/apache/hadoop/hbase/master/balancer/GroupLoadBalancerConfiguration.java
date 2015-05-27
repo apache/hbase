@@ -24,6 +24,7 @@ public class GroupLoadBalancerConfiguration {
   private static final String GROUP_NAME_DELIMITER = ";";
 
   private Map<String, GroupLoadBalancerRegionServer> serverGroups;
+  private Map<String, GroupLoadBalancerRegion> regions;
   private String defaultServerName;
 
   public GroupLoadBalancerConfiguration(Configuration configuration) {
@@ -34,6 +35,7 @@ public class GroupLoadBalancerConfiguration {
     String serverGroupsString = configuration.get(SERVER_GROUPS);
 
     this.serverGroups = getServerGroups(serverGroupsString);
+    this.regions = new HashMap<>();
 
     // Go through config and create server groups, and add their respective regions
     for (Map.Entry<String, GroupLoadBalancerRegionServer> regionServerEntry :
@@ -42,7 +44,7 @@ public class GroupLoadBalancerConfiguration {
       GroupLoadBalancerRegionServer regionServer = regionServerEntry.getValue();
       String regionServerConfigString = configuration.get(REGION_GROUPS_PREFIX + serverName);
       LOG.info("**************** regionServerConfig " + regionServerConfigString);
-      addRegionsToServerGroup(regionServer, serverName, regionServerConfigString);
+      addRegionsToServerGroup(regionServer, regionServerConfigString);
     }
 
     defaultServerName = configuration.get(DEFAULT_GROUP);
@@ -58,7 +60,8 @@ public class GroupLoadBalancerConfiguration {
 
     LOG.info("**************** defaultServerName " + defaultServerName);
 
-    LOG.info("**************** serverGroupNameList " + serverGroups);
+    LOG.info("**************** this.serverGroups " + this.serverGroups);
+    LOG.info("**************** this.regions " + this.regions);
 
   }
 
@@ -66,7 +69,6 @@ public class GroupLoadBalancerConfiguration {
   public Map<String, GroupLoadBalancerRegionServer> getServerGroups(String serverGroupsString) {
     Map<String, GroupLoadBalancerRegionServer> serverGroupMap = new HashMap<>();
     String[] serverGroupsArray = serverGroupsString.split(SERVER_GROUP_DELIMITER);
-
     for (String serverGroup : serverGroupsArray) {
       String[] serverNameArray = serverGroup.split(SERVER_NAME_DELIMITER);
       String serverName = serverNameArray[0];
@@ -82,12 +84,14 @@ public class GroupLoadBalancerConfiguration {
   }
 
   public void addRegionsToServerGroup(GroupLoadBalancerRegionServer regionServer,
-      String serverName, String regionServerConfigString) {
+      String regionServerConfigString) {
+    String serverName = regionServer.getServerName();
     String[] regionNames = regionServerConfigString.split(GROUP_NAME_DELIMITER);
     for (String regionName : regionNames) {
       if (regionName.length() > 0) {
         GroupLoadBalancerRegion region = new GroupLoadBalancerRegion(regionName, serverName);
         regionServer.addRegion(region);
+        this.regions.put(regionName, region);
       }
     }
   }
