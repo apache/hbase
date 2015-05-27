@@ -1013,10 +1013,15 @@ public class ZKUtil {
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
+    return createACL(zkw, node, isSecureZooKeeper(zkw.getConfiguration()));
+  }
+
+  protected static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node,
+      boolean isSecureZooKeeper) {
     if (!node.startsWith(zkw.baseZNode)) {
       return Ids.OPEN_ACL_UNSAFE;
     }
-    if (isSecureZooKeeper(zkw.getConfiguration())) {
+    if (isSecureZooKeeper) {
       String superUser = zkw.getConfiguration().get("hbase.superuser");
       ArrayList<ACL> acls = new ArrayList<ACL>();
       // add permission to hbase supper user
