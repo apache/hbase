@@ -81,8 +81,8 @@ This describes how to set up Apache HBase and clients for connection to secure H
 === Prerequisites
 
 Hadoop Authentication Configuration::
-  To run HBase RPC with strong authentication, you must set `hbase.security.authentication` to `true`.
-  In this case, you must also set `hadoop.security.authentication` to `true`.
+  To run HBase RPC with strong authentication, you must set `hbase.security.authentication` to `kerberos`.
+  In this case, you must also set `hadoop.security.authentication` to `kerberos` in core-site.xml.
   Otherwise, you would be using strong authentication for HBase but not for the underlying HDFS, which would cancel out any benefit.
 
 Kerberos KDC::
@@ -499,6 +499,26 @@ For more information about ACLs, please see the <<hbase.accesscontrol.configurat
 
 It should be possible for clients to authenticate with the HBase cluster through the REST gateway in a pass-through manner via SPNEGO HTTP authentication.
 This is future work.
+
+== Securing Access to HDFS and ZooKeeper
+Secure HBase requires secure ZooKeeper and HDFS so that users cannot access and/or modify the metadata and data from under HBase. HBase uses HDFS (or configured file system) to keep its data files as well as write ahead logs (WALs) and other data. HBase uses ZooKeeper to store some metadata for operations (master address, table locks, recovery state, etc).
+
+=== Securing ZooKeeper Data
+ZooKeeper has a pluggable authentication mechanism to enable access from clients using different methods. ZooKeeper even allows authenticated and un-authenticated clients at the same time. The access to znodes can be restricted by providing Access Control Lists (ACLs) per znode. An ACL contains two components, the authentication method and the principal. ACLs are NOT enforced hierarchically. See link:https://zookeeper.apache.org/doc/r3.3.6/zookeeperProgrammers.html#sc_ZooKeeperPluggableAuthentication[ZooKeeper Programmers Guide] for details. 
+
+HBase daemons authenticate to ZooKeeper via SASL and kerberos (See <<zk.sasl.auth>>). HBase sets up the znode ACLs so that only the HBase user and the configured hbase superuser (`hbase.superuser`) can access and modify the data. In cases where ZooKeeper is used for service discovery or sharing state with the client, the znodes created by HBase will also allow anyone (regardless of authentication) to read these znodes (clusterId, master address, meta location, etc), but only the HBase user can modify them. 
+
+=== Securing File System (HDFS) Data
+All of the data under management is kept under the root directory in the file system (`hbase.rootdir`). Access to the data and WAL files in the filesystem should be restricted so that users cannot bypass the HBase layer, and peek at the underlying data files from the file system. HBase assumes the filesystem used (HDFS or other) enforces permissions hierarchically. If sufficient protection from the file system (both authorization and authentication) is not provided, HBase level authorization control (ACLs, visibility labels, etc) is meaningless since the user can always access the data from the file system. 
+
+HBase enforces the posix-like permissions 700 (`rwx------`) to its root directory. It means that only the HBase user can read or write the files in FS. The default setting can be changed by configuring `hbase.rootdir.perms` in hbase-site.xml. A restart of the active master is needed so that it changes the used permissions. For versions before 1.2.0, you can check whether HBASE-13780 is committed, and if not, you can manually set the permissions for the root directory if needed. Using HDFS, the command would be:
+[source,bash]
+----
+sudo -u hdfs hadoop fs -chmod 700 /hbase
+----
+You should change `/hbase` if you are using a different `hbase.rootdir`. 
+
+In secure mode, SecureBulkLoadEndpoint should be configured and used for properly handing of users files created from MR jobs to the HBase daemons and HBase user. The staging directory in the distributed file system used for bulk load (`hbase.bulkload.staging.dir`, defaults to `/tmp/hbase-staging`) should have (mode 711, or `rwx--x--x`) so that users can access the staging directory created under that parent directory, but cannot do any other operation. See <<hbase.secure.bulkload>> for how to configure SecureBulkLoadEndPoint. 
 
 == Securing Access To Your Data
 

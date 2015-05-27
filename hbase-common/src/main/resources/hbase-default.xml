@@ -1189,6 +1189,13 @@ possible configurations would overwhelm and obscure the important.
     <description>Use Thrift TCompactProtocol binary serialization protocol.</description>
   </property>
   <property>
+    <name>hbase.rootdir.perms</name>
+    <value>700</value>
+    <description>FS Permissions for the root directory in a secure(kerberos) setup.
+    When master starts, it creates the rootdir with this permissions or sets the permissions
+    if it does not match.</description>
+  </property>
+  <property>
     <name>hbase.data.umask.enable</name>
     <value>false</value>
     <description>Enable, if true, that file permissions should be assigned

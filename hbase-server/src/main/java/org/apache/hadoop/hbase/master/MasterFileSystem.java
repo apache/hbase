@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -46,7 +47,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -416,10 +416,18 @@ public class MasterFileSystem {
   throws IOException {
     // If FS is in safe mode wait till out of it.
     FSUtils.waitOnSafeMode(c, c.getInt(HConstants.THREAD_WAKE_FREQUENCY, 10 * 1000));
+
+    boolean isSecurityEnabled = "kerberos".equalsIgnoreCase(c.get("hbase.security.authentication"));
+    FsPermission rootDirPerms = new FsPermission(c.get("hbase.rootdir.perms", "700"));
+
     // Filesystem is good. Go ahead and check for hbase.rootdir.
     try {
       if (!fs.exists(rd)) {
-        fs.mkdirs(rd);
+        if (isSecurityEnabled) {
+          fs.mkdirs(rd, rootDirPerms);
+        } else {
+          fs.mkdirs(rd);
+        }
         // DFS leaves safe mode with 0 DNs when there are 0 blocks.
         // We used to handle this by checking the current DN count and waiting until
         // it is nonzero. With security, the check for datanode count doesn't work --
@@ -433,6 +441,16 @@ public class MasterFileSystem {
       } else {
         if (!fs.isDirectory(rd)) {
           throw new IllegalArgumentException(rd.toString() + " is not a directory");
+        }
+        if (isSecurityEnabled && !rootDirPerms.equals(fs.getFileStatus(rd).getPermission())) {
+          // check whether the permission match
+          LOG.warn("Found rootdir permissions NOT matching expected \"hbase.rootdir.perms\" for "
+              + "rootdir=" + rd.toString() + " permissions=" + fs.getFileStatus(rd).getPermission()
+              + " and  \"hbase.rootdir.perms\" configured as "
+              + c.get("hbase.rootdir.perms", "700") + ". Automatically setting the permissions. You"
+              + " can change the permissions by setting \"hbase.rootdir.perms\" in hbase-site.xml "
+              + "and restarting the master");
+          fs.setPermission(rd, rootDirPerms);
         }
         // as above
         FSUtils.checkVersion(fs, rd, true, c.getInt(HConstants.THREAD_WAKE_FREQUENCY,
