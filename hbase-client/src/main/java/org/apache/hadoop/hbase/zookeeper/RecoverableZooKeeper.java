@@ -464,6 +464,70 @@ public class RecoverableZooKeeper {
   }
 
   /**
+   * getAcl is an idempotent operation. Retry before throwing exception
+   * @return list of ACLs
+   */
+  public List<ACL> getAcl(String path, Stat stat)
+  throws KeeperException, InterruptedException {
+    TraceScope traceScope = null;
+    try {
+      traceScope = Trace.startSpan("RecoverableZookeeper.getAcl");
+      RetryCounter retryCounter = retryCounterFactory.create();
+      while (true) {
+        try {
+          return checkZk().getACL(path, stat);
+        } catch (KeeperException e) {
+          switch (e.code()) {
+            case CONNECTIONLOSS:
+            case SESSIONEXPIRED:
+            case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "getAcl");
+              break;
+
+            default:
+              throw e;
+          }
+        }
+        retryCounter.sleepUntilNextRetry();
+      }
+    } finally {
+      if (traceScope != null) traceScope.close();
+    }
+  }
+
+  /**
+   * setAcl is an idempotent operation. Retry before throwing exception
+   * @return list of ACLs
+   */
+  public Stat setAcl(String path, List<ACL> acls, int version)
+  throws KeeperException, InterruptedException {
+    TraceScope traceScope = null;
+    try {
+      traceScope = Trace.startSpan("RecoverableZookeeper.setAcl");
+      RetryCounter retryCounter = retryCounterFactory.create();
+      while (true) {
+        try {
+          return checkZk().setACL(path, acls, version);
+        } catch (KeeperException e) {
+          switch (e.code()) {
+            case CONNECTIONLOSS:
+            case SESSIONEXPIRED:
+            case OPERATIONTIMEOUT:
+              retryOrThrow(retryCounter, e, "setAcl");
+              break;
+
+            default:
+              throw e;
+          }
+        }
+        retryCounter.sleepUntilNextRetry();
+      }
+    } finally {
+      if (traceScope != null) traceScope.close();
+    }
+  }
+
+  /**
    * <p>
    * NONSEQUENTIAL create is idempotent operation.
    * Retry before throwing exceptions.
