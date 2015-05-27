@@ -3,19 +3,23 @@ package org.apache.hadoop.hbase.master.balancer;
 public class GroupLoadBalancerRegion {
 
   private String regionName;
-  private String regionServerBelongsTo;
+  private String groupRegionBelongsTo;
 
-  public GroupLoadBalancerRegion(String regionName, String regionServerBelongsTo) {
+  public GroupLoadBalancerRegion(String regionName, String groupRegionBelongsTo) {
     this.regionName = regionName;
-    this.regionServerBelongsTo = regionServerBelongsTo;
+    this.groupRegionBelongsTo = groupRegionBelongsTo;
   }
 
-  public void setRegionServerBelongsTo(String regionServerBelongsTo) {
-    this.regionServerBelongsTo = regionServerBelongsTo;
+  public String getRegionName() {
+    return this.regionName;
+  }
+
+  public void setGroupRegionBelongsTo(String groupRegionBelongsTo) {
+    this.groupRegionBelongsTo = groupRegionBelongsTo;
   }
 
   public String toString() {
-    return "{regionName: " + this.regionName + ", regionServerBelongsTo: " +
-        this.regionServerBelongsTo + "}";
+    return "{regionName: " + this.regionName + ", groupRegionBelongsTo: " +
+        this.groupRegionBelongsTo + "}";
   }
 }

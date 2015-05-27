@@ -54,12 +54,20 @@
 		<value>org.apache.hadoop.hbase.master.balancer.GroupLoadBalancer</value>
 	</property>
 	<property>
+		<name>hbase.master.balancer.grouploadbalancer.groups</name>
+		<value>group1;group2</value>
+	</property>
+	<property>
 		<name>hbase.master.balancer.grouploadbalancer.defaultgroup</name>
 		<value>group1</value>
 	</property>
 	<property>
-		<name>hbase.master.balancer.grouploadbalancer.servergroups</name>
-		<value>group1-10.255.196.145,60020;group2-10.255.196.145,60021</value>
+		<name>hbase.master.balancer.grouploadbalancer.servergroups.group1</name>
+		<value>10.255.196.145,60020</value>
+	</property>
+	<property>
+		<name>hbase.master.balancer.grouploadbalancer.servergroups.group2</name>
+		<value>10.255.196.145,60021</value>
 	</property>
 	<property>
 		<name>hbase.master.balancer.grouploadbalancer.regiongroups.group1</name>
