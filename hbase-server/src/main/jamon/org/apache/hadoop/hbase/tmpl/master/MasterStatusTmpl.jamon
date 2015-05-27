@@ -206,7 +206,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <section>
             <& BackupMasterStatusTmpl; master = master &>
         </section>
-	</%if>    
+	</%if>
 
 
         <section>
@@ -353,7 +353,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = null; 
+   HTableDescriptor[] tables = null;
    try (Admin admin = master.getConnection().getAdmin()) {
      tables = master.isInitialized() ? admin.listTables() : null;
    }
@@ -370,11 +370,14 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <th>Description</th>
     </tr>
     <%for HTableDescriptor htDesc : tables%>
+    <%java>
+      TableName tableName = htDesc.getTableName();
+    </%java>
     <tr>
-        <td><% htDesc.getTableName().getNamespaceAsString() %></td>
-        <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getQualifierAsString() %></a> </td>
+        <td><% tableName.getNamespaceAsString() %></td>
+        <td><a href=table.jsp?name=<% tableName.getNameAsString() %>><% tableName.getQualifierAsString() %></a> </td>
         <%if (frags != null) %>
-            <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getQualifierAsString()).intValue() + "%" : "n/a" %></td>
+            <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
         <td><% master.getAssignmentManager().getRegionStates().getRegionsOfTable(htDesc
         .getTableName()).size() %>
