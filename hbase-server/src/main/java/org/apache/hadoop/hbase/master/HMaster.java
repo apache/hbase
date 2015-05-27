@@ -776,6 +776,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // master initialization. See HBASE-5916.
     this.serverManager.clearDeadServersWithSameHostNameAndPortOfOnlineServer();
 
+    // Check and set the znode ACLs if needed in case we are overtaking a non-secure configuration
+    status.setStatus("Checking ZNode ACLs");
+    zooKeeper.checkAndSetZNodeAcls();
+
+    status.setStatus("Calling postStartMaster coprocessors");
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
       try {
