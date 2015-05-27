@@ -40,13 +40,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 
     LOG.info("**************** USING GROUP LOAD BALANCER *******************");
 
-    LOG.info("**************** Logging info *******************");
-    LOG.debug("**************** Logging debug *******************");
-    LOG.fatal("**************** Logging fatal *******************");
-    LOG.error("**************** Logging error *******************");
-    LOG.trace("**************** Logging trace *******************");
-    LOG.warn("**************** Logging warn *******************");
-
     LOG.info("**************** masterServerName " + masterServerName);
 
     // don't balance master

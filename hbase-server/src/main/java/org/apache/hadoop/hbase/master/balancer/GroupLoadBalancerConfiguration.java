@@ -5,6 +5,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 
 import java.lang.StringBuilder;
+import java.security.acl.Group;
 import java.util.*;
 
 public class GroupLoadBalancerConfiguration {
@@ -22,13 +23,15 @@ public class GroupLoadBalancerConfiguration {
   private static final String GROUP_DELIMITER = ";";
 
   private Map<String, GroupLoadBalancerGroup> groups;
+  private Map<String, GroupLoadBalancerRegion> regions;
+  private Map<String, GroupLoadBalancerServer> servers;
   private String defaultGroupName;
 
   public GroupLoadBalancerConfiguration(Configuration configuration) {
 
-    LOG.info("**************** STARTING GROUP LOAD BALANCER CONFIGURATION *******************");
-
     this.groups = new HashMap<>();
+    this.regions = new HashMap<>();
+    this.servers = new HashMap<>();
 
     String groupNamesString = configuration.get(GROUPS);
     String[] groupNamesArray = groupNamesString.split(GROUP_DELIMITER);
@@ -42,14 +45,29 @@ public class GroupLoadBalancerConfiguration {
 
       GroupLoadBalancerGroup group = new GroupLoadBalancerGroup(groupName);
 
-      addRegionsToGroup(group, configuration.get(REGION_GROUPS_PREFIX + groupName));
-      addServersToGroup(group, configuration.get(SERVER_GROUPS_PREFIX + groupName));
+      String regionConfig = configuration.get(REGION_GROUPS_PREFIX + groupName);
+      String serverConfig = configuration.get(SERVER_GROUPS_PREFIX + groupName);
+
+      String[] regionsArray = regionConfig.split(GROUP_DELIMITER);
+      String[] serversArray = serverConfig.split(GROUP_DELIMITER);
+
+      for (String regionName : regionsArray) {
+        GroupLoadBalancerRegion region = new GroupLoadBalancerRegion(regionName, groupName);
+        group.addRegion(region);
+        this.regions.put(regionName, region);
+      }
+
+      for (String serverName : serversArray) {
+        GroupLoadBalancerServer server = new GroupLoadBalancerServer(serverName, groupName);
+        group.addServer(server);
+        this.servers.put(serverName, server);
+      }
 
       if (this.groups.containsKey(groupName)) {
         throw new IllegalArgumentException("Group name cannot be duplicated");
       }
-
       this.groups.put(groupName, group);
+
     }
 
     this.defaultGroupName = configuration.get(DEFAULT_GROUP);
@@ -64,28 +82,16 @@ public class GroupLoadBalancerConfiguration {
 
   }
 
-  public void addRegionsToGroup(GroupLoadBalancerGroup group, String regionsString) {
-    String groupRegionsBelongTo = group.getName();
-    String[] regionsArray = regionsString.split(GROUP_DELIMITER);
-    for (String regionName : regionsArray) {
-      GroupLoadBalancerRegion region =
-          new GroupLoadBalancerRegion(regionName, groupRegionsBelongTo);
-      group.addRegion(region);
-    }
-  }
-
-  public void addServersToGroup(GroupLoadBalancerGroup group, String serversString) {
-    String groupServersBelongTo = group.getName();
-    String[] serversArray = serversString.split(GROUP_DELIMITER);
-    for (String serverName : serversArray) {
-      GroupLoadBalancerServer server =
-          new GroupLoadBalancerServer(serverName, groupServersBelongTo);
-      group.addServer(server);
-    }
-  }
-
   public Map<String, GroupLoadBalancerGroup> getGroups() {
     return this.groups;
+  }
+
+  public Map<String, GroupLoadBalancerRegion> getRegions() {
+    return this.regions;
+  }
+
+  public Map<String, GroupLoadBalancerServer> getServers() {
+    return this.servers;
   }
 
   public String getDefaultGroupName() {
@@ -97,6 +103,15 @@ public class GroupLoadBalancerConfiguration {
     description.append("Groups List: \n");
     for (GroupLoadBalancerGroup group : this.groups.values()) {
       description.append(group.toString());
+    }
+    description.append("\n");
+    description.append("Regions Map: \n");
+    for (GroupLoadBalancerRegion region : this.regions.values()) {
+      description.append(region + "\n");
+    }
+    description.append("Servers Map: \n");
+    for (GroupLoadBalancerServer server : this.servers.values()) {
+      description.append(server + "\n");
     }
     return description.toString();
   }
