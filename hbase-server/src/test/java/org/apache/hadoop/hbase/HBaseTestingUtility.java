@@ -1942,22 +1942,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   // ==========================================================================
 
   /**
-   * Provide an existing table name to truncate
+   * Provide an existing table name to truncate.
+   * Scans the table and issues a delete for each row read.
    * @param tableName existing table
    * @return HTable to that new table
    * @throws IOException
    */
-  public HTable truncateTable(byte[] tableName) throws IOException {
-    return truncateTable(TableName.valueOf(tableName));
+  public HTable deleteTableData(byte[] tableName) throws IOException {
+    return deleteTableData(TableName.valueOf(tableName));
   }
 
   /**
-   * Provide an existing table name to truncate
+   * Provide an existing table name to truncate.
+   * Scans the table and issues a delete for each row read.
    * @param tableName existing table
    * @return HTable to that new table
    * @throws IOException
    */
-  public HTable truncateTable(TableName tableName) throws IOException {
+  public HTable deleteTableData(TableName tableName) throws IOException {
     HTable table = new HTable(getConfiguration(), tableName);
     Scan scan = new Scan();
     ResultScanner resScan = table.getScanner(scan);
@@ -1968,6 +1970,58 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     resScan = table.getScanner(scan);
     resScan.close();
     return table;
+  }
+
+  /**
+   * Truncate a table using the admin command.
+   * Effectively disables, deletes, and recreates the table.
+   * @param tableName table which must exist.
+   * @param preserveRegions keep the existing split points
+   * @return HTable for the new table
+   */
+  public HTable truncateTable(final TableName tableName, final boolean preserveRegions)
+      throws IOException {
+    Admin admin = getHBaseAdmin();
+    admin.truncateTable(tableName, preserveRegions);
+    return new HTable(getConfiguration(), tableName);
+  }
+
+  /**
+   * Truncate a table using the admin command.
+   * Effectively disables, deletes, and recreates the table.
+   * For previous behavior of issuing row deletes, see
+   * deleteTableData.
+   * Expressly does not preserve regions of existing table.
+   * @param tableName table which must exist.
+   * @return HTable for the new table
+   */
+  public HTable truncateTable(final TableName tableName) throws IOException {
+    return truncateTable(tableName, false);
+  }
+
+  /**
+   * Truncate a table using the admin command.
+   * Effectively disables, deletes, and recreates the table.
+   * @param tableName table which must exist.
+   * @param preserveRegions keep the existing split points
+   * @return HTable for the new table
+   */
+  public HTable truncateTable(final byte[] tableName, final boolean preserveRegions)
+      throws IOException {
+    return truncateTable(TableName.valueOf(tableName), preserveRegions);
+  }
+
+  /**
+   * Truncate a table using the admin command.
+   * Effectively disables, deletes, and recreates the table.
+   * For previous behavior of issuing row deletes, see
+   * deleteTableData.
+   * Expressly does not preserve regions of existing table.
+   * @param tableName table which must exist.
+   * @return HTable for the new table
+   */
+  public HTable truncateTable(final byte[] tableName) throws IOException {
+    return truncateTable(tableName, false);
   }
 
   /**
