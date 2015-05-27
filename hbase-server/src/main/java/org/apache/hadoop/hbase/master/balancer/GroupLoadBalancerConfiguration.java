@@ -22,6 +22,7 @@ public class GroupLoadBalancerConfiguration {
   private static final String GROUP_DELIMITER = ";";
 
   private Map<String, GroupLoadBalancerGroup> groups;
+  private String defaultGroupName;
 
   public GroupLoadBalancerConfiguration(Configuration configuration) {
 
@@ -51,11 +52,11 @@ public class GroupLoadBalancerConfiguration {
       this.groups.put(groupName, group);
     }
 
-    String defaultGroupName = configuration.get(DEFAULT_GROUP);
-    if (defaultGroupName.length() < 1) {
+    this.defaultGroupName = configuration.get(DEFAULT_GROUP);
+    if (this.defaultGroupName.length() < 1) {
       throw new IllegalArgumentException("Default group name cannot be null");
     }
-    if (!this.groups.containsKey(defaultGroupName)) {
+    if (!this.groups.containsKey(this.defaultGroupName)) {
       throw new IllegalArgumentException("Default group name must be a pre-existing group name");
     }
 
@@ -81,6 +82,14 @@ public class GroupLoadBalancerConfiguration {
           new GroupLoadBalancerServer(serverName, groupServersBelongTo);
       group.addServer(server);
     }
+  }
+
+  public Map<String, GroupLoadBalancerGroup> getGroups() {
+    return this.groups;
+  }
+
+  public String getDefaultGroupName() {
+    return this.defaultGroupName;
   }
 
   public String toString() {
