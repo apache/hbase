@@ -461,7 +461,101 @@ HColumnDescriptor.setKeepDeletedCells(true);
 ----
 ====
 
-See the API documentation for link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/HColumnDescriptor.html#KEEP_DELETED_CELLS[KEEP_DELETED_CELLS] for more information.
+Let us illustrate the basic effect of setting the `KEEP_DELETED_CELLS` attribute on a table.
+
+First, without:
+[source]
+----
+create 'test', {NAME=>'e', VERSIONS=>2147483647}
+put 'test', 'r1', 'e:c1', 'value', 10
+put 'test', 'r1', 'e:c1', 'value', 12
+put 'test', 'r1', 'e:c1', 'value', 14
+delete 'test', 'r1', 'e:c1',  11
+
+hbase(main):017:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                              COLUMN+CELL
+ r1                                              column=e:c1, timestamp=14, value=value
+ r1                                              column=e:c1, timestamp=12, value=value
+ r1                                              column=e:c1, timestamp=11, type=DeleteColumn
+ r1                                              column=e:c1, timestamp=10, value=value
+1 row(s) in 0.0120 seconds
+
+hbase(main):018:0> flush 'test'
+0 row(s) in 0.0350 seconds
+
+hbase(main):019:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                              COLUMN+CELL
+ r1                                              column=e:c1, timestamp=14, value=value
+ r1                                              column=e:c1, timestamp=12, value=value
+ r1                                              column=e:c1, timestamp=11, type=DeleteColumn
+1 row(s) in 0.0120 seconds
+
+hbase(main):020:0> major_compact 'test'
+0 row(s) in 0.0260 seconds
+
+hbase(main):021:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                              COLUMN+CELL
+ r1                                              column=e:c1, timestamp=14, value=value
+ r1                                              column=e:c1, timestamp=12, value=value
+1 row(s) in 0.0120 seconds
+----
+
+Notice how delete cells are let go.
+
+Now lets run the same test only with `KEEP_DELETED_CELLS` set on the table (you can do table or per-column-family):
+
+[source]
+----
+hbase(main):005:0> create 'test', {NAME=>'e', VERSIONS=>2147483647, KEEP_DELETED_CELLS => true}
+0 row(s) in 0.2160 seconds
+
+=> Hbase::Table - test
+hbase(main):006:0> put 'test', 'r1', 'e:c1', 'value', 10
+0 row(s) in 0.1070 seconds
+
+hbase(main):007:0> put 'test', 'r1', 'e:c1', 'value', 12
+0 row(s) in 0.0140 seconds
+
+hbase(main):008:0> put 'test', 'r1', 'e:c1', 'value', 14
+0 row(s) in 0.0160 seconds
+
+hbase(main):009:0> delete 'test', 'r1', 'e:c1',  11
+0 row(s) in 0.0290 seconds
+
+hbase(main):010:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                                                                          COLUMN+CELL
+ r1                                                                                          column=e:c1, timestamp=14, value=value
+ r1                                                                                          column=e:c1, timestamp=12, value=value
+ r1                                                                                          column=e:c1, timestamp=11, type=DeleteColumn
+ r1                                                                                          column=e:c1, timestamp=10, value=value
+1 row(s) in 0.0550 seconds
+
+hbase(main):011:0> flush 'test'
+0 row(s) in 0.2780 seconds
+
+hbase(main):012:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                                                                          COLUMN+CELL
+ r1                                                                                          column=e:c1, timestamp=14, value=value
+ r1                                                                                          column=e:c1, timestamp=12, value=value
+ r1                                                                                          column=e:c1, timestamp=11, type=DeleteColumn
+ r1                                                                                          column=e:c1, timestamp=10, value=value
+1 row(s) in 0.0620 seconds
+
+hbase(main):013:0> major_compact 'test'
+0 row(s) in 0.0530 seconds
+
+hbase(main):014:0> scan 'test', {RAW=>true, VERSIONS=>1000}
+ROW                                                                                          COLUMN+CELL
+ r1                                                                                          column=e:c1, timestamp=14, value=value
+ r1                                                                                          column=e:c1, timestamp=12, value=value
+ r1                                                                                          column=e:c1, timestamp=11, type=DeleteColumn
+ r1                                                                                          column=e:c1, timestamp=10, value=value
+1 row(s) in 0.0650 seconds
+----
+
+KEEP_DELETED_CELLS is to avoid removing Cells from HBase when the _only_ reason to remove them is the delete marker.
+So with KEEP_DELETED_CELLS enabled deleted cells would get removed if either you write more versions than the configured max, or you have a TTL and Cells are in excess of the configured timeout, etc.
+
 
 [[secondary.indexes]]
 ==  Secondary Indexes and Alternate Query Paths

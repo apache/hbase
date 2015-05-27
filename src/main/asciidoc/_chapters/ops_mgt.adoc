@@ -1311,13 +1311,13 @@ list_peers:: list all replication relationships known by this cluster
 enable_peer <ID>::
   Enable a previously-disabled replication relationship
 disable_peer <ID>::
-  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled. 
+  Disable a replication relationship. HBase will no longer send edits to that peer cluster, but it still keeps track of all the new WALs that it will need to replicate if and when it is re-enabled.
 remove_peer <ID>::
   Disable and remove a replication relationship. HBase will no longer send edits to that peer cluster or keep track of WALs.
 enable_table_replication <TABLE_NAME>::
-  Enable the table replication switch for all it's column families. If the table is not found in the destination cluster then it will create one with the same name and column families. 
+  Enable the table replication switch for all it's column families. If the table is not found in the destination cluster then it will create one with the same name and column families.
 disable_table_replication <TABLE_NAME>::
-  Disable the table replication switch for all it's column families. 
+  Disable the table replication switch for all it's column families.
 
 === Verifying Replicated Data
 
@@ -1608,6 +1608,187 @@ You can use the HBase Shell command `status 'replication'` to monitor the replic
 * `status 'replication'` -- prints the status of each source and its sinks, sorted by hostname.
 * `status 'replication', 'source'` -- prints the status for each replication source, sorted by hostname.
 * `status 'replication', 'sink'` -- prints the status for each replication sink, sorted by hostname.
+
+== Running Multiple Workloads On a Single Cluster
+
+HBase provides the following mechanisms for managing the performance of a cluster
+handling multiple workloads:
+. <<quota>>
+. <<request-queues>>
+. <<multiple-typed-queues>>
+
+[[quota]]
+=== Quotas
+HBASE-11598 introduces quotas, which allow you to throttle requests based on
+the following limits:
+
+. <<request-quotas,The number or size of requests in a given timeframe>>
+. <<namespace-quotas,The number of tables allowed in a namespace>>
+
+These limits can be enforced for a specified user, table, or namespace.
+
+.Enabling Quotas
+
+Quotas are disabled by default. To enable the feature, set the `hbase.quota.enabled`
+property to `true` in _hbase-site.xml_ file for all cluster nodes.
+
+.General Quota Syntax
+. Timeframes  can be expressed in the following units: `sec`, `min`, `hour`, `day`
+. Request sizes can be expressed in the following units: `B` (bytes), `K` (kilobytes),
+`M` (megabytes), `G` (gigabytes), `T` (terabytes), `P` (petabytes)
+. Numbers of requests are expressed as an integer followed by the string `req`
+. Limits relating to time are expressed as req/time or size/time. For instance `10req/day`
+or `100P/hour`.
+. Numbers of tables or regions are expressed as integers.
+
+[[request-quotas]]
+.Setting Request Quotas
+You can set quota rules ahead of time, or you can change the throttle at runtime. The change
+will propagate after the quota refresh period has expired. This expiration period
+defaults to 5 minutes. To change it, modify the `hbase.quota.refresh.period` property
+in `hbase-site.xml`. This property is expressed in milliseconds and defaults to `300000`.
+
+----
+# Limit user u1 to 10 requests per second
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
+
+# Limit user u1 to 10 M per day everywhere
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/day'
+
+# Limit user u1 to 5k per minute on table t2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
+
+# Remove an existing limit from user u1 on namespace ns2
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
+
+# Limit all users to 10 requests per hour on namespace ns1
+hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/shour'
+
+# Limit all users to 10 T per hour on table t1
+hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10T/hour'
+
+# Remove all existing limits from user u1
+hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => NONE
+
+# List all quotas for user u1 in namespace ns2
+hbase> list_quotas USER => 'u1, NAMESPACE => 'ns2'
+
+# List all quotas for namespace ns2
+hbase> list_quotas NAMESPACE => 'ns2'
+
+# List all quotas for table t1
+hbase> list_quotas TABLE => 't1'
+
+# list all quotas
+hbase> list_quotas
+----
+
+You can also place a global limit and exclude a user or a table from the limit by applying the
+`GLOBAL_BYPASS` property.
+----
+hbase> set_quota NAMESPACE => 'ns1', LIMIT => '100req/min'               # a per-namespace request limit
+hbase> set_quota USER => 'u1', GLOBAL_BYPASS => true                     # user u1 is not affected by the limit
+----
+
+[[namespace_quotas]]
+.Setting Namespace Quotas
+
+You can specify the maximum number of tables or regions allowed in a given namespace, either
+when you create the namespace or by altering an existing namespace, by setting the
+`hbase.namespace.quota.maxtables property`  on the namespace.
+
+.Limiting Tables Per Namespace
+----
+# Create a namespace with a max of 5 tables
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxtables'=>'5'}
+
+# Alter an existing namespace to have a max of 8 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxtables'=>'8'}
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns2'
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=>'hbase.namespace.quota.maxtables'}
+----
+
+.Limiting Regions Per Namespace
+----
+# Create a namespace with a max of 10 regions
+hbase> create_namespace 'ns1', {'hbase.namespace.quota.maxregions'=>'10'
+
+# Show quota information for a namespace
+hbase> describe_namespace 'ns1'
+
+# Alter an existing namespace to have a max of 20 tables
+hbase> alter_namespace 'ns2', {METHOD => 'set', 'hbase.namespace.quota.maxregions'=>'20'}
+
+# Alter an existing namespace to remove a quota
+hbase> alter_namespace 'ns2', {METHOD => 'unset', NAME=> 'hbase.namespace.quota.maxregions'}
+----
+
+[[request_queues]]
+=== Request Queues
+If no throttling policy is configured, when the RegionServer receives multiple requests,
+they are now placed into a queue waiting for a free execution slot (HBASE-6721).
+The simplest queue is a FIFO queue, where each request waits for all previous requests in the queue
+to finish before running. Fast or interactive queries can get stuck behind large requests.
+
+If you are able to guess how long a request will take, you can reorder requests by
+pushing the long requests to the end of the queue and allowing short requests to preempt
+them. Eventually, you must still execute the large requests and prioritize the new
+requests behind them. The short requests will be newer, so the result is not terrible,
+but still suboptimal compared to a mechanism which allows large requests to be split
+into multiple smaller ones.
+
+HBASE-10993 introduces such a system for deprioritizing long-running scanners. There
+are two types of queues,`fifo` and `deadline`.To configure the type of queue used,
+configure the `hbase.ipc.server.callqueue.type` property in `hbase-site.xml`. There
+is no way to estimate how long each request may take, so de-prioritization only affects
+scans, and is based on the number of “next” calls a scan request has made. An assumption
+is made that when you are doing a full table scan, your job is not likely to be interactive,
+so if there are concurrent requests, you can delay long-running scans up to a limit tunable by
+setting the `hbase.ipc.server.queue.max.call.delay` property. The slope of the delay is calculated
+by a simple square root of `(numNextCall * weight)` where the weight is
+configurable by setting the `hbase.ipc.server.scan.vtime.weight` property.
+
+[[multiple-typed-queues]]
+=== Multiple-Typed Queues
+
+You can also prioritize or deprioritize different kinds of requests by configuring
+a specified number of dedicated handlers and queues. You can segregate the scan requests
+in a single queue with a single handler, and all the other available queues can service
+short `Get` requests.
+
+You can adjust the IPC queues and handlers based on the type of workload, using static
+tuning options. This approach is an interim first step that will eventually allow
+you to change the settings at runtime, and to dynamically adjust values based on the load.
+
+.Multiple Queues
+
+To avoid contention and separate different kinds of requests, configure the
+`hbase.ipc.server.callqueue.handler.factor` property, which allows you to increase the number of
+queues and control how many handlers can share the same queue., allows admins to increase the number
+of queues and decide how many handlers share the same queue.
+
+Using more queues reduces contention when adding a task to a queue or selecting it
+from a queue. You can even configure one queue per handler. The trade-off is that
+if some queues contain long-running tasks, a handler may need to wait to execute from that queue
+rather than stealing from another queue which has waiting tasks.
+
+.Read and Write Queues
+With multiple queues, you can now divide read and write requests, giving more priority
+(more queues) to one or the other type. Use the `hbase.ipc.server.callqueue.read.ratio`
+property to choose to serve more reads or more writes.
+
+.Get and Scan Queues
+Similar to the read/write split, you can split gets and scans by tuning the `hbase.ipc.server.callqueue.scan.ratio`
+property to give more priority to gets or to scans. A scan ratio of `0.1` will give
+more queue/handlers to the incoming gets, which means that more gets can be processed
+at the same time and that fewer scans can be executed at the same time. A value of
+`0.9` will give more queue/handlers to scans, so the number of scans executed will
+increase and the number of gets will decrease.
+
 
 [[ops.backup]]
 == HBase Backup
