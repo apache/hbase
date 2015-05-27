@@ -32,11 +32,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.data.Stat;
 
 /**
  * Acts as the single ZooKeeper Watcher.  One instance of this is instantiated
@@ -186,6 +191,108 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
       throw new ZooKeeperConnectionException(
           prefix("Unexpected KeeperException creating base node"), e);
     }
+  }
+
+  /** Returns whether the znode is supposed to be readable by the client
+   * and DOES NOT contain sensitive information (world readable).*/
+  public boolean isClientReadable(String node) {
+    // Developer notice: These znodes are world readable. DO NOT add more znodes here UNLESS
+    // all clients need to access this data to work. Using zk for sharing data to clients (other
+    // than service lookup case is not a recommended design pattern.
+    return
+        node.equals(baseZNode) ||
+        node.equals(getMasterAddressZNode()) ||
+        node.equals(clusterIdZNode)||
+        node.equals(rsZNode) ||
+        // /hbase/table and /hbase/table/foo is allowed, /hbase/table-lock is not
+        node.equals(tableZNode) ||
+        node.startsWith(tableZNode + "/");
+  }
+
+  /**
+   * On master start, we check the znode ACLs under the root directory and set the ACLs properly
+   * if needed. If the cluster goes from an unsecure setup to a secure setup, this step is needed
+   * so that the existing znodes created with open permissions are now changed with restrictive
+   * perms.
+   */
+  public void checkAndSetZNodeAcls() {
+    if (!ZKUtil.isSecureZooKeeper(getConfiguration())) {
+      return;
+    }
+
+    // Check the base znodes permission first. Only do the recursion if base znode's perms are not
+    // correct.
+    try {
+      List<ACL> actualAcls = recoverableZooKeeper.getAcl(baseZNode, new Stat());
+
+      if (!isBaseZnodeAclSetup(actualAcls)) {
+        LOG.info("setting znode ACLs");
+        setZnodeAclsRecursive(baseZNode);
+      }
+    } catch(KeeperException.NoNodeException nne) {
+      return;
+    } catch(InterruptedException ie) {
+      interruptedException(ie);
+    } catch (IOException|KeeperException e) {
+      LOG.warn("Received exception while checking and setting zookeeper ACLs", e);
+    }
+  }
+
+  /**
+   * Set the znode perms recursively. This will do post-order recursion, so that baseZnode ACLs
+   * will be set last in case the master fails in between.
+   * @param znode
+   */
+  private void setZnodeAclsRecursive(String znode) throws KeeperException, InterruptedException {
+    List<String> children = recoverableZooKeeper.getChildren(znode, false);
+
+    for (String child : children) {
+      setZnodeAclsRecursive(ZKUtil.joinZNode(znode, child));
+    }
+    List<ACL> acls = ZKUtil.createACL(this, znode, true);
+    LOG.info("Setting ACLs for znode:" + znode + " , acl:" + acls);
+    recoverableZooKeeper.setAcl(znode, acls, -1);
+  }
+
+  /**
+   * Checks whether the ACLs returned from the base znode (/hbase) is set for secure setup.
+   * @param acls acls from zookeeper
+   * @return whether ACLs are set for the base znode
+   * @throws IOException
+   */
+  private boolean isBaseZnodeAclSetup(List<ACL> acls) throws IOException {
+    String superUser = conf.get("hbase.superuser");
+
+    // this assumes that current authenticated user is the same as zookeeper client user
+    // configured via JAAS
+    String hbaseUser = UserGroupInformation.getCurrentUser().getShortUserName();
+
+    if (acls.isEmpty()) {
+      return false;
+    }
+
+    for (ACL acl : acls) {
+      int perms = acl.getPerms();
+      Id id = acl.getId();
+      // We should only set at most 3 possible ACLs for 3 Ids. One for everyone, one for superuser
+      // and one for the hbase user
+      if (Ids.ANYONE_ID_UNSAFE.equals(id)) {
+        if (perms != Perms.READ) {
+          return false;
+        }
+      } else if (superUser != null && new Id("sasl", superUser).equals(id)) {
+        if (perms != Perms.ALL) {
+          return false;
+        }
+      } else if (new Id("sasl", hbaseUser).equals(id)) {
+        if (perms != Perms.ALL) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -483,6 +590,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
    *
    * @throws InterruptedException
    */
+  @Override
   public void close() {
     try {
       if (recoverableZooKeeper != null) {

@@ -939,8 +939,13 @@ public class ZKUtil {
     // Detection for embedded HBase client with jaas configuration
     // defined for third party programs.
     try {
-      javax.security.auth.login.Configuration testConfig = javax.security.auth.login.Configuration.getConfiguration();
-      if(testConfig.getAppConfigurationEntry("Client") == null) {
+      javax.security.auth.login.Configuration testConfig =
+          javax.security.auth.login.Configuration.getConfiguration();
+      if (testConfig.getAppConfigurationEntry("Client") == null
+          && testConfig.getAppConfigurationEntry(
+            JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME) == null
+          && testConfig.getAppConfigurationEntry(
+              JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null) {
         return false;
       }
     } catch(Exception e) {
@@ -949,16 +954,15 @@ public class ZKUtil {
     }
 
     // Master & RSs uses hbase.zookeeper.client.*
-    return("kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication")) &&
-         conf.get("hbase.zookeeper.client.keytab.file") != null);
+    return "kerberos".equalsIgnoreCase(conf.get("hbase.security.authentication"));
   }
 
   private static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node) {
     return createACL(zkw, node, isSecureZooKeeper(zkw.getConfiguration()));
   }
 
-  protected static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node,
-      boolean isSecureZooKeeper) {
+  public static ArrayList<ACL> createACL(ZooKeeperWatcher zkw, String node,
+    boolean isSecureZooKeeper) {
     if (!node.startsWith(zkw.baseZNode)) {
       return Ids.OPEN_ACL_UNSAFE;
     }
@@ -971,14 +975,7 @@ public class ZKUtil {
       }
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
-      if ((node.equals(zkw.baseZNode) == true) ||
-          (node.equals(zkw.metaServerZNode) == true) ||
-          (node.equals(zkw.getMasterAddressZNode()) == true) ||
-          (node.equals(zkw.clusterIdZNode) == true) ||
-          (node.equals(zkw.rsZNode) == true) ||
-          (node.equals(zkw.backupMasterAddressesZNode) == true) ||
-          (node.startsWith(zkw.assignmentZNode) == true) ||
-          (node.startsWith(zkw.tableZNode) == true)) {
+      if (zkw.isClientReadable(node)) {
         acls.addAll(Ids.CREATOR_ALL_ACL);
         acls.addAll(Ids.READ_ACL_UNSAFE);
       } else {
