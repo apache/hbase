@@ -215,7 +215,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
         <section>
             <& BackupMasterStatusTmpl; master = master &>
         </section>
-	</%if>    
+	</%if>
 
 
         <section>
@@ -375,9 +375,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </tr>
     <%for HTableDescriptor htDesc : tables%>
     <%java>
+      TableName tableName = htDesc.getTableName();
       Map<RegionState.State, List<HRegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
-            .getRegionByStateOfTable(htDesc.getTableName());
+            .getRegionByStateOfTable(tableName);
       int openRegionsCount = tableRegions.get(RegionState.State.OPEN).size();
       int offlineRegionsCount = tableRegions.get(RegionState.State.OFFLINE).size();
       int splitRegionsCount = tableRegions.get(RegionState.State.SPLIT).size();
@@ -393,10 +394,10 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
                      - splitRegionsCount;
     </%java>
     <tr>
-        <td><% htDesc.getTableName().getNamespaceAsString() %></td>
-        <td><a href=table.jsp?name=<% htDesc.getTableName().getNameAsString() %>><% htDesc.getTableName().getQualifierAsString() %></a> </td>
+        <td><% tableName.getNamespaceAsString() %></td>
+        <td><a href=table.jsp?name=<% tableName.getNameAsString() %>><% tableName.getQualifierAsString() %></a> </td>
         <%if (frags != null) %>
-            <td align="center"><% frags.get(htDesc.getTableName().getNameAsString()) != null ? frags.get(htDesc.getTableName().getQualifierAsString()).intValue() + "%" : "n/a" %></td>
+            <td align="center"><% frags.get(tableName.getNameAsString()) != null ? frags.get(tableName.getNameAsString()).intValue() + "%" : "n/a" %></td>
         </%if>
         <td><% openRegionsCount %></td>
         <td><% offlineRegionsCount %></td>
