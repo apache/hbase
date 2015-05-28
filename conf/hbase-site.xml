@@ -70,11 +70,11 @@
 		<value>10.255.196.145,60021</value>
 	</property>
 	<property>
-		<name>hbase.master.balancer.grouploadbalancer.regiongroups.group1</name>
-		<value>test,,1431634594053.44771058f55a3069ee7834dd72f52ee2.;test2,,1431966034667.e60e1b8ad268a8eef3655d7df3b3275e.</value>
+		<name>hbase.master.balancer.grouploadbalancer.tablegroups.group1</name>
+		<value>test3;my_table</value>
 	</property>
 	<property>
-		<name>hbase.master.balancer.grouploadbalancer.regiongroups.group2</name>
-		<value>test3,,1432223175996.6c8cb25befefeb931ccd4c91a805728a.;my_table,,1431636610925.a075db8598e629bfde12163e34adfb54.</value>
+		<name>hbase.master.balancer.grouploadbalancer.tablegroups.group2</name>
+		<value>my_ns:namespace_table;test1</value>
 	</property>
 </configuration>
