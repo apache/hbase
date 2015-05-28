@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.util;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.util.RetryCounter.ExponentialBackoffPolicy;
+import org.apache.hadoop.hbase.util.RetryCounter.ExponentialBackoffPolicyWithLimit;
 import org.apache.hadoop.hbase.util.RetryCounter.RetryConfig;
 
 @InterfaceAudience.Private
@@ -29,12 +29,16 @@ public class RetryCounterFactory {
   private final RetryConfig retryConfig;
 
   public RetryCounterFactory(int maxAttempts, int sleepIntervalMillis) {
+    this(maxAttempts, sleepIntervalMillis, -1);
+  }
+
+  public RetryCounterFactory(int maxAttempts, int sleepIntervalMillis, int maxSleepTime) {
     this(new RetryConfig(
       maxAttempts,
       sleepIntervalMillis,
-      -1,
+      maxSleepTime,
       TimeUnit.MILLISECONDS,
-      new ExponentialBackoffPolicy()));
+      new ExponentialBackoffPolicyWithLimit()));
   }
 
   public RetryCounterFactory(RetryConfig retryConfig) {
