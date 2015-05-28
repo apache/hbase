@@ -92,7 +92,7 @@ public class ExpiredMobFileCleanerChore extends ScheduledChore {
                   lock.release();
                 } catch (IOException e) {
                   LOG.error(
-                    "Fail to release the write lock for the table " + htd.getNameAsString(), e);
+                    "Fail to release the read lock for the table " + htd.getNameAsString(), e);
                 }
               }
             }

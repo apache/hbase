@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 @InterfaceAudience.Private
@@ -73,8 +74,8 @@ public class DeleteTableHandler extends TableEventHandler {
     long waitTime = server.getConfiguration().
       getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
     for (HRegionInfo region : regions) {
-      long done = System.currentTimeMillis() + waitTime;
-      while (System.currentTimeMillis() < done) {
+      long done = EnvironmentEdgeManager.currentTime() + waitTime;
+      while (EnvironmentEdgeManager.currentTime() < done) {
         if (states.isRegionInState(region, State.FAILED_OPEN)) {
           am.regionOffline(region);
         }
@@ -192,14 +193,7 @@ public class DeleteTableHandler extends TableEventHandler {
       }
 
       // Archive the mob data if there is a mob-enabled column
-      HColumnDescriptor[] hcds = hTableDescriptor.getColumnFamilies();
-      boolean hasMob = false;
-      for (HColumnDescriptor hcd : hcds) {
-        if (hcd.isMobEnabled()) {
-          hasMob = true;
-          break;
-        }
-      }
+      boolean hasMob = MobUtils.hasMobColumns(hTableDescriptor);
       Path mobTableDir = null;
       if (hasMob) {
         // Archive mob data

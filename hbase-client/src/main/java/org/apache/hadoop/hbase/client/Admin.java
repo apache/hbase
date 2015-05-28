@@ -1461,7 +1461,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    * @throws InterruptedException
    */
-  void compactMob(final TableName tableName) throws IOException,
+  void compactMobs(final TableName tableName) throws IOException,
     InterruptedException;
 
   /**
@@ -1482,7 +1482,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    * @throws InterruptedException
    */
-  void majorCompactMob(final TableName tableName) throws IOException,
+  void majorCompactMobs(final TableName tableName) throws IOException,
     InterruptedException;
 
   /**

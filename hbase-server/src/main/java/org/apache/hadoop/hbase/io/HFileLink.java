@@ -184,7 +184,9 @@ public class HFileLink extends FileLink {
   /**
    * @return the path of the mob hfiles.
    */
-  public Path getMobPath() { return this.mobPath; }
+  public Path getMobPath() {
+    return this.mobPath;
+  }
 
     /**
    * @param path Path to check.

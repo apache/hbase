@@ -82,10 +82,10 @@ class MetricsRegionServerWrapperImpl
   private volatile long flushedCellsSize = 0;
   private volatile long compactedCellsSize = 0;
   private volatile long majorCompactedCellsSize = 0;
-  private volatile long mobCompactedIntoMobCellsCount = 0;
-  private volatile long mobCompactedFromMobCellsCount = 0;
-  private volatile long mobCompactedIntoMobCellsSize = 0;
-  private volatile long mobCompactedFromMobCellsSize = 0;
+  private volatile long cellsCountCompactedToMob = 0;
+  private volatile long cellsCountCompactedFromMob = 0;
+  private volatile long cellsSizeCompactedToMob = 0;
+  private volatile long cellsSizeCompactedFromMob = 0;
   private volatile long mobFlushCount = 0;
   private volatile long mobFlushedCellsCount = 0;
   private volatile long mobFlushedCellsSize = 0;
@@ -449,23 +449,23 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
-  public long getMobCompactedFromMobCellsCount() {
-    return mobCompactedFromMobCellsCount;
+  public long getCellsCountCompactedFromMob() {
+    return cellsCountCompactedFromMob;
   }
 
   @Override
-  public long getMobCompactedIntoMobCellsCount() {
-    return mobCompactedIntoMobCellsCount;
+  public long getCellsCountCompactedToMob() {
+    return cellsCountCompactedToMob;
   }
 
   @Override
-  public long getMobCompactedFromMobCellsSize() {
-    return mobCompactedFromMobCellsSize;
+  public long getCellsSizeCompactedFromMob() {
+    return cellsSizeCompactedFromMob;
   }
 
   @Override
-  public long getMobCompactedIntoMobCellsSize() {
-    return mobCompactedIntoMobCellsSize;
+  public long getCellsSizeCompactedToMob() {
+    return cellsSizeCompactedToMob;
   }
 
   @Override
@@ -560,10 +560,10 @@ class MetricsRegionServerWrapperImpl
       long tempFlushedCellsSize = 0;
       long tempCompactedCellsSize = 0;
       long tempMajorCompactedCellsSize = 0;
-      long tempMobCompactedIntoMobCellsCount = 0;
-      long tempMobCompactedFromMobCellsCount = 0;
-      long tempMobCompactedIntoMobCellsSize = 0;
-      long tempMobCompactedFromMobCellsSize = 0;
+      long tempCellsCountCompactedToMob = 0;
+      long tempCellsCountCompactedFromMob = 0;
+      long tempCellsSizeCompactedToMob = 0;
+      long tempCellsSizeCompactedFromMob = 0;
       long tempMobFlushCount = 0;
       long tempMobFlushedCellsCount = 0;
       long tempMobFlushedCellsSize = 0;
@@ -596,10 +596,10 @@ class MetricsRegionServerWrapperImpl
           tempMajorCompactedCellsSize += store.getMajorCompactedCellsSize();
           if (store instanceof HMobStore) {
             HMobStore mobStore = (HMobStore) store;
-            tempMobCompactedIntoMobCellsCount += mobStore.getMobCompactedIntoMobCellsCount();
-            tempMobCompactedFromMobCellsCount += mobStore.getMobCompactedFromMobCellsCount();
-            tempMobCompactedIntoMobCellsSize += mobStore.getMobCompactedIntoMobCellsSize();
-            tempMobCompactedFromMobCellsSize += mobStore.getMobCompactedFromMobCellsSize();
+            tempCellsCountCompactedToMob += mobStore.getCellsCountCompactedToMob();
+            tempCellsCountCompactedFromMob += mobStore.getCellsCountCompactedFromMob();
+            tempCellsSizeCompactedToMob += mobStore.getCellsSizeCompactedToMob();
+            tempCellsSizeCompactedFromMob += mobStore.getCellsSizeCompactedFromMob();
             tempMobFlushCount += mobStore.getMobFlushCount();
             tempMobFlushedCellsCount += mobStore.getMobFlushedCellsCount();
             tempMobFlushedCellsSize += mobStore.getMobFlushedCellsSize();
@@ -666,10 +666,10 @@ class MetricsRegionServerWrapperImpl
       flushedCellsSize = tempFlushedCellsSize;
       compactedCellsSize = tempCompactedCellsSize;
       majorCompactedCellsSize = tempMajorCompactedCellsSize;
-      mobCompactedIntoMobCellsCount = tempMobCompactedIntoMobCellsCount;
-      mobCompactedFromMobCellsCount = tempMobCompactedFromMobCellsCount;
-      mobCompactedIntoMobCellsSize = tempMobCompactedIntoMobCellsSize;
-      mobCompactedFromMobCellsSize = tempMobCompactedFromMobCellsSize;
+      cellsCountCompactedToMob = tempCellsCountCompactedToMob;
+      cellsCountCompactedFromMob = tempCellsCountCompactedFromMob;
+      cellsSizeCompactedToMob = tempCellsSizeCompactedToMob;
+      cellsSizeCompactedFromMob = tempCellsSizeCompactedFromMob;
       mobFlushCount = tempMobFlushCount;
       mobFlushedCellsCount = tempMobFlushedCellsCount;
       mobFlushedCellsSize = tempMobFlushedCellsSize;

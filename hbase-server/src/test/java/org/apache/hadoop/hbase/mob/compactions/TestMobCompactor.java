@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import static org.junit.Assert.assertEquals;
 
@@ -66,6 +66,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -86,7 +88,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
-public class TestMobFileCompactor {
+public class TestMobCompactor {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
   private String tableNameAsString;
@@ -116,7 +118,7 @@ public class TestMobFileCompactor {
     TEST_UTIL.getConfiguration().setInt("hbase.master.info.port", 0);
     TEST_UTIL.getConfiguration().setBoolean("hbase.regionserver.info.port.auto", true);
     TEST_UTIL.getConfiguration()
-      .setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, 5000);
+      .setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, 5000);
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
       KeyProviderForTesting.class.getName());
     TEST_UTIL.getConfiguration().set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
@@ -199,7 +201,7 @@ public class TestMobFileCompactor {
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: del file count", 0, countFiles(tableName, false, family1));
 
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum * rowNumPerRegion,
@@ -228,7 +230,7 @@ public class TestMobFileCompactor {
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: del file count", 0, countFiles(tableName, false, family1));
 
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum*rowNumPerRegion,
@@ -278,7 +280,7 @@ public class TestMobFileCompactor {
       countFiles(tableName, true, family1));
     assertEquals("Before compaction: del file count", 0, countFiles(tableName, false, family1));
 
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd, pool);
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum*rowNumPerRegion,
@@ -322,7 +324,7 @@ public class TestMobFileCompactor {
         countFiles(tableName, false, family2));
 
     // do the mob file compaction
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum*(rowNumPerRegion-delRowNum),
@@ -345,7 +347,7 @@ public class TestMobFileCompactor {
     resetConf();
     int mergeSize = 5000;
     // change the mob compaction merge size
-    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
+    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
 
     int count = 4;
     // generate mob files
@@ -376,7 +378,7 @@ public class TestMobFileCompactor {
         countFiles(tableName, false, family2));
 
     // do the mob file compaction
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum*(rowNumPerRegion-delRowNum),
@@ -399,7 +401,7 @@ public class TestMobFileCompactor {
   public void testCompactionWithDelFilesAndWithSmallCompactionBatchSize() throws Exception {
     resetConf();
     int batchSize = 2;
-    conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, batchSize);
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, batchSize);
     int count = 4;
     // generate mob files
     loadData(admin, bufMut, tableName, count, rowNumPerFile);
@@ -427,8 +429,8 @@ public class TestMobFileCompactor {
     assertEquals("Before compaction: family2 del file count", regionNum,
         countFiles(tableName, false, family2));
 
-    // do the mob file compaction
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    // do the mob compaction
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After compaction: mob rows count", regionNum*(rowNumPerRegion-delRowNum),
@@ -473,8 +475,8 @@ public class TestMobFileCompactor {
     assertEquals("Before compaction: family2 del file count", regionNum,
         countFiles(tableName, false, family2));
 
-    // do the mob file compaction
-    MobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs, tableName, hcd1, pool);
+    // do the mob compaction
+    MobCompactor compactor = new PartitionedMobCompactor(conf, fs, tableName, hcd1, pool);
     compactor.compact();
 
     assertEquals("After first compaction: mob rows count", regionNum*(rowNumPerRegion-delRowNum),
@@ -565,7 +567,7 @@ public class TestMobFileCompactor {
         countFiles(tableName, false, family2));
 
     int largeFilesCount = countLargeFiles(5000, family1);
-    // do the mob file compaction
+    // do the mob compaction
     admin.compactMob(tableName, hcd1.getName());
 
     waitUntilCompactionFinished(tableName);
@@ -613,7 +615,7 @@ public class TestMobFileCompactor {
     assertEquals("Before compaction: family2 del file count", regionNum,
         countFiles(tableName, false, family2));
 
-    // do the major mob file compaction, it will force all files to compaction
+    // do the major mob compaction, it will force all files to compaction
     admin.majorCompactMob(tableName, hcd1.getName());
 
     waitUntilCompactionFinished(tableName);
@@ -914,9 +916,9 @@ public class TestMobFileCompactor {
    * Resets the configuration.
    */
   private void resetConf() {
-    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD);
-    conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_BATCH_SIZE);
+    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD,
+      MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD);
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE,
+      MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE);
   }
 }

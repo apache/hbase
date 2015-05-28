@@ -267,17 +267,17 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MAJOR_COMPACTED_CELLS_SIZE = "majorCompactedCellsSize";
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
-  String MOB_COMPACTED_INTO_MOB_CELLS_COUNT = "mobCompactedIntoMobCellsCount";
-  String MOB_COMPACTED_INTO_MOB_CELLS_COUNT_DESC =
+  String CELLS_COUNT_COMPACTED_TO_MOB = "cellsCountCompactedToMob";
+  String CELLS_COUNT_COMPACTED_TO_MOB_DESC =
       "The number of cells moved to mob during compaction";
-  String MOB_COMPACTED_FROM_MOB_CELLS_COUNT = "mobCompactedFromMobCellsCount";
-  String MOB_COMPACTED_FROM_MOB_CELLS_COUNT_DESC =
+  String CELLS_COUNT_COMPACTED_FROM_MOB = "cellsCountCompactedFromMob";
+  String CELLS_COUNT_COMPACTED_FROM_MOB_DESC =
       "The number of cells moved from mob during compaction";
-  String MOB_COMPACTED_INTO_MOB_CELLS_SIZE = "mobCompactedIntoMobCellsSize";
-  String MOB_COMPACTED_INTO_MOB_CELLS_SIZE_DESC =
+  String CELLS_SIZE_COMPACTED_TO_MOB = "cellsSizeCompactedToMob";
+  String CELLS_SIZE_COMPACTED_TO_MOB_DESC =
       "The total amount of cells move to mob during compaction, in bytes";
-  String MOB_COMPACTED_FROM_MOB_CELLS_SIZE = "mobCompactedFromMobCellsSize";
-  String MOB_COMPACTED_FROM_MOB_CELLS_SIZE_DESC =
+  String CELLS_SIZE_COMPACTED_FROM_MOB = "cellsSizeCompactedFromMob";
+  String CELLS_SIZE_COMPACTED_FROM_MOB_DESC =
       "The total amount of cells move from mob during compaction, in bytes";
   String MOB_FLUSH_COUNT = "mobFlushCount";
   String MOB_FLUSH_COUNT_DESC = "The number of the flushes in mob-enabled stores";

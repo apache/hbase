@@ -4052,7 +4052,7 @@ public class HBaseAdmin implements Admin {
    * {@inheritDoc}
    */
   @Override
-  public void compactMob(final TableName tableName) throws IOException, InterruptedException {
+  public void compactMobs(final TableName tableName) throws IOException, InterruptedException {
     checkTableNameNotNull(tableName);
     compactMob(tableName, null, false);
   }
@@ -4073,7 +4073,7 @@ public class HBaseAdmin implements Admin {
    * {@inheritDoc}
    */
   @Override
-  public void majorCompactMob(final TableName tableName) throws IOException, InterruptedException {
+  public void majorCompactMobs(final TableName tableName) throws IOException, InterruptedException {
     checkTableNameNotNull(tableName);
     compactMob(tableName, null, true);
   }

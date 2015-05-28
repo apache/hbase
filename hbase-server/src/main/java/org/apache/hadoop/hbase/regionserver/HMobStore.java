@@ -85,10 +85,10 @@ public class HMobStore extends HStore {
   private MobCacheConfig mobCacheConfig;
   private Path homePath;
   private Path mobFamilyPath;
-  private volatile long mobCompactedIntoMobCellsCount = 0;
-  private volatile long mobCompactedFromMobCellsCount = 0;
-  private volatile long mobCompactedIntoMobCellsSize = 0;
-  private volatile long mobCompactedFromMobCellsSize = 0;
+  private volatile long cellsCountCompactedToMob = 0;
+  private volatile long cellsCountCompactedFromMob = 0;
+  private volatile long cellsSizeCompactedToMob = 0;
+  private volatile long cellsSizeCompactedFromMob = 0;
   private volatile long mobFlushCount = 0;
   private volatile long mobFlushedCellsCount = 0;
   private volatile long mobFlushedCellsSize = 0;
@@ -490,36 +490,36 @@ public class HMobStore extends HStore {
     }
   }
 
-  public void updateMobCompactedIntoMobCellsCount(long count) {
-    mobCompactedIntoMobCellsCount += count;
+  public void updateCellsCountCompactedToMob(long count) {
+    cellsCountCompactedToMob += count;
   }
 
-  public long getMobCompactedIntoMobCellsCount() {
-    return mobCompactedIntoMobCellsCount;
+  public long getCellsCountCompactedToMob() {
+    return cellsCountCompactedToMob;
   }
 
-  public void updateMobCompactedFromMobCellsCount(long count) {
-    mobCompactedFromMobCellsCount += count;
+  public void updateCellsCountCompactedFromMob(long count) {
+    cellsCountCompactedFromMob += count;
   }
 
-  public long getMobCompactedFromMobCellsCount() {
-    return mobCompactedFromMobCellsCount;
+  public long getCellsCountCompactedFromMob() {
+    return cellsCountCompactedFromMob;
   }
 
-  public void updateMobCompactedIntoMobCellsSize(long size) {
-    mobCompactedIntoMobCellsSize += size;
+  public void updateCellsSizeCompactedToMob(long size) {
+    cellsSizeCompactedToMob += size;
   }
 
-  public long getMobCompactedIntoMobCellsSize() {
-    return mobCompactedIntoMobCellsSize;
+  public long getCellsSizeCompactedToMob() {
+    return cellsSizeCompactedToMob;
   }
 
-  public void updateMobCompactedFromMobCellsSize(long size) {
-    mobCompactedFromMobCellsSize += size;
+  public void updateCellsSizeCompactedFromMob(long size) {
+    cellsSizeCompactedFromMob += size;
   }
 
-  public long getMobCompactedFromMobCellsSize() {
-    return mobCompactedFromMobCellsSize;
+  public long getCellsSizeCompactedFromMob() {
+    return cellsSizeCompactedFromMob;
   }
 
   public void updateMobFlushCount() {

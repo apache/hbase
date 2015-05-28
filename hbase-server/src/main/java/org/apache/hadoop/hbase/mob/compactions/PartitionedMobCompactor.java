@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -39,8 +39,19 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -48,21 +59,29 @@ import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactionRequest.CompactionType;
-import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartition;
-import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartitionId;
-import org.apache.hadoop.hbase.regionserver.*;
+import org.apache.hadoop.hbase.mob.compactions.MobCompactionRequest.CompactionType;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartition;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.ScanInfo;
+import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 
 /**
- * An implementation of {@link MobFileCompactor} that compacts the mob files in partitions.
+ * An implementation of {@link MobCompactor} that compacts the mob files in partitions.
  */
 @InterfaceAudience.Private
-public class PartitionedMobFileCompactor extends MobFileCompactor {
+public class PartitionedMobCompactor extends MobCompactor {
 
-  private static final Log LOG = LogFactory.getLog(PartitionedMobFileCompactor.class);
+  private static final Log LOG = LogFactory.getLog(PartitionedMobCompactor.class);
   protected long mergeableSize;
   protected int delFileMaxCount;
   /** The number of files compacted in a batch */
@@ -75,16 +94,16 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
   private Tag tableNameTag;
   private Encryption.Context cryptoContext = Encryption.Context.NONE;
 
-  public PartitionedMobFileCompactor(Configuration conf, FileSystem fs, TableName tableName,
+  public PartitionedMobCompactor(Configuration conf, FileSystem fs, TableName tableName,
     HColumnDescriptor column, ExecutorService pool) throws IOException {
     super(conf, fs, tableName, column, pool);
-    mergeableSize = conf.getLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD);
+    mergeableSize = conf.getLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD,
+      MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD);
     delFileMaxCount = conf.getInt(MobConstants.MOB_DELFILE_MAX_COUNT,
       MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
     // default is 100
-    compactionBatchSize = conf.getInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_BATCH_SIZE);
+    compactionBatchSize = conf.getInt(MobConstants.MOB_COMPACTION_BATCH_SIZE,
+      MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE);
     tempPath = new Path(MobUtils.getMobHome(conf), MobConstants.TEMP_DIR_NAME);
     bulkloadPath = new Path(tempPath, new Path(MobConstants.BULKLOAD_DIR_NAME, new Path(
       tableName.getNamespaceAsString(), tableName.getQualifierAsString())));
@@ -98,14 +117,14 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
   }
 
   @Override
-  public List<Path> compact(List<FileStatus> files, boolean isForceAllFiles) throws IOException {
+  public List<Path> compact(List<FileStatus> files, boolean allFiles) throws IOException {
     if (files == null || files.isEmpty()) {
       LOG.info("No candidate mob files");
       return null;
     }
-    LOG.info("isForceAllFiles: " + isForceAllFiles);
+    LOG.info("is allFiles: " + allFiles);
     // find the files to compact.
-    PartitionedMobFileCompactionRequest request = select(files, isForceAllFiles);
+    PartitionedMobCompactionRequest request = select(files, allFiles);
     // compact the files.
     return performCompaction(request);
   }
@@ -114,12 +133,12 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * Selects the compacted mob/del files.
    * Iterates the candidates to find out all the del files and small mob files.
    * @param candidates All the candidates.
-   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @param allFiles Whether add all mob files into the compaction.
    * @return A compaction request.
    * @throws IOException
    */
-  protected PartitionedMobFileCompactionRequest select(List<FileStatus> candidates,
-    boolean isForceAllFiles) throws IOException {
+  protected PartitionedMobCompactionRequest select(List<FileStatus> candidates,
+    boolean allFiles) throws IOException {
     Collection<FileStatus> allDelFiles = new ArrayList<FileStatus>();
     Map<CompactionPartitionId, CompactionPartition> filesToCompact =
       new HashMap<CompactionPartitionId, CompactionPartition>();
@@ -143,8 +162,8 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
       }
       if (StoreFileInfo.isDelFile(linkedFile.getPath())) {
         allDelFiles.add(file);
-      } else if (isForceAllFiles || linkedFile.getLen() < mergeableSize) {
-        // add all files if isForceAllFiles is true,
+      } else if (allFiles || linkedFile.getLen() < mergeableSize) {
+        // add all files if allFiles is true,
         // otherwise add the small files to the merge pool
         MobFileName fileName = MobFileName.create(linkedFile.getPath().getName());
         CompactionPartitionId id = new CompactionPartitionId(fileName.getStartKey(),
@@ -160,7 +179,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
         selectedFileCount++;
       }
     }
-    PartitionedMobFileCompactionRequest request = new PartitionedMobFileCompactionRequest(
+    PartitionedMobCompactionRequest request = new PartitionedMobCompactionRequest(
       filesToCompact.values(), allDelFiles);
     if (candidates.size() == (allDelFiles.size() + selectedFileCount + irrelevantFileCount)) {
       // all the files are selected
@@ -183,7 +202,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @return The paths of new mob files generated in the compaction.
    * @throws IOException
    */
-  protected List<Path> performCompaction(PartitionedMobFileCompactionRequest request)
+  protected List<Path> performCompaction(PartitionedMobCompactionRequest request)
     throws IOException {
     // merge the del files
     List<Path> delFilePaths = new ArrayList<Path>();
@@ -202,12 +221,12 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
     LOG.info("After compaction, there are " + paths.size() + " mob files");
     // archive the del files if all the mob files are selected.
     if (request.type == CompactionType.ALL_FILES && !newDelPaths.isEmpty()) {
-      LOG.info("After a mob file compaction with all files selected, archiving the del files "
-        + newDelFiles);
+      LOG.info("After a mob compaction with all files selected, archiving the del files "
+        + newDelPaths);
       try {
         MobUtils.removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), newDelFiles);
       } catch (IOException e) {
-        LOG.error("Failed to archive the del files " + newDelFiles, e);
+        LOG.error("Failed to archive the del files " + newDelPaths, e);
       }
     }
     return paths;
@@ -220,7 +239,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @return The paths of new mob files after compactions.
    * @throws IOException
    */
-  protected List<Path> compactMobFiles(final PartitionedMobFileCompactionRequest request,
+  protected List<Path> compactMobFiles(final PartitionedMobCompactionRequest request,
     final List<StoreFile> delFiles) throws IOException {
     Collection<CompactionPartition> partitions = request.compactionPartitions;
     if (partitions == null || partitions.isEmpty()) {
@@ -244,19 +263,19 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
         }));
       }
       // compact the partitions in parallel.
-      boolean hasFailure = false;
+      List<CompactionPartitionId> failedPartitions = new ArrayList<CompactionPartitionId>();
       for (Entry<CompactionPartitionId, Future<List<Path>>> result : results.entrySet()) {
         try {
           paths.addAll(result.getValue().get());
         } catch (Exception e) {
           // just log the error
           LOG.error("Failed to compact the partition " + result.getKey(), e);
-          hasFailure = true;
+          failedPartitions.add(result.getKey());
         }
       }
-      if (hasFailure) {
+      if (!failedPartitions.isEmpty()) {
         // if any partition fails in the compaction, directly throw an exception.
-        throw new IOException("Failed to compact the partitions");
+        throw new IOException("Failed to compact the partitions " + failedPartitions);
       }
     } finally {
       try {
@@ -277,7 +296,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @return The paths of new mob files after compactions.
    * @throws IOException
    */
-  private List<Path> compactMobFilePartition(PartitionedMobFileCompactionRequest request,
+  private List<Path> compactMobFilePartition(PartitionedMobCompactionRequest request,
     CompactionPartition partition, List<StoreFile> delFiles, Table table) throws IOException {
     List<Path> newFiles = new ArrayList<Path>();
     List<FileStatus> files = partition.listFiles();
@@ -331,7 +350,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @param newFiles The paths of new mob files after compactions.
    * @throws IOException
    */
-  private void compactMobFilesInBatch(PartitionedMobFileCompactionRequest request,
+  private void compactMobFilesInBatch(PartitionedMobCompactionRequest request,
     CompactionPartition partition, Table table, List<StoreFile> filesToCompact, int batch,
     Path bulkloadPathOfPartition, Path bulkloadColumnPath, List<Path> newFiles)
     throws IOException {
@@ -411,7 +430,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    *         is necessary.
    * @throws IOException
    */
-  protected List<Path> compactDelFiles(PartitionedMobFileCompactionRequest request,
+  protected List<Path> compactDelFiles(PartitionedMobCompactionRequest request,
     List<Path> delFilePaths) throws IOException {
     if (delFilePaths.size() <= delFileMaxCount) {
       return delFilePaths;
@@ -451,7 +470,7 @@ public class PartitionedMobFileCompactor extends MobFileCompactor {
    * @return The path of new del file after merging.
    * @throws IOException
    */
-  private Path compactDelFilesInBatch(PartitionedMobFileCompactionRequest request,
+  private Path compactDelFilesInBatch(PartitionedMobCompactionRequest request,
     List<StoreFile> delFiles) throws IOException {
     // create a scanner for the del files.
     StoreScanner scanner = createScanner(delFiles, ScanType.COMPACT_RETAIN_DELETES);

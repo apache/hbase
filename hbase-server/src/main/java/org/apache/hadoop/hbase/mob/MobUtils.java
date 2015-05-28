@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -63,8 +64,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
-import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactor;
-import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor;
+import org.apache.hadoop.hbase.mob.compactions.MobCompactor;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
@@ -249,7 +250,7 @@ public class MobUtils {
     try {
       stats = fs.listStatus(path);
     } catch (FileNotFoundException e) {
-      LOG.warn("Fail to find the mob file " + path, e);
+      LOG.warn("Failed to find the mob file " + path, e);
     }
     if (null == stats) {
       // no file found
@@ -287,7 +288,7 @@ public class MobUtils {
             filesToClean);
         deletedFileCount = filesToClean.size();
       } catch (IOException e) {
-        LOG.error("Fail to delete the mob files " + filesToClean, e);
+        LOG.error("Failed to delete the mob files " + filesToClean, e);
       }
     }
     LOG.info(deletedFileCount + " expired mob files are deleted");
@@ -555,7 +556,7 @@ public class MobUtils {
   }
 
   /**
-   * Creates a writer for the del file in temp directory.
+   * Creates a writer for the mob file in temp directory.
    * @param conf The current configuration.
    * @param fs The current file system.
    * @param family The descriptor of the current column family.
@@ -631,7 +632,7 @@ public class MobUtils {
       storeFile = new StoreFile(fs, path, conf, cacheConfig, BloomType.NONE);
       storeFile.createReader();
     } catch (IOException e) {
-      LOG.error("Fail to open mob file[" + path + "], keep it in temp directory.", e);
+      LOG.error("Failed to open mob file[" + path + "], keep it in temp directory.", e);
       throw e;
     } finally {
       if (storeFile != null) {
@@ -692,22 +693,22 @@ public class MobUtils {
   }
 
   /**
-   * Performs the mob file compaction.
+   * Performs the mob compaction.
    * @param conf the Configuration
    * @param fs the file system
    * @param tableName the table the compact
    * @param hcd the column descriptor
    * @param pool the thread pool
    * @param tableLockManager the tableLock manager
-   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @param allFiles Whether add all mob files into the compaction.
    */
-  public static void doMobFileCompaction(Configuration conf, FileSystem fs, TableName tableName,
+  public static void doMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
     HColumnDescriptor hcd, ExecutorService pool, TableLockManager tableLockManager,
-    boolean isForceAllFiles) throws IOException {
-    String className = conf.get(MobConstants.MOB_FILE_COMPACTOR_CLASS_KEY,
-      PartitionedMobFileCompactor.class.getName());
-    // instantiate the mob file compactor.
-    MobFileCompactor compactor = null;
+    boolean allFiles) throws IOException {
+    String className = conf.get(MobConstants.MOB_COMPACTOR_CLASS_KEY,
+      PartitionedMobCompactor.class.getName());
+    // instantiate the mob compactor.
+    MobCompactor compactor = null;
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
         Configuration.class, FileSystem.class, TableName.class, HColumnDescriptor.class,
@@ -724,21 +725,21 @@ public class MobUtils {
       // the tableLockManager might be null in testing. In that case, it is lock-free.
       if (tableLockManager != null) {
         lock = tableLockManager.writeLock(MobUtils.getTableLockName(tableName),
-          "Run MobFileCompaction");
+          "Run MobCompactor");
         lock.acquire();
       }
       tableLocked = true;
-      compactor.compact(isForceAllFiles);
+      compactor.compact(allFiles);
     } catch (Exception e) {
-      LOG.error("Fail to compact the mob files for the column " + hcd.getNameAsString()
+      LOG.error("Failed to compact the mob files for the column " + hcd.getNameAsString()
         + " in the table " + tableName.getNameAsString(), e);
     } finally {
       if (lock != null && tableLocked) {
         try {
           lock.release();
         } catch (IOException e) {
-          LOG.error("Fail to release the write lock for the table " + tableName.getNameAsString(),
-            e);
+          LOG.error(
+            "Failed to release the write lock for the table " + tableName.getNameAsString(), e);
         }
       }
     }
@@ -749,15 +750,15 @@ public class MobUtils {
    * @param conf the Configuration
    * @return A thread pool.
    */
-  public static ExecutorService createMobFileCompactorThreadPool(Configuration conf) {
-    int maxThreads = conf.getInt(MobConstants.MOB_FILE_COMPACTION_THREADS_MAX,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_THREADS_MAX);
+  public static ExecutorService createMobCompactorThreadPool(Configuration conf) {
+    int maxThreads = conf.getInt(MobConstants.MOB_COMPACTION_THREADS_MAX,
+      MobConstants.DEFAULT_MOB_COMPACTION_THREADS_MAX);
     if (maxThreads == 0) {
       maxThreads = 1;
     }
     final SynchronousQueue<Runnable> queue = new SynchronousQueue<Runnable>();
     ThreadPoolExecutor pool = new ThreadPoolExecutor(1, maxThreads, 60, TimeUnit.SECONDS, queue,
-      Threads.newDaemonThreadFactory("MobFileCompactor"), new RejectedExecutionHandler() {
+      Threads.newDaemonThreadFactory("MobCompactor"), new RejectedExecutionHandler() {
         @Override
         public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
           try {
@@ -838,5 +839,20 @@ public class MobUtils {
       cryptoContext.setKey(key);
     }
     return cryptoContext;
+  }
+
+  /**
+   * Checks whether this table has mob-enabled columns.
+   * @param htd The current table descriptor.
+   * @return Whether this table has mob-enabled columns.
+   */
+  public static boolean hasMobColumns(HTableDescriptor htd) {
+    HColumnDescriptor[] hcds = htd.getColumnFamilies();
+    for (HColumnDescriptor hcd : hcds) {
+      if (hcd.isMobEnabled()) {
+        return true;
+      }
+    }
+    return false;
   }
 }

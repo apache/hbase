@@ -34,25 +34,25 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
 /**
- * The Class MobFileCompactChore for running compaction regularly to merge small mob files.
+ * The Class MobCompactChore for running compaction regularly to merge small mob files.
  */
 @InterfaceAudience.Private
-public class MobFileCompactionChore extends ScheduledChore {
+public class MobCompactionChore extends ScheduledChore {
 
-  private static final Log LOG = LogFactory.getLog(MobFileCompactionChore.class);
+  private static final Log LOG = LogFactory.getLog(MobCompactionChore.class);
   private HMaster master;
   private TableLockManager tableLockManager;
   private ExecutorService pool;
 
-  public MobFileCompactionChore(HMaster master) {
-    super(master.getServerName() + "-MobFileCompactChore", master, master.getConfiguration()
-      .getInt(MobConstants.MOB_FILE_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD), master.getConfiguration().getInt(
-      MobConstants.MOB_FILE_COMPACTION_CHORE_PERIOD,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD), TimeUnit.SECONDS);
+  public MobCompactionChore(HMaster master) {
+    super(master.getServerName() + "-MobCompactionChore", master, master.getConfiguration()
+      .getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), master.getConfiguration().getInt(
+      MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), TimeUnit.SECONDS);
     this.master = master;
     this.tableLockManager = master.getTableLockManager();
-    this.pool = MobUtils.createMobFileCompactorThreadPool(master.getConfiguration());
+    this.pool = MobUtils.createMobCompactorThreadPool(master.getConfiguration());
   }
 
   @Override
@@ -72,20 +72,20 @@ public class MobFileCompactionChore extends ScheduledChore {
               continue;
             }
             if (!reported) {
-              master.reportMobFileCompactionStart(htd.getTableName());
+              master.reportMobCompactionStart(htd.getTableName());
               reported = true;
             }
-            MobUtils.doMobFileCompaction(master.getConfiguration(), master.getFileSystem(),
+            MobUtils.doMobCompaction(master.getConfiguration(), master.getFileSystem(),
               htd.getTableName(), hcd, pool, tableLockManager, false);
           }
         } finally {
           if (reported) {
-            master.reportMobFileCompactionEnd(htd.getTableName());
+            master.reportMobCompactionEnd(htd.getTableName());
           }
         }
       }
     } catch (Exception e) {
-      LOG.error("Fail to clean the expired mob files", e);
+      LOG.error("Failed to compact mob files", e);
     }
   }
 

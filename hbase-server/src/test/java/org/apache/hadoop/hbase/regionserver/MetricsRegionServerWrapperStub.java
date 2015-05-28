@@ -267,22 +267,22 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
-  public long getMobCompactedIntoMobCellsCount() {
+  public long getCellsCountCompactedToMob() {
     return 20;
   }
 
   @Override
-  public long getMobCompactedFromMobCellsCount() {
+  public long getCellsCountCompactedFromMob() {
     return 10;
   }
 
   @Override
-  public long getMobCompactedIntoMobCellsSize() {
+  public long getCellsSizeCompactedToMob() {
     return 200;
   }
 
   @Override
-  public long getMobCompactedFromMobCellsSize() {
+  public long getCellsSizeCompactedFromMob() {
     return 100;
   }
 

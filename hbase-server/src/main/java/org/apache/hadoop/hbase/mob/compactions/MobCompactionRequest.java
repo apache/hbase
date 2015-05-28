@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
@@ -24,7 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
  * The compaction request for mob files.
  */
 @InterfaceAudience.Private
-public abstract class MobFileCompactionRequest {
+public abstract class MobCompactionRequest {
 
   protected long selectionTime;
   protected CompactionType type = CompactionType.PART_FILES;

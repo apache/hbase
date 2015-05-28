@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -34,10 +34,10 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * A mob file compactor to directly compact the mob files.
+ * A mob compactor to directly compact the mob files.
  */
 @InterfaceAudience.Private
-public abstract class MobFileCompactor {
+public abstract class MobCompactor {
 
   protected FileSystem fs;
   protected Configuration conf;
@@ -48,7 +48,7 @@ public abstract class MobFileCompactor {
   protected Path mobFamilyDir;
   protected ExecutorService pool;
 
-  public MobFileCompactor(Configuration conf, FileSystem fs, TableName tableName,
+  public MobCompactor(Configuration conf, FileSystem fs, TableName tableName,
     HColumnDescriptor column, ExecutorService pool) {
     this.conf = conf;
     this.fs = fs;
@@ -70,21 +70,21 @@ public abstract class MobFileCompactor {
 
   /**
    * Compacts the mob files by compaction type for the current column family.
-   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @param allFiles Whether add all mob files into the compaction.
    * @return The paths of new mob files generated in the compaction.
    * @throws IOException
    */
-  public List<Path> compact(boolean isForceAllFiles) throws IOException {
-    return compact(Arrays.asList(fs.listStatus(mobFamilyDir)), isForceAllFiles);
+  public List<Path> compact(boolean allFiles) throws IOException {
+    return compact(Arrays.asList(fs.listStatus(mobFamilyDir)), allFiles);
   }
 
   /**
    * Compacts the candidate mob files.
    * @param files The candidate mob files.
-   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @param allFiles Whether add all mob files into the compaction.
    * @return The paths of new mob files generated in the compaction.
    * @throws IOException
    */
-  public abstract List<Path> compact(List<FileStatus> files, boolean isForceAllFiles)
+  public abstract List<Path> compact(List<FileStatus> files, boolean allFiles)
     throws IOException;
 }

@@ -998,7 +998,7 @@ module Hbase
     # Requests a mob file compaction
     def compact_mob(table_name, family = nil)
       if family == nil
-        @admin.compactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+        @admin.compactMobs(org.apache.hadoop.hbase.TableName.valueOf(table_name))
       else
         # We are compacting a mob column family within a table.
         @admin.compactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name), family.to_java_bytes)
@@ -1009,7 +1009,7 @@ module Hbase
     # Requests a mob file major compaction
     def major_compact_mob(table_name, family = nil)
       if family == nil
-        @admin.majorCompactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name))
+        @admin.majorCompactMobs(org.apache.hadoop.hbase.TableName.valueOf(table_name))
       else
         # We are major compacting a mob column family within a table.
         @admin.majorCompactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name), family.to_java_bytes)

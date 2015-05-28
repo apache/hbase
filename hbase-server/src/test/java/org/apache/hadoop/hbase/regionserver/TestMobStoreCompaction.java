@@ -62,13 +62,13 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 /**
- * Test mob compaction
+ * Test mob store compaction
  */
 @Category(MediumTests.class)
-public class TestMobCompaction {
+public class TestMobStoreCompaction {
   @Rule
   public TestName name = new TestName();
-  static final Log LOG = LogFactory.getLog(TestMobCompaction.class.getName());
+  static final Log LOG = LogFactory.getLog(TestMobStoreCompaction.class.getName());
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
 
@@ -178,8 +178,8 @@ public class TestMobCompaction {
   }
 
   /**
-   * This test will first generate store files, then bulk load them and trigger the compaction. When
-   * compaction, the cell value will be larger than the threshold.
+   * This test will first generate store files, then bulk load them and trigger the compaction.
+   * When compaction, the cell value will be larger than the threshold.
    */
   @Test
   public void testMobCompactionWithBulkload() throws Exception {

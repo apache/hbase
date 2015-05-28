@@ -44,12 +44,12 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Compact passed set of files in the mob-enabled column family.
  */
 @InterfaceAudience.Private
-public class DefaultMobCompactor extends DefaultCompactor {
+public class DefaultMobStoreCompactor extends DefaultCompactor {
 
-  private static final Log LOG = LogFactory.getLog(DefaultMobCompactor.class);
+  private static final Log LOG = LogFactory.getLog(DefaultMobStoreCompactor.class);
   private long mobSizeThreshold;
   private HMobStore mobStore;
-  public DefaultMobCompactor(Configuration conf, Store store) {
+  public DefaultMobStoreCompactor(Configuration conf, Store store) {
     super(conf, store);
     // The mob cells reside in the mob-enabled column family which is held by HMobStore.
     // During the compaction, the compactor reads the cells from the mob files and
@@ -83,6 +83,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
     Scan scan = new Scan();
     scan.setMaxVersions(store.getFamily().getMaxVersions());
     if (scanType == ScanType.COMPACT_DROP_DELETES) {
+      // In major compaction, we need to write the delete markers to del files, so we have to
+      // retain the them in scanning.
       scanType = ScanType.COMPACT_RETAIN_DELETES;
       return new MobCompactionStoreScanner(store, store.getScanInfo(), scan, scanners,
           scanType, smallestReadPoint, earliestPutTs, true);
@@ -133,6 +135,7 @@ public class DefaultMobCompactor extends DefaultCompactor {
    * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
+   * @param throughputController The compaction throughput controller.
    * @param major Is a major compaction.
    * @return Whether compaction ended; false if it was interrupted for any reason.
    */
@@ -160,10 +163,10 @@ public class DefaultMobCompactor extends DefaultCompactor {
     long deleteMarkersCount = 0;
     Tag tableNameTag = new Tag(TagType.MOB_TABLE_NAME_TAG_TYPE, store.getTableName()
             .getName());
-    long mobCompactedIntoMobCellsCount = 0;
-    long mobCompactedFromMobCellsCount = 0;
-    long mobCompactedIntoMobCellsSize = 0;
-    long mobCompactedFromMobCellsSize = 0;
+    long cellsCountCompactedToMob = 0;
+    long cellsCountCompactedFromMob = 0;
+    long cellsSizeCompactedToMob = 0;
+    long cellsSizeCompactedFromMob = 0;
     try {
       try {
         // If the mob file writer could not be created, directly write the cell to the store file.
@@ -172,7 +175,7 @@ public class DefaultMobCompactor extends DefaultCompactor {
         fileName = Bytes.toBytes(mobFileWriter.getPath().getName());
       } catch (IOException e) {
         LOG.error(
-            "Fail to create mob writer, "
+            "Failed to create mob writer, "
                 + "we will continue the compaction by writing MOB cells directly in store files",
             e);
       }
@@ -180,8 +183,6 @@ public class DefaultMobCompactor extends DefaultCompactor {
           store.getFamily().getCompression(), store.getRegionInfo().getStartKey());
       ScannerContext scannerContext =
               ScannerContext.newBuilder().setBatchLimit(compactionKVMax).build();
-
-
       do {
         hasMore = compactionScanner.next(cells, scannerContext);
         // output to writer:
@@ -211,8 +212,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
                   // put the mob data back to the store file
                   CellUtil.setSequenceId(mobCell, c.getSequenceId());
                   writer.append(mobCell);
-                  mobCompactedFromMobCellsCount++;
-                  mobCompactedFromMobCellsSize += mobCell.getValueLength();
+                  cellsCountCompactedFromMob++;
+                  cellsSizeCompactedFromMob += mobCell.getValueLength();
                 } else {
                   // If the value of a file is empty, there might be issues when retrieving,
                   // directly write the cell to the store file, and leave it to be handled by the
@@ -238,8 +239,8 @@ public class DefaultMobCompactor extends DefaultCompactor {
             KeyValue reference = MobUtils.createMobRefKeyValue(c, fileName, tableNameTag);
             // write the cell whose value is the path of a mob file to the store file.
             writer.append(reference);
-            mobCompactedIntoMobCellsCount++;
-            mobCompactedIntoMobCellsSize += c.getValueLength();
+            cellsCountCompactedToMob++;
+            cellsSizeCompactedToMob += c.getValueLength();
           }
           ++progress.currentCompactedKVs;
 
@@ -276,7 +277,7 @@ public class DefaultMobCompactor extends DefaultCompactor {
           // If the mob file is empty, delete it instead of committing.
           store.getFileSystem().delete(mobFileWriter.getPath(), true);
         } catch (IOException e) {
-          LOG.error("Fail to delete the temp mob file", e);
+          LOG.error("Failed to delete the temp mob file", e);
         }
       }
     }
@@ -290,14 +291,14 @@ public class DefaultMobCompactor extends DefaultCompactor {
           // If the del file is empty, delete it instead of committing.
           store.getFileSystem().delete(delFileWriter.getPath(), true);
         } catch (IOException e) {
-          LOG.error("Fail to delete the temp del file", e);
+          LOG.error("Failed to delete the temp del file", e);
         }
       }
     }
-    mobStore.updateMobCompactedFromMobCellsCount(mobCompactedFromMobCellsCount);
-    mobStore.updateMobCompactedIntoMobCellsCount(mobCompactedIntoMobCellsCount);
-    mobStore.updateMobCompactedFromMobCellsSize(mobCompactedFromMobCellsSize);
-    mobStore.updateMobCompactedIntoMobCellsSize(mobCompactedIntoMobCellsSize);
+    mobStore.updateCellsCountCompactedFromMob(cellsCountCompactedFromMob);
+    mobStore.updateCellsCountCompactedToMob(cellsCountCompactedToMob);
+    mobStore.updateCellsSizeCompactedFromMob(cellsSizeCompactedFromMob);
+    mobStore.updateCellsSizeCompactedToMob(cellsSizeCompactedToMob);
     progress.complete();
     return true;
   }

@@ -77,43 +77,43 @@ public class MobConstants {
   public final static String EMPTY_STRING = "";
   /**
    * If the size of a mob file is less than this value, it's regarded as a small file and needs to
-   * be merged in mob file compaction. The default value is 192MB.
+   * be merged in mob compaction. The default value is 192MB.
    */
-  public static final String MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD =
-    "hbase.mob.file.compaction.mergeable.threshold";
-  public static final long DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD = 192 * 1024 * 1024;
+  public static final String MOB_COMPACTION_MERGEABLE_THRESHOLD =
+    "hbase.mob.compaction.mergeable.threshold";
+  public static final long DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD = 192 * 1024 * 1024;
   /**
-   * The max number of del files that is allowed in the mob file compaction. In the mob file
+   * The max number of del files that is allowed in the mob file compaction. In the mob
    * compaction, when the number of existing del files is larger than this value, they are merged
    * until number of del files is not larger this value. The default value is 3.
    */
   public static final String MOB_DELFILE_MAX_COUNT = "hbase.mob.delfile.max.count";
   public static final int DEFAULT_MOB_DELFILE_MAX_COUNT = 3;
   /**
-   * The max number of the mob files that is allowed in a batch of the mob file compaction.
-   * The mob file compaction merges the small mob files to bigger ones. If the number of the
+   * The max number of the mob files that is allowed in a batch of the mob compaction.
+   * The mob compaction merges the small mob files to bigger ones. If the number of the
    * small files is very large, it could lead to a "too many opened file handlers" in the merge.
    * And the merge has to be split into batches. This value limits the number of mob files
-   * that are selected in a batch of the mob file compaction. The default value is 100.
+   * that are selected in a batch of the mob compaction. The default value is 100.
    */
-  public static final String MOB_FILE_COMPACTION_BATCH_SIZE =
-    "hbase.mob.file.compaction.batch.size";
-  public static final int DEFAULT_MOB_FILE_COMPACTION_BATCH_SIZE = 100;
+  public static final String MOB_COMPACTION_BATCH_SIZE =
+    "hbase.mob.compaction.batch.size";
+  public static final int DEFAULT_MOB_COMPACTION_BATCH_SIZE = 100;
   /**
-   * The period that MobFileCompactionChore runs. The unit is millisecond.
+   * The period that MobCompactionChore runs. The unit is second.
    * The default value is one week.
    */
-  public static final String MOB_FILE_COMPACTION_CHORE_PERIOD =
-    "hbase.mob.file.compaction.chore.period";
-  public static final int DEFAULT_MOB_FILE_COMPACTION_CHORE_PERIOD =
+  public static final String MOB_COMPACTION_CHORE_PERIOD =
+    "hbase.mob.compaction.chore.period";
+  public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD =
     24 * 60 * 60 * 7; // a week
-  public static final String MOB_FILE_COMPACTOR_CLASS_KEY = "hbase.mob.file.compactor.class";
+  public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
   /**
-   * The max number of threads used in MobFileCompactor.
+   * The max number of threads used in MobCompactor.
    */
-  public static final String MOB_FILE_COMPACTION_THREADS_MAX =
-    "hbase.mob.file.compaction.threads.max";
-  public static final int DEFAULT_MOB_FILE_COMPACTION_THREADS_MAX = 1;
+  public static final String MOB_COMPACTION_THREADS_MAX =
+    "hbase.mob.compaction.threads.max";
+  public static final int DEFAULT_MOB_COMPACTION_THREADS_MAX = 1;
   private MobConstants() {
 
   }

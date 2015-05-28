@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -48,8 +48,10 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.mob.filecompactions.MobFileCompactionRequest.CompactionType;
-import org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactionRequest.CompactionPartition;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor;
+import org.apache.hadoop.hbase.mob.compactions.MobCompactionRequest.CompactionType;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartition;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -60,7 +62,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category(LargeTests.class)
-public class TestPartitionedMobFileCompactor {
+public class TestPartitionedMobCompactor {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static String family = "family";
   private final static String qf = "qf";
@@ -111,7 +113,7 @@ public class TestPartitionedMobFileCompactor {
     // create 10 del files
     createStoreFiles(basePath, family, qf, count, Type.Delete);
     listFiles();
-    long mergeSize = MobConstants.DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD;
+    long mergeSize = MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD;
     List<String> expectedStartKeys = new ArrayList<>();
     for(FileStatus file : mobFiles) {
       if(file.getLen() < mergeSize) {
@@ -143,8 +145,8 @@ public class TestPartitionedMobFileCompactor {
         expectedStartKeys.add(startKey);
       }
     }
-    // set the mob file compaction mergeable threshold
-    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
+    // set the mob compaction mergeable threshold
+    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
     testSelectFiles(tableName, CompactionType.PART_FILES, false, expectedStartKeys);
   }
 
@@ -166,8 +168,8 @@ public class TestPartitionedMobFileCompactor {
       String startKey = fileName.substring(0, 32);
       expectedStartKeys.add(startKey);
     }
-    // set the mob file compaction mergeable threshold
-    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
+    // set the mob compaction mergeable threshold
+    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
     testSelectFiles(tableName, CompactionType.ALL_FILES, true, expectedStartKeys);
   }
 
@@ -195,8 +197,8 @@ public class TestPartitionedMobFileCompactor {
     createStoreFiles(basePath, family, qf, 13, Type.Delete);
     listFiles();
 
-    // set the mob file compaction batch size
-    conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, 4);
+    // set the mob compaction batch size
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, 4);
     testCompactDelFiles(tableName, 1, 13, false);
   }
 
@@ -213,8 +215,8 @@ public class TestPartitionedMobFileCompactor {
 
     // set the max del file count
     conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, 5);
-    // set the mob file compaction batch size
-    conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE, 2);
+    // set the mob compaction batch size
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, 2);
     testCompactDelFiles(tableName, 4, 13, false);
   }
 
@@ -222,11 +224,12 @@ public class TestPartitionedMobFileCompactor {
    * Tests the selectFiles
    * @param tableName the table name
    * @param type the expected compaction type
+   * @param isForceAllFiles whether all the mob files are selected
    * @param expected the expected start keys
    */
   private void testSelectFiles(String tableName, final CompactionType type,
     final boolean isForceAllFiles, final List<String> expected) throws IOException {
-    PartitionedMobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs,
+    PartitionedMobCompactor compactor = new PartitionedMobCompactor(conf, fs,
       TableName.valueOf(tableName), hcd, pool) {
       @Override
       public List<Path> compact(List<FileStatus> files, boolean isForceAllFiles)
@@ -234,7 +237,7 @@ public class TestPartitionedMobFileCompactor {
         if (files == null || files.isEmpty()) {
           return null;
         }
-        PartitionedMobFileCompactionRequest request = select(files, isForceAllFiles);
+        PartitionedMobCompactionRequest request = select(files, isForceAllFiles);
         // assert the compaction type
         Assert.assertEquals(type, request.type);
         // assert get the right partitions
@@ -252,13 +255,14 @@ public class TestPartitionedMobFileCompactor {
    * @param tableName the table name
    * @param expectedFileCount the expected file count
    * @param expectedCellCount the expected cell count
+   * @param isForceAllFiles whether all the mob files are selected
    */
   private void testCompactDelFiles(String tableName, final int expectedFileCount,
       final int expectedCellCount, boolean isForceAllFiles) throws IOException {
-    PartitionedMobFileCompactor compactor = new PartitionedMobFileCompactor(conf, fs,
+    PartitionedMobCompactor compactor = new PartitionedMobCompactor(conf, fs,
       TableName.valueOf(tableName), hcd, pool) {
       @Override
-      protected List<Path> performCompaction(PartitionedMobFileCompactionRequest request)
+      protected List<Path> performCompaction(PartitionedMobCompactionRequest request)
           throws IOException {
         List<Path> delFilePaths = new ArrayList<Path>();
         for (FileStatus delFile : request.delFiles) {
@@ -427,10 +431,10 @@ public class TestPartitionedMobFileCompactor {
    * Resets the configuration.
    */
   private void resetConf() {
-    conf.setLong(MobConstants.MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_MERGEABLE_THRESHOLD);
+    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD,
+      MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD);
     conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
-    conf.setInt(MobConstants.MOB_FILE_COMPACTION_BATCH_SIZE,
-      MobConstants.DEFAULT_MOB_FILE_COMPACTION_BATCH_SIZE);
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE,
+      MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE);
   }
 }

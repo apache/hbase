@@ -110,7 +110,6 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
@@ -280,13 +279,13 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
   private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
-  private MobFileCompactionChore mobFileCompactChore;
-  MasterMobFileCompactionThread mobFileCompactThread;
-  // used to synchronize the mobFileCompactionStates
-  private final IdLock mobFileCompactionLock = new IdLock();
-  // save the information of mob file compactions in tables.
+  private MobCompactionChore mobCompactChore;
+  private MasterMobCompactionThread mobCompactThread;
+  // used to synchronize the mobCompactionStates
+  private final IdLock mobCompactionLock = new IdLock();
+  // save the information of mob compactions in tables.
   // the key is table name, the value is the number of compactions in that table.
-  private Map<TableName, AtomicInteger> mobFileCompactionStates = Maps.newConcurrentMap();
+  private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
 
   MasterCoprocessorHost cpHost;
 
@@ -796,9 +795,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
     getChoreService().scheduleChore(expiredMobFileCleanerChore);
 
-    this.mobFileCompactChore = new MobFileCompactionChore(this);
-    getChoreService().scheduleChore(mobFileCompactChore);
-    this.mobFileCompactThread = new MasterMobFileCompactionThread(this);
+    this.mobCompactChore = new MobCompactionChore(this);
+    getChoreService().scheduleChore(mobCompactChore);
+    this.mobCompactThread = new MasterMobCompactionThread(this);
 
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -1134,8 +1133,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.expiredMobFileCleanerChore != null) {
       this.expiredMobFileCleanerChore.cancel(true);
     }
-    if (this.mobFileCompactChore != null) {
-      this.mobFileCompactChore.cancel(true);
+    if (this.mobCompactChore != null) {
+      this.mobCompactChore.cancel(true);
     }
     if (this.balancerChore != null) {
       this.balancerChore.cancel(true);
@@ -1149,8 +1148,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.cancel(true);
     }
-    if (this.mobFileCompactThread != null) {
-      this.mobFileCompactThread.close();
+    if (this.mobCompactThread != null) {
+      this.mobCompactThread.close();
     }
   }
 
@@ -2453,47 +2452,59 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return If a given table is in mob file compaction now.
    */
   public CompactionState getMobCompactionState(TableName tableName) {
-    AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+    AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
     if (compactionsCount != null && compactionsCount.get() != 0) {
       return CompactionState.MAJOR_AND_MINOR;
     }
     return CompactionState.NONE;
   }
 
-  public void reportMobFileCompactionStart(TableName tableName) throws IOException {
+  public void reportMobCompactionStart(TableName tableName) throws IOException {
     IdLock.Entry lockEntry = null;
     try {
-      lockEntry = mobFileCompactionLock.getLockEntry(tableName.hashCode());
-      AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+      lockEntry = mobCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
       if (compactionsCount == null) {
         compactionsCount = new AtomicInteger(0);
-        mobFileCompactionStates.put(tableName, compactionsCount);
+        mobCompactionStates.put(tableName, compactionsCount);
       }
       compactionsCount.incrementAndGet();
     } finally {
       if (lockEntry != null) {
-        mobFileCompactionLock.releaseLockEntry(lockEntry);
+        mobCompactionLock.releaseLockEntry(lockEntry);
       }
     }
   }
 
-  public void reportMobFileCompactionEnd(TableName tableName) throws IOException {
+  public void reportMobCompactionEnd(TableName tableName) throws IOException {
     IdLock.Entry lockEntry = null;
     try {
-      lockEntry = mobFileCompactionLock.getLockEntry(tableName.hashCode());
-      AtomicInteger compactionsCount = mobFileCompactionStates.get(tableName);
+      lockEntry = mobCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
       if (compactionsCount != null) {
         int count = compactionsCount.decrementAndGet();
         // remove the entry if the count is 0.
         if (count == 0) {
-          mobFileCompactionStates.remove(tableName);
+          mobCompactionStates.remove(tableName);
         }
       }
     } finally {
       if (lockEntry != null) {
-        mobFileCompactionLock.releaseLockEntry(lockEntry);
+        mobCompactionLock.releaseLockEntry(lockEntry);
       }
     }
+  }
+
+  /**
+   * Requests mob compaction.
+   * @param tableName The table the compact.
+   * @param columns The compacted columns.
+   * @param allFiles Whether add all mob files into the compaction.
+   */
+  public void requestMobCompaction(TableName tableName,
+    List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
+    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns,
+      tableLockManager, allFiles);
   }
 
   /**

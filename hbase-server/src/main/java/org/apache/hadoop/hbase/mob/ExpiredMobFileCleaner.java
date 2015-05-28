@@ -112,7 +112,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
       try {
         admin.close();
       } catch (IOException e) {
-        LOG.error("Fail to close the HBaseAdmin.", e);
+        LOG.error("Failed to close the HBaseAdmin.", e);
       }
     }
   }

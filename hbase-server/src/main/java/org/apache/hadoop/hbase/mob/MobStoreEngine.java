@@ -43,6 +43,6 @@ public class MobStoreEngine extends DefaultStoreEngine {
    */
   @Override
   protected void createCompactor(Configuration conf, Store store) throws IOException {
-    compactor = new DefaultMobCompactor(conf, store);
+    compactor = new DefaultMobStoreCompactor(conf, store);
   }
 }

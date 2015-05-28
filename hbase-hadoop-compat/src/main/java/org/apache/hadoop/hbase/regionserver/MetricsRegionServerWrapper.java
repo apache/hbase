@@ -258,24 +258,24 @@ public interface MetricsRegionServerWrapper {
   long getMajorCompactedCellsSize();
 
   /**
-   * Gets the number of cells move to mob during compaction.
+   * Gets the number of cells moved to mob during compaction.
    */
-  long getMobCompactedIntoMobCellsCount();
+  long getCellsCountCompactedToMob();
 
   /**
-   * Gets the number of cells move from mob during compaction.
+   * Gets the number of cells moved from mob during compaction.
    */
-  long getMobCompactedFromMobCellsCount();
+  long getCellsCountCompactedFromMob();
 
   /**
-   * Gets the total amount of cells move to mob during compaction, in bytes.
+   * Gets the total amount of cells moved to mob during compaction, in bytes.
    */
-  long getMobCompactedIntoMobCellsSize();
+  long getCellsSizeCompactedToMob();
 
   /**
-   * Gets the total amount of cells move from mob during compaction, in bytes.
+   * Gets the total amount of cells moved from mob during compaction, in bytes.
    */
-  long getMobCompactedFromMobCellsSize();
+  long getCellsSizeCompactedFromMob();
 
   /**
    * Gets the number of the flushes in mob-enabled stores.

@@ -51,9 +51,9 @@ public class CompactMobAction extends Action {
     LOG.info("Performing action: Compact mob of table " + tableName + ", major=" + major);
     try {
       if (major) {
-        admin.majorCompactMob(tableName);
+        admin.majorCompactMobs(tableName);
       } else {
-        admin.compactMob(tableName);
+        admin.compactMobs(tableName);
       }
     } catch (Exception ex) {
       LOG.warn("Mob Compaction failed, might be caused by other chaos: " + ex.getMessage());

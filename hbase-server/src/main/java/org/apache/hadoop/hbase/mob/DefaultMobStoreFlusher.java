@@ -121,7 +121,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
     } finally {
       scanner.close();
     }
-    LOG.info("Flushed, sequenceid=" + cacheFlushId + ", memsize="
+    LOG.info("Mob store is flushed, sequenceid=" + cacheFlushId + ", memsize="
         + StringUtils.TraditionalBinaryPrefix.long2String(snapshot.getSize(), "", 1) +
         ", hasBloomFilter=" + writer.hasGeneralBloom() +
         ", into tmp file " + writer.getPath());
@@ -213,7 +213,7 @@ public class DefaultMobStoreFlusher extends DefaultStoreFlusher {
         // If the mob file is empty, delete it instead of committing.
         store.getFileSystem().delete(mobFileWriter.getPath(), true);
       } catch (IOException e) {
-        LOG.error("Fail to delete the temp mob file", e);
+        LOG.error("Failed to delete the temp mob file", e);
       }
     }
   }

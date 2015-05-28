@@ -344,14 +344,7 @@ public class DeleteTableProcedure
 
     // Archive the mob data if there is a mob-enabled column
     HTableDescriptor htd = env.getMasterServices().getTableDescriptors().get(tableName);
-    HColumnDescriptor[] hcds = htd.getColumnFamilies();
-    boolean hasMob = false;
-    for (HColumnDescriptor hcd : hcds) {
-      if (hcd.isMobEnabled()) {
-        hasMob = true;
-        break;
-      }
-    }
+    boolean hasMob = MobUtils.hasMobColumns(htd);
     Path mobTableDir = null;
     if (hasMob) {
       // Archive mob data

@@ -58,7 +58,7 @@ public class StoreFileInfo {
     Pattern.compile("^(" + HFILE_NAME_REGEX + ")");
 
   /**
-   * A non-capture group, for hfiles, so that this can be embedded.
+   * A non-capture group, for del files, so that this can be embedded.
    * A del file has (_del) as suffix.
    */
   public static final String DELFILE_NAME_REGEX = "[0-9a-f]+(?:_del)";

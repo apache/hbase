@@ -16,7 +16,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.mob.filecompactions;
+package org.apache.hadoop.hbase.mob.compactions;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,18 +28,18 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * An implementation of {@link MobFileCompactionRequest} that is used in
- * {@link PartitionedMobFileCompactor}.
+ * An implementation of {@link MobCompactionRequest} that is used in
+ * {@link PartitionedMobCompactor}.
  * The mob files that have the same start key and date in their names belong to
  * the same partition.
  */
 @InterfaceAudience.Private
-public class PartitionedMobFileCompactionRequest extends MobFileCompactionRequest {
+public class PartitionedMobCompactionRequest extends MobCompactionRequest {
 
   protected Collection<FileStatus> delFiles;
   protected Collection<CompactionPartition> compactionPartitions;
 
-  public PartitionedMobFileCompactionRequest(Collection<CompactionPartition> compactionPartitions,
+  public PartitionedMobCompactionRequest(Collection<CompactionPartition> compactionPartitions,
     Collection<FileStatus> delFiles) {
     this.selectionTime = EnvironmentEdgeManager.currentTime();
     this.compactionPartitions = compactionPartitions;
@@ -63,7 +63,7 @@ public class PartitionedMobFileCompactionRequest extends MobFileCompactionReques
   }
 
   /**
-   * The partition in the mob file compaction.
+   * The partition in the mob compaction.
    * The mob files that have the same start key and date in their names belong to
    * the same partition.
    */
@@ -91,7 +91,7 @@ public class PartitionedMobFileCompactionRequest extends MobFileCompactionReques
   /**
    * The partition id that consists of start key and date of the mob file name.
    */
-  protected static class CompactionPartitionId {
+  public static class CompactionPartitionId {
 
     private String startKey;
     private String date;

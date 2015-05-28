@@ -1605,54 +1605,54 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.mob.file.compaction.mergeable.threshold</name>
+    <name>hbase.mob.compaction.mergeable.threshold</name>
     <value>201326592</value>
     <description>
       If the size of a mob file is less than this value, it's regarded as a small
-      file and needs to be merged in mob file compaction. The default value is 192MB.
+      file and needs to be merged in mob compaction. The default value is 192MB.
     </description>
   </property>
   <property>
     <name>hbase.mob.delfile.max.count</name>
     <value>3</value>
     <description>
-      The max number of del files that is allowed in the mob file compaction.
-      In the mob file compaction, when the number of existing del files is larger than
+      The max number of del files that is allowed in the mob compaction.
+      In the mob compaction, when the number of existing del files is larger than
       this value, they are merged until number of del files is not larger this value.
       The default value is 3.
     </description>
   </property>
   <property>
-    <name>hbase.mob.file.compaction.batch.size</name>
+    <name>hbase.mob.compaction.batch.size</name>
     <value>100</value>
     <description>
-      The max number of the mob files that is allowed in a batch of the mob file compaction.
-      The mob file compaction merges the small mob files to bigger ones. If the number of the
+      The max number of the mob files that is allowed in a batch of the mob compaction.
+      The mob compaction merges the small mob files to bigger ones. If the number of the
       small files is very large, it could lead to a "too many opened file handlers" in the merge.
       And the merge has to be split into batches. This value limits the number of mob files
-      that are selected in a batch of the mob file compaction. The default value is 100.
+      that are selected in a batch of the mob compaction. The default value is 100.
     </description>
   </property>
   <property>
-    <name>hbase.mob.file.compaction.chore.period</name>
+    <name>hbase.mob.compaction.chore.period</name>
     <value>604800</value>
     <description>
-      The period that MobFileCompactionChore runs. The unit is second.
+      The period that MobCompactionChore runs. The unit is second.
       The default value is one week.
     </description>
   </property>
   <property>
-    <name>hbase.mob.file.compactor.class</name>
-    <value>org.apache.hadoop.hbase.mob.filecompactions.PartitionedMobFileCompactor</value>
+    <name>hbase.mob.compactor.class</name>
+    <value>org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor</value>
     <description>
-      Implementation of mob file compactor, the default one is PartitionedMobFileCompactor.
+      Implementation of mob compactor, the default one is PartitionedMobCompactor.
     </description>
   </property>
   <property>
-    <name>hbase.mob.file.compaction.threads.max</name>
+    <name>hbase.mob.compaction.threads.max</name>
     <value>1</value>
     <description>
-      The max number of threads used in MobFileCompactor.
+      The max number of threads used in MobCompactor.
     </description>
   </property>
 </configuration>

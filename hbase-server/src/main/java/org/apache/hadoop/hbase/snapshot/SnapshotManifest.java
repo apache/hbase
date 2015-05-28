@@ -159,12 +159,12 @@ public class SnapshotManifest {
     RegionVisitor visitor = createRegionVisitor(desc);
 
     // 1. dump region meta info into the snapshot directory
-    LOG.debug("Storing '" + regionInfo + "' region-info for snapshot.");
+    LOG.debug("Storing mob region '" + regionInfo + "' region-info for snapshot.");
     Object regionData = visitor.regionOpen(regionInfo);
     monitor.rethrowException();
 
     // 2. iterate through all the stores in the region
-    LOG.debug("Creating references for hfiles");
+    LOG.debug("Creating references for mob files");
 
     Path mobRegionPath = MobUtils.getMobRegionPath(conf, regionInfo.getTable());
     for (HColumnDescriptor hcd : hcds) {
@@ -188,7 +188,7 @@ public class SnapshotManifest {
         storeFiles.add(new StoreFileInfo(conf, fs, stat));
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding snapshot references for " + storeFiles + " hfiles");
+        LOG.debug("Adding snapshot references for " + storeFiles + " mob files");
       }
 
       // 2.2. iterate through all the mob files and create "references".
@@ -198,7 +198,7 @@ public class SnapshotManifest {
 
         // create "reference" to this store file.
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding reference for file (" + (i + 1) + "/" + sz + "): "
+          LOG.debug("Adding reference for mob file (" + (i + 1) + "/" + sz + "): "
             + storeFile.getPath());
         }
         visitor.storeFile(regionData, familyData, storeFile);

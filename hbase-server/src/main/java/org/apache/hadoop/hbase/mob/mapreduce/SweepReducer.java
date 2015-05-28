@@ -43,7 +43,11 @@ import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.*;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.BufferedMutator;
+import org.apache.hadoop.hbase.client.BufferedMutatorParams;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -51,6 +55,7 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFile;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactionRequest.CompactionPartitionId;
 import org.apache.hadoop.hbase.mob.mapreduce.SweepJob.DummyMobAbortable;
 import org.apache.hadoop.hbase.mob.mapreduce.SweepJob.SweepCounter;
 import org.apache.hadoop.hbase.regionserver.BloomType;
@@ -120,7 +125,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       try {
         admin.close();
       } catch (IOException e) {
-        LOG.warn("Fail to close the HBaseAdmin", e);
+        LOG.warn("Failed to close the HBaseAdmin", e);
       }
     }
     // disable the block cache.
@@ -138,7 +143,8 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
     mobTableDir = FSUtils.getTableDir(MobUtils.getMobHome(conf), tn);
   }
 
-  private SweepPartition createPartition(SweepPartitionId id, Context context) throws IOException {
+  private SweepPartition createPartition(CompactionPartitionId id, Context context)
+    throws IOException {
     return new SweepPartition(id, context);
   }
 
@@ -161,13 +167,13 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
       fout = fs.create(nameFilePath, true);
       writer = SequenceFile.createWriter(context.getConfiguration(), fout, String.class,
           String.class, CompressionType.NONE, null);
-      SweepPartitionId id;
+      CompactionPartitionId id;
       SweepPartition partition = null;
       // the mob files which have the same start key and date are in the same partition.
       while (context.nextKey()) {
         Text key = context.getCurrentKey();
         String keyString = key.toString();
-        id = SweepPartitionId.create(keyString);
+        id = createPartitionId(keyString);
         if (null == partition || !id.equals(partition.getId())) {
           // It's the first mob file in the current partition.
           if (null != partition) {
@@ -215,21 +221,21 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
    */
   public class SweepPartition {
 
-    private final SweepPartitionId id;
+    private final CompactionPartitionId id;
     private final Context context;
     private boolean memstoreUpdated = false;
     private boolean mergeSmall = false;
     private final Map<String, MobFileStatus> fileStatusMap = new HashMap<String, MobFileStatus>();
     private final List<Path> toBeDeleted = new ArrayList<Path>();
 
-    public SweepPartition(SweepPartitionId id, Context context) throws IOException {
+    public SweepPartition(CompactionPartitionId id, Context context) throws IOException {
       this.id = id;
       this.context = context;
       memstore.setPartitionId(id);
       init();
     }
 
-    public SweepPartitionId getId() {
+    public CompactionPartitionId getId() {
       return this.id;
     }
 
@@ -294,7 +300,7 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
               storeFiles);
           context.getCounter(SweepCounter.FILE_TO_BE_MERGE_OR_CLEAN).increment(storeFiles.size());
         } catch (IOException e) {
-          LOG.error("Fail to archive the store files " + storeFiles, e);
+          LOG.error("Failed to archive the store files " + storeFiles, e);
         }
         storeFiles.clear();
       }
@@ -390,58 +396,13 @@ public class SweepReducer extends Reducer<Text, KeyValue, Writable, Writable> {
   }
 
   /**
-   * The sweep partition id.
-   * It consists of the start key and date.
-   * The start key is a hex string of the checksum of a region start key.
-   * The date is the latest timestamp of cells in a mob file.
+   * Creates the partition id.
+   * @param fileNameAsString The current file name, in string.
+   * @return The partition id.
    */
-  public static class SweepPartitionId {
-    private String date;
-    private String startKey;
-
-    public SweepPartitionId(MobFileName fileName) {
-      this.date = fileName.getDate();
-      this.startKey = fileName.getStartKey();
-    }
-
-    public SweepPartitionId(String date, String startKey) {
-      this.date = date;
-      this.startKey = startKey;
-    }
-
-    public static SweepPartitionId create(String key) {
-      return new SweepPartitionId(MobFileName.create(key));
-    }
-
-    @Override
-    public boolean equals(Object anObject) {
-      if (this == anObject) {
-        return true;
-      }
-      if (anObject instanceof SweepPartitionId) {
-        SweepPartitionId another = (SweepPartitionId) anObject;
-        if (this.date.equals(another.getDate()) && this.startKey.equals(another.getStartKey())) {
-          return true;
-        }
-      }
-      return false;
-    }
-
-    public String getDate() {
-      return this.date;
-    }
-
-    public String getStartKey() {
-      return this.startKey;
-    }
-
-    public void setDate(String date) {
-      this.date = date;
-    }
-
-    public void setStartKey(String startKey) {
-      this.startKey = startKey;
-    }
+  private CompactionPartitionId createPartitionId(String fileNameAsString) {
+    MobFileName fileName = MobFileName.create(fileNameAsString);
+    return new CompactionPartitionId(fileName.getStartKey(), fileName.getDate());
   }
 
   /**

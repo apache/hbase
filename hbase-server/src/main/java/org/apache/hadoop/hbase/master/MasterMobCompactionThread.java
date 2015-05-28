@@ -38,65 +38,65 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
- * The mob file compaction thread used in {@link MasterRpcServices}
+ * The mob compaction thread used in {@link MasterRpcServices}
  */
 @InterfaceAudience.Private
-public class MasterMobFileCompactionThread {
-  static final Log LOG = LogFactory.getLog(MasterMobFileCompactionThread.class);
+public class MasterMobCompactionThread {
+  static final Log LOG = LogFactory.getLog(MasterMobCompactionThread.class);
   private final HMaster master;
   private final Configuration conf;
-  private final ExecutorService mobFileCompactorPool;
+  private final ExecutorService mobCompactorPool;
   private final ExecutorService masterMobPool;
 
-  public MasterMobFileCompactionThread(HMaster master) {
+  public MasterMobCompactionThread(HMaster master) {
     this.master = master;
     this.conf = master.getConfiguration();
     final String n = Thread.currentThread().getName();
-    // this pool is used to run the mob file compaction
+    // this pool is used to run the mob compaction
     this.masterMobPool = new ThreadPoolExecutor(1, 2, 60, TimeUnit.SECONDS,
       new SynchronousQueue<Runnable>(), new ThreadFactory() {
         @Override
         public Thread newThread(Runnable r) {
           Thread t = new Thread(r);
-          t.setName(n + "-MasterMobFileCompaction-" + EnvironmentEdgeManager.currentTime());
+          t.setName(n + "-MasterMobCompaction-" + EnvironmentEdgeManager.currentTime());
           return t;
         }
       });
     ((ThreadPoolExecutor) this.masterMobPool).allowCoreThreadTimeOut(true);
-    // this pool is used in the mob file compaction to compact the mob files by partitions
+    // this pool is used in the mob compaction to compact the mob files by partitions
     // in parallel
-    this.mobFileCompactorPool = MobUtils
-      .createMobFileCompactorThreadPool(master.getConfiguration());
+    this.mobCompactorPool = MobUtils
+      .createMobCompactorThreadPool(master.getConfiguration());
   }
 
   /**
-   * Requests mob file compaction
+   * Requests mob compaction
    * @param conf The Configuration
    * @param fs The file system
    * @param tableName The table the compact
-   * @param hcds The column descriptors
+   * @param columns The column descriptors
    * @param tableLockManager The tableLock manager
-   * @param isForceAllFiles Whether add all mob files into the compaction.
+   * @param allFiles Whether add all mob files into the compaction.
    */
-  public void requestMobFileCompaction(Configuration conf, FileSystem fs, TableName tableName,
-    List<HColumnDescriptor> hcds, TableLockManager tableLockManager, boolean isForceAllFiles)
+  public void requestMobCompaction(Configuration conf, FileSystem fs, TableName tableName,
+    List<HColumnDescriptor> columns, TableLockManager tableLockManager, boolean allFiles)
     throws IOException {
-    master.reportMobFileCompactionStart(tableName);
+    master.reportMobCompactionStart(tableName);
     try {
-      masterMobPool.execute(new CompactionRunner(fs, tableName, hcds, tableLockManager,
-        isForceAllFiles, mobFileCompactorPool));
+      masterMobPool.execute(new CompactionRunner(fs, tableName, columns, tableLockManager,
+        allFiles, mobCompactorPool));
     } catch (RejectedExecutionException e) {
       // in case the request is rejected by the pool
       try {
-        master.reportMobFileCompactionEnd(tableName);
+        master.reportMobCompactionEnd(tableName);
       } catch (IOException e1) {
-        LOG.error("Failed to mark end of mob file compation", e1);
+        LOG.error("Failed to mark end of mob compation", e1);
       }
       throw e;
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("The mob file compaction is requested for the columns " + hcds + " of the table "
-        + tableName.getNameAsString());
+      LOG.debug("The mob compaction is requested for the columns " + columns
+        + " of the table " + tableName.getNameAsString());
     }
   }
 
@@ -105,17 +105,17 @@ public class MasterMobFileCompactionThread {
     private TableName tableName;
     private List<HColumnDescriptor> hcds;
     private TableLockManager tableLockManager;
-    private boolean isForceAllFiles;
+    private boolean allFiles;
     private ExecutorService pool;
 
     public CompactionRunner(FileSystem fs, TableName tableName, List<HColumnDescriptor> hcds,
-      TableLockManager tableLockManager, boolean isForceAllFiles, ExecutorService pool) {
+      TableLockManager tableLockManager, boolean allFiles, ExecutorService pool) {
       super();
       this.fs = fs;
       this.tableName = tableName;
       this.hcds = hcds;
       this.tableLockManager = tableLockManager;
-      this.isForceAllFiles = isForceAllFiles;
+      this.allFiles = allFiles;
       this.pool = pool;
     }
 
@@ -123,16 +123,16 @@ public class MasterMobFileCompactionThread {
     public void run() {
       try {
         for (HColumnDescriptor hcd : hcds) {
-          MobUtils.doMobFileCompaction(conf, fs, tableName, hcd, pool, tableLockManager,
-            isForceAllFiles);
+          MobUtils.doMobCompaction(conf, fs, tableName, hcd, pool, tableLockManager,
+            allFiles);
         }
       } catch (IOException e) {
-        LOG.error("Failed to perform the mob file compaction", e);
+        LOG.error("Failed to perform the mob compaction", e);
       } finally {
         try {
-          master.reportMobFileCompactionEnd(tableName);
+          master.reportMobCompactionEnd(tableName);
         } catch (IOException e) {
-          LOG.error("Failed to mark end of mob file compation", e);
+          LOG.error("Failed to mark end of mob compation", e);
         }
       }
     }
@@ -142,7 +142,7 @@ public class MasterMobFileCompactionThread {
    * Only interrupt once it's done with a run through the work loop.
    */
   private void interruptIfNecessary() {
-    mobFileCompactorPool.shutdown();
+    mobCompactorPool.shutdown();
     masterMobPool.shutdown();
   }
 
@@ -150,12 +150,12 @@ public class MasterMobFileCompactionThread {
    * Wait for all the threads finish.
    */
   private void join() {
-    waitFor(mobFileCompactorPool, "Mob file Compaction Thread");
-    waitFor(masterMobPool, "Region Server Mob File Compaction Thread");
+    waitFor(mobCompactorPool, "Mob Compaction Thread");
+    waitFor(masterMobPool, "Region Server Mob Compaction Thread");
   }
 
   /**
-   * Closes the MasterMobFileCompactionThread.
+   * Closes the MasterMobCompactionThread.
    */
   public void close() {
     interruptIfNecessary();

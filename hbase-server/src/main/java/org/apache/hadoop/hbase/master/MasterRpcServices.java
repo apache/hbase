@@ -1428,7 +1428,7 @@ public class MasterRpcServices extends RSRpcServices
     if (!master.getTableStateManager().isTableState(tableName, TableState.State.ENABLED)) {
       throw new DoNotRetryIOException("Table " + tableName + " is not enabled");
     }
-    boolean isForceAllFiles = false;
+    boolean allFiles = false;
     List<HColumnDescriptor> compactedColumns = new ArrayList<HColumnDescriptor>();
     HColumnDescriptor[] hcds = master.getTableDescriptors().get(tableName).getColumnFamilies();
     byte[] family = null;
@@ -1437,8 +1437,8 @@ public class MasterRpcServices extends RSRpcServices
       for (HColumnDescriptor hcd : hcds) {
         if (Bytes.equals(family, hcd.getName())) {
           if (!hcd.isMobEnabled()) {
-            LOG.error("Column family " + hcd.getName() + " is not a mob column family");
-            throw new DoNotRetryIOException("Column family " + hcd.getName()
+            LOG.error("Column family " + hcd.getNameAsString() + " is not a mob column family");
+            throw new DoNotRetryIOException("Column family " + hcd.getNameAsString()
                     + " is not a mob column family");
           }
           compactedColumns.add(hcd);
@@ -1452,21 +1452,19 @@ public class MasterRpcServices extends RSRpcServices
       }
     }
     if (compactedColumns.isEmpty()) {
-      LOG.error("No mob column families are assigned in the mob file compaction");
+      LOG.error("No mob column families are assigned in the mob compaction");
       throw new DoNotRetryIOException(
-              "No mob column families are assigned in the mob file compaction");
+              "No mob column families are assigned in the mob compaction");
     }
     if (request.hasMajor() && request.getMajor()) {
-      isForceAllFiles = true;
+      allFiles = true;
     }
     String familyLogMsg = (family != null) ? Bytes.toString(family) : "";
     if (LOG.isTraceEnabled()) {
-      LOG.trace("User-triggered mob file compaction requested for table: "
+      LOG.trace("User-triggered mob compaction requested for table: "
               + tableName.getNameAsString() + " for column family: " + familyLogMsg);
     }
-    master.mobFileCompactThread.requestMobFileCompaction(master.getConfiguration(),
-            master.getFileSystem(), tableName, compactedColumns,
-            master.getTableLockManager(), isForceAllFiles);
+    master.requestMobCompaction(tableName, compactedColumns, allFiles);
     return CompactRegionResponse.newBuilder().build();
   }
 
