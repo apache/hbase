@@ -606,7 +606,7 @@ public class TestHBaseFsck {
   }
 
   /**
-   * This test makes sure that with 10 retries both parallel instances
+   * This test makes sure that with enough retries both parallel instances
    * of hbck will be completed successfully.
    *
    * @throws Exception
@@ -616,22 +616,33 @@ public class TestHBaseFsck {
     final ExecutorService service;
     final Future<HBaseFsck> hbck1,hbck2;
 
+    // With the ExponentialBackoffPolicyWithLimit (starting with 200 milliseconds sleep time, and
+    // max sleep time of 5 seconds), we can retry around 15 times within 60 seconds before bail out.
+    final int timeoutInSeconds = 60;
+    final int sleepIntervalInMilliseconds = 200;
+    final int maxSleepTimeInMilliseconds = 6000;
+    final int maxRetryAttempts = 15;
+
     class RunHbck implements Callable<HBaseFsck>{
 
       @Override
       public HBaseFsck call() throws Exception {
         // Increase retry attempts to make sure the non-active hbck doesn't get starved
         Configuration c = new Configuration(conf);
-        c.setInt("hbase.hbck.lockfile.attempts", 10);
+        c.setInt("hbase.hbck.lockfile.maxwaittime", timeoutInSeconds);
+        c.setInt("hbase.hbck.lockfile.attempt.sleep.interval", sleepIntervalInMilliseconds);
+        c.setInt("hbase.hbck.lockfile.attempt.maxsleeptime", maxSleepTimeInMilliseconds);
+        c.setInt("hbase.hbck.lockfile.attempts", maxRetryAttempts);
         return doFsck(c, false);
       }
     }
+
     service = Executors.newFixedThreadPool(2);
     hbck1 = service.submit(new RunHbck());
     hbck2 = service.submit(new RunHbck());
     service.shutdown();
-    //wait for 15 seconds, for both hbck calls finish
-    service.awaitTermination(25, TimeUnit.SECONDS);
+    //wait for some time, for both hbck calls finish
+    service.awaitTermination(timeoutInSeconds * 2, TimeUnit.SECONDS);
     HBaseFsck h1 = hbck1.get();
     HBaseFsck h2 = hbck2.get();
     // Both should be successful

@@ -199,7 +199,9 @@ public class HBaseFsck extends Configured implements Closeable {
   private static final String TO_BE_LOADED = "to_be_loaded";
   private static final String HBCK_LOCK_FILE = "hbase-hbck.lock";
   private static final int DEFAULT_MAX_LOCK_FILE_ATTEMPTS = 5;
-  private static final int DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL = 200;
+  private static final int DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL = 200; // milliseconds
+  private static final int DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME = 5000; // milliseconds
+  private static final int DEFAULT_WAIT_FOR_LOCK_TIMEOUT = 30; // seconds
 
   /**********************
    * Internal resources
@@ -317,9 +319,11 @@ public class HBaseFsck extends Configured implements Closeable {
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
     executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
     lockFileRetryCounterFactory = new RetryCounterFactory(
-        getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS), 
-        getConf().getInt("hbase.hbck.lockfile.attempt.sleep.interval",
-            DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL));
+      getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
+      getConf().getInt(
+        "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
+      getConf().getInt(
+        "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
   }
 
   /**
@@ -338,10 +342,13 @@ public class HBaseFsck extends Configured implements Closeable {
     errors = getErrorReporter(getConf());
     this.executor = exec;
     lockFileRetryCounterFactory = new RetryCounterFactory(
-        getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
-        getConf().getInt("hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL));
+      getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
+      getConf().getInt(
+        "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
+      getConf().getInt(
+        "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
   }
-  
+
   private class FileLockCallable implements Callable<FSDataOutputStream> {
     RetryCounter retryCounter;
 
@@ -411,7 +418,8 @@ public class HBaseFsck extends Configured implements Closeable {
     ExecutorService executor = Executors.newFixedThreadPool(1);
     FutureTask<FSDataOutputStream> futureTask = new FutureTask<FSDataOutputStream>(callable);
     executor.execute(futureTask);
-    final int timeoutInSeconds = 30;
+    final int timeoutInSeconds = getConf().getInt(
+      "hbase.hbck.lockfile.maxwaittime", DEFAULT_WAIT_FOR_LOCK_TIMEOUT);
     FSDataOutputStream stream = null;
     try {
       stream = futureTask.get(timeoutInSeconds, TimeUnit.SECONDS);
@@ -438,6 +446,7 @@ public class HBaseFsck extends Configured implements Closeable {
           IOUtils.closeQuietly(hbckOutFd);
           FSUtils.delete(FSUtils.getCurrentFileSystem(getConf()),
               HBCK_LOCK_PATH, true);
+          LOG.info("Finishing hbck");
           return;
         } catch (IOException ioe) {
           LOG.info("Failed to delete " + HBCK_LOCK_PATH + ", try="
@@ -454,7 +463,6 @@ public class HBaseFsck extends Configured implements Closeable {
           }
         }
       } while (retryCounter.shouldRetry());
-
     }
   }
 
@@ -477,7 +485,7 @@ public class HBaseFsck extends Configured implements Closeable {
     // Make sure to cleanup the lock
     hbckLockCleanup.set(true);
 
-    // Add a shutdown hook to this thread, incase user tries to
+    // Add a shutdown hook to this thread, in case user tries to
     // kill the hbck with a ctrl-c, we want to cleanup the lock so that
     // it is available for further calls
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -487,7 +495,8 @@ public class HBaseFsck extends Configured implements Closeable {
         unlockHbck();
       }
     });
-    LOG.debug("Launching hbck");
+
+    LOG.info("Launching hbck");
 
     connection = (ClusterConnection)ConnectionFactory.createConnection(getConf());
     admin = connection.getAdmin();
