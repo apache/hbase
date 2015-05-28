@@ -100,6 +100,7 @@ public class DefaultMemStore implements MemStore {
   volatile MemStoreLAB allocator;
   volatile MemStoreLAB snapshotAllocator;
   volatile long snapshotId;
+  volatile boolean tagsPresent;
 
   /**
    * Default constructor. Used for tests.
@@ -171,8 +172,11 @@ public class DefaultMemStore implements MemStore {
         timeOfOldestEdit = Long.MAX_VALUE;
       }
     }
-    return new MemStoreSnapshot(this.snapshotId, snapshot.size(), this.snapshotSize,
-        this.snapshotTimeRangeTracker, new CollectionBackedScanner(snapshot, this.comparator));
+    MemStoreSnapshot memStoreSnapshot = new MemStoreSnapshot(this.snapshotId, snapshot.size(), this.snapshotSize,
+        this.snapshotTimeRangeTracker, new CollectionBackedScanner(snapshot, this.comparator),
+        this.tagsPresent);
+    this.tagsPresent = false;
+    return memStoreSnapshot;
   }
 
   /**
@@ -234,6 +238,13 @@ public class DefaultMemStore implements MemStore {
 
   private boolean addToCellSet(Cell e) {
     boolean b = this.cellSet.add(e);
+    // In no tags case this NoTagsKeyValue.getTagsLength() is a cheap call.
+    // When we use ACL CP or Visibility CP which deals with Tags during
+    // mutation, the TagRewriteCell.getTagsLength() is a cheaper call. We do not
+    // parse the byte[] to identify the tags length.
+    if(e.getTagsLength() > 0) {
+      tagsPresent = true;
+    }
     setOldestEditTimeToNow();
     return b;
   }
@@ -1006,8 +1017,8 @@ public class DefaultMemStore implements MemStore {
     }
   }
 
-  public final static long FIXED_OVERHEAD = ClassSize.align(
-      ClassSize.OBJECT + (9 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG));
+  public final static long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+      + (9 * ClassSize.REFERENCE) + (3 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN);
 
   public final static long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD +
       ClassSize.ATOMIC_LONG + (2 * ClassSize.TIMERANGE_TRACKER) +

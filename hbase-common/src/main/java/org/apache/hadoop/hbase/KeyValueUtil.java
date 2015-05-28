@@ -570,11 +570,12 @@ public class KeyValueUtil {
    * <code>iscreate</code> so doesn't clash with {@link #create(DataInput)}
    *
    * @param in
+   * @param withTags whether the keyvalue should include tags are not
    * @return Created KeyValue OR if we find a length of zero, we will return
    *         null which can be useful marking a stream as done.
    * @throws IOException
    */
-  public static KeyValue iscreate(final InputStream in) throws IOException {
+  public static KeyValue iscreate(final InputStream in, boolean withTags) throws IOException {
     byte[] intBytes = new byte[Bytes.SIZEOF_INT];
     int bytesRead = 0;
     while (bytesRead < intBytes.length) {
@@ -589,7 +590,11 @@ public class KeyValueUtil {
     // TODO: perhaps some sanity check is needed here.
     byte[] bytes = new byte[Bytes.toInt(intBytes)];
     IOUtils.readFully(in, bytes, 0, bytes.length);
-    return new KeyValue(bytes, 0, bytes.length);
+    if (withTags) {
+      return new KeyValue(bytes, 0, bytes.length);
+    } else {
+      return new NoTagsKeyValue(bytes, 0, bytes.length);
+    }
   }
 
   /**

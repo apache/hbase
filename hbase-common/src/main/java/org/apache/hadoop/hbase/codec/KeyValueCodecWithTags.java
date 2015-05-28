@@ -70,7 +70,8 @@ public class KeyValueCodecWithTags implements Codec {
     }
 
     protected Cell parseCell() throws IOException {
-      return KeyValueUtil.iscreate(in);
+      // create KeyValue with tags
+      return KeyValueUtil.iscreate(in, true);
     }
   }
 

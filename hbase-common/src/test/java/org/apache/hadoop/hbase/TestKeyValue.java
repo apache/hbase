@@ -569,9 +569,9 @@ public class TestKeyValue extends TestCase {
     KeyValueUtil.oswrite(mkvA2, os, true);
     DataInputStream is = new DataInputStream(new ByteArrayInputStream(
         byteArrayOutputStream.toByteArray()));
-    KeyValue deSerKV1 = KeyValueUtil.iscreate(is);
+    KeyValue deSerKV1 = KeyValueUtil.iscreate(is, true);
     assertTrue(kvA1.equals(deSerKV1));
-    KeyValue deSerKV2 = KeyValueUtil.iscreate(is);
+    KeyValue deSerKV2 = KeyValueUtil.iscreate(is, true);
     assertTrue(kvA2.equals(deSerKV2));
   }
 

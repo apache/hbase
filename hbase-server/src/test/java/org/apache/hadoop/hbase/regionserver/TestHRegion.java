@@ -71,7 +71,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -5821,6 +5820,25 @@ public class TestHRegion {
     }
   }
 
+  @Test
+  public void testFlushedFileWithNoTags() throws Exception {
+    TableName tableName = TableName.valueOf(getClass().getSimpleName());
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(fam1));
+    HRegionInfo info = new HRegionInfo(tableName, null, null, false);
+    Path path = TEST_UTIL.getDataTestDir(getClass().getSimpleName());
+    region = HBaseTestingUtility.createRegionAndWAL(info, path, TEST_UTIL.getConfiguration(), htd);
+    Put put = new Put(Bytes.toBytes("a-b-0-0"));
+    put.addColumn(fam1, qual1, Bytes.toBytes("c1-value"));
+    region.put(put);
+    region.flush(true);
+    Store store = region.getStore(fam1);
+    Collection<StoreFile> storefiles = store.getStorefiles();
+    for (StoreFile sf : storefiles) {
+      assertFalse("Tags should not be present "
+          ,sf.getReader().getHFileReader().getFileContext().isIncludesTags());
+    }
+  }
   @Test
   @SuppressWarnings("unchecked")
   public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
