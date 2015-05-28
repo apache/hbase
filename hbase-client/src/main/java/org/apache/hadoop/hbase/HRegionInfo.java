@@ -988,7 +988,7 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
   }
 
   /**
-   * Convert a HRegionInfo to a RegionInfo
+   * Convert a HRegionInfo to the protobuf RegionInfo
    *
    * @return the converted RegionInfo
    */

@@ -486,8 +486,7 @@ public class AssignmentManager extends ZooKeeperListener {
     Set<ServerName> deadServers = rebuildUserRegions();
 
     // This method will assign all user regions if a clean server startup or
-    // it will reconstruct master state and cleanup any leftovers from
-    // previous master process.
+    // it will reconstruct master state and cleanup any leftovers from previous master process.
     boolean failover = processDeadServersAndRegionsInTransition(deadServers);
 
     if (!useZKForAssignment) {
@@ -502,20 +501,18 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Process all regions that are in transition in zookeeper and also
-   * processes the list of dead servers by scanning the META.
+   * processes the list of dead servers.
    * Used by master joining an cluster.  If we figure this is a clean cluster
    * startup, will assign all user regions.
-   * @param deadServers
-   *          Map of dead servers and their regions. Can be null.
+   * @param deadServers Set of servers that are offline probably legitimately that were carrying
+   * regions according to a scan of hbase:meta. Can be null.
    * @throws KeeperException
    * @throws IOException
    * @throws InterruptedException
    */
-  boolean processDeadServersAndRegionsInTransition(
-      final Set<ServerName> deadServers) throws KeeperException,
-        IOException, InterruptedException, CoordinatedStateException {
-    List<String> nodes = ZKUtil.listChildrenNoWatch(watcher,
-      watcher.assignmentZNode);
+  boolean processDeadServersAndRegionsInTransition(final Set<ServerName> deadServers)
+  throws KeeperException, IOException, InterruptedException, CoordinatedStateException {
+    List<String> nodes = ZKUtil.listChildrenNoWatch(watcher, watcher.assignmentZNode);
 
     if (useZKForAssignment && nodes == null) {
       String errorMessage = "Failed to get the children from ZK";
@@ -2755,15 +2752,13 @@ public class AssignmentManager extends ZooKeeperListener {
     }
 
     // Generate a round-robin bulk assignment plan
-    Map<ServerName, List<HRegionInfo>> bulkPlan
-      = balancer.roundRobinAssignment(regions, servers);
+    Map<ServerName, List<HRegionInfo>> bulkPlan = balancer.roundRobinAssignment(regions, servers);
     if (bulkPlan == null) {
       throw new IOException("Unable to determine a plan to assign region(s)");
     }
 
     processFavoredNodes(regions);
-    assign(regions.size(), servers.size(),
-      "round-robin=true", bulkPlan);
+    assign(regions.size(), servers.size(), "round-robin=true", bulkPlan);
   }
 
   private void assign(int regions, int totalServers,
@@ -2903,10 +2898,8 @@ public class AssignmentManager extends ZooKeeperListener {
 
   /**
    * Rebuild the list of user regions and assignment information.
-   * <p>
-   * Returns a set of servers that are not found to be online that hosted
-   * some regions.
-   * @return set of servers not online that hosted some regions per meta
+   * Updates regionstates with findings as we go through list of regions.
+   * @return set of servers not online that hosted some regions according to a scan of hbase:meta
    * @throws IOException
    */
   Set<ServerName> rebuildUserRegions() throws
@@ -3061,22 +3054,18 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Processes list of dead servers from result of hbase:meta scan and regions in RIT
-   * <p>
+   * Processes list of dead servers from result of hbase:meta scan and regions in RIT.
    * This is used for failover to recover the lost regions that belonged to
-   * RegionServers which failed while there was no active master or regions
-   * that were in RIT.
-   * <p>
-   *
+   * RegionServers which failed while there was no active master or are offline for whatever
+   * reason and for regions that were in RIT.
    *
    * @param deadServers
-   *          The list of dead servers which failed while there was no active
-   *          master. Can be null.
+   *          The list of dead servers which failed while there was no active master. Can be null.
    * @throws IOException
    * @throws KeeperException
    */
-  private void processDeadServersAndRecoverLostRegions(
-      Set<ServerName> deadServers) throws IOException, KeeperException {
+  private void processDeadServersAndRecoverLostRegions(Set<ServerName> deadServers)
+  throws IOException, KeeperException {
     if (deadServers != null && !deadServers.isEmpty()) {
       for (ServerName serverName: deadServers) {
         if (!serverManager.isServerDead(serverName)) {
@@ -3098,7 +3087,7 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   void processRegionInTransitionZkLess() {
- // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
+    // We need to send RPC call again for PENDING_OPEN/PENDING_CLOSE regions
     // in case the RPC call is not sent out yet before the master was shut down
     // since we update the state before we send the RPC call. We can't update
     // the state after the RPC call. Otherwise, we don't know what's happened
@@ -3403,15 +3392,15 @@ public class AssignmentManager extends ZooKeeperListener {
   }
 
   /**
-   * Process shutdown server removing any assignments.
+   * Clean out crashed server removing any assignments.
    * @param sn Server that went down.
    * @return list of regions in transition on this server
    */
-  public List<HRegionInfo> processServerShutdown(final ServerName sn) {
+  public List<HRegionInfo> cleanOutCrashedServerReferences(final ServerName sn) {
     // Clean out any existing assignment plans for this server
     synchronized (this.regionPlans) {
-      for (Iterator <Map.Entry<String, RegionPlan>> i =
-          this.regionPlans.entrySet().iterator(); i.hasNext();) {
+      for (Iterator <Map.Entry<String, RegionPlan>> i = this.regionPlans.entrySet().iterator();
+          i.hasNext();) {
         Map.Entry<String, RegionPlan> e = i.next();
         ServerName otherSn = e.getValue().getDestination();
         // The name will be null if the region is planned for a random assign.
@@ -3429,8 +3418,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // We need a lock on the region as we could update it
       Lock lock = locker.acquireLock(encodedName);
       try {
-        RegionState regionState =
-          regionStates.getRegionTransitionState(encodedName);
+        RegionState regionState = regionStates.getRegionTransitionState(encodedName);
         if (regionState == null
             || (regionState.getServerName() != null && !regionState.isOnServer(sn))
             || !(regionState.isFailedClose() || regionState.isOffline()
@@ -3635,8 +3623,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
   }
 
-  private void onRegionOpen(
-      final HRegionInfo hri, final ServerName sn, long openSeqNum) {
+  private void onRegionOpen(final HRegionInfo hri, final ServerName sn, long openSeqNum) {
     regionOnline(hri, sn, openSeqNum);
     if (useZKForAssignment) {
       try {

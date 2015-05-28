@@ -364,7 +364,7 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public boolean isServerShutdownHandlerEnabled() {
+    public boolean isServerCrashProcessingEnabled() {
       return true;
     }
 

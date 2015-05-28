@@ -168,6 +168,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     // no-op
   }
 
+  /**
+   * By default, the executor will run procedures start to finish. Return true to make the executor
+   * yield between each flow step to give other procedures time to run their flow steps.
+   * @return Return true if the executor should yield on completion of a flow state step.
+   * Defaults to return false.
+   */
+  protected boolean isYieldAfterSuccessfulFlowStateStep() {
+    return false;
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

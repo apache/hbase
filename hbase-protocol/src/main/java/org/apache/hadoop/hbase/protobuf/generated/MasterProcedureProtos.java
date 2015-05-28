@@ -1070,6 +1070,160 @@ public final class MasterProcedureProtos {
     // @@protoc_insertion_point(enum_scope:DisableTableState)
   }
 
+  /**
+   * Protobuf enum {@code ServerCrashState}
+   */
+  public enum ServerCrashState
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>SERVER_CRASH_START = 1;</code>
+     */
+    SERVER_CRASH_START(0, 1),
+    /**
+     * <code>SERVER_CRASH_PROCESS_META = 2;</code>
+     */
+    SERVER_CRASH_PROCESS_META(1, 2),
+    /**
+     * <code>SERVER_CRASH_GET_REGIONS = 3;</code>
+     */
+    SERVER_CRASH_GET_REGIONS(2, 3),
+    /**
+     * <code>SERVER_CRASH_NO_SPLIT_LOGS = 4;</code>
+     */
+    SERVER_CRASH_NO_SPLIT_LOGS(3, 4),
+    /**
+     * <code>SERVER_CRASH_SPLIT_LOGS = 5;</code>
+     */
+    SERVER_CRASH_SPLIT_LOGS(4, 5),
+    /**
+     * <code>SERVER_CRASH_PREPARE_LOG_REPLAY = 6;</code>
+     */
+    SERVER_CRASH_PREPARE_LOG_REPLAY(5, 6),
+    /**
+     * <code>SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;</code>
+     */
+    SERVER_CRASH_CALC_REGIONS_TO_ASSIGN(6, 7),
+    /**
+     * <code>SERVER_CRASH_ASSIGN = 8;</code>
+     */
+    SERVER_CRASH_ASSIGN(7, 8),
+    /**
+     * <code>SERVER_CRASH_WAIT_ON_ASSIGN = 9;</code>
+     */
+    SERVER_CRASH_WAIT_ON_ASSIGN(8, 9),
+    /**
+     * <code>SERVER_CRASH_FINISH = 100;</code>
+     */
+    SERVER_CRASH_FINISH(9, 100),
+    ;
+
+    /**
+     * <code>SERVER_CRASH_START = 1;</code>
+     */
+    public static final int SERVER_CRASH_START_VALUE = 1;
+    /**
+     * <code>SERVER_CRASH_PROCESS_META = 2;</code>
+     */
+    public static final int SERVER_CRASH_PROCESS_META_VALUE = 2;
+    /**
+     * <code>SERVER_CRASH_GET_REGIONS = 3;</code>
+     */
+    public static final int SERVER_CRASH_GET_REGIONS_VALUE = 3;
+    /**
+     * <code>SERVER_CRASH_NO_SPLIT_LOGS = 4;</code>
+     */
+    public static final int SERVER_CRASH_NO_SPLIT_LOGS_VALUE = 4;
+    /**
+     * <code>SERVER_CRASH_SPLIT_LOGS = 5;</code>
+     */
+    public static final int SERVER_CRASH_SPLIT_LOGS_VALUE = 5;
+    /**
+     * <code>SERVER_CRASH_PREPARE_LOG_REPLAY = 6;</code>
+     */
+    public static final int SERVER_CRASH_PREPARE_LOG_REPLAY_VALUE = 6;
+    /**
+     * <code>SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;</code>
+     */
+    public static final int SERVER_CRASH_CALC_REGIONS_TO_ASSIGN_VALUE = 7;
+    /**
+     * <code>SERVER_CRASH_ASSIGN = 8;</code>
+     */
+    public static final int SERVER_CRASH_ASSIGN_VALUE = 8;
+    /**
+     * <code>SERVER_CRASH_WAIT_ON_ASSIGN = 9;</code>
+     */
+    public static final int SERVER_CRASH_WAIT_ON_ASSIGN_VALUE = 9;
+    /**
+     * <code>SERVER_CRASH_FINISH = 100;</code>
+     */
+    public static final int SERVER_CRASH_FINISH_VALUE = 100;
+
+
+    public final int getNumber() { return value; }
+
+    public static ServerCrashState valueOf(int value) {
+      switch (value) {
+        case 1: return SERVER_CRASH_START;
+        case 2: return SERVER_CRASH_PROCESS_META;
+        case 3: return SERVER_CRASH_GET_REGIONS;
+        case 4: return SERVER_CRASH_NO_SPLIT_LOGS;
+        case 5: return SERVER_CRASH_SPLIT_LOGS;
+        case 6: return SERVER_CRASH_PREPARE_LOG_REPLAY;
+        case 7: return SERVER_CRASH_CALC_REGIONS_TO_ASSIGN;
+        case 8: return SERVER_CRASH_ASSIGN;
+        case 9: return SERVER_CRASH_WAIT_ON_ASSIGN;
+        case 100: return SERVER_CRASH_FINISH;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ServerCrashState>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<ServerCrashState>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<ServerCrashState>() {
+            public ServerCrashState findValueByNumber(int number) {
+              return ServerCrashState.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(9);
+    }
+
+    private static final ServerCrashState[] VALUES = values();
+
+    public static ServerCrashState valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private ServerCrashState(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:ServerCrashState)
+  }
+
   public interface CreateTableStateDataOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -11200,6 +11354,1597 @@ public final class MasterProcedureProtos {
     // @@protoc_insertion_point(class_scope:DisableTableStateData)
   }
 
+  public interface ServerCrashStateDataOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required .ServerName server_name = 1;
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    boolean hasServerName();
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
+
+    // optional bool distributed_log_replay = 2;
+    /**
+     * <code>optional bool distributed_log_replay = 2;</code>
+     */
+    boolean hasDistributedLogReplay();
+    /**
+     * <code>optional bool distributed_log_replay = 2;</code>
+     */
+    boolean getDistributedLogReplay();
+
+    // repeated .RegionInfo regions_on_crashed_server = 3;
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> 
+        getRegionsOnCrashedServerList();
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsOnCrashedServer(int index);
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    int getRegionsOnCrashedServerCount();
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+        getRegionsOnCrashedServerOrBuilderList();
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsOnCrashedServerOrBuilder(
+        int index);
+
+    // repeated .RegionInfo regions_to_assign = 4;
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> 
+        getRegionsToAssignList();
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index);
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    int getRegionsToAssignCount();
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+        getRegionsToAssignOrBuilderList();
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+        int index);
+
+    // optional bool carrying_meta = 5;
+    /**
+     * <code>optional bool carrying_meta = 5;</code>
+     */
+    boolean hasCarryingMeta();
+    /**
+     * <code>optional bool carrying_meta = 5;</code>
+     */
+    boolean getCarryingMeta();
+
+    // optional bool should_split_wal = 6 [default = true];
+    /**
+     * <code>optional bool should_split_wal = 6 [default = true];</code>
+     */
+    boolean hasShouldSplitWal();
+    /**
+     * <code>optional bool should_split_wal = 6 [default = true];</code>
+     */
+    boolean getShouldSplitWal();
+  }
+  /**
+   * Protobuf type {@code ServerCrashStateData}
+   */
+  public static final class ServerCrashStateData extends
+      com.google.protobuf.GeneratedMessage
+      implements ServerCrashStateDataOrBuilder {
+    // Use ServerCrashStateData.newBuilder() to construct.
+    private ServerCrashStateData(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ServerCrashStateData(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ServerCrashStateData defaultInstance;
+    public static ServerCrashStateData getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ServerCrashStateData getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ServerCrashStateData(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = serverName_.toBuilder();
+              }
+              serverName_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(serverName_);
+                serverName_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 16: {
+              bitField0_ |= 0x00000002;
+              distributedLogReplay_ = input.readBool();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                regionsOnCrashedServer_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              regionsOnCrashedServer_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry));
+              break;
+            }
+            case 34: {
+              if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+                regionsToAssign_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>();
+                mutable_bitField0_ |= 0x00000008;
+              }
+              regionsToAssign_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry));
+              break;
+            }
+            case 40: {
+              bitField0_ |= 0x00000004;
+              carryingMeta_ = input.readBool();
+              break;
+            }
+            case 48: {
+              bitField0_ |= 0x00000008;
+              shouldSplitWal_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          regionsOnCrashedServer_ = java.util.Collections.unmodifiableList(regionsOnCrashedServer_);
+        }
+        if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
+          regionsToAssign_ = java.util.Collections.unmodifiableList(regionsToAssign_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_ServerCrashStateData_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_ServerCrashStateData_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ServerCrashStateData> PARSER =
+        new com.google.protobuf.AbstractParser<ServerCrashStateData>() {
+      public ServerCrashStateData parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ServerCrashStateData(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ServerCrashStateData> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .ServerName server_name = 1;
+    public static final int SERVER_NAME_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    public boolean hasServerName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+      return serverName_;
+    }
+    /**
+     * <code>required .ServerName server_name = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+      return serverName_;
+    }
+
+    // optional bool distributed_log_replay = 2;
+    public static final int DISTRIBUTED_LOG_REPLAY_FIELD_NUMBER = 2;
+    private boolean distributedLogReplay_;
+    /**
+     * <code>optional bool distributed_log_replay = 2;</code>
+     */
+    public boolean hasDistributedLogReplay() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional bool distributed_log_replay = 2;</code>
+     */
+    public boolean getDistributedLogReplay() {
+      return distributedLogReplay_;
+    }
+
+    // repeated .RegionInfo regions_on_crashed_server = 3;
+    public static final int REGIONS_ON_CRASHED_SERVER_FIELD_NUMBER = 3;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsOnCrashedServer_;
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsOnCrashedServerList() {
+      return regionsOnCrashedServer_;
+    }
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+        getRegionsOnCrashedServerOrBuilderList() {
+      return regionsOnCrashedServer_;
+    }
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    public int getRegionsOnCrashedServerCount() {
+      return regionsOnCrashedServer_.size();
+    }
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsOnCrashedServer(int index) {
+      return regionsOnCrashedServer_.get(index);
+    }
+    /**
+     * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsOnCrashedServerOrBuilder(
+        int index) {
+      return regionsOnCrashedServer_.get(index);
+    }
+
+    // repeated .RegionInfo regions_to_assign = 4;
+    public static final int REGIONS_TO_ASSIGN_FIELD_NUMBER = 4;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsToAssign_;
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsToAssignList() {
+      return regionsToAssign_;
+    }
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+        getRegionsToAssignOrBuilderList() {
+      return regionsToAssign_;
+    }
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    public int getRegionsToAssignCount() {
+      return regionsToAssign_.size();
+    }
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index) {
+      return regionsToAssign_.get(index);
+    }
+    /**
+     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+        int index) {
+      return regionsToAssign_.get(index);
+    }
+
+    // optional bool carrying_meta = 5;
+    public static final int CARRYING_META_FIELD_NUMBER = 5;
+    private boolean carryingMeta_;
+    /**
+     * <code>optional bool carrying_meta = 5;</code>
+     */
+    public boolean hasCarryingMeta() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool carrying_meta = 5;</code>
+     */
+    public boolean getCarryingMeta() {
+      return carryingMeta_;
+    }
+
+    // optional bool should_split_wal = 6 [default = true];
+    public static final int SHOULD_SPLIT_WAL_FIELD_NUMBER = 6;
+    private boolean shouldSplitWal_;
+    /**
+     * <code>optional bool should_split_wal = 6 [default = true];</code>
+     */
+    public boolean hasShouldSplitWal() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional bool should_split_wal = 6 [default = true];</code>
+     */
+    public boolean getShouldSplitWal() {
+      return shouldSplitWal_;
+    }
+
+    private void initFields() {
+      serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      distributedLogReplay_ = false;
+      regionsOnCrashedServer_ = java.util.Collections.emptyList();
+      regionsToAssign_ = java.util.Collections.emptyList();
+      carryingMeta_ = false;
+      shouldSplitWal_ = true;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasServerName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getServerName().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      for (int i = 0; i < getRegionsOnCrashedServerCount(); i++) {
+        if (!getRegionsOnCrashedServer(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getRegionsToAssignCount(); i++) {
+        if (!getRegionsToAssign(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, serverName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBool(2, distributedLogReplay_);
+      }
+      for (int i = 0; i < regionsOnCrashedServer_.size(); i++) {
+        output.writeMessage(3, regionsOnCrashedServer_.get(i));
+      }
+      for (int i = 0; i < regionsToAssign_.size(); i++) {
+        output.writeMessage(4, regionsToAssign_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(5, carryingMeta_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBool(6, shouldSplitWal_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, serverName_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, distributedLogReplay_);
+      }
+      for (int i = 0; i < regionsOnCrashedServer_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(3, regionsOnCrashedServer_.get(i));
+      }
+      for (int i = 0; i < regionsToAssign_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(4, regionsToAssign_.get(i));
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(5, carryingMeta_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(6, shouldSplitWal_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData other = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData) obj;
+
+      boolean result = true;
+      result = result && (hasServerName() == other.hasServerName());
+      if (hasServerName()) {
+        result = result && getServerName()
+            .equals(other.getServerName());
+      }
+      result = result && (hasDistributedLogReplay() == other.hasDistributedLogReplay());
+      if (hasDistributedLogReplay()) {
+        result = result && (getDistributedLogReplay()
+            == other.getDistributedLogReplay());
+      }
+      result = result && getRegionsOnCrashedServerList()
+          .equals(other.getRegionsOnCrashedServerList());
+      result = result && getRegionsToAssignList()
+          .equals(other.getRegionsToAssignList());
+      result = result && (hasCarryingMeta() == other.hasCarryingMeta());
+      if (hasCarryingMeta()) {
+        result = result && (getCarryingMeta()
+            == other.getCarryingMeta());
+      }
+      result = result && (hasShouldSplitWal() == other.hasShouldSplitWal());
+      if (hasShouldSplitWal()) {
+        result = result && (getShouldSplitWal()
+            == other.getShouldSplitWal());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasServerName()) {
+        hash = (37 * hash) + SERVER_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getServerName().hashCode();
+      }
+      if (hasDistributedLogReplay()) {
+        hash = (37 * hash) + DISTRIBUTED_LOG_REPLAY_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getDistributedLogReplay());
+      }
+      if (getRegionsOnCrashedServerCount() > 0) {
+        hash = (37 * hash) + REGIONS_ON_CRASHED_SERVER_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionsOnCrashedServerList().hashCode();
+      }
+      if (getRegionsToAssignCount() > 0) {
+        hash = (37 * hash) + REGIONS_TO_ASSIGN_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionsToAssignList().hashCode();
+      }
+      if (hasCarryingMeta()) {
+        hash = (37 * hash) + CARRYING_META_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getCarryingMeta());
+      }
+      if (hasShouldSplitWal()) {
+        hash = (37 * hash) + SHOULD_SPLIT_WAL_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getShouldSplitWal());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code ServerCrashStateData}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateDataOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_ServerCrashStateData_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_ServerCrashStateData_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getServerNameFieldBuilder();
+          getRegionsOnCrashedServerFieldBuilder();
+          getRegionsToAssignFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        distributedLogReplay_ = false;
+        bitField0_ = (bitField0_ & ~0x00000002);
+        if (regionsOnCrashedServerBuilder_ == null) {
+          regionsOnCrashedServer_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+        } else {
+          regionsOnCrashedServerBuilder_.clear();
+        }
+        if (regionsToAssignBuilder_ == null) {
+          regionsToAssign_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+        } else {
+          regionsToAssignBuilder_.clear();
+        }
+        carryingMeta_ = false;
+        bitField0_ = (bitField0_ & ~0x00000010);
+        shouldSplitWal_ = true;
+        bitField0_ = (bitField0_ & ~0x00000020);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_ServerCrashStateData_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData result = new org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (serverNameBuilder_ == null) {
+          result.serverName_ = serverName_;
+        } else {
+          result.serverName_ = serverNameBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.distributedLogReplay_ = distributedLogReplay_;
+        if (regionsOnCrashedServerBuilder_ == null) {
+          if (((bitField0_ & 0x00000004) == 0x00000004)) {
+            regionsOnCrashedServer_ = java.util.Collections.unmodifiableList(regionsOnCrashedServer_);
+            bitField0_ = (bitField0_ & ~0x00000004);
+          }
+          result.regionsOnCrashedServer_ = regionsOnCrashedServer_;
+        } else {
+          result.regionsOnCrashedServer_ = regionsOnCrashedServerBuilder_.build();
+        }
+        if (regionsToAssignBuilder_ == null) {
+          if (((bitField0_ & 0x00000008) == 0x00000008)) {
+            regionsToAssign_ = java.util.Collections.unmodifiableList(regionsToAssign_);
+            bitField0_ = (bitField0_ & ~0x00000008);
+          }
+          result.regionsToAssign_ = regionsToAssign_;
+        } else {
+          result.regionsToAssign_ = regionsToAssignBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.carryingMeta_ = carryingMeta_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.shouldSplitWal_ = shouldSplitWal_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData.getDefaultInstance()) return this;
+        if (other.hasServerName()) {
+          mergeServerName(other.getServerName());
+        }
+        if (other.hasDistributedLogReplay()) {
+          setDistributedLogReplay(other.getDistributedLogReplay());
+        }
+        if (regionsOnCrashedServerBuilder_ == null) {
+          if (!other.regionsOnCrashedServer_.isEmpty()) {
+            if (regionsOnCrashedServer_.isEmpty()) {
+              regionsOnCrashedServer_ = other.regionsOnCrashedServer_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+            } else {
+              ensureRegionsOnCrashedServerIsMutable();
+              regionsOnCrashedServer_.addAll(other.regionsOnCrashedServer_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.regionsOnCrashedServer_.isEmpty()) {
+            if (regionsOnCrashedServerBuilder_.isEmpty()) {
+              regionsOnCrashedServerBuilder_.dispose();
+              regionsOnCrashedServerBuilder_ = null;
+              regionsOnCrashedServer_ = other.regionsOnCrashedServer_;
+              bitField0_ = (bitField0_ & ~0x00000004);
+              regionsOnCrashedServerBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getRegionsOnCrashedServerFieldBuilder() : null;
+            } else {
+              regionsOnCrashedServerBuilder_.addAllMessages(other.regionsOnCrashedServer_);
+            }
+          }
+        }
+        if (regionsToAssignBuilder_ == null) {
+          if (!other.regionsToAssign_.isEmpty()) {
+            if (regionsToAssign_.isEmpty()) {
+              regionsToAssign_ = other.regionsToAssign_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+            } else {
+              ensureRegionsToAssignIsMutable();
+              regionsToAssign_.addAll(other.regionsToAssign_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.regionsToAssign_.isEmpty()) {
+            if (regionsToAssignBuilder_.isEmpty()) {
+              regionsToAssignBuilder_.dispose();
+              regionsToAssignBuilder_ = null;
+              regionsToAssign_ = other.regionsToAssign_;
+              bitField0_ = (bitField0_ & ~0x00000008);
+              regionsToAssignBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getRegionsToAssignFieldBuilder() : null;
+            } else {
+              regionsToAssignBuilder_.addAllMessages(other.regionsToAssign_);
+            }
+          }
+        }
+        if (other.hasCarryingMeta()) {
+          setCarryingMeta(other.getCarryingMeta());
+        }
+        if (other.hasShouldSplitWal()) {
+          setShouldSplitWal(other.getShouldSplitWal());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasServerName()) {
+          
+          return false;
+        }
+        if (!getServerName().isInitialized()) {
+          
+          return false;
+        }
+        for (int i = 0; i < getRegionsOnCrashedServerCount(); i++) {
+          if (!getRegionsOnCrashedServer(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getRegionsToAssignCount(); i++) {
+          if (!getRegionsToAssign(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashStateData) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required .ServerName server_name = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public boolean hasServerName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
+        if (serverNameBuilder_ == null) {
+          return serverName_;
+        } else {
+          return serverNameBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          serverName_ = value;
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public Builder setServerName(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
+        if (serverNameBuilder_ == null) {
+          serverName_ = builderForValue.build();
+          onChanged();
+        } else {
+          serverNameBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
+        if (serverNameBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              serverName_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance()) {
+            serverName_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.newBuilder(serverName_).mergeFrom(value).buildPartial();
+          } else {
+            serverName_ = value;
+          }
+          onChanged();
+        } else {
+          serverNameBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public Builder clearServerName() {
+        if (serverNameBuilder_ == null) {
+          serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
+          onChanged();
+        } else {
+          serverNameBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getServerNameFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
+        if (serverNameBuilder_ != null) {
+          return serverNameBuilder_.getMessageOrBuilder();
+        } else {
+          return serverName_;
+        }
+      }
+      /**
+       * <code>required .ServerName server_name = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
+          getServerNameFieldBuilder() {
+        if (serverNameBuilder_ == null) {
+          serverNameBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder>(
+                  serverName_,
+                  getParentForChildren(),
+                  isClean());
+          serverName_ = null;
+        }
+        return serverNameBuilder_;
+      }
+
+      // optional bool distributed_log_replay = 2;
+      private boolean distributedLogReplay_ ;
+      /**
+       * <code>optional bool distributed_log_replay = 2;</code>
+       */
+      public boolean hasDistributedLogReplay() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional bool distributed_log_replay = 2;</code>
+       */
+      public boolean getDistributedLogReplay() {
+        return distributedLogReplay_;
+      }
+      /**
+       * <code>optional bool distributed_log_replay = 2;</code>
+       */
+      public Builder setDistributedLogReplay(boolean value) {
+        bitField0_ |= 0x00000002;
+        distributedLogReplay_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool distributed_log_replay = 2;</code>
+       */
+      public Builder clearDistributedLogReplay() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        distributedLogReplay_ = false;
+        onChanged();
+        return this;
+      }
+
+      // repeated .RegionInfo regions_on_crashed_server = 3;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsOnCrashedServer_ =
+        java.util.Collections.emptyList();
+      private void ensureRegionsOnCrashedServerIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          regionsOnCrashedServer_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>(regionsOnCrashedServer_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionsOnCrashedServerBuilder_;
+
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsOnCrashedServerList() {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(regionsOnCrashedServer_);
+        } else {
+          return regionsOnCrashedServerBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public int getRegionsOnCrashedServerCount() {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          return regionsOnCrashedServer_.size();
+        } else {
+          return regionsOnCrashedServerBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsOnCrashedServer(int index) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          return regionsOnCrashedServer_.get(index);
+        } else {
+          return regionsOnCrashedServerBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder setRegionsOnCrashedServer(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.set(index, value);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder setRegionsOnCrashedServer(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder addRegionsOnCrashedServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.add(value);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder addRegionsOnCrashedServer(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.add(index, value);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder addRegionsOnCrashedServer(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.add(builderForValue.build());
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder addRegionsOnCrashedServer(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder addAllRegionsOnCrashedServer(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> values) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          ensureRegionsOnCrashedServerIsMutable();
+          super.addAll(values, regionsOnCrashedServer_);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder clearRegionsOnCrashedServer() {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          regionsOnCrashedServer_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000004);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public Builder removeRegionsOnCrashedServer(int index) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          ensureRegionsOnCrashedServerIsMutable();
+          regionsOnCrashedServer_.remove(index);
+          onChanged();
+        } else {
+          regionsOnCrashedServerBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionsOnCrashedServerBuilder(
+          int index) {
+        return getRegionsOnCrashedServerFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsOnCrashedServerOrBuilder(
+          int index) {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          return regionsOnCrashedServer_.get(index);  } else {
+          return regionsOnCrashedServerBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+           getRegionsOnCrashedServerOrBuilderList() {
+        if (regionsOnCrashedServerBuilder_ != null) {
+          return regionsOnCrashedServerBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(regionsOnCrashedServer_);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsOnCrashedServerBuilder() {
+        return getRegionsOnCrashedServerFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsOnCrashedServerBuilder(
+          int index) {
+        return getRegionsOnCrashedServerFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RegionInfo regions_on_crashed_server = 3;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder> 
+           getRegionsOnCrashedServerBuilderList() {
+        return getRegionsOnCrashedServerFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+          getRegionsOnCrashedServerFieldBuilder() {
+        if (regionsOnCrashedServerBuilder_ == null) {
+          regionsOnCrashedServerBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>(
+                  regionsOnCrashedServer_,
+                  ((bitField0_ & 0x00000004) == 0x00000004),
+                  getParentForChildren(),
+                  isClean());
+          regionsOnCrashedServer_ = null;
+        }
+        return regionsOnCrashedServerBuilder_;
+      }
+
+      // repeated .RegionInfo regions_to_assign = 4;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsToAssign_ =
+        java.util.Collections.emptyList();
+      private void ensureRegionsToAssignIsMutable() {
+        if (!((bitField0_ & 0x00000008) == 0x00000008)) {
+          regionsToAssign_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>(regionsToAssign_);
+          bitField0_ |= 0x00000008;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionsToAssignBuilder_;
+
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsToAssignList() {
+        if (regionsToAssignBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(regionsToAssign_);
+        } else {
+          return regionsToAssignBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public int getRegionsToAssignCount() {
+        if (regionsToAssignBuilder_ == null) {
+          return regionsToAssign_.size();
+        } else {
+          return regionsToAssignBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index) {
+        if (regionsToAssignBuilder_ == null) {
+          return regionsToAssign_.get(index);
+        } else {
+          return regionsToAssignBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder setRegionsToAssign(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsToAssignBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.set(index, value);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder setRegionsToAssign(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsToAssignBuilder_ == null) {
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder addRegionsToAssign(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsToAssignBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.add(value);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder addRegionsToAssign(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsToAssignBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.add(index, value);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder addRegionsToAssign(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsToAssignBuilder_ == null) {
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.add(builderForValue.build());
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder addRegionsToAssign(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
+        if (regionsToAssignBuilder_ == null) {
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder addAllRegionsToAssign(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> values) {
+        if (regionsToAssignBuilder_ == null) {
+          ensureRegionsToAssignIsMutable();
+          super.addAll(values, regionsToAssign_);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder clearRegionsToAssign() {
+        if (regionsToAssignBuilder_ == null) {
+          regionsToAssign_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000008);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public Builder removeRegionsToAssign(int index) {
+        if (regionsToAssignBuilder_ == null) {
+          ensureRegionsToAssignIsMutable();
+          regionsToAssign_.remove(index);
+          onChanged();
+        } else {
+          regionsToAssignBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionsToAssignBuilder(
+          int index) {
+        return getRegionsToAssignFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+          int index) {
+        if (regionsToAssignBuilder_ == null) {
+          return regionsToAssign_.get(index);  } else {
+          return regionsToAssignBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+           getRegionsToAssignOrBuilderList() {
+        if (regionsToAssignBuilder_ != null) {
+          return regionsToAssignBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(regionsToAssign_);
+        }
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsToAssignBuilder() {
+        return getRegionsToAssignFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsToAssignBuilder(
+          int index) {
+        return getRegionsToAssignFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder> 
+           getRegionsToAssignBuilderList() {
+        return getRegionsToAssignFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
+          getRegionsToAssignFieldBuilder() {
+        if (regionsToAssignBuilder_ == null) {
+          regionsToAssignBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>(
+                  regionsToAssign_,
+                  ((bitField0_ & 0x00000008) == 0x00000008),
+                  getParentForChildren(),
+                  isClean());
+          regionsToAssign_ = null;
+        }
+        return regionsToAssignBuilder_;
+      }
+
+      // optional bool carrying_meta = 5;
+      private boolean carryingMeta_ ;
+      /**
+       * <code>optional bool carrying_meta = 5;</code>
+       */
+      public boolean hasCarryingMeta() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional bool carrying_meta = 5;</code>
+       */
+      public boolean getCarryingMeta() {
+        return carryingMeta_;
+      }
+      /**
+       * <code>optional bool carrying_meta = 5;</code>
+       */
+      public Builder setCarryingMeta(boolean value) {
+        bitField0_ |= 0x00000010;
+        carryingMeta_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool carrying_meta = 5;</code>
+       */
+      public Builder clearCarryingMeta() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        carryingMeta_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional bool should_split_wal = 6 [default = true];
+      private boolean shouldSplitWal_ = true;
+      /**
+       * <code>optional bool should_split_wal = 6 [default = true];</code>
+       */
+      public boolean hasShouldSplitWal() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>optional bool should_split_wal = 6 [default = true];</code>
+       */
+      public boolean getShouldSplitWal() {
+        return shouldSplitWal_;
+      }
+      /**
+       * <code>optional bool should_split_wal = 6 [default = true];</code>
+       */
+      public Builder setShouldSplitWal(boolean value) {
+        bitField0_ |= 0x00000020;
+        shouldSplitWal_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool should_split_wal = 6 [default = true];</code>
+       */
+      public Builder clearShouldSplitWal() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        shouldSplitWal_ = true;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:ServerCrashStateData)
+    }
+
+    static {
+      defaultInstance = new ServerCrashStateData(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:ServerCrashStateData)
+  }
+
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_CreateTableStateData_descriptor;
   private static
@@ -11245,6 +12990,11 @@ public final class MasterProcedureProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_DisableTableStateData_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_ServerCrashStateData_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_ServerCrashStateData_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -11291,64 +13041,78 @@ public final class MasterProcedureProtos {
       "_table_state_check\030\003 \002(\010\"|\n\025DisableTable" +
       "StateData\022#\n\tuser_info\030\001 \002(\0132\020.UserInfor" +
       "mation\022\036\n\ntable_name\030\002 \002(\0132\n.TableName\022\036" +
-      "\n\026skip_table_state_check\030\003 \002(\010*\330\001\n\020Creat" +
-      "eTableState\022\036\n\032CREATE_TABLE_PRE_OPERATIO" +
-      "N\020\001\022 \n\034CREATE_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n",
-      "\030CREATE_TABLE_ADD_TO_META\020\003\022\037\n\033CREATE_TA" +
-      "BLE_ASSIGN_REGIONS\020\004\022\"\n\036CREATE_TABLE_UPD" +
-      "ATE_DESC_CACHE\020\005\022\037\n\033CREATE_TABLE_POST_OP" +
-      "ERATION\020\006*\207\002\n\020ModifyTableState\022\030\n\024MODIFY" +
-      "_TABLE_PREPARE\020\001\022\036\n\032MODIFY_TABLE_PRE_OPE" +
-      "RATION\020\002\022(\n$MODIFY_TABLE_UPDATE_TABLE_DE" +
-      "SCRIPTOR\020\003\022&\n\"MODIFY_TABLE_REMOVE_REPLIC" +
-      "A_COLUMN\020\004\022!\n\035MODIFY_TABLE_DELETE_FS_LAY" +
-      "OUT\020\005\022\037\n\033MODIFY_TABLE_POST_OPERATION\020\006\022#" +
-      "\n\037MODIFY_TABLE_REOPEN_ALL_REGIONS\020\007*\212\002\n\022",
-      "TruncateTableState\022 \n\034TRUNCATE_TABLE_PRE" +
-      "_OPERATION\020\001\022#\n\037TRUNCATE_TABLE_REMOVE_FR" +
-      "OM_META\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_FS_LAY" +
-      "OUT\020\003\022#\n\037TRUNCATE_TABLE_CREATE_FS_LAYOUT" +
-      "\020\004\022\036\n\032TRUNCATE_TABLE_ADD_TO_META\020\005\022!\n\035TR" +
-      "UNCATE_TABLE_ASSIGN_REGIONS\020\006\022!\n\035TRUNCAT" +
-      "E_TABLE_POST_OPERATION\020\007*\337\001\n\020DeleteTable" +
-      "State\022\036\n\032DELETE_TABLE_PRE_OPERATION\020\001\022!\n" +
-      "\035DELETE_TABLE_REMOVE_FROM_META\020\002\022 \n\034DELE" +
-      "TE_TABLE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELETE_TAB",
-      "LE_UPDATE_DESC_CACHE\020\004\022!\n\035DELETE_TABLE_U" +
-      "NASSIGN_REGIONS\020\005\022\037\n\033DELETE_TABLE_POST_O" +
-      "PERATION\020\006*\331\001\n\024AddColumnFamilyState\022\035\n\031A" +
-      "DD_COLUMN_FAMILY_PREPARE\020\001\022#\n\037ADD_COLUMN" +
-      "_FAMILY_PRE_OPERATION\020\002\022-\n)ADD_COLUMN_FA" +
-      "MILY_UPDATE_TABLE_DESCRIPTOR\020\003\022$\n ADD_CO" +
-      "LUMN_FAMILY_POST_OPERATION\020\004\022(\n$ADD_COLU" +
-      "MN_FAMILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027Modif" +
-      "yColumnFamilyState\022 \n\034MODIFY_COLUMN_FAMI" +
-      "LY_PREPARE\020\001\022&\n\"MODIFY_COLUMN_FAMILY_PRE",
-      "_OPERATION\020\002\0220\n,MODIFY_COLUMN_FAMILY_UPD" +
-      "ATE_TABLE_DESCRIPTOR\020\003\022\'\n#MODIFY_COLUMN_" +
-      "FAMILY_POST_OPERATION\020\004\022+\n\'MODIFY_COLUMN" +
-      "_FAMILY_REOPEN_ALL_REGIONS\020\005*\226\002\n\027DeleteC" +
-      "olumnFamilyState\022 \n\034DELETE_COLUMN_FAMILY" +
-      "_PREPARE\020\001\022&\n\"DELETE_COLUMN_FAMILY_PRE_O" +
-      "PERATION\020\002\0220\n,DELETE_COLUMN_FAMILY_UPDAT" +
-      "E_TABLE_DESCRIPTOR\020\003\022)\n%DELETE_COLUMN_FA" +
-      "MILY_DELETE_FS_LAYOUT\020\004\022\'\n#DELETE_COLUMN" +
-      "_FAMILY_POST_OPERATION\020\005\022+\n\'DELETE_COLUM",
-      "N_FAMILY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020Enable" +
-      "TableState\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022\036\n\032" +
-      "ENABLE_TABLE_PRE_OPERATION\020\002\022)\n%ENABLE_T" +
-      "ABLE_SET_ENABLING_TABLE_STATE\020\003\022$\n ENABL" +
-      "E_TABLE_MARK_REGIONS_ONLINE\020\004\022(\n$ENABLE_" +
-      "TABLE_SET_ENABLED_TABLE_STATE\020\005\022\037\n\033ENABL" +
-      "E_TABLE_POST_OPERATION\020\006*\362\001\n\021DisableTabl" +
-      "eState\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037\n\033DIS" +
-      "ABLE_TABLE_PRE_OPERATION\020\002\022+\n\'DISABLE_TA" +
-      "BLE_SET_DISABLING_TABLE_STATE\020\003\022&\n\"DISAB",
-      "LE_TABLE_MARK_REGIONS_OFFLINE\020\004\022*\n&DISAB" +
-      "LE_TABLE_SET_DISABLED_TABLE_STATE\020\005\022 \n\034D" +
-      "ISABLE_TABLE_POST_OPERATION\020\006BK\n*org.apa" +
-      "che.hadoop.hbase.protobuf.generatedB\025Mas" +
-      "terProcedureProtosH\001\210\001\001\240\001\001"
+      "\n\026skip_table_state_check\030\003 \002(\010\"\347\001\n\024Serve" +
+      "rCrashStateData\022 \n\013server_name\030\001 \002(\0132\013.S" +
+      "erverName\022\036\n\026distributed_log_replay\030\002 \001(",
+      "\010\022.\n\031regions_on_crashed_server\030\003 \003(\0132\013.R" +
+      "egionInfo\022&\n\021regions_to_assign\030\004 \003(\0132\013.R" +
+      "egionInfo\022\025\n\rcarrying_meta\030\005 \001(\010\022\036\n\020shou" +
+      "ld_split_wal\030\006 \001(\010:\004true*\330\001\n\020CreateTable" +
+      "State\022\036\n\032CREATE_TABLE_PRE_OPERATION\020\001\022 \n" +
+      "\034CREATE_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n\030CREAT" +
+      "E_TABLE_ADD_TO_META\020\003\022\037\n\033CREATE_TABLE_AS" +
+      "SIGN_REGIONS\020\004\022\"\n\036CREATE_TABLE_UPDATE_DE" +
+      "SC_CACHE\020\005\022\037\n\033CREATE_TABLE_POST_OPERATIO" +
+      "N\020\006*\207\002\n\020ModifyTableState\022\030\n\024MODIFY_TABLE",
+      "_PREPARE\020\001\022\036\n\032MODIFY_TABLE_PRE_OPERATION" +
+      "\020\002\022(\n$MODIFY_TABLE_UPDATE_TABLE_DESCRIPT" +
+      "OR\020\003\022&\n\"MODIFY_TABLE_REMOVE_REPLICA_COLU" +
+      "MN\020\004\022!\n\035MODIFY_TABLE_DELETE_FS_LAYOUT\020\005\022" +
+      "\037\n\033MODIFY_TABLE_POST_OPERATION\020\006\022#\n\037MODI" +
+      "FY_TABLE_REOPEN_ALL_REGIONS\020\007*\212\002\n\022Trunca" +
+      "teTableState\022 \n\034TRUNCATE_TABLE_PRE_OPERA" +
+      "TION\020\001\022#\n\037TRUNCATE_TABLE_REMOVE_FROM_MET" +
+      "A\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_FS_LAYOUT\020\003\022" +
+      "#\n\037TRUNCATE_TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032",
+      "TRUNCATE_TABLE_ADD_TO_META\020\005\022!\n\035TRUNCATE" +
+      "_TABLE_ASSIGN_REGIONS\020\006\022!\n\035TRUNCATE_TABL" +
+      "E_POST_OPERATION\020\007*\337\001\n\020DeleteTableState\022" +
+      "\036\n\032DELETE_TABLE_PRE_OPERATION\020\001\022!\n\035DELET" +
+      "E_TABLE_REMOVE_FROM_META\020\002\022 \n\034DELETE_TAB" +
+      "LE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPD" +
+      "ATE_DESC_CACHE\020\004\022!\n\035DELETE_TABLE_UNASSIG" +
+      "N_REGIONS\020\005\022\037\n\033DELETE_TABLE_POST_OPERATI" +
+      "ON\020\006*\331\001\n\024AddColumnFamilyState\022\035\n\031ADD_COL" +
+      "UMN_FAMILY_PREPARE\020\001\022#\n\037ADD_COLUMN_FAMIL",
+      "Y_PRE_OPERATION\020\002\022-\n)ADD_COLUMN_FAMILY_U" +
+      "PDATE_TABLE_DESCRIPTOR\020\003\022$\n ADD_COLUMN_F" +
+      "AMILY_POST_OPERATION\020\004\022(\n$ADD_COLUMN_FAM" +
+      "ILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027ModifyColum" +
+      "nFamilyState\022 \n\034MODIFY_COLUMN_FAMILY_PRE" +
+      "PARE\020\001\022&\n\"MODIFY_COLUMN_FAMILY_PRE_OPERA" +
+      "TION\020\002\0220\n,MODIFY_COLUMN_FAMILY_UPDATE_TA" +
+      "BLE_DESCRIPTOR\020\003\022\'\n#MODIFY_COLUMN_FAMILY" +
+      "_POST_OPERATION\020\004\022+\n\'MODIFY_COLUMN_FAMIL" +
+      "Y_REOPEN_ALL_REGIONS\020\005*\226\002\n\027DeleteColumnF",
+      "amilyState\022 \n\034DELETE_COLUMN_FAMILY_PREPA" +
+      "RE\020\001\022&\n\"DELETE_COLUMN_FAMILY_PRE_OPERATI" +
+      "ON\020\002\0220\n,DELETE_COLUMN_FAMILY_UPDATE_TABL" +
+      "E_DESCRIPTOR\020\003\022)\n%DELETE_COLUMN_FAMILY_D" +
+      "ELETE_FS_LAYOUT\020\004\022\'\n#DELETE_COLUMN_FAMIL" +
+      "Y_POST_OPERATION\020\005\022+\n\'DELETE_COLUMN_FAMI" +
+      "LY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020EnableTableS" +
+      "tate\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022\036\n\032ENABLE" +
+      "_TABLE_PRE_OPERATION\020\002\022)\n%ENABLE_TABLE_S" +
+      "ET_ENABLING_TABLE_STATE\020\003\022$\n ENABLE_TABL",
+      "E_MARK_REGIONS_ONLINE\020\004\022(\n$ENABLE_TABLE_" +
+      "SET_ENABLED_TABLE_STATE\020\005\022\037\n\033ENABLE_TABL" +
+      "E_POST_OPERATION\020\006*\362\001\n\021DisableTableState" +
+      "\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037\n\033DISABLE_T" +
+      "ABLE_PRE_OPERATION\020\002\022+\n\'DISABLE_TABLE_SE" +
+      "T_DISABLING_TABLE_STATE\020\003\022&\n\"DISABLE_TAB" +
+      "LE_MARK_REGIONS_OFFLINE\020\004\022*\n&DISABLE_TAB" +
+      "LE_SET_DISABLED_TABLE_STATE\020\005\022 \n\034DISABLE" +
+      "_TABLE_POST_OPERATION\020\006*\305\002\n\020ServerCrashS" +
+      "tate\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_C",
+      "RASH_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_" +
+      "REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020" +
+      "\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER" +
+      "_CRASH_PREPARE_LOG_REPLAY\020\006\022\'\n#SERVER_CR" +
+      "ASH_CALC_REGIONS_TO_ASSIGN\020\007\022\027\n\023SERVER_C" +
+      "RASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_AS" +
+      "SIGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020dBK\n*org.a" +
+      "pache.hadoop.hbase.protobuf.generatedB\025M" +
+      "asterProcedureProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -11409,6 +13173,12 @@ public final class MasterProcedureProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DisableTableStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "SkipTableStateCheck", });
+          internal_static_ServerCrashStateData_descriptor =
+            getDescriptor().getMessageTypes().get(9);
+          internal_static_ServerCrashStateData_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_ServerCrashStateData_descriptor,
+              new java.lang.String[] { "ServerName", "DistributedLogReplay", "RegionsOnCrashedServer", "RegionsToAssign", "CarryingMeta", "ShouldSplitWal", });
           return null;
         }
       };

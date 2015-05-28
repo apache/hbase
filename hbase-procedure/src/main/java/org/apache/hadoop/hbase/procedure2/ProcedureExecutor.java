@@ -148,8 +148,8 @@ public class ProcedureExecutor<TEnvironment> {
 
     public void periodicExecute(final TEnvironment env) {
       if (completed.isEmpty()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("No completed procedures to cleanup.");
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("No completed procedures to cleanup.");
         }
         return;
       }

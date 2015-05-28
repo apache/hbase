@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.hadoop.hbase.zookeeper.ZKTableStateManager;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.data.Stat;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -761,8 +762,7 @@ public class TestMasterFailover {
       }
       Thread.sleep(100);
     }
-    LOG.debug("\n\nRegion of enabled table was OPENED on dead RS\n" +
-        region + "\n\n");
+    LOG.debug("\n\nRegion of enabled table was OPENED on dead RS\n" + region + "\n\n");
 
     // Region of disabled table was opened on dead RS
     region = disabledRegions.remove(0);
@@ -778,8 +778,7 @@ public class TestMasterFailover {
       }
       Thread.sleep(100);
     }
-    LOG.debug("\n\nRegion of disabled table was OPENED on dead RS\n" +
-        region + "\n\n");
+    LOG.debug("\n\nRegion of disabled table was OPENED on dead RS\n" + region + "\n\n");
 
     /*
      * ZK = NONE

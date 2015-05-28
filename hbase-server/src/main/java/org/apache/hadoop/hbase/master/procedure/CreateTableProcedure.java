@@ -269,12 +269,12 @@ public class CreateTableProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
-    return env.getProcedureQueue().tryAcquireTableWrite(getTableName(), "create table");
+    return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "create table");
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableWrite(getTableName());
+    env.getProcedureQueue().releaseTableExclusiveLock(getTableName());
   }
 
   private boolean prepareCreate(final MasterProcedureEnv env) throws IOException {

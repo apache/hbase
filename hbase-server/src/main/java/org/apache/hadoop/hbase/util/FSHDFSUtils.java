@@ -170,7 +170,7 @@ public class FSHDFSUtils extends FSUtils {
   boolean recoverDFSFileLease(final DistributedFileSystem dfs, final Path p,
       final Configuration conf, final CancelableProgressable reporter)
   throws IOException {
-    LOG.info("Recovering lease on dfs file " + p);
+    LOG.info("Recover lease on dfs file " + p);
     long startWaiting = EnvironmentEdgeManager.currentTime();
     // Default is 15 minutes. It's huge, but the idea is that if we have a major issue, HDFS
     // usually needs 10 minutes before marking the nodes as dead. So we're putting ourselves
@@ -259,7 +259,7 @@ public class FSHDFSUtils extends FSUtils {
     boolean recovered = false;
     try {
       recovered = dfs.recoverLease(p);
-      LOG.info("recoverLease=" + recovered + ", " +
+      LOG.info((recovered? "Recovered lease, ": "Failed to recover lease, ") +
         getLogMessageDetail(nbAttempt, p, startWaiting));
     } catch (IOException e) {
       if (e instanceof LeaseExpiredException && e.getMessage().contains("File does not exist")) {

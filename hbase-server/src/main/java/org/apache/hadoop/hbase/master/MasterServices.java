@@ -177,7 +177,7 @@ public interface MasterServices extends Server {
   /**
    * @return true if master enables ServerShutdownHandler;
    */
-  boolean isServerShutdownHandlerEnabled();
+  boolean isServerCrashProcessingEnabled();
 
   /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.

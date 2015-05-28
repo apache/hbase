@@ -15,28 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.master;
+package org.apache.hadoop.hbase.master.procedure;
 
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * This tests AssignmentManager with a testing cluster.
+ * Procedures that handle servers -- e.g. server crash -- must implement this Interface.
+ * It is used by the procedure runner to figure locking and what queuing.
  */
-@Category(MediumTests.class)
-public class TestZKLessAMOnCluster extends TestAssignmentManagerOnCluster {
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+public interface ServerProcedureInterface {
+  /**
+   * @return Name of this server instance.
+   */
+  ServerName getServerName();
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
-    // Don't use ZK for region assignment
-    conf.setBoolean("hbase.assignment.usezk", false);
-    setupOnce();
-  }
-
-  @AfterClass
-  public static void tearDownAfterClass() throws Exception {
-    TestAssignmentManagerOnCluster.tearDownAfterClass();
-  }
+  /**
+   * @return True if this server has an hbase:meta table region.
+   */
+  boolean hasMetaTableRegion();
 }

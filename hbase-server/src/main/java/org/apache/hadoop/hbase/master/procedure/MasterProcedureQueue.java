@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -43,11 +44,12 @@ import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOpe
  * ProcedureRunnableSet for the Master Procedures.
  * This RunnableSet tries to provide to the ProcedureExecutor procedures
  * that can be executed without having to wait on a lock.
- * Most of the master operations can be executed concurrently, if the they
+ * Most of the master operations can be executed concurrently, if they
  * are operating on different tables (e.g. two create table can be performed
- * at the same, time assuming table A and table B).
+ * at the same, time assuming table A and table B) or against two different servers; say
+ * two servers that crashed at about the same time.
  *
- * Each procedure should implement an interface providing information for this queue.
+ * <p>Each procedure should implement an interface providing information for this queue.
  * for example table related procedures should implement TableProcedureInterface.
  * each procedure will be pushed in its own queue, and based on the operation type
  * we may take smarter decision. e.g. we can abort all the operations preceding
@@ -58,7 +60,18 @@ import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOpe
 public class MasterProcedureQueue implements ProcedureRunnableSet {
   private static final Log LOG = LogFactory.getLog(MasterProcedureQueue.class);
 
-  private final ProcedureFairRunQueues<TableName, RunQueue> fairq;
+  // Two queues to ensure that server procedures run ahead of table precedures always.
+  private final ProcedureFairRunQueues<TableName, RunQueue> tableFairQ;
+  /**
+   * Rely on basic fair q. ServerCrashProcedure will yield if meta is not assigned. This way, the
+   * server that was carrying meta should rise to the top of the queue (this is how it used to
+   * work when we had handlers and ServerShutdownHandler ran). TODO: special handling of servers
+   * that were carrying system tables on crash; do I need to have these servers have priority?
+   * 
+   * <p>Apart from the special-casing of meta and system tables, fairq is what we want
+   */
+  private final ProcedureFairRunQueues<ServerName, RunQueue> serverFairQ;
+
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
   private final TableLockManager lockManager;
@@ -66,11 +79,16 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
   private final int metaTablePriority;
   private final int userTablePriority;
   private final int sysTablePriority;
+  private static final int DEFAULT_SERVER_PRIORITY = 1;
 
+  /**
+   * Keeps count across server and table queues.
+   */
   private int queueSize;
 
   public MasterProcedureQueue(final Configuration conf, final TableLockManager lockManager) {
-    this.fairq = new ProcedureFairRunQueues<TableName, RunQueue>(1);
+    this.tableFairQ = new ProcedureFairRunQueues<TableName, RunQueue>(1);
+    this.serverFairQ = new ProcedureFairRunQueues<ServerName, RunQueue>(1);
     this.lockManager = lockManager;
 
     // TODO: should this be part of the HTD?
@@ -105,12 +123,13 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
 
   @Override
   public void yield(final Procedure proc) {
-    addFront(proc);
+    addBack(proc);
   }
 
   @Override
   @edu.umd.cs.findbugs.annotations.SuppressWarnings("WA_AWAIT_NOT_IN_LOOP")
   public Long poll() {
+    Long pollResult = null;
     lock.lock();
     try {
       if (queueSize == 0) {
@@ -119,19 +138,25 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
           return null;
         }
       }
-
-      RunQueue queue = fairq.poll();
-      if (queue != null && queue.isAvailable()) {
-        queueSize--;
-        return queue.poll();
+      // For now, let server handling have precedence over table handling; presumption is that it
+      // is more important handling crashed servers than it is running the
+      // enabling/disabling tables, etc.
+      pollResult = doPoll(serverFairQ.poll());
+      if (pollResult == null) {
+        pollResult = doPoll(tableFairQ.poll());
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return null;
     } finally {
       lock.unlock();
     }
-    return null;
+    return pollResult;
+  }
+
+  private Long doPoll(final RunQueue rq) {
+    if (rq == null || !rq.isAvailable()) return null;
+    this.queueSize--;
+    return rq.poll();
   }
 
   @Override
@@ -148,7 +173,8 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
   public void clear() {
     lock.lock();
     try {
-      fairq.clear();
+      serverFairQ.clear();
+      tableFairQ.clear();
       queueSize = 0;
     } finally {
       lock.unlock();
@@ -169,7 +195,8 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
   public String toString() {
     lock.lock();
     try {
-      return "MasterProcedureQueue size=" + queueSize + ": " + fairq;
+      return "MasterProcedureQueue size=" + queueSize + ": tableFairQ: " + tableFairQ +
+        ", serverFairQ: " + serverFairQ;
     } finally {
       lock.unlock();
     }
@@ -197,6 +224,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
         markTableAsDeleted(iProcTable.getTableName());
       }
     }
+    // No cleanup for ServerProcedureInterface types, yet.
   }
 
   private RunQueue getRunQueueOrCreate(final Procedure proc) {
@@ -204,17 +232,26 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
       final TableName table = ((TableProcedureInterface)proc).getTableName();
       return getRunQueueOrCreate(table);
     }
-    // TODO: at the moment we only have Table procedures
-    // if you are implementing a non-table procedure, you have two option create
-    // a group for all the non-table procedures or try to find a key for your
-    // non-table procedure and implement something similar to the TableRunQueue.
+    if (proc instanceof ServerProcedureInterface) {
+      return getRunQueueOrCreate((ServerProcedureInterface)proc);
+    }
+    // TODO: at the moment we only have Table and Server procedures
+    // if you are implementing a non-table/non-server procedure, you have two options: create
+    // a group for all the non-table/non-server procedures or try to find a key for your
+    // non-table/non-server procedures and implement something similar to the TableRunQueue.
     throw new UnsupportedOperationException("RQs for non-table procedures are not implemented yet");
   }
 
   private TableRunQueue getRunQueueOrCreate(final TableName table) {
     final TableRunQueue queue = getRunQueue(table);
     if (queue != null) return queue;
-    return (TableRunQueue)fairq.add(table, createTableRunQueue(table));
+    return (TableRunQueue)tableFairQ.add(table, createTableRunQueue(table));
+  }
+
+  private ServerRunQueue getRunQueueOrCreate(final ServerProcedureInterface spi) {
+    final ServerRunQueue queue = getRunQueue(spi.getServerName());
+    if (queue != null) return queue;
+    return (ServerRunQueue)serverFairQ.add(spi.getServerName(), createServerRunQueue(spi));
   }
 
   private TableRunQueue createTableRunQueue(final TableName table) {
@@ -227,8 +264,35 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
     return new TableRunQueue(priority);
   }
 
+  private ServerRunQueue createServerRunQueue(final ServerProcedureInterface spi) {
+    return new ServerRunQueue(DEFAULT_SERVER_PRIORITY);
+  }
+
   private TableRunQueue getRunQueue(final TableName table) {
-    return (TableRunQueue)fairq.get(table);
+    return (TableRunQueue)tableFairQ.get(table);
+  }
+
+  private ServerRunQueue getRunQueue(final ServerName sn) {
+    return (ServerRunQueue)serverFairQ.get(sn);
+  }
+
+  /**
+   * Try to acquire the write lock on the specified table.
+   * other operations in the table-queue will be executed after the lock is released.
+   * @param table Table to lock
+   * @param purpose Human readable reason for locking the table
+   * @return true if we were able to acquire the lock on the table, otherwise false.
+   */
+  public boolean tryAcquireTableExclusiveLock(final TableName table, final String purpose) {
+    return getRunQueueOrCreate(table).tryExclusiveLock(lockManager, table, purpose);
+  }
+
+  /**
+   * Release the write lock taken with tryAcquireTableWrite()
+   * @param table the name of the table that has the write lock
+   */
+  public void releaseTableExclusiveLock(final TableName table) {
+    getRunQueue(table).releaseExclusiveLock(lockManager, table);
   }
 
   /**
@@ -239,35 +303,54 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
    * @param purpose Human readable reason for locking the table
    * @return true if we were able to acquire the lock on the table, otherwise false.
    */
-  public boolean tryAcquireTableRead(final TableName table, final String purpose) {
-    return getRunQueueOrCreate(table).tryRead(lockManager, table, purpose);
+  public boolean tryAcquireTableSharedLock(final TableName table, final String purpose) {
+    return getRunQueueOrCreate(table).trySharedLock(lockManager, table, purpose);
   }
 
   /**
    * Release the read lock taken with tryAcquireTableRead()
    * @param table the name of the table that has the read lock
    */
-  public void releaseTableRead(final TableName table) {
-    getRunQueue(table).releaseRead(lockManager, table);
+  public void releaseTableSharedLock(final TableName table) {
+    getRunQueue(table).releaseSharedLock(lockManager, table);
   }
 
   /**
-   * Try to acquire the write lock on the specified table.
-   * other operations in the table-queue will be executed after the lock is released.
-   * @param table Table to lock
-   * @param purpose Human readable reason for locking the table
-   * @return true if we were able to acquire the lock on the table, otherwise false.
+   * Try to acquire the write lock on the specified server.
+   * @see #releaseServerExclusiveLock(ServerProcedureInterface)
+   * @param spi Server to lock
+   * @return true if we were able to acquire the lock on the server, otherwise false.
    */
-  public boolean tryAcquireTableWrite(final TableName table, final String purpose) {
-    return getRunQueueOrCreate(table).tryWrite(lockManager, table, purpose);
+  public boolean tryAcquireServerExclusiveLock(final ServerProcedureInterface spi) {
+    return getRunQueueOrCreate(spi).tryExclusiveLock();
   }
 
   /**
-   * Release the write lock taken with tryAcquireTableWrite()
-   * @param table the name of the table that has the write lock
+   * Release the write lock
+   * @see #tryAcquireServerExclusiveLock(ServerProcedureInterface)
+   * @param spi the server that has the write lock
    */
-  public void releaseTableWrite(final TableName table) {
-    getRunQueue(table).releaseWrite(lockManager, table);
+  public void releaseServerExclusiveLock(final ServerProcedureInterface spi) {
+    getRunQueue(spi.getServerName()).releaseExclusiveLock();
+  }
+
+  /**
+   * Try to acquire the read lock on the specified server.
+   * @see #releaseServerSharedLock(ServerProcedureInterface)
+   * @param spi Server to lock
+   * @return true if we were able to acquire the lock on the server, otherwise false.
+   */
+  public boolean tryAcquireServerSharedLock(final ServerProcedureInterface spi) {
+    return getRunQueueOrCreate(spi).trySharedLock();
+  }
+
+  /**
+   * Release the read lock taken
+   * @see #tryAcquireServerSharedLock(ServerProcedureInterface)
+   * @param spi the server that has the read lock
+   */
+  public void releaseServerSharedLock(final ServerProcedureInterface spi) {
+    getRunQueue(spi.getServerName()).releaseSharedLock();
   }
 
   /**
@@ -284,7 +367,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
       lock.lock();
       try {
         if (queue.isEmpty() && !queue.isLocked()) {
-          fairq.remove(table);
+          tableFairQ.remove(table);
 
           // Remove the table lock
           try {
@@ -311,114 +394,167 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
   }
 
   /**
+   * Base abstract class for RunQueue implementations.
+   * Be careful honoring synchronizations in subclasses. In here we protect access but if you are
+   * acting on a state found in here, be sure dependent code keeps synchronization.
+   * Implements basic in-memory read/write locking mechanism to prevent procedure steps being run
+   * in parallel.
+   */
+  private static abstract class AbstractRunQueue implements RunQueue {
+    // All modification of runnables happens with #lock held.
+    private final Deque<Long> runnables = new ArrayDeque<Long>();
+    private final int priority;
+    private boolean exclusiveLock = false;
+    private int sharedLock = 0;
+
+    public AbstractRunQueue(int priority) {
+      this.priority = priority;
+    }
+
+    boolean isEmpty() {
+      return this.runnables.isEmpty();
+    }
+
+    @Override
+    public boolean isAvailable() {
+      synchronized (this) {
+        return !exclusiveLock && !runnables.isEmpty();
+      }
+    }
+
+    @Override
+    public int getPriority() {
+      return this.priority;
+    }
+
+    @Override
+    public void addFront(Procedure proc) {
+      this.runnables.addFirst(proc.getProcId());
+    }
+
+    @Override
+    public void addBack(Procedure proc) {
+      this.runnables.addLast(proc.getProcId());
+    }
+
+    @Override
+    public Long poll() {
+      return this.runnables.poll();
+    }
+
+    @Override
+    public synchronized boolean isLocked() {
+      return isExclusiveLock() || sharedLock > 0;
+    }
+
+    public synchronized boolean isExclusiveLock() {
+      return this.exclusiveLock;
+    }
+
+    public synchronized boolean trySharedLock() {
+      if (isExclusiveLock()) return false;
+      sharedLock++;
+      return true;
+    }
+
+    public synchronized void releaseSharedLock() {
+      sharedLock--;
+    }
+
+    /**
+     * @return True if only one instance of a shared lock outstanding.
+     */
+    synchronized boolean isSingleSharedLock() {
+      return sharedLock == 1;
+    }
+
+    public synchronized boolean tryExclusiveLock() {
+      if (isLocked()) return false;
+      exclusiveLock = true;
+      return true;
+    }
+
+    public synchronized void releaseExclusiveLock() {
+      exclusiveLock = false;
+    }
+ 
+    @Override
+    public String toString() {
+      return this.runnables.toString();
+    }
+  }
+
+  /**
+   * Run Queue for Server procedures.
+   */
+  private static class ServerRunQueue extends AbstractRunQueue {
+    public ServerRunQueue(int priority) {
+      super(priority);
+    }
+  }
+
+  /**
    * Run Queue for a Table. It contains a read-write lock that is used by the
    * MasterProcedureQueue to decide if we should fetch an item from this queue
    * or skip to another one which will be able to run without waiting for locks.
    */
-  private static class TableRunQueue implements RunQueue {
-    private final Deque<Long> runnables = new ArrayDeque<Long>();
-    private final int priority;
-
+  private static class TableRunQueue extends AbstractRunQueue {
     private TableLock tableLock = null;
-    private boolean wlock = false;
-    private int rlock = 0;
 
     public TableRunQueue(int priority) {
-      this.priority = priority;
-    }
-
-    @Override
-    public void addFront(final Procedure proc) {
-      runnables.addFirst(proc.getProcId());
+      super(priority);
     }
 
     // TODO: Improve run-queue push with TableProcedureInterface.getType()
     //       we can take smart decisions based on the type of the operation (e.g. create/delete)
     @Override
     public void addBack(final Procedure proc) {
-      runnables.addLast(proc.getProcId());
+      super.addBack(proc);
     }
 
-    @Override
-    public Long poll() {
-      return runnables.poll();
-    }
-
-    @Override
-    public boolean isAvailable() {
-      synchronized (this) {
-        return !wlock && !runnables.isEmpty();
-      }
-    }
-
-    public boolean isEmpty() {
-      return runnables.isEmpty();
-    }
-
-    @Override
-    public boolean isLocked() {
-      synchronized (this) {
-        return wlock || rlock > 0;
-      }
-    }
-
-    public boolean tryRead(final TableLockManager lockManager,
+    public synchronized boolean trySharedLock(final TableLockManager lockManager,
         final TableName tableName, final String purpose) {
-      synchronized (this) {
-        if (wlock) {
-          return false;
-        }
+      if (isExclusiveLock()) return false;
 
-        // Take zk-read-lock
-        tableLock = lockManager.readLock(tableName, purpose);
-        try {
-          tableLock.acquire();
-        } catch (IOException e) {
-          LOG.error("failed acquire read lock on " + tableName, e);
-          tableLock = null;
-          return false;
-        }
-
-        rlock++;
+      // Take zk-read-lock
+      tableLock = lockManager.readLock(tableName, purpose);
+      try {
+        tableLock.acquire();
+      } catch (IOException e) {
+        LOG.error("failed acquire read lock on " + tableName, e);
+        tableLock = null;
+        return false;
       }
+      trySharedLock();
       return true;
     }
 
-    public void releaseRead(final TableLockManager lockManager,
+    public synchronized void releaseSharedLock(final TableLockManager lockManager,
         final TableName tableName) {
-      synchronized (this) {
-        releaseTableLock(lockManager, rlock == 1);
-        rlock--;
-      }
+      releaseTableLock(lockManager, isSingleSharedLock());
+      releaseSharedLock();
     }
 
-    public boolean tryWrite(final TableLockManager lockManager,
+    public synchronized boolean tryExclusiveLock(final TableLockManager lockManager,
         final TableName tableName, final String purpose) {
-      synchronized (this) {
-        if (wlock || rlock > 0) {
-          return false;
-        }
-
-        // Take zk-write-lock
-        tableLock = lockManager.writeLock(tableName, purpose);
-        try {
-          tableLock.acquire();
-        } catch (IOException e) {
-          LOG.error("failed acquire write lock on " + tableName, e);
-          tableLock = null;
-          return false;
-        }
-        wlock = true;
+      if (isLocked()) return false;
+      // Take zk-write-lock
+      tableLock = lockManager.writeLock(tableName, purpose);
+      try {
+        tableLock.acquire();
+      } catch (IOException e) {
+        LOG.error("failed acquire write lock on " + tableName, e);
+        tableLock = null;
+        return false;
       }
+      tryExclusiveLock();
       return true;
     }
 
-    public void releaseWrite(final TableLockManager lockManager,
+    public synchronized void releaseExclusiveLock(final TableLockManager lockManager,
         final TableName tableName) {
-      synchronized (this) {
-        releaseTableLock(lockManager, true);
-        wlock = false;
-      }
+      releaseTableLock(lockManager, true);
+      releaseExclusiveLock();
     }
 
     private void releaseTableLock(final TableLockManager lockManager, boolean reset) {
@@ -433,16 +569,6 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
           LOG.warn("Could not release the table write-lock", e);
         }
       }
-    }
-
-    @Override
-    public int getPriority() {
-      return priority;
-    }
-
-    @Override
-    public String toString() {
-      return runnables.toString();
     }
   }
 }

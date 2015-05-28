@@ -69,7 +69,7 @@ import org.apache.zookeeper.data.Stat;
 
 /**
  * ZooKeeper based implementation of 
- * {@link org.apache.hadoop.hbase.master.SplitLogManagerCoordination}
+ * {@link SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
 public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
@@ -647,7 +647,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           ZKUtil.createSetData(this.watcher, nodePath,
             ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Marked " + regionEncodeName + " as recovering from " + serverName +
+            LOG.debug("Marked " + regionEncodeName + " recovering from " + serverName +
               ": " + nodePath);
           }
           // break retry loop
@@ -684,7 +684,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   /**
    * ZooKeeper implementation of
-   * {@link org.apache.hadoop.hbase.master.
+   * {@link org.apache.hadoop.hbase.coordination.
    * SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
    */
   @Override
