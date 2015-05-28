@@ -2461,7 +2461,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
    * @return Created KeyValue OR if we find a length of zero, we will return null which
    * can be useful marking a stream as done.
    * @throws IOException
+   * {@link Deprecated} As of 1.2. Use {@link KeyValueUtil#iscreate(InputStream, boolean)} instead.
    */
+  @Deprecated
   public static KeyValue iscreate(final InputStream in) throws IOException {
     byte [] intBytes = new byte[Bytes.SIZEOF_INT];
     int bytesRead = 0;
