@@ -58,7 +58,7 @@ public class KeyValueUtil {
         cell.getValueLength(), cell.getTagsLength(), true);
   }
 
-  private static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
+  public static int length(short rlen, byte flen, int qlen, int vlen, int tlen, boolean withTags) {
     if (withTags) {
       return (int) (KeyValue.getKeyValueDataStructureSize(rlen, flen, qlen, vlen, tlen));
     }
@@ -669,8 +669,8 @@ public class KeyValueUtil {
 
   public static void oswrite(final Cell cell, final OutputStream out, final boolean withTags)
       throws IOException {
-    if (cell instanceof KeyValue) {
-      KeyValue.oswrite((KeyValue) cell, out, withTags);
+    if (cell instanceof Streamable) {
+      ((Streamable)cell).write(out, withTags);
     } else {
       short rlen = cell.getRowLength();
       byte flen = cell.getFamilyLength();

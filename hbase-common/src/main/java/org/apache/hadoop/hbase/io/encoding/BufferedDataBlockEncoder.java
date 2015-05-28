@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -35,6 +37,7 @@ import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -345,7 +348,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   // there. So this has to be an instance of SettableSequenceId. SeekerState need not be
   // SettableSequenceId as we never return that to top layers. When we have to, we make
   // ClonedSeekerState from it.
-  protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId {
+  protected static class ClonedSeekerState implements Cell, HeapSize, SettableSequenceId,
+      Streamable {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (4 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (7 * Bytes.SIZEOF_INT)
         + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (2 * ClassSize.ARRAY));
@@ -533,6 +537,40 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     public long heapSize() {
       return FIXED_OVERHEAD + rowLength + familyLength + qualifierLength + valueLength + tagsLength;
+    }
+
+    @Override
+    public int write(OutputStream out) throws IOException {
+      return write(out, true);
+    }
+
+    @Override
+    public int write(OutputStream out, boolean withTags) throws IOException {
+      int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
+          tagsLength, withTags);
+      StreamUtils.writeInt(out, lenToWrite);
+      StreamUtils.writeInt(out, keyOnlyBuffer.length);
+      StreamUtils.writeInt(out, valueLength);
+      // Write key
+      out.write(keyOnlyBuffer);
+      // Write value
+      assert this.currentBuffer.hasArray();
+      out.write(this.currentBuffer.array(), this.currentBuffer.arrayOffset() + this.valueOffset,
+          this.valueLength);
+      if (withTags) {
+        // 2 bytes tags length followed by tags bytes
+        // tags length is serialized with 2 bytes only(short way) even if the type is int.
+        // As this is non -ve numbers, we save the sign bit. See HBASE-11437
+        out.write((byte) (0xff & (this.tagsLength >> 8)));
+        out.write((byte) (0xff & this.tagsLength));
+        if (this.tagCompressionContext != null) {
+          out.write(cloneTagsBuffer);
+        } else {
+          out.write(this.currentBuffer.array(), this.currentBuffer.arrayOffset() + this.tagsOffset,
+              this.tagsLength);
+        }
+      }
+      return lenToWrite + Bytes.SIZEOF_INT;
     }
   }
 

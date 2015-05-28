@@ -79,7 +79,8 @@ import com.google.common.annotations.VisibleForTesting;
  * and actual tag bytes length.
  */
 @InterfaceAudience.Private
-public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, SettableTimestamp {
+public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
+    SettableTimestamp, Streamable {
   private static final ArrayList<Tag> EMPTY_ARRAY_LIST = new ArrayList<Tag>();
 
   private static final Log LOG = LogFactory.getLog(KeyValue.class);
@@ -2501,46 +2502,37 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
    * @param kv
    * @param out
-   * @return Length written on stream
-   * @throws IOException
-   * @see #create(DataInput) for the inverse function
-   * @see #write(KeyValue, DataOutput)
-   * @deprecated use {@link #oswrite(KeyValue, OutputStream, boolean)} instead
-   */
-  @Deprecated
-  public static long oswrite(final KeyValue kv, final OutputStream out)
-      throws IOException {
-    int length = kv.getLength();
-    // This does same as DataOuput#writeInt (big-endian, etc.)
-    out.write(Bytes.toBytes(length));
-    out.write(kv.getBuffer(), kv.getOffset(), length);
-    return length + Bytes.SIZEOF_INT;
-  }
-
-  /**
-   * Write out a KeyValue in the manner in which we used to when KeyValue was a Writable but do
-   * not require a {@link DataOutput}, just take plain {@link OutputStream}
-   * Named <code>oswrite</code> so does not clash with {@link #write(KeyValue, DataOutput)}
-   * @param kv
-   * @param out
    * @param withTags
    * @return Length written on stream
    * @throws IOException
    * @see #create(DataInput) for the inverse function
    * @see #write(KeyValue, DataOutput)
    * @see KeyValueUtil#oswrite(Cell, OutputStream, boolean)
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Instead use {@link #write(OutputStream, boolean)}
    */
+  @Deprecated
   public static long oswrite(final KeyValue kv, final OutputStream out, final boolean withTags)
       throws IOException {
+    return kv.write(out, withTags);
+  }
+
+  @Override
+  public int write(OutputStream out) throws IOException {
+    return write(out, true);
+  }
+
+  @Override
+  public int write(OutputStream out, boolean withTags) throws IOException {
     // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any changes doing here, pls
     // check KeyValueUtil#oswrite also and do necessary changes.
-    int length = kv.getLength();
+    int length = this.length;
     if (!withTags) {
-      length = kv.getKeyLength() + kv.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
+      length = this.getKeyLength() + this.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
     }
     // This does same as DataOuput#writeInt (big-endian, etc.)
     StreamUtils.writeInt(out, length);
-    out.write(kv.getBuffer(), kv.getOffset(), length);
+    out.write(this.bytes, this.offset, length);
     return length + Bytes.SIZEOF_INT;
   }
 

@@ -1,6 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -23,30 +21,27 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
- * An extension of the KeyValue where the tags length is always 0 
+ * This marks a Cell as streamable to a given OutputStream.
  */
 @InterfaceAudience.Private
-public class NoTagsKeyValue extends KeyValue {
-  public NoTagsKeyValue(byte[] bytes, int offset, int length) {
-    super(bytes, offset, length);
-  }
+public interface Streamable {
 
-  @Override
-  public int getTagsLength() {
-    return 0;
-  }
+  /**
+   * Write this cell to an OutputStream.
+   * @param out Stream to which cell has to be written
+   * @return how many bytes are written.
+   * @throws IOException
+   */
+  int write(OutputStream out) throws IOException;
 
-  @Override
-  public int write(OutputStream out, boolean withTags) throws IOException {
-    // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any changes doing here, pls
-    // check KeyValueUtil#oswrite also and do necessary changes.
-    // This does same as DataOuput#writeInt (big-endian, etc.)
-    StreamUtils.writeInt(out, this.length);
-    out.write(this.bytes, this.offset, this.length);
-    return this.length + Bytes.SIZEOF_INT;
-  }
+  /**
+   * Write this cell to an OutputStream.
+   * @param out Stream to which cell has to be written
+   * @param withTags Whether to write tags.
+   * @return how many bytes are written.
+   * @throws IOException
+   */
+  int write(OutputStream out, boolean withTags) throws IOException;
 }
