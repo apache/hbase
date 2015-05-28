@@ -1131,8 +1131,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     final int numThreads = conf.getInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS,
         Math.max(Runtime.getRuntime().availableProcessors(),
           MasterProcedureConstants.DEFAULT_MIN_MASTER_PROCEDURE_THREADS));
+    final boolean abortOnCorruption = conf.getBoolean(
+        MasterProcedureConstants.EXECUTOR_ABORT_ON_CORRUPTION,
+        MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     procedureStore.start(numThreads);
-    procedureExecutor.start(numThreads);
+    procedureExecutor.start(numThreads, abortOnCorruption);
   }
 
   private void stopProcedureExecutor() {

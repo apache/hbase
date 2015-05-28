@@ -57,11 +57,11 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor)
       throws Exception {
-    restart(procExecutor, null);
+    restart(procExecutor, null, true);
   }
 
   public static <TEnv> void restart(ProcedureExecutor<TEnv> procExecutor,
-      Runnable beforeStartAction) throws Exception {
+      Runnable beforeStartAction, boolean failOnCorrupted) throws Exception {
     ProcedureStore procStore = procExecutor.getStore();
     int storeThreads = procExecutor.getNumThreads();
     int execThreads = procExecutor.getNumThreads();
@@ -75,7 +75,7 @@ public class ProcedureTestingUtility {
     }
     // re-start
     procStore.start(storeThreads);
-    procExecutor.start(execThreads);
+    procExecutor.start(execThreads, failOnCorrupted);
   }
 
   public static <TEnv> void setKillBeforeStoreUpdate(ProcedureExecutor<TEnv> procExecutor,

@@ -74,7 +74,7 @@ public class TestProcedureRecovery {
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), null, procStore);
     procExecutor.testing = new ProcedureExecutor.Testing();
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS);
+    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
     procSleepInterval = 0;
   }
 

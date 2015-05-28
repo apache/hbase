@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureLoader;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
@@ -63,14 +64,14 @@ public final class ProcedureWALFormat {
     }
   }
 
-  interface Loader {
+  interface Loader extends ProcedureLoader {
     void removeLog(ProcedureWALFile log);
     void markCorruptedWAL(ProcedureWALFile log, IOException e);
   }
 
   private ProcedureWALFormat() {}
 
-  public static Iterator<Procedure> load(final Iterator<ProcedureWALFile> logs,
+  public static void load(final Iterator<ProcedureWALFile> logs,
       final ProcedureStoreTracker tracker, final Loader loader) throws IOException {
     ProcedureWALFormatReader reader = new ProcedureWALFormatReader(tracker);
     tracker.setKeepDeletes(true);
@@ -84,14 +85,13 @@ public final class ProcedureWALFormat {
           log.close();
         }
       }
+      reader.finalize(loader);
       // The tracker is now updated with all the procedures read from the logs
       tracker.setPartialFlag(false);
       tracker.resetUpdates();
     } finally {
       tracker.setKeepDeletes(false);
     }
-    // TODO: Write compacted version?
-    return reader.getProcedures();
   }
 
   public static void writeHeader(OutputStream stream, ProcedureWALHeader header)

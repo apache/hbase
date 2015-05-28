@@ -24,8 +24,21 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public final class MasterProcedureConstants {
   private MasterProcedureConstants() {}
 
+  /** Used to construct the name of the log directory for master procedures */
   public static final String MASTER_PROCEDURE_LOGDIR = "MasterProcWALs";
 
+  /** Number of threads used by the procedure executor */
   public static final String MASTER_PROCEDURE_THREADS = "hbase.master.procedure.threads";
   public static final int DEFAULT_MIN_MASTER_PROCEDURE_THREADS = 4;
+
+  /**
+   * Procedure replay sanity check. In case a WAL is missing or unreadable we
+   * may lose information about pending/running procedures.
+   * Set this to true in case you want the Master failing on load if a corrupted
+   * procedure is encountred.
+   * (Default is off, because we prefer having the Master up and running and
+   * fix the "in transition" state "by hand")
+   */
+  public static final String EXECUTOR_ABORT_ON_CORRUPTION = "hbase.procedure.abort.on.corruption";
+  public static final boolean DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION = false;
 }
