@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -84,5 +85,65 @@ public class TestBoundedByteBufferPool {
       this.reservoir.putBuffer(ByteBuffer.allocate(initialByteBufferSize));
     }
     assertEquals(maxToCache, this.reservoir.buffers.size());
+  }
+
+  @Test
+  public void testBufferSizeGrowWithMultiThread() throws Exception {
+    final ConcurrentLinkedDeque<ByteBuffer> bufferQueue = new ConcurrentLinkedDeque<ByteBuffer>();
+    int takeBufferThreadsCount = 30;
+    int putBufferThreadsCount = 1;
+    Thread takeBufferThreads[] = new Thread[takeBufferThreadsCount];
+    for (int i = 0; i < takeBufferThreadsCount; i++) {
+      takeBufferThreads[i] = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          while (true) {
+            ByteBuffer buffer = reservoir.getBuffer();
+            try {
+              Thread.sleep(5);
+            } catch (InterruptedException e) {
+              break;
+            }
+            bufferQueue.offer(buffer);
+            if (Thread.currentThread().isInterrupted()) break;
+          }
+        }
+      });
+    }
+
+    Thread putBufferThread[] = new Thread[putBufferThreadsCount];
+    for (int i = 0; i < putBufferThreadsCount; i++) {
+      putBufferThread[i] = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          while (true) {
+            ByteBuffer buffer = bufferQueue.poll();
+            if (buffer != null) {
+              reservoir.putBuffer(buffer);
+            }
+            if (Thread.currentThread().isInterrupted()) break;
+          }
+        }
+      });
+    }
+
+    for (int i = 0; i < takeBufferThreadsCount; i++) {
+      takeBufferThreads[i].start();
+    }
+    for (int i = 0; i < putBufferThreadsCount; i++) {
+      putBufferThread[i].start();
+    }
+    Thread.sleep(2 * 1000);// Let the threads run for 2 secs
+    for (int i = 0; i < takeBufferThreadsCount; i++) {
+      takeBufferThreads[i].interrupt();
+      takeBufferThreads[i].join();
+    }
+    for (int i = 0; i < putBufferThreadsCount; i++) {
+      putBufferThread[i].interrupt();
+      putBufferThread[i].join();
+    }
+    // None of the BBs we got from pool is growing while in use. So we should not change the
+    // runningAverage in pool
+    assertEquals(initialByteBufferSize, this.reservoir.runningAverage);
   }
 }
