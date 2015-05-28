@@ -32,14 +32,16 @@ public class MemStoreSnapshot {
   private final long size;
   private final TimeRangeTracker timeRangeTracker;
   private final KeyValueScanner scanner;
+  private final boolean tagsPresent;
 
   public MemStoreSnapshot(long id, int cellsCount, long size, TimeRangeTracker timeRangeTracker,
-      KeyValueScanner scanner) {
+      KeyValueScanner scanner, boolean tagsPresent) {
     this.id = id;
     this.cellsCount = cellsCount;
     this.size = size;
     this.timeRangeTracker = timeRangeTracker;
     this.scanner = scanner;
+    this.tagsPresent = tagsPresent;
   }
 
   /**
@@ -75,5 +77,12 @@ public class MemStoreSnapshot {
    */
   public KeyValueScanner getScanner() {
     return this.scanner;
+  }
+
+  /**
+   * @return true if tags are present in this snapshot
+   */
+  public boolean isTagsPresent() {
+    return this.tagsPresent;
   }
 }

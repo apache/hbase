@@ -65,7 +65,7 @@ public class KeyValueCodec implements Codec {
     }
 
     protected Cell parseCell() throws IOException {
-      return KeyValue.iscreate(in);
+      return KeyValueUtil.iscreate(in, false);
     }
   }
 

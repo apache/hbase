@@ -30,6 +30,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -38,6 +39,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -56,8 +58,11 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResul
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
@@ -802,6 +807,39 @@ public abstract class TestVisibilityLabels {
       result = table.get(get);
       assertFalse(result.containsColumn(fam, qual));
       assertTrue(result.containsColumn(fam, qual2));
+    }
+  }
+
+  @Test
+  public void testFlushedFileWithVisibilityTags() throws Exception {
+    final byte[] qual2 = Bytes.toBytes("qual2");
+    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HColumnDescriptor col = new HColumnDescriptor(fam);
+    desc.addFamily(col);
+    TEST_UTIL.getHBaseAdmin().createTable(desc);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      Put p1 = new Put(row1);
+      p1.add(fam, qual, value);
+      p1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+
+      Put p2 = new Put(row1);
+      p2.add(fam, qual2, value);
+      p2.setCellVisibility(new CellVisibility(SECRET));
+
+      RowMutations rm = new RowMutations(row1);
+      rm.add(p1);
+      rm.add(p2);
+
+      table.mutateRow(rm);
+    }
+    TEST_UTIL.getHBaseAdmin().flush(tableName);
+    List<HRegion> regions = TEST_UTIL.getHBaseCluster().getRegions(tableName);
+    Store store = regions.get(0).getStore(fam);
+    Collection<StoreFile> storefiles = store.getStorefiles();
+    assertTrue(storefiles.size() > 0);
+    for (StoreFile storeFile : storefiles) {
+      assertTrue(storeFile.getReader().getHFileReader().getFileContext().isIncludesTags());
     }
   }
 

@@ -5796,6 +5796,23 @@ public class TestHRegion {
   }
 
   @Test
+  public void testFlushedFileWithNoTags() throws Exception {
+    String method = "testFlushedFileWithNoTags";
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    htd.addFamily(new HColumnDescriptor(fam1));
+    region = initHRegion(Bytes.toBytes(method), method, TEST_UTIL.getConfiguration(), fam1);
+    Put put = new Put(Bytes.toBytes("a-b-0-0"));
+    put.addColumn(fam1, qual1, Bytes.toBytes("c1-value"));
+    region.put(put);
+    region.flush(true);
+    Store store = region.getStore(fam1);
+    Collection<StoreFile> storefiles = store.getStorefiles();
+    for (StoreFile sf : storefiles) {
+      assertFalse("Tags should not be present "
+          ,sf.getReader().getHFileReader().getFileContext().isIncludesTags());
+    }
+  }
+  @Test
   @SuppressWarnings("unchecked")
   public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
     // similar to the above test but with distributed log replay
