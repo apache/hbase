@@ -19,12 +19,13 @@ package org.apache.hadoop.hbase.io;
 
 import java.nio.ByteBuffer;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.BoundedArrayQueue;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -55,13 +56,16 @@ public class BoundedByteBufferPool {
   private final int maxByteBufferSizeToCache;
 
   // A running average only it only rises, it never recedes
-  private volatile int runningAverage;
+  @VisibleForTesting
+  volatile int runningAverage;
 
   // Scratch that keeps rough total size of pooled bytebuffers
   private volatile int totalReservoirCapacity;
 
   // For reporting
   private AtomicLong allocations = new AtomicLong(0);
+
+  private ReentrantLock lock =  new ReentrantLock();
 
   /**
    * @param maxByteBufferSizeToCache
@@ -72,15 +76,23 @@ public class BoundedByteBufferPool {
       final int maxToCache) {
     this.maxByteBufferSizeToCache = maxByteBufferSizeToCache;
     this.runningAverage = initialByteBufferSize;
-    this.buffers = new ArrayBlockingQueue<ByteBuffer>(maxToCache, true);
+    this.buffers = new BoundedArrayQueue<ByteBuffer>(maxToCache);
   }
 
   public ByteBuffer getBuffer() {
-    ByteBuffer bb = this.buffers.poll();
+    ByteBuffer bb = null;
+    lock.lock();
+    try {
+      bb = this.buffers.poll();
+      if (bb != null) {
+        this.totalReservoirCapacity -= bb.capacity();
+      }
+    } finally {
+      lock.unlock();
+    }
     if (bb != null) {
-      // Clear sets limit == capacity.  Postion == 0.
+      // Clear sets limit == capacity. Postion == 0.
       bb.clear();
-      this.totalReservoirCapacity -= bb.capacity();
     } else {
       bb = ByteBuffer.allocate(this.runningAverage);
       this.allocations.incrementAndGet();
@@ -96,15 +108,21 @@ public class BoundedByteBufferPool {
   public void putBuffer(ByteBuffer bb) {
     // If buffer is larger than we want to keep around, just let it go.
     if (bb.capacity() > this.maxByteBufferSizeToCache) return;
-    if (!this.buffers.offer(bb)) {
+    boolean success = false;
+    int average = 0;
+    lock.lock();
+    try {
+      success = this.buffers.offer(bb);
+      if (success) {
+        this.totalReservoirCapacity += bb.capacity();
+        average = this.totalReservoirCapacity / this.buffers.size(); // size will never be 0.
+      }
+    } finally {
+      lock.unlock();
+    }
+    if (!success) {
       LOG.warn("At capacity: " + this.buffers.size());
     } else {
-      int size = this.buffers.size(); // This size may be inexact.
-      this.totalReservoirCapacity += bb.capacity();
-      int average = 0;
-      if (size != 0) {
-        average = this.totalReservoirCapacity / size;
-      }
       if (average > this.runningAverage && average < this.maxByteBufferSizeToCache) {
         this.runningAverage = average;
       }
