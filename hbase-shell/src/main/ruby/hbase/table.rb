@@ -271,6 +271,7 @@ EOF
               org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow))
       end
 
+      scanner.close()
       # Return the counter
       return count
     end
@@ -525,8 +526,8 @@ EOF
           break
         end
       end
-      scanner.close()
 
+      scanner.close()
       return ((block_given?) ? count : res)
     end
 
