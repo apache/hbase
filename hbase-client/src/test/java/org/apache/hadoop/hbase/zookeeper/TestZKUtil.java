@@ -34,9 +34,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-/**
- *
- */
 @Category({SmallTests.class})
 public class TestZKUtil {
 
@@ -50,7 +47,7 @@ public class TestZKUtil {
     Assert.assertTrue(!clusterKey.contains("\t") && !clusterKey.contains("\n"));
     Assert.assertEquals("localhost:3333:hbase,test", clusterKey);
   }
-  
+
   @Test
   public void testCreateACL() throws ZooKeeperConnectionException, IOException {
     Configuration conf = HBaseConfiguration.create();
