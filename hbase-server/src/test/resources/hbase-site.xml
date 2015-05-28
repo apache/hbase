@@ -147,4 +147,11 @@
     <description>Skip sanity checks in tests
     </description>
   </property>
+  <property>
+    <name>hbase.procedure.fail.on.corruption</name>
+    <value>true</value>
+    <description>
+      Enable replay sanity checks on procedure tests.
+    </description>
+  </property>
 </configuration>

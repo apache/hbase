@@ -71,7 +71,7 @@ public class TestProcedureExecution {
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), null, procStore);
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
-    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS);
+    procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
   @After

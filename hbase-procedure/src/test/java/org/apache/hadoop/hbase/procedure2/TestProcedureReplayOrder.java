@@ -19,13 +19,17 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -46,7 +50,7 @@ import static org.junit.Assert.fail;
 public class TestProcedureReplayOrder {
   private static final Log LOG = LogFactory.getLog(TestProcedureReplayOrder.class);
 
-  private static final Procedure NULL_PROC = null;
+  private static final int NUM_THREADS = 16;
 
   private ProcedureExecutor<Void> procExecutor;
   private TestProcedureEnv procEnv;
@@ -60,7 +64,7 @@ public class TestProcedureReplayOrder {
   @Before
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
-    htu.getConfiguration().setInt("hbase.procedure.store.wal.sync.wait.msec", 10);
+    htu.getConfiguration().setInt("hbase.procedure.store.wal.sync.wait.msec", 25);
 
     testDir = htu.getDataTestDir();
     fs = testDir.getFileSystem(htu.getConfiguration());
@@ -70,8 +74,8 @@ public class TestProcedureReplayOrder {
     procEnv = new TestProcedureEnv();
     procStore = ProcedureTestingUtility.createWalStore(htu.getConfiguration(), fs, logDir);
     procExecutor = new ProcedureExecutor(htu.getConfiguration(), procEnv, procStore);
-    procStore.start(24);
-    procExecutor.start(1);
+    procStore.start(NUM_THREADS);
+    procExecutor.start(1, true);
   }
 
   @After
@@ -82,47 +86,45 @@ public class TestProcedureReplayOrder {
   }
 
   @Test(timeout=90000)
-  public void testSingleStepReplyOrder() throws Exception {
-    // avoid the procedure to be runnable
-    procEnv.setAcquireLock(false);
+  public void testSingleStepReplayOrder() throws Exception {
+    final int NUM_PROC_XTHREAD = 32;
+    final int NUM_PROCS = NUM_THREADS * NUM_PROC_XTHREAD;
 
     // submit the procedures
-    submitProcedures(16, 25, TestSingleStepProcedure.class);
+    submitProcedures(NUM_THREADS, NUM_PROC_XTHREAD, TestSingleStepProcedure.class);
+
+    while (procEnv.getExecId() < NUM_PROCS) {
+      Thread.sleep(100);
+    }
 
     // restart the executor and allow the procedures to run
-    ProcedureTestingUtility.restart(procExecutor, new Runnable() {
-      @Override
-      public void run() {
-        procEnv.setAcquireLock(true);
-      }
-    });
+    ProcedureTestingUtility.restart(procExecutor);
 
     // wait the execution of all the procedures and
     // assert that the execution order was sorted by procId
     ProcedureTestingUtility.waitNoProcedureRunning(procExecutor);
-    procEnv.assertSortedExecList();
-
-    // TODO: FIXME: This should be revisited
+    procEnv.assertSortedExecList(NUM_PROCS);
   }
 
-  @Ignore
   @Test(timeout=90000)
-  public void testMultiStepReplyOrder() throws Exception {
-    // avoid the procedure to be runnable
-    procEnv.setAcquireLock(false);
+  public void testMultiStepReplayOrder() throws Exception {
+    final int NUM_PROC_XTHREAD = 24;
+    final int NUM_PROCS = NUM_THREADS * (NUM_PROC_XTHREAD * 2);
 
     // submit the procedures
-    submitProcedures(16, 10, TestTwoStepProcedure.class);
+    submitProcedures(NUM_THREADS, NUM_PROC_XTHREAD, TestTwoStepProcedure.class);
+
+    while (procEnv.getExecId() < NUM_PROCS) {
+      Thread.sleep(100);
+    }
 
     // restart the executor and allow the procedures to run
-    ProcedureTestingUtility.restart(procExecutor, new Runnable() {
-      @Override
-      public void run() {
-        procEnv.setAcquireLock(true);
-      }
-    });
+    ProcedureTestingUtility.restart(procExecutor);
 
-    fail("TODO: FIXME: NOT IMPLEMENT REPLAY ORDER");
+    // wait the execution of all the procedures and
+    // assert that the execution order was sorted by procId
+    ProcedureTestingUtility.waitNoProcedureRunning(procExecutor);
+    procEnv.assertSortedExecList(NUM_PROCS);
   }
 
   private void submitProcedures(final int nthreads, final int nprocPerThread,
@@ -154,73 +156,101 @@ public class TestProcedureReplayOrder {
   }
 
   private static class TestProcedureEnv {
-    private ArrayList<Long> execList = new ArrayList<Long>();
-    private boolean acquireLock = true;
+    private ArrayList<TestProcedure> execList = new ArrayList<TestProcedure>();
+    private AtomicLong execTimestamp = new AtomicLong(0);
 
-    public void setAcquireLock(boolean acquireLock) {
-      this.acquireLock = acquireLock;
+    public long getExecId() {
+      return execTimestamp.get();
     }
 
-    public boolean canAcquireLock() {
-      return acquireLock;
+    public long nextExecId() {
+      return execTimestamp.incrementAndGet();
     }
 
-    public void addToExecList(final Procedure proc) {
-      execList.add(proc.getProcId());
+    public void addToExecList(final TestProcedure proc) {
+      execList.add(proc);
     }
 
-    public ArrayList<Long> getExecList() {
-      return execList;
-    }
-
-    public void assertSortedExecList() {
+    public void assertSortedExecList(int numProcs) {
+      assertEquals(numProcs, execList.size());
       LOG.debug("EXEC LIST: " + execList);
-      for (int i = 1; i < execList.size(); ++i) {
-        assertTrue("exec list not sorted: " + execList.get(i-1) + " >= " + execList.get(i),
-          execList.get(i-1) < execList.get(i));
+      for (int i = 0; i < execList.size() - 1; ++i) {
+        TestProcedure a = execList.get(i);
+        TestProcedure b = execList.get(i + 1);
+        assertTrue("exec list not sorted: " + a + " < " + b, a.getExecId() > b.getExecId());
       }
     }
   }
 
-  public static class TestSingleStepProcedure extends SequentialProcedure<TestProcedureEnv> {
+  public static abstract class TestProcedure extends Procedure<TestProcedureEnv> {
+    protected long execId = 0;
+    protected int step = 0;
+
+    public long getExecId() {
+      return execId;
+    }
+
+    @Override
+    protected void rollback(TestProcedureEnv env) { }
+
+    @Override
+    protected boolean abort(TestProcedureEnv env) { return true; }
+
+    @Override
+    protected void serializeStateData(final OutputStream stream) throws IOException {
+      StreamUtils.writeLong(stream, execId);
+    }
+
+    @Override
+    protected void deserializeStateData(final InputStream stream) throws IOException {
+      execId = StreamUtils.readLong(stream);
+      step = 2;
+    }
+  }
+
+  public static class TestSingleStepProcedure extends TestProcedure {
     public TestSingleStepProcedure() { }
 
     @Override
-    protected Procedure[] execute(TestProcedureEnv env) {
-      LOG.debug("execute procedure " + this);
-      env.addToExecList(this);
-      return null;
-    }
-
-    protected boolean acquireLock(final TestProcedureEnv env) {
-      return env.canAcquireLock();
+    protected Procedure[] execute(TestProcedureEnv env) throws ProcedureYieldException {
+      LOG.trace("execute procedure step=" + step + ": " + this);
+      if (step == 0) {
+        step = 1;
+        execId = env.nextExecId();
+        return new Procedure[] { this };
+      } else if (step == 2) {
+        env.addToExecList(this);
+        return null;
+      }
+      throw new ProcedureYieldException();
     }
 
     @Override
-    protected void rollback(TestProcedureEnv env) { }
-
-    @Override
-    protected boolean abort(TestProcedureEnv env) { return true; }
+    public String toString() {
+      return "SingleStep(procId=" + getProcId() + " execId=" + execId + ")";
+    }
   }
 
-  public static class TestTwoStepProcedure extends SequentialProcedure<TestProcedureEnv> {
+  public static class TestTwoStepProcedure extends TestProcedure {
     public TestTwoStepProcedure() { }
 
     @Override
-    protected Procedure[] execute(TestProcedureEnv env) {
-      LOG.debug("execute procedure " + this);
-      env.addToExecList(this);
-      return new Procedure[] { new TestSingleStepProcedure() };
-    }
-
-    protected boolean acquireLock(final TestProcedureEnv env) {
-      return true;
+    protected Procedure[] execute(TestProcedureEnv env) throws ProcedureYieldException {
+      LOG.trace("execute procedure step=" + step + ": " + this);
+      if (step == 0) {
+        step = 1;
+        execId = env.nextExecId();
+        return new Procedure[] { new TestSingleStepProcedure() };
+      } else if (step == 2) {
+        env.addToExecList(this);
+        return null;
+      }
+      throw new ProcedureYieldException();
     }
 
     @Override
-    protected void rollback(TestProcedureEnv env) { }
-
-    @Override
-    protected boolean abort(TestProcedureEnv env) { return true; }
+    public String toString() {
+      return "TwoStep(procId=" + getProcId() + " execId=" + execId + ")";
+    }
   }
 }

@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.HashSet;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -43,6 +42,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
@@ -264,45 +264,70 @@ public class ProcedureExecutor<TEnvironment> {
     this.conf = conf;
   }
 
-  private List<Map.Entry<Long, RootProcedureState>> load() throws IOException {
+  private void load(final boolean abortOnCorruption) throws IOException {
     Preconditions.checkArgument(completed.isEmpty());
     Preconditions.checkArgument(rollbackStack.isEmpty());
     Preconditions.checkArgument(procedures.isEmpty());
     Preconditions.checkArgument(waitingTimeout.isEmpty());
     Preconditions.checkArgument(runnables.size() == 0);
 
-    // 1. Load the procedures
-    Iterator<Procedure> loader = store.load();
-    if (loader == null) {
-      lastProcId.set(0);
-      return null;
-    }
-
-    long logMaxProcId = 0;
-    int runnablesCount = 0;
-    while (loader.hasNext()) {
-      Procedure proc = loader.next();
-      proc.beforeReplay(getEnvironment());
-      procedures.put(proc.getProcId(), proc);
-      logMaxProcId = Math.max(logMaxProcId, proc.getProcId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Loading procedure state=" + proc.getState() +
-            " isFailed=" + proc.hasException() + ": " + proc);
+    store.load(new ProcedureStore.ProcedureLoader() {
+      @Override
+      public void setMaxProcId(long maxProcId) {
+        assert lastProcId.get() < 0 : "expected only one call to setMaxProcId()";
+        LOG.debug("load procedures maxProcId=" + maxProcId);
+        lastProcId.set(maxProcId);
       }
+
+      @Override
+      public void load(ProcedureIterator procIter) throws IOException {
+        loadProcedures(procIter, abortOnCorruption);
+      }
+
+      @Override
+      public void handleCorrupted(ProcedureIterator procIter) throws IOException {
+        int corruptedCount = 0;
+        while (procIter.hasNext()) {
+          Procedure proc = procIter.next();
+          LOG.error("corrupted procedure: " + proc);
+          corruptedCount++;
+        }
+        if (abortOnCorruption && corruptedCount > 0) {
+          throw new IOException("found " + corruptedCount + " procedures on replay");
+        }
+      }
+    });
+  }
+
+  private void loadProcedures(final ProcedureIterator procIter,
+      final boolean abortOnCorruption) throws IOException {
+    // 1. Build the rollback stack
+    int runnablesCount = 0;
+    while (procIter.hasNext()) {
+      Procedure proc = procIter.next();
       if (!proc.hasParent() && !proc.isFinished()) {
         rollbackStack.put(proc.getProcId(), new RootProcedureState());
       }
+      // add the procedure to the map
+      proc.beforeReplay(getEnvironment());
+      procedures.put(proc.getProcId(), proc);
+
       if (proc.getState() == ProcedureState.RUNNABLE) {
         runnablesCount++;
       }
     }
-    assert lastProcId.get() < 0;
-    lastProcId.set(logMaxProcId);
 
     // 2. Initialize the stacks
-    TreeSet<Procedure> runnableSet = null;
+    ArrayList<Procedure> runnableList = new ArrayList(runnablesCount);
     HashSet<Procedure> waitingSet = null;
-    for (final Procedure proc: procedures.values()) {
+    procIter.reset();
+    while (procIter.hasNext()) {
+      Procedure proc = procIter.next();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(String.format("Loading procedure state=%s isFailed=%s: %s",
+                    proc.getState(), proc.hasException(), proc));
+      }
+
       Long rootProcId = getRootProcedureId(proc);
       if (rootProcId == null) {
         // The 'proc' was ready to run but the root procedure was rolledback?
@@ -312,10 +337,11 @@ public class ProcedureExecutor<TEnvironment> {
 
       if (!proc.hasParent() && proc.isFinished()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("The procedure is completed state=" + proc.getState() +
-              " isFailed=" + proc.hasException() + ": " + proc);
+          LOG.debug(String.format("The procedure is completed state=%s isFailed=%s",
+                    proc.getState(), proc.hasException()));
         }
         assert !rollbackStack.containsKey(proc.getProcId());
+        procedures.remove(proc.getProcId());
         completed.put(proc.getProcId(), newResultFromProcedure(proc));
         continue;
       }
@@ -333,10 +359,7 @@ public class ProcedureExecutor<TEnvironment> {
 
       switch (proc.getState()) {
         case RUNNABLE:
-          if (runnableSet == null) {
-            runnableSet = new TreeSet<Procedure>();
-          }
-          runnableSet.add(proc);
+          runnableList.add(proc);
           break;
         case WAITING_TIMEOUT:
           if (waitingSet == null) {
@@ -361,7 +384,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // 3. Validate the stacks
-    List<Map.Entry<Long, RootProcedureState>> corrupted = null;
+    int corruptedCount = 0;
     Iterator<Map.Entry<Long, RootProcedureState>> itStack = rollbackStack.entrySet().iterator();
     while (itStack.hasNext()) {
       Map.Entry<Long, RootProcedureState> entry = itStack.next();
@@ -369,32 +392,49 @@ public class ProcedureExecutor<TEnvironment> {
       if (procStack.isValid()) continue;
 
       for (Procedure proc: procStack.getSubprocedures()) {
+        LOG.error("corrupted procedure: " + proc);
         procedures.remove(proc.getProcId());
-        if (runnableSet != null) runnableSet.remove(proc);
+        runnableList.remove(proc);
         if (waitingSet != null) waitingSet.remove(proc);
+        corruptedCount++;
       }
       itStack.remove();
-      if (corrupted == null) {
-        corrupted = new ArrayList<Map.Entry<Long, RootProcedureState>>();
-      }
-      corrupted.add(entry);
+    }
+
+    if (abortOnCorruption && corruptedCount > 0) {
+      throw new IOException("found " + corruptedCount + " procedures on replay");
     }
 
     // 4. Push the runnables
-    if (runnableSet != null) {
-      // TODO: See ProcedureWALFormatReader.readInitEntry() some procedure
-      // may be started way before this stuff.
-      for (Procedure proc: runnableSet) {
+    if (!runnableList.isEmpty()) {
+      // TODO: See ProcedureWALFormatReader#hasFastStartSupport
+      // some procedure may be started way before this stuff.
+      for (int i = runnableList.size() - 1; i >= 0; --i) {
+        Procedure proc = runnableList.get(i);
         if (!proc.hasParent()) {
           sendProcedureLoadedNotification(proc.getProcId());
         }
-        runnables.addBack(proc);
+        if (proc.wasExecuted()) {
+          runnables.addFront(proc);
+        } else {
+          // if it was not in execution, it can wait.
+          runnables.addBack(proc);
+        }
       }
     }
-    return corrupted;
   }
 
-  public void start(int numThreads) throws IOException {
+  /**
+   * Start the procedure executor.
+   * It calls ProcedureStore.recoverLease() and ProcedureStore.load() to
+   * recover the lease, and ensure a single executor, and start the procedure
+   * replay to resume and recover the previous pending and in-progress perocedures.
+   *
+   * @param numThreads number of threads available for procedure execution.
+   * @param abortOnCorruption true if you want to abort your service in case
+   *          a corrupted procedure is found on replay. otherwise false.
+   */
+  public void start(int numThreads, boolean abortOnCorruption) throws IOException {
     if (running.getAndSet(true)) {
       LOG.warn("Already running");
       return;
@@ -427,11 +467,11 @@ public class ProcedureExecutor<TEnvironment> {
     store.recoverLease();
 
     // TODO: Split in two steps.
-    // TODO: Handle corrupted procedure returned (probably just a WARN)
+    // TODO: Handle corrupted procedures (currently just a warn)
     // The first one will make sure that we have the latest id,
     // so we can start the threads and accept new procedures.
     // The second step will do the actual load of old procedures.
-    load();
+    load(abortOnCorruption);
 
     // Start the executors. Here we must have the lastProcId set.
     for (int i = 0; i < threads.length; ++i) {

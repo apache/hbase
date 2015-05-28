@@ -215,13 +215,12 @@ public class WALProcedureStore implements ProcedureStore {
     FileStatus[] oldLogs = getLogFiles();
     while (running.get()) {
       // Get Log-MaxID and recover lease on old logs
-      flushLogId = initOldLogs(oldLogs) + 1;
+      flushLogId = initOldLogs(oldLogs);
 
       // Create new state-log
-      if (!rollWriter(flushLogId)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Someone else has already created log: " + flushLogId);
-        }
+      if (!rollWriter(flushLogId + 1)) {
+        // someone else has already created this log
+        LOG.debug("someone else has already created log " + flushLogId);
         continue;
       }
 
@@ -241,7 +240,7 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   @Override
-  public Iterator<Procedure> load() throws IOException {
+  public void load(final ProcedureLoader loader) throws IOException {
     if (logs.isEmpty()) {
       throw new RuntimeException("recoverLease() must be called before loading data");
     }
@@ -251,7 +250,8 @@ public class WALProcedureStore implements ProcedureStore {
       if (LOG.isDebugEnabled()) {
         LOG.debug("No state logs to replay.");
       }
-      return null;
+      loader.setMaxProcId(0);
+      return;
     }
 
     // Load the old logs
@@ -259,7 +259,22 @@ public class WALProcedureStore implements ProcedureStore {
     Iterator<ProcedureWALFile> it = logs.descendingIterator();
     it.next(); // Skip the current log
     try {
-      return ProcedureWALFormat.load(it, storeTracker, new ProcedureWALFormat.Loader() {
+      ProcedureWALFormat.load(it, storeTracker, new ProcedureWALFormat.Loader() {
+        @Override
+        public void setMaxProcId(long maxProcId) {
+          loader.setMaxProcId(maxProcId);
+        }
+
+        @Override
+        public void load(ProcedureIterator procIter) throws IOException {
+          loader.load(procIter);
+        }
+
+        @Override
+        public void handleCorrupted(ProcedureIterator procIter) throws IOException {
+          loader.handleCorrupted(procIter);
+        }
+
         @Override
         public void removeLog(ProcedureWALFile log) {
           toRemove.add(log);
@@ -301,7 +316,7 @@ public class WALProcedureStore implements ProcedureStore {
       }
 
       // Push the transaction data and wait until it is persisted
-      logId = pushData(slot);
+      pushData(slot);
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
@@ -383,7 +398,7 @@ public class WALProcedureStore implements ProcedureStore {
       storeTracker.delete(procId);
       if (logId == flushLogId) {
         if (storeTracker.isEmpty() && totalSynced.get() > rollThreshold) {
-          removeOldLogs = rollWriterOrDie(logId + 1);
+          removeOldLogs = rollWriterOrDie();
         }
       }
     }
@@ -541,9 +556,9 @@ public class WALProcedureStore implements ProcedureStore {
     }
   }
 
-  private boolean rollWriterOrDie(final long logId) {
+  private boolean rollWriterOrDie() {
     try {
-      return rollWriter(logId);
+      return rollWriter();
     } catch (IOException e) {
       LOG.warn("Unable to roll the log", e);
       sendAbortProcessSignal();
@@ -551,7 +566,13 @@ public class WALProcedureStore implements ProcedureStore {
     }
   }
 
+  protected boolean rollWriter() throws IOException {
+    return rollWriter(flushLogId + 1);
+  }
+
   private boolean rollWriter(final long logId) throws IOException {
+    assert logId > flushLogId : "logId=" + logId + " flushLogId=" + flushLogId;
+
     ProcedureWALHeader header = ProcedureWALHeader.newBuilder()
       .setVersion(ProcedureWALFormat.HEADER_VERSION)
       .setType(ProcedureWALFormat.LOG_TYPE_STREAM)

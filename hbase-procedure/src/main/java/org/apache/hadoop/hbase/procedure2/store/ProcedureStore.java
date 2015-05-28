@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.procedure2.store;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -43,6 +42,57 @@ public interface ProcedureStore {
      * the main process should abort.
      */
     void abortProcess();
+  }
+
+  /**
+   * An Iterator over a collection of Procedure
+   */
+  public interface ProcedureIterator {
+    /**
+     * Reset the Iterator by seeking to the beginning of the list.
+     */
+    void reset();
+
+    /**
+     * Returns true if the iterator has more elements.
+     * (In other words, returns true if next() would return a Procedure
+     * rather than throwing an exception.)
+     * @return true if the iterator has more procedures
+     */
+    boolean hasNext();
+
+    /**
+     * Returns the next procedure in the iteration.
+     * @throws IOException if there was an error fetching/deserializing the procedure
+     * @throws NoSuchElementException if the iteration has no more elements
+     * @return the next procedure in the iteration.
+     */
+    Procedure next() throws IOException;
+  }
+
+  /**
+   * Interface passed to the ProcedureStore.load() method to handle the store-load events.
+   */
+  public interface ProcedureLoader {
+    /**
+     * Called by ProcedureStore.load() to notify about the maximum proc-id in the store.
+     * @param maxProcId the highest proc-id in the store
+     */
+    void setMaxProcId(long maxProcId);
+
+    /**
+     * Called by the ProcedureStore.load() every time a set of procedures are ready to be executed.
+     * The ProcedureIterator passed to the method, has the procedure sorted in replay-order.
+     * @param procIter iterator over the procedures ready to be added to the executor.
+     */
+    void load(ProcedureIterator procIter) throws IOException;
+
+    /**
+     * Called by the ProcedureStore.load() in case we have procedures not-ready to be added to
+     * the executor, which probably means they are corrupted since some information/link is missing.
+     * @param procIter iterator over the procedures not ready to be added to the executor, corrupted
+     */
+    void handleCorrupted(ProcedureIterator procIter) throws IOException;
   }
 
   /**
@@ -87,9 +137,9 @@ public interface ProcedureStore {
 
   /**
    * Load the Procedures in the store.
-   * @return the set of procedures present in the store
+   * @param loader the ProcedureLoader that will handle the store-load events
    */
-  Iterator<Procedure> load() throws IOException;
+  void load(ProcedureLoader loader) throws IOException;
 
   /**
    * When a procedure is submitted to the executor insert(proc, null) will be called.

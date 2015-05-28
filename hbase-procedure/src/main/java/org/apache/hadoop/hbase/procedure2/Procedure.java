@@ -519,6 +519,20 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return (diff < 0) ? -1 : (diff > 0) ? 1 : 0;
   }
 
+  /**
+   * Get an hashcode for the specified Procedure ID
+   * @return the hashcode for the specified procId
+   */
+  public static long getProcIdHashCode(final long procId) {
+    long h = procId;
+    h ^= h >> 16;
+    h *= 0x85ebca6b;
+    h ^= h >> 13;
+    h *= 0xc2b2ae35;
+    h ^= h >> 16;
+    return h;
+  }
+
   /*
    * Helper to lookup the root Procedure ID given a specified procedure.
    */
