@@ -52,8 +52,7 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
-import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
-import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
+import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -579,7 +578,7 @@ public class ServerManager {
       }
       return;
     }
-    if (!services.isServerShutdownHandlerEnabled()) {
+    if (!services.isServerCrashProcessingEnabled()) {
       LOG.info("Master doesn't enable ServerShutdownHandler during initialization, "
           + "delay expiring server " + serverName);
       this.queuedDeadServers.add(serverName);
@@ -591,18 +590,8 @@ public class ServerManager {
           " but server shutdown already in progress");
       return;
     }
-    synchronized (onlineServers) {
-      if (!this.onlineServers.containsKey(serverName)) {
-        LOG.warn("Expiration of " + serverName + " but server not online");
-      }
-      // Remove the server from the known servers lists and update load info BUT
-      // add to deadservers first; do this so it'll show in dead servers list if
-      // not in online servers list.
-      this.deadservers.add(serverName);
-      this.onlineServers.remove(serverName);
-      onlineServers.notifyAll();
-    }
-    this.rsAdmins.remove(serverName);
+    moveFromOnelineToDeadServers(serverName);
+
     // If cluster is going down, yes, servers are going to be expiring; don't
     // process as a dead server
     if (this.clusterShutdown) {
@@ -615,13 +604,8 @@ public class ServerManager {
     }
 
     boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
-    if (carryingMeta) {
-      this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
-        this.services, this.deadservers, serverName));
-    } else {
-      this.services.getExecutorService().submit(new ServerShutdownHandler(this.master,
-        this.services, this.deadservers, serverName, true));
-    }
+    this.services.getMasterProcedureExecutor().
+      submitProcedure(new ServerCrashProcedure(serverName, true, carryingMeta));
     LOG.debug("Added=" + serverName +
       " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
 
@@ -633,8 +617,20 @@ public class ServerManager {
     }
   }
 
-  public synchronized void processDeadServer(final ServerName serverName) {
-    this.processDeadServer(serverName, false);
+  @VisibleForTesting
+  public void moveFromOnelineToDeadServers(final ServerName sn) {
+    synchronized (onlineServers) {
+      if (!this.onlineServers.containsKey(sn)) {
+        LOG.warn("Expiration of " + sn + " but server not online");
+      }
+      // Remove the server from the known servers lists and update load info BUT
+      // add to deadservers first; do this so it'll show in dead servers list if
+      // not in online servers list.
+      this.deadservers.add(sn);
+      this.onlineServers.remove(sn);
+      onlineServers.notifyAll();
+    }
+    this.rsAdmins.remove(sn);
   }
 
   public synchronized void processDeadServer(final ServerName serverName, boolean shouldSplitWal) {
@@ -652,9 +648,8 @@ public class ServerManager {
     }
 
     this.deadservers.add(serverName);
-    this.services.getExecutorService().submit(
-      new ServerShutdownHandler(this.master, this.services, this.deadservers, serverName,
-          shouldSplitWal));
+    this.services.getMasterProcedureExecutor().
+    submitProcedure(new ServerCrashProcedure(serverName, shouldSplitWal, false));
   }
 
   /**
@@ -662,7 +657,7 @@ public class ServerManager {
    * called after HMaster#assignMeta and AssignmentManager#joinCluster.
    * */
   synchronized void processQueuedDeadServers() {
-    if (!services.isServerShutdownHandlerEnabled()) {
+    if (!services.isServerCrashProcessingEnabled()) {
       LOG.info("Master hasn't enabled ServerShutdownHandler");
     }
     Iterator<ServerName> serverIterator = queuedDeadServers.iterator();

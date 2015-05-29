@@ -406,16 +406,15 @@ public class SplitLogManager {
       // the function is only used in WALEdit direct replay mode
       return;
     }
+    if (serverNames == null || serverNames.isEmpty()) return;
 
     Set<String> recoveredServerNameSet = new HashSet<String>();
-    if (serverNames != null) {
-      for (ServerName tmpServerName : serverNames) {
-        recoveredServerNameSet.add(tmpServerName.getServerName());
-      }
+    for (ServerName tmpServerName : serverNames) {
+      recoveredServerNameSet.add(tmpServerName.getServerName());
     }
-
+   
+    this.recoveringRegionLock.lock();
     try {
-      this.recoveringRegionLock.lock();
       ((BaseCoordinatedStateManager) server.getCoordinatedStateManager())
           .getSplitLogManagerCoordination().removeRecoveringRegions(recoveredServerNameSet,
             isMetaRecovery);

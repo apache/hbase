@@ -69,7 +69,7 @@ import org.apache.zookeeper.data.Stat;
 
 /**
  * ZooKeeper based implementation of
- *  {@link org.apache.hadoop.hbase.master.SplitLogManagerCoordination}
+ * {@link SplitLogManagerCoordination}
  */
 @InterfaceAudience.Private
 public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
@@ -647,7 +647,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
           ZKUtil.createSetData(this.watcher, nodePath,
             ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Marked " + regionEncodeName + " as recovering from " + serverName +
+            LOG.debug("Marked " + regionEncodeName + " recovering from " + serverName +
               ": " + nodePath);
           }
           // break retry loop
@@ -684,7 +684,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
   /**
    * ZooKeeper implementation of
-   * {@link org.apache.hadoop.hbase.master.
+   * {@link org.apache.hadoop.hbase.coordination.
    * SplitLogManagerCoordination#removeStaleRecoveringRegions(Set)}
    */
   @Override
@@ -789,7 +789,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
   public void setRecoveryMode(boolean isForInitialization) throws IOException {
     synchronized(this) {
       if (this.isDrainingDone) {
-        // when there is no outstanding splitlogtask after master start up, we already have up to 
+        // when there is no outstanding splitlogtask after master start up, we already have up to
         // date recovery mode
         return;
       }
@@ -920,9 +920,9 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
 
 
   /**
-   * {@link org.apache.hadoop.hbase.master.SplitLogManager} can use objects implementing this 
-   * interface to finish off a partially done task by 
-   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. This provides a 
+   * {@link org.apache.hadoop.hbase.master.SplitLogManager} can use objects implementing this
+   * interface to finish off a partially done task by
+   * {@link org.apache.hadoop.hbase.regionserver.SplitLogWorker}. This provides a
    * serialization point at the end of the task processing. Must be restartable and idempotent.
    */
   public interface TaskFinisher {

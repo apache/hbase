@@ -97,7 +97,7 @@ public class MetaTableLocator {
   }
 
   /**
-   * 
+   *
    * @param zkw
    * @param replicaId
    * @return meta table regions and their locations.
@@ -120,7 +120,7 @@ public class MetaTableLocator {
   }
 
   /**
-   * 
+   *
    * @param zkw
    * @param replicaId
    * @return List of meta regions

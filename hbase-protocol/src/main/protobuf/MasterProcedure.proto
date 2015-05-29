@@ -183,3 +183,25 @@ message DisableTableStateData {
   required TableName table_name = 2;
   required bool skip_table_state_check = 3;
 }
+
+message ServerCrashStateData {
+  required ServerName server_name = 1;
+  optional bool distributed_log_replay = 2;
+  repeated RegionInfo regions_on_crashed_server = 3;
+  repeated RegionInfo regions_to_assign = 4;
+  optional bool carrying_meta = 5;
+  optional bool should_split_wal = 6 [default = true];
+}
+
+enum ServerCrashState {
+  SERVER_CRASH_START = 1;
+  SERVER_CRASH_PROCESS_META = 2;
+  SERVER_CRASH_GET_REGIONS = 3;
+  SERVER_CRASH_NO_SPLIT_LOGS = 4;
+  SERVER_CRASH_SPLIT_LOGS = 5;
+  SERVER_CRASH_PREPARE_LOG_REPLAY = 6;
+  SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;
+  SERVER_CRASH_ASSIGN = 8;
+  SERVER_CRASH_WAIT_ON_ASSIGN = 9;
+  SERVER_CRASH_FINISH = 100;
+}

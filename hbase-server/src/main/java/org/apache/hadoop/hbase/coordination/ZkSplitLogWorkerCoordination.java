@@ -104,7 +104,7 @@ public class ZkSplitLogWorkerCoordination extends ZooKeeperListener implements
   @Override
   public void nodeChildrenChanged(String path) {
     if (path.equals(watcher.splitLogZNode)) {
-      LOG.debug("tasks arrived or departed");
+      if (LOG.isTraceEnabled()) LOG.trace("tasks arrived or departed on " + path);
       synchronized (taskReadyLock) {
         taskReadySeq++;
         taskReadyLock.notify();

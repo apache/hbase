@@ -265,7 +265,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   volatile boolean serviceStarted = false;
 
   // flag set after we complete assignMeta.
-  private volatile boolean serverShutdownHandlerEnabled = false;
+  private volatile boolean serverCrashProcessingEnabled = false;
 
   LoadBalancer balancer;
   private BalancerChore balancerChore;
@@ -669,11 +669,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // get a list for previously failed RS which need log splitting work
     // we recover hbase:meta region servers inside master initialization and
     // handle other failed servers in SSH in order to start up master node ASAP
-    Set<ServerName> previouslyFailedServers = this.fileSystemManager
-        .getFailedServersFromLogFolders();
-
-    // remove stale recovering regions from previous run
-    this.fileSystemManager.removeStaleRecoveringRegionsFromZK(previouslyFailedServers);
+    Set<ServerName> previouslyFailedServers =
+      this.fileSystemManager.getFailedServersFromLogFolders();
 
     // log splitting for hbase:meta server
     ServerName oldMetaServerLocation = metaTableLocator.getMetaRegionLocation(this.getZooKeeper());
@@ -707,14 +704,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Check if master is shutting down because of some issue
     // in initializing the regionserver or the balancer.
-    if(isStopped()) return;
+    if (isStopped()) return;
 
     // Make sure meta assigned before proceeding.
     status.setStatus("Assigning Meta Region");
     assignMeta(status, previouslyFailedMetaRSs, HRegionInfo.DEFAULT_REPLICA_ID);
     // check if master is shutting down because above assignMeta could return even hbase:meta isn't
     // assigned when master is shutting down
-    if(isStopped()) return;
+    if (isStopped()) return;
 
     // migrating existent table state from zk, so splitters
     // and recovery process treat states properly.
@@ -736,11 +733,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
-    //set cluster status again after user regions are assigned
+    // set cluster status again after user regions are assigned
     this.balancer.setClusterStatus(getClusterStatus());
 
-    // Start balancer and meta catalog janitor after meta and regions have
-    // been assigned.
+    // Start balancer and meta catalog janitor after meta and regions have been assigned.
     status.setStatus("Starting balancer and catalog janitor");
     this.clusterStatusChore = new ClusterStatusChore(this, balancer);
     getChoreService().scheduleChore(clusterStatusChore);
@@ -763,6 +759,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     status.markComplete("Initialization successful");
     LOG.info("Master has completed initialization");
     configurationManager.registerObserver(this.balancer);
+    // Set master as 'initialized'.
     initialized = true;
     // assign the meta replicas
     Set<ServerName> EMPTY_SET = new HashSet<ServerName>();
@@ -910,7 +907,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // if the meta region server is died at this time, we need it to be re-assigned
     // by SSH so that system tables can be assigned.
     // No need to wait for meta is assigned = 0 when meta is just verified.
-    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableServerShutdownHandler(assigned != 0);
+    if (replicaId == HRegionInfo.DEFAULT_REPLICA_ID) enableCrashedServerProcessing(assigned != 0);
     LOG.info("hbase:meta with replicaId " + replicaId + " assigned=" + assigned + ", location="
       + metaTableLocator.getMetaRegionLocation(this.getZooKeeper(), replicaId));
     status.setStatus("META assigned.");
@@ -946,15 +943,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
   }
 
-  private void enableServerShutdownHandler(
-      final boolean waitForMeta) throws IOException, InterruptedException {
-    // If ServerShutdownHandler is disabled, we enable it and expire those dead
-    // but not expired servers. This is required so that if meta is assigning to
-    // a server which dies after assignMeta starts assignment,
-    // SSH can re-assign it. Otherwise, we will be
+  private void enableCrashedServerProcessing(final boolean waitForMeta)
+  throws IOException, InterruptedException {
+    // If crashed server processing is disabled, we enable it and expire those dead but not expired
+    // servers. This is required so that if meta is assigning to a server which dies after
+    // assignMeta starts assignment, ServerCrashProcedure can re-assign it. Otherwise, we will be
     // stuck here waiting forever if waitForMeta is specified.
-    if (!serverShutdownHandlerEnabled) {
-      serverShutdownHandlerEnabled = true;
+    if (!serverCrashProcessingEnabled) {
+      serverCrashProcessingEnabled = true;
       this.serverManager.processQueuedDeadServers();
     }
 
@@ -2065,13 +2061,18 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   /**
-   * ServerShutdownHandlerEnabled is set false before completing
-   * assignMeta to prevent processing of ServerShutdownHandler.
+   * ServerCrashProcessingEnabled is set false before completing assignMeta to prevent processing
+   * of crashed servers.
    * @return true if assignMeta has completed;
    */
   @Override
-  public boolean isServerShutdownHandlerEnabled() {
-    return this.serverShutdownHandlerEnabled;
+  public boolean isServerCrashProcessingEnabled() {
+    return this.serverCrashProcessingEnabled;
+  }
+
+  @VisibleForTesting
+  public void setServerCrashProcessingEnabled(final boolean b) {
+    this.serverCrashProcessingEnabled = b;
   }
 
   /**

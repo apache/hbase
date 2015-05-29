@@ -192,18 +192,58 @@ public class MasterProcedureTestingUtility {
     assertTrue(tsm.getTableState(tableName).equals(TableState.State.DISABLED));
   }
 
+  /**
+   * Run through all procedure flow states TWICE while also restarting procedure executor at each
+   * step; i.e force a reread of procedure store.
+   *
+   *<p>It does
+   * <ol><li>Execute step N - kill the executor before store update
+   * <li>Restart executor/store
+   * <li>Execute step N - and then save to store
+   * </ol>
+   *
+   *<p>This is a good test for finding state that needs persisting and steps that are not
+   * idempotent. Use this version of the test when a procedure executes all flow steps from start to
+   * finish.
+   * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long)
+   */
   public static <TState> void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int numSteps, final TState[] states) throws Exception {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
-    // Restart the executor and execute the step twice
-    //   execute step N - kill before store update
-    //   restart executor/store
-    //   execute step N - save on store
     for (int i = 0; i < numSteps; ++i) {
       LOG.info("Restart "+ i +" exec state: " + states[i]);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
+      ProcedureTestingUtility.restart(procExec);
+      ProcedureTestingUtility.waitProcedure(procExec, procId);
+    }
+    assertEquals(true, procExec.isRunning());
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+  }
+
+  /**
+   * Run through all procedure flow states TWICE while also restarting procedure executor at each
+   * step; i.e force a reread of procedure store.
+   *
+   *<p>It does
+   * <ol><li>Execute step N - kill the executor before store update
+   * <li>Restart executor/store
+   * <li>Execute step N - and then save to store
+   * </ol>
+   *
+   *<p>This is a good test for finding state that needs persisting and steps that are not
+   * idempotent. Use this version of the test when the order in which flow steps are executed is
+   * not start to finish; where the procedure may vary the flow steps dependent on circumstance
+   * found.
+   * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long, int, Object[])
+   */
+  public static <TState> void testRecoveryAndDoubleExecution(
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId)
+  throws Exception {
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    assertEquals(false, procExec.isRunning());
+    while (!procExec.isFinished(procId)) {
       ProcedureTestingUtility.restart(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }

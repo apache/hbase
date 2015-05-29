@@ -2665,7 +2665,7 @@ public class Bytes implements Comparable<Bytes> {
 
   /**
    * Find index of passed delimiter walking from end of buffer backwards.
-   * 
+   *
    * @param b
    * @param delimiter
    * @return Index of delimiter
@@ -2684,12 +2684,12 @@ public class Bytes implements Comparable<Bytes> {
     }
     return result;
     }
-  
+
     public static int findCommonPrefix(byte[] left, byte[] right, int leftLength, int rightLength,
         int leftOffset, int rightOffset) {
       int length = Math.min(leftLength, rightLength);
       int result = 0;
-  
+
       while (result < length && left[leftOffset + result] == right[rightOffset + result]) {
         result++;
       }

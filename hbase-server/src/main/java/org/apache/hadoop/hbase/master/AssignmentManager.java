@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -392,9 +393,10 @@ public class AssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
+   * @throws CoordinatedStateException 
    */
-  void joinCluster() throws IOException,
-          KeeperException, InterruptedException {
+  void joinCluster()
+  throws IOException, KeeperException, InterruptedException, CoordinatedStateException {
     long startTime = System.currentTimeMillis();
     // Concurrency note: In the below the accesses on regionsInTransition are
     // outside of a synchronization block where usually all accesses to RIT are
@@ -410,8 +412,7 @@ public class AssignmentManager {
     Set<ServerName> deadServers = rebuildUserRegions();
 
     // This method will assign all user regions if a clean server startup or
-    // it will reconstruct master state and cleanup any leftovers from
-    // previous master process.
+    // it will reconstruct master state and cleanup any leftovers from previous master process.
     boolean failover = processDeadServersAndRegionsInTransition(deadServers);
 
     recoverTableInDisablingState();
@@ -422,16 +423,17 @@ public class AssignmentManager {
 
   /**
    * Process all regions that are in transition in zookeeper and also
-   * processes the list of dead servers by scanning the META.
+   * processes the list of dead servers.
    * Used by master joining an cluster.  If we figure this is a clean cluster
    * startup, will assign all user regions.
-   * @param deadServers
-   *          Map of dead servers and their regions. Can be null.
+   * @param deadServers Set of servers that are offline probably legitimately that were carrying
+   * regions according to a scan of hbase:meta. Can be null.
    * @throws IOException
    * @throws InterruptedException
    */
   boolean processDeadServersAndRegionsInTransition(final Set<ServerName> deadServers)
-          throws IOException, InterruptedException {
+  throws KeeperException, IOException, InterruptedException, CoordinatedStateException {
+    // TODO Needed? List<String> nodes = ZKUtil.listChildrenNoWatch(watcher, watcher.assignmentZNode);
     boolean failover = !serverManager.getDeadServers().isEmpty();
     if (failover) {
       // This may not be a failover actually, especially if meta is on this master.
@@ -1483,15 +1485,13 @@ public class AssignmentManager {
     }
 
     // Generate a round-robin bulk assignment plan
-    Map<ServerName, List<HRegionInfo>> bulkPlan
-      = balancer.roundRobinAssignment(regions, servers);
+    Map<ServerName, List<HRegionInfo>> bulkPlan = balancer.roundRobinAssignment(regions, servers);
     if (bulkPlan == null) {
       throw new IOException("Unable to determine a plan to assign region(s)");
     }
 
     processFavoredNodes(regions);
-    assign(regions.size(), servers.size(),
-      "round-robin=true", bulkPlan);
+    assign(regions.size(), servers.size(), "round-robin=true", bulkPlan);
   }
 
   private void assign(int regions, int totalServers,
@@ -1607,10 +1607,8 @@ public class AssignmentManager {
 
   /**
    * Rebuild the list of user regions and assignment information.
-   * <p>
-   * Returns a set of servers that are not found to be online that hosted
-   * some regions.
-   * @return set of servers not online that hosted some regions per meta
+   * Updates regionstates with findings as we go through list of regions.
+   * @return set of servers not online that hosted some regions according to a scan of hbase:meta
    * @throws IOException
    */
   Set<ServerName> rebuildUserRegions() throws
@@ -2058,15 +2056,15 @@ public class AssignmentManager {
   }
 
   /**
-   * Process shutdown server removing any assignments.
+   * Clean out crashed server removing any assignments.
    * @param sn Server that went down.
    * @return list of regions in transition on this server
    */
-  public List<HRegionInfo> processServerShutdown(final ServerName sn) {
+  public List<HRegionInfo> cleanOutCrashedServerReferences(final ServerName sn) {
     // Clean out any existing assignment plans for this server
     synchronized (this.regionPlans) {
-      for (Iterator <Map.Entry<String, RegionPlan>> i =
-          this.regionPlans.entrySet().iterator(); i.hasNext();) {
+      for (Iterator <Map.Entry<String, RegionPlan>> i = this.regionPlans.entrySet().iterator();
+          i.hasNext();) {
         Map.Entry<String, RegionPlan> e = i.next();
         ServerName otherSn = e.getValue().getDestination();
         // The name will be null if the region is planned for a random assign.
@@ -2084,8 +2082,7 @@ public class AssignmentManager {
       // We need a lock on the region as we could update it
       Lock lock = locker.acquireLock(encodedName);
       try {
-        RegionState regionState =
-          regionStates.getRegionTransitionState(encodedName);
+        RegionState regionState = regionStates.getRegionTransitionState(encodedName);
         if (regionState == null
             || (regionState.getServerName() != null && !regionState.isOnServer(sn))
             || !RegionStates.isOneOfStates(regionState, State.PENDING_OPEN,

@@ -15,34 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.hbase.master.procedure;
 
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * Procedures that operates on a specific Table (e.g. create, delete, snapshot, ...)
- * must implement this interface to allow the system handle the lock/concurrency problems.
+ * Procedures that handle servers -- e.g. server crash -- must implement this Interface.
+ * It is used by the procedure runner to figure locking and what queuing.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public interface TableProcedureInterface {
-  public enum TableOperationType {
-    CREATE, DELETE, DISABLE, EDIT, ENABLE, READ,
-  };
+public interface ServerProcedureInterface {
+  /**
+   * @return Name of this server instance.
+   */
+  ServerName getServerName();
 
   /**
-   * @return the name of the table the procedure is operating on
+   * @return True if this server has an hbase:meta table region.
    */
-  TableName getTableName();
-
-  /**
-   * Given an operation type we can take decisions about what to do with pending operations.
-   * e.g. if we get a delete and we have some table operation pending (e.g. add column)
-   * we can abort those operations.
-   * @return the operation type that the procedure is executing.
-   */
-  TableOperationType getTableOperationType();
+  boolean hasMetaTableRegion();
 }

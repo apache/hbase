@@ -168,7 +168,7 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
     SortedMap<String, SortedSet<String>> newQueues = new TreeMap<String, SortedSet<String>>();
     // check whether there is multi support. If yes, use it.
     if (conf.getBoolean(HConstants.ZOOKEEPER_USEMULTI, true)) {
-      LOG.info("Atomically moving " + regionserverZnode + "'s wals to my queue");
+      LOG.info("Atomically moving " + regionserverZnode + "'s WALs to my queue");
       newQueues = copyQueuesFromRSUsingMulti(regionserverZnode);
     } else {
       LOG.info("Moving " + regionserverZnode + "'s wals to my queue");
@@ -336,9 +336,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
       }
       // add delete op for dead rs
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
-      LOG.debug(" The multi list size is: " + listOfOps.size());
+      if (LOG.isTraceEnabled()) LOG.trace(" The multi list size is: " + listOfOps.size());
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);
-      LOG.info("Atomically moved the dead regionserver logs. ");
+      if (LOG.isTraceEnabled()) LOG.trace("Atomically moved the dead regionserver logs. ");
     } catch (KeeperException e) {
       // Multi call failed; it looks like some other regionserver took away the logs.
       LOG.warn("Got exception in copyQueuesFromRSUsingMulti: ", e);

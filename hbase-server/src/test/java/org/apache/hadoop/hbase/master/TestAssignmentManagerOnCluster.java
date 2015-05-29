@@ -635,7 +635,7 @@ public class TestAssignmentManagerOnCluster {
       am.getRegionStates().updateRegionState(hri, RegionState.State.PENDING_OPEN, destServerName);
 
       am.getTableStateManager().setTableState(table, TableState.State.DISABLING);
-      List<HRegionInfo> toAssignRegions = am.processServerShutdown(destServerName);
+      List<HRegionInfo> toAssignRegions = am.cleanOutCrashedServerReferences(destServerName);
       assertTrue("Regions to be assigned should be empty.", toAssignRegions.isEmpty());
       assertTrue("Regions to be assigned should be empty.", am.getRegionStates()
           .getRegionState(hri).isOffline());
@@ -1222,8 +1222,8 @@ public class TestAssignmentManagerOnCluster {
     }
 
     @Override
-    public boolean isServerShutdownHandlerEnabled() {
-      return enabled.get() && super.isServerShutdownHandlerEnabled();
+    public boolean isServerCrashProcessingEnabled() {
+      return enabled.get() && super.isServerCrashProcessingEnabled();
     }
 
     public void enableSSH(boolean enabled) {

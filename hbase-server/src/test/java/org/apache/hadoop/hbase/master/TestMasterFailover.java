@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, LargeTests.class})
@@ -218,7 +219,7 @@ public class TestMasterFailover {
     HMaster master = masterThreads.get(0).getMaster();
     assertTrue(master.isActiveMaster());
     assertTrue(master.isInitialized());
-    
+
     // Create a table with a region online
     Table onlineTable = TEST_UTIL.createTable(TableName.valueOf("onlineTable"), "family");
     onlineTable.close();
@@ -261,36 +262,36 @@ public class TestMasterFailover {
     oldState = new RegionState(hriOffline, State.OFFLINE);
     newState = new RegionState(hriOffline, State.PENDING_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     HRegionInfo failedClose = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedClose, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedClose);
-    
+
     oldState = new RegionState(failedClose, State.PENDING_CLOSE);
     newState = new RegionState(failedClose, State.FAILED_CLOSE, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     HRegionInfo failedOpen = new HRegionInfo(offlineTable.getTableName(), null, null);
     createRegion(failedOpen, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpen);
-    
+
     // Simulate a region transitioning to failed open when the region server reports the
     // transition as FAILED_OPEN
     oldState = new RegionState(failedOpen, State.PENDING_OPEN);
     newState = new RegionState(failedOpen, State.FAILED_OPEN, newState.getServerName());
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     HRegionInfo failedOpenNullServer = new HRegionInfo(offlineTable.getTableName(), null, null);
     LOG.info("Failed open NUll server " + failedOpenNullServer.getEncodedName());
     createRegion(failedOpenNullServer, rootdir, conf, offlineTable);
     MetaTableAccessor.addRegionToMeta(master.getConnection(), failedOpenNullServer);
-    
+
     // Simulate a region transitioning to failed open when the master couldn't find a plan for
     // the region
     oldState = new RegionState(failedOpenNullServer, State.OFFLINE);
     newState = new RegionState(failedOpenNullServer, State.FAILED_OPEN, null);
     stateStore.updateRegionState(HConstants.NO_SEQNUM, newState, oldState);
-    
+
     // Stop the master
     log("Aborting master");
     cluster.abortMaster(0);

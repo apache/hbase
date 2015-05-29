@@ -38,6 +38,7 @@ import java.util.Set;
 
 /**
  * Class to hold dead servers list and utility querying dead server list.
+ * On znode expiration, servers are added here.
  */
 @InterfaceAudience.Private
 public class DeadServer {
@@ -115,7 +116,7 @@ public class DeadServer {
   }
 
   public synchronized void finish(ServerName sn) {
-    LOG.debug("Finished processing " + sn);
+    if (LOG.isDebugEnabled()) LOG.debug("Finished " + sn + "; numProcessing=" + this.numProcessing);
     this.numProcessing--;
   }
 

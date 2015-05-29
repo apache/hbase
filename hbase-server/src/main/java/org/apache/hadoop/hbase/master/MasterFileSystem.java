@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.ipc.RemoteException;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * This class abstracts a bunch of operations the HMaster needs to interact with
  * the underlying file system, including splitting log files, checking file
@@ -130,6 +132,11 @@ public class MasterFileSystem {
         new SplitLogManager(master, master.getConfiguration(), master, services,
             master.getServerName());
     this.distributedLogReplay = this.splitLogManager.isLogReplaying();
+  }
+
+  @VisibleForTesting
+  SplitLogManager getSplitLogManager() {
+    return this.splitLogManager;
   }
 
   /**
