@@ -96,7 +96,10 @@ public class TestFromClientSide3 {
    */
   @After
   public void tearDown() throws Exception {
-    // Nothing to do.
+    for (HTableDescriptor htd: TEST_UTIL.getHBaseAdmin().listTables()) {
+      LOG.info("Tear down, remove table=" + htd.getTableName());
+      TEST_UTIL.deleteTable(htd.getTableName());
+    }
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
@@ -276,20 +279,20 @@ public class TestFromClientSide3 {
       // create an empty Put
       Put put1 = new Put(ROW);
       actions.add(put1);
-      
+
       Put put2 = new Put(ANOTHERROW);
       put2.add(FAMILY, QUALIFIER, VALUE);
       actions.add(put2);
-      
+
       table.batch(actions, results);
       fail("Empty Put should have failed the batch call");
     } catch (IllegalArgumentException iae) {
-      
+
     } finally {
       table.close();
     }
   }
-  
+
   @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
 
@@ -333,6 +336,61 @@ public class TestFromClientSide3 {
   }
 
   @Test
+  public void testHTableExistsBeforeGet() throws Exception {
+    Table table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsBeforeGet"), new byte[][] { FAMILY });
+    try {
+      Put put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+
+      Get get = new Get(ROW);
+
+      boolean exist = table.exists(get);
+      assertEquals(true, exist);
+
+      Result result = table.get(get);
+      assertEquals(false, result.isEmpty());
+      assertTrue(Bytes.equals(VALUE, result.getValue(FAMILY, QUALIFIER)));
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
+  public void testHTableExistsAllBeforeGet() throws Exception {
+    final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
+    Table table = TEST_UTIL.createTable(
+      Bytes.toBytes("testHTableExistsAllBeforeGet"), new byte[][] { FAMILY });
+    try {
+      Put put = new Put(ROW);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+      put = new Put(ROW2);
+      put.add(FAMILY, QUALIFIER, VALUE);
+      table.put(put);
+
+      Get get = new Get(ROW);
+      Get get2 = new Get(ROW2);
+      ArrayList<Get> getList = new ArrayList(2);
+      getList.add(get);
+      getList.add(get2);
+
+      boolean[] exists = table.existsAll(getList);
+      assertEquals(true, exists[0]);
+      assertEquals(true, exists[1]);
+
+      Result[] result = table.get(getList);
+      assertEquals(false, result[0].isEmpty());
+      assertTrue(Bytes.equals(VALUE, result[0].getValue(FAMILY, QUALIFIER)));
+      assertEquals(false, result[1].isEmpty());
+      assertTrue(Bytes.equals(VALUE, result[1].getValue(FAMILY, QUALIFIER)));
+    } finally {
+      table.close();
+    }
+  }
+
+  @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
 
     Table table = TEST_UTIL.createTable(
@@ -355,7 +413,7 @@ public class TestFromClientSide3 {
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
     HTable table = TEST_UTIL.createTable(
-      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"), 
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"),
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
