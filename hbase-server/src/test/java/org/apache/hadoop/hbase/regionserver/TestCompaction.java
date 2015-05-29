@@ -493,7 +493,8 @@ public class TestCompaction {
     when(mockServer.getChoreService()).thenReturn(new ChoreService("test"));
     CompactSplitThread cst = new CompactSplitThread(mockServer);
     when(mockServer.getCompactSplitThread()).thenReturn(cst);
-
+    //prevent large compaction thread pool stealing job from small compaction queue.
+    cst.shutdownLongCompactions();
     // Set up the region mock that redirects compactions.
     HRegion r = mock(HRegion.class);
     when(

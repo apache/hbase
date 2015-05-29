@@ -26,7 +26,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadFactory;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputCont
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -117,8 +117,9 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
 
     final String n = Thread.currentThread().getName();
 
+    StealJobQueue<Runnable> stealJobQueue = new StealJobQueue<>();
     this.longCompactions = new ThreadPoolExecutor(largeThreads, largeThreads,
-        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
+        60, TimeUnit.SECONDS, stealJobQueue,
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
@@ -128,8 +129,9 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
           }
       });
     this.longCompactions.setRejectedExecutionHandler(new Rejection());
+    this.longCompactions.prestartAllCoreThreads();
     this.shortCompactions = new ThreadPoolExecutor(smallThreads, smallThreads,
-        60, TimeUnit.SECONDS, new PriorityBlockingQueue<Runnable>(),
+        60, TimeUnit.SECONDS, stealJobQueue.getStealFromQueue(),
         new ThreadFactory() {
           @Override
           public Thread newThread(Runnable r) {
@@ -500,7 +502,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         assert this.compaction.hasSelection();
         ThreadPoolExecutor pool = store.throttleCompaction(
             compaction.getRequest().getSize()) ? longCompactions : shortCompactions;
-        if (this.parent != pool) {
+
+        // Long compaction pool can process small job
+        // Short compaction pool should not process large job
+        if (this.parent == shortCompactions && pool == longCompactions) {
           this.store.cancelRequestedCompaction(this.compaction);
           this.compaction = null;
           this.parent = pool;
@@ -672,4 +677,13 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
     return compactionThroughputController;
   }
 
+  @VisibleForTesting
+  /**
+   * Shutdown the long compaction thread pool.
+   * Should only be used in unit test to prevent long compaction thread pool from stealing job
+   * from short compaction queue
+   */
+  void shutdownLongCompactions(){
+    this.longCompactions.shutdown();
+  }
 }
