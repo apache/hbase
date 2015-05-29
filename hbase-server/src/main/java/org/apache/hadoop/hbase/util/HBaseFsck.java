@@ -3343,7 +3343,11 @@ public class HBaseFsck extends Configured implements Closeable {
   KeeperException {
     undeployRegions(hi);
     ZooKeeperWatcher zkw = createZooKeeperWatcher();
-    ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    try {
+      ZKUtil.deleteNode(zkw, zkw.getZNodeForReplica(hi.metaEntry.getReplicaId()));
+    } finally {
+      zkw.close();
+    }
   }
 
   private void assignMetaReplica(int replicaId)
