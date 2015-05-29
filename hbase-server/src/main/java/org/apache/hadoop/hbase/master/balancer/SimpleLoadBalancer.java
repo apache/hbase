@@ -419,9 +419,6 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
         serversOverloaded + " overloaded servers onto " +
         serversUnderloaded + " less loaded servers");
 
-
-    LOG.info("**************** DONE USING SIMPLE LOAD BALANCER *******************");
-
     return regionsToReturn;
   }
 
