@@ -107,7 +107,18 @@ public class Get extends Query
     this.tr = get.getTimeRange();
     this.checkExistenceOnly = get.isCheckExistenceOnly();
     this.closestRowBefore = get.isClosestRowBefore();
-    this.familyMap = get.getFamilyMap();
+    Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
+    for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
+      byte [] fam = entry.getKey();
+      NavigableSet<byte[]> cols = entry.getValue();
+      if (cols != null && cols.size() > 0) {
+        for (byte[] col : cols) {
+          addColumn(fam, col);
+        }
+      } else {
+        addFamily(fam);
+      }
+    }
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }

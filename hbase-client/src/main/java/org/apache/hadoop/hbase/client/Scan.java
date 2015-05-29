@@ -235,6 +235,7 @@ public class Scan extends Query {
     loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     consistency = scan.getConsistency();
     reversed = scan.isReversed();
+    asyncPrefetch = scan.isAsyncPrefetch();
     small = scan.isSmall();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
