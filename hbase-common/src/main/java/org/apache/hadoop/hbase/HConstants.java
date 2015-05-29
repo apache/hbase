@@ -281,7 +281,7 @@ public final class HConstants {
     "hbase.client.meta.operation.timeout";
 
   /** Default HBase client operation timeout, which is tantamount to a blocking call */
-  public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = 60000;
+  public static final int DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT = Integer.MAX_VALUE;
 
   /** Used to construct the name of the log directory for a region server */
   public static final String HREGION_LOGDIR_NAME = "WALs";
