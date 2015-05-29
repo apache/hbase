@@ -405,6 +405,8 @@ public class DeleteTableProcedure
 
   protected static void deleteTableStates(final MasterProcedureEnv env, final TableName tableName)
       throws IOException {
-    ProcedureSyncWait.getMasterQuotaManager(env).removeTableFromNamespaceQuota(tableName);
+    if (!tableName.isSystemTable()) {
+      ProcedureSyncWait.getMasterQuotaManager(env).removeTableFromNamespaceQuota(tableName);
+    }
   }
 }
