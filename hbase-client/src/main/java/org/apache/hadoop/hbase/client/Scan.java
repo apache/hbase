@@ -51,40 +51,33 @@ import org.apache.hadoop.hbase.util.Bytes;
  * and stopRow may be defined.  If rows are not specified, the Scanner will
  * iterate over all rows.
  * <p>
- * To scan everything for each row, instantiate a Scan object.
+ * To get all columns from all rows of a Table, create an instance with no constraints; use the
+ * {@link #Scan()} constructor. To constrain the scan to specific column families,
+ * call {@link #addFamily(byte[]) addFamily} for each family to retrieve on your Scan instance.
  * <p>
- * To modify scanner caching for just this scan, use {@link #setCaching(int) setCaching}.
- * If caching is NOT set, we will use the caching value of the hosting {@link Table}.
- * In addition to row caching, it is possible to specify a
- * maximum result size, using {@link #setMaxResultSize(long)}. When both are used,
- * single server requests are limited by either number of rows or maximum result size, whichever
- * limit comes first.
- * <p>
- * To further define the scope of what to get when scanning, perform additional
- * methods as outlined below.
- * <p>
- * To get all columns from specific families, execute {@link #addFamily(byte[]) addFamily}
- * for each family to retrieve.
- * <p>
- * To get specific columns, execute {@link #addColumn(byte[], byte[]) addColumn}
+ * To get specific columns, call {@link #addColumn(byte[], byte[]) addColumn}
  * for each column to retrieve.
  * <p>
  * To only retrieve columns within a specific range of version timestamps,
- * execute {@link #setTimeRange(long, long) setTimeRange}.
+ * call {@link #setTimeRange(long, long) setTimeRange}.
  * <p>
- * To only retrieve columns with a specific timestamp, execute
+ * To only retrieve columns with a specific timestamp, call
  * {@link #setTimeStamp(long) setTimestamp}.
  * <p>
- * To limit the number of versions of each column to be returned, execute
+ * To limit the number of versions of each column to be returned, call
  * {@link #setMaxVersions(int) setMaxVersions}.
  * <p>
  * To limit the maximum number of values returned for each call to next(),
- * execute {@link #setBatch(int) setBatch}.
+ * call {@link #setBatch(int) setBatch}.
  * <p>
- * To add a filter, execute {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
+ * To add a filter, call {@link #setFilter(org.apache.hadoop.hbase.filter.Filter) setFilter}.
  * <p>
  * Expert: To explicitly disable server-side block caching for this scan,
  * execute {@link #setCacheBlocks(boolean)}.
+ * <p><em>Note:</em> Usage alters Scan instances. Internally, attributes are updated as the Scan
+ * runs and if enabled, metrics accumulate in the Scan instance. Be aware this is the case when
+ * you go to clone a Scan instance or if you go to reuse a created Scan instance; safer is create
+ * a Scan instance per usage.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
