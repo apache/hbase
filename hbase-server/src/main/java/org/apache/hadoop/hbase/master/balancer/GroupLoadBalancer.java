@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.master.balancer.GroupLoadBalancerGroupedClusterFactory;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG) public class GroupLoadBalancer
@@ -39,11 +38,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
   @Override public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterMap) {
 
     LOG.info("**************** USING GROUP LOAD BALANCER *******************");
-
-    LOG.info("**************** masterServerName " + masterServerName);
-
-    LOG.info("**************** clusterMap " + clusterMap);
-
 
     // don't balance master
     if (masterServerName != null && clusterMap.containsKey(masterServerName)) {
@@ -57,42 +51,22 @@ import org.apache.hadoop.hbase.master.RegionPlan;
       return regionsToReturn;
     }
 
-    // Move all tables to either first or last server
-    ServerName destinationServer1 = masterServerName;
-    ServerName destinationServer2 = masterServerName;
-
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterMap.entrySet()) {
-      ServerName serverName = entry.getKey();
-      if (serverName.toString().contains("10.255.196.145,60020")) {
-        destinationServer1 = serverName;
-      } else {
-        destinationServer2 = serverName;
-      }
-    }
-
-    regionsToReturn = new ArrayList<RegionPlan>();
-
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterMap.entrySet()) {
-      ServerName serverName = entry.getKey();
-      List<HRegionInfo> hriList = entry.getValue();
-      for (HRegionInfo  hri : hriList) {
-        ServerName destinationServer = hri.toString().contains("test")?destinationServer1:destinationServer2;
-        RegionPlan rp = new RegionPlan(hri, serverName, destinationServer);
-        regionsToReturn.add(rp);
-      }
-    }
-
-
-    LOG.info("**************** regionsToReturn " + regionsToReturn);
-
-    Cluster cluster = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
     Configuration configuration = HBaseConfiguration.create();
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration = new GroupLoadBalancerConfiguration(configuration);
     GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters = new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);
+    Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap = groupLoadBalancerGroupedClusters.getGroupedClusters();
 
-    LOG.info("**************** groupLoadBalancerGroupedClusters " + groupLoadBalancerGroupedClusters);
-    groupLoadBalancerGroupedClusters.getGroupedClusters();
+    regionsToReturn = new ArrayList<>();
 
+    for (Map<ServerName, List<HRegionInfo>> cluster : groupedClusterMap.values()) {
+      SimpleLoadBalancer simpleLoadBalancer = new SimpleLoadBalancer();
+      List<RegionPlan> regionsToReturnForGroup = simpleLoadBalancer.balanceCluster(cluster);
+      if (regionsToReturnForGroup != null) {
+        regionsToReturn.addAll(simpleLoadBalancer.balanceCluster(cluster));
+      }
+    }
+
+    LOG.info("**************** regionsToReturn " + regionsToReturn);
     return regionsToReturn;
   }
 }

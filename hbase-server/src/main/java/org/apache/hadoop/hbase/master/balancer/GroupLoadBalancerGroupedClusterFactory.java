@@ -11,7 +11,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
 public class GroupLoadBalancerGroupedClusterFactory {
-  
+
   private GroupLoadBalancerConfiguration configuration;
   private Map<ServerName, List<HRegionInfo>> clusterMap;
   private Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap;
