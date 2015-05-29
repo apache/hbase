@@ -5559,14 +5559,6 @@ public class TestFromClientSide {
     }
     checkTableIsLegal(htd);
 
-    // HBASE-13776 Setting illegal versions for HColumnDescriptor
-    //  does not throw IllegalArgumentException
-    // finally, minVersions must be less than or equal to maxVersions
-    hcd.setMaxVersions(4);
-    hcd.setMinVersions(5);
-    checkTableIsIllegal(htd);
-    hcd.setMinVersions(3);
-
     hcd.setScope(-1);
     checkTableIsIllegal(htd);
     hcd.setScope(0);
