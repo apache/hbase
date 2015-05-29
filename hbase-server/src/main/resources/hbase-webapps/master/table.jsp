@@ -21,6 +21,8 @@
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.TreeMap"
   import="java.util.Map"
+  import="java.util.Set"
+  import="java.util.Collection"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.Admin"
@@ -35,6 +37,7 @@
   import="org.apache.hadoop.hbase.util.FSUtils"
   import="org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState"
   import="org.apache.hadoop.hbase.TableName"
+  import="org.apache.hadoop.hbase.HColumnDescriptor"
   import="org.apache.hadoop.hbase.client.RegionReplicaUtil"
   import="org.apache.hadoop.hbase.HBaseConfiguration" %>
 <%
@@ -236,6 +239,42 @@ if ( fqtn != null ) {
       <td>How fragmented is the table. After a major compaction it is 0%.</td>
   </tr>
 <%  } %>
+</table>
+<h2>Table Schema</h2>
+<table class="table table-striped">
+  <tr>
+      <th>Column Name</th>
+      <th></th>
+  </tr>
+  <%
+    Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
+    for (HColumnDescriptor family: families) {
+  %>
+  <tr>
+    <td><%= family.getNameAsString() %></td>
+    <td>
+    <table class="table table-striped">
+      <tr>
+       <th>Property</th>
+       <th>Value</th>       
+      </tr>
+    <%
+    Map<Bytes, Bytes> familyValues = family.getValues();
+    for (Bytes familyKey: familyValues.keySet()) {
+    %>
+      <tr>
+        <td>
+          <%= familyKey %>
+		</td>
+        <td>
+          <%= familyValues.get(familyKey) %>
+        </td>
+      </tr>
+    <% } %>
+    </table>
+    </td>
+  </tr>
+  <% } %>
 </table>
 <%
   Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
