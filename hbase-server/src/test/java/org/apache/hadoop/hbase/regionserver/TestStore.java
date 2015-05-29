@@ -304,7 +304,7 @@ public class TestStore {
     HColumnDescriptor hcd = new HColumnDescriptor(family);
     hcd.setMinVersions(minVersions);
     hcd.setTimeToLive(ttl);
-    init(name.getMethodName(), conf, hcd);
+    init(name.getMethodName() + "-" + minVersions, conf, hcd);
 
     long storeTtl = this.store.getScanInfo().getTtl();
     long sleepTime = storeTtl / storeFileNum;
@@ -344,6 +344,7 @@ public class TestStore {
       edge.incrementTime(sleepTime);
     }
     assertNull(this.store.requestCompaction());
+
     Collection<StoreFile> sfs = this.store.getStorefiles();
     // Assert the last expired file is not removed.
     if (minVersions == 0) {
@@ -351,6 +352,10 @@ public class TestStore {
     }
     long ts = sfs.iterator().next().getReader().getMaxTimestamp();
     assertTrue(ts < (edge.currentTime() - storeTtl));
+
+    for (StoreFile sf : sfs) {
+      sf.closeReader(true);
+    }
   }
 
   @Test
