@@ -1570,6 +1570,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
       // max versions already being checked
 
+      // HBASE-13776 Setting illegal versions for HColumnDescriptor
+      //  does not throw IllegalArgumentException
+      // check minVersions <= maxVerions
+      if (hcd.getMinVersions() > hcd.getMaxVersions()) {
+        String message = "Min versions for column family " + hcd.getNameAsString()
+            + " must be less than the Max versions.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
+      }
+
       // check replication scope
       if (hcd.getScope() < 0) {
         String message = "Replication scope for column family "
