@@ -120,7 +120,8 @@ public class DisableTableProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, final DisableTableState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, final DisableTableState state)
+      throws InterruptedException {
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -161,7 +162,7 @@ public class DisableTableProcedure
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (InterruptedException|IOException e) {
+    } catch (IOException e) {
       LOG.warn("Retriable error trying to disable table=" + tableName + " state=" + state, e);
     }
     return Flow.HAS_MORE_STATE;

@@ -82,10 +82,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * The main code of the procedure. It must be idempotent since execute()
    * may be called multiple time in case of machine failure in the middle
    * of the execution.
+   * @param env the environment passed to the ProcedureExecutor
    * @return a set of sub-procedures or null if there is nothing else to execute.
+   * @throw ProcedureYieldException the procedure will be added back to the queue and retried later
+   * @throw InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract Procedure[] execute(TEnvironment env)
-    throws ProcedureYieldException;
+    throws ProcedureYieldException, InterruptedException;
 
   /**
    * The code to undo what done by the execute() code.
@@ -94,10 +97,12 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * the execute() call. The implementation must be idempotent since rollback()
    * may be called multiple time in case of machine failure in the middle
    * of the execution.
+   * @param env the environment passed to the ProcedureExecutor
    * @throws IOException temporary failure, the rollback will retry later
+   * @throw InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract void rollback(TEnvironment env)
-    throws IOException;
+    throws IOException, InterruptedException;
 
   /**
    * The abort() call is asynchronous and each procedure must decide how to deal
@@ -169,12 +174,14 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   }
 
   /**
-   * By default, the executor will run procedures start to finish. Return true to make the executor
-   * yield between each flow step to give other procedures time to run their flow steps.
-   * @return Return true if the executor should yield on completion of a flow state step.
-   * Defaults to return false.
+   * By default, the executor will try ro run procedures start to finish.
+   * Return true to make the executor yield between each execution step to
+   * give other procedures time to run their steps.
+   * @param env the environment passed to the ProcedureExecutor
+   * @return Return true if the executor should yield on completion of an execution step.
+   *         Defaults to return false.
    */
-  protected boolean isYieldAfterSuccessfulFlowStateStep() {
+  protected boolean isYieldAfterExecutionStep(final TEnvironment env) {
     return false;
   }
 
@@ -404,7 +411,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    */
   @InterfaceAudience.Private
   protected Procedure[] doExecute(final TEnvironment env)
-      throws ProcedureYieldException {
+      throws ProcedureYieldException, InterruptedException {
     try {
       updateTimestamp();
       return execute(env);
@@ -418,7 +425,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * user-level code rollback().
    */
   @InterfaceAudience.Private
-  protected void doRollback(final TEnvironment env) throws IOException {
+  protected void doRollback(final TEnvironment env)
+      throws IOException, InterruptedException {
     try {
       updateTimestamp();
       rollback(env);

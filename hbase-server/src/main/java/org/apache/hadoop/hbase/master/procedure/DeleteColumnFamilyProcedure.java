@@ -81,7 +81,8 @@ public class DeleteColumnFamilyProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, DeleteColumnFamilyState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, DeleteColumnFamilyState state)
+      throws InterruptedException {
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -114,7 +115,7 @@ public class DeleteColumnFamilyProcedure
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
-    } catch (InterruptedException|IOException e) {
+    } catch (IOException e) {
       if (!isRollbackSupported(state)) {
         // We reach a state that cannot be rolled back. We just need to keep retry.
         LOG.warn("Error trying to delete the column family " + getColumnFamilyName()

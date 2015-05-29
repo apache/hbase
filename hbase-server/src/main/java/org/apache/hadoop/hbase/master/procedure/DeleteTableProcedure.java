@@ -90,7 +90,8 @@ public class DeleteTableProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, DeleteTableState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, DeleteTableState state)
+      throws InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -146,9 +147,6 @@ public class DeleteTableProcedure
       }
     } catch (HBaseException|IOException e) {
       LOG.warn("Retriable error trying to delete table=" + getTableName() + " state=" + state, e);
-    } catch (InterruptedException e) {
-      // if the interrupt is real, the executor will be stopped.
-      LOG.warn("Interrupted trying to delete table=" + getTableName() + " state=" + state, e);
     }
     return Flow.HAS_MORE_STATE;
   }

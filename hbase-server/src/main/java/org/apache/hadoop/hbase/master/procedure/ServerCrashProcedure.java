@@ -745,7 +745,7 @@ implements ServerProcedureInterface {
    * stuck waiting for regions to online so it can replay edits.
    */
   @Override
-  protected boolean isYieldAfterSuccessfulFlowStateStep() {
+  protected boolean isYieldBeforeExecuteFromState(MasterProcedureEnv env, ServerCrashState state) {
     return true;
   }
 }

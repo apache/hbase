@@ -78,7 +78,7 @@ public class ModifyColumnFamilyProcedure
 
   @Override
   protected Flow executeFromState(final MasterProcedureEnv env,
-      final ModifyColumnFamilyState state) {
+      final ModifyColumnFamilyState state) throws InterruptedException {
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -107,7 +107,7 @@ public class ModifyColumnFamilyProcedure
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
-    } catch (InterruptedException|IOException e) {
+    } catch (IOException e) {
       LOG.warn("Error trying to modify the column family " + getColumnFamilyName()
           + " of the table " + tableName + "(in state=" + state + ")", e);
 

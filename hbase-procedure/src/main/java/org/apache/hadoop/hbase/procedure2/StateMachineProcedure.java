@@ -57,7 +57,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    *         Flow.HAS_MORE_STATE if there is another step.
    */
   protected abstract Flow executeFromState(TEnvironment env, TState state)
-    throws ProcedureYieldException;
+    throws ProcedureYieldException, InterruptedException;
 
   /**
    * called to perform the rollback of the specified state
@@ -65,7 +65,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
    * @throws IOException temporary failure, the rollback will retry later
    */
   protected abstract void rollbackState(TEnvironment env, TState state)
-    throws IOException;
+    throws IOException, InterruptedException;
 
   /**
    * Convert an ordinal (or state id) to an Enum (or more descriptive) state object.
@@ -95,12 +95,24 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
     setNextState(getStateId(state));
   }
 
+  /**
+   * By default, the executor will try ro run all the steps of the procedure start to finish.
+   * Return true to make the executor yield between execution steps to
+   * give other procedures time to run their steps.
+   * @param state the state we are going to execute next.
+   * @return Return true if the executor should yield before the execution of the specified step.
+   *         Defaults to return false.
+   */
+  protected boolean isYieldBeforeExecuteFromState(TEnvironment env, TState state) {
+    return false;
+  }
+
   @Override
   protected Procedure[] execute(final TEnvironment env)
-      throws ProcedureYieldException {
+      throws ProcedureYieldException, InterruptedException {
     updateTimestamp();
     try {
-      TState state = stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
+      TState state = getCurrentState();
       if (stateCount == 0) {
         setNextState(getStateId(state));
       }
@@ -115,14 +127,24 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
-  protected void rollback(final TEnvironment env) throws IOException {
+  protected void rollback(final TEnvironment env)
+      throws IOException, InterruptedException {
     try {
       updateTimestamp();
-      rollbackState(env, stateCount > 0 ? getState(states[stateCount-1]) : getInitialState());
+      rollbackState(env, getCurrentState());
       stateCount--;
     } finally {
       updateTimestamp();
     }
+  }
+
+  @Override
+  protected boolean isYieldAfterExecutionStep(final TEnvironment env) {
+    return isYieldBeforeExecuteFromState(env, getCurrentState());
+  }
+
+  private TState getCurrentState() {
+    return stateCount > 0 ? getState(states[stateCount-1]) : getInitialState();
   }
 
   /**
