@@ -269,6 +269,9 @@ public class CreateTableProcedure
 
   @Override
   protected boolean acquireLock(final MasterProcedureEnv env) {
+    if (!env.isInitialized() && !getTableName().isSystemTable() ) {
+      return false;
+    }
     return env.getProcedureQueue().tryAcquireTableExclusiveLock(getTableName(), "create table");
   }
 
