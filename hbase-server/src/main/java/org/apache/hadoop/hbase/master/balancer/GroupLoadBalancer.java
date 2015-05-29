@@ -24,11 +24,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.master.balancer.GroupLoadBalancerConfiguration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.master.balancer.GroupLoadBalancerGroupedClusterFactory;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG) public class GroupLoadBalancer
@@ -42,6 +42,9 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 
     LOG.info("**************** masterServerName " + masterServerName);
 
+    LOG.info("**************** clusterMap " + clusterMap);
+
+
     // don't balance master
     if (masterServerName != null && clusterMap.containsKey(masterServerName)) {
       clusterMap = new HashMap<ServerName, List<HRegionInfo>>(clusterMap);
@@ -51,19 +54,7 @@ import org.apache.hadoop.hbase.master.RegionPlan;
     // see if master regions need to be balanced
     List<RegionPlan> regionsToReturn = balanceMasterRegions(clusterMap);
     if (regionsToReturn != null) {
-      LOG.info("**************** Master regions need to be balanced " + regionsToReturn);
       return regionsToReturn;
-    }
-
-    LOG.info("**************** clusterMap without masterServerName  *******************");
-
-    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterMap.entrySet()) {
-      ServerName serverName = entry.getKey();
-      List<HRegionInfo> hriList = entry.getValue();
-      LOG.info("**************** serverName " + serverName);
-      for (HRegionInfo hri : hriList) {
-        LOG.info("**************** HRegionInfo shortname " + hri.getRegionNameAsString());
-      }
     }
 
     // Move all tables to either first or last server
@@ -79,12 +70,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
       }
     }
 
-    if (destinationServer1 == masterServerName) {
-      LOG.info("**************** destinationServer was not changed");
-    } else {
-      LOG.info("**************** destinationServer was changed to " + destinationServer1.toString());
-    }
-
     regionsToReturn = new ArrayList<RegionPlan>();
 
     for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterMap.entrySet()) {
@@ -92,11 +77,8 @@ import org.apache.hadoop.hbase.master.RegionPlan;
       List<HRegionInfo> hriList = entry.getValue();
       for (HRegionInfo  hri : hriList) {
         ServerName destinationServer = hri.toString().contains("test")?destinationServer1:destinationServer2;
-        LOG.info("\"**************** Region " + hri + " is going to " + destinationServer);
         RegionPlan rp = new RegionPlan(hri, serverName, destinationServer);
-        LOG.info("**************** rp " + rp);
         regionsToReturn.add(rp);
-        LOG.info("**************** here");
       }
     }
 
@@ -106,6 +88,10 @@ import org.apache.hadoop.hbase.master.RegionPlan;
     Cluster cluster = new Cluster(clusterMap, null, this.regionFinder, this.rackManager);
     Configuration configuration = HBaseConfiguration.create();
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration = new GroupLoadBalancerConfiguration(configuration);
+    GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters = new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);
+
+    LOG.info("**************** groupLoadBalancerGroupedClusters " + groupLoadBalancerGroupedClusters);
+    groupLoadBalancerGroupedClusters.getGroupedClusters();
 
     return regionsToReturn;
   }

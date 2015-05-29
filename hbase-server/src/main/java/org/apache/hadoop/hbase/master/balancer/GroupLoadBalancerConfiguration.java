@@ -78,8 +78,6 @@ public class GroupLoadBalancerConfiguration {
       throw new IllegalArgumentException("Default group name must be a pre-existing group name");
     }
 
-    LOG.info("**************** groups " + toString());
-
   }
 
   public Map<String, GroupLoadBalancerGroup> getGroups() {

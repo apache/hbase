@@ -14,6 +14,10 @@ public class GroupLoadBalancerTable {
     return this.tableName;
   }
 
+  public String getGroupTableBelongsTo() {
+    return this.groupTableBelongsTo;
+  }
+
   public void setGroupTableBelongsTo(String groupTableBelongsTo) {
     this.groupTableBelongsTo = groupTableBelongsTo;
   }

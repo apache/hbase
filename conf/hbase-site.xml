@@ -75,6 +75,6 @@
 	</property>
 	<property>
 		<name>hbase.master.balancer.grouploadbalancer.tablegroups.group2</name>
-		<value>my_ns:namespace_table;test1</value>
+		<value>my_ns:namespace_table;test</value>
 	</property>
 </configuration>

@@ -14,6 +14,10 @@ public class GroupLoadBalancerServer {
     return this.serverName;
   }
 
+  public String getGroupServerBelongsTo() {
+    return this.groupServerBelongsTo;
+  }
+
   public void setGroupServerBelongsTo(String groupServerBelongsTo) {
     this.groupServerBelongsTo = groupServerBelongsTo;
   }

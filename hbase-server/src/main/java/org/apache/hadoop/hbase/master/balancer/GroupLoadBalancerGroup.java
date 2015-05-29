@@ -30,11 +30,11 @@ public class GroupLoadBalancerGroup {
 
   public String toString() {
     StringBuilder description = new StringBuilder();
-    description.append("Servers List: \n");
+    description.append("Servers Map: \n");
     for (GroupLoadBalancerServer server : servers.values()) {
       description.append("\t" + server + "\n");
     }
-    description.append("Tables List: \n");
+    description.append("Tables Map: \n");
     for (GroupLoadBalancerTable table : tables.values()) {
       description.append("\t" + table + "\n");
     }
