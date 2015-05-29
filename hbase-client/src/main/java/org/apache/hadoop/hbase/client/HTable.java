@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescripto
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -800,6 +801,7 @@ public class HTable implements HTableInterface, RegionLocator {
     if (scan.getBatch() > 0 && scan.isSmall()) {
       throw new IllegalArgumentException("Small scan should not be used with batching");
     }
+
     if (scan.getCaching() <= 0) {
       scan.setCaching(getScannerCaching());
     }
@@ -858,18 +860,28 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public Result get(final Get get) throws IOException {
-    if (get.getConsistency() == null){
-      get.setConsistency(defaultConsistency);
+    return get(get, false);
+  }
+
+  private Result get(Get get, final boolean checkExistenceOnly) throws IOException {
+    // if we are changing settings to the get, clone it.
+    if (get.isCheckExistenceOnly() != checkExistenceOnly || get.getConsistency() == null) {
+      get = ReflectionUtils.newInstance(get.getClass(), get);
+      get.setCheckExistenceOnly(checkExistenceOnly);
+      if (get.getConsistency() == null){
+        get.setConsistency(defaultConsistency);
+      }
     }
 
     if (get.getConsistency() == Consistency.STRONG) {
       // Good old call.
+      final Get getReq = get;
       RegionServerCallable<Result> callable = new RegionServerCallable<Result>(this.connection,
           getName(), get.getRow()) {
         @Override
         public Result call(int callTimeout) throws IOException {
           ClientProtos.GetRequest request =
-              RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), get);
+            RequestConverter.buildGetRequest(getLocation().getRegionInfo().getRegionName(), getReq);
           PayloadCarryingRpcController controller = rpcControllerFactory.newController();
           controller.setPriority(tableName);
           controller.setCallTimeout(callTimeout);
@@ -1377,8 +1389,7 @@ public class HTable implements HTableInterface, RegionLocator {
    */
   @Override
   public boolean exists(final Get get) throws IOException {
-    get.setCheckExistenceOnly(true);
-    Result r = get(get);
+    Result r = get(get, true);
     assert r.getExists() != null;
     return r.getExists();
   }
@@ -1391,13 +1402,16 @@ public class HTable implements HTableInterface, RegionLocator {
     if (gets.isEmpty()) return new boolean[]{};
     if (gets.size() == 1) return new boolean[]{exists(gets.get(0))};
 
+    ArrayList<Get> exists = new ArrayList<Get>(gets.size());
     for (Get g: gets){
-      g.setCheckExistenceOnly(true);
+      Get ge = new Get(g);
+      ge.setCheckExistenceOnly(true);
+      exists.add(ge);
     }
 
     Object[] r1;
     try {
-      r1 = batch(gets);
+      r1 = batch(exists);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
