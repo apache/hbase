@@ -52,9 +52,12 @@ import org.apache.hadoop.hbase.master.RegionPlan;
     }
 
     Configuration configuration = HBaseConfiguration.create();
-    GroupLoadBalancerConfiguration groupLoadBalancerConfiguration = new GroupLoadBalancerConfiguration(configuration);
-    GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters = new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);
-    Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap = groupLoadBalancerGroupedClusters.getGroupedClusters();
+    GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
+        new GroupLoadBalancerConfiguration(configuration);
+    GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters =
+        new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);
+    Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap =
+        groupLoadBalancerGroupedClusters.getGroupedClusters();
 
     regionsToReturn = new ArrayList<>();
 
