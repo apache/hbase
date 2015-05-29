@@ -357,7 +357,6 @@ public class DeleteTableProcedure
       }
     }
 
-
     // Delete table directory from FS (temp directory)
     if (!fs.delete(tempTableDir, true) && fs.exists(tempTableDir)) {
       throw new IOException("Couldn't delete " + tempTableDir);
@@ -366,7 +365,7 @@ public class DeleteTableProcedure
     // Delete the table directory where the mob files are saved
     if (hasMob && mobTableDir != null && fs.exists(mobTableDir)) {
       if (!fs.delete(mobTableDir, true)) {
-        LOG.error("Couldn't delete " + mobTableDir);
+        throw new IOException("Couldn't delete mob dir " + mobTableDir);
       }
     }
   }
