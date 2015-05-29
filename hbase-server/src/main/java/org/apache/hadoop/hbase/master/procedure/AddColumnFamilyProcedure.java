@@ -80,7 +80,8 @@ public class AddColumnFamilyProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, final AddColumnFamilyState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, final AddColumnFamilyState state)
+      throws InterruptedException {
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -109,7 +110,7 @@ public class AddColumnFamilyProcedure
       default:
         throw new UnsupportedOperationException(this + " unhandled state=" + state);
       }
-    } catch (InterruptedException|IOException e) {
+    } catch (IOException e) {
       LOG.warn("Error trying to add the column family" + getColumnFamilyName() + " to the table "
           + tableName + " (in state=" + state + ")", e);
 

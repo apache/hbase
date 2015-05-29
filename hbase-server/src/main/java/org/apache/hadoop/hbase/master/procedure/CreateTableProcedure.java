@@ -95,7 +95,8 @@ public class CreateTableProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, final CreateTableState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, final CreateTableState state)
+      throws InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -136,7 +137,7 @@ public class CreateTableProcedure
         default:
           throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (InterruptedException|HBaseException|IOException e) {
+    } catch (HBaseException|IOException e) {
       LOG.error("Error trying to create table=" + getTableName() + " state=" + state, e);
       setFailure("master-create-table", e);
     }

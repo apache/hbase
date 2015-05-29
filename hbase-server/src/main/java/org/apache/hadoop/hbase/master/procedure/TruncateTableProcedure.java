@@ -68,7 +68,8 @@ public class TruncateTableProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, TruncateTableState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, TruncateTableState state)
+      throws InterruptedException {
     if (LOG.isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -130,9 +131,6 @@ public class TruncateTableProcedure
       }
     } catch (HBaseException|IOException e) {
       LOG.warn("Retriable error trying to truncate table=" + getTableName() + " state=" + state, e);
-    } catch (InterruptedException e) {
-      // if the interrupt is real, the executor will be stopped.
-      LOG.warn("Interrupted trying to truncate table=" + getTableName() + " state=" + state, e);
     }
     return Flow.HAS_MORE_STATE;
   }

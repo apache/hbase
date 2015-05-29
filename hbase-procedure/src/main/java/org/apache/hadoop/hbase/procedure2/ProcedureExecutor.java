@@ -732,6 +732,12 @@ public class ProcedureExecutor<TEnvironment> {
         procedureFinished(proc);
         break;
       }
+
+      // if the procedure is kind enough to pass the slot to someone else, yield
+      if (proc.isYieldAfterExecutionStep(getEnvironment())) {
+        runnables.yield(proc);
+        break;
+      }
     } while (procStack.isFailed());
   }
 
@@ -828,6 +834,11 @@ public class ProcedureExecutor<TEnvironment> {
       }
 
       subprocStack.remove(stackTail);
+
+      // if the procedure is kind enough to pass the slot to someone else, yield
+      if (proc.isYieldAfterExecutionStep(getEnvironment())) {
+        return false;
+      }
     }
 
     // Finalize the procedure state
@@ -851,6 +862,9 @@ public class ProcedureExecutor<TEnvironment> {
         LOG.debug("rollback attempt failed for " + proc, e);
       }
       return false;
+    } catch (InterruptedException e) {
+      handleInterruptedException(proc, e);
+      return false;
     } catch (Throwable e) {
       // Catch NullPointerExceptions or similar errors...
       LOG.fatal("CODE-BUG: Uncatched runtime exception for procedure: " + proc, e);
@@ -859,9 +873,7 @@ public class ProcedureExecutor<TEnvironment> {
     // allows to kill the executor before something is stored to the wal.
     // useful to test the procedure recovery.
     if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("TESTING: Kill before store update");
-      }
+      LOG.debug("TESTING: Kill before store update");
       stop();
       return false;
     }
@@ -877,6 +889,7 @@ public class ProcedureExecutor<TEnvironment> {
     } else {
       store.update(proc);
     }
+
     return true;
   }
 
@@ -912,8 +925,12 @@ public class ProcedureExecutor<TEnvironment> {
         }
       } catch (ProcedureYieldException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Yield procedure: " + procedure);
+          LOG.trace("Yield procedure: " + procedure + ": " + e.getMessage());
         }
+        runnables.yield(procedure);
+        return;
+      } catch (InterruptedException e) {
+        handleInterruptedException(procedure, e);
         runnables.yield(procedure);
         return;
       } catch (Throwable e) {
@@ -974,9 +991,7 @@ public class ProcedureExecutor<TEnvironment> {
       // allows to kill the executor before something is stored to the wal.
       // useful to test the procedure recovery.
       if (testing != null && testing.shouldKillBeforeStoreUpdate()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("TESTING: Kill before store update");
-        }
+        LOG.debug("TESTING: Kill before store update");
         stop();
         return;
       }
@@ -996,6 +1011,11 @@ public class ProcedureExecutor<TEnvironment> {
 
       // if the store is not running we are aborting
       if (!store.isRunning()) {
+        return;
+      }
+
+      // if the procedure is kind enough to pass the slot to someone else, yield
+      if (reExecute && procedure.isYieldAfterExecutionStep(getEnvironment())) {
         return;
       }
 
@@ -1033,6 +1053,18 @@ public class ProcedureExecutor<TEnvironment> {
         return;
       }
     }
+  }
+
+  private void handleInterruptedException(final Procedure proc, final InterruptedException e) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("got an interrupt during " + proc + ". suspend and retry it later.", e);
+    }
+
+    // NOTE: We don't call Thread.currentThread().interrupt()
+    // because otherwise all the subsequent calls e.g. Thread.sleep() will throw
+    // the InterruptedException. If the master is going down, we will be notified
+    // and the executor/store will be stopped.
+    // (The interrupted procedure will be retried on the next run)
   }
 
   private void sendProcedureLoadedNotification(final long procId) {

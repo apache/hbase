@@ -119,7 +119,8 @@ public class EnableTableProcedure
   }
 
   @Override
-  protected Flow executeFromState(final MasterProcedureEnv env, final EnableTableState state) {
+  protected Flow executeFromState(final MasterProcedureEnv env, final EnableTableState state)
+      throws InterruptedException {
     if (isTraceEnabled()) {
       LOG.trace(this + " execute state=" + state);
     }
@@ -156,7 +157,7 @@ public class EnableTableProcedure
       default:
         throw new UnsupportedOperationException("unhandled state=" + state);
       }
-    } catch (InterruptedException|HBaseException|IOException e) {
+    } catch (HBaseException|IOException e) {
       LOG.error("Error trying to enable table=" + tableName + " state=" + state, e);
       setFailure("master-enable-table", e);
     }
