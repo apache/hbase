@@ -105,7 +105,18 @@ public class Get extends Query
     this.tr = get.getTimeRange();
     this.checkExistenceOnly = get.isCheckExistenceOnly();
     this.closestRowBefore = get.isClosestRowBefore();
-    this.familyMap = get.getFamilyMap();
+    Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
+    for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
+      byte [] fam = entry.getKey();
+      NavigableSet<byte[]> cols = entry.getValue();
+      if (cols != null && cols.size() > 0) {
+        for (byte[] col : cols) {
+          addColumn(fam, col);
+        }
+      } else {
+        addFamily(fam);
+      }
+    }
     for (Map.Entry<String, byte[]> attr : get.getAttributesMap().entrySet()) {
       setAttribute(attr.getKey(), attr.getValue());
     }
@@ -370,7 +381,7 @@ public class Get extends Query
   public Map<String, Object> toMap(int maxCols) {
     // we start with the fingerprint map and build on top of it.
     Map<String, Object> map = getFingerprint();
-    // replace the fingerprint's simple list of families with a 
+    // replace the fingerprint's simple list of families with a
     // map from column families to lists of qualifiers and kv details
     Map<String, List<String>> columns = new HashMap<String, List<String>>();
     map.put("families", columns);
@@ -403,8 +414,8 @@ public class Get extends Query
           }
           familyList.add(Bytes.toStringBinary(column));
         }
-      }   
-    }   
+      }
+    }
     map.put("totalColumns", colCount);
     if (this.filter != null) {
       map.put("filter", this.filter.toString());

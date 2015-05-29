@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CompareType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.protobuf.Descriptors;
@@ -221,7 +222,7 @@ public class HTable implements HTableInterface {
     this.pool = getDefaultExecutor(this.configuration);
     this.finishSetup();
   }
-   
+
   public static ThreadPoolExecutor getDefaultExecutor(Configuration conf) {
     int maxThreads = conf.getInt("hbase.htable.threads.max", Integer.MAX_VALUE);
     if (maxThreads == 0) {
@@ -808,16 +809,27 @@ public class HTable implements HTableInterface {
    */
   @Override
   public Result get(final Get get) throws IOException {
+    return get(get, false);
+  }
+
+  private Result get(Get get, final boolean checkExistenceOnly) throws IOException {
+    // if we are changing settings to the get, clone it.
+    if (get.isCheckExistenceOnly() != checkExistenceOnly) {
+      get = ReflectionUtils.newInstance(get.getClass(), get);
+      get.setCheckExistenceOnly(checkExistenceOnly);
+    }
+
     // have to instanatiate this and set the priority here since in protobuf util we don't pass in
     // the tablename... an unfortunate side-effect of public interfaces :-/ In 0.99+ we put all the
     // logic back into HTable
     final PayloadCarryingRpcController controller = rpcControllerFactory.newController();
     controller.setPriority(tableName);
+    final Get getReq = get;
     RegionServerCallable<Result> callable =
         new RegionServerCallable<Result>(this.connection, getName(), get.getRow()) {
           public Result call() throws IOException {
-            return ProtobufUtil.get(getStub(), getLocation().getRegionInfo().getRegionName(), get,
-              controller);
+            return ProtobufUtil.get(getStub(), getLocation().getRegionInfo().getRegionName(),
+              getReq, controller);
           }
         };
     return rpcCallerFactory.<Result> newCaller().callWithRetries(callable, this.operationTimeout);
@@ -1294,8 +1306,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public boolean exists(final Get get) throws IOException {
-    get.setCheckExistenceOnly(true);
-    Result r = get(get);
+    Result r = get(get, true);
     assert r.getExists() != null;
     return r.getExists();
   }
@@ -1308,13 +1319,16 @@ public class HTable implements HTableInterface {
     if (gets.isEmpty()) return new Boolean[]{};
     if (gets.size() == 1) return new Boolean[]{exists(gets.get(0))};
 
+    ArrayList<Get> exists = new ArrayList<Get>(gets.size());
     for (Get g: gets){
-      g.setCheckExistenceOnly(true);
+      Get ge = new Get(g);
+      ge.setCheckExistenceOnly(true);
+      exists.add(ge);
     }
 
     Object[] r1;
     try {
-      r1 = batch(gets);
+      r1 = batch(exists);
     } catch (InterruptedException e) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(e);
     }
