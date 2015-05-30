@@ -684,7 +684,7 @@ public class HTable implements HTableInterface {
    */
   @Override
   public Result get(final Get get) throws IOException {
-    return get(get, false);
+    return get(get, get.isCheckExistenceOnly());
   }
 
   private Result get(Get get, final boolean checkExistenceOnly) throws IOException {

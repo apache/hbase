@@ -40,6 +40,8 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Base64;
@@ -155,12 +157,48 @@ public class TestGet {
     Set<byte[]> qualifiers = get.getFamilyMap().get(family);
     Assert.assertEquals(1, qualifiers.size());
   }
-  
+
   @Test
   public void TestGetRowFromGetCopyConstructor() throws Exception {
     Get get = new Get(ROW);
+    get.setFilter(null);
+    get.setAuthorizations(new Authorizations("foo"));
+    get.setACL("u", new Permission(Permission.Action.READ));
+    get.setConsistency(Consistency.TIMELINE);
+    get.setReplicaId(2);
+    get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
+    get.setCheckExistenceOnly(true);
+    get.setClosestRowBefore(true);
+    get.setTimeRange(3, 4);
+    get.setMaxVersions(11);
+    get.setMaxResultsPerColumnFamily(10);
+    get.setRowOffsetPerColumnFamily(11);
+    get.setCacheBlocks(true);
+
     Get copyGet = new Get(get);
     assertEquals(0, Bytes.compareTo(get.getRow(), copyGet.getRow()));
+
+    // from OperationWithAttributes
+    assertEquals(get.getId(), copyGet.getId());
+
+    // from Query class
+    assertEquals(get.getFilter(), copyGet.getFilter());
+    assertTrue(get.getAuthorizations().toString().equals(copyGet.getAuthorizations().toString()));
+    assertTrue(Bytes.equals(get.getACL(), copyGet.getACL()));
+    assertEquals(get.getConsistency(), copyGet.getConsistency());
+    assertEquals(get.getReplicaId(), copyGet.getReplicaId());
+    assertEquals(get.getIsolationLevel(), copyGet.getIsolationLevel());
+
+    // from Get class
+    assertEquals(get.isCheckExistenceOnly(), copyGet.isCheckExistenceOnly());
+    assertEquals(get.isClosestRowBefore(), copyGet.isClosestRowBefore());
+    assertTrue(get.getTimeRange().equals(copyGet.getTimeRange()));
+    assertEquals(get.isClosestRowBefore(), copyGet.isClosestRowBefore());
+    assertEquals(get.getMaxVersions(), copyGet.getMaxVersions());
+    assertEquals(get.getMaxResultsPerColumnFamily(), copyGet.getMaxResultsPerColumnFamily());
+    assertEquals(get.getRowOffsetPerColumnFamily(), copyGet.getRowOffsetPerColumnFamily());
+    assertEquals(get.getCacheBlocks(), copyGet.getCacheBlocks());
+    assertEquals(get.getId(), copyGet.getId());
   }
 
   @Test
