@@ -87,6 +87,7 @@ public class VerifyReplication extends Configured implements Tool {
 
     private ResultScanner replicatedScanner;
     private Result currentCompareRowInPeerTable;
+    private Table replicatedTable;
 
     /**
      * Map method that compares every scanned row with the equivalent from
@@ -127,8 +128,7 @@ public class VerifyReplication extends Configured implements Tool {
             ZKUtil.applyClusterKeyToConf(peerConf, zkClusterKey);
 
             TableName tableName = TableName.valueOf(conf.get(NAME + ".tableName"));
-            // TODO: THis HTable doesn't get closed.  Fix!
-            Table replicatedTable = new HTable(peerConf, tableName);
+            replicatedTable = new HTable(peerConf, tableName);
             scan.setStartRow(value.getRow());
             scan.setStopRow(tableSplit.getEndRow());
             replicatedScanner = replicatedTable.getScanner(scan);
@@ -187,6 +187,14 @@ public class VerifyReplication extends Configured implements Tool {
         } finally {
           replicatedScanner.close();
           replicatedScanner = null;
+        }
+      }
+      if (replicatedTable != null) {
+        TableName tableName = replicatedTable.getName();
+        try {
+          replicatedTable.close();
+        } catch (IOException ioe) {
+          LOG.warn("Exception closing " + tableName, ioe);
         }
       }
     }
