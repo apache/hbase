@@ -283,6 +283,11 @@ public class DeleteColumnFamilyProcedure
       throw new InvalidFamilyOperationException("Family '" + getColumnFamilyName()
           + "' does not exist, so it cannot be deleted");
     }
+
+    if (unmodifiedHTableDescriptor.getColumnFamilies().length == 1) {
+      throw new InvalidFamilyOperationException("Family '" + getColumnFamilyName()
+        + "' is the only column family in the table, so it cannot be deleted");
+    }
   }
 
   /**
