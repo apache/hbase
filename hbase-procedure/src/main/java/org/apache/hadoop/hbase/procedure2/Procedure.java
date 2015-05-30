@@ -84,8 +84,8 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * of the execution.
    * @param env the environment passed to the ProcedureExecutor
    * @return a set of sub-procedures or null if there is nothing else to execute.
-   * @throw ProcedureYieldException the procedure will be added back to the queue and retried later
-   * @throw InterruptedException the procedure will be added back to the queue and retried later
+   * @throws ProcedureYieldException the procedure will be added back to the queue and retried later
+   * @throws InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract Procedure[] execute(TEnvironment env)
     throws ProcedureYieldException, InterruptedException;
@@ -99,7 +99,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
    * of the execution.
    * @param env the environment passed to the ProcedureExecutor
    * @throws IOException temporary failure, the rollback will retry later
-   * @throw InterruptedException the procedure will be added back to the queue and retried later
+   * @throws InterruptedException the procedure will be added back to the queue and retried later
    */
   protected abstract void rollback(TEnvironment env)
     throws IOException, InterruptedException;
