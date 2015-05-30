@@ -27,6 +27,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -52,6 +53,11 @@ public class TableDeleteFamilyHandler extends TableEventHandler {
     super.prepareWithTableLock();
     HTableDescriptor htd = getTableDescriptor();
     this.familyName = hasColumnFamily(htd, familyName);
+
+    if (htd.getColumnFamilies().length == 1) {
+      throw new InvalidFamilyOperationException("Family '" + Bytes.toString(familyName)
+        + "' is the only column family in the table, so it cannot be deleted");
+    }
   }
 
   @Override
