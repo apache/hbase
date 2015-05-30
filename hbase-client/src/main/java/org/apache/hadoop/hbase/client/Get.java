@@ -99,7 +99,11 @@ public class Get extends Query
    */
   public Get(Get get) {
     this(get.getRow());
-    this.filter = get.getFilter();
+    // from Query
+    this.setFilter(get.getFilter());
+    this.setReplicaId(get.getReplicaId());
+    this.setConsistency(get.getConsistency());
+    // from Get
     this.cacheBlocks = get.getCacheBlocks();
     this.maxVersions = get.getMaxVersions();
     this.storeLimit = get.getMaxResultsPerColumnFamily();
