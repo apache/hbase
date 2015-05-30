@@ -1296,11 +1296,11 @@ public class TestAdmin1 {
 
   @Test (timeout=300000)
   public void testEnableDisableAddColumnDeleteColumn() throws Exception {
-    ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
-    TableName tableName = TableName.valueOf("testMasterAdmin");
+	ZooKeeperWatcher zkw = HBaseTestingUtility.getZooKeeperWatcher(TEST_UTIL);
+    TableName tableName = TableName.valueOf("testEnableDisableAddColumnDeleteColumn");
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     while (!ZKTableStateClientSideReader.isEnabledTable(zkw,
-      TableName.valueOf("testMasterAdmin"))) {
+      TableName.valueOf("testEnableDisableAddColumnDeleteColumn"))) {
       Thread.sleep(10);
     }
     this.admin.disableTable(tableName);
@@ -1318,6 +1318,35 @@ public class TestAdmin1 {
       LOG.info(e);
     }
     this.admin.disableTable(tableName);
+    this.admin.deleteTable(tableName);
+  }
+
+  @Test (timeout=300000)
+  public void testDeleteLastColumnFamily() throws Exception {
+    TableName tableName = TableName.valueOf("testDeleteLastColumnFamily");
+    TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
+    while (!this.admin.isTableEnabled(TableName.valueOf("testDeleteLastColumnFamily"))) {
+      Thread.sleep(10);
+    }
+
+    // test for enabled table
+    try {
+      this.admin.deleteColumn(tableName, HConstants.CATALOG_FAMILY);
+      fail("Should have failed to delete the only column family of a table");
+    } catch (InvalidFamilyOperationException ex) {
+      // expected
+    }
+
+    // test for disabled table
+    this.admin.disableTable(tableName);
+
+    try {
+      this.admin.deleteColumn(tableName, HConstants.CATALOG_FAMILY);
+      fail("Should have failed to delete the only column family of a table");
+    } catch (InvalidFamilyOperationException ex) {
+      // expected
+    }
+
     this.admin.deleteTable(tableName);
   }
 }
