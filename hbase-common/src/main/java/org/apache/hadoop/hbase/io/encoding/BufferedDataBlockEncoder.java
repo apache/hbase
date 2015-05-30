@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.SamePrefixComparator;
+import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -254,8 +255,14 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     public KeyValue getKeyValue() {
       ByteBuffer kvBuf = getKeyValueBuffer();
-      KeyValue kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
-          - kvBuf.arrayOffset());
+      KeyValue kv;
+      if (current.tagsLength == 0) {
+        kv = new NoTagsKeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
+            - kvBuf.arrayOffset());
+      } else {
+        kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
+            - kvBuf.arrayOffset());
+      }
       kv.setMvccVersion(current.memstoreTS);
       return kv;
     }

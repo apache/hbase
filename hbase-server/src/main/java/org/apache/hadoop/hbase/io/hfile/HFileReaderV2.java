@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
+import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
@@ -684,11 +685,12 @@ public class HFileReaderV2 extends AbstractHFileReader {
       if (!isSeeked())
         return null;
 
-      return formKeyValue();
+      // HFile V2 do not support tags.
+      return formNoTagsKeyValue();
     }
 
-    protected KeyValue formKeyValue() {
-      KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+    protected KeyValue formNoTagsKeyValue() {
+      KeyValue ret = new NoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
           + blockBuffer.position(), getCellBufSize());
       if (this.reader.shouldIncludeMemstoreTS()) {
         ret.setMvccVersion(currMemstoreTS);
