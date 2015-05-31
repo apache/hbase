@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,6 +39,7 @@ import java.io.IOException;
 @Category(MediumTests.class)
 public class TestRowTooBig {
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
+  private static Path rootRegionDir;
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
 
@@ -46,6 +48,7 @@ public class TestRowTooBig {
     HTU.startMiniCluster();
     HTU.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY,
       10 * 1024 * 1024L);
+    rootRegionDir = HTU.getDataTestDirOnTestFS("TestRowTooBig");
   }
 
   @AfterClass
@@ -80,19 +83,22 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region = HTU.createLocalHRegion(hri,  htd);
+    Region region = HTU.createHRegion(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    try {
+      // Add 5 cells to memstore
+      for (int i = 0; i < 5 ; i++) {
+        Put put = new Put(row1);
 
-    // Add 5 cells to memstore
-    for (int i = 0; i < 5 ; i++) {
-      Put put = new Put(row1);
+        put.add(fam1, Bytes.toBytes("col_" + i ), new byte[5 * 1024 * 1024]);
+        region.put(put);
+        region.flush(true);
+      }
 
-      put.add(fam1, Bytes.toBytes("col_" + i ), new byte[5 * 1024 * 1024]);
-      region.put(put);
-      region.flush(true);
+      Get get = new Get(row1);
+      region.get(get);
+    } finally {
+      HBaseTestingUtility.closeRegion(region);
     }
-
-    Get get = new Get(row1);
-    region.get(get);
   }
 
   /**
@@ -122,20 +128,23 @@ public class TestRowTooBig {
     final HRegionInfo hri =
       new HRegionInfo(htd.getTableName(), HConstants.EMPTY_END_ROW,
         HConstants.EMPTY_END_ROW);
-    Region region = HTU.createLocalHRegion(hri,  htd);
-
-    // Add to memstore
-    for (int i = 0; i < 10; i++) {
-      Put put = new Put(row1);
-      for (int j = 0; j < 10 * 10000; j++) {
-        put.add(fam1, Bytes.toBytes("col_" + i + "_" + j), new byte[10]);
+    Region region = HTU.createHRegion(hri, rootRegionDir, HTU.getConfiguration(), htd);
+    try {
+      // Add to memstore
+      for (int i = 0; i < 10; i++) {
+        Put put = new Put(row1);
+        for (int j = 0; j < 10 * 10000; j++) {
+          put.add(fam1, Bytes.toBytes("col_" + i + "_" + j), new byte[10]);
+        }
+        region.put(put);
+        region.flush(true);
       }
-      region.put(put);
-      region.flush(true);
-    }
-    region.compact(true);
+      region.compact(true);
 
-    Get get = new Get(row1);
-    region.get(get);
+      Get get = new Get(row1);
+      region.get(get);
+    } finally {
+      HBaseTestingUtility.closeRegion(region);
+    }
   }
 }

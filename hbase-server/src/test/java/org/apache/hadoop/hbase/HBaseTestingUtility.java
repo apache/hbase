@@ -283,6 +283,15 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return htu;
   }
 
+ /**
+  * Close the Region {@code r}. For use in tests.
+  */
+ public static void closeRegion(final Region r) throws IOException {
+   if (r != null) {
+     ((HRegion)r).close();
+   }
+ }
+
   /**
    * Returns this classes's instance of {@link Configuration}.  Be careful how
    * you use the returned Configuration since {@link HConnection} instances
@@ -1849,6 +1858,18 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTableDescriptor createTableDescriptor(final String name) {
     return createTableDescriptor(name,  HColumnDescriptor.DEFAULT_MIN_VERSIONS,
         MAXVERSIONS, HConstants.FOREVER, HColumnDescriptor.DEFAULT_KEEP_DELETED);
+  }
+
+  /**
+   * Create an HRegion. Be sure to call {@link HBaseTestingUtility#closeRegion(Region)}
+   * when you're finished with it.
+   */
+  public HRegion createHRegion(
+      final HRegionInfo info,
+      final Path rootDir,
+      final Configuration conf,
+      final HTableDescriptor htd) throws IOException {
+    return HRegion.createHRegion(info, rootDir, conf, htd);
   }
 
   /**
