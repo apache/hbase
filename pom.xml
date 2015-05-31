@@ -805,16 +805,6 @@
   See the reference guide on building for more information: http://hbase.apache.org/book.html#build
               </message>
             </requireJavaVersion>
-            <enforceBytecodeVersion>
-              <maxJdkVersion>${compileSource}</maxJdkVersion>
-              <message>HBase has unsupported dependencies.
-  HBase requires that all dependencies be compiled with version ${compileSource} or earlier
-  of the JDK to properly build from source.  You appear to be using a newer dependency. You can use
-  either "mvn -version" or "mvn enforcer:display-info" to verify what version is active.
-  Non-release builds can temporarily build with a newer JDK version by setting the
-  'compileSource' property (eg. mvn -DcompileSource=1.8 clean package).
-              </message>
-            </enforceBytecodeVersion>
           </rules>
         </configuration>
         <executions>
@@ -1826,6 +1816,24 @@
                 </goals>
               </execution>
             </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-enforcer-plugin</artifactId>
+            <configuration>
+              <rules>
+                <enforceBytecodeVersion>
+                <maxJdkVersion>${compileSource}</maxJdkVersion>
+                <message>HBase has unsupported dependencies.
+  HBase requires that all dependencies be compiled with version ${compileSource} or earlier
+  of the JDK to properly build from source.  You appear to be using a newer dependency. You can use
+  either "mvn -version" or "mvn enforcer:display-info" to verify what version is active.
+  Non-release builds can temporarily build with a newer JDK version by setting the
+  'compileSource' property (eg. mvn -DcompileSource=1.8 clean package).
+                </message>
+              </enforceBytecodeVersion>
+            </rules>
+          </configuration>
           </plugin>
         </plugins>
       </build>
