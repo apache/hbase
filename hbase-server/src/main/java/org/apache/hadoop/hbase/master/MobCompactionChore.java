@@ -25,12 +25,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.TableState;
-import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 
 /**
@@ -44,12 +43,9 @@ public class MobCompactionChore extends ScheduledChore {
   private TableLockManager tableLockManager;
   private ExecutorService pool;
 
-  public MobCompactionChore(HMaster master) {
-    super(master.getServerName() + "-MobCompactionChore", master, master.getConfiguration()
-      .getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-        MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), master.getConfiguration().getInt(
-      MobConstants.MOB_COMPACTION_CHORE_PERIOD,
-      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD), TimeUnit.SECONDS);
+  public MobCompactionChore(HMaster master, int period) {
+    // use the period as initial delay.
+    super(master.getServerName() + "-MobCompactionChore", master, period, period, TimeUnit.SECONDS);
     this.master = master;
     this.tableLockManager = master.getTableLockManager();
     this.pool = MobUtils.createMobCompactorThreadPool(master.getConfiguration());

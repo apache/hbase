@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -795,8 +796,15 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
     getChoreService().scheduleChore(expiredMobFileCleanerChore);
 
-    this.mobCompactChore = new MobCompactionChore(this);
-    getChoreService().scheduleChore(mobCompactChore);
+    int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
+    if (mobCompactionPeriod > 0) {
+      this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
+      getChoreService().scheduleChore(mobCompactChore);
+    } else {
+      LOG
+        .info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
+    }
     this.mobCompactThread = new MasterMobCompactionThread(this);
 
     if (this.cpHost != null) {
