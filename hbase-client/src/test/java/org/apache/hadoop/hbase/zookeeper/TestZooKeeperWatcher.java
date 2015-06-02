@@ -37,6 +37,7 @@ public class TestZooKeeperWatcher {
       "testIsClientReadable", null, false);
 
     assertTrue(watcher.isClientReadable(watcher.baseZNode));
+    assertTrue(watcher.isClientReadable(watcher.metaServerZNode));
     assertTrue(watcher.isClientReadable(watcher.getMasterAddressZNode()));
     assertTrue(watcher.isClientReadable(watcher.clusterIdZNode));
     assertTrue(watcher.isClientReadable(watcher.tableZNode));
