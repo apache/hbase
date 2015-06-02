@@ -201,6 +201,7 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     // than service lookup case is not a recommended design pattern.
     return
         node.equals(baseZNode) ||
+        node.equals(metaServerZNode) ||
         node.equals(getMasterAddressZNode()) ||
         node.equals(clusterIdZNode)||
         node.equals(rsZNode) ||
