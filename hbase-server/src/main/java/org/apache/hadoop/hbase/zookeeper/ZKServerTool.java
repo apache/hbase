@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.hbase.zookeeper;
 
-import java.util.Properties;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -39,8 +37,7 @@ public class ZKServerTool {
    */
   public static void main(String args[]) {
     Configuration conf = HBaseConfiguration.create();
-    Properties zkProps = ZKConfig.makeZKProps(conf);
-    String quorum = zkProps.getProperty(HConstants.ZOOKEEPER_QUORUM);
+    String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
 
     String[] values = quorum.split(",");
     for (String value : values) {
@@ -48,6 +45,5 @@ public class ZKServerTool {
       String host = parts[0];
       System.out.println("ZK host:" + host);
     }
-
   }
 }
