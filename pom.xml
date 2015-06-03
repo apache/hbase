@@ -535,6 +535,10 @@
             <!--Allocate some direct memory for direct memory tests-->
             <argLine>${hbase-surefire.argLine} ${argLine}</argLine>
             <redirectTestOutputToFile>${test.output.tofile}</redirectTestOutputToFile>
+            <systemPropertyVariables>
+              <jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+            </systemPropertyVariables>
+
             <excludes>
 	      <!-- users can add -D option to skip particular test classes
 		   ex: mvn test -Dtest.exclude.pattern=**/TestFoo.java,**/TestBar.java
