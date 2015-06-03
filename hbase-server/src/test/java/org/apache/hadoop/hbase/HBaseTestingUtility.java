@@ -131,7 +131,7 @@ import static org.junit.Assert.fail;
  * Create an instance and keep it around testing HBase.  This class is
  * meant to be your one-stop shop for anything you might need testing.  Manages
  * one cluster at a time only. Managed cluster can be an in-process
- * {@link MiniHBaseCluster}, or a deployed cluster of type {@link DistributedHBaseCluster}.
+ * {@link MiniHBaseCluster}, or a deployed cluster of type {@link HBaseCluster}.
  * Not all methods work with the real cluster.
  * Depends on log4j being on classpath and
  * hbase-site.xml for logging and test-run configuration.  It does not set

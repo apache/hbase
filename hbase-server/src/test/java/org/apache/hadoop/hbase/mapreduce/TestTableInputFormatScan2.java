@@ -112,6 +112,6 @@ public class TestTableInputFormatScan2 extends TestTableInputFormatScanBase {
   @Test
   public void testScanFromConfiguration()
   throws IOException, InterruptedException, ClassNotFoundException {
-    testScanFromConfiguration("bba", "bbd", "bbc");
+    testScan("bba", "bbd", "bbc");
   }
 }
