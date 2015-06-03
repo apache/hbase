@@ -583,6 +583,9 @@ public class TestHBaseFsck {
       public HBaseFsck call(){
         Configuration c = new Configuration(conf);
         c.setInt("hbase.hbck.lockfile.attempts", 1);
+        // HBASE-13574 found that in HADOOP-2.6 and later, the create file would internally retry.
+        // To avoid flakiness of the test, set low max wait time.
+        c.setInt("hbase.hbck.lockfile.maxwaittime", 3);
         try{
           return doFsck(c, false);
         } catch(Exception e){
