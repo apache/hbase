@@ -217,7 +217,9 @@ public class HeapMemoryManager {
     private HeapMemoryTuner heapMemTuner;
     private AtomicLong blockedFlushCount = new AtomicLong();
     private AtomicLong unblockedFlushCount = new AtomicLong();
-    private long evictCount = 0L;
+    private long lastEvictCount = 0L;
+    private long curEvictCount;
+    private long evictCount;
     private TunerContext tunerContext = new TunerContext();
     private boolean alarming = false;
 
@@ -265,7 +267,9 @@ public class HeapMemoryManager {
     }
 
     private void tune() {
-      evictCount = blockCache.getStats().getEvictedCount() - evictCount;
+      curEvictCount = blockCache.getStats().getEvictedCount();
+      evictCount =  curEvictCount - lastEvictCount;
+      lastEvictCount = curEvictCount;
       tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
       tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));
       tunerContext.setEvictCount(evictCount);
