@@ -188,6 +188,27 @@ public class TestAccessController2 extends SecureTestUtil {
   }
 
   @Test
+  public void testCreateTableWithGroupPermissions() throws Exception {
+    grantGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
+    AccessTestAction createAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
+        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+        try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+          try (Admin admin = connection.getAdmin()) {
+            admin.createTable(desc);
+          }
+        }
+        return null;
+      }
+    };
+    verifyAllowed(createAction, TESTGROUP1_USER1);
+    verifyDenied(createAction, TESTGROUP2_USER1);
+    revokeGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
+  }
+
+  @Test
   public void testACLTableAccess() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
 
