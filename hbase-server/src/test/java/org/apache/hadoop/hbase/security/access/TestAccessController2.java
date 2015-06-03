@@ -193,12 +193,13 @@ public class TestAccessController2 extends SecureTestUtil {
     AccessTestAction createAction = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
+        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
         HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
         desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-          try (Admin admin = connection.getAdmin()) {
-            admin.createTable(desc);
-          }
+        try {
+          admin.createTable(desc);
+        } finally {
+          admin.close();
         }
         return null;
       }
