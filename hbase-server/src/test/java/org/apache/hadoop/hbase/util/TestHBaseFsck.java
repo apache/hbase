@@ -617,8 +617,12 @@ public class TestHBaseFsck {
     final Future<HBaseFsck> hbck1,hbck2;
 
     // With the ExponentialBackoffPolicyWithLimit (starting with 200 milliseconds sleep time, and
-    // max sleep time of 5 seconds), we can retry around 15 times within 60 seconds before bail out.
-    final int timeoutInSeconds = 60;
+    // max sleep time of 5 seconds), we can retry around 15 times within 80 seconds before bail out.
+    //
+    // Note: the reason to use 80 seconds is that in HADOOP-2.6 and later, the create file would
+    // retry up to HdfsConstants.LEASE_SOFTLIMIT_PERIOD (60 seconds).  See HBASE-13574 for more
+    // details.
+    final int timeoutInSeconds = 80;
     final int sleepIntervalInMilliseconds = 200;
     final int maxSleepTimeInMilliseconds = 6000;
     final int maxRetryAttempts = 15;

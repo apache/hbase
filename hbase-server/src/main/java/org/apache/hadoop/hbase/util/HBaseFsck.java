@@ -201,7 +201,11 @@ public class HBaseFsck extends Configured implements Closeable {
   private static final int DEFAULT_MAX_LOCK_FILE_ATTEMPTS = 5;
   private static final int DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL = 200; // milliseconds
   private static final int DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME = 5000; // milliseconds
-  private static final int DEFAULT_WAIT_FOR_LOCK_TIMEOUT = 30; // seconds
+  // We have to set the timeout value > HdfsConstants.LEASE_SOFTLIMIT_PERIOD.
+  // In HADOOP-2.6 and later, the Namenode proxy now created with custom RetryPolicy for
+  // AlreadyBeingCreatedException which is implies timeout on this operations up to
+  // HdfsConstants.LEASE_SOFTLIMIT_PERIOD (60 seconds).
+  private static final int DEFAULT_WAIT_FOR_LOCK_TIMEOUT = 80; // seconds
 
   /**********************
    * Internal resources
