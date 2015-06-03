@@ -181,6 +181,7 @@ public class HeapMemoryManager {
           + blockCachePercentMaxRange);
     }
     return true;
+    
   }
 
   public void start(ChoreService service) {
@@ -320,6 +321,8 @@ public class HeapMemoryManager {
           globalMemStorePercent = memstoreSize;
           memStoreFlusher.setGlobalMemstoreLimit(newMemstoreSize);
         }
+      } else {
+    	LOG.info("No changes made by HeapMemoryTuner.");
       }
     }
 

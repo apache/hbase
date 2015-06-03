@@ -57,6 +57,11 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   private float blockCachePercentMinRange;
   private float blockCachePercentMaxRange;
 
+  private boolean lastStepDirection = true ;  // true if last time tuner increased block cache size 
+  private boolean isFirstTuning = true;
+  private long prevFlushCount;
+  private long prevEvictCount;
+  
   @Override
   public TunerResult tune(TunerContext context) {
     long blockedFlushCount = context.getBlockedFlushCount();
@@ -64,23 +69,46 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     long evictCount = context.getEvictCount();
     boolean memstoreSufficient = blockedFlushCount == 0 && unblockedFlushCount == 0;
     boolean blockCacheSufficient = evictCount == 0;
+    
     if (memstoreSufficient && blockCacheSufficient) {
+      isFirstTuning = true;
       return NO_OP_TUNER_RESULT;
     }
     float newMemstoreSize;
     float newBlockCacheSize;
     if (memstoreSufficient) {
       // Increase the block cache size and corresponding decrease in memstore size
-      newBlockCacheSize = context.getCurBlockCacheSize() + step;
-      newMemstoreSize = context.getCurMemStoreSize() - step;
+      lastStepDirection = true;
     } else if (blockCacheSufficient) {
       // Increase the memstore size and corresponding decrease in block cache size
-      newBlockCacheSize = context.getCurBlockCacheSize() - step;
-      newMemstoreSize = context.getCurMemStoreSize() + step;
+      lastStepDirection = false;
     } else {
-      return NO_OP_TUNER_RESULT;
-      // As of now not making any tuning in write/read heavy scenario.
+      if (isFirstTuning){
+    	isFirstTuning = false;
+    	//TODO to find which side we should step
+    	//just taking a random step to increase  memstore size
+    	lastStepDirection = false;
+      }
+      else {
+    	  float percentChangeInEvictCount  = (float)(evictCount-prevEvictCount)/(float)(prevEvictCount);
+    	  float percentChangeInFlushes =
+    	  (float)(blockedFlushCount + unblockedFlushCount-prevFlushCount)/(float)(prevFlushCount);
+    	  //TODO use some better hurestics to calculate which side we should give more memory
+    	  //Negative is desirable , should repeat previous step
+    	  //if it is positive , we should move in opposite direction
+    	  float indicator = percentChangeInEvictCount + percentChangeInFlushes;
+    	  if (indicator > 0.0){
+    		 lastStepDirection = ! lastStepDirection;
+    	  }
+      }
     }
+    if (lastStepDirection){
+      newBlockCacheSize = context.getCurBlockCacheSize() + step;
+      newMemstoreSize = context.getCurMemStoreSize() - step;
+    } else {
+	  newBlockCacheSize = context.getCurBlockCacheSize() - step;
+	  newMemstoreSize = context.getCurMemStoreSize() + step;
+    }  
     if (newMemstoreSize > globalMemStorePercentMaxRange) {
       newMemstoreSize = globalMemStorePercentMaxRange;
     } else if (newMemstoreSize < globalMemStorePercentMinRange) {
@@ -93,6 +121,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     }
     TUNER_RESULT.setBlockCacheSize(newBlockCacheSize);
     TUNER_RESULT.setMemstoreSize(newMemstoreSize);
+    prevFlushCount = blockedFlushCount + unblockedFlushCount;
+    prevEvictCount = evictCount;
+    isFirstTuning = false;
     return TUNER_RESULT;
   }
 
