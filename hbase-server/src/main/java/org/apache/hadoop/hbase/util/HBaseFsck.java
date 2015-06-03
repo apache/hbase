@@ -432,7 +432,7 @@ public class HBaseFsck extends Configured implements Closeable {
       "hbase.hbck.lockfile.maxwaittime", DEFAULT_WAIT_FOR_LOCK_TIMEOUT);
     FSDataOutputStream stream = null;
     try {
-      stream = futureTask.get(30, TimeUnit.SECONDS);
+      stream = futureTask.get(timeoutInSeconds, TimeUnit.SECONDS);
     } catch (ExecutionException ee) {
       LOG.warn("Encountered exception when opening lock file", ee);
     } catch (InterruptedException ie) {
