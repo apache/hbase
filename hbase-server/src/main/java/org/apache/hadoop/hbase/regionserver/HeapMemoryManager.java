@@ -58,7 +58,7 @@ public class HeapMemoryManager {
       "hbase.regionserver.global.memstore.size.min.range";
   public static final String HBASE_RS_HEAP_MEMORY_TUNER_PERIOD = 
       "hbase.regionserver.heapmemory.tuner.period";
-  public static final int HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD = 60 * 1000;
+  public static final int HBASE_RS_HEAP_MEMORY_TUNER_DEFAULT_PERIOD = 10 * 1000;
   public static final String HBASE_RS_HEAP_MEMORY_TUNER_CLASS = 
       "hbase.regionserver.heapmemory.tuner.class";
 
@@ -75,7 +75,7 @@ public class HeapMemoryManager {
 
   private final ResizableBlockCache blockCache;
   private final FlushRequester memStoreFlusher;
-  private final Server server;
+  private final HRegionServer server;
 
   private HeapMemoryTunerChore heapMemTunerChore = null;
   private final boolean tunerOn;
@@ -85,7 +85,7 @@ public class HeapMemoryManager {
   private long maxHeapSize = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
 
   public static HeapMemoryManager create(Configuration conf, FlushRequester memStoreFlusher,
-      Server server) {
+		  HRegionServer server) {
     BlockCache blockCache = CacheConfig.instantiateBlockCache(conf);
     if (blockCache instanceof ResizableBlockCache) {
       return new HeapMemoryManager((ResizableBlockCache) blockCache, memStoreFlusher, server);
@@ -95,7 +95,7 @@ public class HeapMemoryManager {
 
   @VisibleForTesting
   HeapMemoryManager(ResizableBlockCache blockCache, FlushRequester memStoreFlusher,
-      Server server) {
+		  HRegionServer server) {
     Configuration conf = server.getConfiguration();
     this.blockCache = blockCache;
     this.memStoreFlusher = memStoreFlusher;
@@ -220,6 +220,12 @@ public class HeapMemoryManager {
     private long lastEvictCount = 0L;
     private long curEvictCount;
     private long evictCount;
+    private long lastWriteRequestCount = 0L;
+    private long curWriteRequestCount;
+    private long writeRequestCount;
+    private long lastReadRequestCount = 0L;
+    private long curReadRequestCount;
+    private long readRequestCount;
     private TunerContext tunerContext = new TunerContext();
     private boolean alarming = false;
 
@@ -270,11 +276,21 @@ public class HeapMemoryManager {
       curEvictCount = blockCache.getStats().getEvictedCount();
       evictCount =  curEvictCount - lastEvictCount;
       lastEvictCount = curEvictCount;
+      curWriteRequestCount = server.getWriteRequestCount();
+      writeRequestCount = curWriteRequestCount - lastWriteRequestCount;
+      lastWriteRequestCount = curWriteRequestCount;
+      curReadRequestCount = server.getReadRequestCount();
+      readRequestCount = curReadRequestCount - lastReadRequestCount;
+      lastReadRequestCount = curReadRequestCount;
       tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
       tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));
       tunerContext.setEvictCount(evictCount);
+      tunerContext.setReadRequestCount(readRequestCount);
+      tunerContext.setWriteRequestCount(writeRequestCount);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
+      LOG.info("Data passed to HeapMemoryTuner : " + lastEvictCount + " "
+    	  + lastReadRequestCount + " " + lastWriteRequestCount);
       TunerResult result = null;
       try {
         result = this.heapMemTuner.tune(tunerContext);
@@ -355,6 +371,8 @@ public class HeapMemoryManager {
     private long blockedFlushCount;
     private long unblockedFlushCount;
     private long evictCount;
+    private long readRequestCount;
+    private long writeRequestCount;
     private float curMemStoreSize;
     private float curBlockCacheSize;
 
@@ -397,6 +415,22 @@ public class HeapMemoryManager {
     public void setCurBlockCacheSize(float curBlockCacheSize) {
       this.curBlockCacheSize = curBlockCacheSize;
     }
+
+	public long getReadRequestCount() {
+		return readRequestCount;
+	}
+
+	public void setReadRequestCount(long readRequestCount) {
+		this.readRequestCount = readRequestCount;
+	}
+
+	public long getWriteRequestCount() {
+		return writeRequestCount;
+	}
+
+	public void setWriteRequestCount(long writeRequestCount) {
+		this.writeRequestCount = writeRequestCount;
+	}
   }
 
   /**

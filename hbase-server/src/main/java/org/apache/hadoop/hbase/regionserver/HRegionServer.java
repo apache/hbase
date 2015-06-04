@@ -1113,12 +1113,22 @@ public class HRegionServer extends HasThread implements
   /**
    * @return Current write count for all online regions.
    */
-  private long getWriteRequestCount() {
-    int writeCount = 0;
+  public long getWriteRequestCount() {
+    long writeCount = 0;
     for (Map.Entry<String, Region> e: this.onlineRegions.entrySet()) {
       writeCount += e.getValue().getWriteRequestsCount();
     }
     return writeCount;
+  }
+  /**
+   * @return Current read count for all online regions.
+   */
+  public long getReadRequestCount() {
+    long readCount = 0;
+    for (Map.Entry<String, Region> e: this.onlineRegions.entrySet()) {
+      readCount += e.getValue().getReadRequestsCount();
+    }
+    return readCount;
   }
 
   @VisibleForTesting
