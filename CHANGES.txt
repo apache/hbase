@@ -74,6 +74,7 @@ Release 0.98.13 - 6/13/2015
     * [HBASE-13807] - [0.98] NoTagsKeyValue optimization is not proper
     * [HBASE-13812] - Deleting of last Column Family of a table should not be allowed
     * [HBASE-13826] - Unable to create table when group acls are appropriately set.
+    * [HBASE-13837] - [0.98] TestBoundedByteBufferPool does not compile with JDK 1.6
 
 ** Improvement
     * [HBASE-12415] - Add add(byte[][] arrays) to Bytes.
