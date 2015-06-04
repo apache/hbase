@@ -90,7 +90,7 @@ public class ReplicationAdmin implements Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationAdmin.class);
 
   public static final String TNAME = "tableName";
-  public static final String CFNAME = "columnFamlyName";
+  public static final String CFNAME = "columnFamilyName";
 
   // only Global for now, can add other type
   // such as, 1) no global replication, or 2) the table is replicated to this cluster, etc.
