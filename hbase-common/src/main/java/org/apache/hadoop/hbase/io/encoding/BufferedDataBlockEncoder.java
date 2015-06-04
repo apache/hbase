@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -548,9 +549,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     public int write(OutputStream out, boolean withTags) throws IOException {
       int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
           tagsLength, withTags);
-      StreamUtils.writeInt(out, lenToWrite);
-      StreamUtils.writeInt(out, keyOnlyBuffer.length);
-      StreamUtils.writeInt(out, valueLength);
+      writeInt(out, lenToWrite);
+      writeInt(out, keyOnlyBuffer.length);
+      writeInt(out, valueLength);
       // Write key
       out.write(keyOnlyBuffer);
       // Write value
@@ -571,6 +572,16 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
       }
       return lenToWrite + Bytes.SIZEOF_INT;
+    }
+  }
+
+  private static void writeInt(OutputStream out, int v) throws IOException {
+    // We have writeInt in ByteBufferOutputStream so that it can directly write int to underlying
+    // ByteBuffer in one step.
+    if (out instanceof ByteBufferOutputStream) {
+      ((ByteBufferOutputStream) out).writeInt(v);
+    } else {
+      StreamUtils.writeInt(out, v);
     }
   }
 

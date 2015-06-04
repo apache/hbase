@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -44,8 +43,7 @@ public class NoTagsKeyValue extends KeyValue {
   public int write(OutputStream out, boolean withTags) throws IOException {
     // In KeyValueUtil#oswrite we do a Cell serialization as KeyValue. Any changes doing here, pls
     // check KeyValueUtil#oswrite also and do necessary changes.
-    // This does same as DataOuput#writeInt (big-endian, etc.)
-    StreamUtils.writeInt(out, this.length);
+    writeInt(out, this.length);
     out.write(this.bytes, this.offset, this.length);
     return this.length + Bytes.SIZEOF_INT;
   }

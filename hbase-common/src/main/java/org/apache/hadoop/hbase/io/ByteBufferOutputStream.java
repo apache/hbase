@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.io;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
@@ -57,6 +58,7 @@ public class ByteBufferOutputStream extends OutputStream {
    * @see #getByteBuffer()
    */
   public ByteBufferOutputStream(final ByteBuffer bb) {
+    assert bb.order() == ByteOrder.BIG_ENDIAN;
     this.buf = bb;
     this.buf.clear();
   }
@@ -126,6 +128,17 @@ public class ByteBufferOutputStream extends OutputStream {
     checkSizeAndGrow(len);
 
     buf.put(b, off, len);
+  }
+
+  /**
+   * Writes an <code>int</code> to the underlying output stream as four
+   * bytes, high byte first.
+   * @param i the <code>int</code> to write
+   * @throws IOException if an I/O error occurs.
+   */
+  public void writeInt(int i) throws IOException {
+    checkSizeAndGrow(Bytes.SIZEOF_INT);
+    this.buf.putInt(i);
   }
 
   @Override
