@@ -554,8 +554,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       true, null, null, hosts, null);
 
     // Set this just-started cluster as our filesystem.
-    FileSystem fs = this.dfsCluster.getFileSystem();
-    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+    setFs();
 
     // Wait for the cluster to be totally up
     this.dfsCluster.waitClusterUp();
@@ -566,6 +565,14 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return this.dfsCluster;
   }
 
+  private void setFs() throws IOException {
+    if(this.dfsCluster == null){
+      LOG.info("Skipping setting fs because dfsCluster is null");
+      return;
+    }
+    FileSystem fs = this.dfsCluster.getFileSystem();
+    FSUtils.setFsDefault(this.conf, new Path(fs.getUri()));
+  }
 
   public MiniDFSCluster startMiniDFSCluster(int servers, final  String racks[], String hosts[])
       throws Exception {
@@ -879,7 +886,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     // Bring up mini dfs cluster. This spews a bunch of warnings about missing
     // scheme. Complaints are 'Scheme is undefined for build/test/data/dfs/name1'.
-    startMiniDFSCluster(numDataNodes, dataNodeHosts);
+    if(this.dfsCluster == null) {
+      dfsCluster = startMiniDFSCluster(numDataNodes, dataNodeHosts);
+    }
 
     // Start up a zk cluster.
     if (this.zkCluster == null) {
@@ -2665,11 +2674,25 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return dfsCluster;
   }
 
-  public void setDFSCluster(MiniDFSCluster cluster) throws IOException {
-    if (dfsCluster != null && dfsCluster.isClusterUp()) {
-      throw new IOException("DFSCluster is already running! Shut it down first.");
+  public void setDFSCluster(MiniDFSCluster cluster) throws IllegalStateException, IOException {
+    setDFSCluster(cluster, true);
+  }
+
+  /**
+   * Set the MiniDFSCluster
+   * @param cluster cluster to use
+   * @param requireDown requireDown require the that cluster not be "up"
+   *  (MiniDFSCluster#isClusterUp) before it is set.
+   * @throws IllegalStateException if the passed cluster is up when it is required to be down
+   * @throws IOException if the FileSystem could not be set from the passed dfs cluster
+   */
+  public void setDFSCluster(MiniDFSCluster cluster, boolean requireDown)
+      throws IllegalStateException, IOException {
+    if (dfsCluster != null && requireDown && dfsCluster.isClusterUp()) {
+      throw new IllegalStateException("DFSCluster is already running! Shut it down first.");
     }
     this.dfsCluster = cluster;
+    this.setFs();
   }
 
   public FileSystem getTestFileSystem() throws IOException {
