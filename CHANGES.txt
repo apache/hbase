@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.13 - 6/4/2015
+Release 0.98.13 - 6/13/2015
 
 ** Sub-task
     * [HBASE-13035] - [0.98] Backport HBASE-12867 - Shell does not support custom replication endpoint specification
@@ -50,6 +50,7 @@ Release 0.98.13 - 6/4/2015
     * [HBASE-13628] - Use AtomicLong as size in BoundedConcurrentLinkedQueue
     * [HBASE-13632] - Backport HBASE-13368 to branch-1 and 0.98
     * [HBASE-13635] - Regions stuck in transition because master is incorrectly assumed dead
+    * [HBASE-13647] - Default value for hbase.client.operation.timeout is too high
     * [HBASE-13651] - Handle StoreFileScanner FileNotFoundException
     * [HBASE-13662] - RSRpcService.scan() throws an OutOfOrderScannerNext if the scan has a retriable failure
     * [HBASE-13668] - TestFlushRegionEntry is flaky
@@ -57,6 +58,7 @@ Release 0.98.13 - 6/4/2015
     * [HBASE-13711] - Provide an API to set min and max versions in HColumnDescriptor
     * [HBASE-13712] - Backport HBASE-13199 to branch-1
     * [HBASE-13721] - Improve shell scan performances when using LIMIT
+    * [HBASE-13723] - In table.rb scanners are never closed.
     * [HBASE-13727] - Codehaus repository is out of service
     * [HBASE-13731] - TestReplicationAdmin should clean up MiniZKCluster resource
     * [HBASE-13734] - Improper timestamp checking with VisibilityScanDeleteTracker
@@ -64,6 +66,14 @@ Release 0.98.13 - 6/4/2015
     * [HBASE-13757] - TestMultiParallel (and others) failing on 0.98 since HBASE-13712
     * [HBASE-13767] - Allow ZKAclReset to set and not just clear ZK ACLs
     * [HBASE-13768] - ZooKeeper znodes are bootstrapped with insecure ACLs in a secure configuration
+    * [HBASE-13776] - Setting illegal versions for HColumnDescriptor does not throw IllegalArgumentException 
+    * [HBASE-13777] - Table fragmentation display triggers NPE on master status page
+    * [HBASE-13778] - BoundedByteBufferPool incorrectly increasing runningAverage buffer length
+    * [HBASE-13779] - Calling table.exists() before table.get() end up with an empty Result
+    * [HBASE-13801] - Hadoop src checksum is shown instead of HBase src checksum in master / RS UI
+    * [HBASE-13807] - [0.98] NoTagsKeyValue optimization is not proper
+    * [HBASE-13812] - Deleting of last Column Family of a table should not be allowed
+    * [HBASE-13826] - Unable to create table when group acls are appropriately set.
 
 ** Improvement
     * [HBASE-12415] - Add add(byte[][] arrays) to Bytes.
@@ -71,6 +81,7 @@ Release 0.98.13 - 6/4/2015
     * [HBASE-13122] - Improve efficiency for return codes of some filters
     * [HBASE-13132] - Improve RemoveColumn action debug message 
     * [HBASE-13216] - Add version info in RPC connection header
+    * [HBASE-13344] - Add enforcer rule that matches our JDK support statement
     * [HBASE-13350] - Add a debug-warn if we fail HTD checks even if table.sanity.checks is false
     * [HBASE-13366] - Throw DoNotRetryIOException instead of read only IOException
     * [HBASE-13369] - Expose scanNext stats to region server level
@@ -82,6 +93,7 @@ Release 0.98.13 - 6/4/2015
     * [HBASE-13671] - More classes to add to the invoking repository of org.apache.hadoop.hbase.mapreduce.driver
     * [HBASE-13677] - RecoverableZookeeper WARNs on expected events
     * [HBASE-13684] - Allow mlockagent to be used when not starting as root
+    * [HBASE-13761] - Optimize FuzzyRowFilter
     * [HBASE-13780] - Default to 700 for HDFS root dir permissions for secure deployments
 
 ** New Feature
@@ -89,6 +101,7 @@ Release 0.98.13 - 6/4/2015
 
 ** Task
     * [HBASE-13610] - Backport HBASE-13222 (Provide means of non-destructive balancer inspection) to 0.98
+    * [HBASE-13799] - javadoc how Scan gets polluted when used; if you set attributes or ask for scan metrics
 
 ** Test
     * [HBASE-13413] - Create an integration test for Replication
