@@ -55,7 +55,7 @@ function tgz_mover {
 
 function deploy {
   MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 clean install -DskipTests -Prelease
-  MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 install -DskipTests site assembly:single -Prelease 
+  MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 install -DskipTests post-site assembly:single -Prelease 
   tgz_mover
   MAVEN_OPTS="${mvnopts}" ${mvn} -f pom.xml.$1 deploy -DskipTests -Papache-release 
 }
