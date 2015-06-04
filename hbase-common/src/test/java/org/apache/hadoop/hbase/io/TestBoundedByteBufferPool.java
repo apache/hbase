@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.io;
 import static org.junit.Assert.assertEquals;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.After;
@@ -88,7 +88,7 @@ public class TestBoundedByteBufferPool {
 
   @Test
   public void testBufferSizeGrowWithMultiThread() throws Exception {
-    final ConcurrentLinkedDeque<ByteBuffer> bufferQueue = new ConcurrentLinkedDeque<ByteBuffer>();
+    final ConcurrentLinkedQueue<ByteBuffer> bufferQueue = new ConcurrentLinkedQueue<ByteBuffer>();
     int takeBufferThreadsCount = 30;
     int putBufferThreadsCount = 1;
     Thread takeBufferThreads[] = new Thread[takeBufferThreadsCount];
