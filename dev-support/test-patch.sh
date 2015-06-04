@@ -901,18 +901,18 @@ checkSiteXml () {
   echo ""
   echo ""
 
-  echo "$MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
+  echo "$MVN package post-site -DskipTests -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/patchSiteOutput.txt 2>&1"
   export MAVEN_OPTS="${MAVEN_OPTS}"
-  $MVN package site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
+  $MVN package post-site -DskipTests -D${PROJECT_NAME}PatchProcess  > $PATCH_DIR/patchSiteOutput.txt 2>&1
   if [[ $? != 0 ]] ; then
     JIRA_COMMENT="$JIRA_COMMENT
 
-    {color:red}-1 site{color}.  The patch appears to cause mvn site goal to fail."
+    {color:red}-1 site{color}.  The patch appears to cause mvn post-site goal to fail."
     return 1
   fi
   JIRA_COMMENT="$JIRA_COMMENT
 
-  {color:green}+1 site{color}.  The mvn site goal succeeds with this patch."
+  {color:green}+1 site{color}.  The mvn post-site goal succeeds with this patch."
   return 0
 }
 

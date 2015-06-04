@@ -1080,6 +1080,7 @@
         </executions>
       </plugin>
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
         <version>${maven.antrun.version}</version>
         <inherited>false</inherited>
@@ -1191,7 +1192,7 @@
     <bouncycastle.version>1.46</bouncycastle.version>
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
-    <maven.antrun.version>1.6</maven.antrun.version>
+    <maven.antrun.version>1.8</maven.antrun.version>
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <javadoc.version>2.9</javadoc.version>
@@ -1794,7 +1795,7 @@
                 </goals>
                 <configuration>
                   <tasks>
-                    <echo>Maven Exceution Environment</echo>
+                    <echo>Maven Execution Environment</echo>
                     <echo>MAVEN_OPTS="${env.MAVEN_OPTS}"</echo>
                   </tasks>
                 </configuration>
