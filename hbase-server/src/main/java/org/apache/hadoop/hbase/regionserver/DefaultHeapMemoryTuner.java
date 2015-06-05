@@ -24,6 +24,10 @@ import static org.apache.hadoop.hbase.HConstants.HFILE_BLOCK_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY;
 import static org.apache.hadoop.hbase.regionserver.HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY;
 
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.Queue;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -45,64 +49,69 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
 
   public static final String STEP_KEY = "hbase.regionserver.heapmemory.autotuner.step";
   public static final float DEFAULT_STEP_VALUE = 0.02f; // 2%
+  public static final int maxNumLookupPeriods = 20;
 
   private static final TunerResult TUNER_RESULT = new TunerResult(true);
   private static final TunerResult NO_OP_TUNER_RESULT = new TunerResult(false);
 
   private Configuration conf;
   private float step = DEFAULT_STEP_VALUE;
+  private Queue<Long> prevWriteCounts = new LinkedList<Long>();
+  private Queue<Long> prevReadCounts = new LinkedList<Long>();
+  private int lookupCounts = 0;
 
   private float globalMemStorePercentMinRange;
   private float globalMemStorePercentMaxRange;
   private float blockCachePercentMinRange;
   private float blockCachePercentMaxRange;
 
-  private boolean lastStepDirection = true ;  // true if last time tuner increased block cache size 
+  private boolean stepDirection;  // true if last time tuner increased block cache size 
   private boolean isFirstTuning = true;
   private long prevFlushCount;
   private long prevEvictCount;
+
   
   @Override
   public TunerResult tune(TunerContext context) {
     long blockedFlushCount = context.getBlockedFlushCount();
     long unblockedFlushCount = context.getUnblockedFlushCount();
     long evictCount = context.getEvictCount();
+    long writeRequestCount = context.getWriteRequestCount();
+    long readRequestCount = context.getReadRequestCount();
     boolean memstoreSufficient = blockedFlushCount == 0 && unblockedFlushCount == 0;
     boolean blockCacheSufficient = evictCount == 0;
-    
+    boolean loadSenario = checkLoadSenario(writeRequestCount,readRequestCount);
     if (memstoreSufficient && blockCacheSufficient) {
-      isFirstTuning = true;
+      prevFlushCount = blockedFlushCount + unblockedFlushCount;
+      prevEvictCount = evictCount;
       return NO_OP_TUNER_RESULT;
     }
     float newMemstoreSize;
     float newBlockCacheSize;
     if (memstoreSufficient) {
       // Increase the block cache size and corresponding decrease in memstore size
-      lastStepDirection = true;
+      stepDirection = true;
     } else if (blockCacheSufficient) {
       // Increase the memstore size and corresponding decrease in block cache size
-      lastStepDirection = false;
+      stepDirection = false;
+    } else if(!isFirstTuning) {
+	  float percentChangeInEvictCount  = (float)(evictCount-prevEvictCount)/(float)(prevEvictCount);
+	  float percentChangeInFlushes =
+	  (float)(blockedFlushCount + unblockedFlushCount-prevFlushCount)/(float)(prevFlushCount);
+	  //Negative is desirable , should repeat previous step
+	  //if it is positive , we should move in opposite direction
+	  if (percentChangeInEvictCount + percentChangeInFlushes > 0.0) {
+		//revert last step if it went wrong
+		stepDirection = !stepDirection;
+	  } else {
+		//last step was useful, taking step based on current stats
+		stepDirection = loadSenario;
+	  }
     } else {
-      if (isFirstTuning){
-    	isFirstTuning = false;
-    	//TODO to find which side we should step
-    	//just taking a random step to increase  memstore size
-    	lastStepDirection = false;
-      }
-      else {
-    	  float percentChangeInEvictCount  = (float)(evictCount-prevEvictCount)/(float)(prevEvictCount);
-    	  float percentChangeInFlushes =
-    	  (float)(blockedFlushCount + unblockedFlushCount-prevFlushCount)/(float)(prevFlushCount);
-    	  //TODO use some better hurestics to calculate which side we should give more memory
-    	  //Negative is desirable , should repeat previous step
-    	  //if it is positive , we should move in opposite direction
-    	  float indicator = percentChangeInEvictCount + percentChangeInFlushes;
-    	  if (indicator > 0.0){
-    		 lastStepDirection = ! lastStepDirection;
-    	  }
-      }
+      stepDirection = loadSenario;
     }
-    if (lastStepDirection){
+    
+    if (stepDirection){
       newBlockCacheSize = context.getCurBlockCacheSize() + step;
       newMemstoreSize = context.getCurMemStoreSize() - step;
     } else {
@@ -144,5 +153,29 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
         HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
     this.globalMemStorePercentMaxRange = conf.getFloat(MEMSTORE_SIZE_MAX_RANGE_KEY,
         HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false));
+  }
+  /*
+   * @Returns true if read it seems its getting read heavy
+   * and need to increase block cache size
+   */
+  private boolean checkLoadSenario(long writeRequestCount , long readRequestCount) {
+	  lookupCounts++;
+	  prevWriteCounts.offer(writeRequestCount);
+	  prevReadCounts.offer(readRequestCount);
+	  Iterator<Long> readCountIterator = prevReadCounts.iterator();
+	  Iterator<Long> writeCountIterator = prevWriteCounts.iterator();
+	  int loadCount = 0;
+	  while(readCountIterator.hasNext() && writeCountIterator.hasNext()){
+		  if (readCountIterator.next() > writeCountIterator.next()) {
+			 loadCount++;
+		  } else {
+			loadCount--;
+		  }
+		}
+	  if (lookupCounts > maxNumLookupPeriods){
+		 prevWriteCounts.poll();
+		 prevReadCounts.poll();
+	  }
+	  return (loadCount>=0);
   }
 }

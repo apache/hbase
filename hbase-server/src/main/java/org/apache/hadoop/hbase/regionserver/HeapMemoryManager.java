@@ -217,15 +217,9 @@ public class HeapMemoryManager {
     private HeapMemoryTuner heapMemTuner;
     private AtomicLong blockedFlushCount = new AtomicLong();
     private AtomicLong unblockedFlushCount = new AtomicLong();
-    private long lastEvictCount = 0L;
-    private long curEvictCount;
-    private long evictCount;
-    private long lastWriteRequestCount = 0L;
-    private long curWriteRequestCount;
-    private long writeRequestCount;
-    private long lastReadRequestCount = 0L;
-    private long curReadRequestCount;
-    private long readRequestCount;
+    private long evictCount = 0;
+    private long writeRequestCount = 0;
+    private long readRequestCount =0;
     private TunerContext tunerContext = new TunerContext();
     private boolean alarming = false;
 
@@ -273,24 +267,26 @@ public class HeapMemoryManager {
     }
 
     private void tune() {
+      //TODO check if we can increase the memory boundaries 
+      //while remaining in the limits
+      long curEvictCount;
+      long curWriteRequestCount;
+      long curReadRequestCount;
       curEvictCount = blockCache.getStats().getEvictedCount();
-      evictCount =  curEvictCount - lastEvictCount;
-      lastEvictCount = curEvictCount;
+      tunerContext.setEvictCount(curEvictCount - evictCount);
+      evictCount =  curEvictCount;
       curWriteRequestCount = server.getWriteRequestCount();
-      writeRequestCount = curWriteRequestCount - lastWriteRequestCount;
-      lastWriteRequestCount = curWriteRequestCount;
+      tunerContext.setWriteRequestCount(curWriteRequestCount - writeRequestCount);
+      writeRequestCount = curWriteRequestCount;
       curReadRequestCount = server.getReadRequestCount();
-      readRequestCount = curReadRequestCount - lastReadRequestCount;
-      lastReadRequestCount = curReadRequestCount;
+      tunerContext.setReadRequestCount(curReadRequestCount - readRequestCount);
+      readRequestCount = curReadRequestCount;
       tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
       tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));
-      tunerContext.setEvictCount(evictCount);
-      tunerContext.setReadRequestCount(readRequestCount);
-      tunerContext.setWriteRequestCount(writeRequestCount);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
-      LOG.info("Data passed to HeapMemoryTuner : " + lastEvictCount + " "
-    	  + lastReadRequestCount + " " + lastWriteRequestCount);
+      LOG.info("Data passed to HeapMemoryTuner : " + evictCount + " "
+    	  + readRequestCount + " " + writeRequestCount);
       TunerResult result = null;
       try {
         result = this.heapMemTuner.tune(tunerContext);
