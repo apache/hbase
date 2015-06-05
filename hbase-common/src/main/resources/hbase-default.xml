@@ -296,19 +296,23 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
     <name>hbase.regionserver.global.memstore.size</name>
-    <value>0.4</value>
+    <value></value>
     <description>Maximum size of all memstores in a region server before new
-      updates are blocked and flushes are forced. Defaults to 40% of heap.
+      updates are blocked and flushes are forced. Defaults to 40% of heap (0.4).
       Updates are blocked and flushes are forced until size of all memstores
-      in a region server hits hbase.regionserver.global.memstore.size.lower.limit.</description>
+      in a region server hits hbase.regionserver.global.memstore.size.lower.limit.
+      The default value in this configuration has been intentionally left emtpy in order to
+      honor the old hbase.regionserver.global.memstore.upperLimit property if present.</description>
   </property>
   <property>
     <name>hbase.regionserver.global.memstore.size.lower.limit</name>
-    <value>0.95</value>
+    <value></value>
     <description>Maximum size of all memstores in a region server before flushes are forced.
-      Defaults to 95% of hbase.regionserver.global.memstore.size.
+      Defaults to 95% of hbase.regionserver.global.memstore.size (0.95).
       A 100% value for this value causes the minimum possible flushing to occur when updates are 
-      blocked due to memstore limiting.</description>
+      blocked due to memstore limiting.
+      The default value in this configuration has been intentionally left emtpy in order to
+      honor the old hbase.regionserver.global.memstore.lowerLimit property if present.</description>
   </property>
   <property>
     <name>hbase.regionserver.optionalcacheflushinterval</name>
