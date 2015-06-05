@@ -29,6 +29,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -81,12 +82,13 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
         .setName("test")
         .addEndpoint(new URI("https://localhost"))
         .setConf(conf)
-        .keyPassword(sslConf.get("ssl.server.keystore.keypassword"))
+        .keyPassword(HBaseConfiguration.getPassword(sslConf, "ssl.server.keystore.keypassword",
+            null))
         .keyStore(sslConf.get("ssl.server.keystore.location"),
-            sslConf.get("ssl.server.keystore.password"),
+            HBaseConfiguration.getPassword(sslConf, "ssl.server.keystore.password", null),
             sslConf.get("ssl.server.keystore.type", "jks"))
         .trustStore(sslConf.get("ssl.server.truststore.location"),
-            sslConf.get("ssl.server.truststore.password"),
+            HBaseConfiguration.getPassword(sslConf, "ssl.server.truststore.password", null),
             sslConf.get("ssl.server.truststore.type", "jks")).build();
     server.addServlet("echo", "/echo", TestHttpServer.EchoServlet.class);
     server.start();

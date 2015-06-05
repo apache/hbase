@@ -24,6 +24,7 @@ import java.net.URI;
 
 import javax.servlet.http.HttpServlet;
 
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 
@@ -66,12 +67,12 @@ public class InfoServer {
         builder.setLogDir(logDir);
       }
     if (httpConfig.isSecure()) {
-    builder.keyPassword(c.get("ssl.server.keystore.keypassword"))
+    builder.keyPassword(HBaseConfiguration.getPassword(c, "ssl.server.keystore.keypassword", null))
       .keyStore(c.get("ssl.server.keystore.location"),
-        c.get("ssl.server.keystore.password"),
+        HBaseConfiguration.getPassword(c,"ssl.server.keystore.password", null),
         c.get("ssl.server.keystore.type", "jks"))
       .trustStore(c.get("ssl.server.truststore.location"),
-        c.get("ssl.server.truststore.password"),
+        HBaseConfiguration.getPassword(c, "ssl.server.truststore.password", null),
         c.get("ssl.server.truststore.type", "jks"));
     }
     this.httpServer = builder.build();
