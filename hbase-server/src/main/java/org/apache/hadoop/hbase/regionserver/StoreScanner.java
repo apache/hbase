@@ -22,8 +22,10 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -83,6 +85,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   protected final int minVersions;
   protected final long maxRowSize;
   protected final long cellsPerHeartbeatCheck;
+
+  protected Set<KeyValueHeap> heapsForDelayedClose = new HashSet<KeyValueHeap>();
 
   /**
    * The number of KVs seen by the scanner. Includes explicitly skipped KVs, but not
@@ -437,17 +441,32 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
   @Override
   public void close() {
+    close(true);
+  }
+
+  private void close(boolean withHeapClose){
     lock.lock();
     try {
-    if (this.closing) return;
-    this.closing = true;
-    // under test, we dont have a this.store
-    if (this.store != null)
-      this.store.deleteChangedReaderObserver(this);
-    if (this.heap != null)
-      this.heap.close();
-    this.heap = null; // CLOSED!
-    this.lastTop = null; // If both are null, we are closed.
+      if (this.closing) return;
+      this.closing = true;
+      // under test, we dont have a this.store
+      if (this.store != null) this.store.deleteChangedReaderObserver(this);
+      if (withHeapClose) {
+        for (KeyValueHeap h : this.heapsForDelayedClose) {
+          h.close();
+        }
+        this.heapsForDelayedClose.clear();
+        if (this.heap != null) {
+          this.heap.close();
+          this.heap = null; // CLOSED!
+        }
+      } else {
+        if (this.heap != null) {
+          this.heapsForDelayedClose.add(this.heap);
+          this.heap = null;
+        }
+      }
+      this.lastTop = null; // If both are null, we are closed.
     } finally {
       lock.unlock();
     }
@@ -491,13 +510,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // if the heap was left null, then the scanners had previously run out anyways, close and
     // return.
     if (this.heap == null) {
-      close();
+      close(false);// Do all cleanup except heap.close()
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
     Cell peeked = this.heap.peek();
     if (peeked == null) {
-      close();
+      close(false);// Do all cleanup except heap.close()
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
@@ -547,7 +566,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
           Filter f = matcher.getFilter();
           if (f != null) {
-            // TODO convert Scan Query Matcher to be Cell instead of KV based ?
             cell = f.transformCell(cell);
           }
 
@@ -604,7 +622,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
 
         case DONE_SCAN:
-          close();
+          close(false);// Do all cleanup except heap.close()
           return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
 
         case SEEK_NEXT_ROW:
@@ -626,7 +644,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           break;
 
         case SEEK_NEXT_USING_HINT:
-          // TODO convert resee to Cell?
           Cell nextKV = matcher.getNextKeyHint(cell);
           if (nextKV != null) {
             seekAsDirection(nextKV);
@@ -645,7 +662,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     // No more keys
-    close();
+    close(false);// Do all cleanup except heap.close()
     return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     } finally {
       lock.unlock();
@@ -705,7 +722,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     //DebugPrint.println("SS updateReaders, topKey = " + lastTop);
 
     // close scanners to old obsolete Store files
-    this.heap.close(); // bubble thru and close all scanners.
+    this.heapsForDelayedClose.add(this.heap);// Don't close now. Delay it till StoreScanner#close
     this.heap = null; // the re-seeks could be slow (access HDFS) free up memory ASAP
 
     // Let the next() call handle re-creating and seeking

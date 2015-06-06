@@ -85,7 +85,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
       }
 
       if (!scanner.seekToPreviousRow(seekKey)) {
-        scanner.close();
+        this.scannersForDelayedClose.add(scanner);
       } else {
         heap.add(scanner);
       }
@@ -114,7 +114,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
         return current != null;
       }
       if (!scanner.backwardSeek(seekKey)) {
-        scanner.close();
+        this.scannersForDelayedClose.add(scanner);
       } else {
         heap.add(scanner);
       }
@@ -134,7 +134,7 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
       if (this.current.seekToPreviousRow(kvReturn)) {
         this.heap.add(this.current);
       } else {
-        this.current.close();
+        this.scannersForDelayedClose.add(this.current);
       }
       this.current = pollRealKV();
     } else {

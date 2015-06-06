@@ -1077,6 +1077,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           new KeyValue.KeyOnlyKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
               + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen));
     }
+
+    @Override
+    public void close() {
+      // HBASE-12295 will add code here.
+    }
   }
 
   public Path getPath() {

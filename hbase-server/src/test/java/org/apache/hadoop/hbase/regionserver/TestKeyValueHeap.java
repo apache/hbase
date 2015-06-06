@@ -190,12 +190,14 @@ public class TestKeyValueHeap extends HBaseTestCase {
     l1.add(new KeyValue(row1, fam1, col5, data));
     l1.add(new KeyValue(row2, fam1, col1, data));
     l1.add(new KeyValue(row2, fam1, col2, data));
-    scanners.add(new Scanner(l1));
+    Scanner s1 = new Scanner(l1);
+    scanners.add(s1);
 
     List<Cell> l2 = new ArrayList<Cell>();
     l2.add(new KeyValue(row1, fam1, col1, data));
     l2.add(new KeyValue(row1, fam1, col2, data));
-    scanners.add(new Scanner(l2));
+    Scanner s2 = new Scanner(l2);
+    scanners.add(s2);
 
     List<Cell> l3 = new ArrayList<Cell>();
     l3.add(new KeyValue(row1, fam1, col3, data));
@@ -203,16 +205,25 @@ public class TestKeyValueHeap extends HBaseTestCase {
     l3.add(new KeyValue(row1, fam2, col1, data));
     l3.add(new KeyValue(row1, fam2, col2, data));
     l3.add(new KeyValue(row2, fam1, col3, data));
-    scanners.add(new Scanner(l3));
+    Scanner s3 = new Scanner(l3);
+    scanners.add(s3);
 
     List<Cell> l4 = new ArrayList<Cell>();
-    scanners.add(new Scanner(l4));
+    Scanner s4 = new Scanner(l4);
+    scanners.add(s4);
 
     //Creating KeyValueHeap
     KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
 
     while(kvh.next() != null);
-
+    // Once the internal scanners go out of Cells, those will be removed from KVHeap's priority
+    // queue and added to a Set for lazy close. The actual close will happen only on KVHeap#close()
+    assertEquals(4, kvh.scannersForDelayedClose.size());
+    assertTrue(kvh.scannersForDelayedClose.contains(s1));
+    assertTrue(kvh.scannersForDelayedClose.contains(s2));
+    assertTrue(kvh.scannersForDelayedClose.contains(s3));
+    assertTrue(kvh.scannersForDelayedClose.contains(s4));
+    kvh.close();
     for(KeyValueScanner scanner : scanners) {
       assertTrue(((Scanner)scanner).isClosed());
     }

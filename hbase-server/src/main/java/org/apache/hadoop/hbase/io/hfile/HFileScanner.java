@@ -149,4 +149,9 @@ public interface HFileScanner {
    * @return the next key in the index (the key to seek to the next block)
    */
   Cell getNextIndexedKey();
+
+  /**
+   * Close this HFile scanner and do necessary cleanup.
+   */
+  void close();
 }
