@@ -269,10 +269,11 @@ public class HeapMemoryManager {
     }
 
     private void tune() {
-      evictCount = blockCache.getStats().getEvictedCount() - evictCount;
+      long curEvictCount = blockCache.getStats().getEvictedCount();
+      tunerContext.setEvictCount(curEvictCount - evictCount);
+      evictCount = curEvictCount;
       tunerContext.setBlockedFlushCount(blockedFlushCount.getAndSet(0));
       tunerContext.setUnblockedFlushCount(unblockedFlushCount.getAndSet(0));
-      tunerContext.setEvictCount(evictCount);
       tunerContext.setCurBlockCacheSize(blockCachePercent);
       tunerContext.setCurMemStoreSize(globalMemStorePercent);
       TunerResult result = null;
