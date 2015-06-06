@@ -1104,6 +1104,16 @@ public class RpcClientImpl extends AbstractRpcClient {
     synchronized (connections) {
       for (Connection conn : connections.values()) {
         conn.interrupt();
+        if (conn.callSender != null) {
+          conn.callSender.interrupt();
+        }
+
+        // In case the CallSender did not setupIOStreams() yet, the Connection may not be started
+        // at all (if CallSender has a cancelled Call it can happen). See HBASE-13851
+        if (!conn.isAlive()) {
+          conn.markClosed(new InterruptedIOException("RpcClient is closing"));
+          conn.close();
+        }
       }
     }
 
