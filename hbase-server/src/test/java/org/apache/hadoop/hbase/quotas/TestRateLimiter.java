@@ -18,18 +18,16 @@
 
 package org.apache.hadoop.hbase.quotas;
 
-import java.util.concurrent.TimeUnit;
-
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+
+import java.util.concurrent.TimeUnit;
+
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Verify the behaviour of the Rate Limiter.
@@ -58,16 +56,14 @@ public class TestRateLimiter {
 
   private void testWaitInterval(final TimeUnit timeUnit, final long limit,
       final long expectedWaitInterval) {
-    RateLimiter limiter = new RateLimiter();
+    RateLimiter limiter = new AverageIntervalRateLimiter();
     limiter.set(limit, timeUnit);
 
     long nowTs = 0;
-    long lastTs = 0;
-
     // consume all the available resources, one request at the time.
     // the wait interval should be 0
     for (int i = 0; i < (limit - 1); ++i) {
-      assertTrue(limiter.canExecute(nowTs, lastTs));
+      assertTrue(limiter.canExecute());
       limiter.consume();
       long waitInterval = limiter.waitInterval();
       assertEquals(0, waitInterval);
@@ -76,40 +72,102 @@ public class TestRateLimiter {
     for (int i = 0; i < (limit * 4); ++i) {
       // There is one resource available, so we should be able to
       // consume it without waiting.
-      assertTrue(limiter.canExecute(nowTs, lastTs));
+      limiter.setNextRefillTime(limiter.getNextRefillTime() - nowTs);
+      assertTrue(limiter.canExecute());
       assertEquals(0, limiter.waitInterval());
       limiter.consume();
-      lastTs = nowTs;
-
       // No more resources are available, we should wait for at least an interval.
       long waitInterval = limiter.waitInterval();
       assertEquals(expectedWaitInterval, waitInterval);
 
       // set the nowTs to be the exact time when resources should be available again.
-      nowTs += waitInterval;
+      nowTs = waitInterval;
 
       // artificially go into the past to prove that when too early we should fail.
-      assertFalse(limiter.canExecute(nowTs - 500, lastTs));
+      long temp = nowTs + 500;
+      limiter.setNextRefillTime(limiter.getNextRefillTime() + temp);
+      assertFalse(limiter.canExecute());
+      //Roll back the nextRefillTime set to continue further testing
+      limiter.setNextRefillTime(limiter.getNextRefillTime() - temp);
     }
   }
 
   @Test
-  public void testOverconsumption() {
-    RateLimiter limiter = new RateLimiter();
+  public void testOverconsumptionAverageIntervalRefillStrategy() {
+    RateLimiter limiter = new AverageIntervalRateLimiter();
     limiter.set(10, TimeUnit.SECONDS);
 
     // 10 resources are available, but we need to consume 20 resources
     // Verify that we have to wait at least 1.1sec to have 1 resource available
-    assertTrue(limiter.canExecute(0, 0));
+    assertTrue(limiter.canExecute());
     limiter.consume(20);
-    assertEquals(1100, limiter.waitInterval());
+    // To consume 1 resource wait for 100ms
+    assertEquals(100, limiter.waitInterval(1));
+    // To consume 10 resource wait for 1000ms
+    assertEquals(1000, limiter.waitInterval(10));
 
-    // Verify that after 1sec we need to wait for another 0.1sec to get a resource available
-    assertFalse(limiter.canExecute(1000, 0));
-    assertEquals(100, limiter.waitInterval());
-
-    // Verify that after 1.1sec the resource is available
-    assertTrue(limiter.canExecute(1100, 0));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 900);
+    // Verify that after 1sec the 1 resource is available
+    assertTrue(limiter.canExecute(1));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 100);
+    // Verify that after 1sec the 10 resource is available
+    assertTrue(limiter.canExecute());
     assertEquals(0, limiter.waitInterval());
+  }
+
+  @Test
+  public void testOverconsumptionFixedIntervalRefillStrategy() throws InterruptedException {
+    RateLimiter limiter = new FixedIntervalRateLimiter();
+    limiter.set(10, TimeUnit.SECONDS);
+
+    // 10 resources are available, but we need to consume 20 resources
+    // Verify that we have to wait at least 1.1sec to have 1 resource available
+    assertTrue(limiter.canExecute());
+    limiter.consume(20);
+    // To consume 1 resource also wait for 1000ms
+    assertEquals(1000, limiter.waitInterval(1));
+    // To consume 10 resource wait for 100ms
+    assertEquals(1000, limiter.waitInterval(10));
+
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 900);
+    // Verify that after 1sec also no resource should be available
+    assertFalse(limiter.canExecute(1));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 100);
+
+    // Verify that after 1sec the 10 resource is available
+    assertTrue(limiter.canExecute());
+    assertEquals(0, limiter.waitInterval());
+  }
+
+  @Test
+  public void testFixedIntervalResourceAvailability() throws Exception {
+    RateLimiter limiter = new FixedIntervalRateLimiter();
+    limiter.set(10, TimeUnit.MILLISECONDS);
+
+    assertTrue(limiter.canExecute(10));
+    limiter.consume(3);
+    assertEquals(7, limiter.getAvailable());
+    assertFalse(limiter.canExecute(10));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 3);
+    assertTrue(limiter.canExecute(10));
+    assertEquals(10, limiter.getAvailable());
+  }
+
+  @Test
+  public void testLimiterBySmallerRate() throws InterruptedException {
+    // set limiter is 10 resources per seconds
+    RateLimiter limiter = new FixedIntervalRateLimiter();
+    limiter.set(10, TimeUnit.SECONDS);
+
+    int count = 0; // control the test count
+    while ((count++) < 10) {
+      // test will get 3 resources per 0.5 sec. so it will get 6 resources per sec.
+      limiter.setNextRefillTime(limiter.getNextRefillTime() - 500);
+      for (int i = 0; i < 3; i++) {
+        // 6 resources/sec < limit, so limiter.canExecute(nowTs, lastTs) should be true
+        assertEquals(true, limiter.canExecute());
+        limiter.consume();
+      }
+    }
   }
 }
