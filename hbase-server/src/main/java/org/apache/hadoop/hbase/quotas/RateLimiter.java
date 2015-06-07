@@ -16,36 +16,58 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
- * Simple rate limiter. Usage Example: RateLimiter limiter = new RateLimiter(); // At this point you
- * have a unlimited resource limiter limiter.set(10, TimeUnit.SECONDS); // set 10 resources/sec long
- * lastTs = 0; // You need to keep track of the last update timestamp while (true) { long now =
- * System.currentTimeMillis(); // call canExecute before performing resource consuming operation
- * bool canExecute = limiter.canExecute(now, lastTs); // If there are no available resources, wait
- * until one is available if (!canExecute) Thread.sleep(limiter.waitInterval()); // ...execute the
- * work and consume the resource... limiter.consume(); }
+ * Simple rate limiter.
+ *
+ * Usage Example:
+ *    // At this point you have a unlimited resource limiter
+ *   RateLimiter limiter = new AverageIntervalRateLimiter();
+ *                         or new FixedIntervalRateLimiter();
+ *   limiter.set(10, TimeUnit.SECONDS);       // set 10 resources/sec
+ *
+ *   while (true) {
+ *     // call canExecute before performing resource consuming operation
+ *     bool canExecute = limiter.canExecute();
+ *     // If there are no available resources, wait until one is available
+ *     if (!canExecute) Thread.sleep(limiter.waitInterval());
+ *     // ...execute the work and consume the resource...
+ *     limiter.consume();
+ *   }
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class RateLimiter {
-  private long tunit = 1000; // Timeunit factor for translating to ms.
+public abstract class RateLimiter {
+  public static final String QUOTA_RATE_LIMITER_CONF_KEY = "hbase.quota.rate.limiter";
+  private long tunit = 1000;           // Timeunit factor for translating to ms.
   private long limit = Long.MAX_VALUE; // The max value available resource units can be refilled to.
   private long avail = Long.MAX_VALUE; // Currently available resource units
 
-  public RateLimiter() {
-  }
+  /**
+   * Refill the available units w.r.t the elapsed time.
+   * @param limit Maximum available resource units that can be refilled to.
+   * @param available Currently available resource units
+   */
+  abstract long refill(long limit, long available);
+
+  /**
+   * Time in milliseconds to wait for before requesting to consume 'amount' resource.
+   * @param limit Maximum available resource units that can be refilled to.
+   * @param available Currently available resource units
+   * @param amount Resources for which time interval to calculate for
+   * @return estimate of the ms required to wait before being able to provide 'amount' resources.
+   */
+  abstract long getWaitInterval(long limit, long available, long amount);
+
 
   /**
    * Set the RateLimiter max available resources and refill period.
    * @param limit The max value available resource units can be refilled to.
    * @param timeUnit Timeunit factor for translating to ms.
    */
-  public synchronized void set(final long limit, final TimeUnit timeUnit) {
+  public void set(final long limit, final TimeUnit timeUnit) {
     switch (timeUnit) {
-    case NANOSECONDS:
-      throw new RuntimeException("Unsupported NANOSECONDS TimeUnit");
-    case MICROSECONDS:
-      throw new RuntimeException("Unsupported MICROSECONDS TimeUnit");
     case MILLISECONDS:
       tunit = 1;
       break;
@@ -62,23 +84,25 @@ public class RateLimiter {
       tunit = 24 * 60 * 60 * 1000;
       break;
     default:
-      throw new RuntimeException("Invalid TimeUnit " + timeUnit);
+      throw new RuntimeException("Unsupported " + timeUnit.name() + " TimeUnit.");
     }
     this.limit = limit;
     this.avail = limit;
   }
 
   public String toString() {
+    String rateLimiter = this.getClass().getSimpleName();
     if (limit == Long.MAX_VALUE) {
-      return "RateLimiter(Bypass)";
+      return rateLimiter + "(Bypass)";
     }
-    return "RateLimiter(avail=" + avail + " limit=" + limit + " tunit=" + tunit + ")";
+    return rateLimiter + "(avail=" + avail + " limit=" + limit + " tunit=" + tunit + ")";
   }
 
   /**
-   * Sets the current instance of RateLimiter to a new values. if current limit is smaller than the
-   * new limit, bump up the available resources. Otherwise allow clients to use up the previously
-   * available resources.
+   * Sets the current instance of RateLimiter to a new values.
+   *
+   * if current limit is smaller than the new limit, bump up the available resources.
+   * Otherwise allow clients to use up the previously available resources.
    */
   public synchronized void update(final RateLimiter other) {
     this.tunit = other.tunit;
@@ -100,25 +124,38 @@ public class RateLimiter {
     return avail;
   }
 
-  /**
-   * given the time interval, is there at least one resource available to allow execution?
-   * @param now the current timestamp
-   * @param lastTs the timestamp of the last update
-   * @return true if there is at least one resource available, otherwise false
-   */
-  public boolean canExecute(final long now, final long lastTs) {
-    return canExecute(now, lastTs, 1);
+  protected long getTimeUnitInMillis() {
+    return tunit;
   }
 
   /**
-   * given the time interval, are there enough available resources to allow execution?
-   * @param now the current timestamp
-   * @param lastTs the timestamp of the last update
+   * Is there at least one resource available to allow execution?
+   * @return true if there is at least one resource available, otherwise false
+   */
+  public boolean canExecute() {
+    return canExecute(1);
+  }
+
+  /**
+   * Are there enough available resources to allow execution?
    * @param amount the number of required resources
    * @return true if there are enough available resources, otherwise false
    */
-  public synchronized boolean canExecute(final long now, final long lastTs, final long amount) {
-    return avail >= amount ? true : refill(now, lastTs) >= amount;
+  public synchronized boolean canExecute(final long amount) {
+    long refillAmount = refill(limit, avail);
+    if (refillAmount == 0 && avail < amount) {
+      return false;
+    }
+    // check for positive overflow
+    if (avail <= Long.MAX_VALUE - refillAmount) {
+      avail = Math.max(0, Math.min(avail + refillAmount, limit));
+    } else {
+      avail = Math.max(0, limit);
+    }
+    if (avail >= amount) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -134,6 +171,9 @@ public class RateLimiter {
    */
   public synchronized void consume(final long amount) {
     this.avail -= amount;
+    if (this.avail < 0) {
+      this.avail = 0;
+    }
   }
 
   /**
@@ -148,18 +188,16 @@ public class RateLimiter {
    */
   public synchronized long waitInterval(final long amount) {
     // TODO Handle over quota?
-    return (amount <= avail) ? 0 : ((amount * tunit) / limit) - ((avail * tunit) / limit);
+    return (amount <= avail) ? 0 : getWaitInterval(limit, avail, amount);
   }
 
-  /**
-   * given the specified time interval, refill the avilable units to the proportionate to elapsed
-   * time or to the prespecified limit.
-   */
-  private long refill(final long now, final long lastTs) {
-    long delta = (limit * (now - lastTs)) / tunit;
-    if (delta > 0) {
-      avail = Math.min(limit, avail + delta);
-    }
-    return avail;
+  // This method is for strictly testing purpose only
+  @VisibleForTesting
+  public void setNextRefillTime(long nextRefillTime) {
+    this.setNextRefillTime(nextRefillTime);
+  }
+
+  public long getNextRefillTime() {
+    return this.getNextRefillTime();
   }
 }

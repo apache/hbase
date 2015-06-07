@@ -30,13 +30,14 @@ public class ThrottlingException extends QuotaExceededException {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public enum Type {
-    NumRequestsExceeded, NumReadRequestsExceeded, NumWriteRequestsExceeded, WriteSizeExceeded,
-    ReadSizeExceeded,
+    NumRequestsExceeded, RequestSizeExceeded, NumReadRequestsExceeded, NumWriteRequestsExceeded,
+    WriteSizeExceeded, ReadSizeExceeded,
   }
 
-  private static final String[] MSG_TYPE = new String[] { "number of requests exceeded",
-      "number of read requests exceeded", "number of write requests exceeded",
-      "write size limit exceeded", "read size limit exceeded", };
+  private static final String[] MSG_TYPE =
+      new String[] { "number of requests exceeded", "request size limit exceeded",
+          "number of read requests exceeded", "number of write requests exceeded",
+          "write size limit exceeded", "read size limit exceeded", };
 
   private static final String MSG_WAIT = " - wait ";
 
@@ -75,6 +76,11 @@ public class ThrottlingException extends QuotaExceededException {
 
   public static void throwNumRequestsExceeded(final long waitInterval) throws ThrottlingException {
     throwThrottlingException(Type.NumRequestsExceeded, waitInterval);
+  }
+  
+  public static void throwRequestSizeExceeded(final long waitInterval)
+      throws ThrottlingException {
+    throwThrottlingException(Type.RequestSizeExceeded, waitInterval);
   }
 
   public static void throwNumReadRequestsExceeded(final long waitInterval)
