@@ -1,16 +1,26 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
- * agreements. See the NOTICE file distributed with this work for additional information regarding
- * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the License. You may obtain a
- * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
- * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
- * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
- * for the specific language governing permissions and limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package org.apache.hadoop.hbase.quotas;
 
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -18,26 +28,40 @@ import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Throttle;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.TimedQuota;
 import org.apache.hadoop.hbase.quotas.OperationQuota.AvgOperationSize;
 import org.apache.hadoop.hbase.quotas.OperationQuota.OperationType;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 /**
  * Simple time based limiter that checks the quota Throttle
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public final class TimeBasedLimiter implements QuotaLimiter {
-  private long writeLastTs = 0;
-  private long readLastTs = 0;
-
-  private RateLimiter reqsLimiter = new RateLimiter();
-  private RateLimiter reqSizeLimiter = new RateLimiter();
-  private RateLimiter writeReqsLimiter = new RateLimiter();
-  private RateLimiter writeSizeLimiter = new RateLimiter();
-  private RateLimiter readReqsLimiter = new RateLimiter();
-  private RateLimiter readSizeLimiter = new RateLimiter();
+public class TimeBasedLimiter implements QuotaLimiter {
+  private static final Configuration conf = HBaseConfiguration.create();
+  private RateLimiter reqsLimiter = null;
+  private RateLimiter reqSizeLimiter = null;
+  private RateLimiter writeReqsLimiter = null;
+  private RateLimiter writeSizeLimiter = null;
+  private RateLimiter readReqsLimiter = null;
+  private RateLimiter readSizeLimiter = null;
   private AvgOperationSize avgOpSize = new AvgOperationSize();
 
   private TimeBasedLimiter() {
+    if (FixedIntervalRateLimiter.class.getName().equals(
+      conf.getClass(RateLimiter.QUOTA_RATE_LIMITER_CONF_KEY, AverageIntervalRateLimiter.class)
+          .getName())) {
+      reqsLimiter = new FixedIntervalRateLimiter();
+      reqSizeLimiter = new FixedIntervalRateLimiter();
+      writeReqsLimiter = new FixedIntervalRateLimiter();
+      writeSizeLimiter = new FixedIntervalRateLimiter();
+      readReqsLimiter = new FixedIntervalRateLimiter();
+      readSizeLimiter = new FixedIntervalRateLimiter();
+    } else {
+      reqsLimiter = new AverageIntervalRateLimiter();
+      reqSizeLimiter = new AverageIntervalRateLimiter();
+      writeReqsLimiter = new AverageIntervalRateLimiter();
+      writeSizeLimiter = new AverageIntervalRateLimiter();
+      readReqsLimiter = new AverageIntervalRateLimiter();
+      readSizeLimiter = new AverageIntervalRateLimiter();
+    }
   }
 
   static QuotaLimiter fromThrottle(final Throttle throttle) {
@@ -90,31 +114,28 @@ public final class TimeBasedLimiter implements QuotaLimiter {
 
   @Override
   public void checkQuota(long writeSize, long readSize) throws ThrottlingException {
-    long now = EnvironmentEdgeManager.currentTime();
-    long lastTs = Math.max(readLastTs, writeLastTs);
-
-    if (!reqsLimiter.canExecute(now, lastTs)) {
+    if (!reqsLimiter.canExecute()) {
       ThrottlingException.throwNumRequestsExceeded(reqsLimiter.waitInterval());
     }
-    if (!reqSizeLimiter.canExecute(now, lastTs, writeSize + readSize)) {
-      ThrottlingException.throwNumRequestsExceeded(reqSizeLimiter
+    if (!reqSizeLimiter.canExecute(writeSize + readSize)) {
+      ThrottlingException.throwRequestSizeExceeded(reqSizeLimiter
           .waitInterval(writeSize + readSize));
     }
 
     if (writeSize > 0) {
-      if (!writeReqsLimiter.canExecute(now, writeLastTs)) {
+      if (!writeReqsLimiter.canExecute()) {
         ThrottlingException.throwNumWriteRequestsExceeded(writeReqsLimiter.waitInterval());
       }
-      if (!writeSizeLimiter.canExecute(now, writeLastTs, writeSize)) {
+      if (!writeSizeLimiter.canExecute(writeSize)) {
         ThrottlingException.throwWriteSizeExceeded(writeSizeLimiter.waitInterval(writeSize));
       }
     }
 
     if (readSize > 0) {
-      if (!readReqsLimiter.canExecute(now, readLastTs)) {
+      if (!readReqsLimiter.canExecute()) {
         ThrottlingException.throwNumReadRequestsExceeded(readReqsLimiter.waitInterval());
       }
-      if (!readSizeLimiter.canExecute(now, readLastTs, readSize)) {
+      if (!readSizeLimiter.canExecute(readSize)) {
         ThrottlingException.throwReadSizeExceeded(readSizeLimiter.waitInterval(readSize));
       }
     }
@@ -124,20 +145,16 @@ public final class TimeBasedLimiter implements QuotaLimiter {
   public void grabQuota(long writeSize, long readSize) {
     assert writeSize != 0 || readSize != 0;
 
-    long now = EnvironmentEdgeManager.currentTime();
-
     reqsLimiter.consume(1);
     reqSizeLimiter.consume(writeSize + readSize);
 
     if (writeSize > 0) {
       writeReqsLimiter.consume(1);
       writeSizeLimiter.consume(writeSize);
-      writeLastTs = now;
     }
     if (readSize > 0) {
       readReqsLimiter.consume(1);
       readSizeLimiter.consume(readSize);
-      readLastTs = now;
     }
   }
 
