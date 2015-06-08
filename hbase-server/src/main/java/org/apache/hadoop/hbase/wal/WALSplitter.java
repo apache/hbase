@@ -123,6 +123,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ServiceException;
+import com.google.protobuf.TextFormat;
 
 /**
  * This class is responsible for splitting up a bunch of regionserver commit log
@@ -315,15 +316,19 @@ public class WALSplitter {
       failedServerName = (serverName == null) ? "" : serverName.getServerName();
       while ((entry = getNextLogLine(in, logPath, skipErrors)) != null) {
         byte[] region = entry.getKey().getEncodedRegionName();
-        String key = Bytes.toString(region);
-        lastFlushedSequenceId = lastFlushedSequenceIds.get(key);
+        String encodedRegionNameAsStr = Bytes.toString(region);
+        lastFlushedSequenceId = lastFlushedSequenceIds.get(encodedRegionNameAsStr);
         if (lastFlushedSequenceId == null) {
           if (this.distributedLogReplay) {
             RegionStoreSequenceIds ids =
                 csm.getSplitLogWorkerCoordination().getRegionFlushedSequenceId(failedServerName,
-                  key);
+                  encodedRegionNameAsStr);
             if (ids != null) {
               lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+              if (LOG.isDebugEnabled()) {
+                LOG.debug("DLR Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
+                  TextFormat.shortDebugString(ids));
+              }
             }
           } else if (sequenceIdChecker != null) {
             RegionStoreSequenceIds ids = sequenceIdChecker.getLastSequenceId(region);
@@ -332,13 +337,17 @@ public class WALSplitter {
               maxSeqIdInStores.put(storeSeqId.getFamilyName().toByteArray(),
                 storeSeqId.getSequenceId());
             }
-            regionMaxSeqIdInStores.put(key, maxSeqIdInStores);
+            regionMaxSeqIdInStores.put(encodedRegionNameAsStr, maxSeqIdInStores);
             lastFlushedSequenceId = ids.getLastFlushedSequenceId();
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("DLS Last flushed sequenceid for " + encodedRegionNameAsStr + ": " +
+                  TextFormat.shortDebugString(ids));
+            }
           }
           if (lastFlushedSequenceId == null) {
             lastFlushedSequenceId = -1L;
           }
-          lastFlushedSequenceIds.put(key, lastFlushedSequenceId);
+          lastFlushedSequenceIds.put(encodedRegionNameAsStr, lastFlushedSequenceId);
         }
         if (lastFlushedSequenceId >= entry.getKey().getLogSeqNum()) {
           editsSkipped++;
@@ -1063,7 +1072,7 @@ public class WALSplitter {
     }
 
     private void doRun() throws IOException {
-      LOG.debug("Writer thread " + this + ": starting");
+      if (LOG.isTraceEnabled()) LOG.trace("Writer thread starting");
       while (true) {
         RegionEntryBuffer buffer = entryBuffers.getChunkToWrite();
         if (buffer == null) {
@@ -1218,7 +1227,8 @@ public class WALSplitter {
         }
       }
       controller.checkForErrors();
-      LOG.info("Split writers finished");
+      LOG.info((this.writerThreads == null? 0: this.writerThreads.size()) +
+        " split writers finished; closing...");
       return (!progress_failed);
     }
 
@@ -1309,12 +1319,14 @@ public class WALSplitter {
       CompletionService<Void> completionService =
         new ExecutorCompletionService<Void>(closeThreadPool);
       for (final Map.Entry<byte[], SinkWriter> writersEntry : writers.entrySet()) {
-        LOG.debug("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Submitting close of " + ((WriterAndPath)writersEntry.getValue()).p);
+        }
         completionService.submit(new Callable<Void>() {
           @Override
           public Void call() throws Exception {
             WriterAndPath wap = (WriterAndPath) writersEntry.getValue();
-            LOG.debug("Closing " + wap.p);
+            if (LOG.isTraceEnabled()) LOG.trace("Closing " + wap.p);
             try {
               wap.w.close();
             } catch (IOException ioe) {
@@ -1322,8 +1334,8 @@ public class WALSplitter {
               thrown.add(ioe);
               return null;
             }
-            LOG.info("Closed wap " + wap.p + " (wrote " + wap.editsWritten + " edits in "
-                + (wap.nanosSpent / 1000 / 1000) + "ms)");
+            LOG.info("Closed " + wap.p + "; wrote " + wap.editsWritten + " edit(s) in "
+                + (wap.nanosSpent / 1000 / 1000) + "ms");
 
             if (wap.editsWritten == 0) {
               // just remove the empty recovered.edits file
@@ -1482,8 +1494,8 @@ public class WALSplitter {
         }
       }
       Writer w = createWriter(regionedits);
-      LOG.info("Creating writer path=" + regionedits + " region=" + Bytes.toStringBinary(region));
-      return (new WriterAndPath(regionedits, w));
+      LOG.debug("Creating writer path=" + regionedits);
+      return new WriterAndPath(regionedits, w);
     }
 
     private void filterCellByStore(Entry logEntry) {
@@ -1497,6 +1509,7 @@ public class WALSplitter {
         if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
           byte[] family = CellUtil.cloneFamily(cell);
           Long maxSeqId = maxSeqIdInStores.get(family);
+          LOG.info("CHANGE REMOVE " + Bytes.toString(family) + ", max=" + maxSeqId);
           // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
           // or the master was crashed before and we can not get the information.
           if (maxSeqId != null && maxSeqId.longValue() >= logEntry.getKey().getLogSeqNum()) {
@@ -1536,9 +1549,9 @@ public class WALSplitter {
           filterCellByStore(logEntry);
           if (!logEntry.getEdit().isEmpty()) {
             wap.w.append(logEntry);
+            this.updateRegionMaximumEditLogSeqNum(logEntry);
+            editsCount++;
           }
-          this.updateRegionMaximumEditLogSeqNum(logEntry);
-          editsCount++;
         }
         // Pass along summary statistics
         wap.incrementEdits(editsCount);

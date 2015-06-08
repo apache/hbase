@@ -2845,24 +2845,14 @@ public class HRegionServer extends HasThread implements
   @Override
   public boolean removeFromOnlineRegions(final Region r, ServerName destination) {
     Region toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
-
     if (destination != null) {
-      try {
-        WAL wal = getWAL(r.getRegionInfo());
-        long closeSeqNum = wal.getEarliestMemstoreSeqNum(r.getRegionInfo().getEncodedNameAsBytes());
-        if (closeSeqNum == HConstants.NO_SEQNUM) {
-          // No edits in WAL for this region; get the sequence number when the region was opened.
-          closeSeqNum = r.getOpenSeqNum();
-          if (closeSeqNum == HConstants.NO_SEQNUM) {
-            closeSeqNum = 0;
-          }
-        }
-        addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
-      } catch (IOException exception) {
-        LOG.error("Could not retrieve WAL information for region " + r.getRegionInfo() +
-            "; not adding to moved regions.");
-        LOG.debug("Exception details for failure to get wal", exception);
+      long closeSeqNum = r.getMaxFlushedSeqId();
+      if (closeSeqNum == HConstants.NO_SEQNUM) {
+        // No edits in WAL for this region; get the sequence number when the region was opened.
+        closeSeqNum = r.getOpenSeqNum();
+        if (closeSeqNum == HConstants.NO_SEQNUM) closeSeqNum = 0;
       }
+      addToMovedRegions(r.getRegionInfo().getEncodedName(), destination, closeSeqNum);
     }
     this.regionFavoredNodesMap.remove(r.getRegionInfo().getEncodedName());
     return toReturn != null;

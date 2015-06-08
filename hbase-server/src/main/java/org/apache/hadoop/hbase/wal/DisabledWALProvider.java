@@ -186,8 +186,9 @@ class DisabledWALProvider implements WALProvider {
     }
 
     @Override
-    public boolean startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames) {
-      return !(closed.get());
+    public Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames) {
+      if (closed.get()) return null;
+      return HConstants.NO_SEQNUM;
     }
 
     @Override

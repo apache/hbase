@@ -112,16 +112,6 @@ import com.google.common.collect.Sets;
  * services is compaction services where files are aggregated once they pass
  * a configurable threshold.
  *
- * <p>The only thing having to do with logs that Store needs to deal with is
- * the reconstructionLog.  This is a segment of an HRegion's log that might
- * NOT be present upon startup.  If the param is NULL, there's nothing to do.
- * If the param is non-NULL, we need to process the log to reconstruct
- * a TreeMap that might not have been written to disk before the process
- * died.
- *
- * <p>It's assumed that after this constructor returns, the reconstructionLog
- * file will be deleted (by whoever has instantiated the Store).
- *
  * <p>Locking and transactions are handled at a higher level.  This API should
  * not be called directly but by an HRegion manager.
  */
@@ -899,8 +889,7 @@ public class HStore implements Store {
   }
 
   /**
-   * Write out current snapshot.  Presumes {@link #snapshot()} has been called
-   * previously.
+   * Write out current snapshot.  Presumes {@link #snapshot()} has been called previously.
    * @param logCacheFlushId flush sequence number
    * @param snapshot
    * @param status

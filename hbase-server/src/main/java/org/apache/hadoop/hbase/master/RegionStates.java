@@ -414,7 +414,7 @@ public class RegionStates {
       ServerName oldServerName = regionAssignments.put(hri, serverName);
       if (!serverName.equals(oldServerName)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Onlined " + hri.getShortNameToLog() + " on " + serverName + " " + hri);
+          LOG.debug("Onlined " + hri.getShortNameToLog() + " on " + serverName);
         } else {
           LOG.debug("Onlined " + hri.getShortNameToLog() + " on " + serverName);
         }
@@ -599,7 +599,7 @@ public class RegionStates {
           // Region is open on this region server, but in transition.
           // This region must be moving away from this server, or splitting/merging.
           // SSH will handle it, either skip assigning, or re-assign.
-          LOG.info("Transitioning " + state + " will be handled by SSH for " + sn);
+          LOG.info("Transitioning " + state + " will be handled by ServerCrashProcedure for " + sn);
         } else if (sn.equals(state.getServerName())) {
           // Region is in transition on this region server, and this
           // region is not open on this server. So the region must be
@@ -610,7 +610,8 @@ public class RegionStates {
           // tried several times to open it while this region server is not reachable)
           if (isOneOfStates(state, State.OPENING, State.PENDING_OPEN,
               State.FAILED_OPEN, State.FAILED_CLOSE, State.OFFLINE)) {
-            LOG.info("Found region in " + state + " to be reassigned by SSH for " + sn);
+            LOG.info("Found region in " + state +
+              " to be reassigned by ServerCrashProcedure for " + sn);
             rits.add(hri);
           } else if (isOneOfStates(state, State.SPLITTING_NEW)) {
             regionsToCleanIfNoMetaEntry.add(state.getRegion());

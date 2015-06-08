@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
@@ -124,10 +125,19 @@ public interface Region extends ConfigurationObserver {
   /** @return the latest sequence number that was read from storage when this region was opened */
   long getOpenSeqNum();
 
-  /** @return the max sequence id of flushed data on this region */
+  /** @return the max sequence id of flushed data on this region; no edit in memory will have
+   * a sequence id that is less that what is returned here.
+   */
   long getMaxFlushedSeqId();
 
-  /** @return the oldest sequence id found in the store for the given family */
+  /** @return the oldest flushed sequence id for the given family; can be beyond
+   * {@link #getMaxFlushedSeqId()} in case where we've flushed a subset of a regions column
+   * families
+   * @deprecated Since version 1.2.0. Exposes too much about our internals; shutting it down.
+   * Do not use.
+   */
+  @VisibleForTesting
+  @Deprecated
   public long getOldestSeqIdOfStore(byte[] familyName);
 
   /**

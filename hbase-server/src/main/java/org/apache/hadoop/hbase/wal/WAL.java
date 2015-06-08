@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * A Write Ahead Log (WAL) provides service for reading, writing waledits. This interface provides
@@ -140,31 +143,36 @@ public interface WAL {
   void sync(long txid) throws IOException;
 
   /**
-   * WAL keeps track of the sequence numbers that were not yet flushed from memstores
-   * in order to be able to do cleanup. This method tells WAL that some region is about
-   * to flush memstore.
+   * WAL keeps track of the sequence numbers that are as yet not flushed im memstores
+   * in order to be able to do accounting to figure which WALs can be let go. This method tells WAL
+   * that some region is about to flush. The flush can be the whole region or for a column family
+   * of the region only.
    *
-   * <p>We stash the oldest seqNum for the region, and let the the next edit inserted in this
-   * region be recorded in {@link #append(HTableDescriptor, HRegionInfo, WALKey, WALEdit,
-   * AtomicLong, boolean, List)} as new oldest seqnum.
-   * In case of flush being aborted, we put the stashed value back; in case of flush succeeding,
-   * the seqNum of that first edit after start becomes the valid oldest seqNum for this region.
-   *
-   * @return true if the flush can proceed, false in case wal is closing (ususally, when server is
-   * closing) and flush couldn't be started.
+   * <p>Currently, it is expected that the update lock is held for the region; i.e. no
+   * concurrent appends while we set up cache flush.
+   * @param families Families to flush. May be a subset of all families in the region.
+   * @return Returns {@link HConstants#NO_SEQNUM} if we are flushing the whole region OR if
+   * we are flushing a subset of all families but there are no edits in those families not
+   * being flushed; in other words, this is effectively same as a flush of all of the region
+   * though we were passed a subset of regions. Otherwise, it returns the sequence id of the
+   * oldest/lowest outstanding edit.
+   * @see #completeCacheFlush(byte[])
+   * @see #abortCacheFlush(byte[])
    */
-  boolean startCacheFlush(final byte[] encodedRegionName, Set<byte[]> flushedFamilyNames);
+  Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families);
 
   /**
    * Complete the cache flush.
    * @param encodedRegionName Encoded region name.
+   * @see #startCacheFlush(byte[], Set)
+   * @see #abortCacheFlush(byte[])
    */
   void completeCacheFlush(final byte[] encodedRegionName);
 
   /**
    * Abort a cache flush. Call if the flush fails. Note that the only recovery
    * for an aborted flush currently is a restart of the regionserver so the
-   * snapshot content dropped by the failure gets restored to the memstore.v
+   * snapshot content dropped by the failure gets restored to the memstore.
    * @param encodedRegionName Encoded region name.
    */
   void abortCacheFlush(byte[] encodedRegionName);
@@ -174,19 +182,22 @@ public interface WAL {
    */
   WALCoprocessorHost getCoprocessorHost();
 
-
-  /** Gets the earliest sequence number in the memstore for this particular region.
-   * This can serve as best-effort "recent" WAL number for this region.
+  /**
+   * Gets the earliest unflushed sequence id in the memstore for the region.
    * @param encodedRegionName The region to get the number for.
-   * @return The number if present, HConstants.NO_SEQNUM if absent.
+   * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
+   * @deprecated Since version 1.2.0. Removing because not used and exposes subtle internal
+   * workings. Use {@link #getEarliestMemstoreSeqNum(byte[], byte[])}
    */
+  @VisibleForTesting
+  @Deprecated
   long getEarliestMemstoreSeqNum(byte[] encodedRegionName);
 
   /**
-   * Gets the earliest sequence number in the memstore for this particular region and store.
+   * Gets the earliest unflushed sequence id in the memstore for the store.
    * @param encodedRegionName The region to get the number for.
    * @param familyName The family to get the number for.
-   * @return The number if present, HConstants.NO_SEQNUM if absent.
+   * @return The earliest/lowest/oldest sequence id if present, HConstants.NO_SEQNUM if absent.
    */
   long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName);
 

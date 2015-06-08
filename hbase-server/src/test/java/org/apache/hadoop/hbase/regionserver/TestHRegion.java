@@ -231,6 +231,35 @@ public class TestHRegion {
   }
 
   /**
+   * Test that I can use the max flushed sequence id after the close.
+   * @throws IOException
+   */
+  @Test (timeout = 100000)
+  public void testSequenceId() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, COLUMN_FAMILY_BYTES);
+    assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
+    // Weird. This returns 0 if no store files or no edits. Afraid to change it.
+    assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
+    region.close();
+    assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
+    assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
+    // Open region again.
+    region = initHRegion(tableName, name.getMethodName(), CONF, COLUMN_FAMILY_BYTES);
+    byte [] value = Bytes.toBytes(name.getMethodName());
+    // Make a random put against our cf.
+    Put put = new Put(value);
+    put.addColumn(COLUMN_FAMILY_BYTES, null, value);
+    region.put(put);
+    // No flush yet so init numbers should still be in place.
+    assertEquals(HConstants.NO_SEQNUM, region.getMaxFlushedSeqId());
+    assertEquals(0, (long)region.getMaxStoreSeqId().get(COLUMN_FAMILY_BYTES));
+    region.flush(true);
+    long max = region.getMaxFlushedSeqId();
+    region.close();
+    assertEquals(max, region.getMaxFlushedSeqId());
+  }
+
+  /**
    * Test for Bug 2 of HBASE-10466.
    * "Bug 2: Conditions for the first flush of region close (so-called pre-flush) If memstoreSize
    * is smaller than a certain value, or when region close starts a flush is ongoing, the first
