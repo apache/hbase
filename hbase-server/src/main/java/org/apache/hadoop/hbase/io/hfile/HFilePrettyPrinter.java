@@ -167,7 +167,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (cmd.hasOption("w")) {
       String key = cmd.getOptionValue("w");
       if (key != null && key.length() != 0) {
-        row = key.getBytes();
+        row = Bytes.toBytesBinary(key);
         isSeekToRow = true;
       } else {
         System.err.println("Invalid row is specified.");
