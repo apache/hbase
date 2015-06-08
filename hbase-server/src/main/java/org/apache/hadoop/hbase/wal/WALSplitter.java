@@ -1343,7 +1343,7 @@ public class WALSplitter {
               return null;
             }
             if (LOG.isDebugEnabled()) {
-              LOG.debug("Closed wap " + wap.p + " (wrote " + (wap.editsWritten-wap.editsSkipped)
+              LOG.debug("Closed wap " + wap.p + " (wrote " + wap.editsWritten
                 + " edits, skipped " + wap.editsSkipped + " edits in "
                 + (wap.nanosSpent / 1000 / 1000) + "ms");
             }
