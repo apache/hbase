@@ -758,7 +758,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     this.memstoreFlushSize = flushSize;
     this.blockingMemStoreSize = this.memstoreFlushSize *
-        conf.getLong("hbase.hregion.memstore.block.multiplier", 2);
+        conf.getLong(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER,
+                HConstants.DEFAULT_HREGION_MEMSTORE_BLOCK_MULTIPLIER);
   }
 
   /**

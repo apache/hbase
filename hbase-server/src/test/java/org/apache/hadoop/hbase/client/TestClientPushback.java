@@ -73,7 +73,7 @@ public class TestClientPushback {
     // load
     conf.setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, flushSizeBytes);
     // ensure we block the flushes when we are double that flushsize
-    conf.setLong("hbase.hregion.memstore.block.multiplier", 2);
+    conf.setLong(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, HConstants.DEFAULT_HREGION_MEMSTORE_BLOCK_MULTIPLIER);
 
     UTIL.startMiniCluster(1);
     UTIL.createTable(tableName, family);
