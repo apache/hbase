@@ -1330,9 +1330,11 @@ public class WALSplitter {
               thrown.add(ioe);
               return null;
             }
-            LOG.info("Closed wap " + wap.p + " (wrote " + wap.editsWritten + " edits in "
-                + (wap.nanosSpent / 1000 / 1000) + "ms)");
-
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Closed wap " + wap.p + " (wrote " + (wap.editsWritten-wap.editsSkipped)
+                + " edits, skipped " + wap.editsSkipped + " edits in "
+                + (wap.nanosSpent / 1000 / 1000) + "ms");
+            }
             if (wap.editsWritten == 0) {
               // just remove the empty recovered.edits file
               if (fs.exists(wap.p) && !fs.delete(wap.p, false)) {
@@ -1544,9 +1546,11 @@ public class WALSplitter {
           filterCellByStore(logEntry);
           if (!logEntry.getEdit().isEmpty()) {
             wap.w.append(logEntry);
+            this.updateRegionMaximumEditLogSeqNum(logEntry);
+            editsCount++;
+          } else {
+            wap.incrementSkippedEdits(1);
           }
-          this.updateRegionMaximumEditLogSeqNum(logEntry);
-          editsCount++;
         }
         // Pass along summary statistics
         wap.incrementEdits(editsCount);
@@ -1584,11 +1588,17 @@ public class WALSplitter {
   public abstract static class SinkWriter {
     /* Count of edits written to this path */
     long editsWritten = 0;
+    /* Count of edits skipped to this path */
+    long editsSkipped = 0;
     /* Number of nanos spent writing to this log */
     long nanosSpent = 0;
 
     void incrementEdits(int edits) {
       editsWritten += edits;
+    }
+
+    void incrementSkippedEdits(int skipped) {
+      editsSkipped += skipped;
     }
 
     void incrementNanoTime(long nanos) {
