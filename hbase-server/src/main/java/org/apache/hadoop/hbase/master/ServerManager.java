@@ -122,9 +122,15 @@ public class ServerManager {
   // Set if we are to shutdown the cluster.
   private volatile boolean clusterShutdown = false;
 
+  /**
+   * The last flushed sequence id for a region.
+   */
   private final ConcurrentNavigableMap<byte[], Long> flushedSequenceIdByRegion =
     new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
 
+  /**
+   * The last flushed sequence id for a store in a region.
+   */
   private final ConcurrentNavigableMap<byte[], ConcurrentNavigableMap<byte[], Long>>
     storeFlushedSequenceIdsByRegion =
     new ConcurrentSkipListMap<byte[], ConcurrentNavigableMap<byte[], Long>>(Bytes.BYTES_COMPARATOR);
@@ -293,6 +299,10 @@ public class ServerManager {
       Long existingValue = flushedSequenceIdByRegion.get(encodedRegionName);
       long l = entry.getValue().getCompleteSequenceId();
       // Don't let smaller sequence ids override greater sequence ids.
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(Bytes.toString(encodedRegionName) + ", existingValue=" + existingValue +
+          ", completeSequenceId=" + l);
+      }
       if (existingValue == null || (l != HConstants.NO_SEQNUM && l > existingValue)) {
         flushedSequenceIdByRegion.put(encodedRegionName, l);
       } else if (l != HConstants.NO_SEQNUM && l < existingValue) {
@@ -306,6 +316,10 @@ public class ServerManager {
         byte[] family = storeSeqId.getFamilyName().toByteArray();
         existingValue = storeFlushedSequenceId.get(family);
         l = storeSeqId.getSequenceId();
+        if (LOG.isTraceEnabled()) {
+          LOG.trace(Bytes.toString(encodedRegionName) + ", family=" + Bytes.toString(family) +
+            ", existingValue=" + existingValue + ", completeSequenceId=" + l);
+        }
         // Don't let smaller sequence ids override greater sequence ids.
         if (existingValue == null || (l != HConstants.NO_SEQNUM && l > existingValue.longValue())) {
           storeFlushedSequenceId.put(family, l);

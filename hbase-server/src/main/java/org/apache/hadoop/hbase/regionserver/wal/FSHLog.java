@@ -29,16 +29,13 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
@@ -66,7 +63,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,7 +87,6 @@ import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 import com.lmax.disruptor.BlockingWaitStrategy;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.ExceptionHandler;
@@ -156,7 +151,7 @@ public class FSHLog implements WAL {
   private static final Log LOG = LogFactory.getLog(FSHLog.class);
 
   private static final int DEFAULT_SLOW_SYNC_TIME_MS = 100; // in ms
-  
+
   /**
    * The nexus at which all incoming handlers meet.  Does appends and sync with an ordering.
    * Appends and syncs are each put on the ring which means handlers need to
@@ -168,7 +163,7 @@ public class FSHLog implements WAL {
   private final Disruptor<RingBufferTruck> disruptor;
 
   /**
-   * An executorservice that runs the disrutpor AppendEventHandler append executor.
+   * An executorservice that runs the disruptor AppendEventHandler append executor.
    */
   private final ExecutorService appendExecutor;
 
@@ -210,6 +205,7 @@ public class FSHLog implements WAL {
    * WAL directory, where all WAL files would be placed.
    */
   private final Path fullPathLogDir;
+
   /**
    * dir path where old logs are kept.
    */
@@ -241,6 +237,7 @@ public class FSHLog implements WAL {
    * conf object
    */
   protected final Configuration conf;
+
   /** Listeners that are called on WAL events. */
   private final List<WALActionsListener> listeners = new CopyOnWriteArrayList<WALActionsListener>();
 
@@ -258,6 +255,7 @@ public class FSHLog implements WAL {
   public WALCoprocessorHost getCoprocessorHost() {
     return coprocessorHost;
   }
+
   /**
    * FSDataOutputStream associated with the current SequenceFile.writer
    */
@@ -287,6 +285,13 @@ public class FSHLog implements WAL {
   // then disable the rolling in checkLowReplication().
   // Enable it if the replications recover.
   private volatile boolean lowReplicationRollEnabled = true;
+
+  /**
+   * Class that does accounting of sequenceids in WAL subsystem. Holds oldest outstanding
+   * sequence id as yet not flushed as well as the most recent edit sequence id appended to the
+   * WAL. Has facility for answering questions such as "Is it safe to GC a WAL?".
+   */
+  private SequenceIdAccounting sequenceIdAccounting = new SequenceIdAccounting();
 
   /**
    * Current log file.
@@ -334,52 +339,6 @@ public class FSHLog implements WAL {
 
   private final AtomicInteger closeErrorCount = new AtomicInteger();
 
-  // Region sequence id accounting across flushes and for knowing when we can GC a WAL.  These
-  // sequence id numbers are by region and unrelated to the ring buffer sequence number accounting
-  // done above in failedSequence, highest sequence, etc.
-  /**
-   * This lock ties all operations on lowestFlushingStoreSequenceIds and
-   * oldestUnflushedStoreSequenceIds Maps with the exception of append's putIfAbsent call into
-   * oldestUnflushedStoreSequenceIds. We use these Maps to find out the low bound regions
-   * sequence id, or to find regions with old sequence ids to force flush; we are interested in
-   * old stuff not the new additions (TODO: IS THIS SAFE?  CHECK!).
-   */
-  private final Object regionSequenceIdLock = new Object();
-
-  /**
-   * Map of encoded region names and family names to their OLDEST -- i.e. their first,
-   * the longest-lived -- sequence id in memstore. Note that this sequence id is the region
-   * sequence id.  This is not related to the id we use above for {@link #highestSyncedSequence}
-   * and {@link #highestUnsyncedSequence} which is the sequence from the disruptor
-   * ring buffer.
-   */
-  private final ConcurrentMap<byte[], ConcurrentMap<byte[], Long>> oldestUnflushedStoreSequenceIds
-    = new ConcurrentSkipListMap<byte[], ConcurrentMap<byte[], Long>>(
-      Bytes.BYTES_COMPARATOR);
-
-  /**
-   * Map of encoded region names and family names to their lowest or OLDEST sequence/edit id in
-   * memstore currently being flushed out to hfiles. Entries are moved here from
-   * {@link #oldestUnflushedStoreSequenceIds} while the lock {@link #regionSequenceIdLock} is held
-   * (so movement between the Maps is atomic). This is not related to the id we use above for
-   * {@link #highestSyncedSequence} and {@link #highestUnsyncedSequence} which is the sequence from
-   * the disruptor ring buffer, an internal detail.
-   */
-  private final Map<byte[], Map<byte[], Long>> lowestFlushingStoreSequenceIds =
-    new TreeMap<byte[], Map<byte[], Long>>(Bytes.BYTES_COMPARATOR);
-
- /**
-  * Map of region encoded names to the latest region sequence id.  Updated on each append of
-  * WALEdits to the WAL. We create one map for each WAL file at the time it is rolled.
-  * <p>When deciding whether to archive a WAL file, we compare the sequence IDs in this map to
-  * {@link #lowestFlushingRegionSequenceIds} and {@link #oldestUnflushedRegionSequenceIds}.
-  * See {@link FSHLog#areAllRegionsFlushed(Map, Map, Map)} for more info.
-  * <p>
-  * This map uses byte[] as the key, and uses reference equality. It works in our use case as we
-  * use {@link HRegionInfo#getEncodedNameAsBytes()} as keys. For a given region, it always returns
-  * the same array.
-  */
-  private Map<byte[], Long> highestRegionSequenceIds = new HashMap<byte[], Long>();
 
   /**
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
@@ -396,7 +355,7 @@ public class FSHLog implements WAL {
   };
 
   /**
-   * Map of wal log file to the latest sequence ids of all regions it has entries of.
+   * Map of WAL log file to the latest sequence ids of all regions it has entries of.
    * The map is sorted by the log file creation timestamp (contained in the log file name).
    */
   private NavigableMap<Path, Map<byte[], Long>> byWalRegionSequenceIds =
@@ -542,7 +501,7 @@ public class FSHLog implements WAL {
       (long)(blocksize * conf.getFloat("hbase.regionserver.logroll.multiplier", 0.95f));
 
     this.maxLogs = conf.getInt("hbase.regionserver.maxlogs", 32);
-    this.minTolerableReplication = conf.getInt( "hbase.regionserver.hlog.tolerable.lowreplication",
+    this.minTolerableReplication = conf.getInt("hbase.regionserver.hlog.tolerable.lowreplication",
         FSUtils.getDefaultReplication(fs, this.fullPathLogDir));
     this.lowReplicationRollLimit =
       conf.getInt("hbase.regionserver.hlog.lowreplication.rolllimit", 5);
@@ -745,128 +704,37 @@ public class FSHLog implements WAL {
     return DefaultWALProvider.createWriter(conf, fs, path, false);
   }
 
-  private long getLowestSeqId(Map<byte[], Long> seqIdMap) {
-    long result = HConstants.NO_SEQNUM;
-    for (Long seqNum: seqIdMap.values()) {
-      if (result == HConstants.NO_SEQNUM || seqNum.longValue() < result) {
-        result = seqNum.longValue();
-      }
-    }
-    return result;
-  }
-
-  private <T extends Map<byte[], Long>> Map<byte[], Long> copyMapWithLowestSeqId(
-      Map<byte[], T> mapToCopy) {
-    Map<byte[], Long> copied = Maps.newHashMap();
-    for (Map.Entry<byte[], T> entry: mapToCopy.entrySet()) {
-      long lowestSeqId = getLowestSeqId(entry.getValue());
-      if (lowestSeqId != HConstants.NO_SEQNUM) {
-        copied.put(entry.getKey(), lowestSeqId);
-      }
-    }
-    return copied;
-  }
-
   /**
-   * Archive old logs that could be archived: a log is eligible for archiving if all its WALEdits
-   * have been flushed to hfiles.
-   * <p>
-   * For each log file, it compares its region to sequenceId map
-   * (@link {@link FSHLog#highestRegionSequenceIds} with corresponding region entries in
-   * {@link FSHLog#lowestFlushingRegionSequenceIds} and
-   * {@link FSHLog#oldestUnflushedRegionSequenceIds}. If all the regions in the map are flushed
-   * past of their value, then the wal is eligible for archiving.
+   * Archive old logs. A WAL is eligible for archiving if all its WALEdits have been flushed.
    * @throws IOException
    */
   private void cleanOldLogs() throws IOException {
-    Map<byte[], Long> lowestFlushingRegionSequenceIdsLocal = null;
-    Map<byte[], Long> oldestUnflushedRegionSequenceIdsLocal = null;
-    List<Path> logsToArchive = new ArrayList<Path>();
-    // make a local copy so as to avoid locking when we iterate over these maps.
-    synchronized (regionSequenceIdLock) {
-      lowestFlushingRegionSequenceIdsLocal =
-          copyMapWithLowestSeqId(this.lowestFlushingStoreSequenceIds);
-      oldestUnflushedRegionSequenceIdsLocal =
-          copyMapWithLowestSeqId(this.oldestUnflushedStoreSequenceIds);
-    }
-    for (Map.Entry<Path, Map<byte[], Long>> e : byWalRegionSequenceIds.entrySet()) {
-      // iterate over the log file.
+    List<Path> logsToArchive = null;
+    // For each log file, look at its Map of regions to highest sequence id; if all sequence ids
+    // are older than what is currently in memory, the WAL can be GC'd.
+    for (Map.Entry<Path, Map<byte[], Long>> e : this.byWalRegionSequenceIds.entrySet()) {
       Path log = e.getKey();
       Map<byte[], Long> sequenceNums = e.getValue();
-      // iterate over the map for this log file, and tell whether it should be archive or not.
-      if (areAllRegionsFlushed(sequenceNums, lowestFlushingRegionSequenceIdsLocal,
-          oldestUnflushedRegionSequenceIdsLocal)) {
+      if (this.sequenceIdAccounting.areAllLower(sequenceNums)) {
+        if (logsToArchive == null) logsToArchive = new ArrayList<Path>();
         logsToArchive.add(log);
-        LOG.debug("WAL file ready for archiving " + log);
+        if (LOG.isTraceEnabled()) LOG.trace("WAL file ready for archiving " + log);
       }
     }
-    for (Path p : logsToArchive) {
-      this.totalLogSize.addAndGet(-this.fs.getFileStatus(p).getLen());
-      archiveLogFile(p);
-      this.byWalRegionSequenceIds.remove(p);
-    }
-  }
-
-  /**
-   * Takes a region:sequenceId map for a WAL file, and checks whether the file can be archived.
-   * It compares the region entries present in the passed sequenceNums map with the local copy of
-   * {@link #oldestUnflushedRegionSequenceIds} and {@link #lowestFlushingRegionSequenceIds}. If,
-   * for all regions, the value is lesser than the minimum of values present in the
-   * oldestFlushing/UnflushedSeqNums, then the wal file is eligible for archiving.
-   * @param sequenceNums for a WAL, at the time when it was rolled.
-   * @param oldestFlushingMap
-   * @param oldestUnflushedMap
-   * @return true if wal is eligible for archiving, false otherwise.
-   */
-   static boolean areAllRegionsFlushed(Map<byte[], Long> sequenceNums,
-      Map<byte[], Long> oldestFlushingMap, Map<byte[], Long> oldestUnflushedMap) {
-    for (Map.Entry<byte[], Long> regionSeqIdEntry : sequenceNums.entrySet()) {
-      // find region entries in the flushing/unflushed map. If there is no entry, it meansj
-      // a region doesn't have any unflushed entry.
-      long oldestFlushing = oldestFlushingMap.containsKey(regionSeqIdEntry.getKey()) ?
-          oldestFlushingMap.get(regionSeqIdEntry.getKey()) : Long.MAX_VALUE;
-      long oldestUnFlushed = oldestUnflushedMap.containsKey(regionSeqIdEntry.getKey()) ?
-          oldestUnflushedMap.get(regionSeqIdEntry.getKey()) : Long.MAX_VALUE;
-          // do a minimum to be sure to contain oldest sequence Id
-      long minSeqNum = Math.min(oldestFlushing, oldestUnFlushed);
-      if (minSeqNum <= regionSeqIdEntry.getValue()) return false;// can't archive
-    }
-    return true;
-  }
-
-  /**
-   * Iterates over the given map of regions, and compares their sequence numbers with corresponding
-   * entries in {@link #oldestUnflushedRegionSequenceIds}. If the sequence number is greater or
-   * equal, the region is eligible to flush, otherwise, there is no benefit to flush (from the
-   * perspective of passed regionsSequenceNums map), because the region has already flushed the
-   * entries present in the WAL file for which this method is called for (typically, the oldest
-   * wal file).
-   * @param regionsSequenceNums
-   * @return regions which should be flushed (whose sequence numbers are larger than their
-   * corresponding un-flushed entries.
-   */
-  private byte[][] findEligibleMemstoresToFlush(Map<byte[], Long> regionsSequenceNums) {
-    List<byte[]> regionsToFlush = null;
-    // Keeping the old behavior of iterating unflushedSeqNums under oldestSeqNumsLock.
-    synchronized (regionSequenceIdLock) {
-      for (Map.Entry<byte[], Long> e: regionsSequenceNums.entrySet()) {
-        long unFlushedVal = getEarliestMemstoreSeqNum(e.getKey());
-        if (unFlushedVal != HConstants.NO_SEQNUM && unFlushedVal <= e.getValue()) {
-          if (regionsToFlush == null)
-            regionsToFlush = new ArrayList<byte[]>();
-          regionsToFlush.add(e.getKey());
-        }
+    if (logsToArchive != null) {
+      for (Path p : logsToArchive) {
+        this.totalLogSize.addAndGet(-this.fs.getFileStatus(p).getLen());
+        archiveLogFile(p);
+        this.byWalRegionSequenceIds.remove(p);
       }
     }
-    return regionsToFlush == null ? null : regionsToFlush
-        .toArray(new byte[][] { HConstants.EMPTY_BYTE_ARRAY });
   }
 
   /**
-   * If the number of un-archived WAL files is greater than maximum allowed, it checks
-   * the first (oldest) WAL file, and returns the regions which should be flushed so that it could
+   * If the number of un-archived WAL files is greater than maximum allowed, check the first
+   * (oldest) WAL file, and returns those regions which should be flushed so that it can
    * be archived.
-   * @return regions to flush in order to archive oldest wal file.
+   * @return regions (encodedRegionNames) to flush in order to archive oldest WAL file.
    * @throws IOException
    */
   byte[][] findRegionsToForceFlush() throws IOException {
@@ -875,7 +743,7 @@ public class FSHLog implements WAL {
     if (logCount > this.maxLogs && logCount > 0) {
       Map.Entry<Path, Map<byte[], Long>> firstWALEntry =
         this.byWalRegionSequenceIds.firstEntry();
-      regions = findEligibleMemstoresToFlush(firstWALEntry.getValue());
+      regions = this.sequenceIdAccounting.findLower(firstWALEntry.getValue());
     }
     if (regions != null) {
       StringBuilder sb = new StringBuilder();
@@ -883,9 +751,8 @@ public class FSHLog implements WAL {
         if (i > 0) sb.append(", ");
         sb.append(Bytes.toStringBinary(regions[i]));
       }
-      LOG.info("Too many wals: logs=" + logCount + ", maxlogs=" +
-         this.maxLogs + "; forcing flush of " + regions.length + " regions(s): " +
-         sb.toString());
+      LOG.info("Too many WALs; count=" + logCount + ", max=" + this.maxLogs +
+        "; forcing flush of " + regions.length + " regions(s): " + sb.toString());
     }
     return regions;
   }
@@ -963,8 +830,7 @@ public class FSHLog implements WAL {
       this.numEntries.set(0);
       final String newPathString = (null == newPath ? null : FSUtils.getPath(newPath));
       if (oldPath != null) {
-        this.byWalRegionSequenceIds.put(oldPath, this.highestRegionSequenceIds);
-        this.highestRegionSequenceIds = new HashMap<byte[], Long>();
+        this.byWalRegionSequenceIds.put(oldPath, this.sequenceIdAccounting.resetHighest());
         long oldFileLen = this.fs.getFileStatus(oldPath).getLen();
         this.totalLogSize.addAndGet(oldFileLen);
         LOG.info("Rolled WAL " + FSUtils.getPath(oldPath) + " with entries=" + oldNumEntries +
@@ -1108,7 +974,7 @@ public class FSHLog implements WAL {
       LOG.debug("Moved " + files.length + " WAL file(s) to " +
         FSUtils.getPath(this.fullPathArchiveDir));
     }
-    LOG.info("Closed WAL: " + toString() );
+    LOG.info("Closed WAL: " + toString());
   }
 
   @Override
@@ -1631,108 +1497,24 @@ public class FSHLog implements WAL {
   }
 
   @Override
-  public boolean startCacheFlush(final byte[] encodedRegionName,
-      Set<byte[]> flushedFamilyNames) {
-    Map<byte[], Long> oldStoreSeqNum = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
+  public Long startCacheFlush(final byte[] encodedRegionName, Set<byte[]> families) {
     if (!closeBarrier.beginOp()) {
-      LOG.info("Flush will not be started for " + Bytes.toString(encodedRegionName) +
-        " - because the server is closing.");
-      return false;
+      LOG.info("Flush not started for " + Bytes.toString(encodedRegionName) + "; server closing.");
+      return null;
     }
-    synchronized (regionSequenceIdLock) {
-      ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-          oldestUnflushedStoreSequenceIds.get(encodedRegionName);
-      if (oldestUnflushedStoreSequenceIdsOfRegion != null) {
-        for (byte[] familyName: flushedFamilyNames) {
-          Long seqId = oldestUnflushedStoreSequenceIdsOfRegion.remove(familyName);
-          if (seqId != null) {
-            oldStoreSeqNum.put(familyName, seqId);
-          }
-        }
-        if (!oldStoreSeqNum.isEmpty()) {
-          Map<byte[], Long> oldValue = this.lowestFlushingStoreSequenceIds.put(
-              encodedRegionName, oldStoreSeqNum);
-          assert oldValue == null: "Flushing map not cleaned up for "
-              + Bytes.toString(encodedRegionName);
-        }
-        if (oldestUnflushedStoreSequenceIdsOfRegion.isEmpty()) {
-          // Remove it otherwise it will be in oldestUnflushedStoreSequenceIds for ever
-          // even if the region is already moved to other server.
-          // Do not worry about data racing, we held write lock of region when calling
-          // startCacheFlush, so no one can add value to the map we removed.
-          oldestUnflushedStoreSequenceIds.remove(encodedRegionName);
-        }
-      }
-    }
-    if (oldStoreSeqNum.isEmpty()) {
-      // TODO: if we have no oldStoreSeqNum, and WAL is not disabled, presumably either
-      // the region is already flushing (which would make this call invalid), or there
-      // were no appends after last flush, so why are we starting flush? Maybe we should
-      // assert not empty. Less rigorous, but safer, alternative is telling the caller to stop.
-      // For now preserve old logic.
-      LOG.warn("Couldn't find oldest seqNum for the region we are about to flush: ["
-        + Bytes.toString(encodedRegionName) + "]");
-    }
-    return true;
+    return this.sequenceIdAccounting.startCacheFlush(encodedRegionName, families);
   }
 
   @Override
   public void completeCacheFlush(final byte [] encodedRegionName) {
-    synchronized (regionSequenceIdLock) {
-      this.lowestFlushingStoreSequenceIds.remove(encodedRegionName);
-    }
+    this.sequenceIdAccounting.completeCacheFlush(encodedRegionName);
     closeBarrier.endOp();
-  }
-
-  private ConcurrentMap<byte[], Long> getOrCreateOldestUnflushedStoreSequenceIdsOfRegion(
-      byte[] encodedRegionName) {
-    ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-        oldestUnflushedStoreSequenceIds.get(encodedRegionName);
-    if (oldestUnflushedStoreSequenceIdsOfRegion != null) {
-      return oldestUnflushedStoreSequenceIdsOfRegion;
-    }
-    oldestUnflushedStoreSequenceIdsOfRegion =
-        new ConcurrentSkipListMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-    ConcurrentMap<byte[], Long> alreadyPut =
-        oldestUnflushedStoreSequenceIds.putIfAbsent(encodedRegionName,
-          oldestUnflushedStoreSequenceIdsOfRegion);
-    return alreadyPut == null ? oldestUnflushedStoreSequenceIdsOfRegion : alreadyPut;
   }
 
   @Override
   public void abortCacheFlush(byte[] encodedRegionName) {
-    Map<byte[], Long> storeSeqNumsBeforeFlushStarts;
-    Map<byte[], Long> currentStoreSeqNums = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
-    synchronized (regionSequenceIdLock) {
-      storeSeqNumsBeforeFlushStarts = this.lowestFlushingStoreSequenceIds.remove(
-        encodedRegionName);
-      if (storeSeqNumsBeforeFlushStarts != null) {
-        ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-            getOrCreateOldestUnflushedStoreSequenceIdsOfRegion(encodedRegionName);
-        for (Map.Entry<byte[], Long> familyNameAndSeqId: storeSeqNumsBeforeFlushStarts
-            .entrySet()) {
-          currentStoreSeqNums.put(familyNameAndSeqId.getKey(),
-            oldestUnflushedStoreSequenceIdsOfRegion.put(familyNameAndSeqId.getKey(),
-              familyNameAndSeqId.getValue()));
-        }
-      }
-    }
+    this.sequenceIdAccounting.abortCacheFlush(encodedRegionName);
     closeBarrier.endOp();
-    if (storeSeqNumsBeforeFlushStarts != null) {
-      for (Map.Entry<byte[], Long> familyNameAndSeqId : storeSeqNumsBeforeFlushStarts.entrySet()) {
-        Long currentSeqNum = currentStoreSeqNums.get(familyNameAndSeqId.getKey());
-        if (currentSeqNum != null
-            && currentSeqNum.longValue() <= familyNameAndSeqId.getValue().longValue()) {
-          String errorStr =
-              "Region " + Bytes.toString(encodedRegionName) + " family "
-                  + Bytes.toString(familyNameAndSeqId.getKey())
-                  + " acquired edits out of order current memstore seq=" + currentSeqNum
-                  + ", previous oldest unflushed id=" + familyNameAndSeqId.getValue();
-          LOG.error(errorStr);
-          Runtime.getRuntime().halt(1);
-        }
-      }
-    }
   }
 
   @VisibleForTesting
@@ -1762,23 +1544,21 @@ public class FSHLog implements WAL {
 
   @Override
   public long getEarliestMemstoreSeqNum(byte[] encodedRegionName) {
-    ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-        this.oldestUnflushedStoreSequenceIds.get(encodedRegionName);
-    return oldestUnflushedStoreSequenceIdsOfRegion != null ?
-        getLowestSeqId(oldestUnflushedStoreSequenceIdsOfRegion) : HConstants.NO_SEQNUM;
+    // Used by tests. Deprecated as too subtle for general usage.
+    return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName);
   }
 
   @Override
-  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName,
-      byte[] familyName) {
-    ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-        this.oldestUnflushedStoreSequenceIds.get(encodedRegionName);
-    if (oldestUnflushedStoreSequenceIdsOfRegion != null) {
-      Long result = oldestUnflushedStoreSequenceIdsOfRegion.get(familyName);
-      return result != null ? result.longValue() : HConstants.NO_SEQNUM;
-    } else {
-      return HConstants.NO_SEQNUM;
-    }
+  public long getEarliestMemstoreSeqNum(byte[] encodedRegionName, byte[] familyName) {
+    // This method is used by tests and for figuring if we should flush or not because our
+    // sequenceids are too old. It is also used reporting the master our oldest sequenceid for use
+    // figuring what edits can be skipped during log recovery. getEarliestMemStoreSequenceId
+    // from this.sequenceIdAccounting is looking first in flushingOldestStoreSequenceIds, the
+    // currently flushing sequence ids, and if anything found there, it is returning these. This is
+    // the right thing to do for the reporting oldest sequenceids to master; we won't skip edits if
+    // we crash during the flush. For figuring what to flush, we might get requeued if our sequence
+    // id is old even though we are currently flushing. This may mean we do too much flushing.
+    return this.sequenceIdAccounting.getLowestSequenceId(encodedRegionName, familyName);
   }
 
   /**
@@ -1820,10 +1600,10 @@ public class FSHLog implements WAL {
     /**
      * For Thread A to call when it is ready to wait on the 'safe point' to be attained.
      * Thread A will be held in here until Thread B calls {@link #safePointAttained()}
-     * @throws InterruptedException
-     * @throws ExecutionException
      * @param syncFuture We need this as barometer on outstanding syncs.  If it comes home with
      * an exception, then something is up w/ our syncing.
+     * @throws InterruptedException
+     * @throws ExecutionException
      * @return The passed <code>syncFuture</code>
      * @throws FailedSyncBeforeLogCloseException 
      */
@@ -2014,15 +1794,6 @@ public class FSHLog implements WAL {
       }
     }
 
-    private void updateOldestUnflushedSequenceIds(byte[] encodedRegionName,
-        Set<byte[]> familyNameSet, Long lRegionSequenceId) {
-      ConcurrentMap<byte[], Long> oldestUnflushedStoreSequenceIdsOfRegion =
-          getOrCreateOldestUnflushedStoreSequenceIdsOfRegion(encodedRegionName);
-      for (byte[] familyName : familyNameSet) {
-        oldestUnflushedStoreSequenceIdsOfRegion.putIfAbsent(familyName, lRegionSequenceId);
-      }
-    }
-
     /**
      * Append to the WAL.  Does all CP and WAL listener calls.
      * @param entry
@@ -2040,14 +1811,14 @@ public class FSHLog implements WAL {
         // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
         // so region sequenceids will also be in order.
         regionSequenceId = entry.stampRegionSequenceId();
-        
+
         // Edits are empty, there is nothing to append.  Maybe empty when we are looking for a 
         // region sequence id only, a region edit/sequence id that is not associated with an actual 
         // edit. It has to go through all the rigmarole to be sure we have the right ordering.
         if (entry.getEdit().isEmpty()) {
           return;
         }
-        
+
         // Coprocessor hook.
         if (!coprocessorHost.preWALWrite(entry.getHRegionInfo(), entry.getKey(),
             entry.getEdit())) {
@@ -2067,13 +1838,8 @@ public class FSHLog implements WAL {
         writer.append(entry);
         assert highestUnsyncedSequence < entry.getSequence();
         highestUnsyncedSequence = entry.getSequence();
-        Long lRegionSequenceId = Long.valueOf(regionSequenceId);
-        highestRegionSequenceIds.put(encodedRegionName, lRegionSequenceId);
-        if (entry.isInMemstore()) {
-          updateOldestUnflushedSequenceIds(encodedRegionName,
-              entry.getFamilyNames(), lRegionSequenceId);
-        }
-
+        sequenceIdAccounting.update(encodedRegionName, entry.getFamilyNames(), regionSequenceId,
+          entry.isInMemstore());
         coprocessorHost.postWALWrite(entry.getHRegionInfo(), entry.getKey(), entry.getEdit());
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTime() - start);

@@ -91,6 +91,7 @@ public class TestGetLastFlushedSequenceId {
         testUtil.getHBaseCluster().getMaster()
             .getLastSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
     assertEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
+    // This will be the sequenceid just before that of the earliest edit in memstore.
     long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
     assertTrue(storeSequenceId > 0);
     testUtil.getHBaseAdmin().flush(tableName);

@@ -645,7 +645,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
             lastSequenceId = lastRecordedFlushedSequenceId;
           }
           ZKUtil.createSetData(this.watcher, nodePath,
-            ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
+          ZKUtil.regionSequenceIdsToByteArray(lastSequenceId, null));
           if (LOG.isDebugEnabled()) {
             LOG.debug("Marked " + regionEncodeName + " recovering from " + serverName +
               ": " + nodePath);

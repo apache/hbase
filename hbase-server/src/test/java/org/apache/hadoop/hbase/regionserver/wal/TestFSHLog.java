@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -27,9 +26,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
@@ -50,7 +47,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -58,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -318,53 +315,6 @@ public class TestFSHLog {
         wal.close();
       }
     }
-  }
-
-  /**
-   * Simulates WAL append ops for a region and tests
-   * {@link FSHLog#areAllRegionsFlushed(Map, Map, Map)} API.
-   * It compares the region sequenceIds with oldestFlushing and oldestUnFlushed entries.
-   * If a region's entries are larger than min of (oldestFlushing, oldestUnFlushed), then the
-   * region should be flushed before archiving this WAL.
-  */
-  @Test
-  public void testAllRegionsFlushed() {
-    LOG.debug("testAllRegionsFlushed");
-    Map<byte[], Long> oldestFlushingSeqNo = new HashMap<byte[], Long>();
-    Map<byte[], Long> oldestUnFlushedSeqNo = new HashMap<byte[], Long>();
-    Map<byte[], Long> seqNo = new HashMap<byte[], Long>();
-    // create a table
-    TableName t1 = TableName.valueOf("t1");
-    // create a region
-    HRegionInfo hri1 = new HRegionInfo(t1, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    // variables to mock region sequenceIds
-    final AtomicLong sequenceId1 = new AtomicLong(1);
-    // test empty map
-    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
-    // add entries in the region
-    seqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.incrementAndGet());
-    oldestUnFlushedSeqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.get());
-    // should say region1 is not flushed.
-    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
-    // test with entries in oldestFlushing map.
-    oldestUnFlushedSeqNo.clear();
-    oldestFlushingSeqNo.put(hri1.getEncodedNameAsBytes(), sequenceId1.get());
-    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
-    // simulate region flush, i.e., clear oldestFlushing and oldestUnflushed maps
-    oldestFlushingSeqNo.clear();
-    oldestUnFlushedSeqNo.clear();
-    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
-    // insert some large values for region1
-    oldestUnFlushedSeqNo.put(hri1.getEncodedNameAsBytes(), 1000l);
-    seqNo.put(hri1.getEncodedNameAsBytes(), 1500l);
-    assertFalse(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
-
-    // tests when oldestUnFlushed/oldestFlushing contains larger value.
-    // It means region is flushed.
-    oldestFlushingSeqNo.put(hri1.getEncodedNameAsBytes(), 1200l);
-    oldestUnFlushedSeqNo.clear();
-    seqNo.put(hri1.getEncodedNameAsBytes(), 1199l);
-    assertTrue(FSHLog.areAllRegionsFlushed(seqNo, oldestFlushingSeqNo, oldestUnFlushedSeqNo));
   }
 
   @Test(expected=IOException.class)

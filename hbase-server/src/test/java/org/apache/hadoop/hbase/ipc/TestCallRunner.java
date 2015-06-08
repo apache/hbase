@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.security.UserProvider;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
