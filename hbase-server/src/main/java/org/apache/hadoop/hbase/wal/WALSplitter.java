@@ -1519,7 +1519,6 @@ public class WALSplitter {
         if (!CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) {
           byte[] family = CellUtil.cloneFamily(cell);
           Long maxSeqId = maxSeqIdInStores.get(family);
-          LOG.info("CHANGE REMOVE " + Bytes.toString(family) + ", max=" + maxSeqId);
           // Do not skip cell even if maxSeqId is null. Maybe we are in a rolling upgrade,
           // or the master was crashed before and we can not get the information.
           if (maxSeqId != null && maxSeqId.longValue() >= logEntry.getKey().getLogSeqNum()) {
