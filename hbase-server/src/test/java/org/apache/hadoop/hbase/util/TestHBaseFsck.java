@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -95,6 +96,8 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
+import org.apache.hadoop.hbase.mob.MobFileName;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -423,6 +426,31 @@ public class TestHBaseFsck {
     HTableDescriptor desc = new HTableDescriptor(tablename);
     desc.setRegionReplication(replicaCount);
     HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+    desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
+    createTable(TEST_UTIL, desc, SPLITS);
+
+    tbl = (HTable) connection.getTable(tablename, tableExecutorService);
+    List<Put> puts = new ArrayList<Put>();
+    for (byte[] row : ROWKEYS) {
+      Put p = new Put(row);
+      p.add(FAM, Bytes.toBytes("val"), row);
+      puts.add(p);
+    }
+    tbl.put(puts);
+    tbl.flushCommits();
+  }
+
+  /**
+   * Setup a clean table with a mob-enabled column.
+   *
+   * @param tableName The name of a table to be created.
+   * @throws Exception
+   */
+  void setupMobTable(TableName tablename) throws Exception {
+    HTableDescriptor desc = new HTableDescriptor(tablename);
+    HColumnDescriptor hcd = new HColumnDescriptor(Bytes.toString(FAM));
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(0);
     desc.addFamily(hcd); // If a table has no CF's it doesn't get checked
     createTable(TEST_UTIL, desc, SPLITS);
 
@@ -2121,6 +2149,44 @@ public class TestHBaseFsck {
   }
 
   /**
+   * Gets flushed mob files.
+   * @param fs The current file system.
+   * @param table The current table name.
+   * @return Path of a flushed hfile.
+   * @throws IOException
+   */
+  Path getFlushedMobFile(FileSystem fs, TableName table) throws IOException {
+    Path regionDir = MobUtils.getMobRegionPath(conf, table);
+    Path famDir = new Path(regionDir, FAM_STR);
+
+    // keep doing this until we get a legit hfile
+    while (true) {
+      FileStatus[] hfFss = fs.listStatus(famDir);
+      if (hfFss.length == 0) {
+        continue;
+      }
+      for (FileStatus hfs : hfFss) {
+        if (!hfs.isDirectory()) {
+          return hfs.getPath();
+        }
+      }
+    }
+  }
+
+  /**
+   * Creates a new mob file name by the old one.
+   * @param oldFileName The old mob file name.
+   * @return The new mob file name.
+   */
+  String createMobFileName(String oldFileName) {
+    MobFileName mobFileName = MobFileName.create(oldFileName);
+    String startKey = mobFileName.getStartKey();
+    String date = mobFileName.getDate();
+    return MobFileName.create(startKey, date, UUID.randomUUID().toString().replaceAll("-", ""))
+      .getFileName();
+  }
+
+  /**
    * This creates a table and then corrupts an hfile.  Hbck should quarantine the file.
    */
   @Test(timeout=180000)
@@ -2155,6 +2221,50 @@ public class TestHBaseFsck {
 
       // Its been fixed, verify that we can enable.
       admin.enableTable(table);
+    } finally {
+      cleanupTable(table);
+    }
+  }
+
+  /**
+   * This creates a table and then corrupts a mob file.  Hbck should quarantine the file.
+   */
+  @Test(timeout=180000)
+  public void testQuarantineCorruptMobFile() throws Exception {
+    TableName table = TableName.valueOf(name.getMethodName());
+    try {
+      setupMobTable(table);
+      assertEquals(ROWKEYS.length, countRows());
+      admin.flush(table);
+
+      FileSystem fs = FileSystem.get(conf);
+      Path mobFile = getFlushedMobFile(fs, table);
+      admin.disableTable(table);
+      // create new corrupt mob file.
+      String corruptMobFile = createMobFileName(mobFile.getName());
+      Path corrupt = new Path(mobFile.getParent(), corruptMobFile);
+      TestHFile.truncateFile(fs, mobFile, corrupt);
+      LOG.info("Created corrupted mob file " + corrupt);
+      HBaseFsck.debugLsr(conf, FSUtils.getRootDir(conf));
+      HBaseFsck.debugLsr(conf, MobUtils.getMobHome(conf));
+
+      // A corrupt mob file doesn't abort the start of regions, so we can enable the table.
+      admin.enableTable(table);
+      HBaseFsck res = HbckTestingUtil.doHFileQuarantine(conf, table);
+      assertEquals(res.getRetCode(), 0);
+      HFileCorruptionChecker hfcc = res.getHFilecorruptionChecker();
+      assertEquals(hfcc.getHFilesChecked(), 4);
+      assertEquals(hfcc.getCorrupted().size(), 0);
+      assertEquals(hfcc.getFailures().size(), 0);
+      assertEquals(hfcc.getQuarantined().size(), 0);
+      assertEquals(hfcc.getMissing().size(), 0);
+      assertEquals(hfcc.getMobFilesChecked(), 5);
+      assertEquals(hfcc.getCorruptedMobFiles().size(), 1);
+      assertEquals(hfcc.getFailureMobFiles().size(), 0);
+      assertEquals(hfcc.getQuarantinedMobFiles().size(), 1);
+      assertEquals(hfcc.getMissedMobFiles().size(), 0);
+      String quarantinedMobFile = hfcc.getQuarantinedMobFiles().iterator().next().getName();
+      assertEquals(corruptMobFile, quarantinedMobFile);
     } finally {
       cleanupTable(table);
     }
