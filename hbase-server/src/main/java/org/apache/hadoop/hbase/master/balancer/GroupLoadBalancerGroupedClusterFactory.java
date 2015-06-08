@@ -5,16 +5,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
 public class GroupLoadBalancerGroupedClusterFactory {
 
+  private static final Log LOG = LogFactory.getLog(GroupLoadBalancerGroupedClusterFactory.class);
+
   private GroupLoadBalancerConfiguration configuration;
   private Map<ServerName, List<HRegionInfo>> clusterMap;
   private Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap;
 
-  private static final String NAME_DELIMITER = ",";
 
   public GroupLoadBalancerGroupedClusterFactory(GroupLoadBalancerConfiguration configuration,
       Map<ServerName, List<HRegionInfo>> clusterMap) {
@@ -27,7 +30,8 @@ public class GroupLoadBalancerGroupedClusterFactory {
 
     for (Map.Entry<ServerName, List<HRegionInfo>> regionServer : this.clusterMap.entrySet()) {
       String serverName =
-          getServerNameForConfigurationFromServerName(regionServer.getKey().getServerName());
+          GroupLoadBalancerUtils.getServerNameWithoutStartCode(
+              regionServer.getKey().getServerName());
       String groupServerBelongsTo =
           configuration.getServers().get(serverName).getGroupServerBelongsTo();
 
@@ -40,7 +44,7 @@ public class GroupLoadBalancerGroupedClusterFactory {
     for (Map.Entry<ServerName, List<HRegionInfo>> regionServer : this.clusterMap.entrySet()) {
       for (HRegionInfo hri : regionServer.getValue()) {
         String regionName = hri.getRegionNameAsString();
-        String tableName = getTableNameFromRegionName(regionName);
+        String tableName = GroupLoadBalancerUtils.getTableNameFromRegionName(regionName);
 
         // Get the group the table belongs to, if none is assigned, it belongs to the default group
         String groupTableBelongsTo = configuration.getTables().containsKey(tableName)?
@@ -56,6 +60,9 @@ public class GroupLoadBalancerGroupedClusterFactory {
             groupedClusterMap.get(groupTableBelongsTo).containsKey(regionServer.getKey())?
                 regionServer.getKey():defaultServer;
 
+        // Need to update listing in GroupLoadBalancerServer also to be consistent with cluster
+        this.configuration.getTables().get(tableName).setGroupTableBelongsTo(groupTableBelongsTo);
+
         if (groupedClusterMap.get(groupTableBelongsTo).get(serverTableBelongsTo) == null) {
           List<HRegionInfo> hriList = new ArrayList<>();
           hriList.add(hri);
@@ -69,14 +76,6 @@ public class GroupLoadBalancerGroupedClusterFactory {
     return this.groupedClusterMap;
   }
 
-  private String getServerNameForConfigurationFromServerName(String serverName) {
-    String[] serverNameArray = serverName.split(NAME_DELIMITER);
-    return serverNameArray[0] + NAME_DELIMITER + serverNameArray[1];
-  }
-
-  private String getTableNameFromRegionName(String regionName) {
-    return regionName.split(NAME_DELIMITER)[0];
-  }
 
   public String toString() {
     return this.groupedClusterMap.toString();

@@ -3,6 +3,8 @@ package org.apache.hadoop.hbase.master.balancer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.ServerName;
 
 import java.lang.StringBuilder;
 import java.util.*;
@@ -27,7 +29,8 @@ public class GroupLoadBalancerConfiguration {
   private Map<String, GroupLoadBalancerTable> tables;
   private String defaultGroupName;
 
-  public GroupLoadBalancerConfiguration(Configuration configuration) {
+  public GroupLoadBalancerConfiguration(Configuration configuration,
+      Map<ServerName, List<HRegionInfo>> clusterMap){
 
     this.groups = new HashMap<>();
     this.servers = new HashMap<>();
@@ -51,16 +54,16 @@ public class GroupLoadBalancerConfiguration {
       String[] serversArray = serverConfig.split(GROUP_DELIMITER);
       String[] tablesArray = tableConfig.split(GROUP_DELIMITER);
 
-      for (String serverName : serversArray) {
-        GroupLoadBalancerServer server = new GroupLoadBalancerServer(serverName, groupName);
+      for (String serverNameString : serversArray) {
+        GroupLoadBalancerServer server = new GroupLoadBalancerServer(serverNameString, groupName);
         group.addServer(server);
-        this.servers.put(serverName, server);
+        this.servers.put(serverNameString, server);
       }
 
-      for (String tableName : tablesArray) {
-        GroupLoadBalancerTable table = new GroupLoadBalancerTable(tableName, groupName);
+      for (String tableNameString : tablesArray) {
+        GroupLoadBalancerTable table = new GroupLoadBalancerTable(tableNameString, groupName);
         group.addTable(table);
-        this.tables.put(tableName, table);
+        this.tables.put(tableNameString, table);
       }
 
       if (this.groups.containsKey(groupName)) {
@@ -69,7 +72,6 @@ public class GroupLoadBalancerConfiguration {
       this.groups.put(groupName, group);
 
     }
-
     this.defaultGroupName = configuration.get(DEFAULT_GROUP);
     if (this.defaultGroupName.length() < 1) {
       throw new IllegalArgumentException("Default group name cannot be null");
@@ -78,6 +80,33 @@ public class GroupLoadBalancerConfiguration {
       throw new IllegalArgumentException("Default group name must be a pre-existing group name");
     }
 
+    // Go through clusterMap and if we encounter a new server, put it in the default group and
+    // store the ServerName object in GroupLoadBalancerServer
+    for (ServerName serverName : clusterMap.keySet()) {
+      String serverNameString =
+          GroupLoadBalancerUtils.getServerNameWithoutStartCode(serverName.getServerName());
+      if (!this.servers.containsKey(serverNameString)) {
+        GroupLoadBalancerServer groupLoadBalancerServer =
+            new GroupLoadBalancerServer(serverNameString, defaultGroupName);
+        this.servers.put(serverNameString, groupLoadBalancerServer);
+        this.groups.get(defaultGroupName).addServer(groupLoadBalancerServer);
+      }
+      this.servers.get(serverNameString).setServerName(serverName);
+    }
+
+    // Go through clusterMap and if we encounter a new table, put it in the default group
+    for (List<HRegionInfo> hriList : clusterMap.values()) {
+      for (HRegionInfo hri : hriList) {
+        String tableNameString =
+            GroupLoadBalancerUtils.getTableNameFromRegionName(hri.getRegionNameAsString());
+        if (!this.tables.containsKey(tableNameString)) {
+          GroupLoadBalancerTable groupLoadBalancerTable =
+              new GroupLoadBalancerTable(tableNameString, defaultGroupName);
+          this.tables.put(tableNameString, groupLoadBalancerTable);
+          this.groups.get(defaultGroupName).addTable(groupLoadBalancerTable);
+        }
+      }
+    }
   }
 
   public Map<String, GroupLoadBalancerGroup> getGroups() {
@@ -103,14 +132,6 @@ public class GroupLoadBalancerConfiguration {
       description.append(group.toString());
     }
     description.append("\n");
-    description.append("Servers Map: \n");
-    for (GroupLoadBalancerServer server : this.servers.values()) {
-      description.append(server + "\n");
-    }
-    description.append("Tables Map: \n");
-    for (GroupLoadBalancerTable table : this.tables.values()) {
-      description.append(table + "\n");
-    }
     return description.toString();
   }
 

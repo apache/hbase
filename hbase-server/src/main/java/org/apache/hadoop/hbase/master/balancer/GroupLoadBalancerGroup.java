@@ -17,10 +17,16 @@ public class GroupLoadBalancerGroup {
   }
 
   public void addServer(GroupLoadBalancerServer server) {
-    this.servers.put(server.getServerName(), server);
+    if (this.servers.containsKey(server.getServerNameString())) {
+      throw new IllegalArgumentException("Server name already exists.");
+    }
+    this.servers.put(server.getServerNameString(), server);
   }
 
   public void addTable(GroupLoadBalancerTable table) {
+    if (this.tables.containsKey(table.getTableName())) {
+      throw new IllegalArgumentException("Table name already exists");
+    }
     this.tables.put(table.getTableName(), table);
   }
 
