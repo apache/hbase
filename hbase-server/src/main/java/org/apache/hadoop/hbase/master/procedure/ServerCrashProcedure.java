@@ -707,7 +707,9 @@ implements ServerProcedureInterface {
       services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else if (serverName.equals(services.getMetaTableLocator().
         getMetaRegionLocation(services.getZooKeeper()))) {
-      throw new IOException("hbase:meta is onlined on the dead server " + this.serverName);
+      // hbase:meta seems to be still alive on the server whom master is expiring
+      // and thinks is dying. Let's re-assign the hbase:meta anyway.
+      services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else {
       LOG.info("Skip assigning hbase:meta because it is online at "
           + services.getMetaTableLocator().getMetaRegionLocation(services.getZooKeeper()));
