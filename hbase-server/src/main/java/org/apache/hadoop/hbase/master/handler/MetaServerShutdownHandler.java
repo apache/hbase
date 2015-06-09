@@ -159,8 +159,9 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       this.services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else if (serverName.equals(server.getMetaTableLocator().getMetaRegionLocation(
       this.server.getZooKeeper()))) {
-      throw new IOException("hbase:meta is onlined on the dead server "
-          + serverName);
+      // hbase:meta seems to be still alive on the server whom master is expiring
+      // and thinks is dying. Let's re-assign the hbase:meta anyway.
+      this.services.getAssignmentManager().assignMeta(HRegionInfo.FIRST_META_REGIONINFO);
     } else {
       LOG.info("Skip assigning hbase:meta, because it is online on the "
           + server.getMetaTableLocator().getMetaRegionLocation(this.server.getZooKeeper()));
