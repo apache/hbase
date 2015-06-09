@@ -30,6 +30,8 @@ module HBaseQuotasConstants
   THROTTLE_TYPE = 'THROTTLE_TYPE'
   THROTTLE = 'THROTTLE'
   REQUEST = 'REQUEST'
+  WRITE = 'WRITE'
+  READ = 'READ'
 end
 
 module Hbase
@@ -46,6 +48,7 @@ module Hbase
     def throttle(args)
       raise(ArgumentError, "Arguments should be a Hash") unless args.kind_of?(Hash)
       type = args.fetch(THROTTLE_TYPE, REQUEST)
+      args.delete(THROTTLE_TYPE)
       type, limit, time_unit = _parse_limit(args.delete(LIMIT), ThrottleType, type)
       if args.has_key?(USER)
         user = args.delete(USER)

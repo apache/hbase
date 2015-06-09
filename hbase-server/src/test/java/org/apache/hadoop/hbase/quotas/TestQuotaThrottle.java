@@ -140,6 +140,38 @@ public class TestQuotaThrottle {
   }
 
   @Test(timeout=60000)
+  public void testUserGlobalReadAndWriteThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final String userName = User.getCurrent().getShortName();
+
+    // Add 6req/min limit for read request
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES);
+
+    // not limit for write request and should execute at max 6 read requests
+    assertEquals(60, doPuts(60, tables));
+    assertEquals(6, doGets(100, tables));
+
+    waitMinuteQuota();
+
+    // Add 6req/min limit for write request
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, ThrottleType.WRITE_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES);
+
+    // should execute at max 6 read requests and at max 6 write write requests
+    assertEquals(6, doGets(100, tables));
+    assertEquals(6, doPuts(60, tables));
+
+    // Remove all the limits
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
+    triggerUserCacheRefresh(true, TABLE_NAMES);
+    assertEquals(60, doPuts(60, tables));
+    assertEquals(60, doGets(60, tables));
+  }
+
+  @Test(timeout=60000)
   public void testUserTableThrottle() throws Exception {
     final Admin admin = TEST_UTIL.getHBaseAdmin();
     final String userName = User.getCurrent().getShortName();
@@ -156,6 +188,47 @@ public class TestQuotaThrottle {
     // wait a minute and you should get other 6 requests executed
     waitMinuteQuota();
     assertEquals(6, doPuts(100, tables[0]));
+
+    // Remove all the limits
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName, TABLE_NAMES[0]));
+    triggerUserCacheRefresh(true, TABLE_NAMES);
+    assertEquals(60, doPuts(60, tables));
+    assertEquals(60, doGets(60, tables));
+  }
+
+  @Test(timeout=60000)
+  public void testUserTableReadAndWriteThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final String userName = User.getCurrent().getShortName();
+
+    // Add 6req/min limit for write request on tables[0]
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, TABLE_NAMES[0], ThrottleType.WRITE_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 write requests and have no limit for read request
+    assertEquals(6, doPuts(100, tables[0]));
+    assertEquals(60, doGets(60, tables[0]));
+
+    // no limit on tables[1]
+    assertEquals(60, doPuts(60, tables[1]));
+    assertEquals(60, doGets(60, tables[1]));
+
+    // wait a minute and you should get other 6  write requests executed
+    waitMinuteQuota();
+
+    // Add 6req/min limit for read request on tables[0]
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, TABLE_NAMES[0], ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 read requests and at max 6 write requests
+    assertEquals(6, doPuts(100, tables[0]));
+    assertEquals(6, doGets(60, tables[0]));
+
+    // no limit on tables[1]
+    assertEquals(30, doPuts(30, tables[1]));
+    assertEquals(30, doGets(30, tables[1]));
 
     // Remove all the limits
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName, TABLE_NAMES[0]));
@@ -190,6 +263,39 @@ public class TestQuotaThrottle {
   }
 
   @Test(timeout=60000)
+  public void testUserNamespaceReadAndWriteThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final String userName = User.getCurrent().getShortName();
+    final String NAMESPACE = "default";
+
+    // Add 6req/min limit for read request
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, NAMESPACE, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 read requests and have no limit for write request
+    assertEquals(6, doGets(60, tables[0]));
+    assertEquals(60, doPuts(60, tables[0]));
+
+    waitMinuteQuota();
+
+    // Add 6req/min limit for write request, too
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, NAMESPACE, ThrottleType.WRITE_NUMBER, 6, TimeUnit.MINUTES));
+    triggerUserCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 read requests and at max 6 write requests
+    assertEquals(6, doGets(60, tables[0]));
+    assertEquals(6, doPuts(60, tables[0]));
+
+    // Remove all the limits
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName, NAMESPACE));
+    triggerUserCacheRefresh(true, TABLE_NAMES);
+    assertEquals(60, doPuts(60, tables));
+    assertEquals(60, doGets(60, tables));
+  }
+
+  @Test(timeout=60000)
   public void testTableGlobalThrottle() throws Exception {
     final Admin admin = TEST_UTIL.getHBaseAdmin();
 
@@ -214,6 +320,43 @@ public class TestQuotaThrottle {
   }
 
   @Test(timeout=60000)
+  public void testTableGlobalReadAndWriteThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+
+    // Add 6req/min limit for read request
+    admin.setQuota(QuotaSettingsFactory
+      .throttleTable(TABLE_NAMES[0], ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 read requests and have no limit for write request
+    assertEquals(6, doGets(100, tables[0]));
+    assertEquals(100, doPuts(100, tables[0]));
+    // should have no limits on tables[1]
+    assertEquals(30, doPuts(30, tables[1]));
+    assertEquals(30, doGets(30, tables[1]));
+
+    // wait a minute and you should get other 6 requests executed
+    waitMinuteQuota();
+
+    // Add 6req/min limit for write request, too
+    admin.setQuota(QuotaSettingsFactory
+      .throttleTable(TABLE_NAMES[0], ThrottleType.WRITE_NUMBER, 6, TimeUnit.MINUTES));
+    triggerTableCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 read requests and at max 6 write requests
+    assertEquals(6, doGets(100, tables[0]));
+    assertEquals(6, doPuts(100, tables[0]));
+    // should have no limits on tables[1]
+    assertEquals(30, doPuts(30, tables[1]));
+    assertEquals(30, doGets(30, tables[1]));
+
+    // Remove all the limits
+    admin.setQuota(QuotaSettingsFactory.unthrottleTable(TABLE_NAMES[0]));
+    triggerTableCacheRefresh(true, TABLE_NAMES[0]);
+    assertEquals(80, doGets(80, tables[0], tables[1]));
+  }
+
+  @Test(timeout=60000)
   public void testNamespaceGlobalThrottle() throws Exception {
     final Admin admin = TEST_UTIL.getHBaseAdmin();
     final String NAMESPACE = "default";
@@ -229,6 +372,37 @@ public class TestQuotaThrottle {
     // wait a minute and you should get other 6 requests executed
     waitMinuteQuota();
     assertEquals(6, doPuts(100, tables[1]));
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(NAMESPACE));
+    triggerNamespaceCacheRefresh(true, TABLE_NAMES[0]);
+    assertEquals(40, doPuts(40, tables[0]));
+  }
+
+  @Test(timeout=60000)
+  public void testNamespaceGlobalReadAndWriteThrottle() throws Exception {
+    final Admin admin = TEST_UTIL.getHBaseAdmin();
+    final String NAMESPACE = "default";
+
+    // Add 6req/min limit for write request
+    admin.setQuota(QuotaSettingsFactory
+      .throttleNamespace(NAMESPACE, ThrottleType.WRITE_NUMBER, 6, TimeUnit.MINUTES));
+    triggerNamespaceCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 write requests and no limit for read request
+    assertEquals(6, doPuts(100, tables[0]));
+    assertEquals(100, doGets(100, tables[0]));
+
+    // wait a minute and you should get other 6 requests executed
+    waitMinuteQuota();
+
+    // Add 6req/min limit for read request, too
+    admin.setQuota(QuotaSettingsFactory
+      .throttleNamespace(NAMESPACE, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    triggerNamespaceCacheRefresh(false, TABLE_NAMES[0]);
+
+    // should execute at max 6 write requests and at max 6 read requests
+    assertEquals(6, doPuts(100, tables[0]));
+    assertEquals(6, doGets(100, tables[0]));
 
     admin.setQuota(QuotaSettingsFactory.unthrottleNamespace(NAMESPACE));
     triggerNamespaceCacheRefresh(true, TABLE_NAMES[0]);
@@ -389,6 +563,8 @@ public class TestQuotaThrottle {
       QuotaCache quotaCache = quotaManager.getQuotaCache();
 
       quotaCache.triggerCacheRefresh();
+      // sleep for cache update
+      Thread.sleep(250);
 
       for (TableName table: tables) {
         quotaCache.getTableLimiter(table);
