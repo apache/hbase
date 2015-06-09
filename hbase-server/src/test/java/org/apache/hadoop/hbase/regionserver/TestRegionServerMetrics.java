@@ -459,9 +459,9 @@ public class TestRegionServerMetrics {
     ((HRegion)region).initialize();
     region.compact(true);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    metricsHelper.assertCounter("mobCompactedFromMobCellsCount", numHfiles,
+    metricsHelper.assertCounter("cellsCountCompactedFromMob", numHfiles,
         serverSource);
-    metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 0, serverSource);
+    metricsHelper.assertCounter("cellsCountCompactedToMob", 0, serverSource);
     scanner = t.getScanner(scan);
     scanner.next(100);
     numScanNext++;  // this is an ugly construct
@@ -480,8 +480,8 @@ public class TestRegionServerMetrics {
     region.compact(true);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
     // metrics are reset by the region initialization
-    metricsHelper.assertCounter("mobCompactedFromMobCellsCount", 0, serverSource);
-    metricsHelper.assertCounter("mobCompactedIntoMobCellsCount", 2 * numHfiles - 1,
+    metricsHelper.assertCounter("cellsCountCompactedFromMob", 0, serverSource);
+    metricsHelper.assertCounter("cellsCountCompactedToMob", 2 * numHfiles - 1,
         serverSource);
     t.close();
     admin.close();
