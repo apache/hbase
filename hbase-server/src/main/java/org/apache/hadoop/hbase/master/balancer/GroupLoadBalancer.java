@@ -32,7 +32,21 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 
   private static final Log LOG = LogFactory.getLog(GroupLoadBalancer.class);
 
-  @Override public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterMap) {
+  private Configuration configuration;
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    setConf(conf);
+  }
+
+  @Override
+  public synchronized void setConf(Configuration conf) {
+    super.setConf(conf);
+    this.configuration = conf;
+  }
+
+  @Override
+  public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterMap) {
 
     LOG.info("**************** USING GROUP LOAD BALANCER *******************");
 
@@ -48,9 +62,8 @@ import org.apache.hadoop.hbase.master.RegionPlan;
       return regionsToReturn;
     }
 
-    Configuration configuration = HBaseConfiguration.create();
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
-        new GroupLoadBalancerConfiguration(configuration, clusterMap);
+        new GroupLoadBalancerConfiguration(this.configuration, clusterMap);
 
     GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters =
         new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);
