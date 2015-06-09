@@ -1042,7 +1042,7 @@ public class HRegionServer extends HasThread implements
    * @return Current write count for all online regions.
    */
   private long getWriteRequestCount() {
-    int writeCount = 0;
+    long writeCount = 0;
     for (Map.Entry<String, HRegion> e: this.onlineRegions.entrySet()) {
       writeCount += e.getValue().getWriteRequestsCount();
     }
