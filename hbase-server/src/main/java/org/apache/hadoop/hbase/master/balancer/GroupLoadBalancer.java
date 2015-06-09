@@ -113,7 +113,6 @@ import org.apache.hadoop.hbase.master.RegionPlan;
         if (serverName != hriToServerNameMap.get(hri)) {
           RegionPlan regionPlan = new RegionPlan(hri, serverName, hriToServerNameMap.get(hri));
           regionsToReconcile.add(regionPlan);
-        } else {
         }
       }
     }
