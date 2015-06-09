@@ -678,21 +678,20 @@ public class StoreFile {
     // Get first, last, and mid keys.  Midkey is the key that starts block
     // in middle of hfile.  Has column and timestamp.  Need to return just
     // the row we want to split on as midkey.
-    byte [] midkey = this.reader.midkey();
+    Cell midkey = this.reader.midkey();
     if (midkey != null) {
-      KeyValue mk = KeyValueUtil.createKeyValueFromKey(midkey, 0, midkey.length);
-      byte [] fk = this.reader.getFirstKey();
-      KeyValue firstKey = KeyValueUtil.createKeyValueFromKey(fk, 0, fk.length);
+      Cell firstKey = this.reader.getFirstKey();
       byte [] lk = this.reader.getLastKey();
       KeyValue lastKey = KeyValueUtil.createKeyValueFromKey(lk, 0, lk.length);
       // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
-      if (comparator.compareRows(mk, firstKey) == 0 || comparator.compareRows(mk, lastKey) == 0) {
+      if (comparator.compareRows(midkey, firstKey) == 0
+          || comparator.compareRows(midkey, lastKey) == 0) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("cannot split because midkey is the same as first or last row");
         }
         return null;
       }
-      return mk.getRow();
+      return CellUtil.cloneRow(midkey);
     }
     return null;
   }
@@ -1371,8 +1370,7 @@ public class StoreFile {
           .createLastOnRow(scan.getStartRow()) : KeyValueUtil.createLastOnRow(scan
           .getStopRow());
       // TODO this is in hot path? Optimize and avoid 2 extra object creations.
-      KeyValue.KeyOnlyKeyValue firstKeyKV = 
-          new KeyValue.KeyOnlyKeyValue(this.getFirstKey(), 0, this.getFirstKey().length);
+      Cell firstKeyKV = this.getFirstKey();
       KeyValue.KeyOnlyKeyValue lastKeyKV = 
           new KeyValue.KeyOnlyKeyValue(this.getLastKey(), 0, this.getLastKey().length);
       boolean nonOverLapping = ((getComparator().compare(firstKeyKV, largestScanKeyValue)) > 0
@@ -1493,7 +1491,7 @@ public class StoreFile {
       return reader.getLastRowKey();
     }
 
-    public byte[] midkey() throws IOException {
+    public Cell midkey() throws IOException {
       return reader.midkey();
     }
 
@@ -1513,7 +1511,7 @@ public class StoreFile {
       return deleteFamilyCnt;
     }
 
-    public byte[] getFirstKey() {
+    public Cell getFirstKey() {
       return reader.getFirstKey();
     }
 

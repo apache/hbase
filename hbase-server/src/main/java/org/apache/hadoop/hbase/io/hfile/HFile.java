@@ -394,13 +394,13 @@ public class HFile {
 
     byte[] getLastKey();
 
-    byte[] midkey() throws IOException;
+    Cell midkey() throws IOException;
 
     long length();
 
     long getEntries();
 
-    byte[] getFirstKey();
+    Cell getFirstKey();
 
     long indexSize();
 

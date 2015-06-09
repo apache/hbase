@@ -17,9 +17,10 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.io.hfile;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.BloomFilterBase;
 
 import org.apache.hadoop.hbase.CellComparator;
 
@@ -47,7 +48,7 @@ public class CompoundBloomFilterBase implements BloomFilterBase {
   protected long totalByteSize;
   protected long totalMaxKeys;
 
-  /** Hash function type to use, as defined in {@link Hash} */
+  /** Hash function type to use, as defined in {@link org.apache.hadoop.hbase.util.Hash} */
   protected int hashType;
   /** Comparator used to compare Bloom filter keys */
   protected CellComparator comparator;

@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -179,11 +180,10 @@ public class TestHFileWriterV3 {
  // Comparator class name is stored in the trailer in version 2.
     CellComparator comparator = trailer.createComparator();
     HFileBlockIndex.BlockIndexReader dataBlockIndexReader =
-        new HFileBlockIndex.BlockIndexReader(comparator,
+        new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator,
             trailer.getNumDataIndexLevels());
     HFileBlockIndex.BlockIndexReader metaBlockIndexReader =
-        new HFileBlockIndex.BlockIndexReader(
-            null, 1);
+        new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
 
     HFileBlock.BlockIterator blockIter = blockReader.blockRange(
         trailer.getLoadOnOpenDataOffset(),
@@ -194,7 +194,7 @@ public class TestHFileWriterV3 {
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
     
     if (findMidKey) {
-      byte[] midkey = dataBlockIndexReader.midkey();
+      Cell midkey = dataBlockIndexReader.midkey();
       assertNotNull("Midkey should not be null", midkey);
     }
     

@@ -59,7 +59,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
 
   protected final Cell splitCell;
 
-  private byte[] firstKey = null;
+  private Cell firstKey = null;
 
   private boolean firstKeySeeked = false;
 
@@ -262,7 +262,7 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       @Override
       public boolean seekBefore(Cell key) throws IOException {
         if (top) {
-          Cell fk = new KeyValue.KeyOnlyKeyValue(getFirstKey(), 0, getFirstKey().length);
+          Cell fk = getFirstKey();
           if (getComparator().compareKeyIgnoresMvcc(key, fk) <= 0) {
             return false;
           }
@@ -319,18 +319,18 @@ public class HalfStoreFileReader extends StoreFile.Reader {
   }
 
   @Override
-  public byte[] midkey() throws IOException {
+  public Cell midkey() throws IOException {
     // Returns null to indicate file is not splitable.
     return null;
   }
 
   @Override
-  public byte[] getFirstKey() {
+  public Cell getFirstKey() {
     if (!firstKeySeeked) {
       HFileScanner scanner = getScanner(true, true, false);
       try {
         if (scanner.seekTo()) {
-          this.firstKey = Bytes.toBytes(scanner.getKey());
+          this.firstKey = new KeyValue.KeyOnlyKeyValue(Bytes.toBytes(scanner.getKey()));
         }
         firstKeySeeked = true;
       } catch (IOException e) {

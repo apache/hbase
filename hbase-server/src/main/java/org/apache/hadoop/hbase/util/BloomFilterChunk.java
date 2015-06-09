@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import com.google.common.annotations.VisibleForTesting;
 
 /**
- * The basic building block for the {@link CompoundBloomFilter}
+ * The basic building block for the {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter}
  */
 @InterfaceAudience.Private
 public class BloomFilterChunk implements BloomFilterBase {

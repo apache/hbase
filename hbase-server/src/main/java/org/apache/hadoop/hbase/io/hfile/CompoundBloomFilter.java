@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.util;
+package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataInput;
 import java.io.IOException;
@@ -26,15 +26,15 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.BlockType;
-import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
-import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
-import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
+import org.apache.hadoop.hbase.util.BloomFilter;
+import org.apache.hadoop.hbase.util.BloomFilterUtil;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Hash;
 
 /**
- * A Bloom filter implementation built on top of {@link BloomFilterChunk},
- * encapsulating a set of fixed-size Bloom filters written out at the time of
+ * A Bloom filter implementation built on top of 
+ * {@link org.apache.hadoop.hbase.util.BloomFilterChunk}, encapsulating
+ * a set of fixed-size Bloom filters written out at the time of
  * {@link org.apache.hadoop.hbase.io.hfile.HFile} generation into the data
  * block stream, and loaded on demand at query time. This class only provides
  * reading capabilities.
@@ -84,7 +84,11 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
       throw new IllegalArgumentException("Invalid hash type: " + hashType);
     }
     // We will pass null for ROW block
-    index = new HFileBlockIndex.BlockIndexReader(comparator, 1);
+    if(comparator == null) {
+      index = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
+    } else {
+      index = new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator, 1);
+    }
     index.readRootIndex(meta, numChunks);
   }
 

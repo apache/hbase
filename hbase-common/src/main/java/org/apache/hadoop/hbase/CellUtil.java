@@ -770,8 +770,10 @@ public final class CellUtil {
     sb.append(KeyValue.humanReadableTimestamp(cell.getTimestamp()));
     sb.append('/');
     sb.append(Type.codeToType(cell.getTypeByte()));
-    sb.append("/vlen=");
-    sb.append(cell.getValueLength());
+    if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
+      sb.append("/vlen=");
+      sb.append(cell.getValueLength());
+    }
     sb.append("/seqid=");
     sb.append(cell.getSequenceId());
     return sb.toString();

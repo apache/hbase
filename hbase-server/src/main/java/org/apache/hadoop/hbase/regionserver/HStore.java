@@ -1838,9 +1838,8 @@ public class HStore implements Store {
       return false;
     }
     // TODO: Cache these keys rather than make each time?
-    byte [] fk = r.getFirstKey();
-    if (fk == null) return false;
-    KeyValue firstKV = KeyValueUtil.createKeyValueFromKey(fk, 0, fk.length);
+    Cell  firstKV = r.getFirstKey();
+    if (firstKV == null) return false;
     byte [] lk = r.getLastKey();
     KeyValue lastKV = KeyValueUtil.createKeyValueFromKey(lk, 0, lk.length);
     KeyValue firstOnRow = state.getTargetKey();
@@ -1884,9 +1883,9 @@ public class HStore implements Store {
    */
   private boolean seekToScanner(final HFileScanner scanner,
                                 final KeyValue firstOnRow,
-                                final KeyValue firstKV)
+                                final Cell firstKV)
       throws IOException {
-    KeyValue kv = firstOnRow;
+    Cell kv = firstOnRow;
     // If firstOnRow < firstKV, set to firstKV
     if (this.comparator.compareRows(firstKV, firstOnRow) == 0) kv = firstKV;
     int result = scanner.seekTo(kv);

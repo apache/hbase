@@ -170,7 +170,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Split on a row, not in middle of row.  Midkey returned by reader
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
-    KeyValue kv = KeyValueUtil.createKeyValueFromKey(reader.midkey());
+    Cell kv = reader.midkey();
     byte [] midRow = kv.getRow();
     kv = KeyValueUtil.createKeyValueFromKey(reader.getLastKey());
     byte [] finalRow = kv.getRow();
@@ -314,8 +314,8 @@ public class TestStoreFile extends HBaseTestCase {
 
   private void checkHalfHFile(final HRegionFileSystem regionFs, final StoreFile f)
       throws IOException {
-    byte [] midkey = f.createReader().midkey();
-    KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
+    Cell midkey = f.createReader().midkey();
+    KeyValue midKV = (KeyValue)midkey;
     byte [] midRow = midKV.getRow();
     // Create top split.
     HRegionInfo topHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
@@ -332,7 +332,7 @@ public class TestStoreFile extends HBaseTestCase {
       this.fs, bottomPath, conf, cacheConf, BloomType.NONE).createReader();
     ByteBuffer previous = null;
     LOG.info("Midkey: " + midKV.toString());
-    ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midkey);
+    ByteBuffer bbMidkeyBytes = ByteBuffer.wrap(midKV.getKey());
     try {
       // Now make two HalfMapFiles and assert they can read the full backing
       // file, one from the top and the other from the bottom.
@@ -348,7 +348,7 @@ public class TestStoreFile extends HBaseTestCase {
         if ((topScanner.getReader().getComparator().compare(midKV, key.array(),
           key.arrayOffset(), key.limit())) > 0) {
           fail("key=" + Bytes.toStringBinary(key) + " < midkey=" +
-              Bytes.toStringBinary(midkey));
+              midkey);
         }
         if (first) {
           first = false;

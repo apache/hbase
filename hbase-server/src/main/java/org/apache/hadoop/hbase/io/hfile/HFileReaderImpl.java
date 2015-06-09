@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NoTagsKeyValue;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -73,10 +72,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private static final Log LOG = LogFactory.getLog(HFileReaderImpl.class);
 
   /** Data block index reader keeping the root data index in memory */
-  private HFileBlockIndex.BlockIndexReader dataBlockIndexReader;
+  private HFileBlockIndex.CellBasedKeyBlockIndexReader dataBlockIndexReader;
 
   /** Meta block index reader -- always single level */
-  private HFileBlockIndex.BlockIndexReader metaBlockIndexReader;
+  private HFileBlockIndex.ByteArrayKeyBlockIndexReader metaBlockIndexReader;
 
   private final FixedFileTrailer trailer;
 
@@ -189,10 +188,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     // Comparator class name is stored in the trailer in version 2.
     comparator = trailer.createComparator();
-    dataBlockIndexReader = new HFileBlockIndex.BlockIndexReader(comparator,
+    dataBlockIndexReader = new HFileBlockIndex.CellBasedKeyBlockIndexReader(comparator,
         trailer.getNumDataIndexLevels(), this);
-    metaBlockIndexReader = new HFileBlockIndex.BlockIndexReader(
-        null, 1);
+    metaBlockIndexReader = new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
 
     // Parse load-on-open data.
 
@@ -309,7 +307,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   private String toStringFirstKey() {
-    return KeyValue.keyToString(getFirstKey());
+    if(getFirstKey() == null)
+      return null;
+    return CellUtil.getCellKeyAsString(getFirstKey());
   }
 
   private String toStringLastKey() {
@@ -341,7 +341,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    *         first KeyValue.
    */
   @Override
-  public byte [] getFirstKey() {
+  public Cell getFirstKey() {
     if (dataBlockIndexReader == null) {
       throw new BlockIndexNotLoadedException();
     }
@@ -357,8 +357,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    */
   @Override
   public byte[] getFirstRowKey() {
-    byte[] firstKey = getFirstKey();
-    return firstKey == null? null: KeyValueUtil.createKeyValueFromKey(firstKey).getRow();
+    Cell firstKey = getFirstKey();
+    // We have to copy the row part to form the row key alone
+    return firstKey == null? null: CellUtil.cloneRow(firstKey);
   }
 
   /**
@@ -1215,7 +1216,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // Per meta key from any given file, synchronize reads for said block. This
     // is OK to do for meta blocks because the meta block index is always
     // single-level.
-    synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
+    synchronized (metaBlockIndexReader
+        .getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
       BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset);
@@ -1387,7 +1389,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @throws IOException
    */
   @Override
-  public byte[] midkey() throws IOException {
+  public Cell midkey() throws IOException {
     return dataBlockIndexReader.midkey();
   }
 

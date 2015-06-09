@@ -205,7 +205,7 @@ public class TestHFileBlockIndex {
 
     BlockReaderWrapper brw = new BlockReaderWrapper(blockReader);
     HFileBlockIndex.BlockIndexReader indexReader =
-        new HFileBlockIndex.BlockIndexReader(
+        new HFileBlockIndex.CellBasedKeyBlockIndexReader(
             CellComparator.COMPARATOR, numLevels, brw);
 
     indexReader.readRootIndex(blockReader.blockRange(rootIndexOffset,
@@ -493,16 +493,17 @@ public class TestHFileBlockIndex {
     long expected = ClassSize.estimateBase(cl, false);
 
     HFileBlockIndex.BlockIndexReader bi =
-        new HFileBlockIndex.BlockIndexReader(null, 1);
+        new HFileBlockIndex.ByteArrayKeyBlockIndexReader(1);
     long actual = bi.heapSize();
 
     // Since the arrays in BlockIndex(byte [][] blockKeys, long [] blockOffsets,
     // int [] blockDataSizes) are all null they are not going to show up in the
     // HeapSize calculation, so need to remove those array costs from expected.
-    expected -= ClassSize.align(3 * ClassSize.ARRAY);
+    // Already the block keys are not there in this case
+    expected -= ClassSize.align(2 * ClassSize.ARRAY);
 
     if (expected != actual) {
-      ClassSize.estimateBase(cl, true);
+      expected = ClassSize.estimateBase(cl, true);
       assertEquals(expected, actual);
     }
   }
@@ -574,7 +575,7 @@ public class TestHFileBlockIndex {
       assertEquals(expectedNumLevels,
           reader.getTrailer().getNumDataIndexLevels());
 
-      assertTrue(Bytes.equals(keys[0], reader.getFirstKey()));
+      assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey()).getKey()));
       assertTrue(Bytes.equals(keys[NUM_KV - 1], reader.getLastKey()));
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
@@ -631,7 +632,7 @@ public class TestHFileBlockIndex {
       // Validate the mid-key.
       assertEquals(
           Bytes.toStringBinary(blockKeys.get((blockKeys.size() - 1) / 2)),
-          Bytes.toStringBinary(reader.midkey()));
+          reader.midkey());
 
       assertEquals(UNCOMPRESSED_INDEX_SIZES[testI],
           reader.getTrailer().getUncompressedDataIndexSize());

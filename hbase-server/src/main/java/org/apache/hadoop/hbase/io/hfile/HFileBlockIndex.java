@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -51,10 +52,11 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Provides functionality to write ({@link BlockIndexWriter}) and read
- * ({@link BlockIndexReader}) single-level and multi-level block indexes.
+ * ({@link org.apache.hadoop.hbase.io.hfile.BlockIndexReader})
+ * single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in
- * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} and
+ * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
  *  {@link HFileWriterImpl}. Examples of how to use the reader can be
  *  found in {@link HFileWriterImpl} and TestHFileBlockIndex.
  */
@@ -96,124 +98,179 @@ public class HFileBlockIndex {
       2 * Bytes.SIZEOF_INT;
 
   /**
-   * The reader will always hold the root level index in the memory. Index
-   * blocks at all other levels will be cached in the LRU cache in practice,
-   * although this API does not enforce that.
-   *
-   * All non-root (leaf and intermediate) index blocks contain what we call a
-   * "secondary index": an array of offsets to the entries within the block.
-   * This allows us to do binary search for the entry corresponding to the
-   * given key without having to deserialize the block.
+   * An implementation of the BlockIndexReader that deals with block keys which are plain
+   * byte[] like MetaBlock or the Bloom Block for ROW bloom.
+   * Does not need a comparator. It can work on Bytes.BYTES_RAWCOMPARATOR
    */
-  public static class BlockIndexReader implements HeapSize {
-    /** Needed doing lookup on blocks. */
-    private final CellComparator comparator;
+   static class ByteArrayKeyBlockIndexReader extends BlockIndexReader {
 
-    // Root-level data.
-    // TODO : Convert these to Cells (ie) KeyValue.KeyOnlyKV
     private byte[][] blockKeys;
-    private long[] blockOffsets;
-    private int[] blockDataSizes;
-    private int rootCount = 0;
 
-    // Mid-key metadata.
-    private long midLeafBlockOffset = -1;
-    private int midLeafBlockOnDiskSize = -1;
-    private int midKeyEntry = -1;
-
-    /** Pre-computed mid-key */
-    private AtomicReference<byte[]> midKey = new AtomicReference<byte[]>();
-
-    /**
-     * The number of levels in the block index tree. One if there is only root
-     * level, two for root and leaf levels, etc.
-     */
-    private int searchTreeLevel;
-
-    /** A way to read {@link HFile} blocks at a given offset */
-    private CachingBlockReader cachingBlockReader;
-
-    public BlockIndexReader(final CellComparator c, final int treeLevel,
+    public ByteArrayKeyBlockIndexReader(final int treeLevel,
         final CachingBlockReader cachingBlockReader) {
-      this(c, treeLevel);
+      this(treeLevel);
       this.cachingBlockReader = cachingBlockReader;
     }
 
-    public BlockIndexReader(final CellComparator c, final int treeLevel)
-    {
+    public ByteArrayKeyBlockIndexReader(final int treeLevel) {
       // Can be null for METAINDEX block
-      comparator = c;
       searchTreeLevel = treeLevel;
     }
 
-    /**
-     * @return true if the block index is empty.
-     */
+    protected long calculateHeapSizeForBlockKeys(long heapSize) {
+      // Calculating the size of blockKeys
+      if (blockKeys != null) {
+        heapSize += ClassSize.REFERENCE;
+        // Adding array + references overhead
+        heapSize += ClassSize.align(ClassSize.ARRAY + blockKeys.length * ClassSize.REFERENCE);
+
+        // Adding bytes
+        for (byte[] key : blockKeys) {
+          heapSize += ClassSize.align(ClassSize.ARRAY + key.length);
+        }
+      }
+      return heapSize;
+    }
+
+    @Override
     public boolean isEmpty() {
       return blockKeys.length == 0;
     }
 
     /**
-     * Verifies that the block index is non-empty and throws an
-     * {@link IllegalStateException} otherwise.
+     * @param i
+     *          from 0 to {@link #getRootBlockCount() - 1}
      */
-    public void ensureNonEmpty() {
-      if (blockKeys.length == 0) {
-        throw new IllegalStateException("Block index is empty or not loaded");
-      }
+    public byte[] getRootBlockKey(int i) {
+      return blockKeys[i];
     }
 
-    /**
-     * Return the data block which contains this key. This function will only
-     * be called when the HFile version is larger than 1.
-     *
-     * @param key the key we are looking for
-     * @param currentBlock the current block, to avoid re-reading the same block
-     * @param cacheBlocks
-     * @param pread
-     * @param isCompaction
-     * @param expectedDataBlockEncoding the data block encoding the caller is
-     *          expecting the data block to be in, or null to not perform this
-     *          check and return the block irrespective of the encoding
-     * @return reader a basic way to load blocks
-     * @throws IOException
-     */
-    public HFileBlock seekToDataBlock(final Cell key, HFileBlock currentBlock, boolean cacheBlocks,
-        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
-        throws IOException {
-      BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, currentBlock,
-          cacheBlocks,
-          pread, isCompaction, expectedDataBlockEncoding);
-      if (blockWithScanInfo == null) {
-        return null;
-      } else {
-        return blockWithScanInfo.getHFileBlock();
-      }
-    }
-
-    /**
-     * Return the BlockWithScanInfo which contains the DataBlock with other scan
-     * info such as nextIndexedKey. This function will only be called when the
-     * HFile version is larger than 1.
-     * 
-     * @param key
-     *          the key we are looking for
-     * @param currentBlock
-     *          the current block, to avoid re-reading the same block
-     * @param cacheBlocks
-     * @param pread
-     * @param isCompaction
-     * @param expectedDataBlockEncoding the data block encoding the caller is
-     *          expecting the data block to be in, or null to not perform this
-     *          check and return the block irrespective of the encoding.
-     * @return the BlockWithScanInfo which contains the DataBlock with other
-     *         scan info such as nextIndexedKey.
-     * @throws IOException
-     */
+    @Override
     public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
-        boolean cacheBlocks,
-        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
-        throws IOException {
+        boolean cacheBlocks, boolean pread, boolean isCompaction,
+        DataBlockEncoding expectedDataBlockEncoding) throws IOException {
+      // this would not be needed
+      return null;
+    }
+
+    @Override
+    public Cell midkey() throws IOException {
+      // Not needed here
+      return null;
+    }
+
+    protected void initialize(int numEntries) {
+      blockKeys = new byte[numEntries][];
+    }
+
+    protected void add(final byte[] key, final long offset, final int dataSize) {
+      blockOffsets[rootCount] = offset;
+      blockKeys[rootCount] = key;
+      blockDataSizes[rootCount] = dataSize;
+      rootCount++;
+    }
+
+    @Override
+    public int rootBlockContainingKey(byte[] key, int offset, int length, CellComparator comp) {
+      int pos = Bytes.binarySearch(blockKeys, key, offset, length);
+      // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
+      // binarySearch's javadoc.
+
+      if (pos >= 0) {
+        // This means this is an exact match with an element of blockKeys.
+        assert pos < blockKeys.length;
+        return pos;
+      }
+
+      // Otherwise, pos = -(i + 1), where blockKeys[i - 1] < key < blockKeys[i],
+      // and i is in [0, blockKeys.length]. We are returning j = i - 1 such that
+      // blockKeys[j] <= key < blockKeys[j + 1]. In particular, j = -1 if
+      // key < blockKeys[0], meaning the file does not contain the given key.
+
+      int i = -pos - 1;
+      assert 0 <= i && i <= blockKeys.length;
+      return i - 1;
+    }
+
+    @Override
+    public int rootBlockContainingKey(Cell key) {
+      // Should not be called on this because here it deals only with byte[]
+      throw new UnsupportedOperationException(
+          "Cannot search for a key that is of Cell type. Only plain byte array keys " +
+          "can be searched for");
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("size=" + rootCount).append("\n");
+      for (int i = 0; i < rootCount; i++) {
+        sb.append("key=").append(KeyValue.keyToString(blockKeys[i]))
+            .append("\n  offset=").append(blockOffsets[i])
+            .append(", dataSize=" + blockDataSizes[i]).append("\n");
+      }
+      return sb.toString();
+    }
+
+  }
+
+  /**
+   * An implementation of the BlockIndexReader that deals with block keys which are the key
+   * part of a cell like the Data block index or the ROW_COL bloom blocks
+   * This needs a comparator to work with the Cells
+   */
+   static class CellBasedKeyBlockIndexReader extends BlockIndexReader {
+
+    private Cell[] blockKeys;
+    /** Pre-computed mid-key */
+    private AtomicReference<Cell> midKey = new AtomicReference<Cell>();
+    /** Needed doing lookup on blocks. */
+    private CellComparator comparator;
+
+    public CellBasedKeyBlockIndexReader(final CellComparator c, final int treeLevel,
+        final CachingBlockReader cachingBlockReader) {
+      this(c, treeLevel);
+      this.cachingBlockReader = cachingBlockReader;
+    }
+
+    public CellBasedKeyBlockIndexReader(final CellComparator c, final int treeLevel) {
+      // Can be null for METAINDEX block
+      comparator = c;
+      searchTreeLevel = treeLevel;
+    }
+
+    protected long calculateHeapSizeForBlockKeys(long heapSize) {
+      if (blockKeys != null) {
+        heapSize += ClassSize.REFERENCE;
+        // Adding array + references overhead
+        heapSize += ClassSize.align(ClassSize.ARRAY + blockKeys.length * ClassSize.REFERENCE);
+
+        // Adding blockKeys
+        for (Cell key : blockKeys) {
+          heapSize += ClassSize.align(CellUtil.estimatedHeapSizeOf(key));
+        }
+      }
+      // Add comparator and the midkey atomicreference
+      heapSize += 2 * ClassSize.REFERENCE;
+      return heapSize;
+    }
+
+    @Override
+    public boolean isEmpty() {
+      return blockKeys.length == 0;
+    }
+
+    /**
+     * @param i
+     *          from 0 to {@link #getRootBlockCount() - 1}
+     */
+    public Cell getRootBlockKey(int i) {
+      return blockKeys[i];
+    }
+    @Override
+    public BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+        boolean cacheBlocks, boolean pread, boolean isCompaction,
+        DataBlockEncoding expectedDataBlockEncoding) throws IOException {
       int rootLevelIndex = rootBlockContainingKey(key);
       if (rootLevelIndex < 0 || rootLevelIndex >= blockOffsets.length) {
         return null;
@@ -227,7 +284,7 @@ public class HFileBlockIndex {
       int currentOnDiskSize = blockDataSizes[rootLevelIndex];
 
       if (rootLevelIndex < blockKeys.length - 1) {
-        nextIndexedKey = new KeyValue.KeyOnlyKeyValue(blockKeys[rootLevelIndex + 1]);
+        nextIndexedKey = blockKeys[rootLevelIndex + 1];
       } else {
         nextIndexedKey = HConstants.NO_NEXT_INDEXED_KEY;
       }
@@ -314,18 +371,12 @@ public class HFileBlockIndex {
       return blockWithScanInfo;
     }
 
-    /**
-     * An approximation to the {@link HFile}'s mid-key. Operates on block
-     * boundaries, and does not go inside blocks. In other words, returns the
-     * first key of the middle block of the file.
-     *
-     * @return the first key of the middle block
-     */
-    public byte[] midkey() throws IOException {
+    @Override
+    public Cell midkey() throws IOException {
       if (rootCount == 0)
         throw new IOException("HFile empty");
 
-      byte[] targetMidKey = this.midKey.get();
+      Cell targetMidKey = this.midKey.get();
       if (targetMidKey != null) {
         return targetMidKey;
       }
@@ -348,7 +399,8 @@ public class HFileBlockIndex {
             keyRelOffset;
         int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
             + SECONDARY_INDEX_ENTRY_OVERHEAD;
-        targetMidKey = ByteBufferUtils.toBytes(b, keyOffset, keyLen);
+        byte[] bytes = ByteBufferUtils.toBytes(b, keyOffset, keyLen);
+        targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
       } else {
         // The middle of the root-level index.
         targetMidKey = blockKeys[rootCount / 2];
@@ -358,12 +410,173 @@ public class HFileBlockIndex {
       return targetMidKey;
     }
 
-    /**
-     * @param i from 0 to {@link #getRootBlockCount() - 1}
-     */
-    public byte[] getRootBlockKey(int i) {
-      return blockKeys[i];
+    protected void initialize(int numEntries) {
+      blockKeys = new Cell[numEntries];
     }
+
+    /**
+     * Adds a new entry in the root block index. Only used when reading.
+     *
+     * @param key Last key in the block
+     * @param offset file offset where the block is stored
+     * @param dataSize the uncompressed data size
+     */
+    protected void add(final byte[] key, final long offset, final int dataSize) {
+      blockOffsets[rootCount] = offset;
+      // Create the blockKeys as Cells once when the reader is opened
+      blockKeys[rootCount] = new KeyValue.KeyOnlyKeyValue(key, 0, key.length);
+      blockDataSizes[rootCount] = dataSize;
+      rootCount++;
+    }
+
+    @Override
+    public int rootBlockContainingKey(final byte[] key, int offset, int length,
+        CellComparator comp) {
+      // This should always be called with Cell not with a byte[] key
+      throw new UnsupportedOperationException("Cannot find for a key containing plain byte " +
+      		"array. Only cell based keys can be searched for");
+    }
+
+    @Override
+    public int rootBlockContainingKey(Cell key) {
+      // Here the comparator should not be null as this happens for the root-level block
+      int pos = Bytes.binarySearch(blockKeys, key, comparator);
+      // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
+      // binarySearch's javadoc.
+
+      if (pos >= 0) {
+        // This means this is an exact match with an element of blockKeys.
+        assert pos < blockKeys.length;
+        return pos;
+      }
+
+      // Otherwise, pos = -(i + 1), where blockKeys[i - 1] < key < blockKeys[i],
+      // and i is in [0, blockKeys.length]. We are returning j = i - 1 such that
+      // blockKeys[j] <= key < blockKeys[j + 1]. In particular, j = -1 if
+      // key < blockKeys[0], meaning the file does not contain the given key.
+
+      int i = -pos - 1;
+      assert 0 <= i && i <= blockKeys.length;
+      return i - 1;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("size=" + rootCount).append("\n");
+      for (int i = 0; i < rootCount; i++) {
+        sb.append("key=").append((blockKeys[i]))
+            .append("\n  offset=").append(blockOffsets[i])
+            .append(", dataSize=" + blockDataSizes[i]).append("\n");
+      }
+      return sb.toString();
+    }
+  }
+   /**
+   * The reader will always hold the root level index in the memory. Index
+   * blocks at all other levels will be cached in the LRU cache in practice,
+   * although this API does not enforce that.
+   *
+   * All non-root (leaf and intermediate) index blocks contain what we call a
+   * "secondary index": an array of offsets to the entries within the block.
+   * This allows us to do binary search for the entry corresponding to the
+   * given key without having to deserialize the block.
+   */
+   static abstract class BlockIndexReader implements HeapSize {
+
+    protected long[] blockOffsets;
+    protected int[] blockDataSizes;
+    protected int rootCount = 0;
+
+    // Mid-key metadata.
+    protected long midLeafBlockOffset = -1;
+    protected int midLeafBlockOnDiskSize = -1;
+    protected int midKeyEntry = -1;
+
+    /**
+     * The number of levels in the block index tree. One if there is only root
+     * level, two for root and leaf levels, etc.
+     */
+    protected int searchTreeLevel;
+
+    /** A way to read {@link HFile} blocks at a given offset */
+    protected CachingBlockReader cachingBlockReader;
+
+    /**
+     * @return true if the block index is empty.
+     */
+    public abstract boolean isEmpty();
+
+    /**
+     * Verifies that the block index is non-empty and throws an
+     * {@link IllegalStateException} otherwise.
+     */
+    public void ensureNonEmpty() {
+      if (isEmpty()) {
+        throw new IllegalStateException("Block index is empty or not loaded");
+      }
+    }
+
+    /**
+     * Return the data block which contains this key. This function will only
+     * be called when the HFile version is larger than 1.
+     *
+     * @param key the key we are looking for
+     * @param currentBlock the current block, to avoid re-reading the same block
+     * @param cacheBlocks
+     * @param pread
+     * @param isCompaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding
+     * @return reader a basic way to load blocks
+     * @throws IOException
+     */
+    public HFileBlock seekToDataBlock(final Cell key, HFileBlock currentBlock, boolean cacheBlocks,
+        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
+        throws IOException {
+      BlockWithScanInfo blockWithScanInfo = loadDataBlockWithScanInfo(key, currentBlock,
+          cacheBlocks,
+          pread, isCompaction, expectedDataBlockEncoding);
+      if (blockWithScanInfo == null) {
+        return null;
+      } else {
+        return blockWithScanInfo.getHFileBlock();
+      }
+    }
+
+    /**
+     * Return the BlockWithScanInfo which contains the DataBlock with other scan
+     * info such as nextIndexedKey. This function will only be called when the
+     * HFile version is larger than 1.
+     * 
+     * @param key
+     *          the key we are looking for
+     * @param currentBlock
+     *          the current block, to avoid re-reading the same block
+     * @param cacheBlocks
+     * @param pread
+     * @param isCompaction
+     * @param expectedDataBlockEncoding the data block encoding the caller is
+     *          expecting the data block to be in, or null to not perform this
+     *          check and return the block irrespective of the encoding.
+     * @return the BlockWithScanInfo which contains the DataBlock with other
+     *         scan info such as nextIndexedKey.
+     * @throws IOException
+     */
+    public abstract BlockWithScanInfo loadDataBlockWithScanInfo(Cell key, HFileBlock currentBlock,
+        boolean cacheBlocks,
+        boolean pread, boolean isCompaction, DataBlockEncoding expectedDataBlockEncoding)
+        throws IOException;
+
+    /**
+     * An approximation to the {@link HFile}'s mid-key. Operates on block
+     * boundaries, and does not go inside blocks. In other words, returns the
+     * first key of the middle block of the file.
+     *
+     * @return the first key of the middle block
+     */
+    public abstract Cell midkey() throws IOException;
 
     /**
      * @param i from 0 to {@link #getRootBlockCount() - 1}
@@ -402,27 +615,8 @@ public class HFileBlockIndex {
     // When we want to find the meta index block or bloom block for ROW bloom
     // type Bytes.BYTES_RAWCOMPARATOR would be enough. For the ROW_COL bloom case we need the
     // CellComparator.
-    public int rootBlockContainingKey(final byte[] key, int offset, int length,
-        CellComparator comp) {
-      int pos = Bytes.binarySearch(blockKeys, key, offset, length, comp);
-      // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
-      // binarySearch's javadoc.
-
-      if (pos >= 0) {
-        // This means this is an exact match with an element of blockKeys.
-        assert pos < blockKeys.length;
-        return pos;
-      }
-
-      // Otherwise, pos = -(i + 1), where blockKeys[i - 1] < key < blockKeys[i],
-      // and i is in [0, blockKeys.length]. We are returning j = i - 1 such that
-      // blockKeys[j] <= key < blockKeys[j + 1]. In particular, j = -1 if
-      // key < blockKeys[0], meaning the file does not contain the given key.
-
-      int i = -pos - 1;
-      assert 0 <= i && i <= blockKeys.length;
-      return i - 1;
-    }
+    public abstract int rootBlockContainingKey(final byte[] key, int offset, int length,
+        CellComparator comp);
 
     /**
      * Finds the root-level index block containing the given key.
@@ -438,7 +632,7 @@ public class HFileBlockIndex {
     // Bytes.BYTES_RAWCOMPARATOR would be enough. For the ROW_COL bloom case we
     // need the CellComparator.
     public int rootBlockContainingKey(final byte[] key, int offset, int length) {
-      return rootBlockContainingKey(key, offset, length, comparator);
+      return rootBlockContainingKey(key, offset, length, null);
     }
 
     /**
@@ -447,41 +641,7 @@ public class HFileBlockIndex {
      * @param key
      *          Key to find
      */
-    public int rootBlockContainingKey(final Cell key) {
-      // Here the comparator should not be null as this happens for the root-level block
-      int pos = Bytes.binarySearch(blockKeys, key, comparator);
-      // pos is between -(blockKeys.length + 1) to blockKeys.length - 1, see
-      // binarySearch's javadoc.
-
-      if (pos >= 0) {
-        // This means this is an exact match with an element of blockKeys.
-        assert pos < blockKeys.length;
-        return pos;
-      }
-
-      // Otherwise, pos = -(i + 1), where blockKeys[i - 1] < key < blockKeys[i],
-      // and i is in [0, blockKeys.length]. We are returning j = i - 1 such that
-      // blockKeys[j] <= key < blockKeys[j + 1]. In particular, j = -1 if
-      // key < blockKeys[0], meaning the file does not contain the given key.
-
-      int i = -pos - 1;
-      assert 0 <= i && i <= blockKeys.length;
-      return i - 1;
-    }
-
-    /**
-     * Adds a new entry in the root block index. Only used when reading.
-     *
-     * @param key Last key in the block
-     * @param offset file offset where the block is stored
-     * @param dataSize the uncompressed data size
-     */
-    private void add(final byte[] key, final long offset, final int dataSize) {
-      blockOffsets[rootCount] = offset;
-      blockKeys[rootCount] = key;
-      blockDataSizes[rootCount] = dataSize;
-      rootCount++;
-    }
+    public abstract int rootBlockContainingKey(final Cell key);
 
     /**
      * The indexed key at the ith position in the nonRootIndex. The position starts at 0.
@@ -489,7 +649,7 @@ public class HFileBlockIndex {
      * @param i the ith position
      * @return The indexed key at the ith position in the nonRootIndex.
      */
-    private byte[] getNonRootIndexedKey(ByteBuffer nonRootIndex, int i) {
+    protected byte[] getNonRootIndexedKey(ByteBuffer nonRootIndex, int i) {
       int numEntries = nonRootIndex.getInt(0);
       if (i < 0 || i >= numEntries) {
         return null;
@@ -653,10 +813,9 @@ public class HFileBlockIndex {
      * @param numEntries the number of root-level index entries
      * @throws IOException
      */
-    public void readRootIndex(DataInput in, final int numEntries)
-        throws IOException {
+    public void readRootIndex(DataInput in, final int numEntries) throws IOException {
       blockOffsets = new long[numEntries];
-      blockKeys = new byte[numEntries][];
+      initialize(numEntries);
       blockDataSizes = new int[numEntries];
 
       // If index size is zero, no index was written.
@@ -669,6 +828,10 @@ public class HFileBlockIndex {
         }
       }
     }
+
+    protected abstract void initialize(int numEntries);
+
+    protected abstract void add(final byte[] key, final long offset, final int dataSize);
 
     /**
      * Read in the root-level index from the given input stream. Must match
@@ -712,36 +875,15 @@ public class HFileBlockIndex {
     }
 
     @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      sb.append("size=" + rootCount).append("\n");
-      for (int i = 0; i < rootCount; i++) {
-        sb.append("key=").append(KeyValue.keyToString(blockKeys[i]))
-            .append("\n  offset=").append(blockOffsets[i])
-            .append(", dataSize=" + blockDataSizes[i]).append("\n");
-      }
-      return sb.toString();
-    }
-
-    @Override
     public long heapSize() {
-      long heapSize = ClassSize.align(6 * ClassSize.REFERENCE +
+      // The BlockIndexReader does not have the blockKey, comparator and the midkey atomic reference
+      long heapSize = ClassSize.align(3 * ClassSize.REFERENCE +
           2 * Bytes.SIZEOF_INT + ClassSize.OBJECT);
 
       // Mid-key metadata.
       heapSize += MID_KEY_METADATA_SIZE;
 
-      // Calculating the size of blockKeys
-      if (blockKeys != null) {
-        // Adding array + references overhead
-        heapSize += ClassSize.align(ClassSize.ARRAY + blockKeys.length
-            * ClassSize.REFERENCE);
-
-        // Adding bytes
-        for (byte[] key : blockKeys) {
-          heapSize += ClassSize.align(ClassSize.ARRAY + key.length);
-        }
-      }
+      heapSize = calculateHeapSizeForBlockKeys(heapSize);
 
       if (blockOffsets != null) {
         heapSize += ClassSize.align(ClassSize.ARRAY + blockOffsets.length
@@ -756,6 +898,7 @@ public class HFileBlockIndex {
       return ClassSize.align(heapSize);
     }
 
+    protected abstract long calculateHeapSizeForBlockKeys(long heapSize);
   }
 
   /**

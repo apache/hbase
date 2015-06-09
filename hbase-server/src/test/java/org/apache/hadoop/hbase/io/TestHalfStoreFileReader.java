@@ -101,9 +101,8 @@ public class TestHalfStoreFileReader {
 
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
     r.loadFileInfo();
-    byte [] midkey = r.midkey();
-    KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
-    midkey = midKV.getRow();
+    Cell midKV = r.midkey();
+    byte[] midkey = ((KeyValue.KeyOnlyKeyValue)midKV).getRow();
 
     //System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
 
@@ -167,9 +166,8 @@ public class TestHalfStoreFileReader {
 
       HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
       r.loadFileInfo();
-      byte[] midkey = r.midkey();
-      KeyValue midKV = KeyValueUtil.createKeyValueFromKey(midkey);
-      midkey = midKV.getRow();
+      Cell midKV = r.midkey();
+      byte[] midkey = ((KeyValue.KeyOnlyKeyValue)midKV).getRow();
 
       Reference bottom = new Reference(midkey, Reference.Range.bottom);
       Reference top = new Reference(midkey, Reference.Range.top);
@@ -217,7 +215,7 @@ public class TestHalfStoreFileReader {
       assertNull(foundKeyValue);
     }
 
-  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, KeyValue seekBefore,
+  private Cell doTestOfSeekBefore(Path p, FileSystem fs, Reference bottom, Cell seekBefore,
                                         CacheConfig cacheConfig)
             throws IOException {
       final HalfStoreFileReader halfreader = new HalfStoreFileReader(fs, p,
