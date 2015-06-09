@@ -929,7 +929,14 @@ public class MetaTableAccessor {
    */
   public static Put makePutFromRegionInfo(HRegionInfo regionInfo)
     throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
+    return makePutFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+  }
+  /**
+   * Generates and returns a Put containing the region into for the catalog table
+   */
+  public static Put makePutFromRegionInfo(HRegionInfo regionInfo, long ts)
+    throws IOException {
+    Put put = new Put(regionInfo.getRegionName(), ts);
     addRegionInfo(put, regionInfo);
     return put;
   }
@@ -1154,11 +1161,23 @@ public class MetaTableAccessor {
   public static void addRegionsToMeta(Connection connection,
                                       List<HRegionInfo> regionInfos, int regionReplication)
     throws IOException {
+    addRegionsToMeta(connection, regionInfos, regionReplication, HConstants.LATEST_TIMESTAMP);
+  }
+  /**
+   * Adds a hbase:meta row for each of the specified new regions.
+   * @param connection connection we're using
+   * @param regionInfos region information list
+   * @param regionReplication
+   * @param ts desired timestamp
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionsToMeta(Connection connection,
+      List<HRegionInfo> regionInfos, int regionReplication, long ts)
+          throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (HRegionInfo regionInfo : regionInfos) {
       if (RegionReplicaUtil.isDefaultReplica(regionInfo)) {
-        puts.add(makePutFromRegionInfo(regionInfo));
-        Put put = makePutFromRegionInfo(regionInfo);
+        Put put = makePutFromRegionInfo(regionInfo, ts);
         // Add empty locations for region replicas so that number of replicas can be cached
         // whenever the primary region is looked up from meta
         for (int i = 1; i < regionReplication; i++) {
@@ -1380,16 +1399,27 @@ public class MetaTableAccessor {
    * Deletes the specified regions from META.
    * @param connection connection we're using
    * @param regionsInfo list of regions to be deleted from META
+   * @param ts desired timestamp
+   * @throws IOException
+   */
+  public static void deleteRegions(Connection connection,
+                                   List<HRegionInfo> regionsInfo, long ts) throws IOException {
+    List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
+    for (HRegionInfo hri: regionsInfo) {
+      deletes.add(new Delete(hri.getRegionName(), ts));
+    }
+    deleteFromMetaTable(connection, deletes);
+    LOG.info("Deleted " + regionsInfo);
+  }
+  /**
+   * Deletes the specified regions from META.
+   * @param connection connection we're using
+   * @param regionsInfo list of regions to be deleted from META
    * @throws IOException
    */
   public static void deleteRegions(Connection connection,
                                    List<HRegionInfo> regionsInfo) throws IOException {
-    List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
-    for (HRegionInfo hri: regionsInfo) {
-      deletes.add(new Delete(hri.getRegionName()));
-    }
-    deleteFromMetaTable(connection, deletes);
-    LOG.info("Deleted " + regionsInfo);
+    deleteRegions(connection, regionsInfo, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -1431,13 +1461,16 @@ public class MetaTableAccessor {
    */
   public static void overwriteRegions(Connection connection,
       List<HRegionInfo> regionInfos, int regionReplication) throws IOException {
-    deleteRegions(connection, regionInfos);
+    // use master time for delete marker and the Put
+    long now = EnvironmentEdgeManager.currentTime();
+    deleteRegions(connection, regionInfos, now);
     // Why sleep? This is the easiest way to ensure that the previous deletes does not
     // eclipse the following puts, that might happen in the same ts from the server.
     // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
     // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
-    Threads.sleep(20);
-    addRegionsToMeta(connection, regionInfos, regionReplication);
+    //
+    // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
+    addRegionsToMeta(connection, regionInfos, regionReplication, now+1);
     LOG.info("Overwritten " + regionInfos);
   }
 
