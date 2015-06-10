@@ -17,19 +17,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class})
-public class TestGroupLoadBalancer extends BalancerTestBase {
+@Category({ MediumTests.class }) public class TestGroupLoadBalancer extends BalancerTestBase {
   private static GroupLoadBalancer loadBalancer;
   private static final Log LOG = LogFactory.getLog(TestGroupLoadBalancer.class);
   private static Configuration conf;
 
-  @BeforeClass
-  public static void beforeAllTests() throws Exception {
+  @BeforeClass public static void beforeAllTests() throws Exception {
     loadBalancer = new GroupLoadBalancer();
   }
 
-  @Test
-  public void testTablesArePutInRightGroups() throws Exception {
+  @Test public void testTablesArePutInRightGroups() throws Exception {
 
     // Create a configuration
     conf = HBaseConfiguration.create();
@@ -45,7 +42,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -84,17 +81,19 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     });
 
     // Check to make sure that regions are being moved to the right servers
-    assertTrue(regionPlanList.get(0).getRegionInfo().getRegionNameAsString().contains("test_table_2"));
+    assertTrue(
+        regionPlanList.get(0).getRegionInfo().getRegionNameAsString().contains("test_table_2"));
     assertTrue(regionPlanList.get(0).getSource().toString().contains("10.255.196.145,60021"));
     assertTrue(regionPlanList.get(0).getDestination().toString().contains("10.255.196.145,60020"));
 
-    assertTrue(regionPlanList.get(1).getRegionInfo().getRegionNameAsString().contains("test_table_3"));
+    assertTrue(
+        regionPlanList.get(1).getRegionInfo().getRegionNameAsString().contains("test_table_3"));
     assertTrue(regionPlanList.get(1).getSource().toString().contains("10.255.196.145,60020"));
     assertTrue(regionPlanList.get(1).getDestination().toString().contains("10.255.196.145,60021"));
   }
 
-  @Test (expected = IllegalArgumentException.class)
-  public void testDefaultGroupIsAPreExistingGroup() throws Exception {
+  @Test(expected = IllegalArgumentException.class) public void testDefaultGroupIsAPreExistingGroup()
+      throws Exception {
 
     // Create a configuration where the default group is not a pre-existing group
     conf = HBaseConfiguration.create();
@@ -102,15 +101,13 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group3");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group2", "10.255.196.145,60021");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
-        "test_table_1");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
-        "test_table_2");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1", "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2", "test_table_2");
     loadBalancer.setConf(conf);
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -134,18 +131,16 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test (expected = IllegalArgumentException.class)
-  public void testAllGroupsHaveAtLeastOneServer() throws Exception {
+  @Test(expected = IllegalArgumentException.class) public void testAllGroupsHaveAtLeastOneServer()
+      throws Exception {
 
     // Create a configuration where group2 which has no servers assigned to it
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
     conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group1");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
-        "test_table_1");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
-        "test_table_2");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1", "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2", "test_table_2");
     loadBalancer.setConf(conf);
 
     // Create a test region server
@@ -166,8 +161,8 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test (expected = IllegalArgumentException.class)
-  public void testAllGroupsHaveAtLeastOneTable() throws Exception {
+  @Test(expected = IllegalArgumentException.class) public void testAllGroupsHaveAtLeastOneTable()
+      throws Exception {
 
     // Create a configuration where group2 which has no tables assigned to it
     conf = HBaseConfiguration.create();
@@ -175,8 +170,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group1");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group2", "10.255.196.145,60021");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
-        "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1", "test_table_1");
     loadBalancer.setConf(conf);
 
     // Create a test region server
@@ -197,23 +191,21 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test (expected = IllegalArgumentException.class)
-  public void testDefaultGroupIsAlwaysSet() throws Exception {
+  @Test(expected = IllegalArgumentException.class) public void testDefaultGroupIsAlwaysSet()
+      throws Exception {
 
     // Create a configuration where default group has not been set
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group2", "10.255.196.145,60021");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
-        "test_table_1");
-    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
-        "test_table_2");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1", "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2", "test_table_2");
     loadBalancer.setConf(conf);
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -237,8 +229,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test
-  public void testGroupConfigurationIsCorrect() throws Exception {
+  @Test public void testGroupConfigurationIsCorrect() throws Exception {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
@@ -253,7 +244,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -287,28 +278,29 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
         new GroupLoadBalancerConfiguration(conf, testCluster);
 
     // check configuration to make sure servers are assigned to the right group
-    assertTrue(groupLoadBalancerConfiguration
-        .getServer("10.255.196.145,60020").getGroupServerBelongsTo().equals("group1"));
-    assertTrue(groupLoadBalancerConfiguration
-        .getServer("10.255.196.145,60021").getGroupServerBelongsTo().equals("group2"));
+    assertTrue(
+        groupLoadBalancerConfiguration.getServer("10.255.196.145,60020").getGroupServerBelongsTo()
+            .equals("group1"));
+    assertTrue(
+        groupLoadBalancerConfiguration.getServer("10.255.196.145,60021").getGroupServerBelongsTo()
+            .equals("group2"));
 
     // check configuration to make sure tables are assigned to the right group, including
     // test_table_5 which has been assigned to the default group (group1) since its assignment
     // was not explicitly stated in the configuration file
-    assertTrue(groupLoadBalancerConfiguration
-        .getTable("test_table_1").getGroupTableBelongsTo().equals("group1"));
-    assertTrue(groupLoadBalancerConfiguration
-        .getTable("test_table_2").getGroupTableBelongsTo().equals("group1"));
-    assertTrue(groupLoadBalancerConfiguration
-        .getTable("test_table_5").getGroupTableBelongsTo().equals("group1"));
-    assertTrue(groupLoadBalancerConfiguration
-        .getTable("test_table_3").getGroupTableBelongsTo().equals("group2"));
-    assertTrue(groupLoadBalancerConfiguration
-        .getTable("test_table_4").getGroupTableBelongsTo().equals("group2"));
+    assertTrue(groupLoadBalancerConfiguration.getTable("test_table_1").getGroupTableBelongsTo()
+        .equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration.getTable("test_table_2").getGroupTableBelongsTo()
+        .equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration.getTable("test_table_5").getGroupTableBelongsTo()
+        .equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration.getTable("test_table_3").getGroupTableBelongsTo()
+        .equals("group2"));
+    assertTrue(groupLoadBalancerConfiguration.getTable("test_table_4").getGroupTableBelongsTo()
+        .equals("group2"));
   }
 
-  @Test
-  public void testGroupClusterFactory() {
+  @Test public void testGroupClusterFactory() {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
@@ -323,7 +315,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -376,8 +368,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     }
   }
 
-  @Test
-  public void testRegionReconciliation() throws Exception {
+  @Test public void testRegionReconciliation() throws Exception {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
@@ -392,7 +383,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
     // Create two test region servers
     Random random = new Random();
-    long randomTimeDelta = (long)random.nextInt(60000);
+    long randomTimeDelta = (long) random.nextInt(60000);
     long currentTimeStamp = System.currentTimeMillis();
     ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
     ServerName serverName2 =
@@ -440,13 +431,17 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     });
 
     // Check to make sure that regions are being moved to the right servers
-    assertTrue(regionsToReconcile.get(0).getRegionInfo().getRegionNameAsString().contains("test_table_2"));
+    assertTrue(
+        regionsToReconcile.get(0).getRegionInfo().getRegionNameAsString().contains("test_table_2"));
     assertTrue(regionsToReconcile.get(0).getSource().toString().contains("10.255.196.145,60021"));
-    assertTrue(regionsToReconcile.get(0).getDestination().toString().contains("10.255.196.145,60020"));
+    assertTrue(
+        regionsToReconcile.get(0).getDestination().toString().contains("10.255.196.145,60020"));
 
-    assertTrue(regionsToReconcile.get(1).getRegionInfo().getRegionNameAsString().contains("test_table_3"));
+    assertTrue(
+        regionsToReconcile.get(1).getRegionInfo().getRegionNameAsString().contains("test_table_3"));
     assertTrue(regionsToReconcile.get(1).getSource().toString().contains("10.255.196.145,60020"));
-    assertTrue(regionsToReconcile.get(1).getDestination().toString().contains("10.255.196.145,60021"));
+    assertTrue(
+        regionsToReconcile.get(1).getDestination().toString().contains("10.255.196.145,60021"));
   }
 
 }
