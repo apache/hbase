@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -97,6 +96,7 @@ public class TestAccessController2 extends SecureTestUtil {
   private String namespace = "testNamespace";
   private String tname = namespace + ":testtable1";
   private TableName tableName = TableName.valueOf(tname);
+  private static String TESTGROUP_1_NAME;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -109,6 +109,7 @@ public class TestAccessController2 extends SecureTestUtil {
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
+    TESTGROUP_1_NAME = convertToGroup(TESTGROUP_1);
     TESTGROUP1_USER1 =
         User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
     TESTGROUP2_USER1 =
@@ -200,23 +201,27 @@ public class TestAccessController2 extends SecureTestUtil {
 
   @Test
   public void testCreateTableWithGroupPermissions() throws Exception {
-    grantGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
-    AccessTestAction createAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
-        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
-          try (Admin admin = connection.getAdmin()) {
-            admin.createTable(desc);
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
+    try {
+      AccessTestAction createAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
+          desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+          try (Connection connection =
+              ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
+            try (Admin admin = connection.getAdmin()) {
+              admin.createTable(desc);
+            }
           }
+          return null;
         }
-        return null;
-      }
-    };
-    verifyAllowed(createAction, TESTGROUP1_USER1);
-    verifyDenied(createAction, TESTGROUP2_USER1);
-    revokeGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
+      };
+      verifyAllowed(createAction, TESTGROUP1_USER1);
+      verifyDenied(createAction, TESTGROUP2_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
+    }
   }
 
   @Test
@@ -264,55 +269,65 @@ public class TestAccessController2 extends SecureTestUtil {
     SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(),
       TEST_TABLE.getTableName(), null, null, Action.ADMIN);
 
-    // Write tests
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
+    try {
+      // Write tests
 
-    AccessTestAction writeAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
+      AccessTestAction writeAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
 
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
-            TEST_VALUE));
-          return null;
-        } finally {
-        }
-      }
-    };
-
-    // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
-
-    verifyDenied(writeAction, globalAdmin, globalCreate, globalRead);
-    verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
-    verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
-    verifyAllowed(writeAction, superUser, globalWrite);
-
-    // Read tests
-
-    AccessTestAction scanAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        try(Connection conn = ConnectionFactory.createConnection(conf);
-            Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-          ResultScanner s = t.getScanner(new Scan());
-          try {
-            for (Result r = s.next(); r != null; r = s.next()) {
-              // do nothing
-            }
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+              Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
+              TEST_VALUE));
+            return null;
           } finally {
-            s.close();
           }
-          return null;
         }
-      }
-    };
+      };
 
-    // All reads from ACL table denied except for GLOBAL READ and superuser
+      // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
 
-    verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite);
-    verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
-    verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
-    verifyAllowed(scanAction, superUser, globalRead);
+      verifyDenied(writeAction, globalAdmin, globalCreate, globalRead, TESTGROUP2_USER1);
+      verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
+      verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
+      verifyAllowed(writeAction, superUser, globalWrite, TESTGROUP1_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
+    }
+
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.READ);
+    try {
+      // Read tests
+
+      AccessTestAction scanAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+              Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
+            ResultScanner s = t.getScanner(new Scan());
+            try {
+              for (Result r = s.next(); r != null; r = s.next()) {
+                // do nothing
+              }
+            } finally {
+              s.close();
+            }
+            return null;
+          }
+        }
+      };
+
+      // All reads from ACL table denied except for GLOBAL READ and superuser
+
+      verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite, TESTGROUP2_USER1);
+      verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
+      verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
+      verifyAllowed(scanAction, superUser, globalRead, TESTGROUP1_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.READ);
+    }
   }
 
   /*
@@ -412,17 +427,17 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group which has table level access can read all the data and group which
     // has no access can't read any data.
-    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, null, null, Action.READ);
+    grantOnTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, null, null, Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
     verifyDenied(TESTGROUP2_USER1, scanTableActionForGroupWithTableLevelAccess);
 
     // Verify user from a group whose table level access has been revoked can't read any data.
-    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, null, null);
+    revokeFromTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, null, null);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithTableLevelAccess);
 
     // Verify user from a group which has column family level access can read all the data
     // belonging to that family and group which has no access can't read any data.
-    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, null,
+    grantOnTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, null,
       Permission.Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithFamilyLevelAccess);
@@ -431,12 +446,12 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group whose column family level access has been revoked can't read any
     // data from that family.
-    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, null);
+    revokeFromTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, null);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithFamilyLevelAccess);
 
     // Verify user from a group which has column qualifier level access can read data that has this
     // family and qualifier, and group which has no access can't read any data.
-    grantOnTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, Q1, Action.READ);
+    grantOnTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, Q1, Action.READ);
     verifyAllowed(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanFamilyActionForGroupWithQualifierLevelAccess);
     verifyDenied(TESTGROUP1_USER1, scanQualifierActionForGroupWithQualifierLevelAccess);
@@ -446,7 +461,7 @@ public class TestAccessController2 extends SecureTestUtil {
 
     // Verify user from a group whose column qualifier level access has been revoked can't read the
     // data having this column family and qualifier.
-    revokeFromTable(TEST_UTIL, convertToGroup(TESTGROUP_1), tableName, TEST_FAMILY, Q1);
+    revokeFromTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, Q1);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
   }
 
