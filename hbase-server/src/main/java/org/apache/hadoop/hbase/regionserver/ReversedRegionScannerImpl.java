@@ -58,10 +58,10 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
   }
 
   @Override
-  protected boolean isStopRow(byte[] currentRow, int offset, short length) {
-    return currentRow == null
-        || (super.stopRow != null && comparator.compareRows(
-            stopRow, 0, stopRow.length, currentRow, offset, length) >= super.isScan);
+  protected boolean isStopRow(Cell currentRowCell) {
+    return currentRowCell == null
+        || (super.stopRow != null && comparator.compareRows(currentRowCell, stopRow, 0,
+            stopRow.length) <= super.isScan);
   }
 
   @Override

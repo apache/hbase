@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase;
 
+import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
+
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -26,7 +28,6 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 
-import org.apache.hadoop.hbase.CellComparator.MetaCellComparator;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -1037,5 +1038,167 @@ public final class CellUtil {
       return false;
     }
     return matchingColumn(left, right);
+  }
+
+  /**
+   * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
+   *
+   * @param cell
+   * @return First possible Cell on passed Cell's row.
+   */
+  public static Cell createFirstOnRow(final Cell cell) {
+    return new FirstOnRowFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  @InterfaceAudience.Private
+  private static abstract class FakeCell implements Cell {
+
+    @Override
+    public byte[] getRowArray() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return 0;
+    }
+
+    @Override
+    public short getRowLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return 0;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return 0;
+    }
+
+    @Override
+    public long getMvccVersion() {
+      return getSequenceId();
+    }
+
+    @Override
+    public long getSequenceId() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getTagsLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getValue() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] getFamily() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] getQualifier() {
+      return EMPTY_BYTE_ARRAY;
+    }
+
+    @Override
+    public byte[] getRow() {
+      return EMPTY_BYTE_ARRAY;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowFakeCell extends FakeCell {
+    private final byte[] rowArray;
+    private final int roffest;
+    private final short rlength;
+
+    public FirstOnRowFakeCell(final byte[] row, int roffset, short rlength) {
+      this.rowArray = row;
+      this.roffest = roffset;
+      this.rlength = rlength;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.rowArray;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return this.roffest;
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rlength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.LATEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.Maximum.getCode();
+    }
+
+    @Override
+    public byte[] getRow() {
+      return Bytes.copy(this.rowArray, this.roffest, this.rlength);
+    }
   }
 }
