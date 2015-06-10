@@ -807,7 +807,7 @@ public class LoadTestTool extends AbstractHBaseTool {
 
   private void addAuthInfoToConf(Properties authConfig, Configuration conf, String owner,
       String userList) throws IOException {
-    List<String> users = Arrays.asList(userList.split(","));
+    List<String> users = new ArrayList(Arrays.asList(userList.split(",")));
     users.add(owner);
     for (String user : users) {
       String keyTabFileConfKey = "hbase." + user + ".keytab.file";
