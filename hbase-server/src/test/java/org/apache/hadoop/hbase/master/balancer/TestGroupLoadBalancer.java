@@ -92,4 +92,45 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     assertTrue(regionPlanList.get(1).getSource().toString().contains("10.255.196.145,60020"));
     assertTrue(regionPlanList.get(1).getDestination().toString().contains("10.255.196.145,60021"));
   }
+
+  @Test (expected = IllegalArgumentException.class)
+  public void testDefaultGroupIsAPreExistingGroup() throws Exception {
+
+    // Create a configuration where the default group is not a pre-existing group
+    conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
+    conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group3");
+    conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
+    conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group2", "10.255.196.145,60021");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
+        "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
+        "test_table_2");
+    loadBalancer.setConf(conf);
+
+    // Create two test region servers
+    Random random = new Random();
+    long randomTimeDelta = (long)random.nextInt(60000);
+    long currentTimeStamp = System.currentTimeMillis();
+    ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
+    ServerName serverName2 =
+        ServerName.valueOf("10.255.196.145:60021", currentTimeStamp + randomTimeDelta);
+
+    // Create 4 test tables
+    TableName tableName1 = TableName.valueOf("test_table_1");
+    TableName tableName2 = TableName.valueOf("test_table_2");
+    HRegionInfo hri1 = new HRegionInfo(tableName1);
+    HRegionInfo hri2 = new HRegionInfo(tableName2);
+
+    // Create a cluster where 2 tables need to be moved to other groups
+    Map<ServerName, List<HRegionInfo>> testCluster = new HashMap<>();
+    List<HRegionInfo> hriList1 = new ArrayList<>();
+    List<HRegionInfo> hriList2 = new ArrayList<>();
+    hriList1.add(hri1);
+    hriList2.add(hri2);
+    testCluster.put(serverName1, hriList1);
+    testCluster.put(serverName2, hriList2);
+
+    List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
+  }
+
 }
