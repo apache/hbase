@@ -80,7 +80,7 @@ public class GroupLoadBalancerConfiguration {
 
     }
     this.defaultGroupName = configuration.get(DEFAULT_GROUP);
-    if (this.defaultGroupName.length() < 1) {
+    if (this.defaultGroupName == null) {
       throw new IllegalArgumentException("Default group name cannot be null");
     }
     if (!this.groups.containsKey(this.defaultGroupName)) {
