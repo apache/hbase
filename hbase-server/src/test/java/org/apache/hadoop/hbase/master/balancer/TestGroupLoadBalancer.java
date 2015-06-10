@@ -237,4 +237,76 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
+  @Test
+  public void testGroupConfigurationIsCorrect() throws Exception {
+    // Create a configuration
+    conf = HBaseConfiguration.create();
+    conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
+    conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group1");
+    conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
+    conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group2", "10.255.196.145,60021");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
+        "test_table_1;test_table_2");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
+        "test_table_3;test_table_4");
+    loadBalancer.setConf(conf);
+
+    // Create two test region servers
+    Random random = new Random();
+    long randomTimeDelta = (long)random.nextInt(60000);
+    long currentTimeStamp = System.currentTimeMillis();
+    ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
+    ServerName serverName2 =
+        ServerName.valueOf("10.255.196.145:60021", currentTimeStamp + randomTimeDelta);
+
+    // Create 4 test tables
+    TableName tableName1 = TableName.valueOf("test_table_1");
+    TableName tableName2 = TableName.valueOf("test_table_2");
+    TableName tableName3 = TableName.valueOf("test_table_3");
+    TableName tableName4 = TableName.valueOf("test_table_4");
+    TableName tableName5 = TableName.valueOf("test_table_5");
+    HRegionInfo hri1 = new HRegionInfo(tableName1);
+    HRegionInfo hri2 = new HRegionInfo(tableName2);
+    HRegionInfo hri3 = new HRegionInfo(tableName3);
+    HRegionInfo hri4 = new HRegionInfo(tableName4);
+    HRegionInfo hri5 = new HRegionInfo(tableName5);
+
+    // Create a cluster
+    Map<ServerName, List<HRegionInfo>> testCluster = new HashMap<>();
+    List<HRegionInfo> hriList1 = new ArrayList<>();
+    List<HRegionInfo> hriList2 = new ArrayList<>();
+    hriList1.add(hri1);
+    hriList1.add(hri2);
+    hriList2.add(hri3);
+    hriList2.add(hri4);
+    hriList2.add(hri5);
+    testCluster.put(serverName1, hriList1);
+    testCluster.put(serverName2, hriList2);
+
+    GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
+        new GroupLoadBalancerConfiguration(conf, testCluster);
+
+    LOG.info("groupLoadBalancerConfiguration " + groupLoadBalancerConfiguration);
+
+    // check configuration to make sure servers are assigned to the right group
+    assertTrue(groupLoadBalancerConfiguration
+        .getServers().get("10.255.196.145,60020").getGroupServerBelongsTo().equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration
+        .getServers().get("10.255.196.145,60021").getGroupServerBelongsTo().equals("group2"));
+
+    // check configuration to make sure tables are assigned to the right group, including
+    // test_table_5 which has been assigned to the default group (group1) since its assignment
+    // was not explicitly stated in the configuration file
+    assertTrue(groupLoadBalancerConfiguration
+        .getTables().get("test_table_1").getGroupTableBelongsTo().equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration
+        .getTables().get("test_table_2").getGroupTableBelongsTo().equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration
+        .getTables().get("test_table_5").getGroupTableBelongsTo().equals("group1"));
+    assertTrue(groupLoadBalancerConfiguration
+        .getTables().get("test_table_3").getGroupTableBelongsTo().equals("group2"));
+    assertTrue(groupLoadBalancerConfiguration
+        .getTables().get("test_table_4").getGroupTableBelongsTo().equals("group2"));
+  }
+
 }
