@@ -712,7 +712,7 @@ See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#se
 ====
 
 [[schema.casestudies.log_timeseries.varkeys]]
-==== Variangle Length or Fixed Length Rowkeys?
+==== Variable Length or Fixed Length Rowkeys?
 
 It is critical to remember that rowkeys are stamped on every column in HBase.
 If the hostname is `a` and the event type is `e1` then the resulting rowkey would be quite small.
