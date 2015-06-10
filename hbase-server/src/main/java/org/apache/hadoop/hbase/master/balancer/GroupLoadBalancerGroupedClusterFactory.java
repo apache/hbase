@@ -29,11 +29,11 @@ public class GroupLoadBalancerGroupedClusterFactory {
     this.groupedClusterMap = new HashMap<>();
 
     for (Map.Entry<ServerName, List<HRegionInfo>> regionServer : this.clusterMap.entrySet()) {
-      String serverName =
+      String serverNameString =
           GroupLoadBalancerUtils.getServerNameWithoutStartCode(
               regionServer.getKey().getServerName());
       String groupServerBelongsTo =
-          configuration.getServers().get(serverName).getGroupServerBelongsTo();
+          configuration.getServer(serverNameString).getGroupServerBelongsTo();
 
       Map<ServerName, List<HRegionInfo>> newClusterEntry = new HashMap<>();
       newClusterEntry.put(regionServer.getKey(), null);
@@ -48,7 +48,7 @@ public class GroupLoadBalancerGroupedClusterFactory {
 
         // Get the group the table belongs to, if none is assigned, it belongs to the default group
         String groupTableBelongsTo = configuration.getTables().containsKey(tableName)?
-            configuration.getTables().get(tableName).getGroupTableBelongsTo():
+            configuration.getTable(tableName).getGroupTableBelongsTo():
             configuration.getDefaultGroupName();
 
         // Get the server the region is currently assigned to. If the server that the region is
@@ -61,7 +61,7 @@ public class GroupLoadBalancerGroupedClusterFactory {
                 regionServer.getKey():defaultServer;
 
         // Need to update listing in GroupLoadBalancerServer also to be consistent with cluster
-        this.configuration.getTables().get(tableName).setGroupTableBelongsTo(groupTableBelongsTo);
+        this.configuration.getTable(tableName).setGroupTableBelongsTo(groupTableBelongsTo);
 
         if (groupedClusterMap.get(groupTableBelongsTo).get(serverTableBelongsTo) == null) {
           List<HRegionInfo> hriList = new ArrayList<>();

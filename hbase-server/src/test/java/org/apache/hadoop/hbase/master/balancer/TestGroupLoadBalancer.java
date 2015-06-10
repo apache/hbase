@@ -288,23 +288,23 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
     // check configuration to make sure servers are assigned to the right group
     assertTrue(groupLoadBalancerConfiguration
-        .getServers().get("10.255.196.145,60020").getGroupServerBelongsTo().equals("group1"));
+        .getServer("10.255.196.145,60020").getGroupServerBelongsTo().equals("group1"));
     assertTrue(groupLoadBalancerConfiguration
-        .getServers().get("10.255.196.145,60021").getGroupServerBelongsTo().equals("group2"));
+        .getServer("10.255.196.145,60021").getGroupServerBelongsTo().equals("group2"));
 
     // check configuration to make sure tables are assigned to the right group, including
     // test_table_5 which has been assigned to the default group (group1) since its assignment
     // was not explicitly stated in the configuration file
     assertTrue(groupLoadBalancerConfiguration
-        .getTables().get("test_table_1").getGroupTableBelongsTo().equals("group1"));
+        .getTable("test_table_1").getGroupTableBelongsTo().equals("group1"));
     assertTrue(groupLoadBalancerConfiguration
-        .getTables().get("test_table_2").getGroupTableBelongsTo().equals("group1"));
+        .getTable("test_table_2").getGroupTableBelongsTo().equals("group1"));
     assertTrue(groupLoadBalancerConfiguration
-        .getTables().get("test_table_5").getGroupTableBelongsTo().equals("group1"));
+        .getTable("test_table_5").getGroupTableBelongsTo().equals("group1"));
     assertTrue(groupLoadBalancerConfiguration
-        .getTables().get("test_table_3").getGroupTableBelongsTo().equals("group2"));
+        .getTable("test_table_3").getGroupTableBelongsTo().equals("group2"));
     assertTrue(groupLoadBalancerConfiguration
-        .getTables().get("test_table_4").getGroupTableBelongsTo().equals("group2"));
+        .getTable("test_table_4").getGroupTableBelongsTo().equals("group2"));
   }
 
   @Test

@@ -120,8 +120,16 @@ public class GroupLoadBalancerConfiguration {
     return this.groups;
   }
 
+  public GroupLoadBalancerServer getServer(String serverNameString) {
+    return this.servers.get(serverNameString);
+  }
+
   public Map<String, GroupLoadBalancerServer> getServers() {
     return this.servers;
+  }
+
+  public GroupLoadBalancerTable getTable(String serverNameString) {
+    return this.tables.get(serverNameString);
   }
 
   public Map<String, GroupLoadBalancerTable> getTables() {
