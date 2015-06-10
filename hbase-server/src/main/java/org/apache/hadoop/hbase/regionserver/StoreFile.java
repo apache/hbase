@@ -165,6 +165,13 @@ public class StoreFile {
   private final BloomType cfBloomType;
 
   /**
+   * Key for skipping resetting sequence id in metadata.
+   * For bulk loaded hfiles, the scanner resets the cell seqId with the latest one,
+   * if this metadata is set as true, the reset is skipped.
+   */
+  public static final byte[] SKIP_RESET_SEQ_ID = Bytes.toBytes("SKIP_RESET_SEQ_ID");
+
+  /**
    * Constructor, loads a reader and it's indices, etc. May allocate a
    * substantial amount of ram depending on the underlying files (10-20MB?).
    *
@@ -407,6 +414,12 @@ public class StoreFile {
           this.sequenceid += 1;
         }
       }
+      // SKIP_RESET_SEQ_ID only works in bulk loaded file.
+      // In mob compaction, the hfile where the cells contain the path of a new mob file is bulk
+      // loaded to hbase, these cells have the same seqIds with the old ones. We do not want
+      // to reset new seqIds for them since this might make a mess of the visibility of cells that
+      // have the same row key but different seqIds.
+      this.reader.setSkipResetSeqId(isSkipResetSeqId(metadataMap.get(SKIP_RESET_SEQ_ID)));
       this.reader.setBulkLoaded(true);
     }
     this.reader.setSequenceID(this.sequenceid);
@@ -534,6 +547,18 @@ public class StoreFile {
     sb.append(", majorCompaction=").append(isMajorCompaction());
 
     return sb.toString();
+  }
+
+  /**
+   * Gets whether to skip resetting the sequence id for cells.
+   * @param skipResetSeqId The byte array of boolean.
+   * @return Whether to skip resetting the sequence id.
+   */
+  private boolean isSkipResetSeqId(byte[] skipResetSeqId) {
+    if (skipResetSeqId != null && skipResetSeqId.length == 1) {
+      return Bytes.toBoolean(skipResetSeqId);
+    }
+    return false;
   }
 
   public static class WriterBuilder {
@@ -1068,6 +1093,7 @@ public class StoreFile {
     private long deleteFamilyCnt = -1;
     private boolean bulkLoadResult = false;
     private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
+    private boolean skipResetSeqId = true;
 
     public Reader(FileSystem fs, Path path, CacheConfig cacheConf, Configuration conf)
         throws IOException {
@@ -1593,6 +1619,14 @@ public class StoreFile {
 
     public long getMaxTimestamp() {
       return timeRangeTracker == null ? Long.MAX_VALUE : timeRangeTracker.getMaximumTimestamp();
+    }
+
+    boolean isSkipResetSeqId() {
+      return skipResetSeqId;
+    }
+
+    void setSkipResetSeqId(boolean skipResetSeqId) {
+      this.skipResetSeqId = skipResetSeqId;
     }
   }
 

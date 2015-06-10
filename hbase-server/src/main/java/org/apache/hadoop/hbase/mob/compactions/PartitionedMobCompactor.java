@@ -588,6 +588,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     if (writer != null) {
       writer.appendMetadata(maxSeqId, false);
       writer.appendFileInfo(StoreFile.BULKLOAD_TIME_KEY, Bytes.toBytes(bulkloadTime));
+      writer.appendFileInfo(StoreFile.SKIP_RESET_SEQ_ID, Bytes.toBytes(true));
       try {
         writer.close();
       } catch (IOException e) {
