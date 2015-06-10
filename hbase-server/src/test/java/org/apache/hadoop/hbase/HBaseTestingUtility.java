@@ -1023,6 +1023,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
     getHBaseAdmin(); // create immediately the hbaseAdmin
     LOG.info("Minicluster is up");
+
+    // Set the hbase.fs.tmp.dir config to make sure that we have some default value. This is
+    // for tests that do not read hbase-defaults.xml
+    setHBaseFsTmpDir();
+
     return (MiniHBaseCluster)this.hbaseCluster;
   }
 
@@ -1176,6 +1181,17 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public Path createRootDir() throws IOException {
     return createRootDir(false);
+  }
+
+
+  private void setHBaseFsTmpDir() throws IOException {
+    String hbaseFsTmpDirInString = this.conf.get("hbase.fs.tmp.dir");
+    if (hbaseFsTmpDirInString == null) {
+      this.conf.set("hbase.fs.tmp.dir",  getDataTestDirOnTestFS("hbase-staging").toString());
+      LOG.info("Setting hbase.fs.tmp.dir to " + this.conf.get("hbase.fs.tmp.dir"));
+    } else {
+      LOG.info("The hbase.fs.tmp.dir is set to " + hbaseFsTmpDirInString);
+    }
   }
 
   /**
