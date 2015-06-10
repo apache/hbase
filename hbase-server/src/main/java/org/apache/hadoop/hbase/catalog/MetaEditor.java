@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MultiRo
 import org.apache.hadoop.hbase.protobuf.generated.MultiRowMutationProtos.MutateRowsRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.protobuf.ServiceException;
 
@@ -63,7 +62,15 @@ public class MetaEditor {
    */
   public static Put makePutFromRegionInfo(HRegionInfo regionInfo)
   throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
+    return makePutFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Generates and returns a Put containing the region into for the catalog table
+   */
+  public static Put makePutFromRegionInfo(HRegionInfo regionInfo, long ts)
+  throws IOException {
+    Put put = new Put(regionInfo.getRegionName(), ts);
     addRegionInfo(put, regionInfo);
     return put;
   }
@@ -271,9 +278,22 @@ public class MetaEditor {
   public static void addRegionsToMeta(CatalogTracker catalogTracker,
       List<HRegionInfo> regionInfos)
   throws IOException {
+    addRegionsToMeta(catalogTracker, regionInfos, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Adds a hbase:meta row for each of the specified new regions.
+   * @param catalogTracker CatalogTracker
+   * @param regionInfos region information list
+   * @param ts desired timestamp
+   * @throws IOException if problem connecting or updating meta
+   */
+  public static void addRegionsToMeta(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionInfos, long ts)
+  throws IOException {
     List<Put> puts = new ArrayList<Put>();
     for (HRegionInfo regionInfo : regionInfos) {
-      puts.add(makePutFromRegionInfo(regionInfo));
+      puts.add(makePutFromRegionInfo(regionInfo, ts));
     }
     putsToMetaTable(catalogTracker, puts);
     LOG.info("Added " + puts.size());
@@ -488,9 +508,21 @@ public class MetaEditor {
    */
   public static void deleteRegions(CatalogTracker catalogTracker,
       List<HRegionInfo> regionsInfo) throws IOException {
+    deleteRegions(catalogTracker, regionsInfo, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Deletes the specified regions from META.
+   * @param catalogTracker
+   * @param regionsInfo list of regions to be deleted from META
+   * @param ts desired timestamp
+   * @throws IOException
+   */
+  public static void deleteRegions(CatalogTracker catalogTracker,
+      List<HRegionInfo> regionsInfo, long ts) throws IOException {
     List<Delete> deletes = new ArrayList<Delete>(regionsInfo.size());
     for (HRegionInfo hri: regionsInfo) {
-      deletes.add(new Delete(hri.getRegionName()));
+      deletes.add(new Delete(hri.getRegionName(), ts));
     }
     deleteFromMetaTable(catalogTracker, deletes);
     LOG.info("Deleted " + regionsInfo);
@@ -534,13 +566,16 @@ public class MetaEditor {
    */
   public static void overwriteRegions(CatalogTracker catalogTracker,
       List<HRegionInfo> regionInfos) throws IOException {
-    deleteRegions(catalogTracker, regionInfos);
+    // use master time for delete marker and the Put
+    long now = EnvironmentEdgeManager.currentTimeMillis();
+    deleteRegions(catalogTracker, regionInfos, now);
     // Why sleep? This is the easiest way to ensure that the previous deletes does not
     // eclipse the following puts, that might happen in the same ts from the server.
     // See HBASE-9906, and HBASE-9879. Once either HBASE-9879, HBASE-8770 is fixed,
     // or HBASE-9905 is fixed and meta uses seqIds, we do not need the sleep.
-    Threads.sleep(20);
-    addRegionsToMeta(catalogTracker, regionInfos);
+    //
+    // HBASE-13875 uses master timestamp for the mutations. The 20ms sleep is not needed
+    addRegionsToMeta(catalogTracker, regionInfos, now+1);
     LOG.info("Overwritten " + regionInfos);
   }
 
