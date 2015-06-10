@@ -17,16 +17,19 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({ MediumTests.class }) public class TestGroupLoadBalancer extends BalancerTestBase {
+@Category({ MediumTests.class })
+public class TestGroupLoadBalancer extends BalancerTestBase {
   private static GroupLoadBalancer loadBalancer;
   private static final Log LOG = LogFactory.getLog(TestGroupLoadBalancer.class);
   private static Configuration conf;
 
-  @BeforeClass public static void beforeAllTests() throws Exception {
+  @BeforeClass
+  public static void beforeAllTests() throws Exception {
     loadBalancer = new GroupLoadBalancer();
   }
 
-  @Test public void testTablesArePutInRightGroups() throws Exception {
+  @Test
+  public void testTablesArePutInRightGroups() throws Exception {
 
     // Create a configuration
     conf = HBaseConfiguration.create();
@@ -92,7 +95,8 @@ import org.junit.experimental.categories.Category;
     assertTrue(regionPlanList.get(1).getDestination().toString().contains("10.255.196.145,60021"));
   }
 
-  @Test(expected = IllegalArgumentException.class) public void testDefaultGroupIsAPreExistingGroup()
+  @Test(expected = IllegalArgumentException.class)
+  public void testDefaultGroupIsAPreExistingGroup()
       throws Exception {
 
     // Create a configuration where the default group is not a pre-existing group
@@ -131,8 +135,8 @@ import org.junit.experimental.categories.Category;
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test(expected = IllegalArgumentException.class) public void testAllGroupsHaveAtLeastOneServer()
-      throws Exception {
+  @Test(expected = IllegalArgumentException.class)
+  public void testAllGroupsHaveAtLeastOneServer() throws Exception {
 
     // Create a configuration where group2 which has no servers assigned to it
     conf = HBaseConfiguration.create();
@@ -161,8 +165,8 @@ import org.junit.experimental.categories.Category;
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test(expected = IllegalArgumentException.class) public void testAllGroupsHaveAtLeastOneTable()
-      throws Exception {
+  @Test(expected = IllegalArgumentException.class)
+  public void testAllGroupsHaveAtLeastOneTable() throws Exception {
 
     // Create a configuration where group2 which has no tables assigned to it
     conf = HBaseConfiguration.create();
@@ -191,8 +195,8 @@ import org.junit.experimental.categories.Category;
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test(expected = IllegalArgumentException.class) public void testDefaultGroupIsAlwaysSet()
-      throws Exception {
+  @Test(expected = IllegalArgumentException.class)
+  public void testDefaultGroupIsAlwaysSet() throws Exception {
 
     // Create a configuration where default group has not been set
     conf = HBaseConfiguration.create();
@@ -229,7 +233,8 @@ import org.junit.experimental.categories.Category;
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }
 
-  @Test public void testGroupConfigurationIsCorrect() throws Exception {
+  @Test
+  public void testGroupConfigurationIsCorrect() throws Exception {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
@@ -300,7 +305,8 @@ import org.junit.experimental.categories.Category;
         .equals("group2"));
   }
 
-  @Test public void testGroupClusterFactory() {
+  @Test
+  public void testGroupClusterFactory() {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
@@ -368,7 +374,8 @@ import org.junit.experimental.categories.Category;
     }
   }
 
-  @Test public void testRegionReconciliation() throws Exception {
+  @Test
+  public void testRegionReconciliation() throws Exception {
     // Create a configuration
     conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
