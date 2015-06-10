@@ -25,7 +25,6 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
 
   @BeforeClass
   public static void beforeAllTests() throws Exception {
-    conf = HBaseConfiguration.create();
     loadBalancer = new GroupLoadBalancer();
   }
 
@@ -33,6 +32,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
   public void testTablesArePutInRightGroups() throws Exception {
 
     // Create a configuration
+    conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
     conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group1");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
@@ -97,6 +97,7 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
   public void testDefaultGroupIsAPreExistingGroup() throws Exception {
 
     // Create a configuration where the default group is not a pre-existing group
+    conf = HBaseConfiguration.create();
     conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
     conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group3");
     conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
@@ -115,13 +116,13 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     ServerName serverName2 =
         ServerName.valueOf("10.255.196.145:60021", currentTimeStamp + randomTimeDelta);
 
-    // Create 4 test tables
+    // Create 2 test tables
     TableName tableName1 = TableName.valueOf("test_table_1");
     TableName tableName2 = TableName.valueOf("test_table_2");
     HRegionInfo hri1 = new HRegionInfo(tableName1);
     HRegionInfo hri2 = new HRegionInfo(tableName2);
 
-    // Create a cluster where 2 tables need to be moved to other groups
+    // Create a cluster
     Map<ServerName, List<HRegionInfo>> testCluster = new HashMap<>();
     List<HRegionInfo> hriList1 = new ArrayList<>();
     List<HRegionInfo> hriList2 = new ArrayList<>();
@@ -129,6 +130,38 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     hriList2.add(hri2);
     testCluster.put(serverName1, hriList1);
     testCluster.put(serverName2, hriList2);
+
+    List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
+  }
+
+  @Test (expected = IllegalArgumentException.class)
+  public void testAllGroupsHaveAtLeastOneServer() throws Exception {
+
+    // Create a configuration where group2 which has no servers assigned to it
+    conf = HBaseConfiguration.create();
+    conf.set("hbase.master.balancer.grouploadbalancer.groups", "group1;group2");
+    conf.set("hbase.master.balancer.grouploadbalancer.defaultgroup", "group1");
+    conf.set("hbase.master.balancer.grouploadbalancer.servergroups.group1", "10.255.196.145,60020");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group1",
+        "test_table_1");
+    conf.set("hbase.master.balancer.grouploadbalancer.tablegroups.group2",
+        "test_table_2");
+    loadBalancer.setConf(conf);
+
+    // Create a test region server
+    Random random = new Random();
+    long currentTimeStamp = System.currentTimeMillis();
+    ServerName serverName1 = ServerName.valueOf("10.255.196.145:60020", currentTimeStamp);
+
+    // Create a test table
+    TableName tableName1 = TableName.valueOf("test_table_1");
+    HRegionInfo hri1 = new HRegionInfo(tableName1);
+
+    // Create a cluster
+    Map<ServerName, List<HRegionInfo>> testCluster = new HashMap<>();
+    List<HRegionInfo> hriList1 = new ArrayList<>();
+    hriList1.add(hri1);
+    testCluster.put(serverName1, hriList1);
 
     List<RegionPlan> regionPlanList = loadBalancer.balanceCluster(testCluster);
   }

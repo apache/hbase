@@ -51,6 +51,13 @@ public class GroupLoadBalancerConfiguration {
       String serverConfig = configuration.get(SERVER_GROUPS_PREFIX + groupName);
       String tableConfig = configuration.get(TABLE_GROUPS_PREFIX + groupName);
 
+      if (serverConfig == null) {
+        throw new IllegalArgumentException("No servers defined for the group: " + groupName);
+      }
+      if (tableConfig == null) {
+        throw new IllegalArgumentException("No tables defined for the group: " + groupName);
+      }
+
       String[] serversArray = serverConfig.split(GROUP_DELIMITER);
       String[] tablesArray = tableConfig.split(GROUP_DELIMITER);
 
