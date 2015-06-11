@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.13 - 6/13/2015
+Release 0.98.13 - 6/18/2015
 
 ** Sub-task
     * [HBASE-13035] - [0.98] Backport HBASE-12867 - Shell does not support custom replication endpoint specification
@@ -70,11 +70,14 @@ Release 0.98.13 - 6/13/2015
     * [HBASE-13777] - Table fragmentation display triggers NPE on master status page
     * [HBASE-13778] - BoundedByteBufferPool incorrectly increasing runningAverage buffer length
     * [HBASE-13779] - Calling table.exists() before table.get() end up with an empty Result
+    * [HBASE-13789] - ForeignException should not be sent to the client
     * [HBASE-13801] - Hadoop src checksum is shown instead of HBase src checksum in master / RS UI
     * [HBASE-13807] - [0.98] NoTagsKeyValue optimization is not proper
     * [HBASE-13812] - Deleting of last Column Family of a table should not be allowed
     * [HBASE-13826] - Unable to create table when group acls are appropriately set.
     * [HBASE-13837] - [0.98] TestBoundedByteBufferPool does not compile with JDK 1.6
+    * [HBASE-13873] - LoadTestTool addAuthInfoToConf throws UnsupportedOperationException
+    * [HBASE-13875] - Clock skew between master and region server may render restored region without server address
 
 ** Improvement
     * [HBASE-12415] - Add add(byte[][] arrays) to Bytes.
@@ -96,6 +99,8 @@ Release 0.98.13 - 6/13/2015
     * [HBASE-13684] - Allow mlockagent to be used when not starting as root
     * [HBASE-13761] - Optimize FuzzyRowFilter
     * [HBASE-13780] - Default to 700 for HDFS root dir permissions for secure deployments
+    * [HBASE-13828] - Add group permissions testing coverage to AC.
+    * [HBASE-13846] - Run MiniCluster on top of other MiniDfsCluster
 
 ** New Feature
     * [HBASE-13412] - Region split decisions should have jitter
@@ -106,6 +111,7 @@ Release 0.98.13 - 6/13/2015
 
 ** Test
     * [HBASE-13413] - Create an integration test for Replication
+    * [HBASE-13854] - TestTableLockManager#testLockTimeoutException fails in 0.98 and 1.0 branches
 
 
 Release 0.98.12 - 4/17/2015
