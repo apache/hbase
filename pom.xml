@@ -156,6 +156,14 @@
       <organizationUrl>http://www.intel.com</organizationUrl>
     </developer>
     <developer>
+      <id>antonov</id>
+      <name>Mikhail Antonov</name>
+      <email>antonov@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>WANdisco</organization>
+      <organizationUrl>http://www.wandisco.com/</organizationUrl>
+    </developer>
+    <developer>
       <id>busbey</id>
       <name>Sean Busbey</name>
       <email>busbey@apache.org</email>
