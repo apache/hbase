@@ -68,6 +68,16 @@ public class TestNamespaceCommands extends SecureTestUtil {
   // user with admin permission on namespace.
   private static User USER_NSP_ADMIN;
 
+  private static final String GROUP_ADMIN = "group_admin";
+  private static final String GROUP_CREATE = "group_create";
+  private static final String GROUP_READ = "group_read";
+  private static final String GROUP_WRITE = "group_write";
+
+  private static User USER_GROUP_ADMIN;
+  private static User USER_GROUP_CREATE;
+  private static User USER_GROUP_READ;
+  private static User USER_GROUP_WRITE;
+
   private static String TEST_TABLE = TEST_NAMESPACE + ":testtable";
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
@@ -81,6 +91,15 @@ public class TestNamespaceCommands extends SecureTestUtil {
     USER_CREATE = User.createUserForTesting(conf, "create_user", new String[0]);
     USER_NSP_WRITE = User.createUserForTesting(conf, "namespace_write", new String[0]);
     USER_NSP_ADMIN = User.createUserForTesting(conf, "namespace_admin", new String[0]);
+
+    USER_GROUP_ADMIN =
+        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_GROUP_CREATE =
+        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+    USER_GROUP_READ =
+        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+    USER_GROUP_WRITE =
+        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
 
     UTIL.startMiniCluster();
     // Wait for the ACL table to become available
@@ -98,6 +117,11 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE, Permission.Action.ADMIN);
     grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
+
+    grantGlobal(UTIL, convertToGroup(GROUP_ADMIN), Permission.Action.ADMIN);
+    grantGlobal(UTIL, convertToGroup(GROUP_CREATE), Permission.Action.CREATE);
+    grantGlobal(UTIL, convertToGroup(GROUP_READ), Permission.Action.READ);
+    grantGlobal(UTIL, convertToGroup(GROUP_WRITE), Permission.Action.WRITE);
   }
 
   @AfterClass
@@ -152,9 +176,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
       }
     };
     // verify that superuser or hbase admin can modify namespaces.
-    verifyAllowed(modifyNamespace, SUPERUSER, USER_NSP_ADMIN);
+    verifyAllowed(modifyNamespace, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
     // all others should be denied
-    verifyDenied(modifyNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
+    verifyDenied(modifyNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -176,13 +201,15 @@ public class TestNamespaceCommands extends SecureTestUtil {
     };
 
     // verify that only superuser can create namespaces.
-    verifyAllowed(createNamespace, SUPERUSER);
- // verify that superuser or hbase admin can delete namespaces.
-    verifyAllowed(deleteNamespace, SUPERUSER, USER_NSP_ADMIN);
+    verifyAllowed(createNamespace, SUPERUSER, USER_GROUP_ADMIN);
+    // verify that superuser or hbase admin can delete namespaces.
+    verifyAllowed(deleteNamespace, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
 
     // all others should be denied
-    verifyDenied(createNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_NSP_ADMIN);
-    verifyDenied(deleteNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW);
+    verifyDenied(createNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_NSP_ADMIN,
+      USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
+    verifyDenied(deleteNamespace, USER_NSP_WRITE, USER_CREATE, USER_RW, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -241,14 +268,17 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
     // Only HBase super user should be able to grant and revoke permissions to
     // namespaces
-    verifyAllowed(grantAction, SUPERUSER, USER_NSP_ADMIN);
-    verifyDenied(grantAction, USER_CREATE, USER_RW);
-    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
-    verifyDenied(revokeAction, USER_CREATE, USER_RW);
+    verifyAllowed(grantAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(grantAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
+    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
 
     // Only an admin should be able to get the user permission
-    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN);
-    verifyDenied(revokeAction, USER_CREATE, USER_RW);
+    verifyAllowed(revokeAction, SUPERUSER, USER_NSP_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+      USER_GROUP_CREATE);
   }
 
   @Test
@@ -264,9 +294,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
     };
 
     // Only users with create permissions on namespace should be able to create a new table
-    verifyAllowed(createTable, SUPERUSER, USER_NSP_WRITE);
+    verifyAllowed(createTable, SUPERUSER, USER_NSP_WRITE, USER_GROUP_CREATE);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+      USER_GROUP_ADMIN);
   }
 }

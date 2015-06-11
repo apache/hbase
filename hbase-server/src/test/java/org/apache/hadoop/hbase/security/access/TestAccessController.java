@@ -146,6 +146,16 @@ public class TestAccessController extends SecureTestUtil {
   // user with admin rights on the column family
   private static User USER_ADMIN_CF;
 
+  private static final String GROUP_ADMIN = "group_admin";
+  private static final String GROUP_CREATE = "group_create";
+  private static final String GROUP_READ = "group_read";
+  private static final String GROUP_WRITE = "group_write";
+
+  private static User USER_GROUP_ADMIN;
+  private static User USER_GROUP_CREATE;
+  private static User USER_GROUP_READ;
+  private static User USER_GROUP_WRITE;
+
   // TODO: convert this test to cover the full matrix in
   // https://hbase.apache.org/book/appendix_acl_matrix.html
   // creating all Scope x Permission combinations
@@ -203,6 +213,16 @@ public class TestAccessController extends SecureTestUtil {
     USER_CREATE = User.createUserForTesting(conf, "tbl_create", new String[0]);
     USER_NONE = User.createUserForTesting(conf, "nouser", new String[0]);
     USER_ADMIN_CF = User.createUserForTesting(conf, "col_family_admin", new String[0]);
+
+    USER_GROUP_ADMIN =
+        User.createUserForTesting(conf, "user_group_admin", new String[] { GROUP_ADMIN });
+    USER_GROUP_CREATE =
+        User.createUserForTesting(conf, "user_group_create", new String[] { GROUP_CREATE });
+    USER_GROUP_READ =
+        User.createUserForTesting(conf, "user_group_read", new String[] { GROUP_READ });
+    USER_GROUP_WRITE =
+        User.createUserForTesting(conf, "user_group_write", new String[] { GROUP_WRITE });
+
     setUpTableAndUserPermissions();
   }
 
@@ -255,6 +275,11 @@ public class TestAccessController extends SecureTestUtil {
       TEST_TABLE, TEST_FAMILY,
       null, Permission.Action.ADMIN, Permission.Action.CREATE);
 
+    grantGlobal(TEST_UTIL, convertToGroup(GROUP_ADMIN), Permission.Action.ADMIN);
+    grantGlobal(TEST_UTIL, convertToGroup(GROUP_CREATE), Permission.Action.CREATE);
+    grantGlobal(TEST_UTIL, convertToGroup(GROUP_READ), Permission.Action.READ);
+    grantGlobal(TEST_UTIL, convertToGroup(GROUP_WRITE), Permission.Action.WRITE);
+
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
     try {
       assertEquals(5, AccessControlClient.getUserPermissions(conf, TEST_TABLE.toString()).size());
@@ -287,10 +312,11 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     // verify that superuser can create tables
-    verifyAllowed(createTable, SUPERUSER, USER_ADMIN);
+    verifyAllowed(createTable, SUPERUSER, USER_ADMIN, USER_GROUP_CREATE);
 
     // all others should be denied
-    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyDenied(createTable, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_ADMIN,
+      USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -307,8 +333,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(modifyTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(modifyTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -322,8 +349,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(deleteTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(deleteTable, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(deleteTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(deleteTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -338,8 +366,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(truncateTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(truncateTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -354,8 +383,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -371,8 +401,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
+      USER_GROUP_CREATE, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -386,8 +417,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
+      USER_GROUP_CREATE, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -410,11 +442,13 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(disableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(disableTable, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(disableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(disableTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
 
     // No user should be allowed to disable _acl_ table
-    verifyDenied(disableAclTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_RW, USER_RO);
+    verifyDenied(disableAclTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+      USER_GROUP_CREATE, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -428,8 +462,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(enableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER);
-    verifyDenied(enableTable, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(enableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(enableTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -452,8 +487,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -476,8 +512,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -500,8 +537,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -524,8 +562,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -538,8 +577,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -552,8 +592,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -566,8 +607,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -580,13 +622,15 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   private void verifyWrite(AccessTestAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
-    verifyDenied(action, USER_NONE, USER_RO);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_GROUP_WRITE);
+    verifyDenied(action, USER_NONE, USER_RO, USER_GROUP_ADMIN, USER_GROUP_READ, USER_GROUP_CREATE);
   }
 
   @Test
@@ -599,8 +643,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -615,8 +660,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -635,8 +681,9 @@ public class TestAccessController extends SecureTestUtil {
         }
       };
 
-      verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER);
-      verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+      verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
     } finally {
       TEST_UTIL.deleteTable(tname);
     }
@@ -661,8 +708,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -676,18 +724,21 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-    verifyDenied(action, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_GROUP_CREATE,
+      USER_GROUP_ADMIN);
+    verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   private void verifyRead(AccessTestAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO);
-    verifyDenied(action, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW, USER_RO,
+      USER_GROUP_READ);
+    verifyDenied(action, USER_NONE, USER_GROUP_CREATE, USER_GROUP_ADMIN, USER_GROUP_WRITE);
   }
 
   private void verifyReadWrite(AccessTestAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
-    verifyDenied(action, USER_NONE, USER_RO);
+    verifyDenied(action, USER_NONE, USER_RO, USER_GROUP_ADMIN, USER_GROUP_CREATE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
   }
 
   @Test
@@ -859,8 +910,10 @@ public class TestAccessController extends SecureTestUtil {
 
       // User performing bulk loads must have privilege to read table metadata
       // (ADMIN or CREATE)
-      verifyAllowed(bulkLoadAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE);
-      verifyDenied(bulkLoadAction, USER_RW, USER_NONE, USER_RO);
+      verifyAllowed(bulkLoadAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE,
+        USER_GROUP_CREATE);
+      verifyDenied(bulkLoadAction, USER_RW, USER_NONE, USER_RO, USER_GROUP_READ, USER_GROUP_WRITE,
+        USER_GROUP_ADMIN);
 
     } finally {
       // Reinit after the bulk upload
@@ -970,8 +1023,10 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(appendAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
-    verifyDenied(appendAction, USER_RO, USER_NONE);
+    verifyAllowed(appendAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW,
+      USER_GROUP_WRITE);
+    verifyDenied(appendAction, USER_RO, USER_NONE, USER_GROUP_CREATE, USER_GROUP_READ,
+      USER_GROUP_ADMIN);
   }
 
   @Test
@@ -1042,17 +1097,21 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER);
-    verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+    verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
     try {
-      verifyAllowed(revokeAction, SUPERUSER, USER_ADMIN, USER_OWNER);
-      verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+      verifyAllowed(revokeAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
 
-      verifyAllowed(getTablePermissionsAction, SUPERUSER, USER_ADMIN, USER_OWNER);
-      verifyDenied(getTablePermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+      verifyAllowed(getTablePermissionsAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
+      verifyDenied(getTablePermissionsAction, USER_CREATE, USER_RW, USER_RO, USER_NONE,
+        USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
-      verifyAllowed(getGlobalPermissionsAction, SUPERUSER, USER_ADMIN);
-      verifyDenied(getGlobalPermissionsAction, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+      verifyAllowed(getGlobalPermissionsAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+      verifyDenied(getGlobalPermissionsAction, USER_CREATE, USER_OWNER, USER_RW, USER_RO,
+        USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
     } finally {
       // Cleanup, Grant the revoked permission back to the user
       grantOnTable(TEST_UTIL, USER_RO.getShortName(), TEST_TABLE, TEST_FAMILY, null,
@@ -1236,7 +1295,8 @@ public class TestAccessController extends SecureTestUtil {
 
       // grant table read permission
       grantGlobal(TEST_UTIL, gblUser.getShortName(), Permission.Action.READ);
-      grantOnTable(TEST_UTIL, tblUser.getShortName(), tableName, null, null, Permission.Action.READ);
+      grantOnTable(TEST_UTIL, tblUser.getShortName(), tableName, null, null,
+        Permission.Action.READ);
 
       // check
       verifyAllowed(tblUser, getActionAll, getAction1, getAction2);
@@ -1602,8 +1662,8 @@ public class TestAccessController extends SecureTestUtil {
     }
     UserPermission adminPerm = new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
       AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW"));
-    assertTrue("Only user admin has permission on table _acl_ per setup",
-      perms.size() == 1 && hasFoundUserPermission(adminPerm, perms));
+    assertTrue("Only global users and user admin has permission on table _acl_ per setup",
+      perms.size() == 5 && hasFoundUserPermission(adminPerm, perms));
   }
 
   /** global operations */
@@ -1788,8 +1848,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -1802,8 +1863,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_OWNER, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -1816,8 +1878,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -1830,8 +1893,9 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(action, SUPERUSER, USER_ADMIN);
-    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER, USER_GROUP_CREATE,
+      USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test
@@ -1994,11 +2058,14 @@ public class TestAccessController extends SecureTestUtil {
         }
       };
 
-      verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN);
-      verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN);
+      verifyAllowed(listTablesAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+      verifyDenied(listTablesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, TABLE_ADMIN,
+        USER_GROUP_READ, USER_GROUP_WRITE, USER_GROUP_CREATE);
 
-      verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, TABLE_ADMIN);
-      verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE);
+      verifyAllowed(getTableDescAction, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER,
+        TABLE_ADMIN, USER_GROUP_ADMIN, USER_GROUP_CREATE);
+      verifyDenied(getTableDescAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+        USER_GROUP_WRITE);
     } finally {
       // Cleanup, revoke TABLE ADMIN privs
       revokeFromTable(TEST_UTIL, TABLE_ADMIN.getShortName(), TEST_TABLE, null, null,
@@ -2029,7 +2096,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE);
+    verifyDenied(deleteTableAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
+      USER_GROUP_WRITE);
     verifyAllowed(deleteTableAction, TABLE_ADMIN);
   }
 
@@ -2352,8 +2420,10 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   private void verifyAnyCreate(AccessTestAction action) throws Exception {
-    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_ADMIN_CF);
-    verifyDenied(action, USER_NONE, USER_RO, USER_RW);
+    verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_ADMIN_CF,
+      USER_GROUP_CREATE);
+    verifyDenied(action, USER_NONE, USER_RO, USER_RW, USER_GROUP_READ, USER_GROUP_WRITE,
+      USER_GROUP_ADMIN);
   }
 
   @Test
@@ -2389,7 +2459,8 @@ public class TestAccessController extends SecureTestUtil {
       }
     };
 
-    verifyAllowed(replicateLogEntriesAction, SUPERUSER, USER_ADMIN);
-    verifyDenied(replicateLogEntriesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER);
+    verifyAllowed(replicateLogEntriesAction, SUPERUSER, USER_ADMIN, USER_GROUP_WRITE);
+    verifyDenied(replicateLogEntriesAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_OWNER,
+      USER_GROUP_READ, USER_GROUP_ADMIN, USER_GROUP_CREATE);
   }
 }

@@ -85,6 +85,7 @@ public class TestAccessController2 extends SecureTestUtil {
   private String namespace = "testNamespace";
   private String tname = namespace + ":testtable1";
   private byte[] tableName = Bytes.toBytes(tname);
+  private static String TESTGROUP_1_NAME;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -97,6 +98,7 @@ public class TestAccessController2 extends SecureTestUtil {
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
+    TESTGROUP_1_NAME = convertToGroup(TESTGROUP_1);
     TESTGROUP1_USER1 =
         User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
     TESTGROUP2_USER1 =
@@ -189,24 +191,27 @@ public class TestAccessController2 extends SecureTestUtil {
 
   @Test
   public void testCreateTableWithGroupPermissions() throws Exception {
-    grantGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
-    AccessTestAction createAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
-        HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
-        desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
-        try {
-          admin.createTable(desc);
-        } finally {
-          admin.close();
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
+    try {
+      AccessTestAction createAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          HBaseAdmin admin = new HBaseAdmin(TEST_UTIL.getConfiguration());
+          HTableDescriptor desc = new HTableDescriptor(TEST_TABLE.getTableName());
+          desc.addFamily(new HColumnDescriptor(TEST_FAMILY));
+          try {
+            admin.createTable(desc);
+          } finally {
+            admin.close();
+          }
+          return null;
         }
-        return null;
-      }
-    };
-    verifyAllowed(createAction, TESTGROUP1_USER1);
-    verifyDenied(createAction, TESTGROUP2_USER1);
-    revokeGlobal(TEST_UTIL, convertToGroup(TESTGROUP_1), Action.CREATE);
+      };
+      verifyAllowed(createAction, TESTGROUP1_USER1);
+      verifyDenied(createAction, TESTGROUP2_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
+    }
   }
 
   @Test
@@ -254,57 +259,67 @@ public class TestAccessController2 extends SecureTestUtil {
     SecureTestUtil.grantOnTable(TEST_UTIL, tableAdmin.getShortName(),
       TEST_TABLE.getTableName(), null, null, Action.ADMIN);
 
-    // Write tests
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
+    try {
+      // Write tests
 
-    AccessTestAction writeAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
-          t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
-            TEST_VALUE));
-          return null;
-        } finally {
-          t.close();
-        }
-      }
-    };
-
-    // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
-
-    verifyDenied(writeAction, globalAdmin, globalCreate, globalRead);
-    verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
-    verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
-    verifyAllowed(writeAction, superUser, globalWrite);
-
-    // Read tests
-
-    AccessTestAction scanAction = new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
-        try {
-          ResultScanner s = t.getScanner(new Scan());
+      AccessTestAction writeAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
           try {
-            for (Result r = s.next(); r != null; r = s.next()) {
-              // do nothing
-            }
+            t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
+              TEST_VALUE));
+            return null;
           } finally {
-            s.close();
+            t.close();
           }
-          return null;
-        } finally {
-          t.close();
         }
-      }
-    };
+      };
 
-    // All reads from ACL table denied except for GLOBAL READ and superuser
+      // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
 
-    verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite);
-    verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
-    verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
-    verifyAllowed(scanAction, superUser, globalRead);
+      verifyDenied(writeAction, globalAdmin, globalCreate, globalRead, TESTGROUP2_USER1);
+      verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
+      verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
+      verifyAllowed(writeAction, superUser, globalWrite, TESTGROUP1_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
+    }
+
+    grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.READ);
+    try {
+      // Read tests
+
+      AccessTestAction scanAction = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          HTable t = new HTable(conf, AccessControlLists.ACL_TABLE_NAME);
+          try {
+            ResultScanner s = t.getScanner(new Scan());
+            try {
+              for (Result r = s.next(); r != null; r = s.next()) {
+                // do nothing
+              }
+            } finally {
+              s.close();
+            }
+            return null;
+          } finally {
+            t.close();
+          }
+        }
+      };
+
+      // All reads from ACL table denied except for GLOBAL READ and superuser
+
+      verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite, TESTGROUP2_USER1);
+      verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
+      verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
+      verifyAllowed(scanAction, superUser, globalRead, TESTGROUP1_USER1);
+    } finally {
+      revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.READ);
+    }
   }
 
   /*
