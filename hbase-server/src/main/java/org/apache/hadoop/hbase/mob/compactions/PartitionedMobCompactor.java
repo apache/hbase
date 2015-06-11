@@ -211,14 +211,22 @@ public class PartitionedMobCompactor extends MobCompactor {
     }
     List<Path> newDelPaths = compactDelFiles(request, delFilePaths);
     List<StoreFile> newDelFiles = new ArrayList<StoreFile>();
-    for (Path newDelPath : newDelPaths) {
-      StoreFile sf = new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE);
-      newDelFiles.add(sf);
+    List<Path> paths = null;
+    try {
+      for (Path newDelPath : newDelPaths) {
+        StoreFile sf = new StoreFile(fs, newDelPath, conf, compactionCacheConfig, BloomType.NONE);
+        // pre-create reader of a del file to avoid race condition when opening the reader in each
+        // partition.
+        sf.createReader();
+        newDelFiles.add(sf);
+      }
+      LOG.info("After merging, there are " + newDelFiles.size() + " del files");
+      // compact the mob files by partitions.
+      paths = compactMobFiles(request, newDelFiles);
+      LOG.info("After compaction, there are " + paths.size() + " mob files");
+    } finally {
+      closeStoreFileReaders(newDelFiles);
     }
-    LOG.info("After merging, there are " + newDelFiles.size() + " del files");
-    // compact the mob files by partitions.
-    List<Path> paths = compactMobFiles(request, newDelFiles);
-    LOG.info("After compaction, there are " + paths.size() + " mob files");
     // archive the del files if all the mob files are selected.
     if (request.type == CompactionType.ALL_FILES && !newDelPaths.isEmpty()) {
       LOG.info("After a mob compaction with all files selected, archiving the del files "
@@ -337,6 +345,20 @@ public class PartitionedMobCompactor extends MobCompactor {
   }
 
   /**
+   * Closes the readers of store files.
+   * @param storeFiles The store files to be closed.
+   */
+  private void closeStoreFileReaders(List<StoreFile> storeFiles) {
+    for (StoreFile storeFile : storeFiles) {
+      try {
+        storeFile.closeReader(true);
+      } catch (IOException e) {
+        LOG.warn("Failed to close the reader on store file " + storeFile.getPath(), e);
+      }
+    }
+  }
+
+  /**
    * Compacts a partition of selected small mob files and all the del files in a batch.
    * @param request The compaction request.
    * @param partition A compaction partition.
@@ -415,6 +437,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     }
     // archive the old mob files, do not archive the del files.
     try {
+      closeStoreFileReaders(mobFilesToCompact);
       MobUtils
         .removeMobFiles(conf, fs, tableName, mobTableDir, column.getName(), mobFilesToCompact);
     } catch (IOException e) {
