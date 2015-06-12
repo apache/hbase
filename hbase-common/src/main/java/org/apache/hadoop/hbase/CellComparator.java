@@ -135,6 +135,50 @@ public class CellComparator implements Comparator<Cell>, Serializable{
     return a.getTypeByte() == b.getTypeByte();
   }
 
+  public static int compareFamilies(Cell left, Cell right) {
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+        right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+  }
+
+  public static int compareQualifiers(Cell left, Cell right) {
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
+        right.getQualifierLength());
+  }
+
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
+  public static int compareRows(final Cell left, final Cell right) {
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+  }
+
+  /**
+   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
+   * so can't be treated as plain byte arrays as this method does.
+   */
+  public static int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+      int rlength) {
+    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
+  }
+
+  /**
+   * Compares cell's timestamps in DESCENDING order.
+   * The below older timestamps sorting ahead of newer timestamps looks
+   * wrong but it is intentional. This way, newer timestamps are first
+   * found when we iterate over a memstore and newer versions are the
+   * first we trip over when reading from a store file.
+   * @return 1 if left's timestamp < right's timestamp
+   *         -1 if left's timestamp > right's timestamp
+   *         0 if both timestamps are equal
+   */
+  public static int compareTimestamps(final Cell left, final Cell right) {
+    long ltimestamp = left.getTimestamp();
+    long rtimestamp = right.getTimestamp();
+    return compareTimestamps(ltimestamp, rtimestamp);
+  }
 
   /********************* hashCode ************************/
 
@@ -233,6 +277,25 @@ public class CellComparator implements Comparator<Cell>, Serializable{
    */
   public static boolean equalsIgnoreMvccVersion(Cell a, Cell b){
     return 0 == compareStaticIgnoreMvccVersion(a, b);
+  }
+
+  /**
+   * Compares timestamps in DESCENDING order.
+   * The below older timestamps sorting ahead of newer timestamps looks
+   * wrong but it is intentional. This way, newer timestamps are first
+   * found when we iterate over a memstore and newer versions are the
+   * first we trip over when reading from a store file.
+   * @return 1 if left timestamp < right timestamp
+   *         -1 if left timestamp > right timestamp
+   *         0 if both timestamps are equal
+   */
+  static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
+    if (ltimestamp < rtimestamp) {
+      return 1;
+    } else if (ltimestamp > rtimestamp) {
+      return -1;
+    }
+    return 0;
   }
 
 }
