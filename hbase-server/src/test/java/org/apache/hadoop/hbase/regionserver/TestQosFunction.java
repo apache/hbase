@@ -1,4 +1,3 @@
-package org.apache.hadoop.hbase.regionserver;
 /**
 * Licensed to the Apache Software Foundation (ASF) under one
 * or more contributor license agreements.  See the NOTICE file
@@ -16,6 +15,9 @@ package org.apache.hadoop.hbase.regionserver;
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+
+package org.apache.hadoop.hbase.regionserver;
+
 import static org.junit.Assert.assertEquals;
 
 import static org.mockito.Mockito.when;
@@ -39,6 +41,8 @@ import org.mockito.Mockito;
 
 import com.google.protobuf.Message;
 
+import java.io.IOException;
+
 /**
  * Basic test that qos function is sort of working; i.e. a change in method naming style
  * over in pb doesn't break it.
@@ -60,7 +64,7 @@ public class TestQosFunction {
   }
 
   @Test
-  public void testRegionInTransition() {
+  public void testRegionInTransition() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     HRegionServer rs = Mockito.mock(HRegionServer.class);
     when(rs.getConfiguration()).thenReturn(conf);

@@ -25,6 +25,7 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -98,7 +99,7 @@ public class TestAccessController2 extends SecureTestUtil {
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
-    TESTGROUP_1_NAME = convertToGroup(TESTGROUP_1);
+    TESTGROUP_1_NAME = AuthUtil.toGroupEntry(TESTGROUP_1);
     TESTGROUP1_USER1 =
         User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
     TESTGROUP2_USER1 =

@@ -221,6 +221,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationLoad;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -563,6 +564,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     this.isOnline = false;
     checkCodecs(this.conf);
     this.userProvider = UserProvider.instantiate(conf);
+
+    Superusers.initialize(conf);
 
     FSUtils.setupShortCircuitRead(this.conf);
 

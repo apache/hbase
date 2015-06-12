@@ -39,6 +39,14 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public class AuthUtil {
   private static final Log LOG = LogFactory.getLog(AuthUtil.class);
+
+  /** Prefix character to denote group names */
+  public static final String GROUP_PREFIX = "@";
+
+  private AuthUtil() {
+    super();
+  }
+
   /**
    * Checks if security is enabled and if so, launches chore for refreshing kerberos ticket.
    */
@@ -94,5 +102,33 @@ public class AuthUtil {
     };
     // Start the chore for refreshing credentials
     Threads.setDaemonThreadRunning(refreshCredentials.getThread());
+  }
+
+  /**
+   * Returns whether or not the given name should be interpreted as a group
+   * principal.  Currently this simply checks if the name starts with the
+   * special group prefix character ("@").
+   */
+  public static boolean isGroupPrincipal(String name) {
+    return name != null && name.startsWith(GROUP_PREFIX);
+  }
+
+  /**
+   * Returns the actual name for a group principal (stripped of the
+   * group prefix).
+   */
+  public static String getGroupName(String aclKey) {
+    if (!isGroupPrincipal(aclKey)) {
+      return aclKey;
+    }
+
+    return aclKey.substring(GROUP_PREFIX.length());
+  }
+
+  /**
+   * Returns the group entry with the group prefix for a group principal.
+   */
+  public static String toGroupEntry(String name) {
+    return GROUP_PREFIX + name;
   }
 }

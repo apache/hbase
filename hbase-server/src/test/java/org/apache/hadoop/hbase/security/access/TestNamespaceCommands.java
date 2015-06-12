@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -118,10 +119,10 @@ public class TestNamespaceCommands extends SecureTestUtil {
     grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE, Permission.Action.ADMIN);
     grantOnNamespace(UTIL, USER_NSP_ADMIN.getShortName(), TEST_NAMESPACE2, Permission.Action.ADMIN);
 
-    grantGlobal(UTIL, convertToGroup(GROUP_ADMIN), Permission.Action.ADMIN);
-    grantGlobal(UTIL, convertToGroup(GROUP_CREATE), Permission.Action.CREATE);
-    grantGlobal(UTIL, convertToGroup(GROUP_READ), Permission.Action.READ);
-    grantGlobal(UTIL, convertToGroup(GROUP_WRITE), Permission.Action.WRITE);
+    grantGlobal(UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
+    grantGlobal(UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
+    grantGlobal(UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
+    grantGlobal(UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
   }
 
   @AfterClass

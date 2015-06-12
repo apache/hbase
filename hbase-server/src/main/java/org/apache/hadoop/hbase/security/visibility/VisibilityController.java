@@ -34,6 +34,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -99,8 +100,8 @@ import org.apache.hadoop.hbase.regionserver.OperationStatus;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -135,8 +136,6 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   private Map<InternalScanner,String> scannerOwners =
       new MapMaker().weakKeys().makeMap();
 
-  private List<String> superUsers;
-  private List<String> superGroups;
   private VisibilityLabelService visibilityLabelService;
 
   /** if we are active, usually true, only not true if "hbase.security.authorization"
@@ -175,10 +174,6 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
       visibilityLabelService = VisibilityLabelServiceManager.getInstance()
           .getVisibilityLabelService(this.conf);
     }
-    Pair<List<String>, List<String>> superUsersAndGroups =
-        VisibilityUtils.getSystemAndSuperUsers(this.conf);
-    this.superUsers = superUsersAndGroups.getFirst();
-    this.superGroups = superUsersAndGroups.getSecond();
   }
 
   @Override
@@ -696,19 +691,7 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
   }
 
   private boolean isSystemOrSuperUser() throws IOException {
-    User activeUser = VisibilityUtils.getActiveUser();
-    if (this.superUsers.contains(activeUser.getShortName())) {
-      return true;
-    }
-    String[] groups = activeUser.getGroupNames();
-    if (groups != null && groups.length > 0) {
-      for (String group : groups) {
-        if (this.superGroups.contains(group)) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return Superusers.isSuperUser(VisibilityUtils.getActiveUser());
   }
 
   @Override
@@ -944,7 +927,8 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
               + (requestingUser != null ? requestingUser.getShortName() : "null")
               + "' is not authorized to perform this action.");
         }
-        if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
+        if (AuthUtil.isGroupPrincipal(Bytes.toString(user))) {
+          String group = AuthUtil.getGroupName(Bytes.toString(user));
           // For backward compatibility. Previous custom visibilityLabelService
           // implementation may not have getGroupAuths
           try {
@@ -956,7 +940,6 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
             throw new AccessDeniedException(
                 "Get group auth is not supported in this implementation");
           }
-          String group = AccessControlLists.getGroupName(Bytes.toString(user));
           labels = this.visibilityLabelService.getGroupAuths(new String[]{group}, false);
         }
         else {

@@ -35,6 +35,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -49,15 +50,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.OperationStatus;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.security.visibility.expression.ExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.LeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.NonLeafExpressionNode;
 import org.apache.hadoop.hbase.security.visibility.expression.Operator;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.common.collect.Lists;
 
 /**
  * This is a VisibilityLabelService where labels in Mutation's visibility
@@ -80,8 +79,6 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   private Configuration conf;
   private HRegion labelsRegion;
   private List<ScanLabelGenerator> scanLabelGenerators;
-  private List<String> superUsers;
-  private List<String> superGroups;
 
   @Override
   public OperationStatus[] addLabels(List<byte[]> labels) throws IOException {
@@ -116,8 +113,8 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     assert labelsRegion != null;
     OperationStatus[] finalOpStatus = new OperationStatus[authLabels.size()];
     List<String> currentAuths;
-    if (AccessControlLists.isGroupPrincipal(Bytes.toString(user))) {
-      String group = AccessControlLists.getGroupName(Bytes.toString(user));
+    if (AuthUtil.isGroupPrincipal(Bytes.toString(user))) {
+      String group = AuthUtil.getGroupName(Bytes.toString(user));
       currentAuths = this.getGroupAuths(new String[]{group}, true);
     }
     else {
@@ -189,7 +186,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     List<String> auths = new ArrayList<String>();
     if (groups != null && groups.length > 0) {
       for (String group : groups) {
-        Get get = new Get(Bytes.toBytes(AccessControlLists.toGroupEntry(group)));
+        Get get = new Get(Bytes.toBytes(AuthUtil.toGroupEntry(group)));
         List<Cell> cells = null;
         if (labelsRegion == null) {
           HTable table = null;
@@ -389,57 +386,16 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
   @Override
   public void init(RegionCoprocessorEnvironment e) throws IOException {
     this.scanLabelGenerators = VisibilityUtils.getScanLabelGenerators(this.conf);
-    initSystemAndSuperUsers();
     if (e.getRegion().getRegionInfo().getTable().equals(LABELS_TABLE_NAME)) {
       this.labelsRegion = e.getRegion();
     }
-  }
-
-  private void initSystemAndSuperUsers() throws IOException {
-    this.superUsers = new ArrayList<String>();
-    this.superGroups = new ArrayList<String>();
-    User user = User.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, "
-          + "authorization checks for internal operations will not work correctly!");
-    }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("Current user name is " + user.getShortName());
-    }
-    String currentUser = user.getShortName();
-    List<String> superUserList = Lists.asList(currentUser,
-        this.conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
-    if (superUserList != null) {
-      for (String name : superUserList) {
-        if (AccessControlLists.isGroupPrincipal(name)) {
-          this.superGroups.add(AccessControlLists.getGroupName(name));
-        } else {
-          this.superUsers.add(name);
-        }
-      }
-    };
-  }
-
-  protected boolean isSystemOrSuperUser(User user) throws IOException {
-    if (this.superUsers.contains(user.getShortName())) {
-      return true;
-    }
-    String[] groups = user.getGroupNames();
-    if (groups != null) {
-      for (String group : groups) {
-        if (this.superGroups.contains(group)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   @Override
   @Deprecated
   public boolean havingSystemAuth(byte[] user) throws IOException {
     // Implementation for backward compatibility
-    if (this.superUsers.contains(Bytes.toString(user))) {
+    if (Superusers.isSuperUser(Bytes.toString(user))) {
       return true;
     }
     List<String> auths = this.getUserAuths(user, true);
@@ -451,7 +407,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
 
   @Override
   public boolean havingSystemAuth(User user) throws IOException {
-    if (isSystemOrSuperUser(user)) {
+    if (Superusers.isSuperUser(user)) {
       return true;
     }
     Set<String> auths = new HashSet<String>();
