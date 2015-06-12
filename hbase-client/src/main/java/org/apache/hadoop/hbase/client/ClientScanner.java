@@ -586,7 +586,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
     // the caller will receive a result back where the number of cells in the result is less than
     // the batch size even though it may not be the last group of cells for that row.
     if (allowPartials || isBatchSet) {
-      addResultsToList(resultsToAddToCache, resultsFromServer, 0, resultsFromServer.length);
+      addResultsToList(resultsToAddToCache, resultsFromServer, 0,
+          (null == resultsFromServer ? 0 : resultsFromServer.length));
       return resultsToAddToCache;
     }
 

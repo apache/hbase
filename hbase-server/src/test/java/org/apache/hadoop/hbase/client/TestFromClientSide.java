@@ -73,6 +73,8 @@ import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
+import org.apache.hadoop.hbase.filter.FirstKeyOnlyFilter;
+import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.KeyOnlyFilter;
 import org.apache.hadoop.hbase.filter.LongComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
@@ -6317,6 +6319,20 @@ public class TestFromClientSide {
         byte[] endKey = i == KEYS.length ? HConstants.EMPTY_END_ROW : KEYS[i];
         assertArrayEquals(startKey, startEndKeys.getFirst()[i]);
         assertArrayEquals(endKey, startEndKeys.getSecond()[i]);
+      }
+    }
+  }
+
+  @Test
+  public void testFilterAllRecords() throws IOException {
+    Scan scan = new Scan();
+    scan.setBatch(1);
+    scan.setCaching(1);
+    // Filter out any records
+    scan.setFilter(new FilterList(new FirstKeyOnlyFilter(), new InclusiveStopFilter(new byte[0])));
+    try (Table table = TEST_UTIL.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME)) {
+      try (ResultScanner s = table.getScanner(scan)) {
+        assertNull(s.next());
       }
     }
   }
