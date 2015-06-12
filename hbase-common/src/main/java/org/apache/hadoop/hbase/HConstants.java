@@ -1176,13 +1176,6 @@ public final class HConstants {
       "hbase.heap.occupancy.high_water_mark";
   public static final float DEFAULT_HEAP_OCCUPANCY_HIGH_WATERMARK = 0.98f;
 
-  /**
-   * Config key for assigning regions and regionservers into groups
-   */
-
-  public static final String GROUP_BALANCER_GROUP_NAMES =
-      "hbase.master.balancer.grouploadbalancer.groupnames";
-
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
