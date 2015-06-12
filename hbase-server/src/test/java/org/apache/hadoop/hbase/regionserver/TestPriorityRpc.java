@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.conf.Configuration;
@@ -121,13 +122,15 @@ public class TestPriorityRpc {
     PriorityFunction qosFunc = regionServer.rpcServices.getPriority();
 
     //test superusers
-    ((AnnotationReadingPriorityFunction) qosFunc).superUsers.add("samplesuperuser");
+    regionServer.conf.set(Superusers.SUPERUSER_CONF_KEY, "samplesuperuser");
+    Superusers.initialize(regionServer.conf);
     assertEquals(HConstants.ADMIN_QOS, qosFunc.getPriority(header, null,
       User.createUserForTesting(regionServer.conf, "samplesuperuser",
         new String[]{"somegroup"})));
 
     //test supergroups
-    ((AnnotationReadingPriorityFunction) qosFunc).superGroups.add("samplesupergroup");
+    regionServer.conf.set(Superusers.SUPERUSER_CONF_KEY, "@samplesupergroup");
+    Superusers.initialize(regionServer.conf);
     assertEquals(HConstants.ADMIN_QOS, qosFunc.getPriority(header, null,
       User.createUserForTesting(regionServer.conf, "regularuser",
         new String[]{"samplesupergroup"})));

@@ -1,4 +1,3 @@
-package org.apache.hadoop.hbase.regionserver;
 /**
 * Licensed to the Apache Software Foundation (ASF) under one
 * or more contributor license agreements.  See the NOTICE file
@@ -16,19 +15,23 @@ package org.apache.hadoop.hbase.regionserver;
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+
+package org.apache.hadoop.hbase.regionserver;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
-import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -38,6 +41,8 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import com.google.protobuf.Message;
+
+import java.io.IOException;
 
 /**
  * Basic test that qos function is sort of working; i.e. a change in method naming style
@@ -65,8 +70,9 @@ public class TestQosFunction {
   }
 
   @Test
-  public void testRegionInTransition() {
+  public void testRegionInTransition() throws IOException {
     Configuration conf = HBaseConfiguration.create();
+    Superusers.initialize(conf);
     RSRpcServices rpcServices = Mockito.mock(RSRpcServices.class);
     when(rpcServices.getConfiguration()).thenReturn(conf);
 

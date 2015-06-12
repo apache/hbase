@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -284,10 +285,10 @@ public class TestAccessController extends SecureTestUtil {
       TEST_TABLE, TEST_FAMILY,
       null, Permission.Action.ADMIN, Permission.Action.CREATE);
 
-    grantGlobal(TEST_UTIL, convertToGroup(GROUP_ADMIN), Permission.Action.ADMIN);
-    grantGlobal(TEST_UTIL, convertToGroup(GROUP_CREATE), Permission.Action.CREATE);
-    grantGlobal(TEST_UTIL, convertToGroup(GROUP_READ), Permission.Action.READ);
-    grantGlobal(TEST_UTIL, convertToGroup(GROUP_WRITE), Permission.Action.WRITE);
+    grantGlobal(TEST_UTIL, toGroupEntry(GROUP_ADMIN), Permission.Action.ADMIN);
+    grantGlobal(TEST_UTIL, toGroupEntry(GROUP_CREATE), Permission.Action.CREATE);
+    grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
+    grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
     assertEquals(5, AccessControlLists.getTablePermissions(conf, TEST_TABLE).size());
     try {

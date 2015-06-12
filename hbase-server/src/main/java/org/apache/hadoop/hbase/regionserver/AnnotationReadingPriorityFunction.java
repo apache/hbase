@@ -17,11 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.logging.Log;
@@ -52,9 +49,8 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * Reads special method annotations and table names to figure a priority for use by QoS facility in
@@ -110,11 +106,6 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
 
   private final float scanVirtualTimeWeight;
 
-  // lists of super users and super groups, used to route rpc calls made by
-  // superusers through high-priority (ADMIN_QOS) thread pool.
-  // made protected for tests
-  protected final HashSet<String> superUsers;
-  protected final HashSet<String> superGroups;
   /**
    * Calls {@link #AnnotationReadingPriorityFunction(RSRpcServices, Class)} using the result of
    * {@code rpcServices#getClass()}
@@ -168,16 +159,6 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
 
     Configuration conf = rpcServices.getConfiguration();
     scanVirtualTimeWeight = conf.getFloat(SCAN_VTIME_WEIGHT_CONF_KEY, 1.0f);
-
-    try {
-      // TODO Usage of VisibilityUtils API to be avoided with HBASE-13755
-      Pair<List<String>, List<String>> pair = VisibilityUtils.getSystemAndSuperUsers(rpcServices
-          .getConfiguration());
-      superUsers = new HashSet<>(pair.getFirst());
-      superGroups = new HashSet<>(pair.getSecond());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private String capitalize(final String s) {
@@ -203,8 +184,15 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
     }
 
     // all requests executed by super users have high QoS
-    if (isExecutedBySuperUser(user)) {
-      return HConstants.ADMIN_QOS;
+    try {
+      if (Superusers.isSuperUser(user)) {
+        return HConstants.ADMIN_QOS;
+      }
+    } catch (IllegalStateException ex) {
+      // Not good throwing an exception out of here, a runtime anyways.  Let the query go into the
+      // server and have it throw the exception if still an issue.  Just mark it normal priority.
+      if (LOG.isTraceEnabled()) LOG.trace("Marking normal priority after getting exception=" + ex);
+      return HConstants.NORMAL_QOS;
     }
 
     if (param == null) {
@@ -305,25 +293,5 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
   @VisibleForTesting
   void setRegionServer(final HRegionServer hrs) {
     this.rpcServices = hrs.getRSRpcServices();
-  }
-
-  /**
-   * @param user user running request
-   * @return true if user is super user, false otherwise
-   */
-  private boolean isExecutedBySuperUser(User user) {
-    if (superUsers.contains(user.getShortName())) {
-      return true;
-    }
-
-    String[] groups = user.getGroupNames();
-    if (groups != null) {
-      for (String group : groups) {
-        if (superGroups.contains(group)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }
