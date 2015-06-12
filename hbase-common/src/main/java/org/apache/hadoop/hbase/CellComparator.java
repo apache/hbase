@@ -245,9 +245,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    *         0 if both timestamps are equal
    */
   public static int compareTimestamps(final Cell left, final Cell right) {
-    long ltimestamp = left.getTimestamp();
-    long rtimestamp = right.getTimestamp();
-    return compareTimestamps(ltimestamp, rtimestamp);
+    return compareTimestamps(left.getTimestamp(), right.getTimestamp());
   }
 
   /********************* hashCode ************************/
