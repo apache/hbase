@@ -29,8 +29,40 @@ import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
 
-@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG) public class GroupLoadBalancer
-    extends BaseLoadBalancer {
+/**
+ * This load balancer partitions servers and tables into groups. Then, within each group, it uses
+ * another load balancer to balance within each group.
+ *
+ * The configuration for the groups is set within the hbase-site.xml file. Within hbase-site.xml:
+ *
+ * "hbase.master.loadbalancer.class" needs to be set to
+ * "org.apache.hadoop.hbase.master.balancer.grouploadbalancer.GroupLoadBalancer" for this load
+ * balancer to work.
+ *
+ * "hbase.master.balancer.grouploadbalancer.groups" configures the names of the groups, separated
+ * with a ";" eg. "group1;group2" creates two groups, named group1 and group2.
+ *
+ * "hbase.master.balancer.grouploadbalancer.defaultgroup" configures the name of the default group.
+ * Note that the defaultgroup must be a pre-existing group defined in
+ * "hbase.master.balancer.grouploadbalancer.groups". eg. "group1" sets group1 to be the default
+ * group.
+ *
+ * To put servers in groups, you need to create a property named
+ * "hbase.master.balancer.grouploadbalancer.servergroups." + groupName, and set it's value to the
+ * IP address and port of the server in a comma separated list.
+ * Note that the IP address and the port over the server is separated by a ",", not a ":".
+ * eg. "hbase.master.balancer.grouploadbalancer.servergroups.group1" with a value
+ * "10.255.196.145,60020;10.255.196.145,60021" will put two servers in group1.
+ *
+ * To put tables in groups, you need to create a property named
+ * "hbase.master.balancer.grouploadbalancer.tablegroups." + groupName, and set it's value to the
+ * name of the table in a comma separated list. You must specify it's namespace in here also.
+ * eg. "hbase.master.balancer.grouploadbalancer.tablegroups.group1" with a value
+ * "my_ns:namespace_table;test" will put two servers in group1. Note that "namespace_table" is under
+ * the namespace "my_ns".
+*/
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+public class GroupLoadBalancer extends BaseLoadBalancer {
 
   private static final Log LOG = LogFactory.getLog(GroupLoadBalancer.class);
 
@@ -93,8 +125,15 @@ import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
     return regionsToReturn;
   }
 
-  /* If regions are placed in servers on the wrong group, this needs to be fixed before passing the
-   * the load balancing to another load balancer
+  /**
+   * If there is a mismatch between the groupedClusterMap and clusterMap regarding which tables
+   * belongs on which servers, then create a list of region plans so that the tables are moved to
+   * the servers which are specified by groupedClusterMap.
+   *
+   * @param groupedClusterMap a clusterMap which as been partitioned by groups
+   * @param clusterMap a mapping of servers and a list of regions which they hold
+   * @return a list of region plans which move regions around so that the regions which are placed
+   * on the servers in clusterMap are the same as what is specified in groupedClusterMap
    */
   public List<RegionPlan> reconcileToGroupConfiguration(
       Map<String, Map<ServerName, List<HRegionInfo>>> groupedClusterMap,

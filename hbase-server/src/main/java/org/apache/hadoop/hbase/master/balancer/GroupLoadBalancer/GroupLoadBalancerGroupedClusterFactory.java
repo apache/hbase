@@ -25,6 +25,10 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 
+/**
+ * This class is resposible for creating a groupedClusterMap which partitions a clusterMap
+ * into separate groups
+ */
 public class GroupLoadBalancerGroupedClusterFactory {
 
   private static final Log LOG = LogFactory.getLog(GroupLoadBalancerGroupedClusterFactory.class);
@@ -40,6 +44,11 @@ public class GroupLoadBalancerGroupedClusterFactory {
     this.clusterMap = clusterMap;
   }
 
+  /**
+   * Using the configuration and a clusterMap, create a groupedClusterMap which partitions a
+   * clusterMap into separate groups
+   * @return a groupedClusterMap
+   */
   public Map<String, Map<ServerName, List<HRegionInfo>>> getGroupedClusters() {
     this.groupedClusterMap = new HashMap<>();
 
@@ -91,7 +100,9 @@ public class GroupLoadBalancerGroupedClusterFactory {
     return this.groupedClusterMap;
   }
 
-
+  /**
+   * @return a description of the groupedClusterMap which maps the name of the group to a clusterMap
+   */
   public String toString() {
     return this.groupedClusterMap.toString();
   }

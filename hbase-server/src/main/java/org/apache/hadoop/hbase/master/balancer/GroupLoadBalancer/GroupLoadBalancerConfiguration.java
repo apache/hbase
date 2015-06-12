@@ -44,6 +44,12 @@ public class GroupLoadBalancerConfiguration {
   private Map<String, GroupLoadBalancerTable> tables;
   private String defaultGroupName;
 
+  /**
+   * Create an object that holds all configuration info for grouping
+   *
+   * @param configuration the configuration object, which includes hbase-site.xml
+   * @param clusterMap this maps a server to the list of regions which is on it
+   */
   public GroupLoadBalancerConfiguration(Configuration configuration,
       Map<ServerName, List<HRegionInfo>> clusterMap){
 
@@ -131,30 +137,55 @@ public class GroupLoadBalancerConfiguration {
     }
   }
 
+  /**
+   * @return a map which maps the name of a group as a string to a GroupLoadBalancerGroup object
+   */
   public Map<String, GroupLoadBalancerGroup> getGroups() {
     return this.groups;
   }
 
+  /**
+   * @param serverNameString the name of the server as a string
+   * @return a GroupLoadBalancerServer object with the name specified
+   */
   public GroupLoadBalancerServer getServer(String serverNameString) {
     return this.servers.get(serverNameString);
   }
 
+  /**
+   * @return a map of all the servers. The key of the map is the name of the server as a string,
+   * and the value of the map is a GroupLoadBalancerServer object.
+   */
   public Map<String, GroupLoadBalancerServer> getServers() {
     return this.servers;
   }
 
-  public GroupLoadBalancerTable getTable(String serverNameString) {
-    return this.tables.get(serverNameString);
+  /**
+   * @param tableNameString the name of the table as a string
+   * @return a GroupLoadBalancerTable object with the name specified
+   */
+  public GroupLoadBalancerTable getTable(String tableNameString) {
+    return this.tables.get(tableNameString);
   }
 
+  /**
+   * @return a map of all the tables. The key of the map is the name of the table as a string,
+   * and the value of the map is a GroupLoadBalancerTable object.
+   */
   public Map<String, GroupLoadBalancerTable> getTables() {
     return this.tables;
   }
 
+  /**
+   * @return a the name of the default group name as a string
+   */
   public String getDefaultGroupName() {
     return this.defaultGroupName;
   }
 
+  /**
+   * @return a formatted string of the configuration
+   */
   public String toString() {
     StringBuilder description = new StringBuilder();
     description.append("Groups List: \n");

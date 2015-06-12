@@ -19,6 +19,10 @@ import java.lang.StringBuilder;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * An object that holds the name of the group, as well as all the tables and servers which belongs
+ * to that group
+ */
 public class GroupLoadBalancerGroup {
 
   private String name;
@@ -31,6 +35,9 @@ public class GroupLoadBalancerGroup {
     this.tables = new HashMap<>();
   }
 
+  /**
+   * @param server a GroupLoadBalancerServer object to be added to the group
+   */
   public void addServer(GroupLoadBalancerServer server) {
     if (this.servers.containsKey(server.getServerNameString())) {
       throw new IllegalArgumentException("Server name already exists.");
@@ -38,6 +45,9 @@ public class GroupLoadBalancerGroup {
     this.servers.put(server.getServerNameString(), server);
   }
 
+  /**
+   * @param table a GroupLoadBalancerTable object to be added to the group
+   */
   public void addTable(GroupLoadBalancerTable table) {
     if (this.tables.containsKey(table.getTableName())) {
       throw new IllegalArgumentException("Table name already exists");
@@ -45,10 +55,16 @@ public class GroupLoadBalancerGroup {
     this.tables.put(table.getTableName(), table);
   }
 
+  /**
+   * @return the name of the group as a string
+   */
   public String getName() {
     return this.name;
   }
 
+  /**
+   * @return a description of the group including all its servers and tables as a string
+   */
   public String toString() {
     StringBuilder description = new StringBuilder();
     description.append("Servers Map: \n");
