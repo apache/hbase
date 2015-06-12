@@ -228,7 +228,8 @@ public abstract class User {
    */
   public static User createUserForTesting(Configuration conf,
       String name, String[] groups) {
-    return SecureHadoopUser.createUserForTesting(conf, name, groups);
+    User userForTesting = SecureHadoopUser.createUserForTesting(conf, name, groups);
+    return userForTesting;
   }
 
   /**

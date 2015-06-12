@@ -30,12 +30,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel;
-import org.apache.hadoop.hbase.security.access.AccessControlLists;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
@@ -145,8 +145,8 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
       this.groupAuths.clear();
       for (UserAuthorizations userAuths : multiUserAuths.getUserAuthsList()) {
         String user = Bytes.toString(userAuths.getUser().toByteArray());
-        if (AccessControlLists.isGroupPrincipal(user)) {
-          this.groupAuths.put(AccessControlLists.getGroupName(user),
+        if (AuthUtil.isGroupPrincipal(user)) {
+          this.groupAuths.put(AuthUtil.getGroupName(user),
             new HashSet<Integer>(userAuths.getAuthList()));
         } else {
           this.userAuths.put(user, new HashSet<Integer>(userAuths.getAuthList()));

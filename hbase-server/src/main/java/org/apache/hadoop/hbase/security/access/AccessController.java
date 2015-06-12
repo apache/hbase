@@ -96,6 +96,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -180,9 +181,6 @@ public class AccessController extends BaseMasterAndRegionObserver
 
   /** Provider for mapping principal names to Users */
   private UserProvider userProvider;
-
-  /** The list of users with superuser authority */
-  private List<String> superusers;
 
   /** if we are active, usually true, only not true if "hbase.security.authorization"
    has been set to false in site configuration */
@@ -891,7 +889,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       return;
     }
     // Superusers are allowed to store cells unconditionally.
-    if (superusers.contains(user.getShortName())) {
+    if (Superusers.isSuperUser(user)) {
       m.setAttribute(TAG_CHECK_PASSED, TRUE);
       return;
     }
@@ -954,11 +952,6 @@ public class AccessController extends BaseMasterAndRegionObserver
 
     // set the user-provider.
     this.userProvider = UserProvider.instantiate(env.getConfiguration());
-
-    // set up the list of users with superuser privilege
-    User user = userProvider.getCurrent();
-    superusers = Lists.asList(user.getShortName(),
-      conf.getStrings(AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
 
     // If zk is null or IOException while obtaining auth manager,
     // throw RuntimeException so that the coprocessor is unloaded.
@@ -1358,7 +1351,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     } else {
       HRegionInfo regionInfo = region.getRegionInfo();
       if (regionInfo.getTable().isSystemTable()) {
-        isSystemOrSuperUser(regionEnv.getConfiguration());
+        checkSystemOrSuperUser();
       } else {
         requirePermission("preOpen", Action.ADMIN);
       }
@@ -2404,20 +2397,15 @@ public class AccessController extends BaseMasterAndRegionObserver
     requirePermission("preClose", Action.ADMIN);
   }
 
-  private void isSystemOrSuperUser(Configuration conf) throws IOException {
+  private void checkSystemOrSuperUser() throws IOException {
     // No need to check if we're not going to throw
     if (!authorizationEnabled) {
       return;
     }
-    User user = userProvider.getCurrent();
-    if (user == null) {
-      throw new IOException("Unable to obtain the current user, " +
-        "authorization checks for internal operations will not work correctly!");
-    }
     User activeUser = getActiveUser();
-    if (!(superusers.contains(activeUser.getShortName()))) {
-      throw new AccessDeniedException("User '" + (user != null ? user.getShortName() : "null") +
-        "is not system or super user.");
+    if (!Superusers.isSuperUser(activeUser)) {
+      throw new AccessDeniedException("User '" + (activeUser != null ?
+        activeUser.getShortName() : "null") + "is not system or super user.");
     }
   }
 

@@ -27,11 +27,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -79,13 +81,13 @@ public class TableAuthManager {
 
     /**
      * Returns a combined map of user and group permissions, with group names prefixed by
-     * {@link AccessControlLists#GROUP_PREFIX}.
+     * {@link AuthUtil#GROUP_PREFIX}.
      */
     public ListMultimap<String,T> getAllPermissions() {
       ListMultimap<String,T> tmp = ArrayListMultimap.create();
       tmp.putAll(userCache);
       for (String group : groupCache.keySet()) {
-        tmp.putAll(AccessControlLists.GROUP_PREFIX + group, groupCache.get(group));
+        tmp.putAll(AuthUtil.toGroupEntry(group), groupCache.get(group));
       }
       return tmp;
     }
@@ -139,11 +141,11 @@ public class TableAuthManager {
 
     // the system user is always included
     List<String> superusers = Lists.asList(currentUser, conf.getStrings(
-        AccessControlLists.SUPERUSER_CONF_KEY, new String[0]));
+        Superusers.SUPERUSER_CONF_KEY, new String[0]));
     if (superusers != null) {
       for (String name : superusers) {
-        if (AccessControlLists.isGroupPrincipal(name)) {
-          newCache.putGroup(AccessControlLists.getGroupName(name),
+        if (AuthUtil.isGroupPrincipal(name)) {
+          newCache.putGroup(AuthUtil.getGroupName(name),
               new Permission(Permission.Action.values()));
         } else {
           newCache.putUser(name, new Permission(Permission.Action.values()));
@@ -205,8 +207,8 @@ public class TableAuthManager {
     try {
       newCache = initGlobal(conf);
       for (Map.Entry<String,TablePermission> entry : userPerms.entries()) {
-        if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-          newCache.putGroup(AccessControlLists.getGroupName(entry.getKey()),
+        if (AuthUtil.isGroupPrincipal(entry.getKey())) {
+          newCache.putGroup(AuthUtil.getGroupName(entry.getKey()),
               new Permission(entry.getValue().getActions()));
         } else {
           newCache.putUser(entry.getKey(), new Permission(entry.getValue().getActions()));
@@ -233,8 +235,8 @@ public class TableAuthManager {
     PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
 
     for (Map.Entry<String,TablePermission> entry : tablePerms.entries()) {
-      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-        newTablePerms.putGroup(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
+      if (AuthUtil.isGroupPrincipal(entry.getKey())) {
+        newTablePerms.putGroup(AuthUtil.getGroupName(entry.getKey()), entry.getValue());
       } else {
         newTablePerms.putUser(entry.getKey(), entry.getValue());
       }
@@ -257,8 +259,8 @@ public class TableAuthManager {
     PermissionCache<TablePermission> newTablePerms = new PermissionCache<TablePermission>();
 
     for (Map.Entry<String, TablePermission> entry : tablePerms.entries()) {
-      if (AccessControlLists.isGroupPrincipal(entry.getKey())) {
-        newTablePerms.putGroup(AccessControlLists.getGroupName(entry.getKey()), entry.getValue());
+      if (AuthUtil.isGroupPrincipal(entry.getKey())) {
+        newTablePerms.putGroup(AuthUtil.getGroupName(entry.getKey()), entry.getValue());
       } else {
         newTablePerms.putUser(entry.getKey(), entry.getValue());
       }
