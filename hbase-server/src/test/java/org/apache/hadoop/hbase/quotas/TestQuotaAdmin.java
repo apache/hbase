@@ -57,6 +57,54 @@ public class TestQuotaAdmin {
   }
 
   @Test
+  public void testThrottleType() throws Exception {
+    Admin admin = TEST_UTIL.getHBaseAdmin();
+    String userName = User.getCurrent().getShortName();
+
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, ThrottleType.READ_NUMBER, 6, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory
+      .throttleUser(userName, ThrottleType.WRITE_NUMBER, 12, TimeUnit.MINUTES));
+    admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
+
+    try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
+      int countThrottle = 0;
+      int countGlobalBypass = 0;
+      for (QuotaSettings settings: scanner) {
+        switch (settings.getQuotaType()) {
+          case THROTTLE:
+            ThrottleSettings throttle = (ThrottleSettings)settings;
+            if (throttle.getSoftLimit() == 6) {
+              assertEquals(ThrottleType.READ_NUMBER, throttle.getThrottleType());
+            } else if (throttle.getSoftLimit() == 12) {
+              assertEquals(ThrottleType.WRITE_NUMBER, throttle.getThrottleType());
+            } else {
+              fail("should not come here, because don't set quota with this limit");
+            }
+            assertEquals(userName, throttle.getUserName());
+            assertEquals(null, throttle.getTableName());
+            assertEquals(null, throttle.getNamespace());
+            assertEquals(TimeUnit.MINUTES, throttle.getTimeUnit());
+            countThrottle++;
+            break;
+          case GLOBAL_BYPASS:
+            countGlobalBypass++;
+            break;
+          default:
+            fail("unexpected settings type: " + settings.getQuotaType());
+        }
+      }
+      assertEquals(2, countThrottle);
+      assertEquals(1, countGlobalBypass);
+    }
+
+    admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));
+    assertNumResults(1, null);
+    admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, false));
+    assertNumResults(0, null);
+  }
+
+  @Test
   public void testSimpleScan() throws Exception {
     Admin admin = TEST_UTIL.getHBaseAdmin();
     String userName = User.getCurrent().getShortName();
@@ -65,8 +113,7 @@ public class TestQuotaAdmin {
       TimeUnit.MINUTES));
     admin.setQuota(QuotaSettingsFactory.bypassGlobals(userName, true));
 
-    QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration());
-    try {
+    try (QuotaRetriever scanner = QuotaRetriever.open(TEST_UTIL.getConfiguration())) {
       int countThrottle = 0;
       int countGlobalBypass = 0;
       for (QuotaSettings settings : scanner) {
@@ -90,8 +137,6 @@ public class TestQuotaAdmin {
       }
       assertEquals(1, countThrottle);
       assertEquals(1, countGlobalBypass);
-    } finally {
-      scanner.close();
     }
 
     admin.setQuota(QuotaSettingsFactory.unthrottleUser(userName));

@@ -26,9 +26,21 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public enum ThrottleType {
-  /** Throttling based on the number of request per time-unit */
+  /** Throttling based on the number of requests per time-unit */
   REQUEST_NUMBER,
 
   /** Throttling based on the read+write data size */
   REQUEST_SIZE,
+
+  /** Throttling based on the number of write requests per time-unit */
+  WRITE_NUMBER,
+
+  /** Throttling based on the write data size */
+  WRITE_SIZE,
+
+  /** Throttling based on the number of read requests per time-unit */
+  READ_NUMBER,
+
+  /** Throttling based on the read data size */
+  READ_SIZE,
 }

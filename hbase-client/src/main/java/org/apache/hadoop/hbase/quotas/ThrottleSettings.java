@@ -67,9 +67,13 @@ class ThrottleSettings extends QuotaSettings {
       if (timedQuota.hasSoftLimit()) {
         switch (getThrottleType()) {
         case REQUEST_NUMBER:
+        case WRITE_NUMBER:
+        case READ_NUMBER:
           builder.append(String.format("%dreq", timedQuota.getSoftLimit()));
           break;
         case REQUEST_SIZE:
+        case WRITE_SIZE:
+        case READ_SIZE:
           builder.append(sizeToString(timedQuota.getSoftLimit()));
           break;
         default:
