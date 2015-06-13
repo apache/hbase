@@ -719,10 +719,6 @@ public class SecureTestUtil {
     return AccessControlLists.NAMESPACE_PREFIX + namespace;
   }
 
-  public static String convertToGroup(String group) {
-    return AccessControlLists.GROUP_PREFIX + group;
-  }
-
   public static void checkGlobalPerms(HBaseTestingUtility testUtil, Permission.Action... actions)
       throws IOException {
     Permission[] perms = new Permission[actions.length];

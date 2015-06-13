@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -108,7 +109,7 @@ public class TestAccessController2 extends SecureTestUtil {
     // Wait for the ACL table to become available
     TEST_UTIL.waitUntilAllRegionsAssigned(AccessControlLists.ACL_TABLE_NAME);
 
-    TESTGROUP_1_NAME = convertToGroup(TESTGROUP_1);
+    TESTGROUP_1_NAME = toGroupEntry(TESTGROUP_1);
     TESTGROUP1_USER1 =
         User.createUserForTesting(conf, "testgroup1_user1", new String[] { TESTGROUP_1 });
     TESTGROUP2_USER1 =
