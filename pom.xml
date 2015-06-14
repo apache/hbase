@@ -1113,7 +1113,7 @@
       "-Djava.library.path=${hadoop.library.path};${java.library.path}"
     </hbase-surefire.cygwin-argline>
     <hbase.skip-jacoco>true</hbase.skip-jacoco>
-    <jacoco.version>0.6.2.201302030002</jacoco.version>
+    <jacoco.version>0.7.5.201505241946</jacoco.version>
     <extra.enforcer.version>1.0-beta-3</extra.enforcer.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
