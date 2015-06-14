@@ -147,7 +147,7 @@ public interface Region extends ConfigurationObserver {
    */
   long getOldestHfileTs(boolean majorCompactioOnly) throws IOException;
 
-  /** 
+  /**
    * @return map of column family names to max sequence id that was read from storage when this
    * region was opened
    */
@@ -168,7 +168,7 @@ public interface Region extends ConfigurationObserver {
 
   ///////////////////////////////////////////////////////////////////////////
   // Metrics
-  
+
   /** @return read requests count for this region */
   long getReadRequestsCount();
 
@@ -192,7 +192,7 @@ public interface Region extends ConfigurationObserver {
 
   /** @return the number of mutations processed bypassing the WAL */
   long getNumMutationsWithoutWAL();
-  
+
   /** @return the size of data processed bypassing the WAL, in bytes */
   long getDataInMemoryWithoutWAL();
 
@@ -227,7 +227,7 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * This method needs to be called before any public call that reads or
-   * modifies data. 
+   * modifies data.
    * Acquires a read lock and checks if the region is closing or closed.
    * <p>{@link #closeRegionOperation} MUST then always be called after
    * the operation has completed, whether it succeeded or failed.
@@ -237,7 +237,7 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * This method needs to be called before any public call that reads or
-   * modifies data. 
+   * modifies data.
    * Acquires a read lock and checks if the region is closing or closed.
    * <p>{@link #closeRegionOperation} MUST then always be called after
    * the operation has completed, whether it succeeded or failed.
@@ -427,7 +427,7 @@ public interface Region extends ConfigurationObserver {
 
   /**
    * Perform atomic mutations within the region.
-   * 
+   *
    * @param mutations The list of mutations to perform.
    * <code>mutations</code> can contain operations for multiple rows.
    * Caller has to ensure that all rows are contained in this region.
@@ -623,13 +623,13 @@ public interface Region extends ConfigurationObserver {
       CANNOT_FLUSH_MEMSTORE_EMPTY,
       CANNOT_FLUSH
     }
-    
+
     /** @return the detailed result code */
     Result getResult();
 
     /** @return true if the memstores were flushed, else false */
     boolean isFlushSucceeded();
-    
+
     /** @return True if the flush requested a compaction, else false */
     boolean isCompactionNeeded();
   }
@@ -653,6 +653,8 @@ public interface Region extends ConfigurationObserver {
    *
    * @throws IOException general io exceptions
    * because a snapshot was not properly persisted.
+   * @throws DroppedSnapshotException Thrown when abort is required. The caller MUST catch this
+   * exception and MUST abort. Any further operation to the region may cause data loss.
    */
   FlushResult flush(boolean force) throws IOException;
 
@@ -660,7 +662,7 @@ public interface Region extends ConfigurationObserver {
    * Synchronously compact all stores in the region.
    * <p>This operation could block for a long time, so don't call it from a
    * time-sensitive thread.
-   * <p>Note that no locks are taken to prevent possible conflicts between 
+   * <p>Note that no locks are taken to prevent possible conflicts between
    * compaction and splitting activities. The regionserver does not normally compact
    * and split in parallel. However by calling this method you may introduce
    * unexpected and unhandled concurrency. Don't do this unless you know what
