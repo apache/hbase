@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -232,47 +234,56 @@ public class TestLoadIncrementalHFiles {
 
   private void runTest(String testName, HTableDescriptor htd, BloomType bloomType,
       boolean preCreateTable, byte[][] tableSplitKeys, byte[][][] hfileRanges) throws Exception {
-    Path dir = util.getDataTestDirOnTestFS(testName);
-    FileSystem fs = util.getTestFileSystem();
-    dir = dir.makeQualified(fs);
-    Path familyDir = new Path(dir, Bytes.toString(FAMILY));
 
-    int hfileIdx = 0;
-    for (byte[][] range : hfileRanges) {
-      byte[] from = range[0];
-      byte[] to = range[1];
-      HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
-          + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
-    }
-    int expectedRows = hfileIdx * 1000;
+    for (boolean managed : new boolean[] { true, false }) {
+      Path dir = util.getDataTestDirOnTestFS(testName);
+      FileSystem fs = util.getTestFileSystem();
+      dir = dir.makeQualified(fs);
+      Path familyDir = new Path(dir, Bytes.toString(FAMILY));
 
-    if (preCreateTable) {
-      util.getHBaseAdmin().createTable(htd, tableSplitKeys);
-    }
-
-    final TableName tableName = htd.getTableName();
-    LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
-    String [] args= {dir.toString(), tableName.toString()};
-    loader.run(args);
-
-    Table table = new HTable(util.getConfiguration(), tableName);
-    try {
-      assertEquals(expectedRows, util.countRows(table));
-    } finally {
-      table.close();
-    }
-
-    // verify staging folder has been cleaned up
-    Path stagingBasePath = SecureBulkLoadUtil.getBaseStagingDir(util.getConfiguration());
-    if(fs.exists(stagingBasePath)) {
-      FileStatus[] files = fs.listStatus(stagingBasePath);
-      for(FileStatus file : files) {
-        assertTrue("Folder=" + file.getPath() + " is not cleaned up.",
-          file.getPath().getName() != "DONOTERASE");
+      int hfileIdx = 0;
+      for (byte[][] range : hfileRanges) {
+        byte[] from = range[0];
+        byte[] to = range[1];
+        HFileTestUtil.createHFile(util.getConfiguration(), fs, new Path(familyDir, "hfile_"
+            + hfileIdx++), FAMILY, QUALIFIER, from, to, 1000);
       }
-    }
+      int expectedRows = hfileIdx * 1000;
 
-    util.deleteTable(tableName);
+      if (preCreateTable) {
+        util.getHBaseAdmin().createTable(htd, tableSplitKeys);
+      }
+
+      final TableName tableName = htd.getTableName();
+      if (!util.getHBaseAdmin().tableExists(tableName)) {
+        util.getHBaseAdmin().createTable(htd);
+      }
+      LoadIncrementalHFiles loader = new LoadIncrementalHFiles(util.getConfiguration());
+
+      if (managed) {
+        try (HTable table = new HTable(util.getConfiguration(), tableName)) {
+          loader.doBulkLoad(dir, table);
+          assertEquals(expectedRows, util.countRows(table));
+        }
+      } else {
+        try (Connection conn = ConnectionFactory.createConnection(util.getConfiguration());
+            HTable table = (HTable) conn.getTable(tableName)) {
+          loader.doBulkLoad(dir, table);
+        }
+      }
+
+      // verify staging folder has been cleaned up
+      Path stagingBasePath = SecureBulkLoadUtil.getBaseStagingDir(util.getConfiguration());
+      if (fs.exists(stagingBasePath)) {
+        FileStatus[] files = fs.listStatus(stagingBasePath);
+        for (FileStatus file : files) {
+          assertTrue("Folder=" + file.getPath() + " is not cleaned up.",
+              file.getPath().getName() != "DONOTERASE");
+        }
+      }
+
+      util.deleteTable(tableName);
+    }
   }
 
   /**

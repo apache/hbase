@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -291,15 +292,32 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     throws TableNotFoundException, IOException
   {
     Admin admin = null;
+    Table t = table;
+    Connection conn = table.getConnection();
+    boolean closeConnWhenFinished = false;
     try {
-      try {
-        admin = table.getConnection().getAdmin();
-      } catch (NeedUnmanagedConnectionException ex) {
-        admin = new HBaseAdmin(table.getConfiguration());
+      if (conn instanceof ClusterConnection && ((ClusterConnection) conn).isManaged()) {
+        LOG.warn("managed connection cannot be used for bulkload. Creating unmanaged connection.");
+        // can only use unmanaged connections from here on out.
+        conn = ConnectionFactory.createConnection(table.getConfiguration());
+        t = conn.getTable(table.getName());
+        closeConnWhenFinished = true;
+        if (conn instanceof ClusterConnection && ((ClusterConnection) conn).isManaged()) {
+          throw new RuntimeException("Failed to create unmanaged connection.");
+        }
+        admin = conn.getAdmin();
+      } else {
+        admin = conn.getAdmin();
       }
-      doBulkLoad(hfofDir, admin, table, table.getRegionLocator());
+      try (RegionLocator rl = conn.getRegionLocator(t.getName())) {
+        doBulkLoad(hfofDir, admin, t, rl);
+      }
     } finally {
-      admin.close();
+      if (admin != null) admin.close();
+      if (closeConnWhenFinished) {
+        t.close();
+        conn.close();
+      }
     }
   }
 
