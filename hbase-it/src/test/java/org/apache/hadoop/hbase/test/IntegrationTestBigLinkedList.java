@@ -195,7 +195,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
   protected int NUM_SLAVES_BASE = 3; // number of slaves for the cluster
 
-  private static final int MISSING_ROWS_TO_LOG = 50;
+  private static final int MISSING_ROWS_TO_LOG = 10; // YARN complains when too many counters
 
   private static final int WIDTH_DEFAULT = 1000000;
   private static final int WRAP_DEFAULT = 25;
