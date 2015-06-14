@@ -100,7 +100,7 @@ public class RemoteAdmin {
 
   /**
    * @return string representing the rest api's version
-   * @throws IOEXception
+   * @throws IOException
    *           if the endpoint does not exist, there is a timeout, or some other
    *           general failure mode
    */
@@ -144,7 +144,7 @@ public class RemoteAdmin {
 
   /**
    * @return string representing the cluster's version
-   * @throws IOEXception if the endpoint does not exist, there is a timeout, or some other general failure mode
+   * @throws IOException if the endpoint does not exist, there is a timeout, or some other general failure mode
    */
   public StorageClusterStatusModel getClusterStatus() throws IOException {
 
@@ -185,7 +185,7 @@ public class RemoteAdmin {
 
   /**
    * @return string representing the cluster's version
-   * @throws IOEXception
+   * @throws IOException
    *           if the endpoint does not exist, there is a timeout, or some other
    *           general failure mode
    */
@@ -357,7 +357,7 @@ public class RemoteAdmin {
 
   /**
    * @return string representing the cluster's version
-   * @throws IOEXception
+   * @throws IOException
    *           if the endpoint does not exist, there is a timeout, or some other
    *           general failure mode
    */

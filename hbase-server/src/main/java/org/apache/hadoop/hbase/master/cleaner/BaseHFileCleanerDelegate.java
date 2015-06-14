@@ -25,14 +25,17 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  * <p>
  * If other effects are needed, implement your own LogCleanerDelegate and add it to the
  * configuration "hbase.master.hfilecleaner.plugins", which is a comma-separated list of fully
- * qualified class names. The <code>HFileCleaner<code> will build the cleaner chain in 
+ * qualified class names. The <code>HFileCleaner</code> will build the cleaner chain in 
  * order the order specified by the configuration.
+ * </p>
  * <p>
  * For subclasses, setConf will be called exactly <i>once</i> before using the cleaner.
+ * </p>
  * <p>
  * Since {@link BaseHFileCleanerDelegate HFileCleanerDelegates} are created in
  * HFileCleaner by reflection, classes that implements this interface <b>must</b>
  * provide a default constructor.
+ * </p>
  */
 @InterfaceAudience.Private
 public abstract class BaseHFileCleanerDelegate extends BaseFileCleanerDelegate {

@@ -417,7 +417,7 @@ public abstract class ZKInterProcessLockBase implements InterProcessLock {
 
   /**
    * Visits the locks (both held and attempted) with the given MetadataHandler.
-   * @throws InterruptedException If there is an unrecoverable error
+   * @throws IOException If there is an unrecoverable error
    */
   public void visitLocks(MetadataHandler handler) throws IOException {
     List<String> children;
