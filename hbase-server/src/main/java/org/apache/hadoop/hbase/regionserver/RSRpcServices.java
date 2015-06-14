@@ -956,7 +956,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   Configuration getConfiguration() {
     return regionServer.getConfiguration();
   }
-  
+
   private RegionServerQuotaManager getQuotaManager() {
     return regionServer.getRegionServerQuotaManager();
   }
@@ -1330,6 +1330,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible);
       return MergeRegionsResponse.newBuilder().build();
+    } catch (DroppedSnapshotException ex) {
+      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
+      throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -1765,6 +1768,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       ((HRegion)region).forceSplit(splitPoint);
       regionServer.compactSplitThread.requestSplit(region, ((HRegion)region).checkSplit());
       return SplitRegionResponse.newBuilder().build();
+    } catch (DroppedSnapshotException ex) {
+      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
+      throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -2438,7 +2444,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               region.getCoprocessorHost().postScannerNext(scanner, results, rows, true);
             }
           }
-          
+
           quota.addScanResult(results);
 
           // If the scanner's filter - if any - is done with the scan
