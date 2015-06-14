@@ -287,7 +287,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   @SuppressWarnings("deprecation")
   public void doBulkLoad(Path hfofDir, final HTable table)
       throws TableNotFoundException, IOException {
-    doBulkLoad(hfofDir, table.getConnection().getAdmin(), table, table.getRegionLocator());
+    try (Admin admin = table.getConnection().getAdmin();
+        RegionLocator rl = table.getRegionLocator()) {
+      doBulkLoad(hfofDir, admin, table, rl);
+    }
   }
 
   /**
