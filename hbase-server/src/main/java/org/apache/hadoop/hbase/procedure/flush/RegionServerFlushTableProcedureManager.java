@@ -33,7 +33,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.DaemonThreadFactory;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
@@ -157,7 +159,7 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
         FLUSH_REQUEST_WAKE_MILLIS_DEFAULT);
 
     FlushTableSubprocedurePool taskManager =
-        new FlushTableSubprocedurePool(rss.getServerName().toString(), conf);
+        new FlushTableSubprocedurePool(rss.getServerName().toString(), conf, rss);
     return new FlushTableSubprocedure(member, exnDispatcher, wakeMillis,
       timeoutMillis, involvedRegions, table, taskManager);
   }
@@ -195,13 +197,15 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
    * failures.
    */
   static class FlushTableSubprocedurePool {
+    private final Abortable abortable;
     private final ExecutorCompletionService<Void> taskPool;
     private final ThreadPoolExecutor executor;
     private volatile boolean stopped;
     private final List<Future<Void>> futures = new ArrayList<Future<Void>>();
     private final String name;
 
-    FlushTableSubprocedurePool(String name, Configuration conf) {
+    FlushTableSubprocedurePool(String name, Configuration conf, Abortable abortable) {
+      this.abortable = abortable;
       // configure the executor service
       long keepAlive = conf.getLong(
         RegionServerFlushTableProcedureManager.FLUSH_TIMEOUT_MILLIS_KEY,
@@ -259,9 +263,13 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
         }
         // we are stopped so we can just exit.
       } catch (ExecutionException e) {
-        if (e.getCause() instanceof ForeignException) {
+        Throwable cause = e.getCause();
+        if (cause instanceof ForeignException) {
           LOG.warn("Rethrowing ForeignException from FlushSubprocedurePool", e);
           throw (ForeignException)e.getCause();
+        } else if (cause instanceof DroppedSnapshotException) {
+          // we have to abort the region server according to contract of flush
+          abortable.abort("Received DroppedSnapshotException, aborting", cause);
         }
         LOG.warn("Got Exception in FlushSubprocedurePool", e);
         throw new ForeignException(name, e.getCause());
@@ -272,7 +280,8 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     }
 
     /**
-     * This attempts to cancel out all pending and in progress tasks (interruptions issues)
+     * This attempts to cancel out all pending and in progress tasks. Does not interrupt the running
+     * tasks itself. An ongoing HRegion.flush() should not be interrupted (see HBASE-13877).
      * @throws InterruptedException
      */
     void cancelTasks() throws InterruptedException {
@@ -289,13 +298,14 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
     }
 
     /**
-     * Abruptly shutdown the thread pool.  Call when exiting a region server.
+     * Gracefully shutdown the thread pool. An ongoing HRegion.flush() should not be
+     * interrupted (see HBASE-13877)
      */
     void stop() {
       if (this.stopped) return;
 
       this.stopped = true;
-      this.executor.shutdownNow();
+      this.executor.shutdown();
     }
   }
 
