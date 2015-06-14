@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -92,6 +93,10 @@ class RegionMergeRequest implements Runnable {
                   + (this.server.isStopping() ? " stopping" : " stopped"), e);
           return;
         }
+        if (e instanceof DroppedSnapshotException) {
+          server.abort("Replay of WAL required. Forcing server shutdown", e);
+          return;
+        }
         try {
           LOG.warn("Running rollback/cleanup of failed merge of "
                   + region_a +" and "+ region_b + "; " + e.getMessage(), e);
@@ -131,7 +136,7 @@ class RegionMergeRequest implements Runnable {
       try {
         this.tableLock.release();
       } catch (IOException ex) {
-        LOG.error("Could not release the table lock (something is really wrong). " 
+        LOG.error("Could not release the table lock (something is really wrong). "
            + "Aborting this server to avoid holding the lock forever.");
         this.server.abort("Abort; we got an error when releasing the table lock "
                          + "on " + region_a.getRegionNameAsString());

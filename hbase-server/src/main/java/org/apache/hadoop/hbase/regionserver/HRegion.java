@@ -1150,6 +1150,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * vector if already closed and null if judged that it should not close.
    *
    * @throws IOException e
+   * @throws DroppedSnapshotException Thrown when replay of wal is required
+   * because a Snapshot was not properly persisted. The region is put in closing mode, and the
+   * caller MUST abort after this.
    */
   public Map<byte[], List<StoreFile>> close() throws IOException {
     return close(false);
@@ -1186,6 +1189,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * we are not to close at this time or we are already closed.
    *
    * @throws IOException e
+   * @throws DroppedSnapshotException Thrown when replay of wal is required
+   * because a Snapshot was not properly persisted. The region is put in closing mode, and the
+   * caller MUST abort after this.
    */
   public Map<byte[], List<StoreFile>> close(final boolean abort) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
@@ -1202,6 +1208,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     } finally {
       status.cleanup();
     }
+  }
+
+  /**
+   * Exposed for some very specific unit tests.
+   */
+  @VisibleForTesting
+  public void setClosing(boolean closing) {
+    this.closing.set(closing);
   }
 
   private Map<byte[], List<StoreFile>> doClose(final boolean abort, MonitoredTask status)
@@ -1656,7 +1670,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    *
    * @throws IOException general io exceptions
    * @throws DroppedSnapshotException Thrown when replay of wal is required
-   * because a Snapshot was not properly persisted.
+   * because a Snapshot was not properly persisted. The region is put in closing mode, and the
+   * caller MUST abort after this.
    */
   public FlushResult flushcache() throws IOException {
     // fail-fast instead of waiting on the lock
@@ -2002,6 +2017,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
           Bytes.toStringBinary(getRegionName()));
       dse.initCause(t);
       status.abort("Flush failed: " + StringUtils.stringifyException(t));
+
+      // Callers for flushcache() should catch DroppedSnapshotException and abort the region server.
+      // However, since we may have the region read lock, we cannot call close(true) here since
+      // we cannot promote to a write lock. Instead we are setting closing so that all other region
+      // operations except for close will be rejected.
+      this.closing.set(true);
+
+      if (rsServices != null) {
+        // This is a safeguard against the case where the caller fails to explicitly handle aborting
+        rsServices.abort("Replay of WAL required. Forcing server shutdown", dse);
+      }
+
       throw dse;
     }
 

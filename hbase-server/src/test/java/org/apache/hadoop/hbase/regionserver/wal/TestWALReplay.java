@@ -716,6 +716,8 @@ public class TestWALReplay {
           + t.getMessage());
       // simulated to abort server
       Mockito.doReturn(true).when(rsServices).isAborted();
+      region.setClosing(false); // region normally does not accept writes after
+      // DroppedSnapshotException. We mock around it for this test.
     }
     // writing more data
     int moreRow = 10;

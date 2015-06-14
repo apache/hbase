@@ -1249,6 +1249,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       }
       regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible);
       return MergeRegionsResponse.newBuilder().build();
+    } catch (DroppedSnapshotException ex) {
+      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
+      throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
@@ -1607,6 +1610,9 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       region.forceSplit(splitPoint);
       regionServer.compactSplitThread.requestSplit(region, region.checkSplit());
       return SplitRegionResponse.newBuilder().build();
+    } catch (DroppedSnapshotException ex) {
+      regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
+      throw new ServiceException(ex);
     } catch (IOException ie) {
       throw new ServiceException(ie);
     }
