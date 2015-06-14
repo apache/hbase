@@ -65,11 +65,13 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionServerCallable;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
@@ -288,11 +290,24 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
   public void doBulkLoad(Path hfofDir, final HTable table)
     throws TableNotFoundException, IOException
   {
-    final HConnection conn = table.getConnection();
+    boolean closeConnWhenFinished = false;
+    HConnection conn = table.getConnection();
+    Table t = table;
 
-    if (!conn.isTableAvailable(table.getName())) {
+    if (conn instanceof ClusterConnection && ((ClusterConnection) conn).isManaged()) {
+      LOG.warn("managed connection cannot be used for bulkload. Creating unmanaged connection.");
+      // can only use unmanaged connections from here on out.
+      conn = (HConnection) ConnectionFactory.createConnection(table.getConfiguration());
+      t = conn.getTable(table.getName());
+      closeConnWhenFinished = true;
+      if (conn instanceof ClusterConnection && ((ClusterConnection) conn).isManaged()) {
+        throw new RuntimeException("Failed to create unmanaged connection.");
+      }
+    }
+
+    if (!conn.isTableAvailable(t.getName())) {
       throw new TableNotFoundException("Table " +
-          Bytes.toStringBinary(table.getTableName()) +
+          Bytes.toStringBinary(t.getName().getName()) +
           "is not currently available.");
     }
 
@@ -313,7 +328,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     try {
       discoverLoadQueue(queue, hfofDir);
       // check whether there is invalid family name in HFiles to be bulkloaded
-      Collection<HColumnDescriptor> families = table.getTableDescriptor().getFamilies();
+      Collection<HColumnDescriptor> families = t.getTableDescriptor().getFamilies();
       ArrayList<String> familyNames = new ArrayList<String>(families.size());
       for (HColumnDescriptor family : families) {
         familyNames.add(family.getNameAsString());
@@ -331,7 +346,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         String msg =
             "Unmatched family names found: unmatched family names in HFiles to be bulkloaded: "
                 + unmatchedFamilies + "; valid family names of table "
-                + Bytes.toString(table.getTableName()) + " are: " + familyNames;
+                + Bytes.toString(t.getName().getName()) + " are: " + familyNames;
         LOG.error(msg);
         throw new IOException(msg);
       }
@@ -349,46 +364,48 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       // fs is the source filesystem
       fsDelegationToken.acquireDelegationToken(fs);
       if(isSecureBulkLoadEndpointAvailable()) {
-        bulkToken = new SecureBulkLoadClient(table).prepareBulkLoad(table.getName());
+        bulkToken = new SecureBulkLoadClient(t).prepareBulkLoad(t.getName());
       }
 
       // Assumes that region splits can happen while this occurs.
       while (!queue.isEmpty()) {
         // need to reload split keys each iteration.
-        final Pair<byte[][], byte[][]> startEndKeys = table.getStartEndKeys();
-        if (count != 0) {
-          LOG.info("Split occured while grouping HFiles, retry attempt " +
-              + count + " with " + queue.size() + " files remaining to group or split");
+        try (RegionLocator rl = conn.getRegionLocator(t.getName())) {
+          final Pair<byte[][], byte[][]> startEndKeys = rl.getStartEndKeys();
+          if (count != 0) {
+            LOG.info("Split occured while grouping HFiles, retry attempt " +
+                +count + " with " + queue.size() + " files remaining to group or split");
+          }
+
+          int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 10);
+          if (maxRetries != 0 && count >= maxRetries) {
+            throw new IOException("Retry attempted " + count +
+                " times without completing, bailing out");
+          }
+          count++;
+
+          // Using ByteBuffer for byte[] equality semantics
+          Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase((HTable) t,
+              pool, queue, startEndKeys);
+
+          if (!checkHFilesCountPerRegionPerFamily(regionGroups)) {
+            // Error is logged inside checkHFilesCountPerRegionPerFamily.
+            throw new IOException("Trying to load more than " + maxFilesPerRegionPerFamily
+                + " hfiles to one family of one region");
+          }
+
+          bulkLoadPhase(t, conn, pool, queue, regionGroups);
+
+          // NOTE: The next iteration's split / group could happen in parallel to
+          // atomic bulkloads assuming that there are splits and no merges, and
+          // that we can atomically pull out the groups we want to retry.
         }
-
-        int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 10);
-        if (maxRetries != 0 && count >= maxRetries) {
-          throw new IOException("Retry attempted " + count +
-            " times without completing, bailing out");
-        }
-        count++;
-
-        // Using ByteBuffer for byte[] equality semantics
-        Multimap<ByteBuffer, LoadQueueItem> regionGroups = groupOrSplitPhase(table,
-            pool, queue, startEndKeys);
-
-        if (!checkHFilesCountPerRegionPerFamily(regionGroups)) {
-          // Error is logged inside checkHFilesCountPerRegionPerFamily.
-          throw new IOException("Trying to load more than " + maxFilesPerRegionPerFamily
-            + " hfiles to one family of one region");
-        }
-
-        bulkLoadPhase(table, conn, pool, queue, regionGroups);
-
-        // NOTE: The next iteration's split / group could happen in parallel to
-        // atomic bulkloads assuming that there are splits and no merges, and
-        // that we can atomically pull out the groups we want to retry.
       }
 
     } finally {
       fsDelegationToken.releaseDelegationToken();
       if(bulkToken != null) {
-        new SecureBulkLoadClient(table).cleanupBulkLoad(bulkToken);
+        new SecureBulkLoadClient(t).cleanupBulkLoad(bulkToken);
       }
       pool.shutdown();
       if (queue != null && !queue.isEmpty()) {
@@ -400,6 +417,10 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
           err.append("  ").append(q.hfilePath).append('\n');
         }
         LOG.error(err);
+      }
+      if (closeConnWhenFinished) {
+        t.close();
+        conn.close();
       }
     }
 
