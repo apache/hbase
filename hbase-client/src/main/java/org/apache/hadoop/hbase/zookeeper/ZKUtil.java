@@ -664,7 +664,7 @@ public class ZKUtil {
       return node;
     }
     public boolean isEmpty() {
-      return (data.length == 0);
+      return (data == null || data.length == 0);
     }
   }
 
