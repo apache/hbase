@@ -185,6 +185,7 @@ public class TestAssignmentManager {
     // Make it so we can get a catalogtracker from servermanager.. .needed
     // down in guts of server shutdown handler.
     Mockito.when(server.getConnection()).thenReturn(connection);
+    Mockito.when(connection.isManaged()).thenReturn(true);
 
     // Mock a ServerManager.  Say server SERVERNAME_{A,B} are online.  Also
     // make it so if close or open, we return 'success'.
@@ -1344,6 +1345,7 @@ public class TestAssignmentManager {
     ClusterConnection connection = (ClusterConnection)HConnectionTestingUtility.
       getMockedConnectionAndDecorate(HTU.getConfiguration(), null,
         ri, SERVERNAME_LIVE, REGIONINFO);
+    Mockito.when(this.server.getConnection()).thenReturn(connection);
     // These mocks were done up when all connections were managed.  World is different now we
     // moved to unmanaged connections.  It messes up the intercepts done in these tests.
     // Just mark connections as marked and then down in MetaTableAccessor, it will go the path
