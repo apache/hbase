@@ -44,7 +44,7 @@ public final class ByteBufferArray {
 
   /**
    * We allocate a number of byte buffers as the capacity. In order not to out
-   * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}), 
+   * of the array bounds for the last byte(see {@link ByteBufferArray#multiple}),
    * we will allocate one additional buffer with capacity 0;
    * @param capacity total size of the byte buffer array
    * @param directByteBuffer true if we allocate direct buffer
@@ -96,13 +96,16 @@ public final class ByteBufferArray {
    * @return number of bytes read
    */
   public int getMultiple(long start, int len, byte[] dstArray, int dstOffset) {
-    multiple(start, len, dstArray, dstOffset, new Visitor() {
-      public void visit(ByteBuffer bb, byte[] array, int arrayIdx, int len) {
-        bb.get(array, arrayIdx, len);
-      }
-    });
+    multiple(start, len, dstArray, dstOffset, GET_MULTIPLE_VISTOR);
     return len;
   }
+
+  private final static Visitor GET_MULTIPLE_VISTOR = new Visitor() {
+    @Override
+    public void visit(ByteBuffer bb, byte[] array, int arrayIdx, int len) {
+      bb.get(array, arrayIdx, len);
+    }
+  };
 
   /**
    * Transfers bytes from the given source array into this buffer array
@@ -123,12 +126,15 @@ public final class ByteBufferArray {
    *          read
    */
   public void putMultiple(long start, int len, byte[] srcArray, int srcOffset) {
-    multiple(start, len, srcArray, srcOffset, new Visitor() {
-      public void visit(ByteBuffer bb, byte[] array, int arrayIdx, int len) {
-        bb.put(array, arrayIdx, len);
-      }
-    });
+    multiple(start, len, srcArray, srcOffset, PUT_MULTIPLE_VISITOR);
   }
+
+  private final static Visitor PUT_MULTIPLE_VISITOR = new Visitor() {
+    @Override
+    public void visit(ByteBuffer bb, byte[] array, int arrayIdx, int len) {
+      bb.put(array, arrayIdx, len);
+    }
+  };
 
   private interface Visitor {
     /**
@@ -178,13 +184,12 @@ public final class ByteBufferArray {
         if (i == startBuffer) {
           cnt = bufferSize - startOffset;
           if (cnt > len) cnt = len;
-          bb.limit(startOffset + cnt).position(
-              startOffset );
+          bb.limit(startOffset + cnt).position(startOffset);
         } else if (i == endBuffer) {
           cnt = endOffset;
           bb.limit(cnt).position(0);
         } else {
-          cnt = bufferSize ;
+          cnt = bufferSize;
           bb.limit(cnt).position(0);
         }
         visitor.visit(bb, array, srcIndex + arrayOffset, cnt);
