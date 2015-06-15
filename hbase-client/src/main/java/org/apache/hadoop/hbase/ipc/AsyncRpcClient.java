@@ -360,7 +360,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
         throw new StoppedRpcClientException();
       }
       rpcChannel = connections.get(hashCode);
-      if (rpcChannel == null) {
+      if (rpcChannel == null || !rpcChannel.isAlive()) {
         rpcChannel = new AsyncRpcChannel(this.bootstrap, this, ticket, serviceName, location);
         connections.put(hashCode, rpcChannel);
       }
