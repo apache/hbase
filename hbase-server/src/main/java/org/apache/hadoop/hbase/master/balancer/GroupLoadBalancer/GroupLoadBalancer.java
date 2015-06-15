@@ -69,7 +69,7 @@ public class GroupLoadBalancer extends BaseLoadBalancer {
 
   private static final Log LOG = LogFactory.getLog(GroupLoadBalancer.class);
 
-  private Configuration configuration;
+  private GroupLoadBalancerConfiguration groupLoadBalancerConfiguration;
 
   @Override
   public void onConfigurationChange(Configuration conf) {
@@ -79,7 +79,7 @@ public class GroupLoadBalancer extends BaseLoadBalancer {
   @Override
   public synchronized void setConf(Configuration conf) {
     super.setConf(conf);
-    this.configuration = conf;
+    this.groupLoadBalancerConfiguration = new GroupLoadBalancerConfiguration(conf);
   }
 
   @Override
@@ -99,8 +99,7 @@ public class GroupLoadBalancer extends BaseLoadBalancer {
       return regionsToReturn;
     }
 
-    GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
-        new GroupLoadBalancerConfiguration(this.configuration, clusterMap);
+    this.groupLoadBalancerConfiguration.putUnassignedServersAndTablesInDefaultGroup(clusterMap);
 
     GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters =
         new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, clusterMap);

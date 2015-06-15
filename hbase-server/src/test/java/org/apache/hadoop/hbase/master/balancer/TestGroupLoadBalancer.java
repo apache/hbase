@@ -299,7 +299,8 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     testCluster.put(serverName2, hriList2);
 
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
-        new GroupLoadBalancerConfiguration(conf, testCluster);
+        new GroupLoadBalancerConfiguration(conf);
+    groupLoadBalancerConfiguration.putUnassignedServersAndTablesInDefaultGroup(testCluster);
 
     // check configuration to make sure servers are assigned to the right group
     assertTrue(
@@ -368,7 +369,8 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     testCluster.put(serverName2, hriList2);
 
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
-        new GroupLoadBalancerConfiguration(conf, testCluster);
+        new GroupLoadBalancerConfiguration(conf);
+    groupLoadBalancerConfiguration.putUnassignedServersAndTablesInDefaultGroup(testCluster);
 
     GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters =
         new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, testCluster);
@@ -437,7 +439,8 @@ public class TestGroupLoadBalancer extends BalancerTestBase {
     testCluster.put(serverName2, hriList2);
 
     GroupLoadBalancerConfiguration groupLoadBalancerConfiguration =
-        new GroupLoadBalancerConfiguration(conf, testCluster);
+        new GroupLoadBalancerConfiguration(conf);
+    groupLoadBalancerConfiguration.putUnassignedServersAndTablesInDefaultGroup(testCluster);
 
     GroupLoadBalancerGroupedClusterFactory groupLoadBalancerGroupedClusters =
         new GroupLoadBalancerGroupedClusterFactory(groupLoadBalancerConfiguration, testCluster);

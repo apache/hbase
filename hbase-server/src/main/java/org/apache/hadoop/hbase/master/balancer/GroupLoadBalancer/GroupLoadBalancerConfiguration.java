@@ -37,7 +37,6 @@ public class GroupLoadBalancerConfiguration {
   private static final String TABLE_GROUPS_PREFIX =
       "hbase.master.balancer.grouploadbalancer.tablegroups.";
 
-
   private static final String GROUP_DELIMITER = ";";
 
   private Map<String, GroupLoadBalancerGroup> groups;
@@ -49,10 +48,8 @@ public class GroupLoadBalancerConfiguration {
    * Create an object that holds all configuration info for grouping
    *
    * @param configuration the configuration object, which includes hbase-site.xml
-   * @param clusterMap this maps a server to the list of regions which is on it
    */
-  public GroupLoadBalancerConfiguration(Configuration configuration,
-      Map<ServerName, List<HRegionInfo>> clusterMap){
+  public GroupLoadBalancerConfiguration(Configuration configuration) {
 
     this.groups = new HashMap<>();
     this.servers = new HashMap<>();
@@ -109,9 +106,19 @@ public class GroupLoadBalancerConfiguration {
       throw new IllegalArgumentException("Default group name must be a pre-existing group name");
     }
 
-    // Go through clusterMap and if we encounter a new server, put it in the default group and
-    // store the ServerName object in GroupLoadBalancerServer
-    for (ServerName serverName : clusterMap.keySet()) {
+  }
+
+  /**
+   * Go through clusterMap and if there are any servers or tables that have not been explicitly
+   * placed within a group, then place it within the default group
+   * @param clusterMap a mapping of servers to the regions that it contains
+   */
+  public void putUnassignedServersAndTablesInDefaultGroup(
+      Map<ServerName, List<HRegionInfo>> clusterMap) {
+
+    for (Map.Entry<ServerName, List<HRegionInfo>> entry : clusterMap.entrySet()) {
+
+      ServerName serverName = entry.getKey();
       String serverNameString =
           GroupLoadBalancerUtils.getServerNameWithoutStartCode(serverName.getServerName());
       if (!this.servers.containsKey(serverNameString)) {
@@ -120,10 +127,8 @@ public class GroupLoadBalancerConfiguration {
         this.servers.put(serverNameString, groupLoadBalancerServer);
         this.groups.get(defaultGroupName).addServer(groupLoadBalancerServer);
       }
-    }
 
-    // Go through clusterMap and if we encounter a new table, put it in the default group
-    for (List<HRegionInfo> hriList : clusterMap.values()) {
+      List<HRegionInfo> hriList = entry.getValue();
       for (HRegionInfo hri : hriList) {
         String tableNameString =
             GroupLoadBalancerUtils.getTableNameFromRegionName(hri.getRegionNameAsString());
