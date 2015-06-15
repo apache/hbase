@@ -15,14 +15,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer.grouploadbalancer;
 
-import org.apache.hadoop.hbase.ServerName;
-
 /**
  * This object holds the ServerName object which it represents, and the group which it belongs to
  */
 public class GroupLoadBalancerServer {
 
-  private ServerName serverName;
   private String serverNameString;
   private String groupServerBelongsTo;
 
@@ -39,13 +36,6 @@ public class GroupLoadBalancerServer {
   }
 
   /**
-   * @return the ServerName object which this object relates to
-   */
-  public ServerName getServerName() {
-    return this.serverName;
-  }
-
-  /**
    * @return the server name as a string
    */
   public String getServerNameString() {
@@ -57,19 +47,11 @@ public class GroupLoadBalancerServer {
   }
 
   /**
-   * Set the name of the server. This string is later used to be matched up with a ServerName object
-   * @param serverName the name of the server
-   */
-  public void setServerName(ServerName serverName) {
-    this.serverName = serverName;
-  }
-
-  /**
    * @return a description of the serer including the ServerName object which it is related to,
    * its name as a string, and the name of the group which is belongs to
    */
   public String toString() {
-    return "{serverName: " + serverName + ", serverNameString: " + this.serverNameString +
+    return "{serverNameString: " + this.serverNameString +
         ", groupServerBelongsTo: " + this.groupServerBelongsTo + "}";
   }
 }

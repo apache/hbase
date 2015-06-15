@@ -120,7 +120,6 @@ public class GroupLoadBalancerConfiguration {
         this.servers.put(serverNameString, groupLoadBalancerServer);
         this.groups.get(defaultGroupName).addServer(groupLoadBalancerServer);
       }
-      this.servers.get(serverNameString).setServerName(serverName);
     }
 
     // Go through clusterMap and if we encounter a new table, put it in the default group
