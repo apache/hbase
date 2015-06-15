@@ -15,7 +15,11 @@
  */
 package org.apache.hadoop.hbase.master.balancer.grouploadbalancer;
 
-public class GroupLoadBalancerUtils {
+public final class GroupLoadBalancerUtils {
+
+  // not called
+  private GroupLoadBalancerUtils() {
+  }
 
   private static final String NAME_DELIMITER = ",";
 

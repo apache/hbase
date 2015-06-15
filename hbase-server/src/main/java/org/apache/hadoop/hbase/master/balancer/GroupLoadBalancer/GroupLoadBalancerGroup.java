@@ -15,7 +15,6 @@
  */
 package org.apache.hadoop.hbase.master.balancer.grouploadbalancer;
 
-import java.lang.StringBuilder;
 import java.util.HashMap;
 import java.util.Map;
 
