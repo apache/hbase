@@ -52,13 +52,14 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Provides functionality to write ({@link BlockIndexWriter}) and read
- * ({@link org.apache.hadoop.hbase.io.hfile.BlockIndexReader})
+ * ({@link BlockIndexReader})
  * single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in
  * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
  *  {@link HFileWriterImpl}. Examples of how to use the reader can be
- *  found in {@link HFileWriterImpl} and TestHFileBlockIndex.
+ *  found in {@link HFileWriterImpl} and
+ *  {@link org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex}.
  */
 @InterfaceAudience.Private
 public class HFileBlockIndex {

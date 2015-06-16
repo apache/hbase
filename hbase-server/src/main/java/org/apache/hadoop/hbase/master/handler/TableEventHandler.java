@@ -232,7 +232,6 @@ public abstract class TableEventHandler extends EventHandler {
    * Gets a TableDescriptor from the masterServices.  Can Throw exceptions.
    *
    * @return Table descriptor for this table
-   * @throws TableExistsException
    * @throws FileNotFoundException
    * @throws IOException
    */

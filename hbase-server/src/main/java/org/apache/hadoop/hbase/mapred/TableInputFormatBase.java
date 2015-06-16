@@ -168,7 +168,7 @@ implements InputFormat<ImmutableBytesWritable, Result> {
 
   /**
    * Calculates the splits that will serve as input for the map tasks.
-   * <ul>
+   *
    * Splits are created in number equal to the smallest between numSplits and
    * the number of {@link org.apache.hadoop.hbase.regionserver.HRegion}s in the table. 
    * If the number of splits is smaller than the number of 

@@ -70,8 +70,8 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * cell 
    * @param left
    * @param right
-   * @return an int greater than 0 if left > than right
-   *                lesser than 0 if left < than right
+   * @return an int greater than 0 if left &gt; than right
+   *                lesser than 0 if left &lt; than right
    *                equal to 0 if left is equal to right
    */
   public final int compareKeyIgnoresMvcc(Cell left, Cell right) {
@@ -512,8 +512,8 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * wrong but it is intentional. This way, newer timestamps are first
    * found when we iterate over a memstore and newer versions are the
    * first we trip over when reading from a store file.
-   * @return 1 if left's timestamp < right's timestamp
-   *         -1 if left's timestamp > right's timestamp
+   * @return 1 if left's timestamp &lt; right's timestamp
+   *         -1 if left's timestamp &gt; right's timestamp
    *         0 if both timestamps are equal
    */
   public static int compareTimestamps(final Cell left, final Cell right) {
@@ -601,8 +601,8 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * wrong but it is intentional. This way, newer timestamps are first
    * found when we iterate over a memstore and newer versions are the
    * first we trip over when reading from a store file.
-   * @return 1 if left timestamp < right timestamp
-   *         -1 if left timestamp > right timestamp
+   * @return 1 if left timestamp &lt; right timestamp
+   *         -1 if left timestamp &gt; right timestamp
    *         0 if both timestamps are equal
    */
   public static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
