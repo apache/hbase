@@ -98,6 +98,11 @@ This section lists required services and some required system configuration.
 |JDK 7
 |JDK 8
 
+|1.2
+|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|yes
+|yes
+
 |1.1
 |link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
 |yes
@@ -205,20 +210,20 @@ Use the following legend to interpret this table:
 * "X" = not supported
 * "NT" = Not tested
 
-[cols="1,1,1,1,1", options="header"]
+[cols="1,1,1,1,1,1", options="header"]
 |===
-| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x
-|Hadoop-1.0.x  | X | X | X | X
-|Hadoop-1.1.x | S | NT | X | X
-|Hadoop-0.23.x | S | X | X | X
-|Hadoop-2.0.x-alpha | NT | X | X | X
-|Hadoop-2.1.0-beta | NT | X | X | X
-|Hadoop-2.2.0 | NT | S | NT | NT
-|Hadoop-2.3.x | NT | S | NT | NT
-|Hadoop-2.4.x | NT | S | S | S
-|Hadoop-2.5.x | NT | S | S | S
-|Hadoop-2.6.x | NT | NT | S | S
-|Hadoop-2.7.x | NT | NT | NT | NT
+| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x | HBase-1.2.x
+|Hadoop-1.0.x  | X | X | X | X | X
+|Hadoop-1.1.x | S | NT | X | X | X
+|Hadoop-0.23.x | S | X | X | X | X
+|Hadoop-2.0.x-alpha | NT | X | X | X | X
+|Hadoop-2.1.0-beta | NT | X | X | X | X
+|Hadoop-2.2.0 | NT | S | NT | NT | NT
+|Hadoop-2.3.x | NT | S | NT | NT | NT
+|Hadoop-2.4.x | NT | S | S | S | S
+|Hadoop-2.5.x | NT | S | S | S | S
+|Hadoop-2.6.x | NT | NT | S | S | S
+|Hadoop-2.7.x | NT | NT | NT | NT | NT
 |===
 
 .Replace the Hadoop Bundled With HBase!
