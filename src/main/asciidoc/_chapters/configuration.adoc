@@ -116,11 +116,6 @@ deprecated `remove()` method of the `PoolMap` class and is under consideration. 
 link:https://issues.apache.org/jira/browse/HBASE-7608[HBASE-7608] for more information about JDK 8
 support.
 
-|0.96
-|yes
-|yes
-|N/A
-
 |0.94
 |yes
 |yes
@@ -210,22 +205,20 @@ Use the following legend to interpret this table:
 * "X" = not supported
 * "NT" = Not tested
 
-[cols="1,1,1,1,1,1,1", options="header"]
+[cols="1,1,1,1,1", options="header"]
 |===
-| | HBase-0.92.x | HBase-0.94.x | HBase-0.96.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x
-|Hadoop-0.20.205 | S | X | X | X | X | X
-|Hadoop-0.22.x | S | X | X | X | X | X
-|Hadoop-1.0.x  |X | X | X | X | X | X
-|Hadoop-1.1.x | NT | S | S | NT | X | X
-|Hadoop-0.23.x | X | S | NT | X | X | X
-|Hadoop-2.0.x-alpha | X | NT | X | X | X | X
-|Hadoop-2.1.0-beta | X | NT | S | X | X | X
-|Hadoop-2.2.0 | X | NT | S | S | NT | NT
-|Hadoop-2.3.x | X | NT | S | S | NT | NT
-|Hadoop-2.4.x | X | NT | S | S | S | S
-|Hadoop-2.5.x | X | NT | S | S | S | S
-|Hadoop-2.6.x | X | NT | NT | NT | S | S
-|Hadoop-2.7.x | X | NT | NT | NT | NT | NT
+| | HBase-0.94.x | HBase-0.98.x (Support for Hadoop 1.1+ is deprecated.) | HBase-1.0.x (Hadoop 1.x is NOT supported) | HBase-1.1.x
+|Hadoop-1.0.x  | X | X | X | X
+|Hadoop-1.1.x | S | NT | X | X
+|Hadoop-0.23.x | S | X | X | X
+|Hadoop-2.0.x-alpha | NT | X | X | X
+|Hadoop-2.1.0-beta | NT | X | X | X
+|Hadoop-2.2.0 | NT | S | NT | NT
+|Hadoop-2.3.x | NT | S | NT | NT
+|Hadoop-2.4.x | NT | S | S | S
+|Hadoop-2.5.x | NT | S | S | S
+|Hadoop-2.6.x | NT | NT | S | S
+|Hadoop-2.7.x | NT | NT | NT | NT
 |===
 
 .Replace the Hadoop Bundled With HBase!
