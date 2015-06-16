@@ -318,7 +318,10 @@ public class ZKProcedureMemberRpcs implements ProcedureMemberRpcs {
       // figure out the data we need to pass
       ForeignException ee;
       try {
-        if (!ProtobufUtil.isPBMagicPrefix(data)) {
+        if (data == null || data.length == 0) {
+          // ignore
+          return;
+        } else if (!ProtobufUtil.isPBMagicPrefix(data)) {
           String msg = "Illegally formatted data in abort node for proc " + opName
               + ".  Killing the procedure.";
           LOG.error(msg);
