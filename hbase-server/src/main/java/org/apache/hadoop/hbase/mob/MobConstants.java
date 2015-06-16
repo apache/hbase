@@ -35,6 +35,7 @@ public class MobConstants {
   public static final String MOB_SCAN_RAW = "hbase.mob.scan.raw";
   public static final String MOB_CACHE_BLOCKS = "hbase.mob.cache.blocks";
   public static final String MOB_SCAN_REF_ONLY = "hbase.mob.scan.ref.only";
+  public static final String EMPTY_VALUE_ON_MOBCELL_MISS = "empty.value.on.mobcell.miss";
 
   public static final String MOB_FILE_CACHE_SIZE_KEY = "hbase.mob.file.cache.size";
   public static final int DEFAULT_MOB_FILE_CACHE_SIZE = 1000;

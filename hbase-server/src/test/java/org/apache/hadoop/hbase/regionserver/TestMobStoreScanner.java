@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +41,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
+import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -68,6 +71,8 @@ public class TestMobStoreScanner {
   private static HTableDescriptor desc;
   private static Random random = new Random();
   private static long defaultThreshold = 10;
+  private FileSystem fs;
+  private Configuration conf;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -84,6 +89,8 @@ public class TestMobStoreScanner {
   }
 
   public void setUp(long threshold, TableName tn) throws Exception {
+    conf = TEST_UTIL.getConfiguration();
+    fs = FileSystem.get(conf);
     desc = new HTableDescriptor(tn);
     hcd = new HColumnDescriptor(family);
     hcd.setMobEnabled(true);
@@ -194,6 +201,62 @@ public class TestMobStoreScanner {
     result = rs.next();
     cell = result.getColumnLatestCell(family, qf1);
     Assert.assertEquals("value2", Bytes.toString(cell.getValue()));
+  }
+
+  @Test
+  public void testReadFromCorruptMobFilesWithReadEmptyValueOnMobCellMiss() throws Exception {
+    TableName tn = TableName.valueOf("testReadFromCorruptMobFilesWithReadEmptyValueOnMobCellMiss");
+    setUp(0, tn);
+    createRecordAndCorruptMobFile(tn, row1, family, qf1, Bytes.toBytes("value1"));
+    Get get = new Get(row1);
+    get.setAttribute(MobConstants.EMPTY_VALUE_ON_MOBCELL_MISS, Bytes.toBytes(true));
+    Result result = table.get(get);
+    Cell cell = result.getColumnLatestCell(family, qf1);
+    Assert.assertEquals(0, CellUtil.cloneValue(cell).length);
+  }
+
+  @Test
+  public void testReadFromCorruptMobFiles() throws Exception {
+    TableName tn = TableName.valueOf("testReadFromCorruptMobFiles");
+    setUp(0, tn);
+    createRecordAndCorruptMobFile(tn, row1, family, qf1, Bytes.toBytes("value1"));
+    Get get = new Get(row1);
+    IOException ioe = null;
+    try {
+      table.get(get);
+    } catch (IOException e) {
+      ioe = e;
+    }
+    Assert.assertNotNull(ioe);
+    Assert.assertEquals(CorruptHFileException.class.getName(), ioe.getClass().getName());
+  }
+
+  private void createRecordAndCorruptMobFile(TableName tn, byte[] row, byte[] family, byte[] qf,
+    byte[] value) throws IOException {
+    Put put1 = new Put(row);
+    put1.addColumn(family, qf, value);
+    table.put(put1);
+    admin.flush(tn);
+    Path mobFile = getFlushedMobFile(conf, fs, tn, Bytes.toString(family));
+    Assert.assertNotNull(mobFile);
+    // create new corrupt mob file.
+    Path corruptFile = new Path(mobFile.getParent(), "dummy");
+    TestHFile.truncateFile(fs, mobFile, corruptFile);
+    fs.delete(mobFile, true);
+    fs.rename(corruptFile, mobFile);
+  }
+
+  private Path getFlushedMobFile(Configuration conf, FileSystem fs, TableName table, String family)
+    throws IOException {
+    Path regionDir = MobUtils.getMobRegionPath(conf, table);
+    Path famDir = new Path(regionDir, family);
+    FileStatus[] hfFss = fs.listStatus(famDir);
+    for (FileStatus hfs : hfFss) {
+      if (!hfs.isDirectory()) {
+        return hfs.getPath();
+      }
+    }
+    return null;
   }
 
   private void testGetFromFiles(boolean reversed) throws Exception {

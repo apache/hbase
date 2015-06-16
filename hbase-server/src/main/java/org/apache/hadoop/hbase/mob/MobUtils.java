@@ -855,4 +855,19 @@ public class MobUtils {
     }
     return false;
   }
+
+  /**
+   * Indicates whether return null value when the mob file is missing or corrupt.
+   * The information is set in the attribute "empty.value.on.mobcell.miss" of scan.
+   * @param scan The current scan.
+   * @return True if the readEmptyValueOnMobCellMiss is enabled.
+   */
+  public static boolean isReadEmptyValueOnMobCellMiss(Scan scan) {
+    byte[] readEmptyValueOnMobCellMiss = scan.getAttribute(MobConstants.EMPTY_VALUE_ON_MOBCELL_MISS);
+    try {
+      return readEmptyValueOnMobCellMiss != null && Bytes.toBoolean(readEmptyValueOnMobCellMiss);
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
+  }
 }
