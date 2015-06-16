@@ -283,6 +283,11 @@ public abstract class ZKProcedureUtil
     // TODO This is potentially racy since not atomic. update when we support zk that has multi
     LOG.info("Clearing all znodes for procedure " + procedureName + "including nodes "
         + acquiredZnode + " " + reachedZnode + " " + abortZnode);
+
+    // Make sure we trigger the watches on these nodes by creating them. (HBASE-13885)
+    ZKUtil.createAndFailSilent(watcher, getAcquiredBarrierNode(procedureName));
+    ZKUtil.createAndFailSilent(watcher, getAbortZNode(procedureName));
+
     ZKUtil.deleteNodeRecursively(watcher, getAcquiredBarrierNode(procedureName));
     ZKUtil.deleteNodeRecursively(watcher, getReachedBarrierNode(procedureName));
     ZKUtil.deleteNodeRecursively(watcher, getAbortZNode(procedureName));
