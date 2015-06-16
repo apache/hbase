@@ -546,6 +546,10 @@ public class CacheConfig {
       throw new IllegalStateException("bucketCacheSize <= 0; Check " +
         BUCKET_CACHE_SIZE_KEY + " setting and/or server java heap size");
     }
+    if (c.get("hbase.bucketcache.percentage.in.combinedcache") != null) {
+      LOG.warn("Configuration 'hbase.bucketcache.percentage.in.combinedcache' is no longer "
+          + "respected. See comments in http://hbase.apache.org/book.html#_changes_of_note");
+    }
     int writerThreads = c.getInt(BUCKET_CACHE_WRITER_THREADS_KEY,
       DEFAULT_BUCKET_CACHE_WRITER_THREADS);
     int writerQueueLen = c.getInt(BUCKET_CACHE_WRITER_QUEUE_KEY,
