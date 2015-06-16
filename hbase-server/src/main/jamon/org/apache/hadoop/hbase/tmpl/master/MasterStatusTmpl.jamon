@@ -371,7 +371,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 	 } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
 	     description = "The hbase:labels table holds information about visibility labels";
         } else {
-            description = "The .NAMESPACE. table holds information about namespaces.";
+            description = "The hbase:namespace table holds information about namespaces.";
         }
     </%java>
     <td><% description %></td>
