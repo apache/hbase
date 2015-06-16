@@ -26,7 +26,7 @@
 # into the startup scripts (bin/hbase, etc.)
 
 # The java implementation to use.  Java 1.7+ required.
-# export JAVA_HOME=/usr/java/jdk1.6.0/
+export JAVA_HOME=$(/usr/libexec/java_home)
 
 # Extra Java CLASSPATH elements.  Optional.
 # export HBASE_CLASSPATH=
@@ -34,7 +34,7 @@
 # The maximum amount of heap to use. Default is left to JVM default.
 # export HBASE_HEAPSIZE=1G
 
-# Uncomment below if you intend to use off heap cache. For example, to allocate 8G of 
+# Uncomment below if you intend to use off heap cache. For example, to allocate 8G of
 # offheap, set the value to "8G".
 # export HBASE_OFFHEAPSIZE=1G
 
@@ -75,7 +75,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -XX:PermSize=128m -XX:M
 # export CLIENT_GC_OPTS="-verbose:gc -XX:+PrintGCDetails -XX:+PrintGCDateStamps -Xloggc:<FILE-PATH> -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=1 -XX:GCLogFileSize=512M"
 
 # See the package documentation for org.apache.hadoop.hbase.io.hfile for other configurations
-# needed setting up off-heap block caching. 
+# needed setting up off-heap block caching.
 
 # Uncomment and adjust to enable JMX exporting
 # See jmxremote.password and jmxremote.access in $JRE_HOME/lib/management to configure remote password access.
@@ -106,7 +106,7 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -XX:PermSize=128m -XX:M
 # Where log files are stored.  $HBASE_HOME/logs by default.
 # export HBASE_LOG_DIR=${HBASE_HOME}/logs
 
-# Enable remote JDWP debugging of major HBase processes. Meant for Core Developers 
+# Enable remote JDWP debugging of major HBase processes. Meant for Core Developers
 # export HBASE_MASTER_OPTS="$HBASE_MASTER_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8070"
 # export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8071"
 # export HBASE_THRIFT_OPTS="$HBASE_THRIFT_OPTS -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8072"
@@ -129,11 +129,11 @@ export HBASE_REGIONSERVER_OPTS="$HBASE_REGIONSERVER_OPTS -XX:PermSize=128m -XX:M
 # Tell HBase whether it should manage it's own instance of Zookeeper or not.
 # export HBASE_MANAGES_ZK=true
 
-# The default log rolling policy is RFA, where the log file is rolled as per the size defined for the 
+# The default log rolling policy is RFA, where the log file is rolled as per the size defined for the
 # RFA appender. Please refer to the log4j.properties file to see more details on this appender.
 # In case one needs to do log rolling on a date change, one should set the environment property
 # HBASE_ROOT_LOGGER to "<DESIRED_LOG LEVEL>,DRFA".
 # For example:
-# HBASE_ROOT_LOGGER=INFO,DRFA
-# The reason for changing default to RFA is to avoid the boundary case of filling out disk space as 
+HBASE_ROOT_LOGGER=INFO,DRFA
+# The reason for changing default to RFA is to avoid the boundary case of filling out disk space as
 # DRFA doesn't put any cap on the log size. Please refer to HBase-5655 for more context.
