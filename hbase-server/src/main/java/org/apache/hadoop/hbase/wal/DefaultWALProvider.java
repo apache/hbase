@@ -307,8 +307,8 @@ public class DefaultWALProvider implements WALProvider {
    * This function returns region server name from a log file name which is in one of the following
    * formats:
    * <ul>
-   *   <li>hdfs://<name node>/hbase/.logs/<server name>-splitting/...
-   *   <li>hdfs://<name node>/hbase/.logs/<server name>/...
+   *   <li>hdfs://&lt;name node&gt;/hbase/.logs/&lt;server name&gt;-splitting/...</li>
+   *   <li>hdfs://&lt;name node&gt;/hbase/.logs/&lt;server name&gt;/...</li>
    * </ul>
    * @param logFile
    * @return null if the passed in logFile isn't a valid WAL file path

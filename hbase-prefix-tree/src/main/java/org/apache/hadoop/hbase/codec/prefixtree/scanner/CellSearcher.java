@@ -50,8 +50,8 @@ public interface CellSearcher extends ReversibleCellScanner {
    * exact match.
    * </p>
    * @param key position the CellScanner on this key or the closest cell before
-   * @return AT if exact match<br/>
-   *         BEFORE if on last cell before key<br/>
+   * @return AT if exact match<br>
+   *         BEFORE if on last cell before key<br>
    *         BEFORE_FIRST if key was before the first cell in this scanner's scope
    */
   CellScannerPosition positionAtOrBefore(Cell key);
@@ -62,8 +62,8 @@ public interface CellSearcher extends ReversibleCellScanner {
    * match.
    * </p>
    * @param key position the CellScanner on this key or the closest cell after
-   * @return AT if exact match<br/>
-   *         AFTER if on first cell after key<br/>
+   * @return AT if exact match<br>
+   *         AFTER if on first cell after key<br>
    *         AFTER_LAST if key was after the last cell in this scanner's scope
    */
   CellScannerPosition positionAtOrAfter(Cell key);

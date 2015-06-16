@@ -2211,14 +2211,14 @@ public class WALSplitter {
   }
 
   /**
-   * This function is used to construct mutations from a WALEntry. It also reconstructs WALKey &
-   * WALEdit from the passed in WALEntry
+   * This function is used to construct mutations from a WALEntry. It also
+   * reconstructs WALKey &amp; WALEdit from the passed in WALEntry
    * @param entry
    * @param cells
    * @param logEntry pair of WALKey and WALEdit instance stores WALKey and WALEdit instances
    *          extracted from the passed in WALEntry.
    * @param durability
-   * @return list of Pair<MutationType, Mutation> to be replayed
+   * @return list of Pair&lt;MutationType, Mutation&gt; to be replayed
    * @throws IOException
    */
   public static List<MutationReplay> getMutationsFromWALEntry(WALEntry entry, CellScanner cells,

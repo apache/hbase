@@ -33,7 +33,7 @@ import com.google.common.collect.ImmutableMap;
 @InterfaceStability.Evolving
 public class ServerSideScanMetrics {
   /**
-   * Hash to hold the String -> Atomic Long mappings for each metric
+   * Hash to hold the String -&gt; Atomic Long mappings for each metric
    */
   private final Map<String, AtomicLong> counters = new HashMap<String, AtomicLong>();
 
@@ -103,7 +103,7 @@ public class ServerSideScanMetrics {
   /**
    * Get all of the values since the last time this function was called. Calling this function will
    * reset all AtomicLongs in the instance back to 0.
-   * @return A Map of String -> Long for metrics
+   * @return A Map of String -&gt; Long for metrics
    */
   public Map<String, Long> getMetricsMap() {
     // Create a builder

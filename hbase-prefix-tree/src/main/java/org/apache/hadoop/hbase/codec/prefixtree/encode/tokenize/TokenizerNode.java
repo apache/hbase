@@ -33,6 +33,7 @@ import com.google.common.collect.Lists;
 
 /**
  * Individual node in a Trie structure.  Each node is one of 3 types:
+ * <ul>
  * <li>Branch: an internal trie node that may have a token and must have multiple children, but does
  * not represent an actual input byte[], hence its numOccurrences is 0
  * <li>Leaf: a node with no children and where numOccurrences is &gt;= 1.  It's token represents the
@@ -40,6 +41,7 @@ import com.google.common.collect.Lists;
  * <li>Nub: a combination of a branch and leaf.  Its token represents the last bytes of input
  * byte[]s and has numOccurrences &gt;= 1, but it also has child nodes which represent input byte[]s
  * that add bytes to this nodes input byte[].
+ * </ul>
  * <br><br>
  * Example inputs (numInputs=7):
  * 0: AAA
@@ -548,7 +550,8 @@ public class TokenizerNode{
   /********************** simple mutation methods *************************/
 
   /**
-   * Each occurrence > 1 indicates a repeat of the previous entry.  This can be called directly by
+   * Each occurrence &gt; 1 indicates a repeat of the previous entry.
+   * This can be called directly by
    * an external class without going through the process of detecting a repeat if it is a known
    * repeat by some external mechanism.  PtEncoder uses this when adding cells to a row if it knows
    * the new cells are part of the current row.

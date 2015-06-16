@@ -32,9 +32,9 @@ import org.apache.hadoop.conf.Configuration;
  * Create a Jetty embedded server to answer http requests. The primary goal
  * is to serve up status information for the server.
  * There are three contexts:
- *   "/stacks/" -> points to stack trace
- *   "/static/" -> points to common static files (src/hbase-webapps/static)
- *   "/" -> the jsp server code from (src/hbase-webapps/<name>)
+ *   "/stacks/" -&gt; points to stack trace
+ *   "/static/" -&gt; points to common static files (src/hbase-webapps/static)
+ *   "/" -&gt; the jsp server code from (src/hbase-webapps/&lt;name&gt;)
  */
 @InterfaceAudience.Private
 public class InfoServer {
@@ -44,7 +44,7 @@ public class InfoServer {
 
   /**
    * Create a status server on the given port.
-   * The jsp scripts are taken from src/hbase-webapps/<code>name<code>.
+   * The jsp scripts are taken from src/hbase-webapps/<code>name</code>.
    * @param name The name of the server
    * @param bindAddress address to bind to
    * @param port The port to use on the server
