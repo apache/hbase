@@ -278,7 +278,9 @@ public final class ProtobufUtil {
 
   /**
    * @param bytes Bytes to check.
-   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
+   * @param offset offset to start at
+   * @param len length to use
+   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
     if (bytes == null || len < PB_MAGIC.length) return false;
@@ -286,7 +288,7 @@ public final class ProtobufUtil {
   }
 
   /**
-   * @param bytes
+   * @param bytes bytes to check
    * @throws DeserializationException if we are missing the pb magic prefix
    */
   public static void expectPBMagicPrefix(final byte [] bytes) throws DeserializationException {
