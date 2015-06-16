@@ -764,7 +764,6 @@
               <!--It don't like freebsd license-->
               <exclude>**/src/main/site/resources/css/freebsd_docbook.css</exclude>
               <exclude>dev-support/hbase_docker/README.md</exclude>
-              <exclude>src/main/asciidoc/asciidoctor.css</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
