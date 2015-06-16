@@ -1380,7 +1380,8 @@ public class HRegionServer extends HasThread implements
   }
 
   private void startHeapMemoryManager() {
-    this.hMemManager = HeapMemoryManager.create(this.conf, this.cacheFlusher, this);
+    this.hMemManager = HeapMemoryManager.create(this.conf, this.cacheFlusher,
+        this, this.regionServerAccounting);
     if (this.hMemManager != null) {
       this.hMemManager.start(getChoreService());
     }
