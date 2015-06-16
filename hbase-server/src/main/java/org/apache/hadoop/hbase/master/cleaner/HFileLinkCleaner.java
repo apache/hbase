@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -61,6 +62,11 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
         // file gets created when cloning a snapshot.
         hfilePath = HFileLink.getHFileFromBackReference(
             new Path(FSUtils.getRootDir(getConf()), HConstants.HBASE_TEMP_DIRECTORY), filePath);
+        if (fs.exists(hfilePath)) {
+          return false;
+        }
+        // check whether the HFileLink still exists in mob dir.
+        hfilePath = HFileLink.getHFileFromBackReference(MobUtils.getMobHome(getConf()), filePath);
         if (fs.exists(hfilePath)) {
           return false;
         }

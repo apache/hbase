@@ -25,12 +25,17 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
+import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -90,6 +95,8 @@ public class TestMobSnapshotCloneIndependence {
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
+    conf.set(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName() + ","
+      + HFileLinkCleaner.class.getName());
   }
 
   @Before
@@ -165,6 +172,57 @@ public class TestMobSnapshotCloneIndependence {
   @Test (timeout=300000)
   public void testOnlineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(true);
+  }
+
+  /**
+   * Verify the mob cells still exist after the table to be cloned is deleted.
+   */
+  @Test (timeout=300000)
+  public void testDeleteTableToBeCloned() throws Exception {
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    TableName tn = TableName.valueOf("testDeleteTableToBeCloned");
+    byte[] qf = Bytes.toBytes("qf");
+    MobSnapshotTestingUtils.createMobTable(UTIL, tn, TEST_FAM);
+    String row = "row";
+    String value = "value";
+    Put put = new Put(Bytes.toBytes(row));
+    put.addColumn(TEST_FAM, qf, Bytes.toBytes(value));
+    Admin admin = UTIL.getHBaseAdmin();
+    BufferedMutator mutator = UTIL.getConnection().getBufferedMutator(tn);
+    mutator.mutate(put);
+    mutator.flush();
+    admin.flush(tn);
+    // Take a snapshot
+    final String snapshotNameAsString = "snapshot_" + tn;
+    byte[] snapshotName = Bytes.toBytes(snapshotNameAsString);
+    Table table = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(tn);
+    Table clonedTable = null;
+    try {
+      SnapshotTestingUtils.createSnapshotAndValidate(admin, tn, TEST_FAM_STR, snapshotNameAsString,
+        rootDir, fs, true);
+      TableName cloneTableName = TableName.valueOf("test-clone-" + tn);
+      admin.cloneSnapshot(snapshotName, cloneTableName);
+      clonedTable = ConnectionFactory.createConnection(UTIL.getConfiguration()).getTable(
+        cloneTableName);
+      admin.deleteSnapshot(snapshotName);
+      admin.disableTable(tn);
+      admin.deleteTable(tn);
+      // run the cleaner
+      UTIL.getHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+      // make sure the mob cell exists
+      Scan scan = new Scan();
+      ResultScanner scanner = clonedTable.getScanner(scan);
+      Result rs = scanner.next();
+      Cell cell = rs.getColumnLatestCell(TEST_FAM, qf);
+      Assert.assertEquals(value, Bytes.toString(CellUtil.cloneValue(cell)));
+      Assert.assertNull(scanner.next());
+    } finally {
+      table.close();
+      if (clonedTable != null) {
+        clonedTable.close();
+      }
+    }
   }
 
   private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
