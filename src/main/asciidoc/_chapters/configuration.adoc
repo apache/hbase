@@ -116,11 +116,6 @@ deprecated `remove()` method of the `PoolMap` class and is under consideration. 
 link:https://issues.apache.org/jira/browse/HBASE-7608[HBASE-7608] for more information about JDK 8
 support.
 
-|0.96
-|yes
-|yes
-|N/A
-
 |0.94
 |yes
 |yes
