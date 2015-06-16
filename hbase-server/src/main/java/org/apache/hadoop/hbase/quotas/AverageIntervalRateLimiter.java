@@ -26,7 +26,7 @@ public class AverageIntervalRateLimiter extends RateLimiter {
   private long nextRefillTime = -1L;
 
   @Override
-  public long refill(long limit, long available) {
+  public long refill(long limit) {
     final long now = EnvironmentEdgeManager.currentTime();
     if (nextRefillTime == -1) {
       // Till now no resource has been consumed.
@@ -37,7 +37,7 @@ public class AverageIntervalRateLimiter extends RateLimiter {
     long delta = (limit * (now - nextRefillTime)) / super.getTimeUnitInMillis();
     if (delta > 0) {
       this.nextRefillTime = now;
-      return Math.min(limit, available + delta);
+      return Math.min(limit, delta);
     }
     return 0;
   }

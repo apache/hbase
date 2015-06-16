@@ -47,9 +47,9 @@ public abstract class RateLimiter {
   /**
    * Refill the available units w.r.t the elapsed time.
    * @param limit Maximum available resource units that can be refilled to.
-   * @param available Currently available resource units
+   * @return how many resource units may be refilled ?
    */
-  abstract long refill(long limit, long available);
+  abstract long refill(long limit);
 
   /**
    * Time in milliseconds to wait for before requesting to consume 'amount' resource.
@@ -142,7 +142,7 @@ public abstract class RateLimiter {
    * @return true if there are enough available resources, otherwise false
    */
   public synchronized boolean canExecute(final long amount) {
-    long refillAmount = refill(limit, avail);
+    long refillAmount = refill(limit);
     if (refillAmount == 0 && avail < amount) {
       return false;
     }
