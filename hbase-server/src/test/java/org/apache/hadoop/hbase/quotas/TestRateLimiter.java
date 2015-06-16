@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -169,5 +170,119 @@ public class TestRateLimiter {
         limiter.consume();
       }
     }
+  }
+
+  @Test
+  public void testCanExecuteOfAverageIntervalRateLimiter() throws InterruptedException {
+    RateLimiter limiter = new AverageIntervalRateLimiter();
+    // when set limit is 100 per sec, this AverageIntervalRateLimiter will support at max 200 per sec
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(50, testCanExecuteByRate(limiter, 50));
+
+    // refill the avail to limit
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(100, testCanExecuteByRate(limiter, 100));
+
+    // refill the avail to limit
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(200, testCanExecuteByRate(limiter, 200));
+
+    // refill the avail to limit
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(200, testCanExecuteByRate(limiter, 500));
+  }
+
+  @Test
+  public void testCanExecuteOfFixedIntervalRateLimiter() throws InterruptedException {
+    RateLimiter limiter = new FixedIntervalRateLimiter();
+    // when set limit is 100 per sec, this FixedIntervalRateLimiter will support at max 100 per sec
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(50, testCanExecuteByRate(limiter, 50));
+
+    // refill the avail to limit
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(100, testCanExecuteByRate(limiter, 100));
+
+    // refill the avail to limit
+    limiter.set(100, TimeUnit.SECONDS);
+    limiter.setNextRefillTime(EnvironmentEdgeManager.currentTime());
+    assertEquals(100, testCanExecuteByRate(limiter, 200));
+  }
+
+  public int testCanExecuteByRate(RateLimiter limiter, int rate) {
+    int request = 0;
+    int count = 0;
+    while ((request++) < rate) {
+      limiter.setNextRefillTime(limiter.getNextRefillTime() - limiter.getTimeUnitInMillis() / rate);
+      if (limiter.canExecute()) {
+        count++;
+        limiter.consume();
+      }
+    }
+    return count;
+  }
+
+  @Test
+  public void testRefillOfAverageIntervalRateLimiter() throws InterruptedException {
+    RateLimiter limiter = new AverageIntervalRateLimiter();
+    limiter.set(60, TimeUnit.SECONDS);
+    assertEquals(60, limiter.getAvailable());
+    // first refill, will return the number same with limit
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+
+    limiter.consume(30);
+
+    // after 0.2 sec, refill should return 12
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 200);
+    assertEquals(12, limiter.refill(limiter.getLimit()));
+
+    // after 0.5 sec, refill should return 30
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 500);
+    assertEquals(30, limiter.refill(limiter.getLimit()));
+
+    // after 1 sec, refill should return 60
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+
+    // after more than 1 sec, refill should return at max 60
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 3000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 5000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+  }
+
+  @Test
+  public void testRefillOfFixedIntervalRateLimiter() throws InterruptedException {
+    RateLimiter limiter = new FixedIntervalRateLimiter();
+    limiter.set(60, TimeUnit.SECONDS);
+    assertEquals(60, limiter.getAvailable());
+    // first refill, will return the number same with limit
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+
+    limiter.consume(30);
+
+    // after 0.2 sec, refill should return 0
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 200);
+    assertEquals(0, limiter.refill(limiter.getLimit()));
+
+    // after 0.5 sec, refill should return 0
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 500);
+    assertEquals(0, limiter.refill(limiter.getLimit()));
+
+    // after 1 sec, refill should return 60
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+
+    // after more than 1 sec, refill should return at max 60
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 3000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 5000);
+    assertEquals(60, limiter.refill(limiter.getLimit()));
   }
 }

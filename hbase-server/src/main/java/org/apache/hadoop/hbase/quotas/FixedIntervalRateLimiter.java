@@ -24,7 +24,7 @@ public class FixedIntervalRateLimiter extends RateLimiter {
   private long nextRefillTime = -1L;
 
   @Override
-  public long refill(long limit, long available) {
+  public long refill(long limit) {
     final long now = EnvironmentEdgeManager.currentTime();
     if (now < nextRefillTime) {
       return 0;
