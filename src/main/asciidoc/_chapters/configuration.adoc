@@ -98,6 +98,11 @@ This section lists required services and some required system configuration.
 |JDK 7
 |JDK 8
 
+|1.2
+|link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
+|yes
+|yes
+
 |1.1
 |link:http://search-hadoop.com/m/DHED4Zlz0R1[Not Supported]
 |yes
