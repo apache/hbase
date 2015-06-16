@@ -89,7 +89,7 @@ public class BufferedMutatorExample extends Configured implements Tool {
             // the same backing buffer, call-back "listener", and RPC executor pool.
             //
             Put p = new Put(Bytes.toBytes("someRow"));
-            p.add(FAMILY, Bytes.toBytes("someQualifier"), Bytes.toBytes("some value"));
+            p.addColumn(FAMILY, Bytes.toBytes("someQualifier"), Bytes.toBytes("some value"));
             mutator.mutate(p);
             // do work... maybe you want to call mutator.flush() after many edits to ensure any of
             // this worker's edits are sent before exiting the Callable
