@@ -96,7 +96,7 @@ import com.sun.jersey.spi.container.servlet.ServletContainer;
  * There are three contexts:
  *   "/logs/" -&gt; points to the log directory
  *   "/static/" -&gt; points to common static files (src/webapps/static)
- *   "/" -&gt; the jsp server code from (src/webapps/&lt;name&gt;)
+ *   "/" -&gt; the jsp server code from (src/webapps/<name>)
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -447,7 +447,7 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/&lt;name&gt;.
+   * The jsp scripts are taken from src/webapps/<name>.
    * @param name The name of the server
    * @param bindAddress The address for this server
    * @param port The port to use on the server
@@ -466,7 +466,7 @@ public class HttpServer implements FilterContainer {
 
   /**
    * Create a status server on the given port.
-   * The jsp scripts are taken from src/webapps/&lt;name&gt;.
+   * The jsp scripts are taken from src/webapps/<name>.
    * @param name The name of the server
    * @param bindAddress The address for this server
    * @param port The port to use on the server

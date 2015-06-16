@@ -20,10 +20,12 @@
 /**
 Provides client classes for invoking Coprocessor RPC protocols
 
+<p>
 <ul>
  <li><a href="#overview">Overview</a></li>
  <li><a href="#usage">Example Usage</a></li>
 </ul>
+</p>
 
 <h2><a name="overview">Overview</a></h2>
 <p>
@@ -36,7 +38,6 @@ protocols.
 <p>
 In order to provide a custom RPC protocol to clients, a coprocessor implementation
 must:
-</p>
 <ul>
  <li>Define a protocol buffer Service and supporting Message types for the RPC methods.
  See the
@@ -48,7 +49,6 @@ must:
  {@link org.apache.hadoop.hbase.coprocessor.CoprocessorService#getService()}
  method should return a reference to the Endpoint's protocol buffer Service instance.
 </ul>
-<p>
 Clients may then call the defined service methods on coprocessor instances via
 the {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])},
 {@link org.apache.hadoop.hbase.client.Table#coprocessorService(Class, byte[], byte[], org.apache.hadoop.hbase.client.coprocessor.Batch.Call)}, and
@@ -63,7 +63,6 @@ method invocations.  Since regions are seldom handled directly in client code
 and the region names may change over time, the coprocessor RPC calls use row keys
 to identify which regions should be used for the method invocations.  Clients
 can call coprocessor Service methods against either:
-</p>
 <ul>
  <li><strong>a single region</strong> - calling
    {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])}
@@ -78,6 +77,7 @@ can call coprocessor Service methods against either:
    from the region containing the start row key to the region containing the end
    row key (inclusive), will we used as the RPC endpoints.</li>
 </ul>
+</p>
 
 <p><em>Note that the row keys passed as parameters to the <code>Table</code>
 methods are not passed directly to the coprocessor Service implementations.
@@ -135,12 +135,12 @@ public static abstract class RowCountService
     public abstract void getRowCount(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
-        com.google.protobuf.RpcCallback&lt;org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse&gt; done);
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
 
     public abstract void getKeyValueCount(
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest request,
-        com.google.protobuf.RpcCallback&lt;org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse&gt; done);
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
   }
 }
 </pre></blockquote></div>
@@ -163,13 +163,13 @@ use:
 Connection connection = ConnectionFactory.createConnection(conf);
 Table table = connection.getTable(TableName.valueOf("mytable"));
 final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
-Map&lt;byte[],Long&gt; results = table.coprocessorService(
+Map<byte[],Long> results = table.coprocessorService(
     ExampleProtos.RowCountService.class, // the protocol interface we're invoking
     null, null,                          // start and end row keys
-    new Batch.Call&lt;ExampleProtos.RowCountService,Long&gt;() {
+    new Batch.Call<ExampleProtos.RowCountService,Long>() {
         public Long call(ExampleProtos.RowCountService counter) throws IOException {
-          BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt; rpcCallback =
-              new BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt;();
+          BlockingRpcCallback<ExampleProtos.CountResponse> rpcCallback =
+              new BlockingRpcCallback<ExampleProtos.CountResponse>();
           counter.getRowCount(null, request, rpcCallback);
           ExampleProtos.CountResponse response = rpcCallback.get();
           return response.hasCount() ? response.getCount() : 0;
@@ -204,17 +204,17 @@ Connection connection = ConnectionFactory.createConnection(conf);
 Table table = connection.getTable(TableName.valueOf("mytable"));
 // combine row count and kv count for region
 final ExampleProtos.CountRequest request = ExampleProtos.CountRequest.getDefaultInstance();
-Map&lt;byte[],Long&gt; results = table.coprocessorService(
+Map<byte[],Long> results = table.coprocessorService(
     ExampleProtos.RowCountService.class, // the protocol interface we're invoking
     null, null,                          // start and end row keys
-    new Batch.Call&lt;ExampleProtos.RowCountService,Pair&lt;Long,Long&gt;&gt;() {
+    new Batch.Call<ExampleProtos.RowCountService,Pair<Long,Long>>() {
        public Long call(ExampleProtos.RowCountService counter) throws IOException {
-         BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt; rowCallback =
-             new BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt;();
+         BlockingRpcCallback<ExampleProtos.CountResponse> rowCallback =
+             new BlockingRpcCallback<ExampleProtos.CountResponse>();
          counter.getRowCount(null, request, rowCallback);
 
-         BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt; kvCallback =
-             new BlockingRpcCallback&lt;ExampleProtos.CountResponse&gt;();
+         BlockingRpcCallback<ExampleProtos.CountResponse> kvCallback =
+             new BlockingRpcCallback<ExampleProtos.CountResponse>();
          counter.getKeyValueCount(null, request, kvCallback);
 
          ExampleProtos.CountResponse rowResponse = rowCallback.get();

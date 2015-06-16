@@ -64,6 +64,7 @@ public interface ProcedureStore {
     /**
      * Returns the next procedure in the iteration.
      * @throws IOException if there was an error fetching/deserializing the procedure
+     * @throws NoSuchElementException if the iteration has no more elements
      * @return the next procedure in the iteration.
      */
     Procedure next() throws IOException;

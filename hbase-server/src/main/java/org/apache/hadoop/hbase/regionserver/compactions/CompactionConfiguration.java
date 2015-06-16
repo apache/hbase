@@ -27,20 +27,18 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.StoreConfigInformation;
 
 /**
- * <p>
  * Compaction configuration for a particular instance of HStore.
  * Takes into account both global settings and ones set on the column family/store.
  * Control knobs for default compaction algorithm:
- * </p>
- * <p>
+ * <p/>
  * maxCompactSize - upper bound on file size to be included in minor compactions
  * minCompactSize - lower bound below which compaction is selected without ratio test
  * minFilesToCompact - lower bound on number of files in any minor compaction
  * maxFilesToCompact - upper bound on number of files in any minor compaction
  * compactionRatio - Ratio used for compaction
  * minLocalityToForceCompact - Locality threshold for a store file to major compact (HBASE-11195)
- * </p>
- * Set parameter as "hbase.hstore.compaction.&lt;attribute&gt;"
+ * <p/>
+ * Set parameter as "hbase.hstore.compaction.<attribute>"
  */
 
 @InterfaceAudience.Private

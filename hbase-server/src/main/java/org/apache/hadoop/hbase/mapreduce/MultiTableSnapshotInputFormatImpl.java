@@ -118,11 +118,11 @@ public class MultiTableSnapshotInputFormatImpl {
   }
 
   /**
-   * Retrieve the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration by
+   * Retrieve the snapshot name -> list<scan> mapping pushed to configuration by
    * {@link #setSnapshotToScans(org.apache.hadoop.conf.Configuration, java.util.Map)}
    *
-   * @param conf Configuration to extract name -&gt; list&lt;scan&gt; mappings from.
-   * @return the snapshot name -&gt; list&lt;scan&gt; mapping pushed to configuration
+   * @param conf Configuration to extract name -> list<scan> mappings from.
+   * @return the snapshot name -> list<scan> mapping pushed to configuration
    * @throws IOException
    */
   public Map<String, Collection<Scan>> getSnapshotsToScans(Configuration conf) throws IOException {

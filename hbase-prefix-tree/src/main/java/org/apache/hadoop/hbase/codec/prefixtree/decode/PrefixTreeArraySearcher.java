@@ -310,7 +310,7 @@ public class PrefixTreeArraySearcher extends PrefixTreeArrayReversibleScanner im
   /****************** complete seek when token mismatch ******************/
 
   /**
-   * @param searcherIsAfterInputKey &lt;0: input key is before the searcher's position<br>
+   * @param searcherIsAfterInputKey &lt;0: input key is before the searcher's position<br/>
    *          &gt;0: input key is after the searcher's position
    */
   protected CellScannerPosition fixRowTokenMissReverse(int searcherIsAfterInputKey) {

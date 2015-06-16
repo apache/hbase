@@ -1096,7 +1096,7 @@ public interface RegionObserver extends Coprocessor {
    * <li>
    * <code>boolean filterRow()</code> returning true</li>
    * <li>
-   * <code>void filterRow(List&lt;KeyValue&gt; kvs)</code> removing all the kvs from
+   * <code>void filterRow(List<KeyValue> kvs)</code> removing all the kvs from
    * the passed List</li>
    * </ol>
    * @param c the environment provided by the region server

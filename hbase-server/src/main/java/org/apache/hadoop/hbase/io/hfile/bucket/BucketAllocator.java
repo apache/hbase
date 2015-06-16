@@ -407,8 +407,7 @@ public final class BucketAllocator {
   /**
    * Allocate a block with specified size. Return the offset
    * @param blockSize size of block
-   * @throws BucketAllocatorException
-   * @throws CacheFullException
+   * @throws BucketAllocatorException,CacheFullException
    * @return the offset in the IOEngine
    */
   public synchronized long allocateBlock(int blockSize) throws CacheFullException,

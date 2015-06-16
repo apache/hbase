@@ -51,34 +51,28 @@ import org.apache.hadoop.hbase.util.JSONBean;
  * functionality is provided through the
  * {@link MBeanServer#queryNames(ObjectName, javax.management.QueryExp)}
  * method.
- * </p>
  * <p>
  * For example <code>http://.../jmx?qry=Hadoop:*</code> will return
  * all hadoop metrics exposed through JMX.
- * </p>
  * <p>
  * The optional <code>get</code> parameter is used to query an specific 
  * attribute of a JMX bean.  The format of the URL is
- * <code>http://.../jmx?get=MXBeanName::AttributeName</code>
- * </p>
+ * <code>http://.../jmx?get=MXBeanName::AttributeName<code>
  * <p>
  * For example 
  * <code>
  * http://../jmx?get=Hadoop:service=NameNode,name=NameNodeInfo::ClusterId
  * </code> will return the cluster id of the namenode mxbean.
- * </p>
  * <p>
  * If the <code>qry</code> or the <code>get</code> parameter is not formatted 
  * correctly then a 400 BAD REQUEST http response code will be returned. 
- * </p>
  * <p>
  * If a resouce such as a mbean or attribute can not be found, 
  * a 404 SC_NOT_FOUND http response code will be returned. 
- * </p>
  * <p>
  * The return format is JSON and in the form
- * </p>
- *  <pre><code>
+ * <p>
+ *  <code><pre>
  *  {
  *    "beans" : [
  *      {
@@ -87,7 +81,7 @@ import org.apache.hadoop.hbase.util.JSONBean;
  *      }
  *    ]
  *  }
- *  </code></pre>
+ *  </pre></code>
  *  <p>
  *  The servlet attempts to convert the the JMXBeans into JSON. Each
  *  bean's attributes will be converted to a JSON object member.
@@ -107,7 +101,6 @@ import org.apache.hadoop.hbase.util.JSONBean;
  *  The bean's name and modelerType will be returned for all beans.
  *
  *  Optional paramater "callback" should be used to deliver JSONP response.
- * </p>
  *  
  */
 public class JMXJsonServlet extends HttpServlet {

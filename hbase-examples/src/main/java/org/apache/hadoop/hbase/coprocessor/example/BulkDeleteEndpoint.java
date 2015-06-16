@@ -66,7 +66,7 @@ import com.google.protobuf.Service;
  * deleted(even if Scan fetches many versions). When timestamp passed as null, all the versions
  * which the Scan selects will get deleted.
  * 
- * <br> Example: <pre><code>
+ * </br> Example: <code><pre>
  * Scan scan = new Scan();
  * // set scan properties(rowkey range, filters, timerange etc).
  * HTable ht = ...;
@@ -93,7 +93,7 @@ import com.google.protobuf.Service;
  * for (BulkDeleteResponse response : result.values()) {
  *   noOfDeletedRows += response.getRowsDeleted();
  * }
- * </code></pre>
+ * </pre></code>
  */
 public class BulkDeleteEndpoint extends BulkDeleteService implements CoprocessorService,
     Coprocessor {

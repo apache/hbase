@@ -226,7 +226,7 @@ public abstract class Compactor {
    * @param scanner Where to read from.
    * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
-   * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is &lt;= smallestReadPoint
+   * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is <= smallestReadPoint
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
   protected boolean performCompaction(InternalScanner scanner, CellSink writer,

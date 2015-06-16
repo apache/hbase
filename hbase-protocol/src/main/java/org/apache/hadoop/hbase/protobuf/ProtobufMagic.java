@@ -74,8 +74,6 @@ public class ProtobufMagic {
 
   /**
    * @param bytes Bytes to check.
-   * @param offset offset to start at
-   * @param len length to use
    * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
