@@ -325,7 +325,14 @@ public class SecureClient extends HBaseClient {
           start();
           return;
         }
-      } catch (IOException e) {
+      } catch (Throwable t) {
+        failedServers.addToFailedServers(remoteId.address);
+        IOException e;
+        if (t instanceof IOException) {
+          e = (IOException)t;
+        } else {
+          e = new IOException("Could not set up Secure IO Streams", t);
+        }
         markClosed(e);
         close();
 
