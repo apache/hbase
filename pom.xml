@@ -2741,10 +2741,10 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.9.1</version>
+        <version>2.10.3</version>
         <configuration>
           <sourceFilesExclude>**/generated</sourceFilesExclude>
-          <excludePackageNames>org.apache.hadoop.hbase.generated.master</excludePackageNames>
+          <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated</excludePackageNames>
           <maxmemory>2048m</maxmemory>
           <notimestamp>true</notimestamp>
         </configuration>
