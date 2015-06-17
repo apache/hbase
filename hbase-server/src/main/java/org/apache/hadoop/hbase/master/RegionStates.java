@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableStateManager;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -130,14 +129,6 @@ public class RegionStates {
    */
   private final HashMap<String, ServerName> oldAssignments =
     new HashMap<String, ServerName>();
-
-  /**
-   * Map a host port pair string to the latest start code
-   * of a region server which is known to be dead. It is dead
-   * to us, but server manager may not know it yet.
-   */
-  private final HashMap<String, Long> deadServers =
-    new HashMap<String, Long>();
 
   /**
    * Map a dead servers to the time when log split is done.
@@ -823,10 +814,6 @@ public class RegionStates {
    * If so, we should hold re-assign this region till SSH has split its wals.
    * Once logs are split, the last assignment of this region will be reset,
    * which means a null last assignment server is ok for re-assigning.
-   *
-   * A region server could be dead but we don't know it yet. We may
-   * think it's online falsely. Therefore if a server is online, we still
-   * need to confirm it reachable and having the expected start code.
    */
   synchronized boolean wasRegionOnDeadServer(final String encodedName) {
     ServerName server = lastAssignments.get(encodedName);
@@ -836,24 +823,9 @@ public class RegionStates {
   synchronized boolean isServerDeadAndNotProcessed(ServerName server) {
     if (server == null) return false;
     if (serverManager.isServerOnline(server)) {
-      String hostAndPort = server.getHostAndPort();
-      long startCode = server.getStartcode();
-      Long deadCode = deadServers.get(hostAndPort);
-      if (deadCode == null || startCode > deadCode.longValue()) {
-        if (serverManager.isServerReachable(server)) {
-          return false;
-        }
-        // The size of deadServers won't grow unbounded.
-        deadServers.put(hostAndPort, Long.valueOf(startCode));
+      if (!serverManager.isServerDead(server)) {
+        return false;
       }
-      // Watch out! If the server is not dead, the region could
-      // remain unassigned. That's why ServerManager#isServerReachable
-      // should use some retry.
-      //
-      // We cache this info since it is very unlikely for that
-      // instance to come back up later on. We don't want to expire
-      // the server since we prefer to let it die naturally.
-      LOG.warn("Couldn't reach online server " + server);
     }
     // Now, we know it's dead. Check if it's processed
     return !processedServers.containsKey(server);
