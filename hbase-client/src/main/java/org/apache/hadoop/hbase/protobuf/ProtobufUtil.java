@@ -22,28 +22,20 @@ import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpeci
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableSet;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -51,7 +43,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Consistency;
@@ -67,7 +58,6 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
-import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
@@ -92,15 +82,12 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.DeleteType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.MutationType;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
@@ -127,8 +114,6 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
 import org.apache.hadoop.hbase.quotas.ThrottleType;
@@ -142,22 +127,17 @@ import org.apache.hadoop.hbase.security.visibility.Authorizations;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.DynamicClassLoader;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.VersionInfo;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 
-import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
-import com.google.protobuf.Parser;
 import com.google.protobuf.RpcChannel;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
@@ -166,8 +146,6 @@ import com.google.protobuf.TextFormat;
 /**
  * Protobufs utility.
  */
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED",
-  justification="None. Address sometime.")
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
 
@@ -180,62 +158,7 @@ public final class ProtobufUtil {
   private final static Map<String, Class<?>>
     PRIMITIVES = new HashMap<String, Class<?>>();
 
-  /**
-   * Many results are simple: no cell, exists true or false. To save on object creations,
-   *  we reuse them across calls.
-   */
-  private final static Cell[] EMPTY_CELL_ARRAY = new Cell[]{};
-  private final static Result EMPTY_RESULT = Result.create(EMPTY_CELL_ARRAY);
-  private final static Result EMPTY_RESULT_EXISTS_TRUE = Result.create(null, true);
-  private final static Result EMPTY_RESULT_EXISTS_FALSE = Result.create(null, false);
-  private final static Result EMPTY_RESULT_STALE = Result.create(EMPTY_CELL_ARRAY, null, true);
-  private final static Result EMPTY_RESULT_EXISTS_TRUE_STALE
-    = Result.create((Cell[])null, true, true);
-  private final static Result EMPTY_RESULT_EXISTS_FALSE_STALE
-    = Result.create((Cell[])null, false, true);
-
-  private final static ClientProtos.Result EMPTY_RESULT_PB;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_STALE;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_TRUE_STALE;
-  private final static ClientProtos.Result EMPTY_RESULT_PB_EXISTS_FALSE_STALE;
-
-
   static {
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-
-    builder.setExists(true);
-    builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB_EXISTS_TRUE =  builder.build();
-
-    builder.setStale(true);
-    EMPTY_RESULT_PB_EXISTS_TRUE_STALE = builder.build();
-    builder.clear();
-
-    builder.setExists(false);
-    builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB_EXISTS_FALSE =  builder.build();
-    builder.setStale(true);
-    EMPTY_RESULT_PB_EXISTS_FALSE_STALE = builder.build();
-
-    builder.clear();
-    builder.setAssociatedCellCount(0);
-    EMPTY_RESULT_PB =  builder.build();
-    builder.setStale(true);
-    EMPTY_RESULT_PB_STALE = builder.build();
-  }
-
-  /**
-   * Dynamic class loader to load filter/comparators
-   */
-  private final static ClassLoader CLASS_LOADER;
-
-  static {
-    ClassLoader parent = ProtobufUtil.class.getClassLoader();
-    Configuration conf = HBaseConfiguration.create();
-    CLASS_LOADER = new DynamicClassLoader(conf, parent);
-
     PRIMITIVES.put(Boolean.TYPE.getName(), Boolean.TYPE);
     PRIMITIVES.put(Byte.TYPE.getName(), Byte.TYPE);
     PRIMITIVES.put(Character.TYPE.getName(), Character.TYPE);
@@ -326,17 +249,7 @@ public final class ProtobufUtil {
    */
   public static HBaseProtos.ServerName
       toServerName(final ServerName serverName) {
-    if (serverName == null) return null;
-    HBaseProtos.ServerName.Builder builder =
-      HBaseProtos.ServerName.newBuilder();
-    builder.setHostName(serverName.getHostname());
-    if (serverName.getPort() >= 0) {
-      builder.setPort(serverName.getPort());
-    }
-    if (serverName.getStartcode() >= 0) {
-      builder.setStartCode(serverName.getStartcode());
-    }
-    return builder.build();
+    return ProtobufConverter.toServerName(serverName);
   }
 
   /**
@@ -346,17 +259,7 @@ public final class ProtobufUtil {
    * @return the converted ServerName
    */
   public static ServerName toServerName(final HBaseProtos.ServerName proto) {
-    if (proto == null) return null;
-    String hostName = proto.getHostName();
-    long startCode = -1;
-    int port = -1;
-    if (proto.hasPort()) {
-      port = proto.getPort();
-    }
-    if (proto.hasStartCode()) {
-      startCode = proto.getStartCode();
-    }
-    return ServerName.valueOf(hostName, port, startCode);
+    return ProtobufConverter.toServerName(proto);
   }
 
   /**
@@ -394,41 +297,15 @@ public final class ProtobufUtil {
    */
   public static Durability toDurability(
       final ClientProtos.MutationProto.Durability proto) {
-    switch(proto) {
-    case USE_DEFAULT:
-      return Durability.USE_DEFAULT;
-    case SKIP_WAL:
-      return Durability.SKIP_WAL;
-    case ASYNC_WAL:
-      return Durability.ASYNC_WAL;
-    case SYNC_WAL:
-      return Durability.SYNC_WAL;
-    case FSYNC_WAL:
-      return Durability.FSYNC_WAL;
-    default:
-      return Durability.USE_DEFAULT;
-    }
+    return ProtobufConverter.toDurability(proto);
   }
 
   /**
-   * Convert a client Durability into a protbuf Durability
+   * Convert a client Durability into a protobuf Durability
    */
   public static ClientProtos.MutationProto.Durability toDurability(
       final Durability d) {
-    switch(d) {
-    case USE_DEFAULT:
-      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
-    case SKIP_WAL:
-      return ClientProtos.MutationProto.Durability.SKIP_WAL;
-    case ASYNC_WAL:
-      return ClientProtos.MutationProto.Durability.ASYNC_WAL;
-    case SYNC_WAL:
-      return ClientProtos.MutationProto.Durability.SYNC_WAL;
-    case FSYNC_WAL:
-      return ClientProtos.MutationProto.Durability.FSYNC_WAL;
-    default:
-      return ClientProtos.MutationProto.Durability.USE_DEFAULT;
-    }
+    return ProtobufConverter.toDurability(d);
   }
 
   /**
@@ -440,78 +317,15 @@ public final class ProtobufUtil {
    */
   public static Get toGet(
       final ClientProtos.Get proto) throws IOException {
-    if (proto == null) return null;
-    byte[] row = proto.getRow().toByteArray();
-    Get get = new Get(row);
-    if (proto.hasCacheBlocks()) {
-      get.setCacheBlocks(proto.getCacheBlocks());
-    }
-    if (proto.hasMaxVersions()) {
-      get.setMaxVersions(proto.getMaxVersions());
-    }
-    if (proto.hasStoreLimit()) {
-      get.setMaxResultsPerColumnFamily(proto.getStoreLimit());
-    }
-    if (proto.hasStoreOffset()) {
-      get.setRowOffsetPerColumnFamily(proto.getStoreOffset());
-    }
-    if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      get.setTimeRange(minStamp, maxStamp);
-    }
-    if (proto.hasFilter()) {
-      FilterProtos.Filter filter = proto.getFilter();
-      get.setFilter(ProtobufUtil.toFilter(filter));
-    }
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      get.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    if (proto.getColumnCount() > 0) {
-      for (Column column: proto.getColumnList()) {
-        byte[] family = column.getFamily().toByteArray();
-        if (column.getQualifierCount() > 0) {
-          for (ByteString qualifier: column.getQualifierList()) {
-            get.addColumn(family, qualifier.toByteArray());
-          }
-        } else {
-          get.addFamily(family);
-        }
-      }
-    }
-    if (proto.hasExistenceOnly() && proto.getExistenceOnly()){
-      get.setCheckExistenceOnly(true);
-    }
-    if (proto.hasClosestRowBefore() && proto.getClosestRowBefore()){
-      get.setClosestRowBefore(true);
-    }
-    if (proto.hasConsistency()) {
-      get.setConsistency(toConsistency(proto.getConsistency()));
-    }
-    return get;
+    return ProtobufConverter.toGet(proto);
   }
 
   public static Consistency toConsistency(ClientProtos.Consistency consistency) {
-    switch (consistency) {
-      case STRONG : return Consistency.STRONG;
-      case TIMELINE : return Consistency.TIMELINE;
-      default : return Consistency.STRONG;
-    }
+    return ProtobufConverter.toConsistency(consistency);
   }
 
   public static ClientProtos.Consistency toConsistency(Consistency consistency) {
-    switch (consistency) {
-      case STRONG : return ClientProtos.Consistency.STRONG;
-      case TIMELINE : return ClientProtos.Consistency.TIMELINE;
-      default : return ClientProtos.Consistency.STRONG;
-    }
+    return ProtobufConverter.toConsistency(consistency);
   }
 
   /**
@@ -523,7 +337,7 @@ public final class ProtobufUtil {
    */
   public static Put toPut(final MutationProto proto)
   throws IOException {
-    return toPut(proto, null);
+    return ProtobufConverter.toPut(proto, null);
   }
 
   /**
@@ -536,83 +350,7 @@ public final class ProtobufUtil {
    */
   public static Put toPut(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
-    // TODO: Server-side at least why do we convert back to the Client types?  Why not just pb it?
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.PUT: type.name();
-    long timestamp = proto.hasTimestamp()? proto.getTimestamp(): HConstants.LATEST_TIMESTAMP;
-    Put put = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-            toShortString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + toShortString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (put == null) {
-          put = new Put(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
-        }
-        put.add(cell);
-      }
-    } else {
-      if (proto.hasRow()) {
-        put = new Put(proto.getRow().asReadOnlyByteBuffer(), timestamp);
-      } else {
-        throw new IllegalArgumentException("row cannot be null");
-      }
-      // The proto has the metadata and the data itself
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException(
-                "Missing required field: qualifier value");
-          }
-          ByteBuffer qualifier =
-              qv.hasQualifier() ? qv.getQualifier().asReadOnlyByteBuffer() : null;
-          ByteBuffer value =
-              qv.hasValue() ? qv.getValue().asReadOnlyByteBuffer() : null;
-          long ts = timestamp;
-          if (qv.hasTimestamp()) {
-            ts = qv.getTimestamp();
-          }
-          byte[] tags;
-          if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-            Object[] array = Tag.asList(tags, 0, (short)tags.length).toArray();
-            Tag[] tagArray = new Tag[array.length];
-            for(int i = 0; i< array.length; i++) {
-              tagArray[i] = (Tag)array[i];
-            }
-            if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType()), null, tags));
-            } else {
-              put.addImmutable(family, qualifier, ts, value, tagArray);
-            }
-          } else {
-            if(qv.hasDeleteType()) {
-              byte[] qual = qv.hasQualifier() ? qv.getQualifier().toByteArray() : null;
-              put.add(new KeyValue(proto.getRow().toByteArray(), family, qual, ts,
-                  fromDeleteType(qv.getDeleteType())));
-            } else{
-              put.addImmutable(family, qualifier, ts, value);
-            }
-          }
-        }
-      }
-    }
-    put.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      put.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return put;
+    return ProtobufConverter.toPut(proto, cellScanner);
   }
 
   /**
@@ -624,7 +362,7 @@ public final class ProtobufUtil {
    */
   public static Delete toDelete(final MutationProto proto)
   throws IOException {
-    return toDelete(proto, null);
+    return ProtobufConverter.toDelete(proto, null);
   }
 
   /**
@@ -637,66 +375,7 @@ public final class ProtobufUtil {
    */
   public static Delete toDelete(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.DELETE : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    long timestamp = HConstants.LATEST_TIMESTAMP;
-    if (proto.hasTimestamp()) {
-      timestamp = proto.getTimestamp();
-    }
-    Delete delete = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        // TextFormat should be fine for a Delete since it carries no data, just coordinates.
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          // TextFormat should be fine for a Delete since it carries no data, just coordinates.
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (delete == null) {
-          delete =
-            new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), timestamp);
-        }
-        delete.addDeleteMarker(cell);
-      }
-    } else {
-      delete = new Delete(row, timestamp);
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          DeleteType deleteType = qv.getDeleteType();
-          byte[] qualifier = null;
-          if (qv.hasQualifier()) {
-            qualifier = qv.getQualifier().toByteArray();
-          }
-          long ts = HConstants.LATEST_TIMESTAMP;
-          if (qv.hasTimestamp()) {
-            ts = qv.getTimestamp();
-          }
-          if (deleteType == DeleteType.DELETE_ONE_VERSION) {
-            delete.deleteColumn(family, qualifier, ts);
-          } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
-            delete.deleteColumns(family, qualifier, ts);
-          } else if (deleteType == DeleteType.DELETE_FAMILY_VERSION) {
-            delete.deleteFamilyVersion(family, ts);
-          } else {
-            delete.deleteFamily(family, ts);
-          }
-        }
-      }
-    }
-    delete.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      delete.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return delete;
+    return ProtobufConverter.toDelete(proto, cellScanner);
   }
 
   /**
@@ -708,53 +387,7 @@ public final class ProtobufUtil {
    */
   public static Append toAppend(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.APPEND : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Append append = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          toShortString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + toShortString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (append == null) {
-          append = new Append(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        }
-        append.add(cell);
-      }
-    } else {
-      append = new Append(row);
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException(
-              "Missing required field: qualifier value");
-          }
-          byte[] value = qv.getValue().toByteArray();
-          byte[] tags = null;
-          if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-          }
-          append.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
-              KeyValue.Type.Put, value, tags));
-        }
-      }
-    }
-    append.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      append.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return append;
+    return ProtobufConverter.toAppend(proto, cellScanner);
   }
 
   /**
@@ -765,17 +398,7 @@ public final class ProtobufUtil {
    * @throws IOException
    */
   public static Mutation toMutation(final MutationProto proto) throws IOException {
-    MutationType type = proto.getMutateType();
-    if (type == MutationType.APPEND) {
-      return toAppend(proto, null);
-    }
-    if (type == MutationType.DELETE) {
-      return toDelete(proto, null);
-    }
-    if (type == MutationType.PUT) {
-      return toPut(proto, null);
-    }
-    throw new IOException("Unknown mutation type " + type);
+    return ProtobufConverter.toMutation(proto);
   }
 
   /**
@@ -787,64 +410,7 @@ public final class ProtobufUtil {
    */
   public static Increment toIncrement(final MutationProto proto, final CellScanner cellScanner)
   throws IOException {
-    MutationType type = proto.getMutateType();
-    assert type == MutationType.INCREMENT : type.name();
-    byte [] row = proto.hasRow()? proto.getRow().toByteArray(): null;
-    Increment increment = null;
-    int cellCount = proto.hasAssociatedCellCount()? proto.getAssociatedCellCount(): 0;
-    if (cellCount > 0) {
-      // The proto has metadata only and the data is separate to be found in the cellScanner.
-      if (cellScanner == null) {
-        throw new DoNotRetryIOException("Cell count of " + cellCount + " but no cellScanner: " +
-          TextFormat.shortDebugString(proto));
-      }
-      for (int i = 0; i < cellCount; i++) {
-        if (!cellScanner.advance()) {
-          throw new DoNotRetryIOException("Cell count of " + cellCount + " but at index " + i +
-            " no cell returned: " + TextFormat.shortDebugString(proto));
-        }
-        Cell cell = cellScanner.current();
-        if (increment == null) {
-          increment = new Increment(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
-        }
-        increment.add(cell);
-      }
-    } else {
-      increment = new Increment(row);
-      for (ColumnValue column: proto.getColumnValueList()) {
-        byte[] family = column.getFamily().toByteArray();
-        for (QualifierValue qv: column.getQualifierValueList()) {
-          byte[] qualifier = qv.getQualifier().toByteArray();
-          if (!qv.hasValue()) {
-            throw new DoNotRetryIOException("Missing required field: qualifier value");
-          }
-          byte[] value = qv.getValue().toByteArray();
-          byte[] tags = null;
-          if (qv.hasTags()) {
-            tags = qv.getTags().toByteArray();
-          }
-          increment.add(CellUtil.createCell(row, family, qualifier, qv.getTimestamp(),
-              KeyValue.Type.Put, value, tags));
-        }
-      }
-    }
-    if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      increment.setTimeRange(minStamp, maxStamp);
-    }
-    increment.setDurability(toDurability(proto.getDurability()));
-    for (NameBytesPair attribute : proto.getAttributeList()) {
-      increment.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    return increment;
+    return ProtobufConverter.toIncrement(proto, cellScanner);
   }
 
   /**
@@ -856,82 +422,7 @@ public final class ProtobufUtil {
    */
   public static ClientProtos.Scan toScan(
       final Scan scan) throws IOException {
-    ClientProtos.Scan.Builder scanBuilder =
-      ClientProtos.Scan.newBuilder();
-    scanBuilder.setCacheBlocks(scan.getCacheBlocks());
-    if (scan.getBatch() > 0) {
-      scanBuilder.setBatchSize(scan.getBatch());
-    }
-    if (scan.getMaxResultSize() > 0) {
-      scanBuilder.setMaxResultSize(scan.getMaxResultSize());
-    }
-    if (scan.isSmall()) {
-      scanBuilder.setSmall(scan.isSmall());
-    }
-    Boolean loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
-    if (loadColumnFamiliesOnDemand != null) {
-      scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
-    }
-    scanBuilder.setMaxVersions(scan.getMaxVersions());
-    TimeRange timeRange = scan.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      scanBuilder.setTimeRange(timeRangeBuilder.build());
-    }
-    Map<String, byte[]> attributes = scan.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
-        scanBuilder.addAttribute(attributeBuilder.build());
-      }
-    }
-    byte[] startRow = scan.getStartRow();
-    if (startRow != null && startRow.length > 0) {
-      scanBuilder.setStartRow(ByteStringer.wrap(startRow));
-    }
-    byte[] stopRow = scan.getStopRow();
-    if (stopRow != null && stopRow.length > 0) {
-      scanBuilder.setStopRow(ByteStringer.wrap(stopRow));
-    }
-    if (scan.hasFilter()) {
-      scanBuilder.setFilter(ProtobufUtil.toFilter(scan.getFilter()));
-    }
-    if (scan.hasFamilies()) {
-      Column.Builder columnBuilder = Column.newBuilder();
-      for (Map.Entry<byte[],NavigableSet<byte []>>
-          family: scan.getFamilyMap().entrySet()) {
-        columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-        NavigableSet<byte []> qualifiers = family.getValue();
-        columnBuilder.clearQualifier();
-        if (qualifiers != null && qualifiers.size() > 0) {
-          for (byte [] qualifier: qualifiers) {
-            columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
-          }
-        }
-        scanBuilder.addColumn(columnBuilder.build());
-      }
-    }
-    if (scan.getMaxResultsPerColumnFamily() >= 0) {
-      scanBuilder.setStoreLimit(scan.getMaxResultsPerColumnFamily());
-    }
-    if (scan.getRowOffsetPerColumnFamily() > 0) {
-      scanBuilder.setStoreOffset(scan.getRowOffsetPerColumnFamily());
-    }
-    if (scan.isReversed()) {
-      scanBuilder.setReversed(scan.isReversed());
-    }
-    if (scan.getConsistency() == Consistency.TIMELINE) {
-      scanBuilder.setConsistency(toConsistency(scan.getConsistency()));
-    }
-    if (scan.getCaching() > 0) {
-      scanBuilder.setCaching(scan.getCaching());
-    }
-    return scanBuilder.build();
+    return ProtobufConverter.toScan(scan);
   }
 
   /**
@@ -943,80 +434,7 @@ public final class ProtobufUtil {
    */
   public static Scan toScan(
       final ClientProtos.Scan proto) throws IOException {
-    byte [] startRow = HConstants.EMPTY_START_ROW;
-    byte [] stopRow  = HConstants.EMPTY_END_ROW;
-    if (proto.hasStartRow()) {
-      startRow = proto.getStartRow().toByteArray();
-    }
-    if (proto.hasStopRow()) {
-      stopRow = proto.getStopRow().toByteArray();
-    }
-    Scan scan = new Scan(startRow, stopRow);
-    if (proto.hasCacheBlocks()) {
-      scan.setCacheBlocks(proto.getCacheBlocks());
-    }
-    if (proto.hasMaxVersions()) {
-      scan.setMaxVersions(proto.getMaxVersions());
-    }
-    if (proto.hasStoreLimit()) {
-      scan.setMaxResultsPerColumnFamily(proto.getStoreLimit());
-    }
-    if (proto.hasStoreOffset()) {
-      scan.setRowOffsetPerColumnFamily(proto.getStoreOffset());
-    }
-    if (proto.hasLoadColumnFamiliesOnDemand()) {
-      scan.setLoadColumnFamiliesOnDemand(proto.getLoadColumnFamiliesOnDemand());
-    }
-    if (proto.hasTimeRange()) {
-      HBaseProtos.TimeRange timeRange = proto.getTimeRange();
-      long minStamp = 0;
-      long maxStamp = Long.MAX_VALUE;
-      if (timeRange.hasFrom()) {
-        minStamp = timeRange.getFrom();
-      }
-      if (timeRange.hasTo()) {
-        maxStamp = timeRange.getTo();
-      }
-      scan.setTimeRange(minStamp, maxStamp);
-    }
-    if (proto.hasFilter()) {
-      FilterProtos.Filter filter = proto.getFilter();
-      scan.setFilter(ProtobufUtil.toFilter(filter));
-    }
-    if (proto.hasBatchSize()) {
-      scan.setBatch(proto.getBatchSize());
-    }
-    if (proto.hasMaxResultSize()) {
-      scan.setMaxResultSize(proto.getMaxResultSize());
-    }
-    if (proto.hasSmall()) {
-      scan.setSmall(proto.getSmall());
-    }
-    for (NameBytesPair attribute: proto.getAttributeList()) {
-      scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
-    }
-    if (proto.getColumnCount() > 0) {
-      for (Column column: proto.getColumnList()) {
-        byte[] family = column.getFamily().toByteArray();
-        if (column.getQualifierCount() > 0) {
-          for (ByteString qualifier: column.getQualifierList()) {
-            scan.addColumn(family, qualifier.toByteArray());
-          }
-        } else {
-          scan.addFamily(family);
-        }
-      }
-    }
-    if (proto.hasReversed()) {
-      scan.setReversed(proto.getReversed());
-    }
-    if (proto.hasConsistency()) {
-      scan.setConsistency(toConsistency(proto.getConsistency()));
-    }
-    if (proto.hasCaching()) {
-      scan.setCaching(proto.getCaching());
-    }
-    return scan;
+    return ProtobufConverter.toScan(proto);
   }
 
   /**
@@ -1028,63 +446,7 @@ public final class ProtobufUtil {
    */
   public static ClientProtos.Get toGet(
       final Get get) throws IOException {
-    ClientProtos.Get.Builder builder =
-      ClientProtos.Get.newBuilder();
-    builder.setRow(ByteStringer.wrap(get.getRow()));
-    builder.setCacheBlocks(get.getCacheBlocks());
-    builder.setMaxVersions(get.getMaxVersions());
-    if (get.getFilter() != null) {
-      builder.setFilter(ProtobufUtil.toFilter(get.getFilter()));
-    }
-    TimeRange timeRange = get.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
-    Map<String, byte[]> attributes = get.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
-        builder.addAttribute(attributeBuilder.build());
-      }
-    }
-    if (get.hasFamilies()) {
-      Column.Builder columnBuilder = Column.newBuilder();
-      Map<byte[], NavigableSet<byte[]>> families = get.getFamilyMap();
-      for (Map.Entry<byte[], NavigableSet<byte[]>> family: families.entrySet()) {
-        NavigableSet<byte[]> qualifiers = family.getValue();
-        columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-        columnBuilder.clearQualifier();
-        if (qualifiers != null && qualifiers.size() > 0) {
-          for (byte[] qualifier: qualifiers) {
-            columnBuilder.addQualifier(ByteStringer.wrap(qualifier));
-          }
-        }
-        builder.addColumn(columnBuilder.build());
-      }
-    }
-    if (get.getMaxResultsPerColumnFamily() >= 0) {
-      builder.setStoreLimit(get.getMaxResultsPerColumnFamily());
-    }
-    if (get.getRowOffsetPerColumnFamily() > 0) {
-      builder.setStoreOffset(get.getRowOffsetPerColumnFamily());
-    }
-    if (get.isCheckExistenceOnly()){
-      builder.setExistenceOnly(true);
-    }
-    if (get.isClosestRowBefore()){
-      builder.setClosestRowBefore(true);
-    }
-    if (get.getConsistency() != null && get.getConsistency() != Consistency.STRONG) {
-      builder.setConsistency(toConsistency(get.getConsistency()));
-    }
-
-    return builder.build();
+    return ProtobufConverter.toGet(get);
   }
 
   /**
@@ -1095,57 +457,12 @@ public final class ProtobufUtil {
    */
   public static MutationProto toMutation(
     final Increment increment, final MutationProto.Builder builder, long nonce) {
-    builder.setRow(ByteStringer.wrap(increment.getRow()));
-    builder.setMutateType(MutationType.INCREMENT);
-    builder.setDurability(toDurability(increment.getDurability()));
-    if (nonce != HConstants.NO_NONCE) {
-      builder.setNonce(nonce);
-    }
-    TimeRange timeRange = increment.getTimeRange();
-    if (!timeRange.isAllTime()) {
-      HBaseProtos.TimeRange.Builder timeRangeBuilder =
-        HBaseProtos.TimeRange.newBuilder();
-      timeRangeBuilder.setFrom(timeRange.getMin());
-      timeRangeBuilder.setTo(timeRange.getMax());
-      builder.setTimeRange(timeRangeBuilder.build());
-    }
-    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[], List<Cell>> family: increment.getFamilyCellMap().entrySet()) {
-      columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-      columnBuilder.clearQualifierValue();
-      List<Cell> values = family.getValue();
-      if (values != null && values.size() > 0) {
-        for (Cell cell: values) {
-          valueBuilder.clear();
-          valueBuilder.setQualifier(ByteStringer.wrap(
-              cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
-          valueBuilder.setValue(ByteStringer.wrap(
-              cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-          if (cell.getTagsLength() > 0) {
-            valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(),
-                cell.getTagsOffset(), cell.getTagsLength()));
-          }
-          columnBuilder.addQualifierValue(valueBuilder.build());
-        }
-      }
-      builder.addColumnValue(columnBuilder.build());
-    }
-    Map<String, byte[]> attributes = increment.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute : attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
-        builder.addAttribute(attributeBuilder.build());
-      }
-    }
-    return builder.build();
+    return ProtobufConverter.toMutation(increment, builder, nonce);
   }
 
   public static MutationProto toMutation(final MutationType type, final Mutation mutation)
     throws IOException {
-    return toMutation(type, mutation, HConstants.NO_NONCE);
+    return ProtobufConverter.toMutation(type, mutation, HConstants.NO_NONCE);
   }
 
   /**
@@ -1170,35 +487,7 @@ public final class ProtobufUtil {
   public static MutationProto toMutation(final MutationType type, final Mutation mutation,
       MutationProto.Builder builder, long nonce)
   throws IOException {
-    builder = getMutationBuilderAndSetCommonFields(type, mutation, builder);
-    if (nonce != HConstants.NO_NONCE) {
-      builder.setNonce(nonce);
-    }
-    ColumnValue.Builder columnBuilder = ColumnValue.newBuilder();
-    QualifierValue.Builder valueBuilder = QualifierValue.newBuilder();
-    for (Map.Entry<byte[],List<Cell>> family: mutation.getFamilyCellMap().entrySet()) {
-      columnBuilder.clear();
-      columnBuilder.setFamily(ByteStringer.wrap(family.getKey()));
-      for (Cell cell: family.getValue()) {
-        valueBuilder.clear();
-        valueBuilder.setQualifier(ByteStringer.wrap(
-            cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength()));
-        valueBuilder.setValue(ByteStringer.wrap(
-            cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()));
-        valueBuilder.setTimestamp(cell.getTimestamp());
-        if(cell.getTagsLength() > 0) {
-          valueBuilder.setTags(ByteStringer.wrap(cell.getTagsArray(), cell.getTagsOffset(),
-              cell.getTagsLength()));
-        }
-        if (type == MutationType.DELETE || (type == MutationType.PUT && CellUtil.isDelete(cell))) {
-          KeyValue.Type keyValueType = KeyValue.Type.codeToType(cell.getTypeByte());
-          valueBuilder.setDeleteType(toDeleteType(keyValueType));
-        }
-        columnBuilder.addQualifierValue(valueBuilder.build());
-      }
-      builder.addColumnValue(columnBuilder.build());
-    }
-    return builder.build();
+    return ProtobufConverter.toMutation(type, mutation, builder, nonce);
   }
 
   /**
@@ -1212,7 +501,8 @@ public final class ProtobufUtil {
    */
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
       final MutationProto.Builder builder)  throws IOException {
-    return toMutationNoData(type, mutation, builder, HConstants.NO_NONCE);
+    return ProtobufConverter.toMutationNoData(type, mutation, builder,
+            HConstants.NO_NONCE);
   }
 
   /**
@@ -1231,37 +521,7 @@ public final class ProtobufUtil {
 
   public static MutationProto toMutationNoData(final MutationType type, final Mutation mutation,
       final MutationProto.Builder builder, long nonce) throws IOException {
-    getMutationBuilderAndSetCommonFields(type, mutation, builder);
-    builder.setAssociatedCellCount(mutation.size());
-    if (nonce != HConstants.NO_NONCE) {
-      builder.setNonce(nonce);
-    }
-    return builder.build();
-  }
-
-  /**
-   * Code shared by {@link #toMutation(MutationType, Mutation)} and
-   * {@link #toMutationNoData(MutationType, Mutation)}
-   * @param type
-   * @param mutation
-   * @return A partly-filled out protobuf'd Mutation.
-   */
-  private static MutationProto.Builder getMutationBuilderAndSetCommonFields(final MutationType type,
-      final Mutation mutation, MutationProto.Builder builder) {
-    builder.setRow(ByteStringer.wrap(mutation.getRow()));
-    builder.setMutateType(type);
-    builder.setDurability(toDurability(mutation.getDurability()));
-    builder.setTimestamp(mutation.getTimeStamp());
-    Map<String, byte[]> attributes = mutation.getAttributesMap();
-    if (!attributes.isEmpty()) {
-      NameBytesPair.Builder attributeBuilder = NameBytesPair.newBuilder();
-      for (Map.Entry<String, byte[]> attribute: attributes.entrySet()) {
-        attributeBuilder.setName(attribute.getKey());
-        attributeBuilder.setValue(ByteStringer.wrap(attribute.getValue()));
-        builder.addAttribute(attributeBuilder.build());
-      }
-    }
-    return builder;
+    return ProtobufConverter.toMutationNoData(type, mutation, builder, nonce);
   }
 
   /**
@@ -1271,24 +531,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final Result result) {
-    if (result.getExists() != null) {
-      return toResult(result.getExists(), result.isStale());
-    }
-
-    Cell[] cells = result.rawCells();
-    if (cells == null || cells.length == 0) {
-      return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
-    }
-
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    for (Cell c : cells) {
-      builder.addCell(toCell(c));
-    }
-
-    builder.setStale(result.isStale());
-    builder.setPartial(result.isPartial());
-
-    return builder.build();
+    return ProtobufConverter.toResult(result);
   }
 
   /**
@@ -1298,11 +541,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResult(final boolean existence, boolean stale) {
-    if (stale){
-      return existence ? EMPTY_RESULT_PB_EXISTS_TRUE_STALE : EMPTY_RESULT_PB_EXISTS_FALSE_STALE;
-    } else {
-      return existence ? EMPTY_RESULT_PB_EXISTS_TRUE : EMPTY_RESULT_PB_EXISTS_FALSE;
-    }
+    return ProtobufConverter.toResult(existence, stale);
   }
 
   /**
@@ -1313,13 +552,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResultNoData(final Result result) {
-    if (result.getExists() != null) return toResult(result.getExists(), result.isStale());
-    int size = result.size();
-    if (size == 0) return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
-    ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
-    builder.setAssociatedCellCount(size);
-    builder.setStale(result.isStale());
-    return builder.build();
+    return ProtobufConverter.toResultNoData(result);
   }
 
   /**
@@ -1329,23 +562,7 @@ public final class ProtobufUtil {
    * @return the converted client Result
    */
   public static Result toResult(final ClientProtos.Result proto) {
-    if (proto.hasExists()) {
-      if (proto.getStale()) {
-        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
-      }
-      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
-    }
-
-    List<CellProtos.Cell> values = proto.getCellList();
-    if (values.isEmpty()){
-      return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
-    }
-
-    List<Cell> cells = new ArrayList<Cell>(values.size());
-    for (CellProtos.Cell c : values) {
-      cells.add(toCell(c));
-    }
-    return Result.create(cells, null, proto.getStale(), proto.getPartial());
+    return ProtobufConverter.toResult(proto);
   }
 
   /**
@@ -1358,42 +575,8 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto, final CellScanner scanner)
   throws IOException {
-    List<CellProtos.Cell> values = proto.getCellList();
-
-    if (proto.hasExists()) {
-      if ((values != null && !values.isEmpty()) ||
-          (proto.hasAssociatedCellCount() && proto.getAssociatedCellCount() > 0)) {
-        throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
-      }
-      if (proto.getStale()) {
-        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE :EMPTY_RESULT_EXISTS_FALSE_STALE;
-      }
-      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
-    }
-
-    // TODO: Unit test that has some Cells in scanner and some in the proto.
-    List<Cell> cells = null;
-    if (proto.hasAssociatedCellCount()) {
-      int count = proto.getAssociatedCellCount();
-      cells = new ArrayList<Cell>(count + values.size());
-      for (int i = 0; i < count; i++) {
-        if (!scanner.advance()) throw new IOException("Failed get " + i + " of " + count);
-        cells.add(scanner.current());
-      }
-    }
-
-    if (!values.isEmpty()){
-      if (cells == null) cells = new ArrayList<Cell>(values.size());
-      for (CellProtos.Cell c: values) {
-        cells.add(toCell(c));
-      }
-    }
-
-    return (cells == null || cells.isEmpty())
-        ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
-        : Result.create(cells, null, proto.getStale());
+    return ProtobufConverter.toResult(proto, scanner);
   }
-
 
   /**
    * Convert a ByteArrayComparable to a protocol buffer Comparator
@@ -1402,10 +585,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Comparator
    */
   public static ComparatorProtos.Comparator toComparator(ByteArrayComparable comparator) {
-    ComparatorProtos.Comparator.Builder builder = ComparatorProtos.Comparator.newBuilder();
-    builder.setName(comparator.getClass().getName());
-    builder.setSerializedComparator(ByteStringer.wrap(comparator.toByteArray()));
-    return builder.build();
+    return ProtobufConverter.toComparator(comparator);
   }
 
   /**
@@ -1417,20 +597,7 @@ public final class ProtobufUtil {
   @SuppressWarnings("unchecked")
   public static ByteArrayComparable toComparator(ComparatorProtos.Comparator proto)
   throws IOException {
-    String type = proto.getName();
-    String funcName = "parseFrom";
-    byte [] value = proto.getSerializedComparator().toByteArray();
-    try {
-      Class<? extends ByteArrayComparable> c =
-        (Class<? extends ByteArrayComparable>)Class.forName(type, true, CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
-      if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
-      }
-      return (ByteArrayComparable)parseFrom.invoke(null, value);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    return ProtobufConverter.toComparator(proto);
   }
 
   /**
@@ -1441,22 +608,7 @@ public final class ProtobufUtil {
    */
   @SuppressWarnings("unchecked")
   public static Filter toFilter(FilterProtos.Filter proto) throws IOException {
-    String type = proto.getName();
-    final byte [] value = proto.getSerializedFilter().toByteArray();
-    String funcName = "parseFrom";
-    try {
-      Class<? extends Filter> c =
-        (Class<? extends Filter>)Class.forName(type, true, CLASS_LOADER);
-      Method parseFrom = c.getMethod(funcName, byte[].class);
-      if (parseFrom == null) {
-        throw new IOException("Unable to locate function: " + funcName + " in type: " + type);
-      }
-      return (Filter)parseFrom.invoke(c, value);
-    } catch (Exception e) {
-      // Either we couldn't instantiate the method object, or "parseFrom" failed.
-      // In either case, let's not retry.
-      throw new DoNotRetryIOException(e);
-    }
+    return ProtobufConverter.toFilter(proto);
   }
 
   /**
@@ -1466,10 +618,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer Filter
    */
   public static FilterProtos.Filter toFilter(Filter filter) throws IOException {
-    FilterProtos.Filter.Builder builder = FilterProtos.Filter.newBuilder();
-    builder.setName(filter.getClass().getName());
-    builder.setSerializedFilter(ByteStringer.wrap(filter.toByteArray()));
-    return builder.build();
+    return ProtobufConverter.toFilter(filter);
   }
 
   /**
@@ -1481,18 +630,7 @@ public final class ProtobufUtil {
    */
   public static DeleteType toDeleteType(
       KeyValue.Type type) throws IOException {
-    switch (type) {
-    case Delete:
-      return DeleteType.DELETE_ONE_VERSION;
-    case DeleteColumn:
-      return DeleteType.DELETE_MULTIPLE_VERSIONS;
-    case DeleteFamily:
-      return DeleteType.DELETE_FAMILY;
-    case DeleteFamilyVersion:
-      return DeleteType.DELETE_FAMILY_VERSION;
-    default:
-        throw new IOException("Unknown delete type: " + type);
-    }
+    return ProtobufConverter.toDeleteType(type);
   }
 
   /**
@@ -1504,18 +642,7 @@ public final class ProtobufUtil {
    */
   public static KeyValue.Type fromDeleteType(
       DeleteType type) throws IOException {
-    switch (type) {
-    case DELETE_ONE_VERSION:
-      return KeyValue.Type.Delete;
-    case DELETE_MULTIPLE_VERSIONS:
-      return KeyValue.Type.DeleteColumn;
-    case DELETE_FAMILY:
-      return KeyValue.Type.DeleteFamily;
-    case DELETE_FAMILY_VERSION:
-      return KeyValue.Type.DeleteFamilyVersion;
-    default:
-      throw new IOException("Unknown delete type: " + type);
-    }
+    return ProtobufConverter.fromDeleteType(type);
   }
 
   /**
@@ -1527,24 +654,7 @@ public final class ProtobufUtil {
    */
   @SuppressWarnings("unchecked")
   public static Throwable toException(final NameBytesPair parameter) throws IOException {
-    if (parameter == null || !parameter.hasValue()) return null;
-    String desc = parameter.getValue().toStringUtf8();
-    String type = parameter.getName();
-    try {
-      Class<? extends Throwable> c =
-        (Class<? extends Throwable>)Class.forName(type, true, CLASS_LOADER);
-      Constructor<? extends Throwable> cn = null;
-      try {
-        cn = c.getDeclaredConstructor(String.class);
-        return cn.newInstance(desc);
-      } catch (NoSuchMethodException e) {
-        // Could be a raw RemoteException. See HBASE-8987.
-        cn = c.getDeclaredConstructor(String.class, String.class);
-        return cn.newInstance(type, desc);
-      }
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
+    return ProtobufConverter.toException(parameter);
   }
 
 // Start helpers for Client
@@ -1918,12 +1028,7 @@ public final class ProtobufUtil {
    * @return the converted Permission
    */
   public static Permission toPermission(AccessControlProtos.Permission proto) {
-    if (proto.getType() != AccessControlProtos.Permission.Type.Global) {
-      return toTablePermission(proto);
-    } else {
-      List<Permission.Action> actions = toPermissionActions(proto.getGlobalPermission().getActionList());
-      return new Permission(actions.toArray(new Permission.Action[actions.size()]));
-    }
+    return ProtobufConverter.toPermission(proto);
   }
 
   /**
@@ -1933,43 +1038,7 @@ public final class ProtobufUtil {
    * @return the converted TablePermission
    */
   public static TablePermission toTablePermission(AccessControlProtos.Permission proto) {
-    if(proto.getType() == AccessControlProtos.Permission.Type.Global) {
-      AccessControlProtos.GlobalPermission perm = proto.getGlobalPermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      return new TablePermission(null, null, null,
-          actions.toArray(new Permission.Action[actions.size()]));
-    }
-    if(proto.getType() == AccessControlProtos.Permission.Type.Namespace) {
-      AccessControlProtos.NamespacePermission perm = proto.getNamespacePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      if(!proto.hasNamespacePermission()) {
-        throw new IllegalStateException("Namespace must not be empty in NamespacePermission");
-      }
-      String namespace = perm.getNamespaceName().toStringUtf8();
-      return new TablePermission(namespace, actions.toArray(new Permission.Action[actions.size()]));
-    }
-    if(proto.getType() == AccessControlProtos.Permission.Type.Table) {
-      AccessControlProtos.TablePermission perm = proto.getTablePermission();
-      List<Permission.Action> actions = toPermissionActions(perm.getActionList());
-
-      byte[] qualifier = null;
-      byte[] family = null;
-      TableName table = null;
-
-      if (!perm.hasTableName()) {
-        throw new IllegalStateException("TableName cannot be empty");
-      }
-      table = ProtobufUtil.toTableName(perm.getTableName());
-
-      if (perm.hasFamily()) family = perm.getFamily().toByteArray();
-      if (perm.hasQualifier()) qualifier = perm.getQualifier().toByteArray();
-
-      return new TablePermission(table, family, qualifier,
-          actions.toArray(new Permission.Action[actions.size()]));
-    }
-    throw new IllegalStateException("Unrecognize Perm Type: "+proto.getType());
+    return ProtobufConverter.toTablePermission(proto);
   }
 
   /**
@@ -1979,58 +1048,7 @@ public final class ProtobufUtil {
    * @return the protobuf Permission
    */
   public static AccessControlProtos.Permission toPermission(Permission perm) {
-    AccessControlProtos.Permission.Builder ret = AccessControlProtos.Permission.newBuilder();
-    if (perm instanceof TablePermission) {
-      TablePermission tablePerm = (TablePermission)perm;
-      if(tablePerm.hasNamespace()) {
-        ret.setType(AccessControlProtos.Permission.Type.Namespace);
-
-        AccessControlProtos.NamespacePermission.Builder builder =
-            AccessControlProtos.NamespacePermission.newBuilder();
-        builder.setNamespaceName(ByteString.copyFromUtf8(tablePerm.getNamespace()));
-        Permission.Action actions[] = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setNamespacePermission(builder);
-        return ret.build();
-      } else if (tablePerm.hasTable()) {
-        ret.setType(AccessControlProtos.Permission.Type.Table);
-
-        AccessControlProtos.TablePermission.Builder builder =
-            AccessControlProtos.TablePermission.newBuilder();
-        builder.setTableName(ProtobufUtil.toProtoTableName(tablePerm.getTableName()));
-        if (tablePerm.hasFamily()) {
-          builder.setFamily(ByteStringer.wrap(tablePerm.getFamily()));
-        }
-        if (tablePerm.hasQualifier()) {
-          builder.setQualifier(ByteStringer.wrap(tablePerm.getQualifier()));
-        }
-        Permission.Action actions[] = perm.getActions();
-        if (actions != null) {
-          for (Permission.Action a : actions) {
-            builder.addAction(toPermissionAction(a));
-          }
-        }
-        ret.setTablePermission(builder);
-        return ret.build();
-      }
-    }
-
-    ret.setType(AccessControlProtos.Permission.Type.Global);
-
-    AccessControlProtos.GlobalPermission.Builder builder =
-        AccessControlProtos.GlobalPermission.newBuilder();
-    Permission.Action actions[] = perm.getActions();
-    if (actions != null) {
-      for (Permission.Action a: actions) {
-        builder.addAction(toPermissionAction(a));
-      }
-    }
-    ret.setGlobalPermission(builder);
-    return ret.build();
+    return ProtobufConverter.toPermission(perm);
   }
 
   /**
@@ -2041,11 +1059,7 @@ public final class ProtobufUtil {
    */
   public static List<Permission.Action> toPermissionActions(
       List<AccessControlProtos.Permission.Action> protoActions) {
-    List<Permission.Action> actions = new ArrayList<Permission.Action>(protoActions.size());
-    for (AccessControlProtos.Permission.Action a : protoActions) {
-      actions.add(toPermissionAction(a));
-    }
-    return actions;
+    return ProtobufConverter.toPermissionActions(protoActions);
   }
 
   /**
@@ -2056,19 +1070,7 @@ public final class ProtobufUtil {
    */
   public static Permission.Action toPermissionAction(
       AccessControlProtos.Permission.Action action) {
-    switch (action) {
-      case READ:
-        return Permission.Action.READ;
-      case WRITE:
-        return Permission.Action.WRITE;
-      case EXEC:
-        return Permission.Action.EXEC;
-      case CREATE:
-        return Permission.Action.CREATE;
-      case ADMIN:
-        return Permission.Action.ADMIN;
-    }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
+    return ProtobufConverter.toPermissionAction(action);
   }
 
   /**
@@ -2079,19 +1081,7 @@ public final class ProtobufUtil {
    */
   public static AccessControlProtos.Permission.Action toPermissionAction(
       Permission.Action action) {
-    switch (action) {
-      case READ:
-        return AccessControlProtos.Permission.Action.READ;
-      case WRITE:
-        return AccessControlProtos.Permission.Action.WRITE;
-      case EXEC:
-        return AccessControlProtos.Permission.Action.EXEC;
-      case CREATE:
-        return AccessControlProtos.Permission.Action.CREATE;
-      case ADMIN:
-        return AccessControlProtos.Permission.Action.ADMIN;
-    }
-    throw new IllegalArgumentException("Unknown action value "+action.name());
+    return ProtobufConverter.toPermissionAction(action);
   }
 
   /**
@@ -2101,10 +1091,7 @@ public final class ProtobufUtil {
    * @return the protobuf UserPermission
    */
   public static AccessControlProtos.UserPermission toUserPermission(UserPermission perm) {
-    return AccessControlProtos.UserPermission.newBuilder()
-        .setUser(ByteStringer.wrap(perm.getUser()))
-        .setPermission(toPermission(perm))
-        .build();
+    return ProtobufConverter.toUserPermission(perm);
   }
 
   /**
@@ -2114,8 +1101,7 @@ public final class ProtobufUtil {
    * @return the converted UserPermission
    */
   public static UserPermission toUserPermission(AccessControlProtos.UserPermission proto) {
-    return new UserPermission(proto.getUser().toByteArray(),
-        toTablePermission(proto.getPermission()));
+    return ProtobufConverter.toUserPermission(proto);
   }
 
   /**
@@ -2127,18 +1113,7 @@ public final class ProtobufUtil {
    */
   public static AccessControlProtos.UsersAndPermissions toUserTablePermissions(
       ListMultimap<String, TablePermission> perm) {
-    AccessControlProtos.UsersAndPermissions.Builder builder =
-                  AccessControlProtos.UsersAndPermissions.newBuilder();
-    for (Map.Entry<String, Collection<TablePermission>> entry : perm.asMap().entrySet()) {
-      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
-                  AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
-      userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (TablePermission tablePerm: entry.getValue()) {
-        userPermBuilder.addPermissions(toPermission(tablePerm));
-      }
-      builder.addUserPermissions(userPermBuilder.build());
-    }
-    return builder.build();
+    return ProtobufConverter.toUserTablePermissions(perm);
   }
 
   /**
@@ -2380,18 +1355,7 @@ public final class ProtobufUtil {
    */
   public static ListMultimap<String, TablePermission> toUserTablePermissions(
       AccessControlProtos.UsersAndPermissions proto) {
-    ListMultimap<String, TablePermission> perms = ArrayListMultimap.create();
-    AccessControlProtos.UsersAndPermissions.UserPermissions userPerm;
-
-    for (int i = 0; i < proto.getUserPermissionsCount(); i++) {
-      userPerm = proto.getUserPermissions(i);
-      for (int j = 0; j < userPerm.getPermissionsCount(); j++) {
-        TablePermission tablePerm = toTablePermission(userPerm.getPermissions(j));
-        perms.put(userPerm.getUser().toStringUtf8(), tablePerm);
-      }
-    }
-
-    return perms;
+    return ProtobufConverter.toUserTablePermissions(proto);
   }
 
   /**
@@ -2401,13 +1365,7 @@ public final class ProtobufUtil {
    * @return the protobuf Token message
    */
   public static AuthenticationProtos.Token toToken(Token<AuthenticationTokenIdentifier> token) {
-    AuthenticationProtos.Token.Builder builder = AuthenticationProtos.Token.newBuilder();
-    builder.setIdentifier(ByteStringer.wrap(token.getIdentifier()));
-    builder.setPassword(ByteStringer.wrap(token.getPassword()));
-    if (token.getService() != null) {
-      builder.setService(ByteString.copyFromUtf8(token.getService().toString()));
-    }
-    return builder.build();
+    return ProtobufConverter.toToken(token);
   }
 
   /**
@@ -2417,11 +1375,7 @@ public final class ProtobufUtil {
    * @return the Token instance
    */
   public static Token<AuthenticationTokenIdentifier> toToken(AuthenticationProtos.Token proto) {
-    return new Token<AuthenticationTokenIdentifier>(
-        proto.hasIdentifier() ? proto.getIdentifier().toByteArray() : null,
-        proto.hasPassword() ? proto.getPassword().toByteArray() : null,
-        AuthenticationTokenIdentifier.AUTH_TOKEN_TYPE,
-        proto.hasService() ? new Text(proto.getService().toStringUtf8()) : null);
+    return ProtobufConverter.toToken(proto);
   }
 
   /**
@@ -2447,36 +1401,11 @@ public final class ProtobufUtil {
   }
 
   public static ScanMetrics toScanMetrics(final byte[] bytes) {
-    Parser<MapReduceProtos.ScanMetrics> parser = MapReduceProtos.ScanMetrics.PARSER;
-    MapReduceProtos.ScanMetrics pScanMetrics = null;
-    try {
-      pScanMetrics = parser.parseFrom(bytes);
-    } catch (InvalidProtocolBufferException e) {
-      //Ignored there are just no key values to add.
-    }
-    ScanMetrics scanMetrics = new ScanMetrics();
-    if (pScanMetrics != null) {
-      for (HBaseProtos.NameInt64Pair pair : pScanMetrics.getMetricsList()) {
-        if (pair.hasName() && pair.hasValue()) {
-          scanMetrics.setCounter(pair.getName(), pair.getValue());
-        }
-      }
-    }
-    return scanMetrics;
+    return ProtobufConverter.toScanMetrics(bytes);
   }
 
   public static MapReduceProtos.ScanMetrics toScanMetrics(ScanMetrics scanMetrics) {
-    MapReduceProtos.ScanMetrics.Builder builder = MapReduceProtos.ScanMetrics.newBuilder();
-    Map<String, Long> metrics = scanMetrics.getMetricsMap();
-    for (Entry<String, Long> e : metrics.entrySet()) {
-      HBaseProtos.NameInt64Pair nameInt64Pair =
-          HBaseProtos.NameInt64Pair.newBuilder()
-              .setName(e.getKey())
-              .setValue(e.getValue())
-              .build();
-      builder.addMetrics(nameInt64Pair);
-    }
-    return builder.build();
+    return ProtobufConverter.toScanMetrics(scanMetrics);
   }
 
   /**
@@ -2499,51 +1428,22 @@ public final class ProtobufUtil {
   public static CellProtos.Cell toCell(final Cell kv) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    CellProtos.Cell.Builder kvbuilder = CellProtos.Cell.newBuilder();
-    kvbuilder.setRow(ByteStringer.wrap(kv.getRowArray(), kv.getRowOffset(),
-        kv.getRowLength()));
-    kvbuilder.setFamily(ByteStringer.wrap(kv.getFamilyArray(),
-        kv.getFamilyOffset(), kv.getFamilyLength()));
-    kvbuilder.setQualifier(ByteStringer.wrap(kv.getQualifierArray(),
-        kv.getQualifierOffset(), kv.getQualifierLength()));
-    kvbuilder.setCellType(CellProtos.CellType.valueOf(kv.getTypeByte()));
-    kvbuilder.setTimestamp(kv.getTimestamp());
-    kvbuilder.setValue(ByteStringer.wrap(kv.getValueArray(), kv.getValueOffset(),
-        kv.getValueLength()));
-    return kvbuilder.build();
+    return ProtobufConverter.toCell(kv);
   }
 
   public static Cell toCell(final CellProtos.Cell cell) {
     // Doing this is going to kill us if we do it for all data passed.
     // St.Ack 20121205
-    return CellUtil.createCell(cell.getRow().toByteArray(),
-      cell.getFamily().toByteArray(),
-      cell.getQualifier().toByteArray(),
-      cell.getTimestamp(),
-      (byte)cell.getCellType().getNumber(),
-      cell.getValue().toByteArray());
+    return ProtobufConverter.toCell(cell);
   }
 
   public static HBaseProtos.NamespaceDescriptor toProtoNamespaceDescriptor(NamespaceDescriptor ns) {
-    HBaseProtos.NamespaceDescriptor.Builder b =
-        HBaseProtos.NamespaceDescriptor.newBuilder()
-            .setName(ByteString.copyFromUtf8(ns.getName()));
-    for(Map.Entry<String, String> entry: ns.getConfiguration().entrySet()) {
-      b.addConfiguration(HBaseProtos.NameStringPair.newBuilder()
-          .setName(entry.getKey())
-          .setValue(entry.getValue()));
-    }
-    return b.build();
+    return ProtobufConverter.toProtoNamespaceDescriptor(ns);
   }
 
   public static NamespaceDescriptor toNamespaceDescriptor(
       HBaseProtos.NamespaceDescriptor desc) throws IOException {
-    NamespaceDescriptor.Builder b =
-      NamespaceDescriptor.create(desc.getName().toStringUtf8());
-    for(HBaseProtos.NameStringPair prop : desc.getConfigurationList()) {
-      b.addConfiguration(prop.getName(), prop.getValue());
-    }
-    return b.build();
+    return ProtobufConverter.toNamespaceDescriptor(desc);
   }
 
   /**
@@ -2587,67 +1487,20 @@ public final class ProtobufUtil {
     // compaction descriptor contains relative paths.
     // input / output paths are relative to the store dir
     // store dir is relative to region dir
-    CompactionDescriptor.Builder builder = CompactionDescriptor.newBuilder()
-        .setTableName(ByteStringer.wrap(info.getTable().toBytes()))
-        .setEncodedRegionName(ByteStringer.wrap(info.getEncodedNameAsBytes()))
-        .setFamilyName(ByteStringer.wrap(family))
-        .setStoreHomeDir(storeDir.getName()); //make relative
-    for (Path inputPath : inputPaths) {
-      builder.addCompactionInput(inputPath.getName()); //relative path
-    }
-    for (Path outputPath : outputPaths) {
-      builder.addCompactionOutput(outputPath.getName());
-    }
-    builder.setRegionName(ByteStringer.wrap(info.getRegionName()));
-    return builder.build();
+    return ProtobufConverter.toCompactionDescriptor(info, family, inputPaths,
+            outputPaths, storeDir);
   }
 
   public static FlushDescriptor toFlushDescriptor(FlushAction action, HRegionInfo hri,
       long flushSeqId, Map<byte[], List<Path>> committedFiles) {
-    FlushDescriptor.Builder desc = FlushDescriptor.newBuilder()
-        .setAction(action)
-        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
-        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
-        .setFlushSequenceNumber(flushSeqId)
-        .setTableName(ByteStringer.wrap(hri.getTable().getName()));
-
-    for (Map.Entry<byte[], List<Path>> entry : committedFiles.entrySet()) {
-      WALProtos.FlushDescriptor.StoreFlushDescriptor.Builder builder =
-          WALProtos.FlushDescriptor.StoreFlushDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey())); //relative to region
-      if (entry.getValue() != null) {
-        for (Path path : entry.getValue()) {
-          builder.addFlushOutput(path.getName());
-        }
-      }
-      desc.addStoreFlushes(builder);
-    }
-    return desc.build();
+    return ProtobufConverter.toFlushDescriptor(action, hri, flushSeqId, committedFiles);
   }
 
   public static RegionEventDescriptor toRegionEventDescriptor(
       EventType eventType, HRegionInfo hri, long seqId, ServerName server,
       Map<byte[], List<Path>> storeFiles) {
-    RegionEventDescriptor.Builder desc = RegionEventDescriptor.newBuilder()
-        .setEventType(eventType)
-        .setTableName(ByteStringer.wrap(hri.getTable().getName()))
-        .setEncodedRegionName(ByteStringer.wrap(hri.getEncodedNameAsBytes()))
-        .setRegionName(ByteStringer.wrap(hri.getRegionName()))
-        .setLogSequenceNumber(seqId)
-        .setServer(toServerName(server));
-
-    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey()));
-      for (Path path : entry.getValue()) {
-        builder.addStoreFile(path.getName());
-      }
-
-      desc.addStores(builder);
-    }
-    return desc.build();
+    return ProtobufConverter.toRegionEventDescriptor(eventType, hri, seqId,
+            server, storeFiles);
   }
 
   /**
@@ -2671,7 +1524,7 @@ public final class ProtobufUtil {
       // Should be small enough.
       return TextFormat.shortDebugString(m);
     } else if (m instanceof MutationProto) {
-      return toShortString((MutationProto)m);
+      return ProtobufConverter.toShortString((MutationProto) m);
     } else if (m instanceof GetRequest) {
       GetRequest r = (GetRequest) m;
       return "region= " + getStringForByteString(r.getRegion().getValue()) +
@@ -2699,25 +1552,12 @@ public final class ProtobufUtil {
     return Bytes.toStringBinary(bs.toByteArray());
   }
 
-  /**
-   * Print out some subset of a MutationProto rather than all of it and its data
-   * @param proto Protobuf to print out
-   * @return Short String of mutation proto
-   */
-  static String toShortString(final MutationProto proto) {
-    return "row=" + Bytes.toString(proto.getRow().toByteArray()) +
-        ", type=" + proto.getMutateType().toString();
-  }
-
   public static TableName toTableName(HBaseProtos.TableName tableNamePB) {
-    return TableName.valueOf(tableNamePB.getNamespace().asReadOnlyByteBuffer(),
-        tableNamePB.getQualifier().asReadOnlyByteBuffer());
+    return ProtobufConverter.toTableName(tableNamePB);
   }
 
   public static HBaseProtos.TableName toProtoTableName(TableName tableName) {
-    return HBaseProtos.TableName.newBuilder()
-        .setNamespace(ByteStringer.wrap(tableName.getNamespace()))
-        .setQualifier(ByteStringer.wrap(tableName.getQualifier())).build();
+    return ProtobufConverter.toProtoTableName(tableName);
   }
 
   public static TableName[] getTableNameArray(List<HBaseProtos.TableName> tableNamesList) {
@@ -2738,8 +1578,7 @@ public final class ProtobufUtil {
    * @return the converted client CellVisibility
    */
   public static CellVisibility toCellVisibility(ClientProtos.CellVisibility proto) {
-    if (proto == null) return null;
-    return new CellVisibility(proto.getExpression());
+    return ProtobufConverter.toCellVisibility(proto);
   }
 
   /**
@@ -2750,15 +1589,7 @@ public final class ProtobufUtil {
    * @throws DeserializationException
    */
   public static CellVisibility toCellVisibility(byte[] protoBytes) throws DeserializationException {
-    if (protoBytes == null) return null;
-    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
-    ClientProtos.CellVisibility proto = null;
-    try {
-      proto = builder.mergeFrom(protoBytes).build();
-    } catch (InvalidProtocolBufferException e) {
-      throw new DeserializationException(e);
-    }
-    return toCellVisibility(proto);
+    return ProtobufConverter.toCellVisibility(protoBytes);
   }
 
   /**
@@ -2768,9 +1599,7 @@ public final class ProtobufUtil {
    * @return a protocol buffer CellVisibility
    */
   public static ClientProtos.CellVisibility toCellVisibility(CellVisibility cellVisibility) {
-    ClientProtos.CellVisibility.Builder builder = ClientProtos.CellVisibility.newBuilder();
-    builder.setExpression(cellVisibility.getExpression());
-    return builder.build();
+    return ProtobufConverter.toCellVisibility(cellVisibility);
   }
 
   /**
@@ -2780,8 +1609,7 @@ public final class ProtobufUtil {
    * @return the converted client Authorizations
    */
   public static Authorizations toAuthorizations(ClientProtos.Authorizations proto) {
-    if (proto == null) return null;
-    return new Authorizations(proto.getLabelList());
+    return ProtobufConverter.toAuthorizations(proto);
   }
 
   /**
@@ -2792,15 +1620,7 @@ public final class ProtobufUtil {
    * @throws DeserializationException
    */
   public static Authorizations toAuthorizations(byte[] protoBytes) throws DeserializationException {
-    if (protoBytes == null) return null;
-    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
-    ClientProtos.Authorizations proto = null;
-    try {
-      proto = builder.mergeFrom(protoBytes).build();
-    } catch (InvalidProtocolBufferException e) {
-      throw new DeserializationException(e);
-    }
-    return toAuthorizations(proto);
+    return ProtobufConverter.toAuthorizations(protoBytes);
   }
 
   /**
@@ -2810,50 +1630,22 @@ public final class ProtobufUtil {
    * @return a protocol buffer Authorizations
    */
   public static ClientProtos.Authorizations toAuthorizations(Authorizations authorizations) {
-    ClientProtos.Authorizations.Builder builder = ClientProtos.Authorizations.newBuilder();
-    for (String label : authorizations.getLabels()) {
-      builder.addLabel(label);
-    }
-    return builder.build();
+    return ProtobufConverter.toAuthorizations(authorizations);
   }
 
   public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(String user,
       Permission perms) {
-    return AccessControlProtos.UsersAndPermissions.newBuilder()
-      .addUserPermissions(AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder()
-        .setUser(ByteString.copyFromUtf8(user))
-        .addPermissions(toPermission(perms))
-        .build())
-      .build();
+    return ProtobufConverter.toUsersAndPermissions(user, perms);
   }
 
   public static AccessControlProtos.UsersAndPermissions toUsersAndPermissions(
       ListMultimap<String, Permission> perms) {
-    AccessControlProtos.UsersAndPermissions.Builder builder =
-        AccessControlProtos.UsersAndPermissions.newBuilder();
-    for (Map.Entry<String, Collection<Permission>> entry : perms.asMap().entrySet()) {
-      AccessControlProtos.UsersAndPermissions.UserPermissions.Builder userPermBuilder =
-        AccessControlProtos.UsersAndPermissions.UserPermissions.newBuilder();
-      userPermBuilder.setUser(ByteString.copyFromUtf8(entry.getKey()));
-      for (Permission perm: entry.getValue()) {
-        userPermBuilder.addPermissions(toPermission(perm));
-      }
-      builder.addUserPermissions(userPermBuilder.build());
-    }
-    return builder.build();
+    return ProtobufConverter.toUsersAndPermissions(perms);
   }
 
   public static ListMultimap<String, Permission> toUsersAndPermissions(
       AccessControlProtos.UsersAndPermissions proto) {
-    ListMultimap<String, Permission> result = ArrayListMultimap.create();
-    for (AccessControlProtos.UsersAndPermissions.UserPermissions userPerms:
-        proto.getUserPermissionsList()) {
-      String user = userPerms.getUser().toStringUtf8();
-      for (AccessControlProtos.Permission perm: userPerms.getPermissionsList()) {
-        result.put(user, toPermission(perm));
-      }
-    }
-    return result;
+    return ProtobufConverter.toUsersAndPermissions(proto);
   }
 
   /**
@@ -2863,16 +1655,7 @@ public final class ProtobufUtil {
    * @return the converted client TimeUnit
    */
   public static TimeUnit toTimeUnit(final HBaseProtos.TimeUnit proto) {
-    switch (proto) {
-      case NANOSECONDS:  return TimeUnit.NANOSECONDS;
-      case MICROSECONDS: return TimeUnit.MICROSECONDS;
-      case MILLISECONDS: return TimeUnit.MILLISECONDS;
-      case SECONDS:      return TimeUnit.SECONDS;
-      case MINUTES:      return TimeUnit.MINUTES;
-      case HOURS:        return TimeUnit.HOURS;
-      case DAYS:         return TimeUnit.DAYS;
-    }
-    throw new RuntimeException("Invalid TimeUnit " + proto);
+    return ProtobufConverter.toTimeUnit(proto);
   }
 
   /**
@@ -2882,16 +1665,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer TimeUnit
    */
   public static HBaseProtos.TimeUnit toProtoTimeUnit(final TimeUnit timeUnit) {
-    switch (timeUnit) {
-      case NANOSECONDS:  return HBaseProtos.TimeUnit.NANOSECONDS;
-      case MICROSECONDS: return HBaseProtos.TimeUnit.MICROSECONDS;
-      case MILLISECONDS: return HBaseProtos.TimeUnit.MILLISECONDS;
-      case SECONDS:      return HBaseProtos.TimeUnit.SECONDS;
-      case MINUTES:      return HBaseProtos.TimeUnit.MINUTES;
-      case HOURS:        return HBaseProtos.TimeUnit.HOURS;
-      case DAYS:         return HBaseProtos.TimeUnit.DAYS;
-    }
-    throw new RuntimeException("Invalid TimeUnit " + timeUnit);
+    return ProtobufConverter.toProtoTimeUnit(timeUnit);
   }
 
   /**
@@ -2901,15 +1675,7 @@ public final class ProtobufUtil {
    * @return the converted client ThrottleType
    */
   public static ThrottleType toThrottleType(final QuotaProtos.ThrottleType proto) {
-    switch (proto) {
-      case REQUEST_NUMBER: return ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return ThrottleType.READ_SIZE;
-    }
-    throw new RuntimeException("Invalid ThrottleType " + proto);
+    return ProtobufConverter.toThrottleType(proto);
   }
 
   /**
@@ -2919,15 +1685,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer ThrottleType
    */
   public static QuotaProtos.ThrottleType toProtoThrottleType(final ThrottleType type) {
-    switch (type) {
-      case REQUEST_NUMBER: return QuotaProtos.ThrottleType.REQUEST_NUMBER;
-      case REQUEST_SIZE:   return QuotaProtos.ThrottleType.REQUEST_SIZE;
-      case WRITE_NUMBER:   return QuotaProtos.ThrottleType.WRITE_NUMBER;
-      case WRITE_SIZE:     return QuotaProtos.ThrottleType.WRITE_SIZE;
-      case READ_NUMBER:    return QuotaProtos.ThrottleType.READ_NUMBER;
-      case READ_SIZE:      return QuotaProtos.ThrottleType.READ_SIZE;
-    }
-    throw new RuntimeException("Invalid ThrottleType " + type);
+    return ProtobufConverter.toProtoThrottleType(type);
   }
 
   /**
@@ -2937,11 +1695,7 @@ public final class ProtobufUtil {
    * @return the converted client QuotaScope
    */
   public static QuotaScope toQuotaScope(final QuotaProtos.QuotaScope proto) {
-    switch (proto) {
-      case CLUSTER: return QuotaScope.CLUSTER;
-      case MACHINE: return QuotaScope.MACHINE;
-    }
-    throw new RuntimeException("Invalid QuotaScope " + proto);
+    return ProtobufConverter.toQuotaScope(proto);
   }
 
   /**
@@ -2951,11 +1705,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer QuotaScope
    */
   public static QuotaProtos.QuotaScope toProtoQuotaScope(final QuotaScope scope) {
-    switch (scope) {
-      case CLUSTER: return QuotaProtos.QuotaScope.CLUSTER;
-      case MACHINE: return QuotaProtos.QuotaScope.MACHINE;
-    }
-    throw new RuntimeException("Invalid QuotaScope " + scope);
+    return ProtobufConverter.toProtoQuotaScope(scope);
   }
 
   /**
@@ -2965,10 +1715,7 @@ public final class ProtobufUtil {
    * @return the converted client QuotaType
    */
   public static QuotaType toQuotaScope(final QuotaProtos.QuotaType proto) {
-    switch (proto) {
-      case THROTTLE: return QuotaType.THROTTLE;
-    }
-    throw new RuntimeException("Invalid QuotaType " + proto);
+    return ProtobufConverter.toQuotaScope(proto);
   }
 
   /**
@@ -2978,10 +1725,7 @@ public final class ProtobufUtil {
    * @return the converted protocol buffer QuotaType
    */
   public static QuotaProtos.QuotaType toProtoQuotaScope(final QuotaType type) {
-    switch (type) {
-      case THROTTLE: return QuotaProtos.QuotaType.THROTTLE;
-    }
-    throw new RuntimeException("Invalid QuotaType " + type);
+    return ProtobufConverter.toProtoQuotaScope(type);
   }
 
   /**
@@ -2994,11 +1738,7 @@ public final class ProtobufUtil {
    */
   public static QuotaProtos.TimedQuota toTimedQuota(final long limit, final TimeUnit timeUnit,
       final QuotaScope scope) {
-    return QuotaProtos.TimedQuota.newBuilder()
-            .setSoftLimit(limit)
-            .setTimeUnit(toProtoTimeUnit(timeUnit))
-            .setScope(toProtoQuotaScope(scope))
-            .build();
+    return ProtobufConverter.toTimedQuota(limit, timeUnit, scope);
   }
 
   /**
@@ -3014,21 +1754,8 @@ public final class ProtobufUtil {
    */
   public static WALProtos.BulkLoadDescriptor toBulkLoadDescriptor(TableName tableName,
       ByteString encodedRegionName, Map<byte[], List<Path>> storeFiles, long bulkloadSeqId) {
-    BulkLoadDescriptor.Builder desc = BulkLoadDescriptor.newBuilder()
-        .setTableName(ProtobufUtil.toProtoTableName(tableName))
-        .setEncodedRegionName(encodedRegionName).setBulkloadSeqNum(bulkloadSeqId);
-
-    for (Map.Entry<byte[], List<Path>> entry : storeFiles.entrySet()) {
-      WALProtos.StoreDescriptor.Builder builder = StoreDescriptor.newBuilder()
-          .setFamilyName(ByteStringer.wrap(entry.getKey()))
-          .setStoreHomeDir(Bytes.toString(entry.getKey())); // relative to region
-      for (Path path : entry.getValue()) {
-        builder.addStoreFile(path.getName());
-      }
-      desc.addStores(builder);
-    }
-
-    return desc.build();
+    return ProtobufConverter.toBulkLoadDescriptor(tableName, encodedRegionName,
+            storeFiles, bulkloadSeqId);
   }
 
   public static ReplicationLoadSink toReplicationLoadSink(
