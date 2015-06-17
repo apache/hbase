@@ -18,21 +18,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import java.io.File;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.yammer.metrics.core.MetricsRegistry;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -63,7 +50,23 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.StringUtils;
-import com.google.protobuf.InvalidProtocolBufferException;
+
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Utility for {@link TableMapper} and {@link TableReducer}
@@ -278,6 +281,44 @@ public class TableMapReduceUtil {
     conf.setFloat("hbase.offheapcache.percentage", 0f);
     conf.setFloat("hbase.bucketcache.size", 0f);
     conf.unset("hbase.bucketcache.ioengine");
+  }
+
+  /**
+   * Sets up the job for reading from one or more table snapshots, with one or more scans
+   * per snapshot.
+   * It bypasses hbase servers and read directly from snapshot files.
+   *
+   * @param snapshotScans     map of snapshot name to scans on that snapshot.
+   * @param mapper            The mapper class to use.
+   * @param outputKeyClass    The class of the output key.
+   * @param outputValueClass  The class of the output value.
+   * @param job               The current job to adjust.  Make sure the passed job is
+   *                          carrying all necessary HBase configuration.
+   * @param addDependencyJars upload HBase jars and jars for any of the configured
+   *                          job classes via the distributed cache (tmpjars).
+   */
+  public static void initMultiTableSnapshotMapperJob(Map<String, Collection<Scan>> snapshotScans,
+      Class<? extends TableMapper> mapper, Class<?> outputKeyClass, Class<?> outputValueClass,
+      Job job, boolean addDependencyJars, Path tmpRestoreDir) throws IOException {
+    MultiTableSnapshotInputFormat.setInput(job.getConfiguration(), snapshotScans, tmpRestoreDir);
+
+    job.setInputFormatClass(MultiTableSnapshotInputFormat.class);
+    if (outputValueClass != null) {
+      job.setMapOutputValueClass(outputValueClass);
+    }
+    if (outputKeyClass != null) {
+      job.setMapOutputKeyClass(outputKeyClass);
+    }
+    job.setMapperClass(mapper);
+    Configuration conf = job.getConfiguration();
+    HBaseConfiguration.merge(conf, HBaseConfiguration.create(conf));
+
+    if (addDependencyJars) {
+      addDependencyJars(job);
+      addDependencyJars(job.getConfiguration(), MetricsRegistry.class);
+    }
+
+    resetCacheConfig(job.getConfiguration());
   }
 
   /**

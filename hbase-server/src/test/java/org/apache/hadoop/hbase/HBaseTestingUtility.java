@@ -1534,6 +1534,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   }
 
   /**
+   * Create a table with multiple regions.
+   * @param tableName
+   * @param family
+   * @param numRegions
+   * @return An HTable instance for the created table.
+   * @throws IOException
+   */
+  public HTable createMultiRegionTable(TableName tableName, byte[] family, int numRegions)
+      throws IOException {
+    if (numRegions < 3) throw new IOException("Must create at least 3 regions");
+    byte[] startKey = Bytes.toBytes("aaaaa");
+    byte[] endKey = Bytes.toBytes("zzzzz");
+    byte[][] splitKeys = Bytes.split(startKey, endKey, numRegions - 3);
+
+    return createTable(tableName, family, splitKeys);
+  }
+
+  /**
    * Drop an existing table
    * @param tableName existing table
    */
