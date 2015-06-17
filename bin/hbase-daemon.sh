@@ -202,15 +202,26 @@ case $startStop in
   ;;
 
 (foreground_start)
-    # Add to the command log file vital stats on our environment.
-    echo "`date` Starting $command on `hostname`" >> ${HBASE_LOGLOG}
-    echo "`ulimit -a`" >> "$HBASE_LOGLOG" 2>&1
-    # in case the parent shell gets the kill make sure to trap signals.
-    # Only one will get called. Either the trap or the flow will go through.
     trap cleanAfterRun SIGHUP SIGINT SIGTERM EXIT
-    nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
-        --config "${HBASE_CONF_DIR}" \
-        $command "$@" start >> ${HBASE_LOGOUT} 2>&1 &
+    if [ "$HBASE_NO_REDIRECT_LOG" != "" ]; then
+        # NO REDIRECT
+        echo "`date` Starting $command on `hostname`"
+        echo "`ulimit -a`"
+        # in case the parent shell gets the kill make sure to trap signals.
+        # Only one will get called. Either the trap or the flow will go through.
+        nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
+            --config "${HBASE_CONF_DIR}" \
+            $command "$@" start &
+    else
+        echo "`date` Starting $command on `hostname`" >> ${HBASE_LOGLOG}
+        echo "`ulimit -a`" >> "$HBASE_LOGLOG" 2>&1
+        # in case the parent shell gets the kill make sure to trap signals.
+        # Only one will get called. Either the trap or the flow will go through.
+        nice -n $HBASE_NICENESS "$HBASE_HOME"/bin/hbase \
+            --config "${HBASE_CONF_DIR}" \
+            $command "$@" start >> ${HBASE_LOGOUT} 2>&1 &
+    fi
+    # Add to the command log file vital stats on our environment.
     hbase_pid=$!
     echo $hbase_pid > ${HBASE_PID}
     wait $hbase_pid
