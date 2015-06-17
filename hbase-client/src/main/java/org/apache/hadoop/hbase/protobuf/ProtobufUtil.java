@@ -264,8 +264,7 @@ public final class ProtobufUtil {
    * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
-    if (bytes == null) return false;
-    return isPBMagicPrefix(bytes, 0, bytes.length);
+    return ProtobufMagic.isPBMagicPrefix(bytes);
   }
 
   /**
@@ -275,9 +274,7 @@ public final class ProtobufUtil {
    * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
-    if (bytes == null || len < ProtobufMagic.PB_MAGIC.length) return false;
-    return Bytes.compareTo(ProtobufMagic.PB_MAGIC, 0, ProtobufMagic.PB_MAGIC.length,
-      bytes, offset, ProtobufMagic.PB_MAGIC.length) == 0;
+    return ProtobufMagic.isPBMagicPrefix(bytes, offset, len);
   }
 
   /**
@@ -292,10 +289,10 @@ public final class ProtobufUtil {
   }
 
   /**
-   * @return Length of {@link ProtobufMagic#PB_MAGIC}
+   * @return Length of {@link ProtobufMagic#lengthOfPBMagic()}
    */
   public static int lengthOfPBMagic() {
-    return ProtobufMagic.PB_MAGIC.length;
+    return ProtobufMagic.lengthOfPBMagic();
   }
 
   /**
