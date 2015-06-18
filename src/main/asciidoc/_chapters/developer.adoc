@@ -643,7 +643,7 @@ This profile invokes the Apache pom referenced by our pom files, and also signs 
 [source,bourne]
 ----
 
-$ mvn deploy -DskipTests -Papache-release
+$ mvn deploy -DskipTests -Papache-release -Prelease
 ----
 +
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
