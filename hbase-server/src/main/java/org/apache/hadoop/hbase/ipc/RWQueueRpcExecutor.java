@@ -33,6 +33,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
+import org.apache.hadoop.hbase.protobuf.generated
+  .RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -173,8 +176,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
 
   private boolean isWriteRequest(final RequestHeader header, final Message param) {
     // TODO: Is there a better way to do this?
-    String methodName = header.getMethodName();
-    if (methodName.equalsIgnoreCase("multi") && param instanceof MultiRequest) {
+    if (param instanceof MultiRequest) {
       MultiRequest multi = (MultiRequest)param;
       for (RegionAction regionAction : multi.getRegionActionList()) {
         for (Action action: regionAction.getActionList()) {
@@ -184,18 +186,17 @@ public class RWQueueRpcExecutor extends RpcExecutor {
         }
       }
     }
-    if (methodName.equalsIgnoreCase("mutate")) {
+    if (param instanceof MutateRequest) {
       return true;
     }
-    if (methodName.equalsIgnoreCase("ReportRegionStateTransition")) {
+    if (param instanceof ReportRegionStateTransitionRequest) {
       return true;
     }
     return false;
   }
 
   private boolean isScanRequest(final RequestHeader header, final Message param) {
-    String methodName = header.getMethodName();
-    if (methodName.equalsIgnoreCase("scan")) {
+    if (param instanceof ScanRequest) {
       // The first scan request will be executed as a "short read"
       ScanRequest request = (ScanRequest)param;
       return request.hasScannerId();
