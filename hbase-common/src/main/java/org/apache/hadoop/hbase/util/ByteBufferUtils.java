@@ -28,6 +28,8 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
+import sun.nio.ch.DirectBuffer;
+
 /**
  * Utility functions for working with byte buffers, such as reading/writing
  * variable-length long numbers.
@@ -507,5 +509,158 @@ public final class ByteBufferUtils {
       }
     }
     return len1 - len2;
+  }
+
+  /**
+   * Reads a short value at the given buffer's offset.
+   * @param buffer
+   * @param offset
+   * @return short value at offset
+   */
+  public static short toShort(ByteBuffer buffer, int offset) {
+    if (UnsafeAccess.isAvailable()) {
+      return toShortUnsafe(buffer, offset);
+    } else {
+      return buffer.getShort(offset);
+    }
+  }
+
+  private static short toShortUnsafe(ByteBuffer buf, long offset) {
+    short ret;
+    if (buf.isDirect()) {
+      ret = UnsafeAccess.theUnsafe.getShort(((DirectBuffer) buf).address() + offset);
+    } else {
+      ret = UnsafeAccess.theUnsafe.getShort(buf.array(),
+          UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    }
+    if (UnsafeAccess.littleEndian) {
+      return Short.reverseBytes(ret);
+    }
+    return ret;
+  }
+
+  /**
+   * Reads an int value at the given buffer's offset.
+   * @param buffer
+   * @param offset
+   * @return int value at offset
+   */
+  public static int toInt(ByteBuffer buffer, int offset) {
+    if (UnsafeAccess.isAvailable()) {
+      return toIntUnsafe(buffer, offset);
+    } else {
+      return buffer.getInt(offset);
+    }
+  }
+
+  private static int toIntUnsafe(ByteBuffer buf, long offset) {
+    int ret;
+    if (buf.isDirect()) {
+      ret = UnsafeAccess.theUnsafe.getInt(((DirectBuffer) buf).address() + offset);
+    } else {
+      ret = UnsafeAccess.theUnsafe.getInt(buf.array(),
+          UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    }
+    if (UnsafeAccess.littleEndian) {
+      return Integer.reverseBytes(ret);
+    }
+    return ret;
+  }
+
+  /**
+   * Reads a long value at the given buffer's offset.
+   * @param buffer
+   * @param offset
+   * @return long value at offset
+   */
+  public static long toLong(ByteBuffer buffer, int offset) {
+    if (UnsafeAccess.isAvailable()) {
+      return toLongUnsafe(buffer, offset);
+    } else {
+      return buffer.getLong(offset);
+    }
+  }
+
+  private static long toLongUnsafe(ByteBuffer buf, long offset) {
+    long ret;
+    if (buf.isDirect()) {
+      ret = UnsafeAccess.theUnsafe.getLong(((DirectBuffer) buf).address() + offset);
+    } else {
+      ret = UnsafeAccess.theUnsafe.getLong(buf.array(),
+          UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    }
+    if (UnsafeAccess.littleEndian) {
+      return Long.reverseBytes(ret);
+    }
+    return ret;
+  }
+
+  /**
+   * Copies the bytes from given array's offset to length part into the given buffer. Puts the bytes
+   * to buffer's current position. This also advances the position in the 'out' buffer by 'length'
+   * @param out
+   * @param in
+   * @param inOffset
+   * @param length
+   */
+  public static void copyFromArrayToBuffer(ByteBuffer out, byte[] in, int inOffset, int length) {
+    if (out.hasArray()) {
+      System.arraycopy(in, inOffset, out.array(), out.arrayOffset() + out.position(), length);
+      // Move the position in out by length
+      out.position(out.position() + length);
+    } else if (UnsafeAccess.isAvailable()) {
+      copyUnsafe(in, inOffset, out, out.position(), length);
+      // Move the position in out by length
+      out.position(out.position() + length);
+    } else {
+      out.put(in, inOffset, length);
+    }
+  }
+
+  static void copyUnsafe(byte[] src, int srcOffset, ByteBuffer dest, int destOffset, int length) {
+    long destAddress = destOffset;
+    Object destBase = null;
+    if (dest.isDirect()) {
+      destAddress = destAddress + ((DirectBuffer) dest).address();
+    } else {
+      destAddress = destAddress + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
+      destBase = dest.array();
+    }
+    long srcAddress = srcOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+    UnsafeAccess.theUnsafe.copyMemory(src, srcAddress, destBase, destAddress, length);
+  }
+
+  static void copyUnsafe(ByteBuffer src, int srcOffset, byte[] dest, int destOffset, int length) {
+    long srcAddress = srcOffset;
+    Object srcBase = null;
+    if (src.isDirect()) {
+      srcAddress = srcAddress + ((DirectBuffer) src).address();
+    } else {
+      srcAddress = srcAddress + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + src.arrayOffset();
+      srcBase = src.array();
+    }
+    long destAddress = destOffset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+    UnsafeAccess.theUnsafe.copyMemory(srcBase, srcAddress, dest, destAddress, length);
+  }
+
+  /**
+   * Copies specified number of bytes from given offset of 'in' ByteBuffer to the array.
+   * @param out
+   * @param in
+   * @param sourceOffset
+   * @param destinationOffset
+   * @param length
+   */
+  public static void copyFromBufferToArray(byte[] out, ByteBuffer in,
+      int sourceOffset, int destinationOffset, int length) {
+    if (in.hasArray()) {
+      System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out, destinationOffset, length);
+    } else if (UnsafeAccess.isAvailable()) {
+      copyUnsafe(in, sourceOffset, out, destinationOffset, length);
+    } else {
+      for (int i = 0; i < length; i++) {
+        out[destinationOffset + i] = in.get(sourceOffset + i);
+      }
+    }
   }
 }

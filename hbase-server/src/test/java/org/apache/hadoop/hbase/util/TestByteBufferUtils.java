@@ -323,4 +323,53 @@ public class TestByteBufferUtils {
     assertEquals(5, buffer.position());
     assertEquals(5, buffer.limit());
   }
+
+  @Test
+  public void testToPrimitiveTypes() {
+    ByteBuffer buffer = ByteBuffer.allocate(15);
+    long l = 988L;
+    int i = 135;
+    short s = 7;
+    buffer.putLong(l);
+    buffer.putShort(s);
+    buffer.putInt(i);
+    assertEquals(l, ByteBufferUtils.toLong(buffer, 0));
+    assertEquals(s, ByteBufferUtils.toShort(buffer, 8));
+    assertEquals(i, ByteBufferUtils.toInt(buffer, 10));
+  }
+
+  @Test
+  public void testCopyFromArrayToBuffer() {
+    byte[] b = new byte[15];
+    b[0] = -1;
+    long l = 988L;
+    int i = 135;
+    short s = 7;
+    Bytes.putLong(b, 1, l);
+    Bytes.putShort(b, 9, s);
+    Bytes.putInt(b, 11, i);
+    ByteBuffer buffer = ByteBuffer.allocate(14);
+    ByteBufferUtils.copyFromArrayToBuffer(buffer, b, 1, 14);
+    buffer.rewind();
+    assertEquals(l, buffer.getLong());
+    assertEquals(s, buffer.getShort());
+    assertEquals(i, buffer.getInt());
+  }
+
+  @Test
+  public void testCopyFromBufferToArray() {
+    ByteBuffer buffer = ByteBuffer.allocate(15);
+    buffer.put((byte) -1);
+    long l = 988L;
+    int i = 135;
+    short s = 7;
+    buffer.putShort(s);
+    buffer.putInt(i);
+    buffer.putLong(l);
+    byte[] b = new byte[15];
+    ByteBufferUtils.copyFromBufferToArray(b, buffer, 1, 1, 14);
+    assertEquals(s, Bytes.toShort(b, 1));
+    assertEquals(i, Bytes.toInt(b, 3));
+    assertEquals(l, Bytes.toLong(b, 7));
+  }
 }
