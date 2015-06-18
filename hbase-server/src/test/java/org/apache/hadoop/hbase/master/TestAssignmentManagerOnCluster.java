@@ -1028,12 +1028,18 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
+      // Try to unassign the dead region before SSH
+      am.unassign(hri, false);
+      // The region should be moved to offline since the server is dead
+      RegionState state = regionStates.getRegionState(hri);
+      assertTrue(state.isOffline());
+
       // Kill the hosting server, which doesn't have meta on it.
       cluster.killRegionServer(oldServerName);
       cluster.waitForRegionServerToStop(oldServerName, -1);
 
       ServerManager serverManager = master.getServerManager();
-      while (!serverManager.isServerInDeadServersList(oldServerName)
+      while (!serverManager.isServerDead(oldServerName)
           || serverManager.getDeadServers().areDeadServersInProgress()) {
         Thread.sleep(100);
       }
@@ -1087,7 +1093,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.waitFor(120000, 1000, new Waiter.Predicate<Exception>() {
         @Override
         public boolean evaluate() throws Exception {
-          return serverManager.isServerInDeadServersList(serverName)
+          return serverManager.isServerDead(serverName)
             && !serverManager.areDeadServersInProgress();
         }
       });
@@ -1153,6 +1159,12 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
+      // Try to unassign the dead region before SSH
+      am.unassign(hri, false);
+      // The region should be moved to offline since the server is dead
+      RegionState state = regionStates.getRegionState(hri);
+      assertTrue(state.isOffline());
+
       // Disable the table now.
       master.disableTable(hri.getTable());
 
@@ -1161,7 +1173,7 @@ public class TestAssignmentManagerOnCluster {
       cluster.waitForRegionServerToStop(oldServerName, -1);
 
       ServerManager serverManager = master.getServerManager();
-      while (!serverManager.isServerInDeadServersList(oldServerName)
+      while (!serverManager.isServerDead(oldServerName)
           || serverManager.getDeadServers().areDeadServersInProgress()) {
         Thread.sleep(100);
       }

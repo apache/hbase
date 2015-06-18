@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.master.balancer.BaseLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.MetaServerShutdownHandler;
@@ -61,12 +62,14 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.OpenRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.apache.hadoop.hbase.util.RetryCounter;
@@ -154,6 +157,8 @@ public class ServerManager {
   private final long maxSkew;
   private final long warningSkew;
 
+  private final RetryCounterFactory pingRetryCounterFactory;
+
   /**
    * Set of region servers which are dead but not processed immediately. If one
    * server died before master enables ServerShutdownHandler, the server will be
@@ -212,6 +217,11 @@ public class ServerManager {
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     this.connection = connect ? (ClusterConnection)ConnectionFactory.createConnection(c) : null;
+    int pingMaxAttempts = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.maximum.ping.server.attempts", 10));
+    int pingSleepInterval = Math.max(1, master.getConfiguration().getInt(
+      "hbase.master.ping.server.retry.sleep.interval", 100));
+    this.pingRetryCounterFactory = new RetryCounterFactory(pingMaxAttempts, pingSleepInterval);
   }
 
   /**
@@ -734,8 +744,8 @@ public class ServerManager {
         " failed because no RPC connection found to this server");
       return RegionOpeningState.FAILED_OPENING;
     }
-    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server,
-      region, versionOfOfflineNode, favoredNodes,
+    OpenRegionRequest request = RequestConverter.buildOpenRegionRequest(server, 
+      region, versionOfOfflineNode, favoredNodes, 
       (RecoveryMode.LOG_REPLAY == this.services.getMasterFileSystem().getLogRecoveryMode()));
     try {
       OpenRegionResponse response = admin.openRegion(null, request);
@@ -832,7 +842,7 @@ public class ServerManager {
    * Contacts a region server and waits up to timeout ms
    * to close the region.  This bypasses the active hmaster.
    */
-  public static void closeRegionSilentlyAndWait(ClusterConnection connection,
+  public static void closeRegionSilentlyAndWait(ClusterConnection connection, 
     ServerName server, HRegionInfo region, long timeout) throws IOException, InterruptedException {
     AdminService.BlockingInterface rs = connection.getAdmin(server);
     try {
@@ -885,6 +895,47 @@ public class ServerManager {
           + " failed because no RPC connection found to this server");
     }
     ProtobufUtil.mergeRegions(admin, region_a, region_b, forcible);
+  }
+
+  /**
+   * Check if a region server is reachable and has the expected start code
+   */
+  public boolean isServerReachable(ServerName server) {
+    if (server == null) throw new NullPointerException("Passed server is null");
+
+    RetryCounter retryCounter = pingRetryCounterFactory.create();
+    while (retryCounter.shouldRetry()) {
+      synchronized (this.onlineServers) {
+        if (this.deadservers.isDeadServer(server)) {
+          return false;
+        }
+      }
+      try {
+        AdminService.BlockingInterface admin = getRsAdmin(server);
+        if (admin != null) {
+          ServerInfo info = ProtobufUtil.getServerInfo(admin);
+          return info != null && info.hasServerName()
+            && server.getStartcode() == info.getServerName().getStartCode();
+        }
+      } catch (RegionServerStoppedException | ServerNotRunningYetException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't reach " + server, e);
+        }
+        break;
+      } catch (IOException ioe) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Couldn't reach " + server + ", try=" + retryCounter.getAttemptTimes() + " of "
+              + retryCounter.getMaxAttempts(), ioe);
+        }
+        try {
+          retryCounter.sleepUntilNextRetry();
+        } catch(InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
+    return false;
   }
 
     /**
@@ -1045,30 +1096,10 @@ public class ServerManager {
    * not known to be dead either. it is simply not tracked by the
    * master any more, for example, a very old previous instance).
    */
-  public synchronized boolean isServerInDeadServersList(ServerName serverName) {
-    return (serverName == null || deadservers.isDeadServer(serverName)
-        || queuedDeadServers.contains(serverName)
-        || requeuedDeadServers.containsKey(serverName));
-  }
-
-  /**
-   * Check if a server is known to be dead.  A server can be online,
-   * or known to be dead, or unknown to this manager (i.e, not online,
-   * not known to be dead either. it is simply not tracked by the
-   * master any more, for example, a very old previous instance).
-   */
   public synchronized boolean isServerDead(ServerName serverName) {
-    if (isServerInDeadServersList(serverName)) {
-      return true;
-    }
-
-    // we are not acquiring the lock
-    ServerName onlineServer = findServerWithSameHostnamePortWithLock(serverName);
-    if (onlineServer != null && serverName.getStartcode() < onlineServer.getStartcode()) {
-      return true;
-    }
-
-    return false;
+    return serverName == null || deadservers.isDeadServer(serverName)
+      || queuedDeadServers.contains(serverName)
+      || requeuedDeadServers.containsKey(serverName);
   }
 
   public void shutdownCluster() {

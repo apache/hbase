@@ -799,7 +799,7 @@ public class AssignmentManager extends ZooKeeperListener {
         // we need to reset the last region server of the region.
         regionStates.setLastRegionServerOfRegion(sn, encodedName);
         // Make sure we know the server is dead.
-        if (!serverManager.isServerInDeadServersList(sn)) {
+        if (!serverManager.isServerDead(sn)) {
           serverManager.expireServer(sn);
         }
       }
@@ -3079,7 +3079,7 @@ public class AssignmentManager extends ZooKeeperListener {
       Set<ServerName> deadServers) throws IOException, KeeperException {
     if (deadServers != null && !deadServers.isEmpty()) {
       for (ServerName serverName: deadServers) {
-        if (!serverManager.isServerInDeadServersList(serverName)) {
+        if (!serverManager.isServerDead(serverName)) {
           serverManager.expireServer(serverName); // Let SSH do region re-assign
         }
       }
