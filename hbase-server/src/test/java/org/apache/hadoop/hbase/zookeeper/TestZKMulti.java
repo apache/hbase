@@ -339,6 +339,80 @@ public class TestZKMulti {
     }
   }
 
+  /**
+   * Verifies that for the given root node, it should delete all the nodes recursively using
+   * multi-update api.
+   */
+  @Test(timeout = 60000)
+  public void testDeleteNodeRecursivelyMulti() throws Exception {
+    String parentZNode = "/testdeleteNodeRecursivelyMulti";
+    createZNodeTree(parentZNode);
+
+    ZKUtil.deleteNodeRecursively(zkw, parentZNode);
+    assertTrue("Parent znode should be deleted.", ZKUtil.checkExists(zkw, parentZNode) == -1);
+  }
+
+  /**
+   * Verifies that for the given root node, it should delete all the nodes recursively using
+   * normal sequential way.
+   */
+  @Test(timeout = 60000)
+  public void testDeleteNodeRecursivelySequential() throws Exception {
+    String parentZNode = "/testdeleteNodeRecursivelySequential";
+    createZNodeTree(parentZNode);
+    boolean useMulti = zkw.getConfiguration().getBoolean("hbase.zookeeper.useMulti", false);
+    zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", false);
+    try {
+      // disables the multi-update api execution
+      ZKUtil.deleteNodeRecursively(zkw, parentZNode);
+      assertTrue("Parent znode should be deleted.", ZKUtil.checkExists(zkw, parentZNode) == -1);
+    } finally {
+      // sets back the multi-update api execution
+      zkw.getConfiguration().setBoolean("hbase.zookeeper.useMulti", useMulti);
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testDeleteNodeRecursivelyMultiOrSequential() throws Exception {
+    String parentZNode1 = "/testdeleteNode1";
+    String parentZNode2 = "/testdeleteNode2";
+    String parentZNode3 = "/testdeleteNode3";
+    createZNodeTree(parentZNode1);
+    createZNodeTree(parentZNode2);
+    createZNodeTree(parentZNode3);
+
+    ZKUtil.deleteNodeRecursivelyMultiOrSequential(zkw, false, parentZNode1, parentZNode2,
+      parentZNode3);
+    assertTrue("Parent znode 1 should be deleted.", ZKUtil.checkExists(zkw, parentZNode1) == -1);
+    assertTrue("Parent znode 2 should be deleted.", ZKUtil.checkExists(zkw, parentZNode2) == -1);
+    assertTrue("Parent znode 3 should be deleted.", ZKUtil.checkExists(zkw, parentZNode3) == -1);
+  }
+
+  @Test(timeout = 60000)
+  public void testDeleteChildrenRecursivelyMultiOrSequential() throws Exception {
+    String parentZNode1 = "/testdeleteChildren1";
+    String parentZNode2 = "/testdeleteChildren2";
+    String parentZNode3 = "/testdeleteChildren3";
+    createZNodeTree(parentZNode1);
+    createZNodeTree(parentZNode2);
+    createZNodeTree(parentZNode3);
+
+    ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode1, parentZNode2,
+      parentZNode3);
+
+    assertTrue("Wrongly deleted parent znode 1!", ZKUtil.checkExists(zkw, parentZNode1) > -1);
+    List<String> children = zkw.getRecoverableZooKeeper().getChildren(parentZNode1, false);
+    assertTrue("Failed to delete child znodes of parent znode 1!", 0 == children.size());
+
+    assertTrue("Wrongly deleted parent znode 2!", ZKUtil.checkExists(zkw, parentZNode2) > -1);
+    children = zkw.getRecoverableZooKeeper().getChildren(parentZNode2, false);
+    assertTrue("Failed to delete child znodes of parent znode 1!", 0 == children.size());
+
+    assertTrue("Wrongly deleted parent znode 3!", ZKUtil.checkExists(zkw, parentZNode3) > -1);
+    children = zkw.getRecoverableZooKeeper().getChildren(parentZNode3, false);
+    assertTrue("Failed to delete child znodes of parent znode 1!", 0 == children.size());
+  }
+
   private void createZNodeTree(String rootZNode) throws KeeperException,
       InterruptedException {
     List<Op> opList = new ArrayList<Op>();
