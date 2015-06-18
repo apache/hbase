@@ -267,29 +267,29 @@ public abstract class ZKProcedureUtil
   }
 
   public void clearChildZNodes() throws KeeperException {
-    // TODO This is potentially racy since not atomic. update when we support zk that has multi
     LOG.info("Clearing all procedure znodes: " + acquiredZnode + " " + reachedZnode + " "
         + abortZnode);
 
     // If the coordinator was shutdown mid-procedure, then we are going to lose
     // an procedure that was previously started by cleaning out all the previous state. Its much
     // harder to figure out how to keep an procedure going and the subject of HBASE-5487.
-    ZKUtil.deleteChildrenRecursively(watcher, acquiredZnode);
-    ZKUtil.deleteChildrenRecursively(watcher, reachedZnode);
-    ZKUtil.deleteChildrenRecursively(watcher, abortZnode);
+    ZKUtil.deleteChildrenRecursivelyMultiOrSequential(watcher, true, acquiredZnode, reachedZnode,
+      abortZnode);
   }
 
   public void clearZNodes(String procedureName) throws KeeperException {
-    // TODO This is potentially racy since not atomic. update when we support zk that has multi
     LOG.info("Clearing all znodes for procedure " + procedureName + "including nodes "
         + acquiredZnode + " " + reachedZnode + " " + abortZnode);
 
     // Make sure we trigger the watches on these nodes by creating them. (HBASE-13885)
-    ZKUtil.createAndFailSilent(watcher, getAcquiredBarrierNode(procedureName));
-    ZKUtil.createAndFailSilent(watcher, getAbortZNode(procedureName));
+    String acquiredBarrierNode = getAcquiredBarrierNode(procedureName);
+    String reachedBarrierNode = getReachedBarrierNode(procedureName);
+    String abortZNode = getAbortZNode(procedureName);
 
-    ZKUtil.deleteNodeRecursively(watcher, getAcquiredBarrierNode(procedureName));
-    ZKUtil.deleteNodeRecursively(watcher, getReachedBarrierNode(procedureName));
-    ZKUtil.deleteNodeRecursively(watcher, getAbortZNode(procedureName));
+    ZKUtil.createAndFailSilent(watcher, acquiredBarrierNode);
+    ZKUtil.createAndFailSilent(watcher, abortZNode);
+
+    ZKUtil.deleteNodeRecursivelyMultiOrSequential(watcher, true, acquiredBarrierNode,
+      reachedBarrierNode, abortZNode);
   }
 }
