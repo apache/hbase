@@ -194,6 +194,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       nextKvOffset = nextState.nextKvOffset;
       memstoreTS = nextState.memstoreTS;
       currentBuffer = nextState.currentBuffer;
+      tagsOffset = nextState.tagsOffset;
+      tagsLength = nextState.tagsLength;
       if (nextState.tagCompressionContext != null) {
         tagCompressionContext = nextState.tagCompressionContext;
       }
