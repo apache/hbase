@@ -24,14 +24,10 @@ import static com.google.common.base.Preconditions.checkPositionIndex;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.charset.Charset;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,8 +52,6 @@ import sun.misc.Unsafe;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-
-import org.apache.hadoop.hbase.util.Bytes.LexicographicalComparerHolder.UnsafeComparer;
 
 /**
  * Utility class that handles byte arrays, conversions to/from other types,
@@ -795,8 +789,8 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_LONG || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_LONG);
     }
-    if (UnsafeComparer.isAvailable()) {
-      return toLongUnsafe(bytes, offset);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.toLong(bytes, offset);
     } else {
       long l = 0;
       for(int i = offset; i < offset + length; i++) {
@@ -836,8 +830,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a long at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
-      return putLongUnsafe(bytes, offset, val);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.putLong(bytes, offset, val);
     } else {
       for(int i = offset + 7; i > offset; i--) {
         bytes[i] = (byte) val;
@@ -854,15 +848,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset position in the array
    * @param val long to write out
    * @return incremented offset
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
-  public static int putLongUnsafe(byte[] bytes, int offset, long val)
-  {
-    if (UnsafeComparer.littleEndian) {
-      val = Long.reverseBytes(val);
-    }
-    UnsafeComparer.theUnsafe.putLong(bytes, (long) offset +
-      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
-    return offset + SIZEOF_LONG;
+  @Deprecated
+  public static int putLongUnsafe(byte[] bytes, int offset, long val) {
+    return UnsafeAccess.putLong(bytes, offset, val);
   }
 
   /**
@@ -991,8 +981,8 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_INT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_INT);
     }
-    if (UnsafeComparer.isAvailable()) {
-      return toIntUnsafe(bytes, offset);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.toInt(bytes, offset);
     } else {
       int n = 0;
       for(int i = offset; i < (offset + length); i++) {
@@ -1008,15 +998,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param bytes byte array
    * @param offset offset into array
    * @return the int value
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
+  @Deprecated
   public static int toIntUnsafe(byte[] bytes, int offset) {
-    if (UnsafeComparer.littleEndian) {
-      return Integer.reverseBytes(UnsafeComparer.theUnsafe.getInt(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return UnsafeComparer.theUnsafe.getInt(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
-    }
+    return UnsafeAccess.toInt(bytes, offset);
   }
 
   /**
@@ -1024,15 +1010,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param bytes byte array
    * @param offset offset into array
    * @return the short value
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
+  @Deprecated
   public static short toShortUnsafe(byte[] bytes, int offset) {
-    if (UnsafeComparer.littleEndian) {
-      return Short.reverseBytes(UnsafeComparer.theUnsafe.getShort(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return UnsafeComparer.theUnsafe.getShort(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
-    }
+    return UnsafeAccess.toShort(bytes, offset);
   }
 
   /**
@@ -1040,15 +1022,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param bytes byte array
    * @param offset offset into array
    * @return the long value
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
+  @Deprecated
   public static long toLongUnsafe(byte[] bytes, int offset) {
-    if (UnsafeComparer.littleEndian) {
-      return Long.reverseBytes(UnsafeComparer.theUnsafe.getLong(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return UnsafeComparer.theUnsafe.getLong(bytes,
-        (long) offset + UnsafeComparer.BYTE_ARRAY_BASE_OFFSET);
-    }
+    return UnsafeAccess.toLong(bytes, offset);
   }
 
   /**
@@ -1087,8 +1065,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put an int at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
-      return putIntUnsafe(bytes, offset, val);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.putInt(bytes, offset, val);
     } else {
       for(int i= offset + 3; i > offset; i--) {
         bytes[i] = (byte) val;
@@ -1105,15 +1083,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset position in the array
    * @param val int to write out
    * @return incremented offset
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
-  public static int putIntUnsafe(byte[] bytes, int offset, int val)
-  {
-    if (UnsafeComparer.littleEndian) {
-      val = Integer.reverseBytes(val);
-    }
-    UnsafeComparer.theUnsafe.putInt(bytes, (long) offset +
-      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
-    return offset + SIZEOF_INT;
+  @Deprecated
+  public static int putIntUnsafe(byte[] bytes, int offset, int val) {
+    return UnsafeAccess.putInt(bytes, offset, val);
   }
 
   /**
@@ -1161,8 +1135,8 @@ public class Bytes implements Comparable<Bytes> {
     if (length != SIZEOF_SHORT || offset + length > bytes.length) {
       throw explainWrongLengthOrOffset(bytes, offset, length, SIZEOF_SHORT);
     }
-    if (UnsafeComparer.isAvailable()) {
-      return toShortUnsafe(bytes, offset);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.toShort(bytes, offset);
     } else {
       short n = 0;
       n ^= bytes[offset] & 0xFF;
@@ -1199,8 +1173,8 @@ public class Bytes implements Comparable<Bytes> {
       throw new IllegalArgumentException("Not enough room to put a short at"
           + " offset " + offset + " in a " + bytes.length + " byte array");
     }
-    if (UnsafeComparer.isAvailable()) {
-      return putShortUnsafe(bytes, offset, val);
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.putShort(bytes, offset, val);
     } else {
       bytes[offset+1] = (byte) val;
       val >>= 8;
@@ -1215,15 +1189,11 @@ public class Bytes implements Comparable<Bytes> {
    * @param offset position in the array
    * @param val short to write out
    * @return incremented offset
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
    */
-  public static int putShortUnsafe(byte[] bytes, int offset, short val)
-  {
-    if (UnsafeComparer.littleEndian) {
-      val = Short.reverseBytes(val);
-    }
-    UnsafeComparer.theUnsafe.putShort(bytes, (long) offset +
-      UnsafeComparer.BYTE_ARRAY_BASE_OFFSET , val);
-    return offset + SIZEOF_SHORT;
+  @Deprecated
+  public static int putShortUnsafe(byte[] bytes, int offset, short val) {
+    return UnsafeAccess.putShort(bytes, offset, val);
   }
 
   /**
@@ -1506,39 +1476,20 @@ public class Bytes implements Comparable<Bytes> {
       INSTANCE;
 
       static final Unsafe theUnsafe;
-
-      /** The offset to the first element in a byte array. */
-      static final int BYTE_ARRAY_BASE_OFFSET;
-
       static {
-        theUnsafe = (Unsafe) AccessController.doPrivileged(
-            new PrivilegedAction<Object>() {
-              @Override
-              public Object run() {
-                try {
-                  Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                  f.setAccessible(true);
-                  return f.get(null);
-                } catch (NoSuchFieldException e) {
-                  // It doesn't matter what we throw;
-                  // it's swallowed in getBestComparer().
-                  throw new Error();
-                } catch (IllegalAccessException e) {
-                  throw new Error();
-                }
-              }
-            });
-
-        BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
+        if (UnsafeAccess.isAvailable()) {
+          theUnsafe = UnsafeAccess.theUnsafe;
+        } else {
+          // It doesn't matter what we throw;
+          // it's swallowed in getBestComparer().
+          throw new Error();
+        }
 
         // sanity check - this should never fail
         if (theUnsafe.arrayIndexScale(byte[].class) != 1) {
           throw new AssertionError();
         }
       }
-
-      static final boolean littleEndian =
-        ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
       /**
        * Returns true if x1 is less than x2, when both values are treated as
@@ -1548,7 +1499,7 @@ public class Bytes implements Comparable<Bytes> {
        * Big Endian format.
        */
       static boolean lessThanUnsignedLong(long x1, long x2) {
-        if (littleEndian) {
+        if (UnsafeAccess.littleEndian) {
           x1 = Long.reverseBytes(x1);
           x2 = Long.reverseBytes(x2);
         }
@@ -1563,7 +1514,7 @@ public class Bytes implements Comparable<Bytes> {
        * Big Endian format.
        */
       static boolean lessThanUnsignedInt(int x1, int x2) {
-        if (littleEndian) {
+        if (UnsafeAccess.littleEndian) {
           x1 = Integer.reverseBytes(x1);
           x2 = Integer.reverseBytes(x2);
         }
@@ -1578,20 +1529,11 @@ public class Bytes implements Comparable<Bytes> {
        * Big Endian format.
        */
       static boolean lessThanUnsignedShort(short x1, short x2) {
-        if (littleEndian) {
+        if (UnsafeAccess.littleEndian) {
           x1 = Short.reverseBytes(x1);
           x2 = Short.reverseBytes(x2);
         }
         return (x1 & 0xffff) < (x2 & 0xffff);
-      }
-
-      /**
-       * Checks if Unsafe is available
-       * @return true, if available, false - otherwise
-       */
-      public static boolean isAvailable()
-      {
-        return theUnsafe != null;
       }
 
       /**
@@ -1617,8 +1559,8 @@ public class Bytes implements Comparable<Bytes> {
         }
         final int minLength = Math.min(length1, length2);
         final int minWords = minLength / SIZEOF_LONG;
-        final long offset1Adj = offset1 + BYTE_ARRAY_BASE_OFFSET;
-        final long offset2Adj = offset2 + BYTE_ARRAY_BASE_OFFSET;
+        final long offset1Adj = offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        final long offset2Adj = offset2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
 
         /*
          * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a

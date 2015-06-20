@@ -331,19 +331,13 @@ public class FuzzyRowFilter extends FilterBase {
     }
     length = Math.min(length, fuzzyKeyBytes.length);
     int numWords = length / Bytes.SIZEOF_LONG;
-    int offsetAdj = offset + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
 
     int j = numWords << 3; // numWords * SIZEOF_LONG;
 
     for (int i = 0; i < j; i += Bytes.SIZEOF_LONG) {
-
-      long fuzzyBytes =
-          UnsafeAccess.theUnsafe.getLong(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) i);
-      long fuzzyMeta =
-          UnsafeAccess.theUnsafe.getLong(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) i);
-      long rowValue = UnsafeAccess.theUnsafe.getLong(row, offsetAdj + (long) i);
+      long fuzzyBytes = UnsafeAccess.toLong(fuzzyKeyBytes, i);
+      long fuzzyMeta = UnsafeAccess.toLong(fuzzyKeyMeta, i);
+      long rowValue = UnsafeAccess.toLong(row, offset + i);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
@@ -353,13 +347,9 @@ public class FuzzyRowFilter extends FilterBase {
     int off = j;
 
     if (length - off >= Bytes.SIZEOF_INT) {
-      int fuzzyBytes =
-          UnsafeAccess.theUnsafe.getInt(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      int fuzzyMeta =
-          UnsafeAccess.theUnsafe.getInt(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      int rowValue = UnsafeAccess.theUnsafe.getInt(row, offsetAdj + (long) off);
+      int fuzzyBytes = UnsafeAccess.toInt(fuzzyKeyBytes, off);
+      int fuzzyMeta = UnsafeAccess.toInt(fuzzyKeyMeta, off);
+      int rowValue = UnsafeAccess.toInt(row, offset + off);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         return SatisfiesCode.NEXT_EXISTS;
@@ -368,13 +358,9 @@ public class FuzzyRowFilter extends FilterBase {
     }
 
     if (length - off >= Bytes.SIZEOF_SHORT) {
-      short fuzzyBytes =
-          UnsafeAccess.theUnsafe.getShort(fuzzyKeyBytes, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      short fuzzyMeta =
-          UnsafeAccess.theUnsafe.getShort(fuzzyKeyMeta, UnsafeAccess.BYTE_ARRAY_BASE_OFFSET
-              + (long) off);
-      short rowValue = UnsafeAccess.theUnsafe.getShort(row, offsetAdj + (long) off);
+      short fuzzyBytes = UnsafeAccess.toShort(fuzzyKeyBytes, off);
+      short fuzzyMeta = UnsafeAccess.toShort(fuzzyKeyMeta, off);
+      short rowValue = UnsafeAccess.toShort(row, offset + off);
       if ((rowValue & fuzzyMeta) != (fuzzyBytes)) {
         // We always return NEXT_EXISTS
         // even if it does not (in this case getNextForFuzzyRule
