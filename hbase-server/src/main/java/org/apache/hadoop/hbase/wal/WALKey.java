@@ -269,7 +269,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   /**
    * Allow that the log sequence id to be set post-construction and release all waiters on assigned
    * sequence number.
-   * Only public for {@link org.apache.hadoop.hbase.regionserver.wal.FSWALEntry}
+   * Only public for org.apache.hadoop.hbase.regionserver.wal.FSWALEntry
    * @param sequence
    */
   @InterfaceAudience.Private

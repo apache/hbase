@@ -649,8 +649,6 @@ public interface Region extends ConfigurationObserver {
    *
    * @throws IOException general io exceptions
    * because a snapshot was not properly persisted.
-   * @throws DroppedSnapshotException Thrown when abort is required. The caller MUST catch this
-   * exception and MUST abort. Any further operation to the region may cause data loss.
    */
   FlushResult flush(boolean force) throws IOException;
 
