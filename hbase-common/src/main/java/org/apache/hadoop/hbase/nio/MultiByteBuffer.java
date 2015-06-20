@@ -403,7 +403,7 @@ public class MultiByteBuffer {
 
   /**
    * Returns the number of elements between the current position and the
-   * limit. </p>
+   * limit.
    * @return the remaining elements in this MBB
    */
   public int remaining() {
