@@ -121,7 +121,12 @@ public class CreateTableHandler extends EventHandler {
         throw new TableExistsException(tableName);
       }
 
-      checkAndSetEnablingTable(assignmentManager, tableName);
+      // During master initialization, the ZK state could be inconsistent from failed DDL
+      // in the past. If we fail here, it would prevent master to start.  We should force
+      // setting the system table state regardless the table state.
+      boolean skipTableStateCheck =
+          !((HMaster) this.server).isInitialized() && tableName.isSystemTable();
+      checkAndSetEnablingTable(assignmentManager, tableName, skipTableStateCheck);
       success = true;
     } finally {
       if (!success) {
@@ -132,7 +137,7 @@ public class CreateTableHandler extends EventHandler {
   }
 
   static void checkAndSetEnablingTable(final AssignmentManager assignmentManager,
-      final TableName tableName) throws IOException {
+      final TableName tableName, boolean skipTableStateCheck) throws IOException {
     // If we have multiple client threads trying to create the table at the
     // same time, given the async nature of the operation, the table
     // could be in a state where hbase:meta table hasn't been updated yet in
@@ -144,7 +149,12 @@ public class CreateTableHandler extends EventHandler {
     // We could have cleared the hbase.rootdir and not zk.  How can we detect this case?
     // Having to clean zk AND hdfs is awkward.
     try {
-      if (!assignmentManager.getTableStateManager().setTableStateIfNotInStates(tableName,
+      if (skipTableStateCheck) {
+        assignmentManager.getTableStateManager().setTableState(
+          tableName,
+          ZooKeeperProtos.Table.State.ENABLING);
+      } else if (!assignmentManager.getTableStateManager().setTableStateIfNotInStates(
+        tableName,
         ZooKeeperProtos.Table.State.ENABLING,
         ZooKeeperProtos.Table.State.ENABLING,
         ZooKeeperProtos.Table.State.ENABLED)) {

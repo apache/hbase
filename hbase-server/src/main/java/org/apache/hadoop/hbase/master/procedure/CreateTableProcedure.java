@@ -286,13 +286,20 @@ public class CreateTableProcedure
       setFailure("master-create-table", new TableExistsException(getTableName()));
       return false;
     }
-    TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
-    if (tsm.isTableState(tableName, true, ZooKeeperProtos.Table.State.ENABLING,
+    // During master initialization, the ZK state could be inconsistent from failed DDL
+    // in the past. If we fail here, it would prevent master to start.  We should force
+    // setting the system table state regardless the table state.
+    boolean skipTableStateCheck =
+        !(env.getMasterServices().isInitialized()) && tableName.isSystemTable();
+    if (!skipTableStateCheck) {
+      TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
+      if (tsm.isTableState(tableName, true, ZooKeeperProtos.Table.State.ENABLING,
           ZooKeeperProtos.Table.State.ENABLED)) {
-      LOG.warn("The table " + tableName + " does not exist in meta but has a znode. " +
+        LOG.warn("The table " + tableName + " does not exist in meta but has a znode. " +
                "run hbck to fix inconsistencies.");
-      setFailure("master-create-table", new TableExistsException(getTableName()));
-      return false;
+        setFailure("master-create-table", new TableExistsException(getTableName()));
+        return false;
+      }
     }
     return true;
   }
