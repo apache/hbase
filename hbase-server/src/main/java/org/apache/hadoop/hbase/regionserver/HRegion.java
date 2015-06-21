@@ -5225,7 +5225,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /**
    * RegionScannerImpl is used to combine scanners from multiple Stores (aka column families).
    */
-  class RegionScannerImpl implements RegionScanner {
+  class RegionScannerImpl implements RegionScanner, org.apache.hadoop.hbase.ipc.RpcCallback {
     // Package local for testability
     KeyValueHeap storeHeap = null;
     /** Heap of key-values that are not essential for the provided filters and are thus read
@@ -5829,6 +5829,23 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         ((HRegionServer)rsServices).abort(msg);
       }
       throw new UnsupportedOperationException("not able to abort RS after: " + msg);
+    }
+
+    @Override
+    public void shipped() throws IOException {
+      if (storeHeap != null) {
+        storeHeap.shipped();
+      }
+      if (joinedHeap != null) {
+        joinedHeap.shipped();
+      }
+    }
+
+    @Override
+    public void run() throws IOException {
+      // This is the RPC callback method executed. We do the close in of the scanner in this
+      // callback
+      this.close();
     }
   }
 

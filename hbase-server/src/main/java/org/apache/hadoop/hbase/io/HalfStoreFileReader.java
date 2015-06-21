@@ -293,6 +293,11 @@ public class HalfStoreFileReader extends StoreFile.Reader {
       public void close() {
         this.delegate.close();
       }
+
+      @Override
+      public void shipped() throws IOException {
+        this.delegate.shipped();
+      }
     };
   }
   

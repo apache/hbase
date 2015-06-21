@@ -1083,6 +1083,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public void close() {
       // HBASE-12295 will add code here.
     }
+
+    @Override
+    public void shipped() throws IOException {
+      // HBASE-12295 will add code here.
+    }
   }
 
   public Path getPath() {

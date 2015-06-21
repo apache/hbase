@@ -155,11 +155,14 @@ public class Leases extends HasThread {
    * @param leaseName name of the lease
    * @param leaseTimeoutPeriod length of the lease in milliseconds
    * @param listener listener that will process lease expirations
+   * @return The lease created.
    * @throws LeaseStillHeldException
    */
-  public void createLease(String leaseName, int leaseTimeoutPeriod, final LeaseListener listener)
+  public Lease createLease(String leaseName, int leaseTimeoutPeriod, final LeaseListener listener)
       throws LeaseStillHeldException {
-    addLease(new Lease(leaseName, leaseTimeoutPeriod, listener));
+    Lease lease = new Lease(leaseName, leaseTimeoutPeriod, listener);
+    addLease(lease);
+    return lease;
   }
 
   /**

@@ -488,4 +488,9 @@ public class StoreFileScanner implements KeyValueScanner {
   public Cell getNextIndexedKey() {
     return hfs.getNextIndexedKey();
   }
+
+  @Override
+  public void shipped() throws IOException {
+    this.hfs.shipped();
+  }
 }

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.Shipper;
 import org.apache.hadoop.hbase.Cell;
 
 /**
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.Cell;
  * getValue.
  */
 @InterfaceAudience.Private
-public interface HFileScanner {
+public interface HFileScanner extends Shipper {
   /**
    * SeekTo or just before the passed <code>cell</code>.  Examine the return
    * code to figure whether we found the cell or not.

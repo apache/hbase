@@ -63,4 +63,12 @@ public interface RpcCallContext extends Delayable {
    * @return the client version info, or null if the information is not present
    */
   VersionInfo getClientVersionInfo();
+
+  /**
+   * Sets a callback which has to be executed at the end of this RPC call. Such a callback is an
+   * optional one for any Rpc call.
+   *
+   * @param callback
+   */
+  void setCallBack(RpcCallback callback);
 }

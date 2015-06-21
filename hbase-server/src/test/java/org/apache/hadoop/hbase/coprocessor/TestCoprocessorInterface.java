@@ -144,6 +144,11 @@ public class TestCoprocessorInterface {
     public int getBatch() {
       return delegate.getBatch();
     }
+
+    @Override
+    public void shipped() throws IOException {
+      this.delegate.shipped();
+    }
   }
 
   public static class CoprocessorImpl extends BaseRegionObserver {

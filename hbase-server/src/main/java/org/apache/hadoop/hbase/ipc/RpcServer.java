@@ -306,6 +306,7 @@ public class RpcServer implements RpcServerInterface {
 
     private User user;
     private InetAddress remoteAddress;
+    private RpcCallback callback;
 
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
@@ -431,6 +432,16 @@ public class RpcServer implements RpcServerInterface {
         LOG.warn("Exception while creating response " + e);
       }
       this.response = bc;
+      // Once a response message is created and set to this.response, this Call can be treated as
+      // done. The Responder thread will do the n/w write of this message back to client.
+      if (this.callback != null) {
+        try {
+          this.callback.run();
+        } catch (Exception e) {
+          // Don't allow any exception here to kill this handler thread.
+          LOG.warn("Exception while running the Rpc Callback.", e);
+        }
+      }
     }
 
     private BufferChain wrapWithSasl(BufferChain bc)
@@ -552,6 +563,11 @@ public class RpcServer implements RpcServerInterface {
     @Override
     public VersionInfo getClientVersionInfo() {
       return connection.getVersionInfo();
+    }
+
+    @Override
+    public void setCallBack(RpcCallback callback) {
+      this.callback = callback;
     }
   }
 

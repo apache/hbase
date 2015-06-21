@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
-public interface RegionScanner extends InternalScanner {
+public interface RegionScanner extends InternalScanner, Shipper {
   /**
    * @return The RegionInfo for this scanner.
    */

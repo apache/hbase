@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.client.Scan;
  * Scanner that returns the next KeyValue.
  */
 @InterfaceAudience.Private
-public interface KeyValueScanner {
+public interface KeyValueScanner extends Shipper {
   /**
    * Look at the next Cell in this scanner, but do not iterate scanner.
    * @return the next Cell

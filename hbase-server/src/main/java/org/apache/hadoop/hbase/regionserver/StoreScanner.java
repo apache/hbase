@@ -901,5 +901,21 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public Cell getNextIndexedKey() {
     return this.heap.getNextIndexedKey();
   }
+
+  @Override
+  public void shipped() throws IOException {
+    lock.lock();
+    try {
+      for (KeyValueHeap h : this.heapsForDelayedClose) {
+        h.close();// There wont be further fetch of Cells from these scanners. Just close.
+      }
+      this.heapsForDelayedClose.clear();
+      if (this.heap != null) {
+        this.heap.shipped();
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
 }
 

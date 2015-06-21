@@ -406,4 +406,20 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     // here we return the next index key from the top scanner
     return current == null ? null : current.getNextIndexedKey();
   }
+
+  @Override
+  public void shipped() throws IOException {
+    for (KeyValueScanner scanner : this.scannersForDelayedClose) {
+      scanner.close(); // There wont be further fetch of Cells from these scanners. Just close.
+    }
+    this.scannersForDelayedClose.clear();
+    if (this.current != null) {
+      this.current.shipped();
+    }
+    if (this.heap != null) {
+      for (KeyValueScanner scanner : this.heap) {
+        scanner.shipped();
+      }
+    }
+  }
 }
