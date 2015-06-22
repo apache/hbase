@@ -62,6 +62,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
   // We only merge adjacent regions if forcible is false
   private final boolean forcible;
   private boolean useCoordinationForAssignment;
+  private final long masterSystemTime;
 
   /*
    * Transaction state for listener, only valid during execute and
@@ -129,6 +130,17 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    */
   public RegionMergeTransactionImpl(final Region a, final Region b,
       final boolean forcible) {
+    this(a, b, forcible, EnvironmentEdgeManager.currentTime());
+  }
+  /**
+   * Constructor
+   * @param a region a to merge
+   * @param b region b to merge
+   * @param forcible if false, we will only merge adjacent regions
+   * @param masterSystemTime the time at the master side
+   */
+  public RegionMergeTransactionImpl(final Region a, final Region b,
+      final boolean forcible, long masterSystemTime) {
     if (a.getRegionInfo().compareTo(b.getRegionInfo()) <= 0) {
       this.region_a = (HRegion)a;
       this.region_b = (HRegion)b;
@@ -137,6 +149,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       this.region_b = (HRegion)a;
     }
     this.forcible = forcible;
+    this.masterSystemTime = masterSystemTime;
     this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
   }
 
@@ -168,6 +181,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    * @return <code>true</code> if the regions are mergeable else
    *         <code>false</code> if they are not (e.g. its already closed, etc.).
    */
+  @Override
   public boolean prepare(final RegionServerServices services) throws IOException {
     if (!region_a.getTableDesc().getTableName()
         .equals(region_b.getTableDesc().getTableName())) {
@@ -232,6 +246,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    * @throws IOException
    * @see #rollback(Server, RegionServerServices)
    */
+  @Override
   public HRegion execute(final Server server,
       final RegionServerServices services) throws IOException {
     this.server = server;
@@ -335,7 +350,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       if (metaEntries.isEmpty()) {
         MetaTableAccessor.mergeRegions(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
-          server.getServerName(), region_a.getTableDesc().getRegionReplication());
+          server.getServerName(), region_a.getTableDesc().getRegionReplication(), masterSystemTime);
       } else {
         mergeRegionsAndPutMetaEntries(server.getConnection(),
           mergedRegion.getRegionInfo(), region_a.getRegionInfo(), region_b.getRegionInfo(),
@@ -355,7 +370,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
 
   private void mergeRegionsAndPutMetaEntries(HConnection hConnection,
       HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
-      ServerName serverName, List<Mutation> metaEntries, 
+      ServerName serverName, List<Mutation> metaEntries,
       int regionReplication) throws IOException {
     prepareMutationsForMerge(mergedRegion, regionA, regionB, serverName, metaEntries,
       regionReplication);
@@ -367,16 +382,19 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       int regionReplication) throws IOException {
     HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
+    // use the maximum of what master passed us vs local time.
+    long time = Math.max(EnvironmentEdgeManager.currentTime(), masterSystemTime);
+
     // Put for parent
-    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged);
+    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged, time);
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
       regionA.toByteArray());
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
       regionB.toByteArray());
     mutations.add(putOfMerged);
     // Deletes for merging regions
-    Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA);
-    Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB);
+    Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA, time);
+    Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB, time);
     mutations.add(deleteA);
     mutations.add(deleteB);
 
@@ -663,6 +681,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    *         of no return and so now need to abort the server to minimize
    *         damage.
    */
+  @Override
   @SuppressWarnings("deprecation")
   public boolean rollback(final Server server,
       final RegionServerServices services) throws IOException {

@@ -943,6 +943,8 @@ public final class RequestConverter {
     builder.setRegionA(regionASpecifier);
     builder.setRegionB(regionBSpecifier);
     builder.setForcible(forcible);
+    // send the master's wall clock time as well, so that the RS can refer to it
+    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTime());
     return builder.build();
   }
 
