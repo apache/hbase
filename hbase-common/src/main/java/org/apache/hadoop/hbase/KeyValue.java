@@ -147,6 +147,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     Bytes.SIZEOF_INT /*keylength*/ +
     Bytes.SIZEOF_INT /*valuelength*/;
 
+  public static final int ROW_KEY_OFFSET = ROW_OFFSET + ROW_LENGTH_SIZE;
+
   // Size of the length ints in a KeyValue datastructure.
   public static final int KEYVALUE_INFRASTRUCTURE_SIZE = ROW_OFFSET;
 
@@ -1328,7 +1330,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
    */
   @Override
   public int getRowOffset() {
-    return getKeyOffset() + Bytes.SIZEOF_SHORT;
+    return this.offset + ROW_KEY_OFFSET;
   }
 
   /**
@@ -1359,7 +1361,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
    * @return Family offset
    */
   private int getFamilyOffset(int rlength) {
-    return this.offset + ROW_OFFSET + Bytes.SIZEOF_SHORT + rlength + Bytes.SIZEOF_BYTE;
+    return this.offset + ROW_KEY_OFFSET + rlength + Bytes.SIZEOF_BYTE;
   }
 
   /**

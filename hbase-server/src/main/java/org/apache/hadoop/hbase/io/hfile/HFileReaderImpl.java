@@ -35,10 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.SizeCachedKeyValue;
+import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.NoTagsKeyValue;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -827,21 +828,18 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (!isSeeked())
         return null;
 
-      if(currTagsLen > 0) {
-        KeyValue ret = new KeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+      KeyValue ret;
+      if (currTagsLen > 0) {
+        ret = new SizeCachedKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
             + blockBuffer.position(), getCellBufSize());
-        if (this.reader.shouldIncludeMemstoreTS()) {
-          ret.setSequenceId(currMemstoreTS);
-        }
-        return ret;
       } else {
-        NoTagsKeyValue ret = new NoTagsKeyValue(blockBuffer.array(),
-            blockBuffer.arrayOffset() + blockBuffer.position(), getCellBufSize());
-        if (this.reader.shouldIncludeMemstoreTS()) {
-          ret.setSequenceId(currMemstoreTS);
-        }
-        return ret;
+        ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+            + blockBuffer.position(), getCellBufSize());
       }
+      if (this.reader.shouldIncludeMemstoreTS()) {
+        ret.setSequenceId(currMemstoreTS);
+      }
+      return ret;
     }
 
     @Override
