@@ -101,6 +101,9 @@ import org.apache.hadoop.hbase.master.procedure.ModifyTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedurePrepareLatch;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.master.procedure.TruncateTableProcedure;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
+import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -268,7 +271,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   private volatile boolean serverCrashProcessingEnabled = false;
 
   LoadBalancer balancer;
+  RegionNormalizer normalizer;
+  private boolean normalizerEnabled = false;
   private BalancerChore balancerChore;
+  private RegionNormalizerChore normalizerChore;
   private ClusterStatusChore clusterStatusChore;
   private ClusterStatusPublisher clusterStatusPublisherChore = null;
 
@@ -546,6 +552,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   void initializeZKBasedSystemTrackers() throws IOException,
       InterruptedException, KeeperException, CoordinatedStateException {
     this.balancer = LoadBalancerFactory.getLoadBalancer(conf);
+    this.normalizer = RegionNormalizerFactory.getRegionNormalizer(conf);
+    this.normalizer.setMasterServices(this);
+    this.normalizerEnabled = conf.getBoolean(HConstants.HBASE_NORMALIZER_ENABLED, false);
     this.loadBalancerTracker = new LoadBalancerTracker(zooKeeper, this);
     this.loadBalancerTracker.start();
     this.assignmentManager = new AssignmentManager(this, serverManager,
@@ -742,6 +751,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     getChoreService().scheduleChore(clusterStatusChore);
     this.balancerChore = new BalancerChore(this);
     getChoreService().scheduleChore(balancerChore);
+    this.normalizerChore = new RegionNormalizerChore(this);
+    getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this, this);
     getChoreService().scheduleChore(catalogJanitorChore);
 
@@ -1119,6 +1130,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (this.balancerChore != null) {
       this.balancerChore.cancel(true);
     }
+    if (this.normalizerChore != null) {
+      this.normalizerChore.cancel(true);
+    }
     if (this.clusterStatusChore != null) {
       this.clusterStatusChore.cancel(true);
     }
@@ -1249,6 +1263,47 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   /**
+   * Perform normalization of cluster (invoked by {@link RegionNormalizerChore}).
+   *
+   * @return true if normalization step was performed successfully, false otherwise
+   *   (specifically, if HMaster hasn't been initialized properly or normalization
+   *   is globally disabled)
+   * @throws IOException
+   */
+  public boolean normalizeRegions() throws IOException {
+    if (!this.initialized) {
+      LOG.debug("Master has not been initialized, don't run region normalizer.");
+      return false;
+    }
+
+    if (!this.normalizerEnabled) {
+      LOG.debug("Region normalization is disabled, don't run region normalizer.");
+      return false;
+    }
+
+    synchronized (this.normalizer) {
+      // Don't run the normalizer concurrently
+      List<TableName> allEnabledTables = new ArrayList<>(
+        this.tableStateManager.getTablesInStates(TableState.State.ENABLED));
+
+      Collections.shuffle(allEnabledTables);
+
+      for(TableName table : allEnabledTables) {
+        if (table.isSystemTable() || !getTableDescriptors().getDescriptor(table).
+            getHTableDescriptor().isNormalizationEnabled()) {
+          LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
+            + " table or doesn't have auto normalization turned on");
+          continue;
+        }
+        this.normalizer.computePlanForTable(table).execute(clusterConnection.getAdmin());
+      }
+    }
+    // If Region did not generate any plans, it means the cluster is already balanced.
+    // Return true indicating a success.
+    return true;
+  }
+
+  /**
    * @return Client info for use as prefix on an audit log string; who did an action
    */
   String getClientIdAuditPrefix() {
@@ -1270,7 +1325,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       final HRegionInfo region_b, final boolean forcible) throws IOException {
     checkInitialized();
     this.service.submit(new DispatchMergingRegionHandler(this,
-        this.catalogJanitorChore, region_a, region_b, forcible));
+      this.catalogJanitorChore, region_a, region_b, forcible));
   }
 
   void move(final byte[] encodedRegionName,
@@ -1524,7 +1579,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           HConstants.DEFAULT_ZK_SESSION_TIMEOUT);
         // If we're a backup master, stall until a primary to writes his address
         if (conf.getBoolean(HConstants.MASTER_TYPE_BACKUP,
-            HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
+          HConstants.DEFAULT_MASTER_TYPE_BACKUP)) {
           LOG.debug("HMaster started in backup mode. "
             + "Stalling until master znode is written.");
           // This will only be a minute or so while the cluster starts up,
@@ -1546,12 +1601,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
           LOG.fatal("Failed to become active master", t);
           // HBASE-5680: Likely hadoop23 vs hadoop 20.x/1.x incompatibility
           if (t instanceof NoClassDefFoundError &&
-              t.getMessage()
-                  .contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
+            t.getMessage()
+              .contains("org/apache/hadoop/hdfs/protocol/HdfsConstants$SafeModeAction")) {
             // improved error message for this special case
             abort("HBase is having a problem with its Hadoop jars.  You may need to "
               + "recompile HBase against Hadoop version "
-              +  org.apache.hadoop.util.VersionInfo.getVersion()
+              + org.apache.hadoop.util.VersionInfo.getVersion()
               + " or change your hadoop jars to start properly", t);
           } else {
             abort("Unhandled exception. Starting shutdown.", t);
