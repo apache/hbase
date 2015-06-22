@@ -102,6 +102,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Triple;
 
@@ -906,6 +907,8 @@ public final class RequestConverter {
     builder.setRegionA(regionASpecifier);
     builder.setRegionB(regionBSpecifier);
     builder.setForcible(forcible);
+    // send the master's wall clock time as well, so that the RS can refer to it
+    builder.setMasterSystemTime(EnvironmentEdgeManager.currentTimeMillis());
     return builder.build();
   }
 

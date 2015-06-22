@@ -18,34 +18,36 @@
  */
 package org.apache.hadoop.hbase.catalog;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.collect.Lists;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+
+import static org.junit.Assert.*;
 
 /**
  * Test {@link MetaReader}, {@link MetaEditor}.
@@ -294,5 +296,56 @@ public class TestMetaReaderEditor {
       pair.getFirst().getEncodedName());
   }
 
+  @Test
+  public void testMastersSystemTimeIsUsedInMergeRegions() throws IOException {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo regionInfoA = new HRegionInfo(TableName.valueOf("table_foo"),
+        HConstants.EMPTY_START_ROW, new byte[] {'a'}, false, regionId);
+    HRegionInfo regionInfoB = new HRegionInfo(TableName.valueOf("table_foo"),
+        new byte[] {'a'}, HConstants.EMPTY_END_ROW, false, regionId);
+    HRegionInfo mergedRegionInfo = new HRegionInfo(TableName.valueOf("table_foo"),
+        HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId);
+
+    ServerName sn = ServerName.valueOf("bar", 0, 0);
+    HTable meta = new HTable(UTIL.getConfiguration(), TableName.META_TABLE_NAME);
+    try {
+      MetaEditor.addRegionToMeta(meta, regionInfoA);
+      MetaEditor.addRegionToMeta(meta, regionInfoB);
+
+      // write the serverName column with a big current time, but set the masters time as even
+      // bigger. When region merge deletes the rows for regionA and regionB, the serverName columns
+      // should not be seen by the following get
+      long serverNameTime = EnvironmentEdgeManager.currentTimeMillis()   + 100000000;
+      long masterSystemTime = EnvironmentEdgeManager.currentTimeMillis() + 123456789;
+
+      // write the serverName columns
+      MetaEditor.updateRegionLocation(CT, regionInfoA, sn, 1, serverNameTime);
+
+      // assert that we have the serverName column with expected ts
+      Get get = new Get(mergedRegionInfo.getRegionName());
+      Result result = meta.get(get);
+      Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
+      assertNotNull(serverCell);
+      assertEquals(serverNameTime, serverCell.getTimestamp());
+
+      // now merge the regions, effectively deleting the rows for region a and b.
+      MetaEditor.mergeRegions(CT, mergedRegionInfo,
+          regionInfoA, regionInfoB, sn, masterSystemTime);
+
+      result = meta.get(get);
+      serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          HConstants.SERVER_QUALIFIER);
+      Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          HConstants.STARTCODE_QUALIFIER);
+      Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          HConstants.SEQNUM_QUALIFIER);
+      assertNull(serverCell);
+      assertNull(startCodeCell);
+      assertNull(seqNumCell);
+    } finally {
+      meta.close();
+    }
+  }
 }
 

@@ -4149,6 +4149,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       HRegion regionA = getRegion(request.getRegionA());
       HRegion regionB = getRegion(request.getRegionB());
       boolean forcible = request.getForcible();
+      long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
       regionA.startRegionOperation(Operation.MERGE_REGION);
       regionB.startRegionOperation(Operation.MERGE_REGION);
       LOG.info("Receiving merging request for  " + regionA + ", " + regionB
@@ -4165,7 +4166,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         long endTime = EnvironmentEdgeManager.currentTimeMillis();
         metricsRegionServer.updateFlushTime(endTime - startTime);
       }
-      compactSplitThread.requestRegionsMerge(regionA, regionB, forcible);
+      compactSplitThread.requestRegionsMerge(regionA, regionB, forcible, masterSystemTime);
       return MergeRegionsResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       abort("Replay of WAL required. Forcing server shutdown", ex);

@@ -80,10 +80,18 @@ public class MetaEditor {
    * table
    */
   public static Delete makeDeleteFromRegionInfo(HRegionInfo regionInfo) {
+    return makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Generates and returns a Delete containing the region info for the catalog
+   * table
+   */
+  public static Delete makeDeleteFromRegionInfo(HRegionInfo regionInfo, long ts) {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
-    Delete delete = new Delete(regionInfo.getRegionName());
+    Delete delete = new Delete(regionInfo.getRegionName(), ts);
     return delete;
   }
 
@@ -327,25 +335,29 @@ public class MetaEditor {
    * @param regionA
    * @param regionB
    * @param sn the location of the region
+   * @param masterSystemTime
    * @throws IOException
    */
   public static void mergeRegions(final CatalogTracker catalogTracker,
       HRegionInfo mergedRegion, HRegionInfo regionA, HRegionInfo regionB,
-      ServerName sn) throws IOException {
+      ServerName sn, long masterSystemTime) throws IOException {
     HTable meta = MetaReader.getMetaHTable(catalogTracker);
     try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
+      // use the maximum of what master passed us vs local time.
+      long time = Math.max(EnvironmentEdgeManager.currentTimeMillis(), masterSystemTime);
+
       // Put for parent
-      Put putOfMerged = makePutFromRegionInfo(copyOfMerged);
+      Put putOfMerged = makePutFromRegionInfo(copyOfMerged, time);
       putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
           regionA.toByteArray());
       putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
           regionB.toByteArray());
 
       // Deletes for merging regions
-      Delete deleteA = makeDeleteFromRegionInfo(regionA);
-      Delete deleteB = makeDeleteFromRegionInfo(regionB);
+      Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
+      Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
 
       // The merged is a new region, openSeqNum = 1 is fine.
       addLocation(putOfMerged, sn, 1);
@@ -442,7 +454,7 @@ public class MetaEditor {
   public static void updateMetaLocation(CatalogTracker catalogTracker,
       HRegionInfo regionInfo, ServerName sn, long openSeqNum)
   throws IOException, ConnectException {
-    updateLocation(catalogTracker, regionInfo, sn, openSeqNum);
+    updateLocation(catalogTracker, regionInfo, sn, openSeqNum, HConstants.LATEST_TIMESTAMP);
   }
 
   /**
@@ -459,8 +471,27 @@ public class MetaEditor {
    */
   public static void updateRegionLocation(CatalogTracker catalogTracker,
       HRegionInfo regionInfo, ServerName sn, long updateSeqNum)
+      throws IOException {
+    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Updates the location of the specified region in hbase:meta to be the specified
+   * server hostname and startcode.
+   * <p>
+   * Uses passed catalog tracker to get a connection to the server hosting
+   * hbase:meta and makes edits to that region.
+   *
+   * @param catalogTracker catalog tracker
+   * @param regionInfo region to update location of
+   * @param sn Server name
+   * @param masterSystemTime
+   * @throws IOException
+   */
+  public static void updateRegionLocation(CatalogTracker catalogTracker,
+      HRegionInfo regionInfo, ServerName sn, long updateSeqNum, long masterSystemTime)
   throws IOException {
-    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum);
+    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum, masterSystemTime);
   }
 
   /**
@@ -473,13 +504,18 @@ public class MetaEditor {
    * @param regionInfo region to update location of
    * @param sn Server name
    * @param openSeqNum the latest sequence number obtained when the region was open
+   * @param masterSystemTime
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
   private static void updateLocation(final CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
+      HRegionInfo regionInfo, ServerName sn, long openSeqNum, long masterSystemTime)
   throws IOException {
-    Put put = new Put(regionInfo.getRegionName());
+
+    // use the maximum of what master passed us vs local time.
+    long time = Math.max(EnvironmentEdgeManager.currentTimeMillis(), masterSystemTime);
+
+    Put put = new Put(regionInfo.getRegionName(), time);
     addLocation(put, sn, openSeqNum);
     putToCatalogTable(catalogTracker, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
@@ -605,15 +641,12 @@ public class MetaEditor {
   }
 
   private static Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    // using regionserver's local time as the timestamp of Put.
-    // See: HBASE-11536
-    long now = EnvironmentEdgeManager.currentTimeMillis();
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, now,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, now,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, now,
-        Bytes.toBytes(openSeqNum));
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+      Bytes.toBytes(openSeqNum));
     return p;
   }
 }
