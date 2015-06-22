@@ -1351,6 +1351,7 @@ image::hbase_replication_diagram.jpg[]
 HBase replication borrows many concepts from the [firstterm]_statement-based replication_ design used by MySQL.
 Instead of SQL statements, entire WALEdits (consisting of multiple cell inserts coming from Put and Delete operations on the clients) are replicated in order to maintain atomicity.
 
+[[hbase.replication.management]]
 === Managing and Configuring Cluster Replication
 .Cluster Configuration Overview
 
