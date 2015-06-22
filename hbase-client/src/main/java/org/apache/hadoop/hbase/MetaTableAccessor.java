@@ -937,10 +937,18 @@ public class MetaTableAccessor {
    * table
    */
   public static Delete makeDeleteFromRegionInfo(HRegionInfo regionInfo) {
+    return makeDeleteFromRegionInfo(regionInfo, HConstants.LATEST_TIMESTAMP);
+  }
+
+  /**
+   * Generates and returns a Delete containing the region info for the catalog
+   * table
+   */
+  public static Delete makeDeleteFromRegionInfo(HRegionInfo regionInfo, long ts) {
     if (regionInfo == null) {
       throw new IllegalArgumentException("Can't make a delete for null region");
     }
-    Delete delete = new Delete(regionInfo.getRegionName());
+    Delete delete = new Delete(regionInfo.getRegionName(), ts);
     return delete;
   }
 
@@ -1204,24 +1212,29 @@ public class MetaTableAccessor {
    * @param regionA
    * @param regionB
    * @param sn the location of the region
+   * @param masterSystemTime
    * @throws IOException
    */
   public static void mergeRegions(final Connection connection, HRegionInfo mergedRegion,
-      HRegionInfo regionA, HRegionInfo regionB, ServerName sn) throws IOException {
+      HRegionInfo regionA, HRegionInfo regionB, ServerName sn, long masterSystemTime)
+          throws IOException {
     Table meta = getMetaHTable(connection);
     try {
       HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
+      // use the maximum of what master passed us vs local time.
+      long time = Math.max(EnvironmentEdgeManager.currentTime(), masterSystemTime);
+
       // Put for parent
-      Put putOfMerged = makePutFromRegionInfo(copyOfMerged);
+      Put putOfMerged = makePutFromRegionInfo(copyOfMerged, time);
       putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
         regionA.toByteArray());
       putOfMerged.addImmutable(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
         regionB.toByteArray());
 
       // Deletes for merging regions
-      Delete deleteA = makeDeleteFromRegionInfo(regionA);
-      Delete deleteB = makeDeleteFromRegionInfo(regionB);
+      Delete deleteA = makeDeleteFromRegionInfo(regionA, time);
+      Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
 
       // The merged is a new region, openSeqNum = 1 is fine.
       addLocation(putOfMerged, sn, 1, -1, mergedRegion.getReplicaId());

@@ -13531,6 +13531,24 @@ public final class AdminProtos {
      * <code>optional bool forcible = 3 [default = false];</code>
      */
     boolean getForcible();
+
+    // optional uint64 master_system_time = 4;
+    /**
+     * <code>optional uint64 master_system_time = 4;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    boolean hasMasterSystemTime();
+    /**
+     * <code>optional uint64 master_system_time = 4;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    long getMasterSystemTime();
   }
   /**
    * Protobuf type {@code MergeRegionsRequest}
@@ -13619,6 +13637,11 @@ public final class AdminProtos {
             case 24: {
               bitField0_ |= 0x00000004;
               forcible_ = input.readBool();
+              break;
+            }
+            case 32: {
+              bitField0_ |= 0x00000008;
+              masterSystemTime_ = input.readUInt64();
               break;
             }
           }
@@ -13721,10 +13744,35 @@ public final class AdminProtos {
       return forcible_;
     }
 
+    // optional uint64 master_system_time = 4;
+    public static final int MASTER_SYSTEM_TIME_FIELD_NUMBER = 4;
+    private long masterSystemTime_;
+    /**
+     * <code>optional uint64 master_system_time = 4;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    public boolean hasMasterSystemTime() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>optional uint64 master_system_time = 4;</code>
+     *
+     * <pre>
+     * wall clock time from master
+     * </pre>
+     */
+    public long getMasterSystemTime() {
+      return masterSystemTime_;
+    }
+
     private void initFields() {
       regionA_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       regionB_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.getDefaultInstance();
       forcible_ = false;
+      masterSystemTime_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -13763,6 +13811,9 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBool(3, forcible_);
       }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeUInt64(4, masterSystemTime_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -13783,6 +13834,10 @@ public final class AdminProtos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBoolSize(3, forcible_);
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, masterSystemTime_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -13822,6 +13877,11 @@ public final class AdminProtos {
         result = result && (getForcible()
             == other.getForcible());
       }
+      result = result && (hasMasterSystemTime() == other.hasMasterSystemTime());
+      if (hasMasterSystemTime()) {
+        result = result && (getMasterSystemTime()
+            == other.getMasterSystemTime());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -13846,6 +13906,10 @@ public final class AdminProtos {
       if (hasForcible()) {
         hash = (37 * hash) + FORCIBLE_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getForcible());
+      }
+      if (hasMasterSystemTime()) {
+        hash = (37 * hash) + MASTER_SYSTEM_TIME_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getMasterSystemTime());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -13979,6 +14043,8 @@ public final class AdminProtos {
         bitField0_ = (bitField0_ & ~0x00000002);
         forcible_ = false;
         bitField0_ = (bitField0_ & ~0x00000004);
+        masterSystemTime_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00000008);
         return this;
       }
 
@@ -14027,6 +14093,10 @@ public final class AdminProtos {
           to_bitField0_ |= 0x00000004;
         }
         result.forcible_ = forcible_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.masterSystemTime_ = masterSystemTime_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14051,6 +14121,9 @@ public final class AdminProtos {
         }
         if (other.hasForcible()) {
           setForcible(other.getForcible());
+        }
+        if (other.hasMasterSystemTime()) {
+          setMasterSystemTime(other.getMasterSystemTime());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -14358,6 +14431,55 @@ public final class AdminProtos {
       public Builder clearForcible() {
         bitField0_ = (bitField0_ & ~0x00000004);
         forcible_ = false;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 master_system_time = 4;
+      private long masterSystemTime_ ;
+      /**
+       * <code>optional uint64 master_system_time = 4;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public boolean hasMasterSystemTime() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional uint64 master_system_time = 4;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public long getMasterSystemTime() {
+        return masterSystemTime_;
+      }
+      /**
+       * <code>optional uint64 master_system_time = 4;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public Builder setMasterSystemTime(long value) {
+        bitField0_ |= 0x00000008;
+        masterSystemTime_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 master_system_time = 4;</code>
+       *
+       * <pre>
+       * wall clock time from master
+       * </pre>
+       */
+      public Builder clearMasterSystemTime() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        masterSystemTime_ = 0L;
         onChanged();
         return this;
       }
@@ -22210,51 +22332,52 @@ public final class AdminProtos {
       "teInfo\032S\n\020RegionUpdateInfo\022\033\n\006region\030\001 \002" +
       "(\0132\013.RegionInfo\022\"\n\rfavored_nodes\030\002 \003(\0132\013" +
       ".ServerName\".\n\032UpdateFavoredNodesRespons" +
-      "e\022\020\n\010response\030\001 \001(\r\"v\n\023MergeRegionsReque" +
-      "st\022\"\n\010region_a\030\001 \002(\0132\020.RegionSpecifier\022\"" +
-      "\n\010region_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010fo" +
-      "rcible\030\003 \001(\010:\005false\"\026\n\024MergeRegionsRespo" +
-      "nse\"X\n\010WALEntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n",
-      "\017key_value_bytes\030\002 \003(\014\022\035\n\025associated_cel" +
-      "l_count\030\003 \001(\005\"4\n\030ReplicateWALEntryReques" +
-      "t\022\030\n\005entry\030\001 \003(\0132\t.WALEntry\"\033\n\031Replicate" +
-      "WALEntryResponse\"\026\n\024RollWALWriterRequest" +
-      "\"0\n\025RollWALWriterResponse\022\027\n\017region_to_f" +
-      "lush\030\001 \003(\014\"#\n\021StopServerRequest\022\016\n\006reaso" +
-      "n\030\001 \002(\t\"\024\n\022StopServerResponse\"\026\n\024GetServ" +
-      "erInfoRequest\"B\n\nServerInfo\022 \n\013server_na" +
-      "me\030\001 \002(\0132\013.ServerName\022\022\n\nwebui_port\030\002 \001(" +
-      "\r\"9\n\025GetServerInfoResponse\022 \n\013server_inf",
-      "o\030\001 \002(\0132\013.ServerInfo\"\034\n\032UpdateConfigurat" +
-      "ionRequest\"\035\n\033UpdateConfigurationRespons" +
-      "e2\230\010\n\014AdminService\022>\n\rGetRegionInfo\022\025.Ge" +
-      "tRegionInfoRequest\032\026.GetRegionInfoRespon" +
-      "se\022;\n\014GetStoreFile\022\024.GetStoreFileRequest" +
-      "\032\025.GetStoreFileResponse\022D\n\017GetOnlineRegi" +
-      "on\022\027.GetOnlineRegionRequest\032\030.GetOnlineR" +
-      "egionResponse\0225\n\nOpenRegion\022\022.OpenRegion" +
-      "Request\032\023.OpenRegionResponse\0228\n\013CloseReg" +
-      "ion\022\023.CloseRegionRequest\032\024.CloseRegionRe",
-      "sponse\0228\n\013FlushRegion\022\023.FlushRegionReque" +
-      "st\032\024.FlushRegionResponse\0228\n\013SplitRegion\022" +
-      "\023.SplitRegionRequest\032\024.SplitRegionRespon" +
-      "se\022>\n\rCompactRegion\022\025.CompactRegionReque" +
-      "st\032\026.CompactRegionResponse\022;\n\014MergeRegio" +
-      "ns\022\024.MergeRegionsRequest\032\025.MergeRegionsR" +
-      "esponse\022J\n\021ReplicateWALEntry\022\031.Replicate" +
-      "WALEntryRequest\032\032.ReplicateWALEntryRespo" +
-      "nse\022?\n\006Replay\022\031.ReplicateWALEntryRequest" +
-      "\032\032.ReplicateWALEntryResponse\022>\n\rRollWALW",
-      "riter\022\025.RollWALWriterRequest\032\026.RollWALWr" +
-      "iterResponse\022>\n\rGetServerInfo\022\025.GetServe" +
-      "rInfoRequest\032\026.GetServerInfoResponse\0225\n\n" +
-      "StopServer\022\022.StopServerRequest\032\023.StopSer" +
-      "verResponse\022M\n\022UpdateFavoredNodes\022\032.Upda" +
-      "teFavoredNodesRequest\032\033.UpdateFavoredNod" +
-      "esResponse\022P\n\023UpdateConfiguration\022\033.Upda" +
-      "teConfigurationRequest\032\034.UpdateConfigura" +
-      "tionResponseBA\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
+      "e\022\020\n\010response\030\001 \001(\r\"\222\001\n\023MergeRegionsRequ" +
+      "est\022\"\n\010region_a\030\001 \002(\0132\020.RegionSpecifier\022" +
+      "\"\n\010region_b\030\002 \002(\0132\020.RegionSpecifier\022\027\n\010f" +
+      "orcible\030\003 \001(\010:\005false\022\032\n\022master_system_ti" +
+      "me\030\004 \001(\004\"\026\n\024MergeRegionsResponse\"X\n\010WALE",
+      "ntry\022\024\n\003key\030\001 \002(\0132\007.WALKey\022\027\n\017key_value_" +
+      "bytes\030\002 \003(\014\022\035\n\025associated_cell_count\030\003 \001" +
+      "(\005\"4\n\030ReplicateWALEntryRequest\022\030\n\005entry\030" +
+      "\001 \003(\0132\t.WALEntry\"\033\n\031ReplicateWALEntryRes" +
+      "ponse\"\026\n\024RollWALWriterRequest\"0\n\025RollWAL" +
+      "WriterResponse\022\027\n\017region_to_flush\030\001 \003(\014\"" +
+      "#\n\021StopServerRequest\022\016\n\006reason\030\001 \002(\t\"\024\n\022" +
+      "StopServerResponse\"\026\n\024GetServerInfoReque" +
+      "st\"B\n\nServerInfo\022 \n\013server_name\030\001 \002(\0132\013." +
+      "ServerName\022\022\n\nwebui_port\030\002 \001(\r\"9\n\025GetSer",
+      "verInfoResponse\022 \n\013server_info\030\001 \002(\0132\013.S" +
+      "erverInfo\"\034\n\032UpdateConfigurationRequest\"" +
+      "\035\n\033UpdateConfigurationResponse2\230\010\n\014Admin" +
+      "Service\022>\n\rGetRegionInfo\022\025.GetRegionInfo" +
+      "Request\032\026.GetRegionInfoResponse\022;\n\014GetSt" +
+      "oreFile\022\024.GetStoreFileRequest\032\025.GetStore" +
+      "FileResponse\022D\n\017GetOnlineRegion\022\027.GetOnl" +
+      "ineRegionRequest\032\030.GetOnlineRegionRespon" +
+      "se\0225\n\nOpenRegion\022\022.OpenRegionRequest\032\023.O" +
+      "penRegionResponse\0228\n\013CloseRegion\022\023.Close",
+      "RegionRequest\032\024.CloseRegionResponse\0228\n\013F" +
+      "lushRegion\022\023.FlushRegionRequest\032\024.FlushR" +
+      "egionResponse\0228\n\013SplitRegion\022\023.SplitRegi" +
+      "onRequest\032\024.SplitRegionResponse\022>\n\rCompa" +
+      "ctRegion\022\025.CompactRegionRequest\032\026.Compac" +
+      "tRegionResponse\022;\n\014MergeRegions\022\024.MergeR" +
+      "egionsRequest\032\025.MergeRegionsResponse\022J\n\021" +
+      "ReplicateWALEntry\022\031.ReplicateWALEntryReq" +
+      "uest\032\032.ReplicateWALEntryResponse\022?\n\006Repl" +
+      "ay\022\031.ReplicateWALEntryRequest\032\032.Replicat",
+      "eWALEntryResponse\022>\n\rRollWALWriter\022\025.Rol" +
+      "lWALWriterRequest\032\026.RollWALWriterRespons" +
+      "e\022>\n\rGetServerInfo\022\025.GetServerInfoReques" +
+      "t\032\026.GetServerInfoResponse\0225\n\nStopServer\022" +
+      "\022.StopServerRequest\032\023.StopServerResponse" +
+      "\022M\n\022UpdateFavoredNodes\022\032.UpdateFavoredNo" +
+      "desRequest\032\033.UpdateFavoredNodesResponse\022" +
+      "P\n\023UpdateConfiguration\022\033.UpdateConfigura" +
+      "tionRequest\032\034.UpdateConfigurationRespons" +
+      "eBA\n*org.apache.hadoop.hbase.protobuf.ge",
+      "neratedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -22386,7 +22509,7 @@ public final class AdminProtos {
           internal_static_MergeRegionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MergeRegionsRequest_descriptor,
-              new java.lang.String[] { "RegionA", "RegionB", "Forcible", });
+              new java.lang.String[] { "RegionA", "RegionB", "Forcible", "MasterSystemTime", });
           internal_static_MergeRegionsResponse_descriptor =
             getDescriptor().getMessageTypes().get(19);
           internal_static_MergeRegionsResponse_fieldAccessorTable = new

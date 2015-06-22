@@ -210,9 +210,9 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   }
 
   public synchronized void requestRegionsMerge(final HRegion a,
-      final HRegion b, final boolean forcible) {
+      final HRegion b, final boolean forcible, long masterSystemTime) {
     try {
-      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible));
+      mergePool.execute(new RegionMergeRequest(a, b, this.server, forcible, masterSystemTime));
       if (LOG.isDebugEnabled()) {
         LOG.debug("Region merge requested for " + a + "," + b + ", forcible="
             + forcible + ".  " + this);

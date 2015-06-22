@@ -58,6 +58,7 @@ public class TestMetaTableAccessor {
   private static final Log LOG = LogFactory.getLog(TestMetaTableAccessor.class);
   private static final  HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Connection connection;
+  private Random random = new Random();
 
   @BeforeClass public static void beforeClass() throws Exception {
     UTIL.startMiniCluster(3);
@@ -383,6 +384,9 @@ public class TestMetaTableAccessor {
     }
   }
 
+  /**
+   * Tests whether maximum of masters system time versus RSs local system time is used
+   */
   @Test
   public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
     long regionId = System.currentTimeMillis();
@@ -415,6 +419,58 @@ public class TestMetaTableAccessor {
       assertEquals(masterSystemTime, serverCell.getTimestamp());
       assertEquals(masterSystemTime, startCodeCell.getTimestamp());
       assertEquals(masterSystemTime, seqNumCell.getTimestamp());
+    } finally {
+      meta.close();
+    }
+  }
+
+  @Test
+  public void testMastersSystemTimeIsUsedInMergeRegions() throws IOException {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo regionInfoA = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, new byte[] {'a'}, false, regionId, 0);
+    HRegionInfo regionInfoB = new HRegionInfo(TableName.valueOf("table_foo"),
+      new byte[] {'a'}, HConstants.EMPTY_END_ROW, false, regionId, 0);
+    HRegionInfo mergedRegionInfo = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId, 0);
+
+    ServerName sn = ServerName.valueOf("bar", 0, 0);
+    Table meta = MetaTableAccessor.getMetaHTable(connection);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(regionInfoA, regionInfoB);
+      MetaTableAccessor.addRegionsToMeta(connection, regionInfos, 1);
+
+      // write the serverName column with a big current time, but set the masters time as even
+      // bigger. When region merge deletes the rows for regionA and regionB, the serverName columns
+      // should not be seen by the following get
+      long serverNameTime = EnvironmentEdgeManager.currentTime()   + 100000000;
+      long masterSystemTime = EnvironmentEdgeManager.currentTime() + 123456789;
+
+      // write the serverName columns
+      MetaTableAccessor.updateRegionLocation(connection, regionInfoA, sn, 1, serverNameTime);
+
+      // assert that we have the serverName column with expected ts
+      Get get = new Get(mergedRegionInfo.getRegionName());
+      Result result = meta.get(get);
+      Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(0));
+      assertNotNull(serverCell);
+      assertEquals(serverNameTime, serverCell.getTimestamp());
+
+      // now merge the regions, effectively deleting the rows for region a and b.
+      MetaTableAccessor.mergeRegions(connection, mergedRegionInfo,
+        regionInfoA, regionInfoB, sn, masterSystemTime);
+
+      result = meta.get(get);
+      serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+          MetaTableAccessor.getServerColumn(0));
+      Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        MetaTableAccessor.getStartCodeColumn(0));
+      Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        MetaTableAccessor.getSeqNumColumn(0));
+      assertNull(serverCell);
+      assertNull(startCodeCell);
+      assertNull(seqNumCell);
     } finally {
       meta.close();
     }
