@@ -151,6 +151,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       lastCommonPrefix = nextState.lastCommonPrefix;
       nextKvOffset = nextState.nextKvOffset;
       memstoreTS = nextState.memstoreTS;
+      tagsOffset = nextState.tagsOffset;
+      tagsLength = nextState.tagsLength;
     }
 
   }
