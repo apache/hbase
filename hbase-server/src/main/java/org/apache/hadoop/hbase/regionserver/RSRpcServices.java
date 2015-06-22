@@ -1312,6 +1312,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       Region regionA = getRegion(request.getRegionA());
       Region regionB = getRegion(request.getRegionB());
       boolean forcible = request.getForcible();
+      long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
       regionA.startRegionOperation(Operation.MERGE_REGION);
       regionB.startRegionOperation(Operation.MERGE_REGION);
       if (regionA.getRegionInfo().getReplicaId() != HRegionInfo.DEFAULT_REPLICA_ID ||
@@ -1332,7 +1333,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         long endTime = EnvironmentEdgeManager.currentTime();
         regionServer.metricsRegionServer.updateFlushTime(endTime - startTime);
       }
-      regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible);
+      regionServer.compactSplitThread.requestRegionsMerge(regionA, regionB, forcible,
+          masterSystemTime);
       return MergeRegionsResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);

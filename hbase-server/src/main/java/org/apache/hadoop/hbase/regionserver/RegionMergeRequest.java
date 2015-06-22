@@ -42,13 +42,16 @@ class RegionMergeRequest implements Runnable {
   private final HRegionServer server;
   private final boolean forcible;
   private TableLock tableLock;
+  private final long masterSystemTime;
 
-  RegionMergeRequest(Region a, Region b, HRegionServer hrs, boolean forcible) {
+  RegionMergeRequest(Region a, Region b, HRegionServer hrs, boolean forcible,
+    long masterSystemTime) {
     Preconditions.checkNotNull(hrs);
     this.region_a = (HRegion)a;
     this.region_b = (HRegion)b;
     this.server = hrs;
     this.forcible = forcible;
+    this.masterSystemTime = masterSystemTime;
   }
 
   @Override
@@ -67,7 +70,7 @@ class RegionMergeRequest implements Runnable {
     try {
       final long startTime = EnvironmentEdgeManager.currentTime();
       RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a,
-          region_b, forcible);
+          region_b, forcible, masterSystemTime);
 
       //acquire a shared read lock on the table, so that table schema modifications
       //do not happen concurrently
