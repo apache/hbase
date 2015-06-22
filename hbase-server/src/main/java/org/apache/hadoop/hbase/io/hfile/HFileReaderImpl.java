@@ -447,7 +447,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected volatile int blockFetches;
     protected final HFile.Reader reader;
     private int currTagsLen;
-
+    private KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
     protected HFileBlock block;
 
     /**
@@ -600,7 +600,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       long memstoreTS = 0;
       int memstoreTSLen = 0;
       int lastKeyValueSize = -1;
-      KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
       do {
         blockBuffer.mark();
         klen = blockBuffer.getInt();
@@ -760,7 +759,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         return false;
       }
       ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
-
+      // Will be changed as part of HBASE-13939
       if (reader.getComparator()
           .compareKeyIgnoresMvcc(
               new KeyValue.KeyOnlyKeyValue(firstKey.array(), firstKey.arrayOffset(),
@@ -849,16 +848,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position()
               + KEY_VALUE_LEN_SIZE, currKeyLen).slice();
-    }
-
-    public int compareKey(CellComparator comparator, byte[] key, int offset, int length) {
-      // TODO HFileScannerImpl, instance will be used by single thread alone. So we can
-      // have one KeyValue.KeyOnlyKeyValue instance as instance variable and reuse here and in
-      // compareKey(CellComparator comparator, Cell key), seekBefore(Cell key) and
-      // blockSeek(Cell key, boolean seekBefore)
-      KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue(key, offset, length);
-      return comparator.compare(keyOnlyKv, blockBuffer.array(), blockBuffer.arrayOffset()
-          + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
     }
 
     @Override
@@ -1071,10 +1060,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     public int compareKey(CellComparator comparator, Cell key) {
+      this.keyOnlyKv.setKey(blockBuffer.array(), blockBuffer.arrayOffset()
+              + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
       return comparator.compareKeyIgnoresMvcc(
-          key,
-          new KeyValue.KeyOnlyKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-              + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen));
+          key, this.keyOnlyKv);
     }
 
     @Override

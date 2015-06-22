@@ -596,6 +596,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected STATE current = createSeekerState(); // always valid
     protected STATE previous = createSeekerState(); // may not be valid
     protected TagCompressionContext tagCompressionContext = null;
+    protected  KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
 
     public BufferedEncodedSeeker(CellComparator comparator,
         HFileBlockDecodingContext decodingCtx) {
@@ -620,11 +621,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public int compareKey(CellComparator comparator, Cell key) {
-      // TODO BufferedEncodedSeeker, instance will be used by single thread alone. So we can
-      // have one KeyValue.KeyOnlyKeyValue instance as instance variable and reuse here and in
-      // seekToKeyInBlock 
-      return comparator.compareKeyIgnoresMvcc(key,
-          new KeyValue.KeyOnlyKeyValue(current.keyBuffer, 0, current.keyLength));
+      keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
+      return comparator.compareKeyIgnoresMvcc(key, keyOnlyKV);
     }
 
     @Override
@@ -748,10 +746,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       int familyCommonPrefix = 0;
       int qualCommonPrefix = 0;
       previous.invalidate();
-      KeyValue.KeyOnlyKeyValue currentCell = new KeyValue.KeyOnlyKeyValue();
       do {
         int comp;
-        currentCell.setKey(current.keyBuffer, 0, current.keyLength);
+        keyOnlyKV.setKey(current.keyBuffer, 0, current.keyLength);
         if (current.lastCommonPrefix != 0) {
           // The KV format has row key length also in the byte array. The
           // common prefix
@@ -763,19 +760,19 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         if (current.lastCommonPrefix <= 2) {
           rowCommonPrefix = 0;
         }
-        rowCommonPrefix += findCommonPrefixInRowPart(seekCell, currentCell, rowCommonPrefix);
-        comp = compareCommonRowPrefix(seekCell, currentCell, rowCommonPrefix);
+        rowCommonPrefix += findCommonPrefixInRowPart(seekCell, keyOnlyKV, rowCommonPrefix);
+        comp = compareCommonRowPrefix(seekCell, keyOnlyKV, rowCommonPrefix);
         if (comp == 0) {
-          comp = compareTypeBytes(seekCell, currentCell);
+          comp = compareTypeBytes(seekCell, keyOnlyKV);
           if (comp == 0) {
             // Subtract the fixed row key length and the family key fixed length
             familyCommonPrefix = Math.max(
                 0,
                 Math.min(familyCommonPrefix,
-                    current.lastCommonPrefix - (3 + currentCell.getRowLength())));
-            familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell, currentCell,
+                    current.lastCommonPrefix - (3 + keyOnlyKV.getRowLength())));
+            familyCommonPrefix += findCommonPrefixInFamilyPart(seekCell, keyOnlyKV,
                 familyCommonPrefix);
-            comp = compareCommonFamilyPrefix(seekCell, currentCell, familyCommonPrefix);
+            comp = compareCommonFamilyPrefix(seekCell, keyOnlyKV, familyCommonPrefix);
             if (comp == 0) {
               // subtract the rowkey fixed length and the family key fixed
               // length
@@ -784,12 +781,12 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
                   Math.min(
                       qualCommonPrefix,
                       current.lastCommonPrefix
-                          - (3 + currentCell.getRowLength() + currentCell.getFamilyLength())));
-              qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell, currentCell,
+                          - (3 + keyOnlyKV.getRowLength() + keyOnlyKV.getFamilyLength())));
+              qualCommonPrefix += findCommonPrefixInQualifierPart(seekCell, keyOnlyKV,
                   qualCommonPrefix);
-              comp = compareCommonQualifierPrefix(seekCell, currentCell, qualCommonPrefix);
+              comp = compareCommonQualifierPrefix(seekCell, keyOnlyKV, qualCommonPrefix);
               if (comp == 0) {
-                comp = CellComparator.compareTimestamps(seekCell, currentCell);
+                comp = CellComparator.compareTimestamps(seekCell, keyOnlyKV);
                 if (comp == 0) {
                   // Compare types. Let the delete types sort ahead of puts;
                   // i.e. types
@@ -799,7 +796,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
                   // appears ahead of everything, and minimum (0) appears
                   // after
                   // everything.
-                  comp = (0xff & currentCell.getTypeByte()) - (0xff & seekCell.getTypeByte());
+                  comp = (0xff & keyOnlyKV.getTypeByte()) - (0xff & seekCell.getTypeByte());
                 }
               }
             }

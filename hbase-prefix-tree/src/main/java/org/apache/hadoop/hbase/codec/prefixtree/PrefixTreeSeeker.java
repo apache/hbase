@@ -143,19 +143,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   private static final boolean USE_POSITION_BEFORE = false;
 
   /*
-   * Support both of these options since the underlying PrefixTree supports both.  Possibly
-   * expand the EncodedSeeker to utilize them both.
-   */
-
-  protected int seekToOrBeforeUsingPositionAtOrBefore(byte[] keyOnlyBytes, int offset, int length,
-      boolean seekBefore){
-    // this does a deep copy of the key byte[] because the CellSearcher interface wants a Cell
-    KeyValue kv = new KeyValue.KeyOnlyKeyValue(keyOnlyBytes, offset, length);
-
-    return seekToOrBeforeUsingPositionAtOrBefore(kv, seekBefore);
-  }
-
-  /*
    * Support both of these options since the underlying PrefixTree supports
    * both. Possibly expand the EncodedSeeker to utilize them both.
    */
@@ -174,14 +161,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     }
 
     return 1;
-  }
-
-  protected int seekToOrBeforeUsingPositionAtOrAfter(byte[] keyOnlyBytes, int offset, int length,
-      boolean seekBefore) {
-    // this does a deep copy of the key byte[] because the CellSearcher
-    // interface wants a Cell
-    KeyValue kv = new KeyValue.KeyOnlyKeyValue(keyOnlyBytes, offset, length);
-    return seekToOrBeforeUsingPositionAtOrAfter(kv, seekBefore);
   }
 
   protected int seekToOrBeforeUsingPositionAtOrAfter(Cell kv, boolean seekBefore) {

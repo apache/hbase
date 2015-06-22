@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -294,6 +295,7 @@ public class HFileBlockIndex {
       int index = -1;
 
       HFileBlock block;
+      KeyOnlyKeyValue tmpNextIndexKV = new KeyValue.KeyOnlyKeyValue();
       while (true) {
 
         if (currentBlock != null && currentBlock.getOffset() == currentOffset)
@@ -356,9 +358,10 @@ public class HFileBlockIndex {
         currentOnDiskSize = buffer.getInt();
 
         // Only update next indexed key if there is a next indexed key in the current level
-        byte[] tmpNextIndexedKey = getNonRootIndexedKey(buffer, index + 1);
-        if (tmpNextIndexedKey != null) {
-          nextIndexedKey = new KeyValue.KeyOnlyKeyValue(tmpNextIndexedKey);
+        byte[] nonRootIndexedKey = getNonRootIndexedKey(buffer, index + 1);
+        if (nonRootIndexedKey != null) {
+          tmpNextIndexKV.setKey(nonRootIndexedKey, 0, nonRootIndexedKey.length);
+          nextIndexedKey = tmpNextIndexKV;
         }
       }
 
