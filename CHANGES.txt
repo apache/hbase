@@ -1,9 +1,7 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.1.1 07/17/2015
 
-
-Release Notes - HBase - Version 1.1.1
+Release Notes - HBase - Version 1.1.1 06/23/2015
 
 ** Sub-task
     * [HBASE-13470] - High level Integration test for master DDL operations
@@ -11,6 +9,7 @@ Release Notes - HBase - Version 1.1.1
     * [HBASE-13579] - Avoid isCellTTLExpired() for NO-TAG cases
     * [HBASE-13593] - Quota support for namespace should take snapshot restore and clone into account
     * [HBASE-13658] - Improve the test run time for TestAccessController class
+    * [HBASE-13937] - Partially revert HBASE-13172
 
 
 
@@ -18,7 +17,6 @@ Release Notes - HBase - Version 1.1.1
 
 
 ** Bug
-    * [HBASE-13605] - RegionStates should not keep its list of dead servers
     * [HBASE-11830] - TestReplicationThrottler.testThrottling failed on virtual boxes
     * [HBASE-12413] - Mismatch in the equals and hashcode methods of KeyValue
     * [HBASE-13200] - Improper configuration can leads to endless lease recovery during failover
@@ -33,7 +31,6 @@ Release Notes - HBase - Version 1.1.1
     * [HBASE-13576] - HBCK enhancement: Failure in checking one region should not fail the entire HBCK operation.
     * [HBASE-13600] - check_compatibility.sh should ignore shaded jars
     * [HBASE-13604] - bin/hbase mapredcp does not include yammer-metrics jar
-    * [HBASE-13605] - RegionStates should not keep its list of dead servers
     * [HBASE-13606] - AssignmentManager.assign() is not sync in both path
     * [HBASE-13607] - TestSplitLogManager.testGetPreviousRecoveryMode consistently failing
     * [HBASE-13608] - 413 Error with Stargate through Knox, using AD, SPNEGO, and Pre-Auth
@@ -104,6 +101,9 @@ Release Notes - HBase - Version 1.1.1
     * [HBASE-13901] - Error while calling watcher on creating and deleting an HBase table
     * [HBASE-13904] - TestAssignmentManager.testBalanceOnMasterFailoverScenarioWithOfflineNode failing consistently on branch-1.1
     * [HBASE-13905] - TestRecoveredEdits.testReplayWorksThoughLotsOfFlushing failing consistently on branch-1.1
+    * [HBASE-13933] - DBE's seekBefore with tags corrupts the tag's offset information thus leading to incorrect results
+    * [HBASE-13935] - Orphaned namespace table ZK node should not prevent master to start
+    * [HBASE-13938] - Deletes done during the region merge transaction may get eclipsed
 
 
 
@@ -141,15 +141,18 @@ Release Notes - HBase - Version 1.1.1
 
 
 ** Task
+    * [HBASE-13666] - book.pdf is not renamed during site build
     * [HBASE-13697] - publish updated ref guide with prereq tables for 1.1 release train
     * [HBASE-13764] - Backport HBASE-7782 (HBaseTestingUtility.truncateTable() not acting like CLI) to branch-1.x
     * [HBASE-13799] - javadoc how Scan gets polluted when used; if you set attributes or ask for scan metrics
+    * [HBASE-13929] - make_rc.sh publishes empty shaded artifacts
 
 
 ** Test
     * [HBASE-13591] - TestHBaseFsck is flakey
     * [HBASE-13609] - TestFastFail is still failing
     * [HBASE-13623] - TestSplitLogManager.testGetPreviousRecoveryMode is still flaky
+    * [HBASE-13940] - IntegrationTestBulkLoad needs option to specify output folders used by test
 
 
 
