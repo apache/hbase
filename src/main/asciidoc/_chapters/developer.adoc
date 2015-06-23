@@ -1336,6 +1336,9 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.0
 | Enis Soztutar
+
+| 1.1
+| Nick Dimiduk
 |===
 
 [[code.standards]]
