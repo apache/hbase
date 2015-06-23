@@ -201,6 +201,16 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
   private static final ImmutableBytesWritable REGION_MEMSTORE_REPLICATION_KEY =
       new ImmutableBytesWritable(Bytes.toBytes(REGION_MEMSTORE_REPLICATION));
 
+  /**
+   * <em>INTERNAL</em> Used by shell/rest interface to access this metadata
+   * attribute which denotes if the table should be treated by region normalizer.
+   *
+   * @see #isNormalizationEnabled()
+   */
+  public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
+  private static final ImmutableBytesWritable NORMALIZATION_ENABLED_KEY =
+    new ImmutableBytesWritable(Bytes.toBytes(NORMALIZATION_ENABLED));
+
   /** Default durability for HTD is USE_DEFAULT, which defaults to HBase-global default value */
   private static final Durability DEFAULT_DURABLITY = Durability.USE_DEFAULT;
 
@@ -226,6 +236,11 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * Constant that denotes whether the table is compaction enabled by default
    */
   public static final boolean DEFAULT_COMPACTION_ENABLED = true;
+
+  /**
+   * Constant that denotes whether the table is normalized by default.
+   */
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
 
   /**
    * Constant that denotes the maximum default size of the memstore after which
@@ -381,7 +396,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   private void setMetaFlags(final TableName name) {
     setMetaRegion(isRootRegion() ||
-        name.equals(TableName.META_TABLE_NAME));
+      name.equals(TableName.META_TABLE_NAME));
   }
 
   /**
@@ -405,7 +420,7 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   protected void setRootRegion(boolean isRoot) {
     // TODO: Make the value a boolean rather than String of boolean.
-    setValue(IS_ROOT_KEY, isRoot? TRUE: FALSE);
+    setValue(IS_ROOT_KEY, isRoot ? TRUE : FALSE);
   }
 
   /**
@@ -626,6 +641,26 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    */
   public HTableDescriptor setCompactionEnabled(final boolean isEnable) {
     setValue(COMPACTION_ENABLED_KEY, isEnable ? TRUE : FALSE);
+    return this;
+  }
+
+  /**
+   * Check if normalization enable flag of the table is true. If flag is
+   * false then no region normalizer won't attempt to normalize this table.
+   *
+   * @return true if region normalization is enabled for this table
+   */
+  public boolean isNormalizationEnabled() {
+    return isSomething(NORMALIZATION_ENABLED_KEY, DEFAULT_NORMALIZATION_ENABLED);
+  }
+
+  /**
+   * Setting the table normalization enable flag.
+   *
+   * @param isEnable True if enable normalization.
+   */
+  public HTableDescriptor setNormalizationEnabled(final boolean isEnable) {
+    setValue(NORMALIZATION_ENABLED_KEY, isEnable ? TRUE : FALSE);
     return this;
   }
 
