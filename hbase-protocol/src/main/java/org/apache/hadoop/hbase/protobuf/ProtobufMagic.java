@@ -22,6 +22,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 /**
  * Protobufs utility.
  */
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED",
+  justification="None. Address sometime.")
 @InterfaceAudience.Private
 public class ProtobufMagic {
 
