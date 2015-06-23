@@ -415,7 +415,7 @@ public class ClientScanner extends AbstractClientScanner {
           continue;
         }
         retryAfterOutOfOrderException = true;
-      } catch (DoNotRetryIOException e) {
+      } catch (DoNotRetryIOException | NeedUnmanagedConnectionException e) {
         // An exception was thrown which makes any partial results that we were collecting
         // invalid. The scanner will need to be reset to the beginning of a row.
         clearPartialResults();

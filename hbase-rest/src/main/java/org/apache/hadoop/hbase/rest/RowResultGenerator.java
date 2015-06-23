@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -70,7 +71,7 @@ public class RowResultGenerator extends ResultGenerator {
       if (result != null && !result.isEmpty()) {
         valuesI = result.listCells().iterator();
       }
-    } catch (DoNotRetryIOException e) {
+    } catch (DoNotRetryIOException | NeedUnmanagedConnectionException e) {
       // Warn here because Stargate will return 404 in the case if multiple
       // column families were specified but one did not exist -- currently
       // HBase will fail the whole Get.

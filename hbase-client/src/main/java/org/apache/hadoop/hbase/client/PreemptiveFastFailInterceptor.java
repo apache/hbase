@@ -203,6 +203,9 @@ class PreemptiveFastFailInterceptor extends RetryingCallerInterceptor {
     if (t instanceof DoNotRetryIOException) {
       throw (DoNotRetryIOException) t;
     }
+    if (t instanceof NeedUnmanagedConnectionException) {
+      throw new DoNotRetryIOException(t);
+    }
     if (t instanceof Error) {
       throw (Error) t;
     }

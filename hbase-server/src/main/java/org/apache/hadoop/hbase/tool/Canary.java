@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -272,7 +273,7 @@ public final class Canary implements Tool {
       } catch (TableNotEnabledException tnee) {
         // This is considered a success since we got a response.
         LOG.debug("The targeted table was disabled.  Assuming success.");
-      } catch (DoNotRetryIOException dnrioe) {
+      } catch (DoNotRetryIOException | NeedUnmanagedConnectionException dnrioe) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
         LOG.error(dnrioe);
       } catch (IOException e) {

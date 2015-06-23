@@ -231,8 +231,12 @@ public class RpcRetryingCaller<T> {
     if (t instanceof ServiceException) {
       ServiceException se = (ServiceException)t;
       Throwable cause = se.getCause();
-      if (cause != null && cause instanceof DoNotRetryIOException) {
-        throw (DoNotRetryIOException)cause;
+      if (cause != null) {
+        if (cause instanceof DoNotRetryIOException) {
+          throw (DoNotRetryIOException)cause;
+        } else if (cause instanceof NeedUnmanagedConnectionException) {
+          throw new DoNotRetryIOException(cause);
+        }
       }
       // Don't let ServiceException out; its rpc specific.
       t = cause;
@@ -240,6 +244,8 @@ public class RpcRetryingCaller<T> {
       translateException(t);
     } else if (t instanceof DoNotRetryIOException) {
       throw (DoNotRetryIOException)t;
+    } else if (t instanceof NeedUnmanagedConnectionException) {
+      throw new DoNotRetryIOException(t);
     }
     return t;
   }

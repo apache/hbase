@@ -170,6 +170,8 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
       rl = connection.locateRegion(tableName, row, useCache, true, replicaId);
     } catch (DoNotRetryIOException e) {
       throw e;
+    } catch (NeedUnmanagedConnectionException e) {
+      throw new DoNotRetryIOException(e);
     } catch (RetriesExhaustedException e) {
       throw e;
     } catch (InterruptedIOException e) {

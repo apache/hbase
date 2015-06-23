@@ -1087,7 +1087,8 @@ class AsyncProcess {
     public Retry manageError(int originalIndex, Row row, Retry canRetry,
                                 Throwable throwable, ServerName server) {
       if (canRetry == Retry.YES
-          && throwable != null && throwable instanceof DoNotRetryIOException) {
+          && throwable != null && (throwable instanceof DoNotRetryIOException ||
+          throwable instanceof NeedUnmanagedConnectionException)) {
         canRetry = Retry.NO_NOT_RETRIABLE;
       }
 
