@@ -80,6 +80,8 @@
                                     </includes>
                                     <excludes>
                                         <exclude>org.slf4j:*</exclude>
+                                        <exclude>com.google.code.findbugs:*</exclude>
+                                        <exclude>com.github.stephenc.findbugs:*</exclude>
                                         <exclude>org.apache.htrace:*</exclude>
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
