@@ -78,6 +78,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.NeedUnmanagedConnectionException;
 import org.apache.hadoop.hbase.client.Operation;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.RegionMovedException;
@@ -390,7 +391,8 @@ public class RpcServer implements RpcServerInterface {
           ExceptionResponse.Builder exceptionBuilder = ExceptionResponse.newBuilder();
           exceptionBuilder.setExceptionClassName(t.getClass().getName());
           exceptionBuilder.setStackTrace(errorMsg);
-          exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException);
+          exceptionBuilder.setDoNotRetry(t instanceof DoNotRetryIOException ||
+            t instanceof NeedUnmanagedConnectionException);
           if (t instanceof RegionMovedException) {
             // Special casing for this exception.  This is only one carrying a payload.
             // Do this instead of build a generic system for allowing exceptions carry

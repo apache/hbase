@@ -4148,7 +4148,8 @@ public class HBaseAdmin implements Admin {
           LOG.warn("failed to get the procedure result procId=" + procId, serviceEx);
 
           // Not much to do, if we have a DoNotRetryIOException
-          if (serviceEx instanceof DoNotRetryIOException) {
+          if (serviceEx instanceof DoNotRetryIOException ||
+              serviceEx instanceof NeedUnmanagedConnectionException) {
             // TODO: looks like there is no way to unwrap this exception and get the proper
             // UnsupportedOperationException aside from looking at the message.
             // anyway, if we fail here we just failover to the compatibility side

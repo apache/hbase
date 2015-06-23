@@ -262,6 +262,10 @@ public class RpcRetryingCallerWithReadReplicas {
       throw (DoNotRetryIOException) t;
     }
 
+    if (t instanceof NeedUnmanagedConnectionException) {
+      throw new DoNotRetryIOException(t);
+    }
+
     RetriesExhaustedException.ThrowableWithExtraContext qt =
         new RetriesExhaustedException.ThrowableWithExtraContext(t,
             EnvironmentEdgeManager.currentTime(), null);
@@ -302,6 +306,8 @@ public class RpcRetryingCallerWithReadReplicas {
       }
     } catch (DoNotRetryIOException e) {
       throw e;
+    } catch (NeedUnmanagedConnectionException e) {
+      throw new DoNotRetryIOException(e);
     } catch (RetriesExhaustedException e) {
       throw e;
     } catch (InterruptedIOException e) {
