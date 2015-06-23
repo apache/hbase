@@ -58,6 +58,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
   private final Path mergesdir;
   // We only merge adjacent regions if forcible is false
   private final boolean forcible;
+  private final long masterSystemTime;
 
   /*
    * Transaction state for listener, only valid during execute and
@@ -123,6 +124,17 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
    */
   public RegionMergeTransactionImpl(final Region a, final Region b,
       final boolean forcible) {
+    this(a, b, forcible, EnvironmentEdgeManager.currentTime());
+  }
+  /**
+   * Constructor
+   * @param a region a to merge
+   * @param b region b to merge
+   * @param forcible if false, we will only merge adjacent regions
+   * @param masterSystemTime the time at the master side
+   */
+  public RegionMergeTransactionImpl(final Region a, final Region b,
+      final boolean forcible, long masterSystemTime) {
     if (a.getRegionInfo().compareTo(b.getRegionInfo()) <= 0) {
       this.region_a = (HRegion)a;
       this.region_b = (HRegion)b;
@@ -131,6 +143,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       this.region_b = (HRegion)a;
     }
     this.forcible = forcible;
+    this.masterSystemTime = masterSystemTime;
     this.mergesdir = region_a.getRegionFileSystem().getMergesDir();
   }
 
@@ -313,16 +326,19 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       HRegionInfo regionB, ServerName serverName, List<Mutation> mutations) throws IOException {
     HRegionInfo copyOfMerged = new HRegionInfo(mergedRegion);
 
+    // use the maximum of what master passed us vs local time.
+    long time = Math.max(EnvironmentEdgeManager.currentTime(), masterSystemTime);
+
     // Put for parent
-    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged);
+    Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged, time);
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
       regionA.toByteArray());
     putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
       regionB.toByteArray());
     mutations.add(putOfMerged);
     // Deletes for merging regions
-    Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA);
-    Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB);
+    Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA, time);
+    Delete deleteB = MetaTableAccessor.makeDeleteFromRegionInfo(regionB, time);
     mutations.add(deleteA);
     mutations.add(deleteB);
     // The merged is a new region, openSeqNum = 1 is fine.

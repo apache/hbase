@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MultiHConnection;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.zookeeper.KeeperException;
@@ -246,6 +247,7 @@ public class RegionStateStore {
 
   void mergeRegions(HRegionInfo p,
       HRegionInfo a, HRegionInfo b, ServerName sn, int regionReplication) throws IOException {
-    MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn, regionReplication);
+    MetaTableAccessor.mergeRegions(server.getConnection(), p, a, b, sn, regionReplication,
+    		EnvironmentEdgeManager.currentTime());
   }
 }

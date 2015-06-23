@@ -185,6 +185,8 @@ message MergeRegionsRequest {
   required RegionSpecifier region_a = 1;
   required RegionSpecifier region_b = 2;
   optional bool forcible = 3 [default = false];
+  // wall clock time from master
+  optional uint64 master_system_time = 4;
 }
 
 message MergeRegionsResponse {
