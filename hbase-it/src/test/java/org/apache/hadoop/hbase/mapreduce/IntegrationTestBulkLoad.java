@@ -157,7 +157,12 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     String jobName =  IntegrationTestBulkLoad.class.getSimpleName() + " - " +
         EnvironmentEdgeManager.currentTimeMillis();
     Configuration conf = new Configuration(util.getConfiguration());
-    Path p = util.getDataTestDirOnTestFS(getTablename() +  "-" + iteration);
+    Path p = null;
+    if (conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY) == null) {
+      p = util.getDataTestDirOnTestFS(getTablename() + "-" + iteration);
+    } else {
+      p = new Path(conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY));
+    }    
     HTable table = new HTable(conf, getTablename());
 
     conf.setBoolean("mapreduce.map.speculative", false);
