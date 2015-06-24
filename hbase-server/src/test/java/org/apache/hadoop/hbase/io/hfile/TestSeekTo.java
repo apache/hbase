@@ -65,10 +65,7 @@ public class TestSeekTo {
   public static Collection<Object[]> parameters() {
     List<Object[]> paramList = new ArrayList<Object[]>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
-      // Remove after HBASE-13939
-      if (encoding != DataBlockEncoding.PREFIX_TREE) {
-        paramList.add(new Object[] { encoding });
-      }
+      paramList.add(new Object[] { encoding });
     }
     return paramList;
   }
