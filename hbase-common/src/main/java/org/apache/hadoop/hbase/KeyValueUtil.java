@@ -82,7 +82,6 @@ public class KeyValueUtil {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyToByteArrayWithoutValue(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
   }
 
@@ -126,7 +125,6 @@ public class KeyValueUtil {
     byte[] bytes = new byte[length(cell)];
     appendToByteArray(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
   }
 

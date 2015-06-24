@@ -367,7 +367,6 @@ public class TestDataBlockEncoders {
       ByteBuffer actualKeyValue = seeker.getKeyValueBuffer();
       ByteBuffer actualKey = seeker.getKeyDeepCopy();
       ByteBuffer actualValue = seeker.getValueShallowCopy();
-
       if (expectedKeyValue != null) {
         assertEquals(expectedKeyValue, actualKeyValue);
       } else {
