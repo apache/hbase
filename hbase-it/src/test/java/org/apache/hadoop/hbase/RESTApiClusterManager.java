@@ -158,12 +158,12 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   @Override
   public void suspend(ServiceType service, String hostname) throws IOException {
-    hBaseClusterManager.kill(service, hostname);
+    hBaseClusterManager.suspend(service, hostname);
   }
 
   @Override
   public void resume(ServiceType service, String hostname) throws IOException {
-    hBaseClusterManager.kill(service, hostname);
+    hBaseClusterManager.resume(service, hostname);
   }
 
 
