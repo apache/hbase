@@ -105,11 +105,15 @@ public class KeyValueUtil {
     return kvCell;
   }
 
+  /**
+   * The position will be set to the beginning of the new ByteBuffer
+   * @param cell
+   * @return the Bytebuffer containing the key part of the cell
+   */
   public static ByteBuffer copyKeyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[keyLength(cell)];
     appendKeyTo(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
   }
 
@@ -151,11 +155,15 @@ public class KeyValueUtil {
     return pos;
   }
 
+  /**
+   * The position will be set to the beginning of the new ByteBuffer
+   * @param cell
+   * @return the ByteBuffer containing the cell
+   */
   public static ByteBuffer copyToNewByteBuffer(final Cell cell) {
     byte[] bytes = new byte[length(cell)];
     appendToByteArray(cell, bytes, 0);
     ByteBuffer buffer = ByteBuffer.wrap(bytes);
-    buffer.position(buffer.limit());//make it look as if each field were appended
     return buffer;
   }
 
