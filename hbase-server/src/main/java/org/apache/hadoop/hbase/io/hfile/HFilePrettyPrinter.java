@@ -24,9 +24,13 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 
 import org.apache.commons.cli.CommandLine;
@@ -57,12 +61,14 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -95,6 +101,10 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private boolean checkRow;
   private boolean checkFamily;
   private boolean isSeekToRow = false;
+  private boolean checkMobIntegrity = false;
+  private Map<String, List<Path>> mobFileLocations;
+  private static final int FOUND_MOB_FILES_CACHE_CAPACITY = 50;
+  private static final int MISSING_MOB_FILES_CACHE_CAPACITY = 20;
 
   /**
    * The row which the user wants to specify and print all the KeyValues for.
@@ -130,6 +140,8 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     options.addOption("w", "seekToRow", true,
       "Seek to this row and print all the kvs for this row only");
     options.addOption("s", "stats", false, "Print statistics");
+    options.addOption("i", "checkMobIntegrity", false,
+      "Print all cells whose mob files are missing");
 
     OptionGroup files = new OptionGroup();
     files.addOption(new Option("f", "file", true,
@@ -158,6 +170,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     printStats = cmd.hasOption("s");
     checkRow = cmd.hasOption("k");
     checkFamily = cmd.hasOption("a");
+    checkMobIntegrity = cmd.hasOption("i");
 
     if (cmd.hasOption("f")) {
       files.add(new Path(cmd.getOptionValue("f")));
@@ -199,6 +212,12 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       files.addAll(regionFiles);
     }
 
+    if(checkMobIntegrity) {
+      if (verbose) {
+        System.out.println("checkMobIntegrity is enabled");
+      }
+      mobFileLocations = new HashMap<String, List<Path>>();
+    }
     return true;
   }
 
@@ -255,7 +274,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
 
     KeyValueStatsCollector fileStats = null;
 
-    if (verbose || printKey || checkRow || checkFamily || printStats) {
+    if (verbose || printKey || checkRow || checkFamily || printStats || checkMobIntegrity) {
       // scan over file and read key/value's and check if requested
       HFileScanner scanner = reader.getScanner(false, false, false);
       fileStats = new KeyValueStatsCollector();
@@ -313,6 +332,9 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   private void scanKeysValues(Path file, KeyValueStatsCollector fileStats,
       HFileScanner scanner,  byte[] row) throws IOException {
     Cell pCell = null;
+    FileSystem fs = FileSystem.get(getConf());
+    Set<String> foundMobFiles = new LinkedHashSet<String>(FOUND_MOB_FILES_CACHE_CAPACITY);
+    Set<String> missingMobFiles = new LinkedHashSet<String>(MISSING_MOB_FILES_CACHE_CAPACITY);
     do {
       Cell cell = scanner.getKeyValue();
       if (row != null && row.length != 0) {
@@ -369,9 +391,85 @@ public class HFilePrettyPrinter extends Configured implements Tool {
               + "\n\tcurrent  -> " + CellUtil.getCellKeyAsString(cell));
         }
       }
+      // check if mob files are missing.
+      if (checkMobIntegrity && MobUtils.isMobReferenceCell(cell)) {
+        Tag tnTag = MobUtils.getTableNameTag(cell);
+        if (tnTag == null) {
+          System.err.println("ERROR, wrong tag format in mob reference cell "
+            + CellUtil.getCellKeyAsString(cell));
+        } else if (!MobUtils.hasValidMobRefCellValue(cell)) {
+          System.err.println("ERROR, wrong value format in mob reference cell "
+            + CellUtil.getCellKeyAsString(cell));
+        } else {
+          TableName tn = TableName.valueOf(tnTag.getValue());
+          String mobFileName = MobUtils.getMobFileName(cell);
+          boolean exist = mobFileExists(fs, tn, mobFileName,
+            Bytes.toString(CellUtil.cloneFamily(cell)), foundMobFiles, missingMobFiles);
+          if (!exist) {
+            // report error
+            System.err.println("ERROR, the mob file [" + mobFileName
+              + "] is missing referenced by cell " + CellUtil.getCellKeyAsString(cell));
+          }
+        }
+      }
       pCell = cell;
       ++count;
     } while (scanner.next());
+  }
+
+  /**
+   * Checks whether the referenced mob file exists.
+   */
+  private boolean mobFileExists(FileSystem fs, TableName tn, String mobFileName, String family,
+    Set<String> foundMobFiles, Set<String> missingMobFiles) throws IOException {
+    if (foundMobFiles.contains(mobFileName)) {
+      return true;
+    }
+    if (missingMobFiles.contains(mobFileName)) {
+      return false;
+    }
+    String tableName = tn.getNameAsString();
+    List<Path> locations = mobFileLocations.get(tableName);
+    if (locations == null) {
+      locations = new ArrayList<Path>(2);
+      locations.add(MobUtils.getMobFamilyPath(getConf(), tn, family));
+      locations.add(HFileArchiveUtil.getStoreArchivePath(getConf(), tn,
+        MobUtils.getMobRegionInfo(tn).getEncodedName(), family));
+      mobFileLocations.put(tn.getNameAsString(), locations);
+    }
+    boolean exist = false;
+    for (Path location : locations) {
+      Path mobFilePath = new Path(location, mobFileName);
+      if (fs.exists(mobFilePath)) {
+        exist = true;
+        break;
+      }
+    }
+    if (exist) {
+      evictMobFilesIfNecessary(foundMobFiles, FOUND_MOB_FILES_CACHE_CAPACITY);
+      foundMobFiles.add(mobFileName);
+    } else {
+      evictMobFilesIfNecessary(missingMobFiles, MISSING_MOB_FILES_CACHE_CAPACITY);
+      missingMobFiles.add(mobFileName);
+    }
+    return exist;
+  }
+
+  /**
+   * Evicts the cached mob files if the set is larger than the limit.
+   */
+  private void evictMobFilesIfNecessary(Set<String> mobFileNames, int limit) {
+    if (mobFileNames.size() < limit) {
+      return;
+    }
+    int index = 0;
+    int evict = limit / 2;
+    Iterator<String> fileNamesItr = mobFileNames.iterator();
+    while (index < evict && fileNamesItr.hasNext()) {
+      fileNamesItr.next();
+      fileNamesItr.remove();
+      index++;
+    }
   }
 
   /**
