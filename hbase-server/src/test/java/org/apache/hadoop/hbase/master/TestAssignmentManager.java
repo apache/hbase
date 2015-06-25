@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.RegionException;
 import org.apache.hadoop.hbase.RegionTransition;
@@ -133,7 +134,7 @@ public class TestAssignmentManager {
   private static boolean enabling = false;
 
   // Mocked objects or; get redone for each test.
-  private Server server;
+  private MasterServices server;
   private ServerManager serverManager;
   private ZooKeeperWatcher watcher;
   private CoordinatedStateManager cp;
@@ -161,7 +162,7 @@ public class TestAssignmentManager {
     // Mock a Server.  Have it return a legit Configuration and ZooKeeperWatcher.
     // If abort is called, be sure to fail the test (don't just swallow it
     // silently as is mockito default).
-    this.server = Mockito.mock(Server.class);
+    this.server = Mockito.mock(MasterServices.class);
     Mockito.when(server.getServerName()).thenReturn(ServerName.valueOf("master,1,1"));
     Mockito.when(server.getConfiguration()).thenReturn(HTU.getConfiguration());
     this.watcher =
@@ -1039,7 +1040,7 @@ public class TestAssignmentManager {
 
     CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
+    MasterServices server = new HMaster(HTU.getConfiguration(), csm);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
 
@@ -1094,7 +1095,8 @@ public class TestAssignmentManager {
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
     CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
+    MasterServices server = new HMaster(HTU.getConfiguration(), csm);
+
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
@@ -1109,7 +1111,7 @@ public class TestAssignmentManager {
       // set table in enabling state.
       am.getTableStateManager().setTableState(REGIONINFO.getTable(),
         Table.State.ENABLING);
-      new EnableTableHandler(server, REGIONINFO.getTable(),
+      new EnableTableHandler((Server)server, REGIONINFO.getTable(),
           am, new NullTableLockManager(), true).prepare()
           .process();
       assertEquals("Number of assignments should be 1.", 1, assignmentCount);
@@ -1143,7 +1145,7 @@ public class TestAssignmentManager {
     HTU.getConfiguration().setInt(HConstants.MASTER_PORT, 0);
     CoordinatedStateManager csm = CoordinatedStateManagerFactory.getCoordinatedStateManager(
       HTU.getConfiguration());
-    Server server = new HMaster(HTU.getConfiguration(), csm);
+    MasterServices server = new HMaster(HTU.getConfiguration(), csm);
     Whitebox.setInternalState(server, "serverManager", this.serverManager);
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(server,
         this.serverManager);
@@ -1288,9 +1290,9 @@ public class TestAssignmentManager {
    * @throws IOException
    * @throws KeeperException
    */
-  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(final Server server,
-      final ServerManager manager) throws IOException, KeeperException,
-        ServiceException, CoordinatedStateException {
+  private AssignmentManagerWithExtrasForTesting setUpMockedAssignmentManager(
+      final MasterServices server, final ServerManager manager)
+        throws IOException, KeeperException, ServiceException, CoordinatedStateException {
     // Make an RS Interface implementation. Make it so a scanner can go against
     // it and a get to return the single region, REGIONINFO, this test is
     // messing with. Needed when "new master" joins cluster. AM will try and
@@ -1334,6 +1336,7 @@ public class TestAssignmentManager {
       getMockedConnectionAndDecorate(HTU.getConfiguration(), null,
         ri, SERVERNAME_LIVE, REGIONINFO);
     Mockito.when(this.server.getConnection()).thenReturn(connection);
+
     // These mocks were done up when all connections were managed.  World is different now we
     // moved to unmanaged connections.  It messes up the intercepts done in these tests.
     // Just mark connections as marked and then down in MetaTableAccessor, it will go the path
@@ -1361,7 +1364,7 @@ public class TestAssignmentManager {
     private ClusterConnection connection;
 
     public AssignmentManagerWithExtrasForTesting(
-        final Server master, ClusterConnection connection, final ServerManager serverManager,
+        final MasterServices master, ClusterConnection connection, final ServerManager serverManager,
         final LoadBalancer balancer,
         final ExecutorService service, final TableLockManager tableLockManager)
             throws KeeperException, IOException, CoordinatedStateException {
