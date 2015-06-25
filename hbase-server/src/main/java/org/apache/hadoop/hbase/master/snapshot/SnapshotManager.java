@@ -1024,7 +1024,9 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
 
     this.rootDir = master.getMasterFileSystem().getRootDir();
     checkSnapshotSupport(master.getConfiguration(), master.getMasterFileSystem());
-
+    this.snapshotLayoutVersion = SnapshotDescriptionUtils.getDefaultSnapshotLayoutFormat(
+      master.getConfiguration());
+    
     // get the configuration for the coordinator
     Configuration conf = master.getConfiguration();
     long wakeFrequency = conf.getInt(SNAPSHOT_WAKE_MILLIS_KEY, SNAPSHOT_WAKE_MILLIS_DEFAULT);
