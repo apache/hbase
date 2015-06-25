@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
 
 import static org.junit.Assert.assertEquals;
@@ -107,6 +108,20 @@ public class ProcedureTestingUtility {
       boolean value) {
     ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, value);
     ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, value);
+  }
+
+  public static <TEnv> long submitAndWait(Configuration conf, TEnv env, Procedure<TEnv> proc)
+      throws IOException {
+    NoopProcedureStore procStore = new NoopProcedureStore();
+    ProcedureExecutor<TEnv> procExecutor = new ProcedureExecutor<TEnv>(conf, env, procStore);
+    procStore.start(1);
+    procExecutor.start(1, false);
+    try {
+      return submitAndWait(procExecutor, proc);
+    } finally {
+      procStore.stop(false);
+      procExecutor.stop();
+    }
   }
 
   public static <TEnv> long submitAndWait(ProcedureExecutor<TEnv> procExecutor, Procedure proc) {

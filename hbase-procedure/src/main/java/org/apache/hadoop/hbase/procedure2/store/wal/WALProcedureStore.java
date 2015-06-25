@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.LinkedTransferQueue;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -47,7 +46,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreBase;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -58,7 +57,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHe
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class WALProcedureStore implements ProcedureStore {
+public class WALProcedureStore extends ProcedureStoreBase {
   private static final Log LOG = LogFactory.getLog(WALProcedureStore.class);
 
   public interface LeaseRecovery {
@@ -76,12 +75,8 @@ public class WALProcedureStore implements ProcedureStore {
   private static final String ROLL_THRESHOLD_CONF_KEY = "hbase.procedure.store.wal.roll.threshold";
   private static final long DEFAULT_ROLL_THRESHOLD = 32 * 1024 * 1024; // 32M
 
-  private final CopyOnWriteArrayList<ProcedureStoreListener> listeners =
-    new CopyOnWriteArrayList<ProcedureStoreListener>();
-
   private final LinkedList<ProcedureWALFile> logs = new LinkedList<ProcedureWALFile>();
   private final ProcedureStoreTracker storeTracker = new ProcedureStoreTracker();
-  private final AtomicBoolean running = new AtomicBoolean(false);
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
   private final Condition slotCond = lock.newCondition();
@@ -117,7 +112,7 @@ public class WALProcedureStore implements ProcedureStore {
 
   @Override
   public void start(int numSlots) throws IOException {
-    if (running.getAndSet(true)) {
+    if (!setRunning(true)) {
       return;
     }
 
@@ -137,7 +132,7 @@ public class WALProcedureStore implements ProcedureStore {
     syncThread = new Thread("WALProcedureStoreSyncThread") {
       @Override
       public void run() {
-        while (running.get()) {
+        while (isRunning()) {
           try {
             syncLoop();
           } catch (IOException e) {
@@ -152,7 +147,7 @@ public class WALProcedureStore implements ProcedureStore {
 
   @Override
   public void stop(boolean abort) {
-    if (!running.getAndSet(false)) {
+    if (!setRunning(false)) {
       return;
     }
 
@@ -186,11 +181,6 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   @Override
-  public boolean isRunning() {
-    return running.get();
-  }
-
-  @Override
   public int getNumThreads() {
     return slots == null ? 0 : slots.length;
   }
@@ -200,20 +190,10 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   @Override
-  public void registerListener(ProcedureStoreListener listener) {
-    this.listeners.add(listener);
-  }
-
-  @Override
-  public boolean unregisterListener(ProcedureStoreListener listener) {
-    return this.listeners.remove(listener);
-  }
-
-  @Override
   public void recoverLease() throws IOException {
     LOG.info("Starting WAL Procedure Store lease recovery");
     FileStatus[] oldLogs = getLogFiles();
-    while (running.get()) {
+    while (isRunning()) {
       // Get Log-MaxID and recover lease on old logs
       flushLogId = initOldLogs(oldLogs);
 
@@ -462,7 +442,7 @@ public class WALProcedureStore implements ProcedureStore {
 
   private void syncLoop() throws IOException {
     inSync.set(false);
-    while (running.get()) {
+    while (isRunning()) {
       lock.lock();
       try {
         // Wait until new data is available
@@ -522,7 +502,7 @@ public class WALProcedureStore implements ProcedureStore {
           sendAbortProcessSignal();
         }
       }
-    } while (running.get());
+    } while (isRunning());
     return totalSynced;
   }
 
@@ -546,14 +526,6 @@ public class WALProcedureStore implements ProcedureStore {
                 ", flushed=" + StringUtils.humanSize(totalSynced));
     }
     return totalSynced;
-  }
-
-  private void sendAbortProcessSignal() {
-    if (!this.listeners.isEmpty()) {
-      for (ProcedureStoreListener listener : this.listeners) {
-        listener.abortProcess();
-      }
-    }
   }
 
   private boolean rollWriterOrDie() {
