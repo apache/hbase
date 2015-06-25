@@ -24,8 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.quotas.QuotaExceededException;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * The Class NamespaceAuditor performs checks to ensure operations like table creation and region
  * splitting preserve namespace quota. The namespace quota can be specified while namespace
@@ -131,12 +129,10 @@ public class NamespaceAuditor {
   }
 
   /**
-   * Used only for unit tests.
    * @param namespace The name of the namespace
    * @return An instance of NamespaceTableAndRegionInfo
    */
-  @VisibleForTesting
-  NamespaceTableAndRegionInfo getState(String namespace) {
+  public NamespaceTableAndRegionInfo getState(String namespace) {
     if (stateManager.isInitialized()) {
       return stateManager.getState(namespace);
     }
