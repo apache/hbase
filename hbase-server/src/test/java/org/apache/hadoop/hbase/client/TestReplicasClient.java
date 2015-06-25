@@ -85,7 +85,7 @@ public class TestReplicasClient {
   }
 
   private static final int NB_SERVERS = 1;
-  private static HTable table = null;
+  private static Table table = null;
   private static final byte[] row = TestReplicasClient.class.getName().getBytes();
 
   private static HRegionInfo hriPrimary;
@@ -177,9 +177,11 @@ public class TestReplicasClient {
     // Create table then get the single region for our new table.
     HTableDescriptor hdt = HTU.createTableDescriptor(TestReplicasClient.class.getSimpleName());
     hdt.addCoprocessor(SlowMeCopro.class.getName());
-    table = HTU.createTable(hdt, new byte[][]{f}, HTU.getConfiguration());
+    table = HTU.createTable(hdt, new byte[][]{f}, null);
 
-    hriPrimary = table.getRegionLocation(row, false).getRegionInfo();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(hdt.getTableName())) {
+      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+    }
 
     // mock a secondary region info to open
     hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),
@@ -547,8 +549,7 @@ public class TestReplicasClient {
 
       Thread.sleep(1000 + REFRESH_PERIOD * 2);
 
-      AsyncProcess ap = ((ClusterConnection) HTU.getHBaseAdmin().getConnection())
-          .getAsyncProcess();
+      AsyncProcess ap = ((ClusterConnection) HTU.getConnection()).getAsyncProcess();
 
       // Make primary slowdown
       SlowMeCopro.getCdl().set(new CountDownLatch(1));
@@ -563,8 +564,10 @@ public class TestReplicasClient {
       g.setConsistency(Consistency.TIMELINE);
       gets.add(g);
       Object[] results = new Object[2];
-      AsyncRequestFuture reqs = ap.submitAll(table.getPool(), table.getName(),
-          gets, null, results);
+
+      AsyncRequestFuture reqs = ap.submitAll(
+          HTable.getDefaultExecutor(HTU.getConfiguration()),
+          table.getName(), gets, null, results);
       reqs.waitUntilDone();
       // verify we got the right results back
       for (Object r : results) {

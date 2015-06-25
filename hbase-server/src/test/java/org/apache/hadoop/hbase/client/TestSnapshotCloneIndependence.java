@@ -182,7 +182,7 @@ public class TestSnapshotCloneIndependence {
     runTestSnapshotDeleteIndependent(true);
   }
 
-  private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
+  private static void waitOnSplit(Connection c, final Table t, int originalCount) throws Exception {
     for (int i = 0; i < 200; i++) {
       try {
         Thread.sleep(50);
@@ -190,8 +190,10 @@ public class TestSnapshotCloneIndependence {
         // Restore the interrupted status
         Thread.currentThread().interrupt();
       }
-      if (t.getAllRegionLocations().size() > originalCount) {
-        return;
+      try (RegionLocator locator = c.getRegionLocator(t.getName())) {
+        if (locator.getAllRegionLocations().size() > originalCount) {
+          return;
+        }
       }
     }
     throw new Exception("Split did not increase the number of regions");
@@ -276,7 +278,7 @@ public class TestSnapshotCloneIndependence {
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
-    HTable original = UTIL.createTable(localTableName, TEST_FAM);
+    Table original = UTIL.createTable(localTableName, TEST_FAM);
     UTIL.loadTable(original, TEST_FAM);
     final int loadedTableCount = UTIL.countRows(original);
     System.out.println("Original table has: " + loadedTableCount + " rows");
@@ -298,7 +300,7 @@ public class TestSnapshotCloneIndependence {
     admin.cloneSnapshot(snapshotName, cloneTableName);
 
     // Verify that region information is the same pre-split
-    original.clearRegionCache();
+    ((ClusterConnection) UTIL.getConnection()).clearRegionCache();
     List<HRegionInfo> originalTableHRegions = admin.getTableRegions(localTableName);
 
     final int originalRegionCount = originalTableHRegions.size();
@@ -309,7 +311,7 @@ public class TestSnapshotCloneIndependence {
 
     // Split a region on the parent table
     admin.splitRegion(originalTableHRegions.get(0).getRegionName());
-    waitOnSplit(original, originalRegionCount);
+    waitOnSplit(UTIL.getConnection(), original, originalRegionCount);
 
     // Verify that the cloned table region is not split
     final int cloneTableRegionCount2 = admin.getTableRegions(cloneTableName).size();
@@ -332,7 +334,7 @@ public class TestSnapshotCloneIndependence {
     final long startTime = System.currentTimeMillis();
     final TableName localTableName =
         TableName.valueOf(STRING_TABLE_NAME + startTime);
-    HTable original = UTIL.createTable(localTableName, TEST_FAM);
+    Table original = UTIL.createTable(localTableName, TEST_FAM);
     UTIL.loadTable(original, TEST_FAM);
 
     final String snapshotNameAsString = "snapshot_" + localTableName;

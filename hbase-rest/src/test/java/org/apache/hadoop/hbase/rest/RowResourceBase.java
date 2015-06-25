@@ -52,6 +52,9 @@ import org.junit.BeforeClass;
 public class RowResourceBase {
 
   protected static final String TABLE = "TestRowResource";
+
+  protected static final TableName TABLE_NAME = TableName.valueOf(TABLE);
+
   protected static final String CFA = "a";
   protected static final String CFB = "b";
   protected static final String COLUMN_1 = CFA + ":1";
@@ -75,6 +78,7 @@ public class RowResourceBase {
   protected static Unmarshaller xmlUnmarshaller;
   protected static Configuration conf;
   protected static ObjectMapper jsonMapper;
+
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -102,10 +106,10 @@ public class RowResourceBase {
   @Before
   public void beforeMethod() throws Exception {
     Admin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TableName.valueOf(TABLE))) {
-      TEST_UTIL.deleteTable(Bytes.toBytes(TABLE));
+    if (admin.tableExists(TABLE_NAME)) {
+      TEST_UTIL.deleteTable(TABLE_NAME);
     }
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(TABLE));
+    HTableDescriptor htd = new HTableDescriptor(TABLE);
     htd.addFamily(new HColumnDescriptor(CFA));
     htd.addFamily(new HColumnDescriptor(CFB));
     admin.createTable(htd);
@@ -114,8 +118,8 @@ public class RowResourceBase {
   @After
   public void afterMethod() throws Exception {
     Admin admin = TEST_UTIL.getHBaseAdmin();
-    if (admin.tableExists(TableName.valueOf(TABLE))) {
-      TEST_UTIL.deleteTable(Bytes.toBytes(TABLE));
+    if (admin.tableExists(TABLE_NAME)) {
+      TEST_UTIL.deleteTable(TABLE_NAME);
     }
   }
 

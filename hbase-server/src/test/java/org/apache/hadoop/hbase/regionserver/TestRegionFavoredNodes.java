@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -53,7 +54,7 @@ import org.junit.experimental.categories.Category;
 public class TestRegionFavoredNodes {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private static HTable table;
+  private static Table table;
   private static final TableName TABLE_NAME =
       TableName.valueOf("table");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("family");

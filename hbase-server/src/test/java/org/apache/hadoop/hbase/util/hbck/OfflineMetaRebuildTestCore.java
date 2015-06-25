@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -182,10 +184,14 @@ public class OfflineMetaRebuildTestCore {
     HTableDescriptor htd = tbl.getTableDescriptor();
     dumpMeta(htd);
 
-    Map<HRegionInfo, ServerName> hris = ((HTable)tbl).getRegionLocations();
-    for (Entry<HRegionInfo, ServerName> e : hris.entrySet()) {
-      HRegionInfo hri = e.getKey();
-      ServerName hsa = e.getValue();
+    List<HRegionLocation> regions;
+    try(RegionLocator rl = connection.getRegionLocator(tbl.getName())) {
+      regions = rl.getAllRegionLocations();
+    }
+
+    for (HRegionLocation e : regions) {
+      HRegionInfo hri = e.getRegionInfo();
+      ServerName hsa = e.getServerName();
       if (Bytes.compareTo(hri.getStartKey(), startKey) == 0
           && Bytes.compareTo(hri.getEndKey(), endKey) == 0) {
 

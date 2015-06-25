@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
@@ -77,7 +78,7 @@ public abstract class MultiTableInputFormatTestBase {
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
     for (String tableName : TABLES) {
-      try (HTable table =
+      try (Table table =
           TEST_UTIL.createMultiRegionTable(TableName.valueOf(tableName),
             INPUT_FAMILY, 4)) {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);

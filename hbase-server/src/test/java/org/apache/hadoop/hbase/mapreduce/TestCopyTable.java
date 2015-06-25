@@ -189,13 +189,13 @@ public class TestCopyTable {
    */
   @Test
   public void testRenameFamily() throws Exception {
-    String sourceTable = "sourceTable";
-    String targetTable = "targetTable";
+    TableName sourceTable = TableName.valueOf("sourceTable");
+    TableName targetTable = TableName.valueOf("targetTable");
 
     byte[][] families = { FAMILY_A, FAMILY_B };
 
-    Table t = TEST_UTIL.createTable(Bytes.toBytes(sourceTable), families);
-    Table t2 = TEST_UTIL.createTable(Bytes.toBytes(targetTable), families);
+    Table t = TEST_UTIL.createTable(sourceTable, families);
+    Table t2 = TEST_UTIL.createTable(targetTable, families);
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data11"));
     p.add(FAMILY_B, QUALIFIER,  Bytes.toBytes("Data12"));
@@ -210,7 +210,7 @@ public class TestCopyTable {
     long currentTime = System.currentTimeMillis();
     String[] args = new String[] { "--new.name=" + targetTable, "--families=a:b", "--all.cells",
         "--starttime=" + (currentTime - 100000), "--endtime=" + (currentTime + 100000),
-        "--versions=1", sourceTable };
+        "--versions=1", sourceTable.getNameAsString() };
     assertNull(t2.get(new Get(ROW1)).getRow());
 
     assertTrue(runCopy(args));

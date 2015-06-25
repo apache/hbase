@@ -98,9 +98,9 @@ public class TestMetaTableAccessor {
     final TableName name =
         TableName.valueOf("testRetrying");
     LOG.info("Started " + name);
-    HTable t = UTIL.createMultiRegionTable(name, HConstants.CATALOG_FAMILY);
+    Table t = UTIL.createMultiRegionTable(name, HConstants.CATALOG_FAMILY);
     int regionCount = -1;
-    try (RegionLocator r = t.getRegionLocator()) {
+    try (RegionLocator r = UTIL.getConnection().getRegionLocator(name)) {
       regionCount = r.getStartKeys().length;
     }
     // Test it works getting a region from just made user table.
@@ -494,7 +494,7 @@ public class TestMetaTableAccessor {
         new byte[][] { Bytes.toBytes("region_a"), Bytes.toBytes("region_b") };
 
     UTIL.createTable(TABLENAME, FAMILY, SPLIT_KEYS);
-    HTable table = (HTable) connection.getTable(TABLENAME);
+    Table table = connection.getTable(TABLENAME);
     // Make sure all the regions are deployed
     UTIL.countRows(table);
 

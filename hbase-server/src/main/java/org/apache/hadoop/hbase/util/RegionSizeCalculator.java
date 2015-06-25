@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 
 /**
  * Computes size of each region for given table and given column families.
@@ -66,10 +67,11 @@ public class RegionSizeCalculator {
    * @deprecated Use {@link #RegionSizeCalculator(RegionLocator, Admin)} instead.
    */
   @Deprecated
-  public RegionSizeCalculator(HTable table) throws IOException {
+  public RegionSizeCalculator(Table table) throws IOException {
     try (Connection conn = ConnectionFactory.createConnection(table.getConfiguration());
+        RegionLocator locator = conn.getRegionLocator(table.getName());
         Admin admin = conn.getAdmin()) {
-      init(table.getRegionLocator(), admin);
+      init(locator, admin);
     }
   }
 

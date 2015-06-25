@@ -955,10 +955,12 @@ public class TestAccessController extends SecureTestUtil {
 
 
       try (Connection conn = ConnectionFactory.createConnection(conf);
-           HTable table = (HTable)conn.getTable(tableName)) {
+           Admin admin = conn.getAdmin();
+           RegionLocator locator = conn.getRegionLocator(tableName);
+           Table table = conn.getTable(tableName)) {
         TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
         LoadIncrementalHFiles loader = new LoadIncrementalHFiles(conf);
-        loader.doBulkLoad(loadPath, table);
+        loader.doBulkLoad(loadPath, admin, table, locator);
       }
     }
 
@@ -1964,7 +1966,7 @@ public class TestAccessController extends SecureTestUtil {
     HRegionLocation location = regions.get(0);
     final HRegionInfo hri = location.getRegionInfo();
     final ServerName server = location.getServerName();
-    try (HTable table = (HTable) systemUserConnection.getTable(TEST_TABLE2)) {
+    try (Table table = systemUserConnection.getTable(TEST_TABLE2)) {
       AccessTestAction moveAction = new AccessTestAction() {
         @Override
         public Object run() throws Exception {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -83,7 +84,7 @@ public class TestMaster {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HMaster m = cluster.getMaster();
 
-    try (HTable ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
+    try (Table ht = TEST_UTIL.createTable(TABLENAME, FAMILYNAME)) {
       assertTrue(m.assignmentManager.getTableStateManager().isTableState(TABLENAME,
         TableState.State.ENABLED));
       TEST_UTIL.loadTable(ht, FAMILYNAME, false);

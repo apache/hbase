@@ -478,7 +478,7 @@ public abstract class HBaseTestCase extends TestCase {
   }
 
   /**
-   * A class that makes a {@link Incommon} out of a {@link HTable}
+   * A class that makes a {@link Incommon} out of a {@link Table}
    */
   public static class HTableIncommon implements Incommon {
     final Table table;

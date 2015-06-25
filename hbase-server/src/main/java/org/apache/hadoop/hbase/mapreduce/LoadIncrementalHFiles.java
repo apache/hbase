@@ -433,7 +433,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       final Multimap<ByteBuffer, LoadQueueItem> regionGroups) throws IOException {
     // atomically bulk load the groups.
     Set<Future<List<LoadQueueItem>>> loadingFutures = new HashSet<Future<List<LoadQueueItem>>>();
-    for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> e: regionGroups.asMap().entrySet()) {
+    for (Entry<ByteBuffer, ? extends Collection<LoadQueueItem>> e: regionGroups.asMap().entrySet()){
       final byte[] first = e.getKey().array();
       final Collection<LoadQueueItem> lqis =  e.getValue();
 
@@ -854,7 +854,8 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
    * Algo:
    * 1) Poll on the keys in order:
    *    a) Keep adding the mapped values to these keys (runningSum)
-   *    b) Each time runningSum reaches 0, add the start Key from when the runningSum had started to a boundary list.
+   *    b) Each time runningSum reaches 0, add the start Key from when the runningSum had started to
+   *       a boundary list.
    * 2) Return the boundary list.
    */
   public static byte[][] inferBoundaries(TreeMap<byte[], Integer> bdryMap) {
@@ -958,8 +959,9 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
       Path hfofDir = new Path(dirPath);
 
-      try (HTable table = (HTable) connection.getTable(tableName);) {
-        doBulkLoad(hfofDir, table);
+      try (Table table = connection.getTable(tableName);
+          RegionLocator locator = connection.getRegionLocator(tableName)) {
+          doBulkLoad(hfofDir, admin, table, locator);
       }
     }
 

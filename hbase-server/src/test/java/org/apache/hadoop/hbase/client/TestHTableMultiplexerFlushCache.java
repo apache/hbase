@@ -64,7 +64,7 @@ public class TestHTableMultiplexerFlushCache {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  private static void checkExistence(final HTable htable, final byte[] row, final byte[] family,
+  private static void checkExistence(final Table htable, final byte[] row, final byte[] family,
       final byte[] quality,
       final byte[] value) throws Exception {
     // verify that the Get returns the correct result
@@ -86,31 +86,33 @@ public class TestHTableMultiplexerFlushCache {
   public void testOnRegionChange() throws Exception {
     TableName TABLE = TableName.valueOf("testOnRegionChange");
     final int NUM_REGIONS = 10;
-    HTable htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
+    Table htable = TEST_UTIL.createTable(TABLE, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
 
     HTableMultiplexer multiplexer = new HTableMultiplexer(TEST_UTIL.getConfiguration(), 
       PER_REGIONSERVER_QUEUE_SIZE);
     
-    byte[][] startRows = htable.getStartKeys();
-    byte[] row = startRows[1];
-    assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+      byte[][] startRows = r.getStartKeys();
+      byte[] row = startRows[1];
+      assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
 
-    Put put = new Put(row).add(FAMILY, QUALIFIER1, VALUE1);
-    assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
-    
-    checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
+      Put put = new Put(row).add(FAMILY, QUALIFIER1, VALUE1);
+      assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
 
-    // Now let's shutdown the regionserver and let regions moved to other servers.
-    HRegionLocation loc = htable.getRegionLocation(row);
-    MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster(); 
-    hbaseCluster.stopRegionServer(loc.getServerName());
-    TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
+      checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
 
-    // put with multiplexer.
-    put = new Put(row).add(FAMILY, QUALIFIER2, VALUE2);
-    assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+      // Now let's shutdown the regionserver and let regions moved to other servers.
+      HRegionLocation loc = r.getRegionLocation(row);
+      MiniHBaseCluster hbaseCluster = TEST_UTIL.getHBaseCluster();
+      hbaseCluster.stopRegionServer(loc.getServerName());
+      TEST_UTIL.waitUntilAllRegionsAssigned(TABLE);
 
-    checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);
+      // put with multiplexer.
+      put = new Put(row).addColumn(FAMILY, QUALIFIER2, VALUE2);
+      assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
+
+      checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);
+    }
   }
 }

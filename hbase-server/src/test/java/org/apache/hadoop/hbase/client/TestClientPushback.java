@@ -56,7 +56,7 @@ public class TestClientPushback {
   private static final Log LOG = LogFactory.getLog(TestClientPushback.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static final byte[] tableName = Bytes.toBytes("client-pushback");
+  private static final TableName tableName = TableName.valueOf("client-pushback");
   private static final byte[] family = Bytes.toBytes("f");
   private static final byte[] qualifier = Bytes.toBytes("q");
   private static long flushSizeBytes = 1024;
@@ -87,31 +87,28 @@ public class TestClientPushback {
   @Test(timeout=60000)
   public void testClientTracksServerPushback() throws Exception{
     Configuration conf = UTIL.getConfiguration();
-    TableName tablename = TableName.valueOf(tableName);
-    Connection conn = ConnectionFactory.createConnection(conf);
-    HTable table = (HTable) conn.getTable(tablename);
+    ClusterConnection conn = (ClusterConnection) ConnectionFactory.createConnection(conf);
+    HTable table = (HTable) conn.getTable(tableName);
 
     HRegionServer rs = UTIL.getHBaseCluster().getRegionServer(0);
-    Region region = rs.getOnlineRegions(tablename).get(0);
+    Region region = rs.getOnlineRegions(tableName).get(0);
 
-    LOG.debug("Writing some data to "+tablename);
+    LOG.debug("Writing some data to "+tableName);
     // write some data
     Put p = new Put(Bytes.toBytes("row"));
-    p.add(family, qualifier, Bytes.toBytes("value1"));
+    p.addColumn(family, qualifier, Bytes.toBytes("value1"));
     table.put(p);
-    table.flushCommits();
 
     // get the current load on RS. Hopefully memstore isn't flushed since we wrote the the data
     int load = (int)((((HRegion)region).addAndGetGlobalMemstoreSize(0) * 100) / flushSizeBytes);
-    LOG.debug("Done writing some data to "+tablename);
+    LOG.debug("Done writing some data to "+tableName);
 
     // get the stats for the region hosting our table
-    ClusterConnection connection = table.connection;
-    ClientBackoffPolicy backoffPolicy = connection.getBackoffPolicy();
+    ClientBackoffPolicy backoffPolicy = conn.getBackoffPolicy();
     assertTrue("Backoff policy is not correctly configured",
       backoffPolicy instanceof ExponentialClientBackoffPolicy);
     
-    ServerStatisticTracker stats = connection.getStatisticsTracker();
+    ServerStatisticTracker stats = conn.getStatisticsTracker();
     assertNotNull( "No stats configured for the client!", stats);
     // get the names so we can query the stats
     ServerName server = rs.getServerName();
@@ -135,8 +132,9 @@ public class TestClientPushback {
     ops.add(p);
     final CountDownLatch latch = new CountDownLatch(1);
     final AtomicLong endTime = new AtomicLong();
-    long startTime = EnvironmentEdgeManager.currentTime();    
-    table.mutator.ap.submit(tablename, ops, true, new Batch.Callback<Result>() {
+    long startTime = EnvironmentEdgeManager.currentTime();
+
+    table.mutator.ap.submit(tableName, ops, true, new Batch.Callback<Result>() {
       @Override
       public void update(byte[] region, byte[] row, Result result) {
         endTime.set(EnvironmentEdgeManager.currentTime());

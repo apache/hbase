@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -86,8 +87,7 @@ public class TestAdmin1 {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
     TEST_UTIL.getConfiguration().setInt("hbase.client.retries.number", 6);
-    TEST_UTIL.getConfiguration().setBoolean(
-        "hbase.master.enabletable.roundrobin", true);
+    TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -104,7 +104,7 @@ public class TestAdmin1 {
   @After
   public void tearDown() throws Exception {
     for (HTableDescriptor htd : this.admin.listTables()) {
-      TEST_UTIL.deleteTable(htd.getName());
+      TEST_UTIL.deleteTable(htd.getTableName());
     }
   }
 
@@ -362,9 +362,9 @@ public class TestAdmin1 {
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY).close();
     tables = this.admin.listTables();
     assertEquals(numTables + 1, tables.length);
-    assertTrue("Table must be enabled.", TEST_UTIL.getHBaseCluster()
-        .getMaster().getAssignmentManager().getTableStateManager().isTableState(
-            tableName, TableState.State.ENABLED));
+    assertTrue("Table must be enabled.",
+        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().getTableStateManager()
+            .isTableState(tableName, TableState.State.ENABLED));
     assertEquals(TableState.State.ENABLED, getStateFromMeta(tableName));
   }
 
@@ -434,11 +434,11 @@ public class TestAdmin1 {
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(fam1);
     this.admin.createTable(htd);
-    HTable table = (HTable)TEST_UTIL.getConnection().getTable(htd.getTableName());
+    Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     long ts = this.admin.getLastMajorCompactionTimestamp(tableName);
     assertEquals(0, ts);
     Put p = new Put(Bytes.toBytes("row1"));
-    p.add(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
+    p.addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
     table.put(p);
     ts = this.admin.getLastMajorCompactionTimestamp(tableName);
     // no files written -> no data
@@ -449,12 +449,14 @@ public class TestAdmin1 {
     // still 0, we flushed a file, but no major compaction happened
     assertEquals(0, ts);
 
-    byte[] regionName =
-        table.getRegionLocator().getAllRegionLocations().get(0).getRegionInfo().getRegionName();
+    byte[] regionName;
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      regionName = l.getAllRegionLocations().get(0).getRegionInfo().getRegionName();
+    }
     long ts1 = this.admin.getLastMajorCompactionTimestampForRegion(regionName);
     assertEquals(ts, ts1);
     p = new Put(Bytes.toBytes("row2"));
-    p.add(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
+    p.addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("fam1"), Bytes.toBytes("fam1"));
     table.put(p);
     this.admin.flush(tableName);
     ts = this.admin.getLastMajorCompactionTimestamp(tableName);
@@ -623,19 +625,19 @@ public class TestAdmin1 {
         "hbase.online.schema.update.enable", true);
   }
 
-  @SuppressWarnings("deprecation")
-  protected void verifyRoundRobinDistribution(HTable ht, int expectedRegions) throws IOException {
-    int numRS = ht.getConnection().getCurrentNrHRS();
-    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
+  protected void verifyRoundRobinDistribution(ClusterConnection c, RegionLocator regionLocator, int
+      expectedRegions) throws IOException {
+    int numRS = c.getCurrentNrHRS();
+    List<HRegionLocation> regions = regionLocator.getAllRegionLocations();
     Map<ServerName, List<HRegionInfo>> server2Regions = new HashMap<ServerName, List<HRegionInfo>>();
-    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
-      ServerName server = entry.getValue();
+    for (HRegionLocation loc : regions) {
+      ServerName server = loc.getServerName();
       List<HRegionInfo> regs = server2Regions.get(server);
       if (regs == null) {
         regs = new ArrayList<HRegionInfo>();
         server2Regions.put(server, regs);
       }
-      regs.add(entry.getKey());
+      regs.add(loc.getRegionInfo());
     }
     if (numRS >= 2) {
       // Ignore the master region server,
@@ -656,28 +658,29 @@ public class TestAdmin1 {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc);
-    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
-    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
-    assertEquals("Table should have only 1 region", 1, regions.size());
-    ht.close();
+    List<HRegionLocation> regions;
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Table should have only 1 region", 1, regions.size());
+    }
 
     TableName TABLE_2 = TableName.valueOf(tableName.getNameAsString() + "_2");
     desc = new HTableDescriptor(TABLE_2);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, new byte[][]{new byte[]{42}});
-    HTable ht2 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_2);
-    regions = ht2.getRegionLocations();
-    assertEquals("Table should have only 2 region", 2, regions.size());
-    ht2.close();
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_2)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Table should have only 2 region", 2, regions.size());
+    }
 
     TableName TABLE_3 = TableName.valueOf(tableName.getNameAsString() + "_3");
     desc = new HTableDescriptor(TABLE_3);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, "a".getBytes(), "z".getBytes(), 3);
-    HTable ht3 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_3);
-    regions = ht3.getRegionLocations();
-    assertEquals("Table should have only 3 region", 3, regions.size());
-    ht3.close();
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_3)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Table should have only 3 region", 3, regions.size());
+    }
 
     TableName TABLE_4 = TableName.valueOf(tableName.getNameAsString() + "_4");
     desc = new HTableDescriptor(TABLE_4);
@@ -692,11 +695,11 @@ public class TestAdmin1 {
     TableName TABLE_5 = TableName.valueOf(tableName.getNameAsString() + "_5");
     desc = new HTableDescriptor(TABLE_5);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
-    admin.createTable(desc, new byte[] {1}, new byte[] {127}, 16);
-    HTable ht5 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_5);
-    regions = ht5.getRegionLocations();
-    assertEquals("Table should have 16 region", 16, regions.size());
-    ht5.close();
+    admin.createTable(desc, new byte[] { 1 }, new byte[] { 127 }, 16);
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_5)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Table should have 16 region", 16, regions.size());
+    }
   }
 
   @Test (timeout=300000)
@@ -724,47 +727,53 @@ public class TestAdmin1 {
     boolean tableAvailable = admin.isTableAvailable(tableName, splitKeys);
     assertTrue("Table should be created with splitKyes + 1 rows in META", tableAvailable);
 
-    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
-    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
-    assertEquals("Tried to create " + expectedRegions + " regions " +
-        "but only found " + regions.size(),
-        expectedRegions, regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    List<HRegionLocation> regions;
+    Iterator<HRegionLocation> hris;
+    HRegionInfo hri;
+    ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      regions = l.getAllRegionLocations();
 
-    Iterator<HRegionInfo> hris = regions.keySet().iterator();
-    HRegionInfo hri = hris.next();
-    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
-    assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
-    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+      assertEquals("Tried to create " + expectedRegions + " regions " +
+              "but only found " + regions.size(), expectedRegions, regions.size());
+      System.err.println("Found " + regions.size() + " regions");
 
-    verifyRoundRobinDistribution(ht, expectedRegions);
-    ht.close();
+      hris = regions.iterator();
+      hri = hris.next().getRegionInfo();
+      assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[0]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[0]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[1]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[1]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[2]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[2]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[3]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[3]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[4]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[4]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[5]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[5]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[6]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[6]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[7]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[7]));
+      assertTrue(Bytes.equals(hri.getEndKey(), splitKeys[8]));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), splitKeys[8]));
+      assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+
+      verifyRoundRobinDistribution(conn, l, expectedRegions);
+    }
+
+
 
     // Now test using start/end with a number of regions
 
@@ -784,47 +793,46 @@ public class TestAdmin1 {
     admin = TEST_UTIL.getHBaseAdmin();
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
-    HTable ht2 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_2);
-    regions = ht2.getRegionLocations();
-    assertEquals("Tried to create " + expectedRegions + " regions " +
-        "but only found " + regions.size(),
-        expectedRegions, regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_2)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Tried to create " + expectedRegions + " regions " +
+          "but only found " + regions.size(), expectedRegions, regions.size());
+      System.err.println("Found " + regions.size() + " regions");
 
-    hris = regions.keySet().iterator();
-    hri = hris.next();
-    assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {1,1,1,1,1,1,1,1,1,1}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {1,1,1,1,1,1,1,1,1,1}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {2,2,2,2,2,2,2,2,2,2}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {2,2,2,2,2,2,2,2,2,2}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {3,3,3,3,3,3,3,3,3,3}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {3,3,3,3,3,3,3,3,3,3}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {4,4,4,4,4,4,4,4,4,4}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {4,4,4,4,4,4,4,4,4,4}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {5,5,5,5,5,5,5,5,5,5}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {5,5,5,5,5,5,5,5,5,5}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {6,6,6,6,6,6,6,6,6,6}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {6,6,6,6,6,6,6,6,6,6}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {7,7,7,7,7,7,7,7,7,7}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {7,7,7,7,7,7,7,7,7,7}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {8,8,8,8,8,8,8,8,8,8}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {8,8,8,8,8,8,8,8,8,8}));
-    assertTrue(Bytes.equals(hri.getEndKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
-    hri = hris.next();
-    assertTrue(Bytes.equals(hri.getStartKey(), new byte [] {9,9,9,9,9,9,9,9,9,9}));
-    assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
+      hris = regions.iterator();
+      hri = hris.next().getRegionInfo();
+      assertTrue(hri.getStartKey() == null || hri.getStartKey().length == 0);
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 3, 3, 3, 3, 3, 3, 3, 3, 3, 3 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 4, 4, 4, 4, 4, 4, 4, 4, 4, 4 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 5, 5, 5, 5, 5, 5, 5, 5, 5, 5 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 6, 6, 6, 6, 6, 6, 6, 6, 6, 6 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 7, 7, 7, 7, 7, 7, 7, 7, 7, 7 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 8, 8, 8, 8, 8, 8, 8, 8, 8, 8 }));
+      assertTrue(Bytes.equals(hri.getEndKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
+      hri = hris.next().getRegionInfo();
+      assertTrue(Bytes.equals(hri.getStartKey(), new byte[] { 9, 9, 9, 9, 9, 9, 9, 9, 9, 9 }));
+      assertTrue(hri.getEndKey() == null || hri.getEndKey().length == 0);
 
-    verifyRoundRobinDistribution(ht2, expectedRegions);
-    ht2.close();
+      verifyRoundRobinDistribution(conn, l, expectedRegions);
+    }
 
     // Try once more with something that divides into something infinite
 
@@ -841,15 +849,14 @@ public class TestAdmin1 {
     admin.createTable(desc, startKey, endKey, expectedRegions);
 
 
-    HTable ht3 = (HTable) TEST_UTIL.getConnection().getTable(TABLE_3);
-    regions = ht3.getRegionLocations();
-    assertEquals("Tried to create " + expectedRegions + " regions " +
-        "but only found " + regions.size(),
-        expectedRegions, regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(TABLE_3)) {
+      regions = l.getAllRegionLocations();
+      assertEquals("Tried to create " + expectedRegions + " regions " +
+          "but only found " + regions.size(), expectedRegions, regions.size());
+      System.err.println("Found " + regions.size() + " regions");
 
-    verifyRoundRobinDistribution(ht3, expectedRegions);
-    ht3.close();
+      verifyRoundRobinDistribution(conn, l, expectedRegions);
+    }
 
 
     // Try an invalid case where there are duplicate split keys
@@ -962,20 +969,22 @@ public class TestAdmin1 {
     HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
-    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
-    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
-    assertEquals("Tried to create " + expectedRegions + " regions "
-        + "but only found " + regions.size(), expectedRegions, regions.size());
-    // Disable table.
-    admin.disableTable(tableName);
-    // Enable table, use retain assignment to assign regions.
-    admin.enableTable(tableName);
-    Map<HRegionInfo, ServerName> regions2 = ht.getRegionLocations();
 
-    // Check the assignment.
-    assertEquals(regions.size(), regions2.size());
-    for (Map.Entry<HRegionInfo, ServerName> entry : regions.entrySet()) {
-      assertEquals(regions2.get(entry.getKey()), entry.getValue());
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      List<HRegionLocation> regions = l.getAllRegionLocations();
+
+      assertEquals(
+          "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
+          expectedRegions, regions.size());
+      // Disable table.
+      admin.disableTable(tableName);
+      // Enable table, use retain assignment to assign regions.
+      admin.enableTable(tableName);
+      List<HRegionLocation> regions2 = l.getAllRegionLocations();
+
+      // Check the assignment.
+      assertEquals(regions.size(), regions2.size());
+      assertTrue(regions2.containsAll(regions));
     }
   }
 
@@ -1022,133 +1031,132 @@ public class TestAdmin1 {
       sb.append("_").append(Integer.toString(rowCounts[i]));
     }
     assertFalse(admin.tableExists(tableName));
-    final HTable table = TEST_UTIL.createTable(tableName, familyNames,
+    try(final Table table = TEST_UTIL.createTable(tableName, familyNames,
       numVersions, blockSize);
+      final RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
 
-    int rowCount = 0;
-    byte[] q = new byte[0];
+      int rowCount = 0;
+      byte[] q = new byte[0];
 
-    // insert rows into column families. The number of rows that have values
-    // in a specific column family is decided by rowCounts[familyIndex]
-    for (int index = 0; index < familyNames.length; index++) {
-      ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
-      for (int i = 0; i < rowCounts[index]; i++) {
-        byte[] k = Bytes.toBytes(i);
-        Put put = new Put(k);
-        put.add(familyNames[index], q, k);
-        puts.add(put);
-      }
-      table.put(puts);
-
-      if ( rowCount < rowCounts[index] ) {
-        rowCount = rowCounts[index];
-      }
-    }
-
-    // get the initial layout (should just be one region)
-    Map<HRegionInfo, ServerName> m = table.getRegionLocations();
-    LOG.info("Initial regions (" + m.size() + "): " + m);
-    assertTrue(m.size() == 1);
-
-    // Verify row count
-    Scan scan = new Scan();
-    ResultScanner scanner = table.getScanner(scan);
-    int rows = 0;
-    for(@SuppressWarnings("unused") Result result : scanner) {
-      rows++;
-    }
-    scanner.close();
-    assertEquals(rowCount, rows);
-
-    // Have an outstanding scan going on to make sure we can scan over splits.
-    scan = new Scan();
-    scanner = table.getScanner(scan);
-    // Scan first row so we are into first region before split happens.
-    scanner.next();
-
-    // Split the table
-    this.admin.split(tableName, splitPoint);
-
-    final AtomicInteger count = new AtomicInteger(0);
-    Thread t = new Thread("CheckForSplit") {
-      @Override
-      public void run() {
-        for (int i = 0; i < 45; i++) {
-          try {
-            sleep(1000);
-          } catch (InterruptedException e) {
-            continue;
-          }
-          // check again    table = new HTable(conf, tableName);
-          Map<HRegionInfo, ServerName> regions = null;
-          try {
-            regions = table.getRegionLocations();
-          } catch (IOException e) {
-            e.printStackTrace();
-          }
-          if (regions == null) continue;
-          count.set(regions.size());
-          if (count.get() >= 2) {
-            LOG.info("Found: " + regions);
-            break;
-          }
-          LOG.debug("Cycle waiting on split");
+      // insert rows into column families. The number of rows that have values
+      // in a specific column family is decided by rowCounts[familyIndex]
+      for (int index = 0; index < familyNames.length; index++) {
+        ArrayList<Put> puts = new ArrayList<Put>(rowCounts[index]);
+        for (int i = 0; i < rowCounts[index]; i++) {
+          byte[] k = Bytes.toBytes(i);
+          Put put = new Put(k);
+          put.addColumn(familyNames[index], q, k);
+          puts.add(put);
         }
-        LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
-      }
-    };
-    t.setPriority(Thread.NORM_PRIORITY - 2);
-    t.start();
-    t.join();
+        table.put(puts);
 
-    // Verify row count
-    rows = 1; // We counted one row above.
-    for (@SuppressWarnings("unused") Result result : scanner) {
-      rows++;
-      if (rows > rowCount) {
-        scanner.close();
-        assertTrue("Scanned more than expected (" + rowCount + ")", false);
-      }
-    }
-    scanner.close();
-    assertEquals(rowCount, rows);
-
-    Map<HRegionInfo, ServerName> regions = null;
-    try {
-      regions = table.getRegionLocations();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    assertEquals(2, regions.size());
-    Set<HRegionInfo> hRegionInfos = regions.keySet();
-    HRegionInfo[] r = hRegionInfos.toArray(new HRegionInfo[hRegionInfos.size()]);
-    if (splitPoint != null) {
-      // make sure the split point matches our explicit configuration
-      assertEquals(Bytes.toString(splitPoint),
-          Bytes.toString(r[0].getEndKey()));
-      assertEquals(Bytes.toString(splitPoint),
-          Bytes.toString(r[1].getStartKey()));
-      LOG.debug("Properly split on " + Bytes.toString(splitPoint));
-    } else {
-      if (familyNames.length > 1) {
-        int splitKey = Bytes.toInt(r[0].getEndKey());
-        // check if splitKey is based on the largest column family
-        // in terms of it store size
-        int deltaForLargestFamily = Math.abs(rowCount/2 - splitKey);
-        LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily +
-          ", r=" + r[0]);
-        for (int index = 0; index < familyNames.length; index++) {
-          int delta = Math.abs(rowCounts[index]/2 - splitKey);
-          if (delta < deltaForLargestFamily) {
-            assertTrue("Delta " + delta + " for family " + index
-              + " should be at least deltaForLargestFamily " + deltaForLargestFamily,
-              false);
-          }
+        if (rowCount < rowCounts[index]) {
+          rowCount = rowCounts[index];
         }
       }
+
+      // get the initial layout (should just be one region)
+      List<HRegionLocation> m = locator.getAllRegionLocations();
+      LOG.info("Initial regions (" + m.size() + "): " + m);
+      assertTrue(m.size() == 1);
+
+      // Verify row count
+      Scan scan = new Scan();
+      ResultScanner scanner = table.getScanner(scan);
+      int rows = 0;
+      for (@SuppressWarnings("unused") Result result : scanner) {
+        rows++;
+      }
+      scanner.close();
+      assertEquals(rowCount, rows);
+
+      // Have an outstanding scan going on to make sure we can scan over splits.
+      scan = new Scan();
+      scanner = table.getScanner(scan);
+      // Scan first row so we are into first region before split happens.
+      scanner.next();
+
+      // Split the table
+      this.admin.split(tableName, splitPoint);
+
+      final AtomicInteger count = new AtomicInteger(0);
+      Thread t = new Thread("CheckForSplit") {
+        @Override
+        public void run() {
+          for (int i = 0; i < 45; i++) {
+            try {
+              sleep(1000);
+            } catch (InterruptedException e) {
+              continue;
+            }
+            // check again
+            List<HRegionLocation> regions = null;
+            try {
+              regions = locator.getAllRegionLocations();
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+            if (regions == null)
+              continue;
+            count.set(regions.size());
+            if (count.get() >= 2) {
+              LOG.info("Found: " + regions);
+              break;
+            }
+            LOG.debug("Cycle waiting on split");
+          }
+          LOG.debug("CheckForSplit thread exited, current region count: " + count.get());
+        }
+      };
+      t.setPriority(Thread.NORM_PRIORITY - 2);
+      t.start();
+      t.join();
+
+      // Verify row count
+      rows = 1; // We counted one row above.
+      for (@SuppressWarnings("unused") Result result : scanner) {
+        rows++;
+        if (rows > rowCount) {
+          scanner.close();
+          assertTrue("Scanned more than expected (" + rowCount + ")", false);
+        }
+      }
+      scanner.close();
+      assertEquals(rowCount, rows);
+
+      List<HRegionLocation> regions = null;
+      try {
+        regions = locator.getAllRegionLocations();
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+      assertEquals(2, regions.size());
+      if (splitPoint != null) {
+        // make sure the split point matches our explicit configuration
+        assertEquals(Bytes.toString(splitPoint),
+            Bytes.toString(regions.get(0).getRegionInfo().getEndKey()));
+        assertEquals(Bytes.toString(splitPoint),
+            Bytes.toString(regions.get(1).getRegionInfo().getStartKey()));
+        LOG.debug("Properly split on " + Bytes.toString(splitPoint));
+      } else {
+        if (familyNames.length > 1) {
+          int splitKey = Bytes.toInt(regions.get(0).getRegionInfo().getEndKey());
+          // check if splitKey is based on the largest column family
+          // in terms of it store size
+          int deltaForLargestFamily = Math.abs(rowCount / 2 - splitKey);
+          LOG.debug("SplitKey=" + splitKey + "&deltaForLargestFamily=" + deltaForLargestFamily +
+              ", r=" + regions.get(0).getRegionInfo());
+          for (int index = 0; index < familyNames.length; index++) {
+            int delta = Math.abs(rowCounts[index] / 2 - splitKey);
+            if (delta < deltaForLargestFamily) {
+              assertTrue("Delta " + delta + " for family " + index + " should be at least "
+                      + "deltaForLargestFamily " + deltaForLargestFamily, false);
+            }
+          }
+        }
+      }
+      TEST_UTIL.deleteTable(tableName);
     }
-    TEST_UTIL.deleteTable(tableName);
-    table.close();
   }
 
   @Test
@@ -1173,7 +1181,7 @@ public class TestAdmin1 {
       Thread.sleep(10);
     } while (oldRegions.size() != 9); //3 regions * 3 replicas
     // write some data to the table
-    HTable ht = (HTable) TEST_UTIL.getConnection().getTable(tableName);
+    Table ht = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>();
     byte[] qualifier = "c".getBytes();
     Put put = new Put(new byte[]{(byte)'1'});
@@ -1186,7 +1194,6 @@ public class TestAdmin1 {
     put.add(cf, qualifier, "100".getBytes());
     puts.add(put);
     ht.put(puts);
-    ht.flushCommits();
     ht.close();
     List<Pair<HRegionInfo, ServerName>> regions =
         MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tableName);

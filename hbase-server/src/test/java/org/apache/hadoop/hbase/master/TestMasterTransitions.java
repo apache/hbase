@@ -66,9 +66,9 @@ public class TestMasterTransitions {
     TEST_UTIL.startMiniCluster(2);
     // Create a table of three families.  This will assign a region.
     TEST_UTIL.createMultiRegionTable(TABLENAME, FAMILIES);
-    HTable t = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
+    Table t = TEST_UTIL.getConnection().getTable(TABLENAME);
     int countOfRegions = -1;
-    try (RegionLocator r = t.getRegionLocator()) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(TABLENAME)) {
       countOfRegions = r.getStartKeys().length;
     }
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLENAME);

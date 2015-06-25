@@ -80,8 +80,8 @@ public class TestSyncTable {
   
   @Test
   public void testSyncTable() throws Exception {
-    String sourceTableName = "testSourceTable";
-    String targetTableName = "testTargetTable";
+    TableName sourceTableName = TableName.valueOf("testSourceTable");
+    TableName targetTableName = TableName.valueOf("testTargetTable");
     Path testDir = TEST_UTIL.getDataTestDirOnTestFS("testSyncTable");
     
     writeTestData(sourceTableName, targetTableName);
@@ -101,10 +101,10 @@ public class TestSyncTable {
     TEST_UTIL.cleanupDataTestDirOnTestFS();
   }
 
-  private void assertEqualTables(int expectedRows, String sourceTableName, String targetTableName) 
-      throws Exception {
-    Table sourceTable = TEST_UTIL.getConnection().getTable(TableName.valueOf(sourceTableName));
-    Table targetTable = TEST_UTIL.getConnection().getTable(TableName.valueOf(targetTableName));
+  private void assertEqualTables(int expectedRows, TableName sourceTableName,
+      TableName targetTableName) throws Exception {
+    Table sourceTable = TEST_UTIL.getConnection().getTable(sourceTableName);
+    Table targetTable = TEST_UTIL.getConnection().getTable(targetTableName);
     
     ResultScanner sourceScanner = sourceTable.getScanner(new Scan());
     ResultScanner targetScanner = targetTable.getScanner(new Scan());
@@ -177,13 +177,13 @@ public class TestSyncTable {
     targetTable.close();
   }
 
-  private Counters syncTables(String sourceTableName, String targetTableName,
+  private Counters syncTables(TableName sourceTableName, TableName targetTableName,
       Path testDir) throws Exception {
     SyncTable syncTable = new SyncTable(TEST_UTIL.getConfiguration());
     int code = syncTable.run(new String[] { 
         testDir.toString(),
-        sourceTableName,
-        targetTableName
+        sourceTableName.getNameAsString(),
+        targetTableName.getNameAsString()
         });
     assertEquals("sync table job failed", 0, code);
     
@@ -191,7 +191,7 @@ public class TestSyncTable {
     return syncTable.counters;
   }
 
-  private void hashSourceTable(String sourceTableName, Path testDir)
+  private void hashSourceTable(TableName sourceTableName, Path testDir)
       throws Exception, IOException {
     int numHashFiles = 3;
     long batchSize = 100;  // should be 2 batches per region
@@ -201,14 +201,14 @@ public class TestSyncTable {
         "--batchsize=" + batchSize,
         "--numhashfiles=" + numHashFiles,
         "--scanbatch=" + scanBatch,
-        sourceTableName,
+        sourceTableName.getNameAsString(),
         testDir.toString()});
     assertEquals("hash table job failed", 0, code);
     
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     
     HashTable.TableHash tableHash = HashTable.TableHash.read(fs.getConf(), testDir);
-    assertEquals(sourceTableName, tableHash.tableName);
+    assertEquals(sourceTableName.getNameAsString(), tableHash.tableName);
     assertEquals(batchSize, tableHash.batchSize);
     assertEquals(numHashFiles, tableHash.numHashFiles);
     assertEquals(numHashFiles - 1, tableHash.partitions.size());
@@ -216,7 +216,7 @@ public class TestSyncTable {
     LOG.info("Hash table completed");
   }
 
-  private void writeTestData(String sourceTableName, String targetTableName)
+  private void writeTestData(TableName sourceTableName, TableName targetTableName)
       throws Exception {
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
@@ -229,10 +229,10 @@ public class TestSyncTable {
     int sourceRegions = 10;
     int targetRegions = 6;
     
-    HTable sourceTable = TEST_UTIL.createTable(TableName.valueOf(sourceTableName),
+    Table sourceTable = TEST_UTIL.createTable(sourceTableName,
         family, generateSplits(numRows, sourceRegions));
 
-    HTable targetTable = TEST_UTIL.createTable(TableName.valueOf(targetTableName),
+    Table targetTable = TEST_UTIL.createTable(targetTableName,
         family, generateSplits(numRows, targetRegions));
 
     long timestamp = 1430764183454L;

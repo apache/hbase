@@ -101,16 +101,16 @@ public class TestImportTSVWithTTLs implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    String tableName = "test-" + UUID.randomUUID();
+    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
         "-D" + ImportTsv.MAPPER_CONF_KEY
             + "=org.apache.hadoop.hbase.mapreduce.TsvImporterMapper",
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_TTL",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001b1000000\n";
-    util.createTable(TableName.valueOf(tableName), FAMILY);
+    util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1);
     util.deleteTable(tableName);
   }

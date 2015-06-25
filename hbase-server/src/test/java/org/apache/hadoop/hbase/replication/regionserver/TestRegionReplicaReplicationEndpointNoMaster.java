@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseWALObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -86,7 +88,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   private static final int NB_SERVERS = 2;
   private static TableName tableName = TableName.valueOf(
     TestRegionReplicaReplicationEndpointNoMaster.class.getSimpleName());
-  private static HTable table;
+  private static Table table;
   private static final byte[] row = "TestRegionReplicaReplicator".getBytes();
 
   private static HRegionServer rs0;
@@ -117,10 +119,12 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     HTU.startMiniCluster(NB_SERVERS);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor htd = HTU.createTableDescriptor(tableName.toString());
-    table = HTU.createTable(htd, new byte[][]{f}, HTU.getConfiguration());
+    HTableDescriptor htd = HTU.createTableDescriptor(tableName.getNameAsString());
+    table = HTU.createTable(htd, new byte[][]{f}, null);
 
-    hriPrimary = table.getRegionLocation(row, false).getRegionInfo();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
+      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+    }
 
     // mock a secondary region info to open
     hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),

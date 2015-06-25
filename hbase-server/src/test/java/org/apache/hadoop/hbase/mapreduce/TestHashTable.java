@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,7 +69,7 @@ public class TestHashTable {
   
   @Test
   public void testHashTable() throws Exception {
-    final String tableName = "testHashTable";
+    final TableName tableName = TableName.valueOf("testHashTable");
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
@@ -85,7 +86,7 @@ public class TestHashTable {
     
     long timestamp = 1430764183454L;
     // put rows into the first table
-    HTable t1 = TEST_UTIL.createTable(TableName.valueOf(tableName), family, splitRows);
+    Table t1 = TEST_UTIL.createTable(tableName, family, splitRows);
     for (int i = 0; i < numRows; i++) {
       Put p = new Put(Bytes.toBytes(i), timestamp);
       p.addColumn(family, column1, column1);
@@ -97,21 +98,21 @@ public class TestHashTable {
     
     HashTable hashTable = new HashTable(TEST_UTIL.getConfiguration());
     
-    Path testDir = TEST_UTIL.getDataTestDirOnTestFS(tableName);
+    Path testDir = TEST_UTIL.getDataTestDirOnTestFS(tableName.getNameAsString());
     
     long batchSize = 300;
     int code = hashTable.run(new String[] { 
         "--batchsize=" + batchSize,
         "--numhashfiles=" + numHashFiles,
         "--scanbatch=2",
-        tableName,
+        tableName.getNameAsString(),
         testDir.toString()});
     assertEquals("test job failed", 0, code);
     
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     
     HashTable.TableHash tableHash = HashTable.TableHash.read(fs.getConf(), testDir);
-    assertEquals(tableName, tableHash.tableName);
+    assertEquals(tableName.getNameAsString(), tableHash.tableName);
     assertEquals(batchSize, tableHash.batchSize);
     assertEquals(numHashFiles, tableHash.numHashFiles);
     assertEquals(numHashFiles - 1, tableHash.partitions.size());

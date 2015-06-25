@@ -288,12 +288,12 @@ public class TestSnapshotFromMaster {
     UTIL.deleteTable(TABLE_NAME);
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.setCompactionEnabled(false);
-    UTIL.createTable(htd, new byte[][] { TEST_FAM }, UTIL.getConfiguration());
+    UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
     // load the table (creates 4 hfiles)
     UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
     UTIL.flush(TABLE_NAME);
     // Put some more data into the table so for sure we get more storefiles.
-    UTIL.loadTable((HTable) UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
+    UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
 
     // disable the table so we can take a snapshot
     admin.disableTable(TABLE_NAME);

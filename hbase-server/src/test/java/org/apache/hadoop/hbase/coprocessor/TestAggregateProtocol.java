@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.LongColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -84,7 +85,7 @@ public class TestAggregateProtocol {
     util.startMiniCluster(2);
     final byte[][] SPLIT_KEYS = new byte[][] { ROWS[rowSeperator1],
         ROWS[rowSeperator2] };
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
+    Table table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
     /**
      * The testtable has one CQ which is always populated and one variable CQ
      * for each row rowkey1: CF:CQ CF:CQ1 rowKey2: CF:CQ CF:CQ2

@@ -104,7 +104,7 @@ public class TestAdmin2 {
   @After
   public void tearDown() throws Exception {
     for (HTableDescriptor htd : this.admin.listTables()) {
-      TEST_UTIL.deleteTable(htd.getName());
+      TEST_UTIL.deleteTable(htd.getTableName());
     }
   }
 
@@ -693,15 +693,17 @@ public class TestAdmin2 {
 
     final TableName tableName = TableName.valueOf("testGetRegion");
     LOG.info("Started " + tableName);
-    HTable t = TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
+    Table t = TEST_UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
 
-    HRegionLocation regionLocation = t.getRegionLocation("mmm");
-    HRegionInfo region = regionLocation.getRegionInfo();
-    byte[] regionName = region.getRegionName();
-    Pair<HRegionInfo, ServerName> pair = rawAdmin.getRegion(regionName);
-    assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
-    pair = rawAdmin.getRegion(region.getEncodedNameAsBytes());
-    assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      HRegionLocation regionLocation = locator.getRegionLocation(Bytes.toBytes("mmm"));
+      HRegionInfo region = regionLocation.getRegionInfo();
+      byte[] regionName = region.getRegionName();
+      Pair<HRegionInfo, ServerName> pair = rawAdmin.getRegion(regionName);
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+      pair = rawAdmin.getRegion(region.getEncodedNameAsBytes());
+      assertTrue(Bytes.equals(regionName, pair.getFirst().getRegionName()));
+    }
   }
 
   @Test(timeout = 30000)

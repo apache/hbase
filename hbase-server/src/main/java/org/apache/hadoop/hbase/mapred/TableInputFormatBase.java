@@ -41,7 +41,7 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
 /**
- * A Base for {@link TableInputFormat}s. Receives a {@link HTable}, a
+ * A Base for {@link TableInputFormat}s. Receives a {@link Table}, a
  * byte[] of input columns and optionally a {@link Filter}.
  * Subclasses may use other TableRecordReader implementations.
  *

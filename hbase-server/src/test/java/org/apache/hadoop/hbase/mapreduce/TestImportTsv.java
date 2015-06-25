@@ -125,7 +125,7 @@ public class TestImportTsv implements Configurable {
     doMROnTableTest(null, 1);
     util.deleteTable(table);
   }
-  
+
   @Test
   public void testMROnTableWithTimestamp() throws Exception {
     util.createTable(TableName.valueOf(table), FAMILY);
@@ -147,7 +147,7 @@ public class TestImportTsv implements Configurable {
     doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
-  
+
   @Test
   public void testBulkOutputWithoutAnExistingTable() throws Exception {
     // Prepare the arguments required for the test.
@@ -169,7 +169,7 @@ public class TestImportTsv implements Configurable {
     doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
-  
+
   @Test
   public void testBulkOutputWithAnExistingTableNoStrictTrue() throws Exception {
     util.createTable(TableName.valueOf(table), FAMILY);

@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
@@ -97,7 +98,7 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     TableName TEST_TABLE = TableName.valueOf("observed_table");
     byte[] TEST_FAMILY = Bytes.toBytes("aaa");
 
-    HTable table = TEST_UTIL.createMultiRegionTable(TEST_TABLE, TEST_FAMILY);
+    Table table = TEST_UTIL.createMultiRegionTable(TEST_TABLE, TEST_FAMILY);
     TEST_UTIL.waitUntilAllRegionsAssigned(TEST_TABLE);
     // Note which regionServer that should survive the buggy coprocessor's
     // prePut().
@@ -108,12 +109,10 @@ public class TestRegionServerCoprocessorExceptionWithRemove {
     try {
       final byte[] ROW = Bytes.toBytes("aaa");
       Put put = new Put(ROW);
-      put.add(TEST_FAMILY, ROW, ROW);
+      put.addColumn(TEST_FAMILY, ROW, ROW);
       table.put(put);
-      table.flushCommits();
       // We may need two puts to reliably get an exception
       table.put(put);
-      table.flushCommits();
     } catch (IOException e) {
       threwIOE = true;
     } finally {

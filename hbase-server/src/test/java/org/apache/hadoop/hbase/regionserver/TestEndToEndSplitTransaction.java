@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -94,7 +95,7 @@ public class TestEndToEndSplitTransaction {
   public void testMasterOpsWhileSplitting() throws Exception {
     TableName tableName = TableName.valueOf("TestSplit");
     byte[] familyName = Bytes.toBytes("fam");
-    try (HTable ht = TEST_UTIL.createTable(tableName, familyName)) {
+    try (Table ht = TEST_UTIL.createTable(tableName, familyName)) {
       TEST_UTIL.loadTable(ht, familyName, false);
     }
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
@@ -318,19 +319,23 @@ public class TestEndToEndSplitTransaction {
 
     /** verify region boundaries obtained from HTable.getStartEndKeys() */
     void verifyRegionsUsingHTable() throws IOException {
-      HTable table = null;
+      Table table = null;
       try {
         //HTable.getStartEndKeys()
-        table = (HTable) connection.getTable(tableName);
-        Pair<byte[][], byte[][]> keys = table.getRegionLocator().getStartEndKeys();
-        verifyStartEndKeys(keys);
+        table = connection.getTable(tableName);
 
-        //HTable.getRegionsInfo()
-        Set<HRegionInfo> regions = new TreeSet<HRegionInfo>();
-        for (HRegionLocation loc : table.getRegionLocator().getAllRegionLocations()) {
-          regions.add(loc.getRegionInfo());
+        try(RegionLocator rl = connection.getRegionLocator(tableName)) {
+          Pair<byte[][], byte[][]> keys = rl.getStartEndKeys();
+          verifyStartEndKeys(keys);
+
+          //HTable.getRegionsInfo()
+          Set<HRegionInfo> regions = new TreeSet<HRegionInfo>();
+          for (HRegionLocation loc : rl.getAllRegionLocations()) {
+            regions.add(loc.getRegionInfo());
+          }
+          verifyTableRegions(regions);
         }
-        verifyTableRegions(regions);
+
       } finally {
         IOUtils.closeQuietly(table);
       }

@@ -71,8 +71,7 @@ public class TestResultSizeEstimation {
 
     TableName TABLE = TableName.valueOf("testResultSizeEstimation");
     byte[][] FAMILIES = new byte[][] { FAMILY };
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    HTable table = TEST_UTIL.createTable(TABLE, FAMILIES, conf);
+    Table table = TEST_UTIL.createTable(TABLE, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE));
     table.put(p);
@@ -102,8 +101,7 @@ public class TestResultSizeEstimation {
 
     TableName TABLE = TableName.valueOf("testResultSizeEstimationWithTags");
     byte[][] FAMILIES = new byte[][] { FAMILY };
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    HTable table = TEST_UTIL.createTable(TABLE, FAMILIES, conf);
+    Table table = TEST_UTIL.createTable(TABLE, FAMILIES);
     Put p = new Put(ROW1);
     p.add(new KeyValue(ROW1, FAMILY, QUALIFIER, Long.MAX_VALUE, VALUE,
       new Tag[] { new Tag((byte)1, new byte[TAG_DATA_SIZE]) } ));

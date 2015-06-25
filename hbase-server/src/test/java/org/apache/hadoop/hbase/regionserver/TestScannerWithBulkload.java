@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -83,7 +84,9 @@ public class TestScannerWithBulkload {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    bulkload.doBulkLoad(hfilePath, (HTable) table);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      bulkload.doBulkLoad(hfilePath, admin, table, locator);
+    }
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     result = scanAfterBulkLoad(scanner, result, "version2");
@@ -168,8 +171,8 @@ public class TestScannerWithBulkload {
   private Table init(HBaseAdmin admin, long l, Scan scan, TableName tableName) throws Exception {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     Put put0 = new Put(Bytes.toBytes("row1"));
-    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l, Bytes
-        .toBytes("version0")));
+    put0.add(new KeyValue(Bytes.toBytes("row1"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
+        Bytes.toBytes("version0")));
     table.put(put0);
     admin.flush(tableName);
     Put put1 = new Put(Bytes.toBytes("row2"));
@@ -195,9 +198,9 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
+    final TableName tableName = TableName.valueOf("testBulkLoadWithParallelScan");
       final long l = System.currentTimeMillis();
-    HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
+    final HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
     createTable(admin, tableName);
     Scan scan = createScan();
     final Table table = init(admin, l, scan, tableName);
@@ -217,7 +220,9 @@ public class TestScannerWithBulkload {
           put1.add(new KeyValue(Bytes.toBytes("row5"), Bytes.toBytes("col"), Bytes.toBytes("q"), l,
               Bytes.toBytes("version0")));
           table.put(put1);
-          bulkload.doBulkLoad(hfilePath, (HTable) table);
+          try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+            bulkload.doBulkLoad(hfilePath, admin, table, locator);
+          }
           latch.countDown();
         } catch (TableNotFoundException e) {
         } catch (IOException e) {
@@ -231,7 +236,6 @@ public class TestScannerWithBulkload {
     scanAfterBulkLoad(scanner, result, "version1");
     scanner.close();
     table.close();
-
   }
 
   @Test
@@ -248,7 +252,9 @@ public class TestScannerWithBulkload {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.mapreduce.bulkload.assign.sequenceNumbers", true);
     final LoadIncrementalHFiles bulkload = new LoadIncrementalHFiles(conf);
-    bulkload.doBulkLoad(hfilePath, (HTable) table);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
+      bulkload.doBulkLoad(hfilePath, admin, table, locator);
+    }
     ResultScanner scanner = table.getScanner(scan);
     Result result = scanner.next();
     // We had 'version0', 'version1' for 'row1,col:q' in the table.

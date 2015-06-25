@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.coprocessor.AggregationClient;
 import org.apache.hadoop.hbase.client.coprocessor.BigDecimalColumnInterpreter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -83,7 +84,7 @@ public class TestBigDecimalColumnInterpreter {
 
     util.startMiniCluster(2);
     final byte[][] SPLIT_KEYS = new byte[][] { ROWS[rowSeperator1], ROWS[rowSeperator2] };
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
+    Table table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
     /**
      * The testtable has one CQ which is always populated and one variable CQ for each row rowkey1:
      * CF:CQ CF:CQ1 rowKey2: CF:CQ CF:CQ2
@@ -92,11 +93,11 @@ public class TestBigDecimalColumnInterpreter {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
       BigDecimal bd = new BigDecimal(i);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(bd));
+      put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(bd));
       table.put(put);
       Put p2 = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      p2.add(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(bd)),
+      p2.addColumn(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(bd)),
         Bytes.toBytes(bd.multiply(new BigDecimal("0.10"))));
       table.put(p2);
     }

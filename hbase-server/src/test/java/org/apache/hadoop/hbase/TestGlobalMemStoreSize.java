@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -73,12 +74,12 @@ public class TestGlobalMemStoreSize {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    byte [] table = Bytes.toBytes("TestGlobalMemStoreSize");
+    TableName table = TableName.valueOf("TestGlobalMemStoreSize");
     byte [] family = Bytes.toBytes("family");
     LOG.info("Creating table with " + regionNum + " regions");
-    HTable ht = TEST_UTIL.createMultiRegionTable(TableName.valueOf(table), family, regionNum);
+    Table ht = TEST_UTIL.createMultiRegionTable(table, family, regionNum);
     int numRegions = -1;
-    try (RegionLocator r = ht.getRegionLocator()) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(table)) {
       numRegions = r.getStartKeys().length;
     }
     assertEquals(regionNum,numRegions);

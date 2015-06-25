@@ -84,8 +84,8 @@ public class TestStatusResource {
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster(1, 1);
-    TEST_UTIL.createTable(Bytes.toBytes("TestStatusResource"), Bytes.toBytes("D"));
-    TEST_UTIL.createTable(Bytes.toBytes("TestStatusResource2"), Bytes.toBytes("D"));
+    TEST_UTIL.createTable(TableName.valueOf("TestStatusResource"), Bytes.toBytes("D"));
+    TEST_UTIL.createTable(TableName.valueOf("TestStatusResource2"), Bytes.toBytes("D"));
     REST_TEST_UTIL.startServletContainer(conf);
     Cluster cluster = new Cluster();
     cluster.add("localhost", REST_TEST_UTIL.getServletPort());

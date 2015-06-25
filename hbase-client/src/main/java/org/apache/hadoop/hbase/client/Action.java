@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * A Get, Put, Increment, Append, or Delete associated with it's region.  Used internally by  
- * {@link HTable#batch} to associate the action with it's region and maintain
+ * {@link Table#batch} to associate the action with it's region and maintain
  * the index from the original request. 
  */
 @InterfaceAudience.Private

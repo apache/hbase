@@ -156,18 +156,18 @@ public class TestServerCustomProtocol {
   @Before
   public void before()  throws Exception {
     final byte[][] SPLIT_KEYS = new byte[][] { ROW_B, ROW_C };
-    HTable table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
+    Table table = util.createTable(TEST_TABLE, TEST_FAMILY, SPLIT_KEYS);
 
     Put puta = new Put( ROW_A );
-    puta.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
+    puta.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(puta);
 
     Put putb = new Put( ROW_B );
-    putb.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
+    putb.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(putb);
 
     Put putc = new Put( ROW_C );
-    putc.add(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
+    putc.addColumn(TEST_FAMILY, Bytes.toBytes("col1"), Bytes.toBytes(1));
     table.put(putc);
   }
 
@@ -306,8 +306,8 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testSingleMethod() throws Throwable {
-    try (HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
+    try (Table table = util.getConnection().getTable(TEST_TABLE);
+        RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
       Map<byte [], String> results = table.coprocessorService(PingProtos.PingService.class,
         null, ROW_A,
         new Batch.Call<PingProtos.PingService, String>() {
@@ -335,10 +335,11 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testRowRange() throws Throwable {
-    try (HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
-      for (Entry<HRegionInfo, ServerName> e: table.getRegionLocations().entrySet()) {
-        LOG.info("Region " + e.getKey().getRegionNameAsString() + ", servername=" + e.getValue());
+    try (Table table = util.getConnection().getTable(TEST_TABLE);
+        RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
+      for (HRegionLocation e: locator.getAllRegionLocations()) {
+        LOG.info("Region " + e.getRegionInfo().getRegionNameAsString()
+            + ", servername=" + e.getServerName());
       }
       // Here are what regions looked like on a run:
       //
@@ -355,7 +356,7 @@ public class TestServerCustomProtocol {
       results = ping(table, ROW_BC, null);
       assertEquals(2, results.size());
       // should contain last 2 regions
-      HRegionLocation loc = table.getRegionLocation(ROW_A, true);
+      HRegionLocation loc = locator.getRegionLocation(ROW_A, true);
       assertNull("Should be missing region for row aaa (prior to start row)",
         results.get(loc.getRegionInfo().getRegionName()));
       verifyRegionResults(locator, results, ROW_B);
@@ -367,7 +368,7 @@ public class TestServerCustomProtocol {
       assertEquals(2, results.size());
       verifyRegionResults(locator, results, ROW_A);
       verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_C, true);
+      loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
           results.get(loc.getRegionInfo().getRegionName()));
   
@@ -377,7 +378,7 @@ public class TestServerCustomProtocol {
       assertEquals(2, results.size());
       verifyRegionResults(locator, results, ROW_A);
       verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_C, true);
+      loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
           results.get(loc.getRegionInfo().getRegionName()));
   
@@ -386,10 +387,10 @@ public class TestServerCustomProtocol {
       // should only contain region bbb
       assertEquals(1, results.size());
       verifyRegionResults(locator, results, ROW_B);
-      loc = table.getRegionLocation(ROW_A, true);
+      loc = locator.getRegionLocation(ROW_A, true);
       assertNull("Should be missing region for row aaa (prior to start)",
           results.get(loc.getRegionInfo().getRegionName()));
-      loc = table.getRegionLocation(ROW_C, true);
+      loc = locator.getRegionLocation(ROW_C, true);
       assertNull("Should be missing region for row ccc (past stop row)",
           results.get(loc.getRegionInfo().getRegionName()));
     }
@@ -415,8 +416,8 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testCompoundCall() throws Throwable {
-    try (HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
+    try (Table table = util.getConnection().getTable(TEST_TABLE);
+        RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
       Map<byte [], String> results = compoundOfHelloAndPing(table, ROW_A, ROW_C);
       verifyRegionResults(locator, results, "Hello, pong", ROW_A);
       verifyRegionResults(locator, results, "Hello, pong", ROW_B);
@@ -426,8 +427,8 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testNullCall() throws Throwable {
-    try(HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
+    try (Table table = util.getConnection().getTable(TEST_TABLE);
+        RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
       Map<byte[],String> results = hello(table, null, ROW_A, ROW_C);
       verifyRegionResults(locator, results, "Who are you?", ROW_A);
       verifyRegionResults(locator, results, "Who are you?", ROW_B);
@@ -437,8 +438,8 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testNullReturn() throws Throwable {
-    try (HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
-      RegionLocator locator = table.getRegionLocator();
+    try (Table table = util.getConnection().getTable(TEST_TABLE);
+        RegionLocator locator = util.getConnection().getRegionLocator(TEST_TABLE)) {
       Map<byte[],String> results = hello(table, "nobody", ROW_A, ROW_C);
       verifyRegionResults(locator, results, null, ROW_A);
       verifyRegionResults(locator, results, null, ROW_B);
@@ -448,7 +449,7 @@ public class TestServerCustomProtocol {
 
   @Test
   public void testEmptyReturnType() throws Throwable {
-    try (HTable table = (HTable) util.getConnection().getTable(TEST_TABLE)) {
+    try (Table table = util.getConnection().getTable(TEST_TABLE)) {
       Map<byte[],String> results = noop(table, ROW_A, ROW_C);
       assertEquals("Should have results from three regions", 3, results.size());
       // all results should be null

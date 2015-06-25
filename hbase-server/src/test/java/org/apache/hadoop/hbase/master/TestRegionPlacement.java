@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -50,7 +51,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeAssignmentHelper;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodeLoadBalancer;
 import org.apache.hadoop.hbase.master.balancer.FavoredNodesPlan;
@@ -546,11 +549,10 @@ public class TestRegionPlacement {
     desc.addFamily(new HColumnDescriptor(HConstants.CATALOG_FAMILY));
     admin.createTable(desc, splitKeys);
 
-    HTable ht = (HTable) CONNECTION.getTable(tableName);
-    @SuppressWarnings("deprecation")
-    Map<HRegionInfo, ServerName> regions = ht.getRegionLocations();
-    assertEquals("Tried to create " + expectedRegions + " regions "
-        + "but only found " + regions.size(), expectedRegions, regions.size());
-    ht.close();
+    try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {
+      List<HRegionLocation> regions = r.getAllRegionLocations();
+      assertEquals("Tried to create " + expectedRegions + " regions "
+          + "but only found " + regions.size(), expectedRegions, regions.size());
+    }
   }
 }

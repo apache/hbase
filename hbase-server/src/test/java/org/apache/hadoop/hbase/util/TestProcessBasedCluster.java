@@ -58,7 +58,7 @@ public class TestProcessBasedCluster {
     cluster.startMiniDFS();
     cluster.startHBase();
     try {
-      TEST_UTIL.createRandomTable(HTestConst.DEFAULT_TABLE_STR,
+      TEST_UTIL.createRandomTable(HTestConst.DEFAULT_TABLE,
           HTestConst.DEFAULT_CF_STR_SET,
           HColumnDescriptor.DEFAULT_VERSIONS, COLS_PER_ROW, FLUSHES, NUM_REGIONS,
           ROWS_PER_FLUSH);

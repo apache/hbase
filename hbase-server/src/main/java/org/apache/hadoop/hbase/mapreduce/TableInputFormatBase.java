@@ -526,7 +526,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
       }
     }
     //transform the List of bytes to byte[]
-    byte result[] = new byte[resultBytesList.size()];
+    byte[] result = new byte[resultBytesList.size()];
     for (int k = 0; k < resultBytesList.size(); k++) {
       result[k] = (byte) resultBytesList.get(k);
     }
@@ -558,7 +558,7 @@ extends InputFormat<ImmutableBytesWritable, Result> {
   }
 
   /**
-   * Allows subclasses to get the {@link HTable}.
+   * Allows subclasses to get the {@link Table}.
    *
    * @deprecated use {@link #getTable()}
    */

@@ -237,7 +237,7 @@ public class IntegrationTestBulkLoad extends IntegrationTestBase {
     }
 
     util.createTable(
-        getTablename().getName(),
+        getTablename(),
         new byte[][]{CHAIN_FAM, SORT_FAM, DATA_FAM},
         getSplits(16)
     );

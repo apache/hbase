@@ -155,7 +155,7 @@ public class TestRowCounter {
     long ts;
 
     // clean up content of TABLE_NAME
-    HTable table = TEST_UTIL.deleteTableData(TableName.valueOf(TABLE_NAME));
+    Table table = TEST_UTIL.deleteTableData(TableName.valueOf(TABLE_NAME));
     ts = System.currentTimeMillis();
     put1.add(family, col1, ts, Bytes.toBytes("val1"));
     table.put(put1);

@@ -298,7 +298,7 @@ public class TestSplitTransactionOnCluster {
         TableName.valueOf("testRSSplitDaughtersAreOnlinedAfterShutdownHandling");
 
     // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
 
@@ -343,7 +343,7 @@ public class TestSplitTransactionOnCluster {
         TableName.valueOf("testExistingZnodeBlocksSplitAndWeRollback");
 
     // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
 
@@ -401,7 +401,7 @@ public class TestSplitTransactionOnCluster {
         TableName.valueOf("testShutdownFixupWhenDaughterHasSplit");
 
     // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
 
@@ -567,7 +567,7 @@ public class TestSplitTransactionOnCluster {
         .valueOf("testMasterRestartAtRegionSplitPendingCatalogJanitor");
 
     // Create table then get the single region for our new table.
-    HTable t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
+    Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
     HRegionInfo hri = getAndCheckSingleTableRegion(regions);
 
@@ -683,8 +683,7 @@ public class TestSplitTransactionOnCluster {
     htd.setRegionReplication(2);
     htd.addCoprocessor(SlowMeCopro.class.getName());
     // Create table then get the single region for our new table.
-    Table t = TESTING_UTIL.createTable(htd, new byte[][]{Bytes.toBytes("cf")},
-        TESTING_UTIL.getConfiguration());
+    Table t = TESTING_UTIL.createTable(htd, new byte[][]{Bytes.toBytes("cf")}, null);
     List<HRegion> oldRegions;
     do {
       oldRegions = cluster.getRegions(tableName);
@@ -965,7 +964,7 @@ public class TestSplitTransactionOnCluster {
       desc.addFamily(new HColumnDescriptor(Bytes.toBytes("f")));
       admin.createTable(desc);
       Connection connection = ConnectionFactory.createConnection(cluster.getConfiguration());
-      HTable hTable = (HTable) connection.getTable(desc.getTableName());
+      Table hTable = connection.getTable(desc.getTableName());
       for(int i = 1; i < 5; i++) {
         Put p1 = new Put(("r"+i).getBytes());
         p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
@@ -1266,9 +1265,9 @@ public class TestSplitTransactionOnCluster {
     return regions;
   }
 
-  private HTable createTableAndWait(TableName tableName, byte[] cf) throws IOException,
+  private Table createTableAndWait(TableName tableName, byte[] cf) throws IOException,
       InterruptedException {
-    HTable t = TESTING_UTIL.createTable(tableName, cf);
+    Table t = TESTING_UTIL.createTable(tableName, cf);
     awaitTableRegions(tableName);
     assertTrue("Table not online: " + tableName,
       cluster.getRegions(tableName).size() != 0);

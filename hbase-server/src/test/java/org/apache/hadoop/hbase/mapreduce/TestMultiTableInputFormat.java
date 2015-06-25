@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -40,9 +41,9 @@ public class TestMultiTableInputFormat extends MultiTableInputFormatTestBase {
   @BeforeClass
   public static void setupLogging() {
     TEST_UTIL.enableDebug(MultiTableInputFormat.class);
-  }
+      }
 
-  @Override
+    @Override
   protected void initJob(List<Scan> scans, Job job) throws IOException {
     TableMapReduceUtil.initTableMapperJob(scans, ScanMapper.class,
         ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);

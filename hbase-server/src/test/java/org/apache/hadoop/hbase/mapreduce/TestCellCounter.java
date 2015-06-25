@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -80,38 +81,37 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounter() throws Exception {
-    String sourceTable = "sourceTable";
+    TableName sourceTable = TableName.valueOf("sourceTable");
     byte[][] families = { FAMILY_A, FAMILY_B };
-    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(sourceTable, families);
     try{
-    Put p = new Put(ROW1);
-    p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
-    p.add(FAMILY_B, QUALIFIER, now + 1, Bytes.toBytes("Data12"));
-    p.add(FAMILY_A, QUALIFIER, now + 2, Bytes.toBytes("Data13"));
-    t.put(p);
-    p = new Put(ROW2);
-    p.add(FAMILY_B, QUALIFIER, now, Bytes.toBytes("Dat21"));
-    p.add(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
-    p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
-    t.put(p);
-    String[] args = { sourceTable, FQ_OUTPUT_DIR.toString(), ";", "^row1" };
-    runCount(args);
-    FileInputStream inputStream = new FileInputStream(OUTPUT_DIR + File.separator +
-        "part-r-00000");
-    String data = IOUtils.toString(inputStream);
-    inputStream.close();
-    assertTrue(data.contains("Total Families Across all Rows" + "\t" + "2"));
-    assertTrue(data.contains("Total Qualifiers across all Rows" + "\t" + "2"));
-    assertTrue(data.contains("Total ROWS" + "\t" + "1"));
-    assertTrue(data.contains("b;q" + "\t" + "1"));
-    assertTrue(data.contains("a;q" + "\t" + "1"));
-    assertTrue(data.contains("row1;a;q_Versions" + "\t" + "1"));
-    assertTrue(data.contains("row1;b;q_Versions" + "\t" + "1"));
+      Put p = new Put(ROW1);
+      p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
+      p.add(FAMILY_B, QUALIFIER, now + 1, Bytes.toBytes("Data12"));
+      p.add(FAMILY_A, QUALIFIER, now + 2, Bytes.toBytes("Data13"));
+      t.put(p);
+      p = new Put(ROW2);
+      p.add(FAMILY_B, QUALIFIER, now, Bytes.toBytes("Dat21"));
+      p.add(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
+      p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
+      t.put(p);
+      String[] args = { sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(), ";", "^row1" };
+      runCount(args);
+      FileInputStream inputStream = new FileInputStream(OUTPUT_DIR + File.separator +
+          "part-r-00000");
+      String data = IOUtils.toString(inputStream);
+      inputStream.close();
+      assertTrue(data.contains("Total Families Across all Rows" + "\t" + "2"));
+      assertTrue(data.contains("Total Qualifiers across all Rows" + "\t" + "2"));
+      assertTrue(data.contains("Total ROWS" + "\t" + "1"));
+      assertTrue(data.contains("b;q" + "\t" + "1"));
+      assertTrue(data.contains("a;q" + "\t" + "1"));
+      assertTrue(data.contains("row1;a;q_Versions" + "\t" + "1"));
+      assertTrue(data.contains("row1;b;q_Versions" + "\t" + "1"));
     }finally{
       t.close();
       FileUtil.fullyDelete(new File(OUTPUT_DIR));
     }
-
   }
 
   /**
@@ -119,9 +119,9 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounterStartTimeRange() throws Exception {
-    String sourceTable = "testCellCounterStartTimeRange";
+    TableName sourceTable = TableName.valueOf("testCellCounterStartTimeRange");
     byte[][] families = { FAMILY_A, FAMILY_B };
-    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(sourceTable, families);
     try{
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
@@ -134,7 +134,7 @@ public class TestCellCounter {
     p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
     t.put(p);
     String[] args = {
-      sourceTable, FQ_OUTPUT_DIR.toString(),  ";", "^row1", "--starttime=" + now,
+      sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(),  ";", "^row1", "--starttime=" + now,
       "--endtime=" + now + 2 };
     runCount(args);
     FileInputStream inputStream = new FileInputStream(OUTPUT_DIR + File.separator +
@@ -159,9 +159,9 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounteEndTimeRange() throws Exception {
-    String sourceTable = "testCellCounterEndTimeRange";
+    TableName sourceTable = TableName.valueOf("testCellCounterEndTimeRange");
     byte[][] families = { FAMILY_A, FAMILY_B };
-    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(sourceTable, families);
     try{
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
@@ -174,7 +174,8 @@ public class TestCellCounter {
     p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
     t.put(p);
     String[] args = {
-      sourceTable, FQ_OUTPUT_DIR.toString(),  ";", "^row1", "--endtime=" + now + 1 };
+      sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(),  ";", "^row1",
+        "--endtime=" + now + 1 };
     runCount(args);
     FileInputStream inputStream = new FileInputStream(OUTPUT_DIR + File.separator +
         "part-r-00000");
@@ -198,9 +199,9 @@ public class TestCellCounter {
    */
   @Test (timeout=300000)
   public void testCellCounteOutOfTimeRange() throws Exception {
-    String sourceTable = "testCellCounterOutTimeRange";
+    TableName sourceTable = TableName.valueOf("testCellCounterOutTimeRange");
     byte[][] families = { FAMILY_A, FAMILY_B };
-    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(sourceTable, families);
     try{
     Put p = new Put(ROW1);
     p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
@@ -213,7 +214,7 @@ public class TestCellCounter {
     p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
     t.put(p);
     String[] args = {
-      sourceTable, FQ_OUTPUT_DIR.toString(),  ";", "--starttime=" + now + 1,
+      sourceTable.getNameAsString(), FQ_OUTPUT_DIR.toString(),  ";", "--starttime=" + now + 1,
       "--endtime=" + now + 2 };
 
     runCount(args);
@@ -275,14 +276,14 @@ public class TestCellCounter {
    */
   @Test(timeout = 300000)
   public void testCellCounterForCompleteTable() throws Exception {
-    String sourceTable = "testCellCounterForCompleteTable";
+    TableName sourceTable = TableName.valueOf("testCellCounterForCompleteTable");
     String outputPath = OUTPUT_DIR + sourceTable;
     LocalFileSystem localFileSystem = new LocalFileSystem();
     Path outputDir =
         new Path(outputPath).makeQualified(localFileSystem.getUri(),
           localFileSystem.getWorkingDirectory());
     byte[][] families = { FAMILY_A, FAMILY_B };
-    Table t = UTIL.createTable(Bytes.toBytes(sourceTable), families);
+    Table t = UTIL.createTable(sourceTable, families);
     try {
       Put p = new Put(ROW1);
       p.add(FAMILY_A, QUALIFIER, now, Bytes.toBytes("Data11"));
@@ -294,7 +295,7 @@ public class TestCellCounter {
       p.add(FAMILY_A, QUALIFIER, now + 1, Bytes.toBytes("Data22"));
       p.add(FAMILY_B, QUALIFIER, now + 2, Bytes.toBytes("Data23"));
       t.put(p);
-      String[] args = { sourceTable, outputDir.toString(), ";" };
+      String[] args = { sourceTable.getNameAsString(), outputDir.toString(), ";" };
       runCount(args);
       FileInputStream inputStream =
           new FileInputStream(outputPath + File.separator + "part-r-00000");

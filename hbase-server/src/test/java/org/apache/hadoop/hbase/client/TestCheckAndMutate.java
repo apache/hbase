@@ -57,7 +57,7 @@ public class TestCheckAndMutate {
     final TableName tableName = TableName.valueOf("TestPutWithDelete");
     final byte[] rowKey = Bytes.toBytes("12345");
     final byte[] family = Bytes.toBytes("cf");
-    HTable table = TEST_UTIL.createTable(tableName, family);
+    Table table = TEST_UTIL.createTable(tableName, family);
     TEST_UTIL.waitTableAvailable(tableName.getName(), 5000);
     try {
       // put one row
@@ -79,11 +79,11 @@ public class TestCheckAndMutate {
       // put the same row again with C column deleted
       RowMutations rm = new RowMutations(rowKey);
       put = new Put(rowKey);
-      put.add(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
-      put.add(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
+      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
+      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
       rm.add(put);
       Delete del = new Delete(rowKey);
-      del.deleteColumn(family, Bytes.toBytes("C"));
+      del.addColumn(family, Bytes.toBytes("C"));
       rm.add(del);
       boolean res = table.checkAndMutate(rowKey, family, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,
           Bytes.toBytes("a"), rm);

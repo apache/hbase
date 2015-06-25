@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * <p>
- * Used to communicate with a single HBase table similar to {@link HTable}
+ * Used to communicate with a single HBase table similar to {@link Table}
  * but meant for batched, potentially asynchronous puts. Obtain an instance from
  * a {@link Connection} and call {@link #close()} afterwards.
  * </p>

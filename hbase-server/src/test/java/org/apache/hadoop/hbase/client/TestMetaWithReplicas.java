@@ -157,19 +157,19 @@ public class TestMetaWithReplicas {
     byte[] data = ZKUtil.getData(zkw, primaryMetaZnode);
     ServerName primary = ServerName.parseFrom(data);
 
-    byte[] TABLE = Bytes.toBytes("testShutdownHandling");
+    TableName TABLE = TableName.valueOf("testShutdownHandling");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     if (util.getHBaseAdmin().tableExists(TABLE)) {
       util.getHBaseAdmin().disableTable(TABLE);
       util.getHBaseAdmin().deleteTable(TABLE);
     }
-    Table htable = util.createTable(TABLE, FAMILIES, conf);
+    Table htable = util.createTable(TABLE, FAMILIES);
 
     util.getHBaseAdmin().flush(TableName.META_TABLE_NAME);
     Thread.sleep(conf.getInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
        30000) * 6);
     Connection c = ConnectionFactory.createConnection(util.getConfiguration());
-    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(c, TableName.valueOf(TABLE));
+    List<HRegionInfo> regions = MetaTableAccessor.getTableRegions(c, TABLE);
     HRegionLocation hrl = MetaTableAccessor.getRegionLocation(c, regions.get(0));
     // Ensure that the primary server for test table is not the same one as the primary
     // of the meta region since we will be killing the srv holding the meta's primary...
@@ -198,11 +198,11 @@ public class TestMetaWithReplicas {
     }
     ((ClusterConnection)c).clearRegionCache();
     htable.close();
-    htable = c.getTable(TableName.valueOf(TABLE));
+    htable = c.getTable(TABLE);
     byte[] row = "test".getBytes();
     Put put = new Put(row);
     put.add("foo".getBytes(), row, row);
-    BufferedMutator m = c.getBufferedMutator(TableName.valueOf(TABLE));
+    BufferedMutator m = c.getBufferedMutator(TABLE);
     m.mutate(put);
     m.flush();
     // Try to do a get of the row that was just put
@@ -217,22 +217,22 @@ public class TestMetaWithReplicas {
     ((ClusterConnection)c).clearRegionCache();
     htable.close();
     conf.setBoolean(HConstants.USE_META_REPLICAS, false);
-    htable = c.getTable(TableName.valueOf(TABLE));
+    htable = c.getTable(TABLE);
     r = htable.get(get);
     assertTrue(Arrays.equals(r.getRow(), row));
   }
 
   @Test
   public void testMetaLookupThreadPoolCreated() throws Exception {
-    byte[] TABLE = Bytes.toBytes("testMetaLookupThreadPoolCreated");
+    TableName TABLE = TableName.valueOf("testMetaLookupThreadPoolCreated");
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     if (TEST_UTIL.getHBaseAdmin().tableExists(TABLE)) {
       TEST_UTIL.getHBaseAdmin().disableTable(TABLE);
       TEST_UTIL.getHBaseAdmin().deleteTable(TABLE);
     }
-    Table htable = TEST_UTIL.createTable(TABLE, FAMILIES, TEST_UTIL.getConfiguration());
+    Table htable = TEST_UTIL.createTable(TABLE, FAMILIES);
     byte[] row = "test".getBytes();
-    ConnectionImplementation c = ((ConnectionImplementation)((HTable)htable).connection);
+    ConnectionImplementation c = ((ConnectionImplementation) TEST_UTIL.getConnection());
     // check that metalookup pool would get created
     c.relocateRegion(TABLE, row);
     ExecutorService ex = c.getCurrentMetaLookupPool();

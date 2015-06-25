@@ -30,6 +30,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -58,7 +60,7 @@ import com.google.protobuf.ServiceException;
 public class TestRegionServerNoMaster {
 
   private static final int NB_SERVERS = 1;
-  private static HTable table;
+  private static Table table;
   private static final byte[] row = "ee".getBytes();
 
   private static HRegionInfo hri;
@@ -78,7 +80,9 @@ public class TestRegionServerNoMaster {
     p.add(HConstants.CATALOG_FAMILY, row, row);
     table.put(p);
 
-    hri = table.getRegionLocation(row, false).getRegionInfo();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
+      hri = locator.getRegionLocation(row, false).getRegionInfo();
+    }
     regionName = hri.getRegionName();
 
     stopMasterAndAssignMeta(HTU);

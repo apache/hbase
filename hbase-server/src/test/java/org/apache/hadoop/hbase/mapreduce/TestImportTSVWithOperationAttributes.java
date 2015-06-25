@@ -110,32 +110,32 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   @Test
   public void testMROnTable() throws Exception {
-    String tableName = "test-" + UUID.randomUUID();
+    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
         "-D" + ImportTsv.MAPPER_CONF_KEY
             + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest=>myvalue\n";
-    util.createTable(TableName.valueOf(tableName), FAMILY);
+    util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, true);
     util.deleteTable(tableName);
   }
 
   @Test
   public void testMROnTableWithInvalidOperationAttr() throws Exception {
-    String tableName = "test-" + UUID.randomUUID();
+    TableName tableName = TableName.valueOf("test-" + UUID.randomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
         "-D" + ImportTsv.MAPPER_CONF_KEY
             + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapperForOprAttr",
         "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_ATTRIBUTES_KEY",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName.getNameAsString() };
     String data = "KEY\u001bVALUE1\u001bVALUE2\u001btest1=>myvalue\n";
-    util.createTable(TableName.valueOf(tableName), FAMILY);
+    util.createTable(tableName, FAMILY);
     doMROnTableTest(util, FAMILY, data, args, 1, false);
     util.deleteTable(tableName);
   }

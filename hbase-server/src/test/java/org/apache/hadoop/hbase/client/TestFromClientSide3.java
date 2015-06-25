@@ -100,7 +100,7 @@ public class TestFromClientSide3 {
     for (HTableDescriptor htd: TEST_UTIL.getHBaseAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
       TEST_UTIL.deleteTable(htd.getTableName());
-    }
+  }
   }
 
   private void randomCFPuts(Table table, byte[] row, byte[] family, int nPuts)
@@ -114,28 +114,23 @@ public class TestFromClientSide3 {
     table.put(put);
   }
 
-  private void performMultiplePutAndFlush(HBaseAdmin admin, HTable table,
+  private void performMultiplePutAndFlush(HBaseAdmin admin, Table table,
       byte[] row, byte[] family, int nFlushes, int nPuts)
   throws Exception {
 
-    // connection needed for poll-wait
-    HRegionLocation loc = table.getRegionLocation(row, true);
-    AdminProtos.AdminService.BlockingInterface server =
-      admin.getConnection().getAdmin(loc.getServerName());
-    byte[] regName = loc.getRegionInfo().getRegionName();
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(table.getName())) {
+      // connection needed for poll-wait
+      HRegionLocation loc = locator.getRegionLocation(row, true);
+      AdminProtos.AdminService.BlockingInterface server =
+          admin.getConnection().getAdmin(loc.getServerName());
+      byte[] regName = loc.getRegionInfo().getRegionName();
 
-    for (int i = 0; i < nFlushes; i++) {
-      randomCFPuts(table, row, family, nPuts);
-      List<String> sf = ProtobufUtil.getStoreFiles(server, regName, FAMILY);
-      int sfCount = sf.size();
+      for (int i = 0; i < nFlushes; i++) {
+        randomCFPuts(table, row, family, nPuts);
+        List<String> sf = ProtobufUtil.getStoreFiles(server, regName, FAMILY);
+        int sfCount = sf.size();
 
-      // TODO: replace this api with a synchronous flush after HBASE-2949
-      admin.flush(table.getName());
-
-      // synchronously poll wait for a new storefile to appear (flush happened)
-      while (ProtobufUtil.getStoreFiles(
-          server, regName, FAMILY).size() == sfCount) {
-        Thread.sleep(40);
+        admin.flush(table.getName());
       }
     }
   }
@@ -156,151 +151,147 @@ public class TestFromClientSide3 {
 
     String tableName = "testAdvancedConfigOverride";
     TableName TABLE = TableName.valueOf(tableName);
-    HTable hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
+    Table hTable = TEST_UTIL.createTable(TABLE, FAMILY, 10);
     HBaseAdmin admin = TEST_UTIL.getHBaseAdmin();
-    ClusterConnection connection = (ClusterConnection)TEST_UTIL.getConnection();
+    ClusterConnection connection = (ClusterConnection) TEST_UTIL.getConnection();
 
     // Create 3 store files.
     byte[] row = Bytes.toBytes(random.nextInt());
     performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 100);
 
-    // Verify we have multiple store files.
-    HRegionLocation loc = hTable.getRegionLocation(row, true);
-    byte[] regionName = loc.getRegionInfo().getRegionName();
-    AdminProtos.AdminService.BlockingInterface server =
-      connection.getAdmin(loc.getServerName());
-    assertTrue(ProtobufUtil.getStoreFiles(
-      server, regionName, FAMILY).size() > 1);
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+      // Verify we have multiple store files.
+      HRegionLocation loc = locator.getRegionLocation(row, true);
+      byte[] regionName = loc.getRegionInfo().getRegionName();
+      AdminProtos.AdminService.BlockingInterface server = connection.getAdmin(loc.getServerName());
+      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() > 1);
 
-    // Issue a compaction request
-    admin.compact(TABLE.getName());
+      // Issue a compaction request
+      admin.compact(TABLE.getName());
 
-    // poll wait for the compactions to happen
-    for (int i = 0; i < 10 * 1000 / 40; ++i) {
-      // The number of store files after compaction should be lesser.
-      loc = hTable.getRegionLocation(row, true);
-      if (!loc.getRegionInfo().isOffline()) {
-        regionName = loc.getRegionInfo().getRegionName();
-        server = connection.getAdmin(loc.getServerName());
-        if (ProtobufUtil.getStoreFiles(
-            server, regionName, FAMILY).size() <= 1) {
-          break;
+      // poll wait for the compactions to happen
+      for (int i = 0; i < 10 * 1000 / 40; ++i) {
+        // The number of store files after compaction should be lesser.
+        loc = locator.getRegionLocation(row, true);
+        if (!loc.getRegionInfo().isOffline()) {
+          regionName = loc.getRegionInfo().getRegionName();
+          server = connection.getAdmin(loc.getServerName());
+          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1) {
+            break;
+          }
         }
+        Thread.sleep(40);
       }
-      Thread.sleep(40);
-    }
-    // verify the compactions took place and that we didn't just time out
-    assertTrue(ProtobufUtil.getStoreFiles(
-      server, regionName, FAMILY).size() <= 1);
+      // verify the compactions took place and that we didn't just time out
+      assertTrue(ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() <= 1);
 
-    // change the compaction.min config option for this table to 5
-    LOG.info("hbase.hstore.compaction.min should now be 5");
-    HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
-    htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
-    admin.modifyTable(TABLE, htd);
-    Pair<Integer, Integer> st;
-    while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
-      LOG.debug(st.getFirst() + " regions left to update");
-      Thread.sleep(40);
-    }
-    LOG.info("alter status finished");
+      // change the compaction.min config option for this table to 5
+      LOG.info("hbase.hstore.compaction.min should now be 5");
+      HTableDescriptor htd = new HTableDescriptor(hTable.getTableDescriptor());
+      htd.setValue("hbase.hstore.compaction.min", String.valueOf(5));
+      admin.modifyTable(TABLE, htd);
+      Pair<Integer, Integer> st;
+      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+        LOG.debug(st.getFirst() + " regions left to update");
+        Thread.sleep(40);
+      }
+      LOG.info("alter status finished");
 
-    // Create 3 more store files.
-    performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
+      // Create 3 more store files.
+      performMultiplePutAndFlush(admin, hTable, row, FAMILY, 3, 10);
 
-    // Issue a compaction request
-    admin.compact(TABLE.getName());
+      // Issue a compaction request
+      admin.compact(TABLE.getName());
 
-    // This time, the compaction request should not happen
-    Thread.sleep(10 * 1000);
-    loc = hTable.getRegionLocation(row, true);
-    regionName = loc.getRegionInfo().getRegionName();
-    server = connection.getAdmin(loc.getServerName());
-    int sfCount = ProtobufUtil.getStoreFiles(
-      server, regionName, FAMILY).size();
-    assertTrue(sfCount > 1);
-
-    // change an individual CF's config option to 2 & online schema update
-    LOG.info("hbase.hstore.compaction.min should now be 2");
-    HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-    hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
-    htd.modifyFamily(hcd);
-    admin.modifyTable(TABLE, htd);
-    while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
-      LOG.debug(st.getFirst() + " regions left to update");
-      Thread.sleep(40);
-    }
-    LOG.info("alter status finished");
-
-    // Issue a compaction request
-    admin.compact(TABLE.getName());
-
-    // poll wait for the compactions to happen
-    for (int i = 0; i < 10 * 1000 / 40; ++i) {
-      loc = hTable.getRegionLocation(row, true);
+      // This time, the compaction request should not happen
+      Thread.sleep(10 * 1000);
+      loc = locator.getRegionLocation(row, true);
       regionName = loc.getRegionInfo().getRegionName();
-      try {
-        server = connection.getAdmin(loc.getServerName());
-        if (ProtobufUtil.getStoreFiles(
-            server, regionName, FAMILY).size() < sfCount) {
-          break;
-        }
-      } catch (Exception e) {
-        LOG.debug("Waiting for region to come online: " + regionName);
-      }
-      Thread.sleep(40);
-    }
-    // verify the compaction took place and that we didn't just time out
-    assertTrue(ProtobufUtil.getStoreFiles(
-      server, regionName, FAMILY).size() < sfCount);
+      server = connection.getAdmin(loc.getServerName());
+      int sfCount = ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size();
+      assertTrue(sfCount > 1);
 
-    // Finally, ensure that we can remove a custom config value after we made it
-    LOG.info("Removing CF config value");
-    LOG.info("hbase.hstore.compaction.min should now be 5");
-    hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
-    hcd.setValue("hbase.hstore.compaction.min", null);
-    htd.modifyFamily(hcd);
-    admin.modifyTable(TABLE, htd);
-    while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
-      LOG.debug(st.getFirst() + " regions left to update");
-      Thread.sleep(40);
+      // change an individual CF's config option to 2 & online schema update
+      LOG.info("hbase.hstore.compaction.min should now be 2");
+      HColumnDescriptor hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+      hcd.setValue("hbase.hstore.compaction.min", String.valueOf(2));
+      htd.modifyFamily(hcd);
+      admin.modifyTable(TABLE, htd);
+      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+        LOG.debug(st.getFirst() + " regions left to update");
+        Thread.sleep(40);
+      }
+      LOG.info("alter status finished");
+
+      // Issue a compaction request
+      admin.compact(TABLE.getName());
+
+      // poll wait for the compactions to happen
+      for (int i = 0; i < 10 * 1000 / 40; ++i) {
+        loc = locator.getRegionLocation(row, true);
+        regionName = loc.getRegionInfo().getRegionName();
+        try {
+          server = connection.getAdmin(loc.getServerName());
+          if (ProtobufUtil.getStoreFiles(server, regionName, FAMILY).size() < sfCount) {
+            break;
+          }
+        } catch (Exception e) {
+          LOG.debug("Waiting for region to come online: " + regionName);
+        }
+        Thread.sleep(40);
+      }
+
+      // verify the compaction took place and that we didn't just time out
+      assertTrue(ProtobufUtil.getStoreFiles(
+        server, regionName, FAMILY).size() < sfCount);
+
+      // Finally, ensure that we can remove a custom config value after we made it
+      LOG.info("Removing CF config value");
+      LOG.info("hbase.hstore.compaction.min should now be 5");
+      hcd = new HColumnDescriptor(htd.getFamily(FAMILY));
+      hcd.setValue("hbase.hstore.compaction.min", null);
+      htd.modifyFamily(hcd);
+      admin.modifyTable(TABLE, htd);
+      while (null != (st = admin.getAlterStatus(TABLE)) && st.getFirst() > 0) {
+        LOG.debug(st.getFirst() + " regions left to update");
+        Thread.sleep(40);
+      }
+      LOG.info("alter status finished");
+      assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
+          "hbase.hstore.compaction.min"));
     }
-    LOG.info("alter status finished");
-    assertNull(hTable.getTableDescriptor().getFamily(FAMILY).getValue(
-        "hbase.hstore.compaction.min"));
   }
 
   @Test
-  public void testHTableBatchWithEmptyPut() throws Exception {
-    Table table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableBatchWithEmptyPut"), new byte[][] { FAMILY });
+  public void testHTableBatchWithEmptyPut ()throws Exception {
+      Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableBatchWithEmptyPut"),
+          new byte[][] { FAMILY });
     try {
       List actions = (List) new ArrayList();
       Object[] results = new Object[2];
       // create an empty Put
       Put put1 = new Put(ROW);
       actions.add(put1);
-
+      
       Put put2 = new Put(ANOTHERROW);
       put2.add(FAMILY, QUALIFIER, VALUE);
       actions.add(put2);
-
+      
       table.batch(actions, results);
       fail("Empty Put should have failed the batch call");
     } catch (IllegalArgumentException iae) {
-
+      
     } finally {
       table.close();
     }
   }
-
+  
   @Test
   public void testHTableExistsMethodSingleRegionSingleGet() throws Exception {
-
-    // Test with a single region table.
-
-    Table table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodSingleRegionSingleGet"), new byte[][] { FAMILY });
+      // Test with a single region table.
+      Table table = TEST_UTIL.createTable(
+          TableName.valueOf("testHTableExistsMethodSingleRegionSingleGet"),
+          new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
@@ -317,9 +308,8 @@ public class TestFromClientSide3 {
   }
 
   public void testHTableExistsMethodSingleRegionMultipleGets() throws Exception {
-
-    HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsMethodSingleRegionMultipleGets"), new byte[][] { FAMILY });
+    Table table = TEST_UTIL.createTable(TableName.valueOf(
+        "testHTableExistsMethodSingleRegionMultipleGets"), new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
@@ -330,7 +320,7 @@ public class TestFromClientSide3 {
     gets.add(null);
     gets.add(new Get(ANOTHERROW));
 
-    Boolean[] results = table.exists(gets);
+    boolean[] results = table.existsAll(gets);
     assertEquals(results[0], true);
     assertEquals(results[1], false);
     assertEquals(results[2], false);
@@ -338,11 +328,11 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsBeforeGet() throws Exception {
-    Table table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsBeforeGet"), new byte[][] { FAMILY });
+    Table table = TEST_UTIL.createTable(TableName.valueOf("testHTableExistsBeforeGet"),
+        new byte[][] { FAMILY });
     try {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
 
       Get get = new Get(ROW);
@@ -362,13 +352,13 @@ public class TestFromClientSide3 {
   public void testHTableExistsAllBeforeGet() throws Exception {
     final byte[] ROW2 = Bytes.add(ROW, Bytes.toBytes("2"));
     Table table = TEST_UTIL.createTable(
-      Bytes.toBytes("testHTableExistsAllBeforeGet"), new byte[][] { FAMILY });
+        TableName.valueOf("testHTableExistsAllBeforeGet"), new byte[][] { FAMILY });
     try {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
       put = new Put(ROW2);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
 
       Get get = new Get(ROW);
@@ -393,12 +383,11 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsMethodMultipleRegionsSingleGet() throws Exception {
-
     Table table = TEST_UTIL.createTable(
       TableName.valueOf("testHTableExistsMethodMultipleRegionsSingleGet"), new byte[][] { FAMILY },
       1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
 
     Get get = new Get(ROW);
 
@@ -413,8 +402,8 @@ public class TestFromClientSide3 {
 
   @Test
   public void testHTableExistsMethodMultipleRegionsMultipleGets() throws Exception {
-    HTable table = TEST_UTIL.createTable(
-      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"),
+    Table table = TEST_UTIL.createTable(
+      TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"), 
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
     put.add(FAMILY, QUALIFIER, VALUE);
@@ -427,7 +416,7 @@ public class TestFromClientSide3 {
     gets.add(new Get(Bytes.add(ANOTHERROW, new byte[] { 0x00 })));
 
     LOG.info("Calling exists");
-    Boolean[] results = table.exists(gets);
+    boolean[] results = table.existsAll(gets);
     assertEquals(results[0], false);
     assertEquals(results[1], false);
     assertEquals(results[2], true);
@@ -441,7 +430,7 @@ public class TestFromClientSide3 {
     gets = new ArrayList<Get>();
     gets.add(new Get(new byte[] { 0x00 }));
     gets.add(new Get(new byte[] { 0x00, 0x00 }));
-    results = table.exists(gets);
+    results = table.existsAll(gets);
     assertEquals(results[0], true);
     assertEquals(results[1], false);
 
@@ -454,7 +443,7 @@ public class TestFromClientSide3 {
     gets.add(new Get(new byte[] { (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff }));
     gets.add(new Get(new byte[] { (byte) 0xff, (byte) 0xff, (byte) 0xff }));
-    results = table.exists(gets);
+    results = table.existsAll(gets);
     assertEquals(results[0], false);
     assertEquals(results[1], true);
     assertEquals(results[2], false);
@@ -491,8 +480,8 @@ public class TestFromClientSide3 {
 
   @Test
   public void testLeaseRenewal() throws Exception {
-    HTable table = TEST_UTIL.createTable(
-      Bytes.toBytes("testLeaseRenewal"), FAMILY);
+    Table table = TEST_UTIL.createTable(
+      TableName.valueOf("testLeaseRenewal"), FAMILY);
     Put p = new Put(ROW_BYTES);
     p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(p);

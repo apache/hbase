@@ -337,7 +337,7 @@ public class TestRegionServerMetrics {
       p.add(cf, qualifier, val);
       puts.add(p);
     }
-    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+    try (Table t = TEST_UTIL.createTable(tableName, cf)) {
       t.put(puts);
 
       Scan s = new Scan();
@@ -387,7 +387,7 @@ public class TestRegionServerMetrics {
       p.add(cf, qualifier, val);
       puts.add(p);
     }
-    try (HTable t = TEST_UTIL.createTable(tableName, cf)) {
+    try (Table t = TEST_UTIL.createTable(tableName, cf)) {
       t.put(puts);
 
       Scan s = new Scan();

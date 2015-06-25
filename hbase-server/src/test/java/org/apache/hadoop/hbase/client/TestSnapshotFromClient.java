@@ -97,7 +97,7 @@ public class TestSnapshotFromClient {
   public void setup() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.setRegionReplication(getNumReplicas());
-    UTIL.createTable(htd, new byte[][]{TEST_FAM}, UTIL.getConfiguration());
+    UTIL.createTable(htd, new byte[][]{TEST_FAM}, null);
   }
 
   protected int getNumReplicas() {

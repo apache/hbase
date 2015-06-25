@@ -40,10 +40,10 @@ import com.google.protobuf.Message;
 /**
  * Provides clients with an RPC connection to call coprocessor endpoint {@link com.google.protobuf.Service}s
  * against a given table region.  An instance of this class may be obtained
- * by calling {@link org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])},
+ * by calling {@link org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])},
  * but should normally only be used in creating a new {@link com.google.protobuf.Service} stub to call the endpoint
  * methods.
- * @see org.apache.hadoop.hbase.client.HTable#coprocessorService(byte[])
+ * @see org.apache.hadoop.hbase.client.Table#coprocessorService(byte[])
  */
 @InterfaceAudience.Private
 public class RegionCoprocessorRpcChannel extends CoprocessorRpcChannel{

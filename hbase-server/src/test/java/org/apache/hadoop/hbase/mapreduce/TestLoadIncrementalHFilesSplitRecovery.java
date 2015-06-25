@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.HConnection;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -177,8 +178,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     // create HFiles for different column families
     LoadIncrementalHFiles lih = new LoadIncrementalHFiles(util.getConfiguration());
     Path bulk1 = buildBulkFiles(table, value);
-    try (Table t = connection.getTable(table)) {
-      lih.doBulkLoad(bulk1, (HTable)t);
+    try (Table t = connection.getTable(table);
+        RegionLocator locator = connection.getRegionLocator(table);
+        Admin admin = connection.getAdmin()) {
+        lih.doBulkLoad(bulk1, admin, t, locator);
     }
   }
 
@@ -223,7 +226,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
   @BeforeClass
   public static void setupCluster() throws Exception {
     util = new HBaseTestingUtility();
-    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,"");
+    util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, "");
     util.startMiniCluster(1);
   }
 
@@ -298,8 +301,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       try {
         // create HFiles for different column families
         Path dir = buildBulkFiles(table, 1);
-        try (Table t = connection.getTable(table)) {
-          lih.doBulkLoad(dir, (HTable)t);
+        try (Table t = connection.getTable(table);
+            RegionLocator locator = connection.getRegionLocator(table);
+            Admin admin = connection.getAdmin()) {
+          lih.doBulkLoad(dir, admin, t, locator);
         }
       } finally {
         util.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
@@ -364,9 +369,11 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       };
 
       // create HFiles for different column families
-      try (Table t = connection.getTable(table)) {
+      try (Table t = connection.getTable(table);
+          RegionLocator locator = connection.getRegionLocator(table);
+          Admin admin = connection.getAdmin()) {
         Path bulk = buildBulkFiles(table, 2);
-        lih2.doBulkLoad(bulk, (HTable)t);
+        lih2.doBulkLoad(bulk, admin, t, locator);
       }
 
       // check that data was loaded
@@ -408,8 +415,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       // create HFiles for different column families
       Path bulk = buildBulkFiles(table, 2);
-      try (Table t = connection.getTable(table)) {
-        lih.doBulkLoad(bulk, (HTable)t);
+      try (Table t = connection.getTable(table);
+          RegionLocator locator = connection.getRegionLocator(table);
+          Admin admin = connection.getAdmin()) {
+        lih.doBulkLoad(bulk, admin, t, locator);
       }
       assertExpectedTable(connection, table, ROWCOUNT, 2);
       assertEquals(20, countedLqis.get());
@@ -446,8 +455,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       // create HFiles for different column families
       Path dir = buildBulkFiles(table,1);
-      try (Table t = connection.getTable(table)) {
-        lih.doBulkLoad(dir, (HTable)t);
+      try (Table t = connection.getTable(table);
+          RegionLocator locator = connection.getRegionLocator(table);
+          Admin admin = connection.getAdmin()) {
+        lih.doBulkLoad(dir, admin, t, locator);
       }
     }
 
@@ -472,7 +483,7 @@ public class TestLoadIncrementalHFilesSplitRecovery {
 
       protected List<LoadQueueItem> groupOrSplit(
           Multimap<ByteBuffer, LoadQueueItem> regionGroups,
-          final LoadQueueItem item, final HTable htable,
+          final LoadQueueItem item, final Table htable,
           final Pair<byte[][], byte[][]> startEndKeys) throws IOException {
         List<LoadQueueItem> lqis = super.groupOrSplit(regionGroups, item, htable, startEndKeys);
         if (lqis != null) {
@@ -483,8 +494,10 @@ public class TestLoadIncrementalHFilesSplitRecovery {
     };
 
     // do bulkload when there is no region hole in hbase:meta.
-    try {
-      loader.doBulkLoad(dir, (HTable)table);
+    try (Table t = connection.getTable(tableName);
+        RegionLocator locator = connection.getRegionLocator(tableName);
+        Admin admin = connection.getAdmin()) {
+      loader.doBulkLoad(dir, admin, t, locator);
     } catch (Exception e) {
       LOG.error("exeception=", e);
     }
@@ -502,10 +515,12 @@ public class TestLoadIncrementalHFilesSplitRecovery {
       }
     }
 
-    try {
-      loader.doBulkLoad(dir, (HTable)table);
+    try (Table t = connection.getTable(tableName);
+        RegionLocator locator = connection.getRegionLocator(tableName);
+        Admin admin = connection.getAdmin()) {
+      loader.doBulkLoad(dir, admin, t, locator);
     } catch (Exception e) {
-      LOG.error("exeception=", e);
+      LOG.error("exception=", e);
       assertTrue("IOException expected", e instanceof IOException);
     }
 

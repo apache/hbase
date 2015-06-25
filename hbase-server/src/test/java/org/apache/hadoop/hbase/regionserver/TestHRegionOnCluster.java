@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -76,12 +77,17 @@ public class TestHRegionOnCluster {
 
       // Put data: r1->v1
       Log.info("Loading r1 to v1 into " + TABLENAME);
-      HTable table = (HTable) TEST_UTIL.getConnection().getTable(TABLENAME);
+      Table table = TEST_UTIL.getConnection().getTable(TABLENAME);
       putDataAndVerify(table, "r1", FAMILY, "v1", 1);
 
       TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
       // Move region to target server
-      HRegionInfo regionInfo = table.getRegionLocation("r1").getRegionInfo();
+
+      HRegionInfo regionInfo;
+      try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLENAME)) {
+        regionInfo = locator.getRegionLocation(Bytes.toBytes("r1")).getRegionInfo();
+      }
+
       int originServerNum = cluster.getServerWith(regionInfo.getRegionName());
       HRegionServer originServer = cluster.getRegionServer(originServerNum);
       int targetServerNum = (originServerNum + 1) % NUM_RS;

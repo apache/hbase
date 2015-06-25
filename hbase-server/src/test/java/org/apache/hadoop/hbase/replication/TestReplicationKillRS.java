@@ -55,7 +55,7 @@ public class TestReplicationKillRS extends TestReplicationBase {
     Thread killer = killARegionServer(util, 5000, rsToKill1);
 
     LOG.info("Start loading table");
-    int initialCount = utility1.loadTable((HTable)htable1, famName);
+    int initialCount = utility1.loadTable(htable1, famName);
     LOG.info("Done loading table");
     killer.join(5000);
     LOG.info("Done waiting for threads");

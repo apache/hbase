@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -66,7 +67,7 @@ public class TestQuotaThrottle {
   };
 
   private static ManualEnvironmentEdge envEdge;
-  private static HTable[] tables;
+  private static Table[] tables;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -81,7 +82,7 @@ public class TestQuotaThrottle {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     QuotaCache.TEST_FORCE_REFRESH = true;
 
-    tables = new HTable[TABLE_NAMES.length];
+    tables = new Table[TABLE_NAMES.length];
     for (int i = 0; i < TABLE_NAMES.length; ++i) {
       tables[i] = TEST_UTIL.createTable(TABLE_NAMES[i], FAMILY);
     }
@@ -505,13 +506,13 @@ public class TestQuotaThrottle {
     assertEquals(30, doGets(30, tables[1]));
   }
 
-  private int doPuts(int maxOps, final HTable... tables) throws Exception {
+  private int doPuts(int maxOps, final Table... tables) throws Exception {
     int count = 0;
     try {
       while (count < maxOps) {
         Put put = new Put(Bytes.toBytes("row-" + count));
         put.add(FAMILY, QUALIFIER, Bytes.toBytes("data-" + count));
-        for (final HTable table: tables) {
+        for (final Table table: tables) {
           table.put(put);
         }
         count += tables.length;
@@ -527,12 +528,12 @@ public class TestQuotaThrottle {
     return count;
   }
 
-  private long doGets(int maxOps, final HTable... tables) throws Exception {
+  private long doGets(int maxOps, final Table... tables) throws Exception {
     int count = 0;
     try {
       while (count < maxOps) {
         Get get = new Get(Bytes.toBytes("row-" + count));
-        for (final HTable table: tables) {
+        for (final Table table: tables) {
           table.get(get);
         }
         count += tables.length;

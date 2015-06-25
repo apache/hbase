@@ -34,9 +34,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionSplitter.HexStringSplit;
@@ -109,22 +112,22 @@ public class TestRegionSplitter {
       expectedBounds.add(new byte[] {      0x20, 0, 0, 0, 0, 0, 0, 0});
       expectedBounds.add(new byte[] {      0x30, 0, 0, 0, 0, 0, 0, 0});
       expectedBounds.add(new byte[] {      0x40, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {      0x50, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {      0x60, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {      0x70, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0x80, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0x90, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] { 0x50, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { 0x60, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { 0x70, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { (byte) 0x80, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { (byte) 0x90, 0, 0, 0, 0, 0, 0, 0 });
       expectedBounds.add(new byte[] {(byte)0xa0, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0xb0, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0xc0, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0xd0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] { (byte) 0xb0, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { (byte) 0xc0, 0, 0, 0, 0, 0, 0, 0 });
+      expectedBounds.add(new byte[] { (byte) 0xd0, 0, 0, 0, 0, 0, 0, 0 });
       expectedBounds.add(new byte[] {(byte)0xe0, 0, 0, 0, 0, 0, 0, 0});
-      expectedBounds.add(new byte[] {(byte)0xf0, 0, 0, 0, 0, 0, 0, 0});
+      expectedBounds.add(new byte[] { (byte) 0xf0, 0, 0, 0, 0, 0, 0, 0 });
       expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
 
       // Do table creation/pre-splitting and verification of region boundaries
       preSplitTableAndVerify(expectedBounds, UniformSplit.class.getSimpleName(),
-        TableName.valueOf("NewUniformPresplitTable"));
+          TableName.valueOf("NewUniformPresplitTable"));
     }
 
     /**
@@ -181,8 +184,7 @@ public class TestRegionSplitter {
 
         byte[][] twoRegionsSplits = splitter.split(2);
         assertEquals(1, twoRegionsSplits.length);
-        assertArrayEquals(twoRegionsSplits[0],
-            new byte[] { (byte) 0x80, 0, 0, 0, 0, 0, 0, 0 });
+        assertArrayEquals(twoRegionsSplits[0], new byte[] { (byte) 0x80, 0, 0, 0, 0, 0, 0, 0 });
 
         byte[][] threeRegionsSplits = splitter.split(3);
         assertEquals(2, threeRegionsSplits.length);
@@ -194,7 +196,7 @@ public class TestRegionSplitter {
 
         // Check splitting existing regions that have start and end points
         byte[] splitPoint = splitter.split(new byte[] {0x10}, new byte[] {0x30});
-        assertArrayEquals(new byte[] {0x20}, splitPoint);
+        assertArrayEquals(new byte[] { 0x20 }, splitPoint);
 
         byte[] lastRow = new byte[] {xFF, xFF, xFF, xFF, xFF, xFF, xFF, xFF};
         assertArrayEquals(lastRow, splitter.lastRow());
@@ -202,15 +204,15 @@ public class TestRegionSplitter {
         assertArrayEquals(firstRow, splitter.firstRow());
 
         splitPoint = splitter.split(firstRow, new byte[] {0x20});
-        assertArrayEquals(splitPoint, new byte[] {0x10});
+        assertArrayEquals(splitPoint, new byte[] { 0x10 });
 
         splitPoint = splitter.split(new byte[] {(byte)0xdf, xFF, xFF, xFF, xFF,
                 xFF, xFF, xFF}, lastRow);
-        assertArrayEquals(splitPoint,
-                new byte[] {(byte)0xef, xFF, xFF, xFF, xFF, xFF, xFF, xFF});
+        assertArrayEquals(splitPoint, new byte[] { (byte) 0xef, xFF, xFF, xFF, xFF, xFF, xFF, xFF
+        });
 
         splitPoint = splitter.split(new byte[] {'a', 'a', 'a'}, new byte[] {'a', 'a', 'b'});
-        assertArrayEquals(splitPoint, new byte[] {'a', 'a', 'a', (byte)0x80 });
+        assertArrayEquals(splitPoint, new byte[] { 'a', 'a', 'a', (byte) 0x80 });
     }
 
   @Test
@@ -283,7 +285,7 @@ public class TestRegionSplitter {
         final Configuration conf = UTIL.getConfiguration();
         conf.setInt("split.count", numRegions);
         SplitAlgorithm splitAlgo = RegionSplitter.newSplitAlgoInstance(conf, splitClass);
-        RegionSplitter.createPresplitTable(tableName, splitAlgo, new String[] {CF_NAME}, conf);
+        RegionSplitter.createPresplitTable(tableName, splitAlgo, new String[] { CF_NAME }, conf);
         verifyBounds(expectedBounds, tableName);
     }
 
@@ -291,8 +293,7 @@ public class TestRegionSplitter {
   public void noopRollingSplit() throws Exception {
     final List<byte[]> expectedBounds = new ArrayList<byte[]>();
     expectedBounds.add(ArrayUtils.EMPTY_BYTE_ARRAY);
-    rollingSplitAndVerify(
-        TableName.valueOf(TestRegionSplitter.class.getSimpleName()),
+    rollingSplitAndVerify(TableName.valueOf(TestRegionSplitter.class.getSimpleName()),
         "UniformSplit", expectedBounds);
   }
 
@@ -309,27 +310,27 @@ public class TestRegionSplitter {
 
     private void verifyBounds(List<byte[]> expectedBounds, TableName tableName)
             throws Exception {
-        // Get region boundaries from the cluster and verify their endpoints
-        final int numRegions = expectedBounds.size()-1;
-        final HTable hTable = (HTable) UTIL.getConnection().getTable(tableName);
-        final Map<HRegionInfo, ServerName> regionInfoMap = hTable.getRegionLocations();
+      // Get region boundaries from the cluster and verify their endpoints
+      final int numRegions = expectedBounds.size()-1;
+      try (Table table = UTIL.getConnection().getTable(tableName);
+          RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
+        final List<HRegionLocation> regionInfoMap = locator.getAllRegionLocations();
         assertEquals(numRegions, regionInfoMap.size());
-        for (Map.Entry<HRegionInfo, ServerName> entry: regionInfoMap.entrySet()) {
-            final HRegionInfo regionInfo = entry.getKey();
-            byte[] regionStart = regionInfo.getStartKey();
-            byte[] regionEnd = regionInfo.getEndKey();
+        for (HRegionLocation entry : regionInfoMap) {
+          final HRegionInfo regionInfo = entry.getRegionInfo();
+          byte[] regionStart = regionInfo.getStartKey();
+          byte[] regionEnd = regionInfo.getEndKey();
 
-            // This region's start key should be one of the region boundaries
-            int startBoundaryIndex = indexOfBytes(expectedBounds, regionStart);
-            assertNotSame(-1, startBoundaryIndex);
+          // This region's start key should be one of the region boundaries
+          int startBoundaryIndex = indexOfBytes(expectedBounds, regionStart);
+          assertNotSame(-1, startBoundaryIndex);
 
-            // This region's end key should be the region boundary that comes
-            // after the starting boundary.
-            byte[] expectedRegionEnd = expectedBounds.get(
-                    startBoundaryIndex+1);
-            assertEquals(0, Bytes.compareTo(regionEnd, expectedRegionEnd));
+          // This region's end key should be the region boundary that comes
+          // after the starting boundary.
+          byte[] expectedRegionEnd = expectedBounds.get(startBoundaryIndex + 1);
+          assertEquals(0, Bytes.compareTo(regionEnd, expectedRegionEnd));
         }
-        hTable.close();
+      }
     }
 
     /**

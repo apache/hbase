@@ -297,9 +297,9 @@ public class TestScannersFromClientSide {
     }
 
     assertTrue("Expected row count: " + expectedRowCount + " Actual row count: " + rowCount,
-      expectedRowCount == rowCount);
+        expectedRowCount == rowCount);
     assertTrue("Expected cell count: " + expectedCellCount + " Actual cell count: " + cellCount,
-      expectedCellCount == cellCount);
+        expectedCellCount == cellCount);
     scanner.close();
   }
 
@@ -310,7 +310,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetMaxResults() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testGetMaxResults");
+    TableName TABLE = TableName.valueOf("testGetMaxResults");
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -430,7 +430,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testScanMaxResults() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testScanLimit");
+    TableName TABLE = TableName.valueOf("testScanLimit");
     byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
@@ -480,7 +480,7 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testGetRowOffset() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testGetRowOffset");
+    TableName TABLE = TableName.valueOf("testGetRowOffset");
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 20);
 
@@ -579,7 +579,7 @@ public class TestScannersFromClientSide {
     TableName TABLE = TableName.valueOf("testScanOnReopenedRegion");
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 2);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILY);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
 
     Put put;
     Scan scan;
@@ -599,7 +599,11 @@ public class TestScannersFromClientSide {
     scan = new Scan(ROW);
     scanner = ht.getScanner(scan);
 
-    HRegionLocation loc = ht.getRegionLocation(ROW);
+    HRegionLocation loc;
+
+    try (RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(TABLE)) {
+      loc = locator.getRegionLocation(ROW);
+    }
     HRegionInfo hri = loc.getRegionInfo();
     MiniHBaseCluster cluster = TEST_UTIL.getMiniHBaseCluster();
     byte[] regionName = hri.getRegionName();
@@ -649,12 +653,12 @@ public class TestScannersFromClientSide {
    */
   @Test
   public void testAsyncScanner() throws Exception {
-    byte [] TABLE = Bytes.toBytes("testAsyncScan");
+    TableName TABLE = TableName.valueOf("testAsyncScan");
     byte [][] ROWS = HTestConst.makeNAscii(ROW, 2);
     byte [][] FAMILIES = HTestConst.makeNAscii(FAMILY, 3);
     byte [][] QUALIFIERS = HTestConst.makeNAscii(QUALIFIER, 10);
 
-    HTable ht = TEST_UTIL.createTable(TABLE, FAMILIES);
+    Table ht = TEST_UTIL.createTable(TABLE, FAMILIES);
 
     Put put;
     Scan scan;

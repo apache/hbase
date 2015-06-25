@@ -57,7 +57,7 @@ import com.google.protobuf.TextFormat;
 
 /**
  * Scanner operations such as create, next, etc.
- * Used by {@link ResultScanner}s made by {@link HTable}. Passed to a retrying caller such as
+ * Used by {@link ResultScanner}s made by {@link Table}. Passed to a retrying caller such as
  * {@link RpcRetryingCaller} so fails are retried.
  */
 @InterfaceAudience.Private

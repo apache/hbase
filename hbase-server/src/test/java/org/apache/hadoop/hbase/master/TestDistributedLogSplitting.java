@@ -343,10 +343,11 @@ public class TestDistributedLogSplitting {
     master.balanceSwitch(false);
 
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, TABLE_NAME, FAMILY_NAME, NUM_REGIONS_TO_CREATE);
     NonceGeneratorWithDups ng = new NonceGeneratorWithDups();
     NonceGenerator oldNg =
-        ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)ht.getConnection(), ng);
+        ConnectionUtils.injectNonceGeneratorForTesting(
+            (ClusterConnection)TEST_UTIL.getConnection(), ng);
 
     try {
       List<Increment> reqs = new ArrayList<Increment>();
@@ -380,7 +381,8 @@ public class TestDistributedLogSplitting {
         }
       }
     } finally {
-      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection) ht.getConnection(), oldNg);
+      ConnectionUtils.injectNonceGeneratorForTesting((ClusterConnection)
+              TEST_UTIL.getConnection(), oldNg);
       ht.close();
       zkw.close();
     }
@@ -711,7 +713,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
 
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
@@ -901,7 +903,7 @@ public class TestDistributedLogSplitting {
 
     List<RegionServerThread> rsts = cluster.getLiveRegionServerThreads();
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
+    Table ht = installTable(zkw, "table", "family", NUM_REGIONS_TO_CREATE);
     final SplitLogManager slm = master.getMasterFileSystem().splitLogManager;
 
     Set<HRegionInfo> regionSet = new HashSet<HRegionInfo>();
@@ -1399,7 +1401,7 @@ public class TestDistributedLogSplitting {
     LOG.info("testReadWriteSeqIdFiles");
     startCluster(2);
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
-    HTable ht = installTable(zkw, "table", "family", 10);
+    Table ht = installTable(zkw, "table", "family", 10);
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
     List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
@@ -1425,19 +1427,19 @@ public class TestDistributedLogSplitting {
     ht.close();
   } 
   
-  HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
+  Table installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }
 
-  HTable installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs,
+  Table installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs,
       int existingRegions) throws Exception {
     // Create a table with regions
     TableName table = TableName.valueOf(tname);
     byte [] family = Bytes.toBytes(fname);
     LOG.info("Creating table with " + nrs + " regions");
-    HTable ht = TEST_UTIL.createMultiRegionTable(table, family, nrs);
+    Table ht = TEST_UTIL.createMultiRegionTable(table, family, nrs);
     int numRegions = -1;
-    try (RegionLocator r = ht.getRegionLocator()) {
+    try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(table)) {
       numRegions = r.getStartKeys().length;
     }
     assertEquals(nrs, numRegions);

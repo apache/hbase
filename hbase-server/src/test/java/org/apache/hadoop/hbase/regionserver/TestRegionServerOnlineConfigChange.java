@@ -28,7 +28,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,14 +55,14 @@ public class TestRegionServerOnlineConfigChange {
   private static HBaseTestingUtility hbaseTestingUtility = new HBaseTestingUtility();
   private static Configuration conf = null;
 
-  private static HTable t1 = null;
+  private static Table t1 = null;
   private static HRegionServer rs1 = null;
   private static byte[] r1name = null;
   private static Region r1 = null;
 
   private final static String table1Str = "table1";
   private final static String columnFamily1Str = "columnFamily1";
-  private final static byte[] TABLE1 = Bytes.toBytes(table1Str);
+  private final static TableName TABLE1 = TableName.valueOf(table1Str);
   private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
 
 
@@ -68,12 +71,13 @@ public class TestRegionServerOnlineConfigChange {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster(1,1);
     t1 = hbaseTestingUtility.createTable(TABLE1, COLUMN_FAMILY1);
-    @SuppressWarnings("deprecation")
-    HRegionInfo firstHRI = t1.getRegionLocations().keySet().iterator().next();
-    r1name = firstHRI.getRegionName();
-    rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
-        hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));
-    r1 = rs1.getRegion(r1name);
+    try (RegionLocator locator = hbaseTestingUtility.getConnection().getRegionLocator(TABLE1)) {
+      HRegionInfo firstHRI = locator.getAllRegionLocations().get(0).getRegionInfo();
+      r1name = firstHRI.getRegionName();
+      rs1 = hbaseTestingUtility.getHBaseCluster().getRegionServer(
+          hbaseTestingUtility.getHBaseCluster().getServerWith(r1name));
+      r1 = rs1.getRegion(r1name);
+    }
   }
 
   @AfterClass

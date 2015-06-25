@@ -446,7 +446,7 @@ public class TestNamespaceAuditor {
     // This call will pass.
     ADMIN.createTable(tableDescOne);
     Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
-    HTable htable = (HTable)connection.getTable(tableOne);
+    Table htable = connection.getTable(tableOne);
     UTIL.loadNumericRows(htable, Bytes.toBytes("info"), 1, 1000);
     ADMIN.flush(tableOne);
     stateInfo = getNamespaceState(nsp1);

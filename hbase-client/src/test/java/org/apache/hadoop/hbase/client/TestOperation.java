@@ -382,7 +382,7 @@ public class TestOperation {
     Assert.assertEquals(0, c.size());
     Assert.assertEquals(HConstants.LATEST_TIMESTAMP, p.getTimeStamp());
 
-    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 1984L, ByteBuffer.wrap(VALUE));
+    p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 1984L, ByteBuffer.wrap(VALUE));
     c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(1984L, c.get(0).getTimestamp());
@@ -391,7 +391,7 @@ public class TestOperation {
     Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ROW);
-    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
+    p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2013L, null);
     c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(2013L, c.get(0).getTimestamp());
@@ -400,7 +400,7 @@ public class TestOperation {
     Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW));
-    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
+    p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
     c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(2001L, c.get(0).getTimestamp());
@@ -410,7 +410,7 @@ public class TestOperation {
     Assert.assertEquals(0, CellComparator.COMPARATOR.compare(c.get(0), new KeyValue(c.get(0))));
 
     p = new Put(ByteBuffer.wrap(ROW), 1970L);
-    p.add(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
+    p.addColumn(FAMILY, ByteBuffer.wrap(QUALIFIER), 2001L, null);
     c = p.get(FAMILY, QUALIFIER);
     Assert.assertEquals(1, c.size());
     Assert.assertEquals(2001L, c.get(0).getTimestamp());

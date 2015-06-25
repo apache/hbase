@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.AbstractRpcClient;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -61,10 +62,10 @@ public class TestFromClientSideNoCodec {
 
   @Test
   public void testBasics() throws IOException {
-    final byte [] t = Bytes.toBytes("testBasics");
+    final TableName t = TableName.valueOf("testBasics");
     final byte [][] fs = new byte[][] {Bytes.toBytes("cf1"), Bytes.toBytes("cf2"),
       Bytes.toBytes("cf3") };
-    HTable ht = TEST_UTIL.createTable(t, fs);
+    Table ht = TEST_UTIL.createTable(t, fs);
     // Check put and get.
     final byte [] row = Bytes.toBytes("row");
     Put p = new Put(row);
@@ -79,10 +80,13 @@ public class TestFromClientSideNoCodec {
         Bytes.equals(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
           f, 0, f.length));
     }
-    // Check getRowOrBefore
-    byte [] f = fs[0];
-    r = ht.getRowOrBefore(row, f);
-    assertTrue(r.toString(), r.containsColumn(f, f));
+    if(ht instanceof HTableInterface) {
+      HTableInterface hti = (HTableInterface) ht;
+      // Check getRowOrBefore
+      byte[] f = fs[0];
+      r = hti.getRowOrBefore(row, f);
+      assertTrue(r.toString(), r.containsColumn(f, f));
+    }
     // Check scan.
     ResultScanner scanner = ht.getScanner(new Scan());
     int count = 0;

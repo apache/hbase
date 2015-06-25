@@ -19,11 +19,15 @@ package org.apache.hadoop.hbase.io.encoding;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.ServerName;
@@ -75,7 +79,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
 
     HColumnDescriptor hcd = getColumnDesc(admin);
     System.err.println("\nDisabling encode-on-disk. Old column descriptor: " + hcd + "\n");
-    HTable t = (HTable) TEST_UTIL.getConnection().getTable(TABLE);
+    Table t = TEST_UTIL.getConnection().getTable(TABLE);
     assertAllOnLine(t);
 
     admin.disableTable(TABLE);
@@ -92,7 +96,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     assertAllOnLine(t);
 
     System.err.println("\nCompacting the table\n");
-    admin.majorCompact(TABLE.getName());
+    admin.majorCompact(TABLE);
     // Wait until compaction completes
     Threads.sleepWithoutInterrupt(5000);
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
@@ -103,10 +107,13 @@ public class TestLoadAndSwitchEncodeOnDisk extends
     System.err.println("\nDone with the test, shutting down the cluster\n");
   }
 
-  private void assertAllOnLine(final HTable t) throws IOException {
-    NavigableMap<HRegionInfo, ServerName> regions = t.getRegionLocations();
-    for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-      byte [] startkey = e.getKey().getStartKey();
+  private void assertAllOnLine(final Table t) throws IOException {
+    List<HRegionLocation> regions;
+    try(RegionLocator rl = TEST_UTIL.getConnection().getRegionLocator(t.getName())) {
+      regions = rl.getAllRegionLocations();
+    }
+    for (HRegionLocation e: regions) {
+      byte [] startkey = e.getRegionInfo().getStartKey();
       Scan s = new Scan(startkey);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();

@@ -87,7 +87,7 @@ public class TestCompactionWithThroughputController {
       admin.disableTable(tableName);
       admin.deleteTable(tableName);
     }
-    HTable table = TEST_UTIL.createTable(tableName, family);
+    Table table = TEST_UTIL.createTable(tableName, family);
     Random rand = new Random();
     for (int i = 0; i < 10; i++) {
       for (int j = 0; j < 10; j++) {

@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -388,25 +389,26 @@ public class TestHFileOutputFormat2  {
     Configuration conf = util.getConfiguration();
     byte[][] splitKeys = generateRandomSplitKeys(4);
     util.startMiniCluster();
-    try {
-      HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
-      Admin admin = table.getConnection().getAdmin();
+
+    Table table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
+    try (RegionLocator r = util.getConnection().getRegionLocator(TABLE_NAME)) {
+
+      Admin admin = util.getConnection().getAdmin();
       Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
       assertEquals("Should start with empty table",
           0, util.countRows(table));
-      int numRegions = -1;
-      try (RegionLocator r = table.getRegionLocator()) {
+      int numRegions;
+
         numRegions = r.getStartKeys().length;
-      }
-      assertEquals("Should make 5 regions", numRegions, 5);
 
-      // Generate the bulk load files
-      util.startMiniMapReduceCluster();
-      runIncrementalPELoad(conf, table.getTableDescriptor(), table.getRegionLocator(), testDir);
-      // This doesn't write into the table, just makes files
-      assertEquals("HFOF should not touch actual table",
-          0, util.countRows(table));
+        assertEquals("Should make 5 regions", numRegions, 5);
 
+        // Generate the bulk load files
+        util.startMiniMapReduceCluster();
+        runIncrementalPELoad(conf, table.getTableDescriptor(), r, testDir);
+        // This doesn't write into the table, just makes files
+        assertEquals("HFOF should not touch actual table",
+            0, util.countRows(table));
 
       // Make sure that a directory was created for every CF
       int dir = 0;
@@ -432,7 +434,8 @@ public class TestHFileOutputFormat2  {
         byte[][] newSplitKeys = generateRandomSplitKeys(14);
         table = util.createTable(TABLE_NAME, FAMILIES, newSplitKeys);
 
-        while (table.getRegionLocator().getAllRegionLocations().size() != 15 ||
+        while (util.getConnection().getRegionLocator(TABLE_NAME)
+            .getAllRegionLocations().size() != 15 ||
             !admin.isTableAvailable(table.getName())) {
           Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
@@ -440,7 +443,7 @@ public class TestHFileOutputFormat2  {
       }
 
       // Perform the actual load
-      new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
+      new LoadIncrementalHFiles(conf).doBulkLoad(testDir, admin, table, r);
 
       // Ensure data shows up
       int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
@@ -911,9 +914,10 @@ public class TestHFileOutputFormat2  {
 
     util.startMiniCluster();
     try (Connection conn = ConnectionFactory.createConnection();
-        Admin admin = conn.getAdmin()) {
+        Admin admin = conn.getAdmin();
+        Table table = util.createTable(TABLE_NAME, FAMILIES);
+        RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       final FileSystem fs = util.getDFSCluster().getFileSystem();
-      HTable table = util.createTable(TABLE_NAME, FAMILIES);
       assertEquals("Should start with empty table", 0, util.countRows(table));
 
       // deep inspection: get the StoreFile dir
@@ -933,7 +937,7 @@ public class TestHFileOutputFormat2  {
         runIncrementalPELoad(conf, table.getTableDescriptor(), conn.getRegionLocator(TABLE_NAME),
             testDir);
         // Perform the actual load
-        new LoadIncrementalHFiles(conf).doBulkLoad(testDir, table);
+        new LoadIncrementalHFiles(conf).doBulkLoad(testDir, admin, table, locator);
       }
 
       // Ensure data shows up
@@ -1077,7 +1081,7 @@ public class TestHFileOutputFormat2  {
     if ("newtable".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);
       byte[][] splitKeys = generateRandomSplitKeys(4);
-      try (HTable table = util.createTable(tname, FAMILIES, splitKeys)) {
+      try (Table table = util.createTable(tname, FAMILIES, splitKeys)) {
       }
     } else if ("incremental".equals(args[0])) {
       TableName tname = TableName.valueOf(args[1]);

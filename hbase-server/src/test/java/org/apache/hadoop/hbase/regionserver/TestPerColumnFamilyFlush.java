@@ -110,7 +110,7 @@ public class TestPerColumnFamilyFlush {
   }
 
   // A helper function to verify edits.
-  void verifyEdit(int familyNum, int putNum, HTable table) throws IOException {
+  void verifyEdit(int familyNum, int putNum, Table table) throws IOException {
     Result r = table.get(createGet(familyNum, putNum));
     byte[] family = FAMILIES[familyNum - 1];
     byte[] qf = Bytes.toBytes("q" + familyNum);
@@ -342,7 +342,7 @@ public class TestPerColumnFamilyFlush {
       TEST_UTIL.startMiniCluster(numRegionServers);
       TEST_UTIL.getHBaseAdmin().createNamespace(
         NamespaceDescriptor.create(TABLENAME.getNamespaceAsString()).build());
-      HTable table = TEST_UTIL.createTable(TABLENAME, FAMILIES);
+      Table table = TEST_UTIL.createTable(TABLENAME, FAMILIES);
       HTableDescriptor htd = table.getTableDescriptor();
 
       for (byte[] family : FAMILIES) {
@@ -360,7 +360,6 @@ public class TestPerColumnFamilyFlush {
           table.put(createPut(3, i));
         }
       }
-      table.flushCommits();
       Thread.sleep(1000);
 
       Pair<Region, HRegionServer> desiredRegionAndServer = getRegionWithName(TABLENAME);
@@ -466,8 +465,7 @@ public class TestPerColumnFamilyFlush {
     final int numRegionServers = 1;
     TEST_UTIL.startMiniCluster(numRegionServers);
     try {
-      HTable table = null;
-      table = TEST_UTIL.createTable(tableName, FAMILIES);
+      Table table = TEST_UTIL.createTable(tableName, FAMILIES);
       // Force flush the namespace table so edits to it are not hanging around as oldest
       // edits. Otherwise, below, when we make maximum number of WAL files, then it will be
       // the namespace region that is flushed and not the below 'desiredRegion'.
@@ -489,7 +487,6 @@ public class TestPerColumnFamilyFlush {
         for (int j = 0; j < 100; j++) {
           table.put(createPut(1, i * 100 + j));
         }
-        table.flushCommits();
         // Roll the WAL. The log file count is less than maxLogs so no flush is triggered.
         int currentNumRolledLogFiles = getNumRolledLogFiles(desiredRegion);
         assertNull(getWAL(desiredRegion).rollWriter());
@@ -503,7 +500,6 @@ public class TestPerColumnFamilyFlush {
       assertTrue(desiredRegion.getStore(FAMILY2).getMemStoreSize() < cfFlushSizeLowerBound);
       assertTrue(desiredRegion.getStore(FAMILY3).getMemStoreSize() < cfFlushSizeLowerBound);
       table.put(createPut(1, 12345678));
-      table.flushCommits();
       // Make numRolledLogFiles greater than maxLogs
       desiredRegionAndServer.getSecond().walRoller.requestRollAll();
       // Wait for some time till the flush caused by log rolling happens.

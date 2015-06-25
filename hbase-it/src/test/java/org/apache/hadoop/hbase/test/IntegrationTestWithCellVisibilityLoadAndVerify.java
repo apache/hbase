@@ -377,7 +377,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
     }
     doLoad(getConf(), htd);
     doVerify(getConf(), htd);
-    getTestingUtil(getConf()).deleteTable(htd.getName());
+    getTestingUtil(getConf()).deleteTable(getTablename());
     return 0;
   }
 

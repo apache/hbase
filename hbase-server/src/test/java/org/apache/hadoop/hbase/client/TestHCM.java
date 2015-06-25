@@ -139,33 +139,34 @@ public class TestHCM {
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Connection con2 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration(), otherPool);
     // make sure the internally created ExecutorService is the one passed
-    assertTrue(otherPool == ((ConnectionImplementation)con2).getCurrentBatchPool());
+    assertTrue(otherPool == ((ConnectionImplementation) con2).getCurrentBatchPool());
 
-    String tableName = "testClusterConnection";
-    TEST_UTIL.createTable(tableName.getBytes(), FAM_NAM).close();
-    HTable t = (HTable)con1.getTable(TableName.valueOf(tableName), otherPool);
+    TableName tableName = TableName.valueOf("testClusterConnection");
+    TEST_UTIL.createTable(tableName, FAM_NAM).close();
+    HTable t = (HTable)con1.getTable(tableName, otherPool);
     // make sure passing a pool to the getTable does not trigger creation of an internal pool
-    assertNull("Internal Thread pool should be null", ((ConnectionImplementation)con1).getCurrentBatchPool());
+    assertNull("Internal Thread pool should be null",
+        ((ConnectionImplementation) con1).getCurrentBatchPool());
     // table should use the pool passed
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con2.getTable(TableName.valueOf(tableName));
+    t = (HTable)con2.getTable(tableName);
     // table should use the connectin's internal pool
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con2.getTable(TableName.valueOf(tableName));
+    t = (HTable)con2.getTable(tableName);
     // try other API too
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con2.getTable(TableName.valueOf(tableName));
+    t = (HTable)con2.getTable(tableName);
     // try other API too
     assertTrue(otherPool == t.getPool());
     t.close();
 
-    t = (HTable)con1.getTable(TableName.valueOf(tableName));
+    t = (HTable)con1.getTable(tableName);
     ExecutorService pool = ((ConnectionImplementation)con1).getCurrentBatchPool();
     // make sure an internal pool was created
     assertNotNull("An internal Thread pool should have been created", pool);
@@ -173,7 +174,7 @@ public class TestHCM {
     assertTrue(t.getPool() == pool);
     t.close();
 
-    t = (HTable)con1.getTable(TableName.valueOf(tableName));
+    t = (HTable)con1.getTable(tableName);
     // still using the *same* internal pool
     assertTrue(t.getPool() == pool);
     t.close();
@@ -214,25 +215,27 @@ public class TestHCM {
     rs.waitForServerOnline();
     final ServerName sn = rs.getRegionServer().getServerName();
 
-    HTable t = TEST_UTIL.createTable(tn, cf);
+    Table t = TEST_UTIL.createTable(tn, cf);
     TEST_UTIL.waitTableAvailable(tn);
 
     while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
         getRegionStates().isRegionsInTransition()){
       Thread.sleep(1);
     }
-    final ConnectionImplementation hci =  (ConnectionImplementation)t.getConnection();
-    while (t.getRegionLocation(rk).getPort() != sn.getPort()){
-      TEST_UTIL.getHBaseAdmin().move(t.getRegionLocation(rk).getRegionInfo().
-          getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
-      while(TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
-          getRegionStates().isRegionsInTransition()){
-        Thread.sleep(1);
+    final ConnectionImplementation hci =  (ConnectionImplementation)TEST_UTIL.getConnection();
+    try (RegionLocator l = TEST_UTIL.getConnection().getRegionLocator(tn)) {
+      while (l.getRegionLocation(rk).getPort() != sn.getPort()) {
+        TEST_UTIL.getHBaseAdmin().move(l.getRegionLocation(rk).getRegionInfo().
+            getEncodedNameAsBytes(), Bytes.toBytes(sn.toString()));
+        while (TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager().
+            getRegionStates().isRegionsInTransition()) {
+          Thread.sleep(1);
+        }
+        hci.clearRegionCache(tn);
       }
-      hci.clearRegionCache(tn);
+      Assert.assertNotNull(hci.clusterStatusListener);
+      TEST_UTIL.assertRegionOnServer(l.getRegionLocation(rk).getRegionInfo(), sn, 20000);
     }
-    Assert.assertNotNull(hci.clusterStatusListener);
-    TEST_UTIL.assertRegionOnServer(t.getRegionLocation(rk).getRegionInfo(), sn, 20000);
 
     Put p1 = new Put(rk);
     p1.add(cf, "qual".getBytes(), "val".getBytes());
@@ -286,27 +289,31 @@ public class TestHCM {
   public void testOperationTimeout() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
-    HTable table = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM}, TEST_UTIL.getConfiguration());
+    Table t = TEST_UTIL.createTable(hdt, new byte[][]{FAM_NAM}, null);
 
-    // Check that it works if the timeout is big enough
-    table.setOperationTimeout(120 * 1000);
-    table.get(new Get(FAM_NAM));
+    if (t instanceof HTable) {
+      HTable table = (HTable) t;
 
-    // Resetting and retrying. Will fail this time, not enough time for the second try
-    SleepAndFailFirstTime.ct.set(0);
-    try {
-      table.setOperationTimeout(30 * 1000);
+      // Check that it works if the timeout is big enough
+      table.setOperationTimeout(120 * 1000);
       table.get(new Get(FAM_NAM));
-      Assert.fail("We expect an exception here");
-    } catch (SocketTimeoutException e) {
-      // The client has a CallTimeout class, but it's not shared.We're not very clean today,
-      //  in the general case you can expect the call to stop, but the exception may vary.
-      // In this test however, we're sure that it will be a socket timeout.
-      LOG.info("We received an exception, as expected ", e);
-    } catch (IOException e) {
-      Assert.fail("Wrong exception:" + e.getMessage());
-    } finally {
-      table.close();
+
+      // Resetting and retrying. Will fail this time, not enough time for the second try
+      SleepAndFailFirstTime.ct.set(0);
+      try {
+        table.setOperationTimeout(30 * 1000);
+        table.get(new Get(FAM_NAM));
+        Assert.fail("We expect an exception here");
+      } catch (SocketTimeoutException e) {
+        // The client has a CallTimeout class, but it's not shared.We're not very clean today,
+        //  in the general case you can expect the call to stop, but the exception may vary.
+        // In this test however, we're sure that it will be a socket timeout.
+        LOG.info("We received an exception, as expected ", e);
+      } catch (IOException e) {
+        Assert.fail("Wrong exception:" + e.getMessage());
+      } finally {
+        table.close();
+      }
     }
   }
 
@@ -326,10 +333,10 @@ public class TestHCM {
     c2.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, allowsInterrupt);
 
     Connection connection = ConnectionFactory.createConnection(c2);
-    final HTable table = (HTable) connection.getTable(tableName);
+    final Table table = connection.getTable(tableName);
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.addColumn(FAM_NAM, ROW, ROW);
     table.put(put);
 
     // 4 steps: ready=0; doGets=1; mustStop=2; stopped=3
@@ -364,9 +371,12 @@ public class TestHCM {
       }
     });
 
-    ServerName sn = table.getRegionLocation(ROW).getServerName();
+    ServerName sn;
+    try(RegionLocator rl = connection.getRegionLocator(tableName)) {
+      sn = rl.getRegionLocation(ROW).getServerName();
+    }
     ConnectionImplementation conn =
-        (ConnectionImplementation) table.getConnection();
+        (ConnectionImplementation) connection;
     RpcClient rpcClient = conn.getRpcClient();
 
     LOG.info("Going to cancel connections. connection=" + conn.toString() + ", sn=" + sn);
@@ -469,14 +479,18 @@ public class TestHCM {
     c2.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 30 * 1000);
 
     final Connection connection = ConnectionFactory.createConnection(c2);
-    final HTable table = (HTable) connection.getTable(tableName);
+    final Table table = connection.getTable(tableName);
 
     Put p = new Put(FAM_NAM);
-    p.add(FAM_NAM, FAM_NAM, FAM_NAM);
+    p.addColumn(FAM_NAM, FAM_NAM, FAM_NAM);
     table.put(p);
 
-    final ConnectionImplementation hci =  (ConnectionImplementation)table.getConnection();
-    final HRegionLocation loc = table.getRegionLocation(FAM_NAM);
+    final ConnectionImplementation hci =  (ConnectionImplementation) connection;
+
+    final HRegionLocation loc;
+    try(RegionLocator rl = connection.getRegionLocator(tableName)) {
+      loc = rl.getRegionLocation(FAM_NAM);
+    }
 
     Get get = new Get(FAM_NAM);
     Assert.assertNotNull(table.get(get));
@@ -553,14 +567,13 @@ public class TestHCM {
     Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     Connection connection = ConnectionFactory.createConnection(conf);
-    final HTable table = (HTable) connection.getTable(TABLE_NAME);
+    final Table table = connection.getTable(TABLE_NAME);
 
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    ConnectionImplementation conn =
-      (ConnectionImplementation)table.getConnection();
+    ConnectionImplementation conn = (ConnectionImplementation) connection;
 
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
 
@@ -756,12 +769,11 @@ public class TestHCM {
    */
   @Test(timeout = 60000)
   public void testCacheSeqNums() throws Exception{
-    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME2, FAM_NAM);
+    Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME2, FAM_NAM);
     Put put = new Put(ROW);
     put.add(FAM_NAM, ROW, ROW);
     table.put(put);
-    ConnectionImplementation conn =
-      (ConnectionImplementation)table.getConnection();
+    ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
 
     HRegionLocation location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
     assertNotNull(location);
@@ -870,10 +882,10 @@ public class TestHCM {
 
   @Test (timeout=30000)
   public void testMulti() throws Exception {
-    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
+    Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
      try {
        ConnectionImplementation conn =
-           (ConnectionImplementation)table.getConnection();
+           (ConnectionImplementation)TEST_UTIL.getConnection();
 
        // We're now going to move the region and check that it works for the client
        // First a new put to add the location in the cache
@@ -1053,7 +1065,7 @@ public class TestHCM {
     Configuration config = new Configuration(TEST_UTIL.getConfiguration());
 
     TableName tableName = TableName.valueOf("testConnectionRideOverClusterRestart");
-    TEST_UTIL.createTable(tableName.getName(), new byte[][] {FAM_NAM}, config).close();
+    TEST_UTIL.createTable(tableName, new byte[][] {FAM_NAM}).close();
 
     Connection connection = ConnectionFactory.createConnection(config);
     Table table = connection.getTable(tableName);

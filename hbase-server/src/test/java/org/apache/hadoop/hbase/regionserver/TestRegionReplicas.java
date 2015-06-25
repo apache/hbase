@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
@@ -68,7 +69,7 @@ public class TestRegionReplicas {
   private static final Log LOG = LogFactory.getLog(TestRegionReplicas.class);
 
   private static final int NB_SERVERS = 1;
-  private static HTable table;
+  private static Table table;
   private static final byte[] row = "TestRegionReplicas".getBytes();
 
   private static HRegionInfo hriPrimary;
@@ -91,7 +92,9 @@ public class TestRegionReplicas {
     // Create table then get the single region for our new table.
     table = HTU.createTable(tableName, f);
 
-    hriPrimary = table.getRegionLocation(row, false).getRegionInfo();
+    try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {
+      hriPrimary = locator.getRegionLocation(row, false).getRegionInfo();
+    }
 
     // mock a secondary region info to open
     hriSecondary = new HRegionInfo(hriPrimary.getTable(), hriPrimary.getStartKey(),

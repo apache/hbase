@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -45,6 +46,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.RegionLocator;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -1612,15 +1615,15 @@ public class TestMasterObserver {
     cp.enableBypass(false);
     cp.resetStates();
 
-    HTable table = UTIL.createMultiRegionTable(tableName, TEST_FAMILY);
+    Table table = UTIL.createMultiRegionTable(tableName, TEST_FAMILY);
 
-    try {
+    try (RegionLocator r = UTIL.getConnection().getRegionLocator(tableName)) {
       UTIL.waitUntilAllRegionsAssigned(tableName);
 
-      NavigableMap<HRegionInfo, ServerName> regions = table.getRegionLocations();
-      Map.Entry<HRegionInfo, ServerName> firstGoodPair = null;
-      for (Map.Entry<HRegionInfo, ServerName> e: regions.entrySet()) {
-        if (e.getValue() != null) {
+      List<HRegionLocation> regions = r.getAllRegionLocations();
+      HRegionLocation firstGoodPair = null;
+      for (HRegionLocation e: regions) {
+        if (e.getServerName() != null) {
           firstGoodPair = e;
           break;
         }
@@ -1630,7 +1633,7 @@ public class TestMasterObserver {
       // Try to force a move
       Collection<ServerName> servers = master.getClusterStatus().getServers();
       String destName = null;
-      String serverNameForFirstRegion = firstGoodPair.getValue().toString();
+      String serverNameForFirstRegion = firstGoodPair.getServerName().toString();
       LOG.info("serverNameForFirstRegion=" + serverNameForFirstRegion);
       ServerName masterServerName = master.getServerName();
       boolean found = false;
@@ -1647,7 +1650,7 @@ public class TestMasterObserver {
       assertTrue("Found server", found);
       LOG.info("Found " + destName);
       master.getMasterRpcServices().moveRegion(null, RequestConverter.buildMoveRegionRequest(
-          firstGoodPair.getKey().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
+          firstGoodPair.getRegionInfo().getEncodedNameAsBytes(),Bytes.toBytes(destName)));
       assertTrue("Coprocessor should have been called on region move",
         cp.wasMoveCalled());
 

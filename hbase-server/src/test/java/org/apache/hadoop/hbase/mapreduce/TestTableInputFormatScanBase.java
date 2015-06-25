@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
@@ -63,12 +64,12 @@ public abstract class TestTableInputFormatScanBase {
   private static final Log LOG = LogFactory.getLog(TestTableInputFormatScanBase.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  static final byte[] TABLE_NAME = Bytes.toBytes("scantest");
+  static final TableName TABLE_NAME = TableName.valueOf("scantest");
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");
   static final String KEY_STARTROW = "startRow";
   static final String KEY_LASTROW = "stpRow";
 
-  private static HTable table = null;
+  private static Table table = null;
 
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
@@ -82,7 +83,7 @@ public abstract class TestTableInputFormatScanBase {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
     // create and fill table
-    table = TEST_UTIL.createMultiRegionTable(TableName.valueOf(TABLE_NAME), INPUT_FAMILY);
+    table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, INPUT_FAMILY);
     TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
     // start MR cluster
     TEST_UTIL.startMiniMapReduceCluster();
@@ -182,7 +183,7 @@ public abstract class TestTableInputFormatScanBase {
     String jobName = "ScanFromConfig" + (start != null ? start.toUpperCase() : "Empty") +
       "To" + (stop != null ? stop.toUpperCase() : "Empty");
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
-    c.set(TableInputFormat.INPUT_TABLE, Bytes.toString(TABLE_NAME));
+    c.set(TableInputFormat.INPUT_TABLE, TABLE_NAME.getNameAsString());
     c.set(TableInputFormat.SCAN_COLUMN_FAMILY, Bytes.toString(INPUT_FAMILY));
     c.set(KEY_STARTROW, start != null ? start : "");
     c.set(KEY_LASTROW, last != null ? last : "");
@@ -233,7 +234,7 @@ public abstract class TestTableInputFormatScanBase {
     LOG.info("scan before: " + scan);
     Job job = new Job(c, jobName);
     TableMapReduceUtil.initTableMapperJob(
-      Bytes.toString(TABLE_NAME), scan, ScanMapper.class,
+      TABLE_NAME, scan, ScanMapper.class,
       ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1); // one to get final "first" and "last" key
@@ -264,11 +265,11 @@ public abstract class TestTableInputFormatScanBase {
     c.set(KEY_STARTROW, "");
     c.set(KEY_LASTROW, "");
     Job job = new Job(c, jobName);
-    TableMapReduceUtil.initTableMapperJob(Bytes.toString(TABLE_NAME), scan, ScanMapper.class,
+    TableMapReduceUtil.initTableMapperJob(TABLE_NAME.getNameAsString(), scan, ScanMapper.class,
             ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
-    Assert.assertEquals(new String(TABLE_NAME), new String(table.getTableName()));
+    Assert.assertEquals(TABLE_NAME, table.getName());
     List<InputSplit> splits = tif.getSplits(job);
     Assert.assertEquals(expectedNumOfSplits, splits.size());
   }

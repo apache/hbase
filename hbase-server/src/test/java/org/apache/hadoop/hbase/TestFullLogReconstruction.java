@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -91,7 +92,7 @@ public class TestFullLogReconstruction {
    */
   @Test (timeout=300000)
   public void testReconstruction() throws Exception {
-    HTable table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
+    Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAMILY);
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);
