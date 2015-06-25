@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.RegionTransition;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -135,7 +134,7 @@ public class AssignmentManager extends ZooKeeperListener {
     = "hbase.assignment.already.intransition.waittime";
   static final int DEFAULT_ALREADY_IN_TRANSITION_WAITTIME = 60000; // 1 minute
 
-  protected final Server server;
+  protected final MasterServices server;
 
   private ServerManager serverManager;
 
@@ -271,7 +270,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * @throws KeeperException
    * @throws IOException
    */
-  public AssignmentManager(Server server, ServerManager serverManager,
+  public AssignmentManager(MasterServices server, ServerManager serverManager,
       final LoadBalancer balancer,
       final ExecutorService service, MetricsMaster metricsMaster,
       final TableLockManager tableLockManager) throws KeeperException,
@@ -2841,7 +2840,7 @@ public class AssignmentManager extends ZooKeeperListener {
       }
     }
     // assign all the replicas that were not recorded in the meta
-    assign(replicaRegionsNotRecordedInMeta(regionsFromMetaScan, (MasterServices)server));
+    assign(replicaRegionsNotRecordedInMeta(regionsFromMetaScan, server));
   }
 
   /**
@@ -2929,7 +2928,7 @@ public class AssignmentManager extends ZooKeeperListener {
       // maybe because it crashed.
       PairOfSameType<HRegionInfo> p = MetaTableAccessor.getMergeRegions(result);
       if (p.getFirst() != null && p.getSecond() != null) {
-        int numReplicas = ((MasterServices)server).getTableDescriptors().get(p.getFirst().
+        int numReplicas = server.getTableDescriptors().get(p.getFirst().
             getTable()).getRegionReplication();
         for (HRegionInfo merge : p) {
           for (int i = 1; i < numReplicas; i++) {
@@ -4039,7 +4038,7 @@ public class AssignmentManager extends ZooKeeperListener {
     }
     int numReplicas = 1;
     try {
-      numReplicas = ((MasterServices)server).getTableDescriptors().get(mergedHri.getTable()).
+      numReplicas = server.getTableDescriptors().get(mergedHri.getTable()).
           getRegionReplication();
     } catch (IOException e) {
       LOG.warn("Couldn't get the replication attribute of the table " + mergedHri.getTable() +
@@ -4068,7 +4067,7 @@ public class AssignmentManager extends ZooKeeperListener {
     // the replica1s of daughters will be on the same machine
     int numReplicas = 1;
     try {
-      numReplicas = ((MasterServices)server).getTableDescriptors().get(parentHri.getTable()).
+      numReplicas = server.getTableDescriptors().get(parentHri.getTable()).
           getRegionReplication();
     } catch (IOException e) {
       LOG.warn("Couldn't get the replication attribute of the table " + parentHri.getTable() +

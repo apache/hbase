@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -77,7 +78,7 @@ public class TestDrainingServer {
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
-  
+
   @BeforeClass
   public static void beforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean("hbase.assignment.usezk", true);
@@ -89,7 +90,7 @@ public class TestDrainingServer {
     AssignmentManager am;
     Configuration conf = TEST_UTIL.getConfiguration();
     final HMaster master = Mockito.mock(HMaster.class);
-    final Server server = Mockito.mock(Server.class);
+    final MasterServices server = Mockito.mock(MasterServices.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserver_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserver_b.org", 1001, 8000);
@@ -118,12 +119,12 @@ public class TestDrainingServer {
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
     Mockito.when(serverManager.getOnlineServersList())
     .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
-    
+
     Mockito.when(serverManager.createDestinationServersList())
         .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(serverManager.createDestinationServersList(null))
         .thenReturn(new ArrayList<ServerName>(onlineServers.keySet()));
-    
+
     for (ServerName sn : onlineServers.keySet()) {
       Mockito.when(serverManager.isServerOnline(sn)).thenReturn(true);
       Mockito.when(serverManager.sendRegionClose(sn, REGIONINFO, -1)).thenReturn(true);
@@ -166,7 +167,7 @@ public class TestDrainingServer {
     LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(conf);
     AssignmentManager am;
     final HMaster master = Mockito.mock(HMaster.class);
-    final Server server = Mockito.mock(Server.class);
+    final MasterServices server = Mockito.mock(MasterServices.class);
     final ServerManager serverManager = Mockito.mock(ServerManager.class);
     final ServerName SERVERNAME_A = ServerName.valueOf("mockserverbulk_a.org", 1000, 8000);
     final ServerName SERVERNAME_B = ServerName.valueOf("mockserverbulk_b.org", 1001, 8000);
@@ -176,7 +177,7 @@ public class TestDrainingServer {
     final Map<HRegionInfo, ServerName> bulk = new HashMap<HRegionInfo, ServerName>();
 
     Set<ServerName> bunchServersAssigned = new HashSet<ServerName>();
-    
+
     HRegionInfo REGIONINFO_A = new HRegionInfo(TableName.valueOf("table_A"),
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_START_ROW);
     HRegionInfo REGIONINFO_B = new HRegionInfo(TableName.valueOf("table_B"),
@@ -219,21 +220,21 @@ public class TestDrainingServer {
     Mockito.when(serverManager.getOnlineServers()).thenReturn(onlineServers);
     Mockito.when(serverManager.getOnlineServersList()).thenReturn(
       new ArrayList<ServerName>(onlineServers.keySet()));
-    
+
     Mockito.when(serverManager.createDestinationServersList()).thenReturn(
       new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(serverManager.createDestinationServersList(null)).thenReturn(
       new ArrayList<ServerName>(onlineServers.keySet()));
-    
+
     for (Entry<HRegionInfo, ServerName> entry : bulk.entrySet()) {
       Mockito.when(serverManager.isServerOnline(entry.getValue())).thenReturn(true);
-      Mockito.when(serverManager.sendRegionClose(entry.getValue(), 
+      Mockito.when(serverManager.sendRegionClose(entry.getValue(),
         entry.getKey(), -1)).thenReturn(true);
-      Mockito.when(serverManager.sendRegionOpen(entry.getValue(), 
-        entry.getKey(), -1, null)).thenReturn(RegionOpeningState.OPENED);  
+      Mockito.when(serverManager.sendRegionOpen(entry.getValue(),
+        entry.getKey(), -1, null)).thenReturn(RegionOpeningState.OPENED);
       Mockito.when(serverManager.addServerToDrainList(entry.getValue())).thenReturn(true);
     }
-    
+
     Mockito.when(master.getServerManager()).thenReturn(serverManager);
 
     drainedServers.add(SERVERNAME_A);
@@ -243,42 +244,42 @@ public class TestDrainingServer {
 
     am = new AssignmentManager(server, serverManager,
       balancer, startupMasterExecutor("mockExecutorServiceBulk"), null, null);
-    
+
     Mockito.when(master.getAssignmentManager()).thenReturn(am);
 
     zkWatcher.registerListener(am);
-    
+
     for (ServerName drained : drainedServers) {
       addServerToDrainedList(drained, onlineServers, serverManager);
     }
-    
+
     am.assign(bulk);
 
     Map<String, RegionState> regionsInTransition = am.getRegionStates().getRegionsInTransition();
     for (Entry<String, RegionState> entry : regionsInTransition.entrySet()) {
-      setRegionOpenedOnZK(zkWatcher, entry.getValue().getServerName(), 
+      setRegionOpenedOnZK(zkWatcher, entry.getValue().getServerName(),
         entry.getValue().getRegion());
     }
-    
+
     am.waitForAssignment(REGIONINFO_A);
     am.waitForAssignment(REGIONINFO_B);
     am.waitForAssignment(REGIONINFO_C);
     am.waitForAssignment(REGIONINFO_D);
     am.waitForAssignment(REGIONINFO_E);
-    
+
     Map<HRegionInfo, ServerName> regionAssignments = am.getRegionStates().getRegionAssignments();
     for (Entry<HRegionInfo, ServerName> entry : regionAssignments.entrySet()) {
-      LOG.info("Region Assignment: " 
+      LOG.info("Region Assignment: "
           + entry.getKey().getRegionNameAsString() + " Server: " + entry.getValue());
       bunchServersAssigned.add(entry.getValue());
     }
-    
+
     for (ServerName sn : drainedServers) {
       assertFalse(bunchServersAssigned.contains(sn));
     }
   }
 
-  private void addServerToDrainedList(ServerName serverName, 
+  private void addServerToDrainedList(ServerName serverName,
       Map<ServerName, ServerLoad> onlineServers, ServerManager serverManager) {
     onlineServers.remove(serverName);
     List<ServerName> availableServers = new ArrayList<ServerName>(onlineServers.keySet());
