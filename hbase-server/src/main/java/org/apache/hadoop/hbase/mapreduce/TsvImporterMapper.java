@@ -57,6 +57,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
   /** Should skip bad lines */
   private boolean skipBadLines;
   private Counter badLineCount;
+  private boolean logBadLines;
 
   protected ImportTsv.TsvParser parser;
 
@@ -129,6 +130,7 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
     skipBadLines = context.getConfiguration().getBoolean(
         ImportTsv.SKIP_LINES_CONF_KEY, true);
     badLineCount = context.getCounter("ImportTsv", "Bad Lines");
+    logBadLines = context.getConfiguration().getBoolean(ImportTsv.LOG_BAD_LINES_CONF_KEY, false);
     hfileOutPath = conf.get(ImportTsv.BULK_OUTPUT_CONF_KEY);
   }
 
@@ -163,26 +165,16 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         populatePut(lineBytes, parsed, put, i);
       }
       context.write(rowKey, put);
-    } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
+    } catch (ImportTsv.TsvParser.BadTsvLineException|IllegalArgumentException badLine) {
+      if (logBadLines) {
+        System.err.println(value);
+      }
+      System.err.println("Bad line at offset: " + offset.get() + ":\n" + badLine.getMessage());
       if (skipBadLines) {
-        System.err.println(
-            "Bad line at offset: " + offset.get() + ":\n" +
-            badLine.getMessage());
         incrementBadLineCount(1);
         return;
-      } else {
-        throw new IOException(badLine);
       }
-    } catch (IllegalArgumentException e) {
-      if (skipBadLines) {
-        System.err.println(
-            "Bad line at offset: " + offset.get() + ":\n" +
-            e.getMessage());
-        incrementBadLineCount(1);
-        return;
-      } else {
-        throw new IOException(e);
-      }
+      throw new IOException(badLine);
     } catch (InterruptedException e) {
       e.printStackTrace();
     }

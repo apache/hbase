@@ -19,13 +19,15 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,7 +47,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
@@ -56,12 +57,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 
 @Category({VerySlowMapReduceTests.class, LargeTests.class})
 public class TestImportTsv implements Configurable {
@@ -70,10 +75,7 @@ public class TestImportTsv implements Configurable {
   protected static final String NAME = TestImportTsv.class.getSimpleName();
   protected static HBaseTestingUtility util = new HBaseTestingUtility();
 
-  /**
-   * Delete the tmp directory after running doMROnTableTest. Boolean. Default is
-   * false.
-   */
+  // Delete the tmp directory after running doMROnTableTest. Boolean. Default is true.
   protected static final String DELETE_AFTER_LOAD_CONF = NAME + ".deleteAfterLoad";
 
   /**
@@ -82,6 +84,11 @@ public class TestImportTsv implements Configurable {
   protected static final String FORCE_COMBINER_CONF = NAME + ".forceCombiner";
 
   private final String FAMILY = "FAM";
+  private String table;
+  private Map<String, String> args;
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   public Configuration getConf() {
     return util.getConfiguration();
@@ -103,112 +110,80 @@ public class TestImportTsv implements Configurable {
     util.shutdownMiniCluster();
   }
 
+  @Before
+  public void setup() throws Exception {
+    table = "test-" + UUID.randomUUID();
+    args = new HashMap<String, String>();
+    // Prepare the arguments required for the test.
+    args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A,FAM:B");
+    args.put(ImportTsv.SEPARATOR_CONF_KEY, "\u001b");
+  }
+
   @Test
   public void testMROnTable() throws Exception {
-    String table = "test-" + UUID.randomUUID();
-
-    // Prepare the arguments required for the test.
-    String[] args = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-        table
-    };
-
     util.createTable(TableName.valueOf(table), FAMILY);
-    doMROnTableTest(util, FAMILY, null, args, 1);
+    doMROnTableTest(null, 1);
     util.deleteTable(table);
   }
   
   @Test
   public void testMROnTableWithTimestamp() throws Exception {
-    String table = "test-" + UUID.randomUUID();
-
-    // Prepare the arguments required for the test.
-    String[] args = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY
-            + "=HBASE_ROW_KEY,HBASE_TS_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
-        table
-    };
+    util.createTable(TableName.valueOf(table), FAMILY);
+    args.put(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,HBASE_TS_KEY,FAM:A,FAM:B");
+    args.put(ImportTsv.SEPARATOR_CONF_KEY, ",");
     String data = "KEY,1234,VALUE1,VALUE2\n";
 
-    util.createTable(TableName.valueOf(table), FAMILY);
-    doMROnTableTest(util, FAMILY, data, args, 1);
+    doMROnTableTest(data, 1);
     util.deleteTable(table);
   }
-  
 
   @Test
   public void testMROnTableWithCustomMapper()
   throws Exception {
-    String table = "test-" + UUID.randomUUID();
-
-    // Prepare the arguments required for the test.
-    String[] args = new String[] {
-        "-D" + ImportTsv.MAPPER_CONF_KEY + "=org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapper",
-        table
-    };
-
     util.createTable(TableName.valueOf(table), FAMILY);
-    doMROnTableTest(util, FAMILY, null, args, 3);
+    args.put(ImportTsv.MAPPER_CONF_KEY,
+        "org.apache.hadoop.hbase.mapreduce.TsvImporterCustomTestMapper");
+
+    doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
   
   @Test
   public void testBulkOutputWithoutAnExistingTable() throws Exception {
-    String table = "test-" + UUID.randomUUID();
-
     // Prepare the arguments required for the test.
     Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
-    String[] args = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-        table
-    };
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
 
-    doMROnTableTest(util, FAMILY, null, args, 3);
+    doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
 
   @Test
   public void testBulkOutputWithAnExistingTable() throws Exception {
-    String table = "test-" + UUID.randomUUID();
+    util.createTable(TableName.valueOf(table), FAMILY);
 
     // Prepare the arguments required for the test.
     Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
-    String[] args = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-        table
-    };
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
 
-    util.createTable(TableName.valueOf(table), FAMILY);
-    doMROnTableTest(util, FAMILY, null, args, 3);
+    doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
   
   @Test
   public void testBulkOutputWithAnExistingTableNoStrictTrue() throws Exception {
-    String table = "test-" + UUID.randomUUID();
+    util.createTable(TableName.valueOf(table), FAMILY);
+
     // Prepare the arguments required for the test.
     Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
-    String[] args = new String[] {
-        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
-        "-D" + ImportTsv.NO_STRICT_COL_FAMILY + "=true",
-        table
-    };
-    util.createTable(TableName.valueOf(table), FAMILY);
-    doMROnTableTest(util, FAMILY, null, args, 3);
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
+    args.put(ImportTsv.NO_STRICT_COL_FAMILY, "true");
+    doMROnTableTest(null, 3);
     util.deleteTable(table);
   }
 
   @Test
   public void testJobConfigurationsWithTsvImporterTextMapper() throws Exception {
-    String table = "test-" + UUID.randomUUID();
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
     String INPUT_FILE = "InputFile1.csv";
     // Prepare the arguments required for the test.
@@ -234,53 +209,150 @@ public class TestImportTsv implements Configurable {
             return 0;
           }
         }, args));
+    // Delete table created by createSubmittableJob.
+    util.deleteTable(table);
   }
 
   @Test
   public void testBulkOutputWithTsvImporterTextMapper() throws Exception {
-    String table = "test-" + UUID.randomUUID();
-    String FAMILY = "FAM";
     Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
-    // Prepare the arguments required for the test.
-    String[] args =
-        new String[] {
-            "-D" + ImportTsv.MAPPER_CONF_KEY
-                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
-            "-D" + ImportTsv.COLUMNS_CONF_KEY
-                + "=HBASE_ROW_KEY,FAM:A,FAM:B",
-            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b",
-            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(), table 
-            };
+    args.put(ImportTsv.MAPPER_CONF_KEY, "org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper");
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, bulkOutputPath.toString());
     String data = "KEY\u001bVALUE4\u001bVALUE8\n";
-    doMROnTableTest(util, FAMILY, data, args, 4);
+    doMROnTableTest(data, 4);
+    util.deleteTable(table);
   }
 
-  @Test(expected = TableNotFoundException.class)
+  @Test
   public void testWithoutAnExistingTableAndCreateTableSetToNo() throws Exception {
-    String table = "test-" + UUID.randomUUID();
-    String[] args =
-        new String[] { table, "/inputFile" };
+    String[] args = new String[] { table, "/inputFile" };
 
     Configuration conf = new Configuration(util.getConfiguration());
     conf.set(ImportTsv.COLUMNS_CONF_KEY, "HBASE_ROW_KEY,FAM:A");
     conf.set(ImportTsv.BULK_OUTPUT_CONF_KEY, "/output");
     conf.set(ImportTsv.CREATE_TABLE_CONF_KEY, "no");
-    ImportTsv.createSubmittableJob(conf, args);
+    exception.expect(TableNotFoundException.class);
+    assertEquals("running test job configuration failed.", 0,
+        ToolRunner.run(new Configuration(util.getConfiguration()), new ImportTsv() {
+              @Override public int run(String[] args) throws Exception {
+                createSubmittableJob(getConf(), args);
+                return 0;
+              }
+            }, args));
   }
 
-  @Test(expected = TableNotFoundException.class)
+  @Test
   public void testMRWithoutAnExistingTable() throws Exception {
-    String table = "test-" + UUID.randomUUID();
     String[] args =
         new String[] { table, "/inputFile" };
 
-    Configuration conf = new Configuration(util.getConfiguration());
-    ImportTsv.createSubmittableJob(conf, args);
+    exception.expect(TableNotFoundException.class);
+    assertEquals("running test job configuration failed.", 0, ToolRunner.run(
+        new Configuration(util.getConfiguration()),
+        new ImportTsv() {
+          @Override
+          public int run(String[] args) throws Exception {
+            createSubmittableJob(getConf(), args);
+            return 0;
+          }
+        }, args));
   }
 
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
-      String data, String[] args) throws Exception {
-    return doMROnTableTest(util, family, data, args, 1);
+  @Test
+  public void testJobConfigurationsWithDryMode() throws Exception {
+    Path bulkOutputPath = new Path(util.getDataTestDirOnTestFS(table),"hfiles");
+    String INPUT_FILE = "InputFile1.csv";
+    // Prepare the arguments required for the test.
+    String[] argsArray = new String[] {
+        "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B",
+        "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=,",
+        "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + bulkOutputPath.toString(),
+        "-D" + ImportTsv.DRY_RUN_CONF_KEY + "=true",
+        table,
+        INPUT_FILE };
+    assertEquals("running test job configuration failed.", 0, ToolRunner.run(
+        new Configuration(util.getConfiguration()),
+        new ImportTsv() {
+          @Override
+          public int run(String[] args) throws Exception {
+            Job job = createSubmittableJob(getConf(), args);
+            assertTrue(job.getOutputFormatClass().equals(NullOutputFormat.class));
+            return 0;
+          }
+        }, argsArray));
+    // Delete table created by createSubmittableJob.
+    util.deleteTable(table);
+  }
+
+  @Test
+  public void testDryModeWithoutBulkOutputAndTableExists() throws Exception {
+    util.createTable(TableName.valueOf(table), FAMILY);
+    args.put(ImportTsv.DRY_RUN_CONF_KEY, "true");
+    doMROnTableTest(null, 1);
+    // Dry mode should not delete an existing table. If it's not present,
+    // this will throw TableNotFoundException.
+    util.deleteTable(table);
+  }
+
+  /**
+   * If table is not present in non-bulk mode, dry run should fail just like
+   * normal mode.
+   */
+  @Test
+  public void testDryModeWithoutBulkOutputAndTableDoesNotExists() throws Exception {
+    args.put(ImportTsv.DRY_RUN_CONF_KEY, "true");
+    exception.expect(TableNotFoundException.class);
+    doMROnTableTest(null, 1);
+  }
+
+  @Test public void testDryModeWithBulkOutputAndTableExists() throws Exception {
+    util.createTable(TableName.valueOf(table), FAMILY);
+    // Prepare the arguments required for the test.
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
+    args.put(ImportTsv.DRY_RUN_CONF_KEY, "true");
+    doMROnTableTest(null, 1);
+    // Dry mode should not delete an existing table. If it's not present,
+    // this will throw TableNotFoundException.
+    util.deleteTable(table);
+  }
+
+  /**
+   * If table is not present in bulk mode and create.table is not set to yes,
+   * import should fail with TableNotFoundException.
+   */
+  @Test
+  public void testDryModeWithBulkOutputAndTableDoesNotExistsCreateTableSetToNo() throws
+      Exception {
+    // Prepare the arguments required for the test.
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
+    args.put(ImportTsv.DRY_RUN_CONF_KEY, "true");
+    args.put(ImportTsv.CREATE_TABLE_CONF_KEY, "no");
+    exception.expect(TableNotFoundException.class);
+    doMROnTableTest(null, 1);
+  }
+
+  @Test
+  public void testDryModeWithBulkModeAndTableDoesNotExistsCreateTableSetToYes() throws Exception {
+    // Prepare the arguments required for the test.
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(table), "hfiles");
+    args.put(ImportTsv.BULK_OUTPUT_CONF_KEY, hfiles.toString());
+    args.put(ImportTsv.DRY_RUN_CONF_KEY, "true");
+    args.put(ImportTsv.CREATE_TABLE_CONF_KEY, "yes");
+    doMROnTableTest(null, 1);
+    // Verify temporary table was deleted.
+    exception.expect(TableNotFoundException.class);
+    util.deleteTable(table);
+  }
+
+  private Tool doMROnTableTest(String data, int valueMultiplier) throws Exception {
+    return doMROnTableTest(util, table, FAMILY, data, args, valueMultiplier);
+  }
+
+  protected static Tool doMROnTableTest(HBaseTestingUtility util, String table,
+      String family, String data, Map<String, String> args) throws Exception {
+    return doMROnTableTest(util, table, family, data, args, 1);
   }
 
   /**
@@ -291,10 +363,9 @@ public class TestImportTsv implements Configurable {
    * @param args Any arguments to pass BEFORE inputFile path is appended.
    * @return The Tool instance used to run the test.
    */
-  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family,
-      String data, String[] args, int valueMultiplier)
+  protected static Tool doMROnTableTest(HBaseTestingUtility util, String table,
+      String family, String data, Map<String, String> args, int valueMultiplier)
   throws Exception {
-    String table = args[args.length - 1];
     Configuration conf = new Configuration(util.getConfiguration());
 
     // populate input file
@@ -313,31 +384,39 @@ public class TestImportTsv implements Configurable {
       conf.setInt("mapreduce.map.combine.minspills", 1);
     }
 
+    // Build args array.
+    String[] argsArray = new String[args.size() + 2];
+    Iterator it = args.entrySet().iterator();
+    int i = 0;
+    while (it.hasNext()) {
+      Map.Entry pair = (Map.Entry) it.next();
+      argsArray[i] = "-D" + pair.getKey() + "=" + pair.getValue();
+      i++;
+    }
+    argsArray[i] = table;
+    argsArray[i + 1] = inputPath.toString();
+
     // run the import
-    List<String> argv = new ArrayList<String>(Arrays.asList(args));
-    argv.add(inputPath.toString());
     Tool tool = new ImportTsv();
-    LOG.debug("Running ImportTsv with arguments: " + argv);
-    assertEquals(0, ToolRunner.run(conf, tool, argv.toArray(args)));
+    LOG.debug("Running ImportTsv with arguments: " + argsArray);
+    assertEquals(0, ToolRunner.run(conf, tool, argsArray));
 
     // Perform basic validation. If the input args did not include
     // ImportTsv.BULK_OUTPUT_CONF_KEY then validate data in the table.
     // Otherwise, validate presence of hfiles.
-    boolean createdHFiles = false;
-    String outputPath = null;
-    for (String arg : argv) {
-      if (arg.contains(ImportTsv.BULK_OUTPUT_CONF_KEY)) {
-        createdHFiles = true;
-        // split '-Dfoo=bar' on '=' and keep 'bar'
-        outputPath = arg.split("=")[1];
-        break;
+    boolean isDryRun = args.containsKey(ImportTsv.DRY_RUN_CONF_KEY) &&
+        "true".equalsIgnoreCase(args.get(ImportTsv.DRY_RUN_CONF_KEY));
+    if (args.containsKey(ImportTsv.BULK_OUTPUT_CONF_KEY)) {
+      if (isDryRun) {
+        assertFalse(String.format("Dry run mode, %s should not have been created.",
+                 ImportTsv.BULK_OUTPUT_CONF_KEY),
+            fs.exists(new Path(ImportTsv.BULK_OUTPUT_CONF_KEY)));
+      } else {
+        validateHFiles(fs, args.get(ImportTsv.BULK_OUTPUT_CONF_KEY), family);
       }
+    } else {
+      validateTable(conf, TableName.valueOf(table), family, valueMultiplier, isDryRun);
     }
-
-    if (createdHFiles)
-      validateHFiles(fs, outputPath, family);
-    else
-      validateTable(conf, TableName.valueOf(table), family, valueMultiplier);
 
     if (conf.getBoolean(DELETE_AFTER_LOAD_CONF, true)) {
       LOG.debug("Deleting test subdirectory");
@@ -350,7 +429,7 @@ public class TestImportTsv implements Configurable {
    * Confirm ImportTsv via data in online table.
    */
   private static void validateTable(Configuration conf, TableName tableName,
-      String family, int valueMultiplier) throws IOException {
+      String family, int valueMultiplier, boolean isDryRun) throws IOException {
 
     LOG.debug("Validating table.");
     Connection connection = ConnectionFactory.createConnection(conf);
@@ -364,14 +443,21 @@ public class TestImportTsv implements Configurable {
         // Scan entire family.
         scan.addFamily(Bytes.toBytes(family));
         ResultScanner resScanner = table.getScanner(scan);
+        int numRows = 0;
         for (Result res : resScanner) {
-          assertTrue(res.size() == 2);
+          numRows++;
+          assertEquals(2, res.size());
           List<Cell> kvs = res.listCells();
           assertTrue(CellUtil.matchingRow(kvs.get(0), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingRow(kvs.get(1), Bytes.toBytes("KEY")));
           assertTrue(CellUtil.matchingValue(kvs.get(0), Bytes.toBytes("VALUE" + valueMultiplier)));
           assertTrue(CellUtil.matchingValue(kvs.get(1), Bytes.toBytes("VALUE" + 2 * valueMultiplier)));
           // Only one result set is expected, so let it loop.
+        }
+        if (isDryRun) {
+          assertEquals(0, numRows);
+        } else {
+          assertEquals(1, numRows);
         }
         verified = true;
         break;
@@ -395,7 +481,6 @@ public class TestImportTsv implements Configurable {
    */
   private static void validateHFiles(FileSystem fs, String outputPath, String family)
       throws IOException {
-
     // validate number and content of output columns
     LOG.debug("Validating HFiles.");
     Set<String> configFamilies = new HashSet<String>();
@@ -407,7 +492,7 @@ public class TestImportTsv implements Configurable {
       foundFamilies.add(cf);
       assertTrue(
         String.format(
-          "HFile ouput contains a column family (%s) not present in input families (%s)",
+          "HFile output contains a column family (%s) not present in input families (%s)",
           cf, configFamilies),
           configFamilies.contains(cf));
       for (FileStatus hfile : fs.listStatus(cfStatus.getPath())) {
@@ -416,6 +501,8 @@ public class TestImportTsv implements Configurable {
           hfile.getLen() > 0);
       }
     }
+    assertTrue(String.format("HFile output does not contain the input family '%s'.", family),
+        foundFamilies.contains(family));
   }
 }
 
