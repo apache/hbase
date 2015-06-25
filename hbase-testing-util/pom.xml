@@ -59,6 +59,12 @@
             <artifactId>hbase-annotations</artifactId>
             <type>test-jar</type>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>jdk.tools</groupId>
+                    <artifactId>jdk.tools</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.hbase</groupId>
