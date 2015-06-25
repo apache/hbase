@@ -1110,10 +1110,12 @@ public class HRegionServer extends HasThread implements
     RegionLoad.Builder regionLoadBldr = RegionLoad.newBuilder();
     RegionSpecifier.Builder regionSpecifier = RegionSpecifier.newBuilder();
     for (HRegion region : regions) {
-      Set<String> regionCoprocessors = region.getCoprocessorHost().getCoprocessors();
-      Iterator<String> iterator = regionCoprocessors.iterator();
-      while (iterator.hasNext()) {
-        serverLoad.addCoprocessors(coprocessorBuilder.setName(iterator.next()).build());
+      if (region.getCoprocessorHost() != null) {
+        Set<String> regionCoprocessors = region.getCoprocessorHost().getCoprocessors();
+        Iterator<String> iterator = regionCoprocessors.iterator();
+        while (iterator.hasNext()) {
+          serverLoad.addCoprocessors(coprocessorBuilder.setName(iterator.next()).build());
+        }
       }
       serverLoad.addRegionLoads(createRegionLoad(region, regionLoadBldr, regionSpecifier));
       for (String coprocessor :
