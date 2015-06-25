@@ -229,6 +229,58 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
   }
 
+  @Test
+  public void testScannerException() throws IOException {
+    // Test for NPE issue when exception happens in scanners (HBASE-13835)
+
+    List<Cell> l1 = new ArrayList<Cell>();
+    l1.add(new KeyValue(row1, fam1, col5, data));
+    l1.add(new KeyValue(row2, fam1, col1, data));
+    l1.add(new KeyValue(row2, fam1, col2, data));
+    SeekScanner s1 = new SeekScanner(l1);
+    scanners.add(s1);
+
+    List<Cell> l2 = new ArrayList<Cell>();
+    l2.add(new KeyValue(row1, fam1, col1, data));
+    l2.add(new KeyValue(row1, fam1, col2, data));
+    SeekScanner s2 = new SeekScanner(l2);
+    scanners.add(s2);
+
+    List<Cell> l3 = new ArrayList<Cell>();
+    l3.add(new KeyValue(row1, fam1, col3, data));
+    l3.add(new KeyValue(row1, fam1, col4, data));
+    l3.add(new KeyValue(row1, fam2, col1, data));
+    l3.add(new KeyValue(row1, fam2, col2, data));
+    l3.add(new KeyValue(row2, fam1, col3, data));
+    SeekScanner s3 = new SeekScanner(l3);
+    scanners.add(s3);
+
+    List<Cell> l4 = new ArrayList<Cell>();
+    SeekScanner s4 = new SeekScanner(l4);
+    scanners.add(s4);
+
+    // Creating KeyValueHeap
+    KeyValueHeap kvh = new KeyValueHeap(scanners, CellComparator.COMPARATOR);
+
+    try {
+      for (KeyValueScanner scanner : scanners) {
+        ((SeekScanner) scanner).setRealSeekDone(false);
+      }
+      while (kvh.next() != null);
+      // The pollRealKV should throw IOE.
+      assertTrue(false);
+    } catch (IOException ioe) {
+      kvh.close();
+    }
+
+    // It implies there is no NPE thrown from kvh.close() if getting here
+    for (KeyValueScanner scanner : scanners) {
+      // Verify that close is called and only called once for each scanner
+      assertTrue(((SeekScanner) scanner).isClosed());
+      assertEquals(((SeekScanner) scanner).getClosedNum(), 1);
+    }
+  }
+
   private static class Scanner extends CollectionBackedScanner {
     private Iterator<Cell> iter;
     private Cell current;
@@ -238,6 +290,7 @@ public class TestKeyValueHeap extends HBaseTestCase {
       super(list);
     }
 
+    @Override
     public void close(){
       closed = true;
     }
@@ -247,6 +300,36 @@ public class TestKeyValueHeap extends HBaseTestCase {
     }
   }
 
+  private static class SeekScanner extends Scanner {
+    private int closedNum = 0;
+    private boolean realSeekDone = true;
 
+    public SeekScanner(List<Cell> list) {
+      super(list);
+    }
+
+    @Override
+    public void close() {
+      super.close();
+      closedNum++;
+    }
+
+    public int getClosedNum() {
+      return closedNum;
+    }
+
+    @Override
+    public boolean realSeekDone() {
+      return realSeekDone;
+    }
+
+    public void setRealSeekDone(boolean done) {
+      realSeekDone = done;
+    }
+
+    @Override
+    public void enforceSeek() throws IOException {
+      throw new IOException("enforceSeek must not be called on a " + "non-lazy scanner");
+    }
+  }
 }
-
