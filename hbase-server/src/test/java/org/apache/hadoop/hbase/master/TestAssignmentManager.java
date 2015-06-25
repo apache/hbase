@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
@@ -111,7 +112,7 @@ import com.google.protobuf.ServiceException;
 
 /**
  * Test {@link AssignmentManager}
- * 
+ *
  * TODO: This test suite has rotted. It is too fragile. The smallest change throws it off. It is
  * too brittle mocking up partial states in mockito trying to ensure we walk the right codepath
  * to obtain expected result. Redo.
@@ -476,7 +477,7 @@ public class TestAssignmentManager {
    * Run a simple server shutdown handler.
    * @throws KeeperException
    * @throws IOException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test (timeout=180000)
   public void testShutdownHandler()
@@ -507,7 +508,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws IOException
    * @throws ServiceException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test (timeout=180000)
   public void testSSHWhenDisablingTableInProgress() throws KeeperException, IOException,
@@ -523,7 +524,7 @@ public class TestAssignmentManager {
    * @throws KeeperException
    * @throws IOException
    * @throws ServiceException
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test (timeout=180000)
   public void testSSHWhenDisabledTableInProgress() throws KeeperException, IOException,
@@ -745,26 +746,13 @@ public class TestAssignmentManager {
       Mockito.when(services.getMetaTableLocator()).thenReturn(mtl);
       Configuration conf = server.getConfiguration();
       Mockito.when(services.getConfiguration()).thenReturn(conf);
+      Mockito.when(services.isServerCrashProcessingEnabled()).thenReturn(true);
+
       MasterProcedureEnv env = new MasterProcedureEnv(services);
       ServerCrashProcedure procedure = new ServerCrashProcedure(SERVERNAME_DEAD, true, false);
       am.failoverCleanupDone.set(true);
       clearRITInBackground(am, REGIONINFO, SERVERNAME_LIVE);
-      Method protectedExecuteMethod = null;
-        try {
-          protectedExecuteMethod =
-            procedure.getClass().getSuperclass().getDeclaredMethod("execute", Object.class);
-          protectedExecuteMethod.setAccessible(true);
-          Procedure [] procedures = new Procedure [] {procedure};
-          do {
-            // We know that ServerCrashProcedure does not return more than a single Procedure as
-            // result; it does not make children so the procedures[0] is safe.
-            procedures = (Procedure [])protectedExecuteMethod.invoke(procedures[0], env);
-          } while(procedures != null);
-        } catch (NoSuchMethodException | SecurityException | IllegalAccessException |
-            IllegalArgumentException | InvocationTargetException e) {
-          // TODO Auto-generated catch block
-          e.printStackTrace();
-        }
+      ProcedureTestingUtility.submitAndWait(conf, env, procedure);
       // The region in r will have been assigned.  It'll be up in zk as unassigned.
     } finally {
       if (connection != null) connection.close();
@@ -1182,7 +1170,7 @@ public class TestAssignmentManager {
    * When a region is in transition, if the region server opening the region goes down,
    * the region assignment takes a long time normally (waiting for timeout monitor to trigger
    * assign). This test is to make sure SSH reassigns it right away.
-   * @throws InterruptedException 
+   * @throws InterruptedException
    */
   @Test (timeout=180000)
   public void testSSHTimesOutOpeningRegionTransition()
