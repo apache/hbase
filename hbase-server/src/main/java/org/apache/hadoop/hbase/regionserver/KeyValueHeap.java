@@ -109,12 +109,14 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     KeyValue kvNext = this.current.peek();
     if (kvNext == null) {
       this.current.close();
+      this.current = null;
       this.current = pollRealKV();
     } else {
       KeyValueScanner topScanner = this.heap.peek();
       // no need to add current back to the heap if it is the only scanner left
       if (topScanner != null && this.comparator.compare(kvNext, topScanner.peek()) >= 0) {
         this.heap.add(this.current);
+        this.current = null;
         this.current = pollRealKV();
       }
     }
@@ -151,6 +153,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     } else {
       this.heap.add(this.current);
     }
+    this.current = null;
     this.current = pollRealKV();
     return (this.current != null);
   }
@@ -344,7 +347,12 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
 
     while (kvScanner != null && !kvScanner.realSeekDone()) {
       if (kvScanner.peek() != null) {
-        kvScanner.enforceSeek();
+        try {
+          kvScanner.enforceSeek();
+        } catch (IOException ioe) {
+          kvScanner.close();
+          throw ioe;
+        }
         KeyValue curKV = kvScanner.peek();
         if (curKV != null) {
           KeyValueScanner nextEarliestScanner = heap.peek();

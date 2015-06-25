@@ -137,12 +137,14 @@ public class ReversedKeyValueHeap extends KeyValueHeap {
       } else {
         this.current.close();
       }
+      this.current = null;
       this.current = pollRealKV();
     } else {
       KeyValueScanner topScanner = this.heap.peek();
       if (topScanner != null
           && this.comparator.compare(this.current, topScanner) > 0) {
         this.heap.add(this.current);
+        this.current = null;
         this.current = pollRealKV();
       }
     }
