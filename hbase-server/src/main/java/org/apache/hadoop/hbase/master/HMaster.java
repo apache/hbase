@@ -1288,7 +1288,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
       Collections.shuffle(allEnabledTables);
 
-      for(TableName table : allEnabledTables) {
+      for (TableName table : allEnabledTables) {
+        if (quotaManager.getNamespaceQuotaManager() != null &&
+            quotaManager.getNamespaceQuotaManager().getState(table.getNamespaceAsString()) != null){
+          LOG.debug("Skipping normalizing " + table + " since its namespace has quota");
+          continue;
+        }
         if (table.isSystemTable() || !getTableDescriptors().getDescriptor(table).
             getHTableDescriptor().isNormalizationEnabled()) {
           LOG.debug("Skipping normalization for table: " + table + ", as it's either system"
