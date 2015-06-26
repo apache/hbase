@@ -135,13 +135,13 @@ public class TestRateLimiter {
   @Test
   public void testFixedIntervalResourceAvailability() throws Exception {
     RateLimiter limiter = new FixedIntervalRateLimiter();
-    limiter.set(10, TimeUnit.MILLISECONDS);
+    limiter.set(10, TimeUnit.SECONDS);
 
     assertTrue(limiter.canExecute(10));
     limiter.consume(3);
     assertEquals(7, limiter.getAvailable());
     assertFalse(limiter.canExecute(10));
-    limiter.setNextRefillTime(limiter.getNextRefillTime() - 3);
+    limiter.setNextRefillTime(limiter.getNextRefillTime() - 1000);
     assertTrue(limiter.canExecute(10));
     assertEquals(10, limiter.getAvailable());
   }
