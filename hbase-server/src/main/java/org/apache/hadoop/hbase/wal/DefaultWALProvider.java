@@ -75,7 +75,7 @@ public class DefaultWALProvider implements WALProvider {
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
   }
 
-  private FSHLog log = null;
+  protected FSHLog log = null;
 
   /**
    * @param factory factory that made us, identity used for FS layout. may not be null
