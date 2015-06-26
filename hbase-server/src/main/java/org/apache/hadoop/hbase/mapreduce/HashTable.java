@@ -53,7 +53,6 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.partition.TotalOrderPartitioner;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -408,7 +407,8 @@ public class HashTable extends Configured implements Tool {
         }
         Path dataDir = new Path(TableHash.this.hashDir, HASH_DATA_DIR);
         Path dataFile = new Path(dataDir, getDataFileName(hashFileIndex));
-        mapFileReader = new MapFile.Reader(dataFile, conf);
+        mapFileReader = new MapFile.Reader(dataFile.getFileSystem(conf), dataFile.toString(),
+          conf);
       }
 
       @Override
@@ -446,7 +446,8 @@ public class HashTable extends Configured implements Tool {
     job.setNumReduceTasks(tableHash.numHashFiles);
     job.setOutputKeyClass(ImmutableBytesWritable.class);
     job.setOutputValueClass(ImmutableBytesWritable.class);
-    job.setOutputFormatClass(MapFileOutputFormat.class);
+    jobConf.set("mapreduce.outputformat.class",
+        "org.apache.hadoop.mapreduce.lib.output.MapFileOutputFormat");
     FileOutputFormat.setOutputPath(job, new Path(destPath, HASH_DATA_DIR));
     
     return job;

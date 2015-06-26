@@ -149,7 +149,7 @@ public class TestHashTable {
     for (int i = 0; i < numHashFiles; i++) {
       Path hashPath = new Path(dataDir, HashTable.TableHash.getDataFileName(i));
       
-      MapFile.Reader reader = new MapFile.Reader(hashPath, fs.getConf());
+      MapFile.Reader reader = new MapFile.Reader(fs, hashPath.toString(), fs.getConf());
       ImmutableBytesWritable key = new ImmutableBytesWritable();
       ImmutableBytesWritable hash = new ImmutableBytesWritable();
       while(reader.next(key, hash)) {
