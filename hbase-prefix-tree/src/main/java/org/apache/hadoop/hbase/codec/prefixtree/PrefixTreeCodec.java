@@ -114,7 +114,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
 
 
   @Override
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
     block.rewind();
     PrefixTreeArraySearcher searcher = null;
     try {
@@ -123,7 +123,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
       if (!searcher.positionAtFirstCell()) {
         return null;
       }
-      return KeyValueUtil.copyKeyToNewByteBuffer(searcher.current());
+      return searcher.current();
     } finally {
       DecoderFactory.checkIn(searcher);
     }

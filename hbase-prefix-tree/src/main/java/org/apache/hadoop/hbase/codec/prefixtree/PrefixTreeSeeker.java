@@ -23,7 +23,6 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
@@ -204,10 +203,8 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public int compareKey(CellComparator comparator, Cell key) {
-    // can't optimize this, make a copy of the key
-    ByteBuffer bb = getKeyDeepCopy();
     return comparator.compare(key,
-        new KeyValue.KeyOnlyKeyValue(bb.array(), bb.arrayOffset(), bb.limit()));
+        ptSearcher.current());
   }
   /**
    * Cloned version of the PrefixTreeCell where except the value part, the rest

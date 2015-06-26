@@ -66,13 +66,13 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
     int keyLength = block.getInt(Bytes.SIZEOF_INT);
     ByteBuffer dup = block.duplicate();
     int pos = 3 * Bytes.SIZEOF_INT;
     dup.position(pos);
     dup.limit(pos + keyLength);
-    return dup.slice();
+    return new KeyValue.KeyOnlyKeyValue(dup.array(), dup.arrayOffset() + pos, keyLength);
   }
 
   @Override

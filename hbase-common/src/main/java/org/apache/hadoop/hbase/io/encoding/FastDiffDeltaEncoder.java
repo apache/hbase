@@ -354,7 +354,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
     block.mark();
     block.position(Bytes.SIZEOF_INT + Bytes.SIZEOF_BYTE);
     int keyLength = ByteBufferUtils.readCompressedInt(block);
@@ -365,7 +365,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuffer dup = block.duplicate();
     dup.position(pos);
     dup.limit(pos + keyLength);
-    return dup.slice();
+    return new KeyValue.KeyOnlyKeyValue(dup.array(), dup.arrayOffset() + pos, keyLength);
   }
 
   @Override

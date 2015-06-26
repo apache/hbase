@@ -305,7 +305,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
     block.mark();
     block.position(Bytes.SIZEOF_INT);
     byte familyLength = block.get();
@@ -350,7 +350,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     block.get(result.array(), pos, Bytes.SIZEOF_BYTE);
 
     block.reset();
-    return result;
+    return new KeyValue.KeyOnlyKeyValue(result.array(), 0, keyLength);
   }
 
   @Override

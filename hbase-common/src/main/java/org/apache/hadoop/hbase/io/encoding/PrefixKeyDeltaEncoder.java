@@ -172,7 +172,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
   }
 
   @Override
-  public ByteBuffer getFirstKeyInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
     block.mark();
     block.position(Bytes.SIZEOF_INT);
     int keyLength = ByteBufferUtils.readCompressedInt(block);
@@ -187,7 +187,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     ByteBuffer dup = block.duplicate();
     dup.position(pos);
     dup.limit(pos + keyLength);
-    return dup.slice();
+    return new KeyValue.KeyOnlyKeyValue(dup.array(), dup.arrayOffset() + pos, keyLength);
   }
 
   @Override

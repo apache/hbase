@@ -83,14 +83,14 @@ public interface DataBlockEncoder {
       throws IOException;
 
   /**
-   * Return first key in block. Useful for indexing. Typically does not make
+   * Return first key in block as a cell. Useful for indexing. Typically does not make
    * a deep copy but returns a buffer wrapping a segment of the actual block's
    * byte array. This is because the first key in block is usually stored
    * unencoded.
    * @param block encoded block we want index, the position will not change
-   * @return First key in block.
+   * @return First key in block as a cell.
    */
-  ByteBuffer getFirstKeyInBlock(ByteBuffer block);
+  Cell getFirstKeyCellInBlock(ByteBuffer block);
 
   /**
    * Create a HFileBlock seeker which find KeyValues within a block.

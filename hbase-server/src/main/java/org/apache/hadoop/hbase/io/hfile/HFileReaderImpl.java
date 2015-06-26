@@ -758,12 +758,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (seekToBlock == null) {
         return false;
       }
-      ByteBuffer firstKey = getFirstKeyInBlock(seekToBlock);
-      // Will be changed as part of HBASE-13939
+      Cell firstKey = getFirstKeyCellInBlock(seekToBlock);
       if (reader.getComparator()
-          .compareKeyIgnoresMvcc(
-              new KeyValue.KeyOnlyKeyValue(firstKey.array(), firstKey.arrayOffset(),
-                  firstKey.limit()), key) >= 0) {
+           .compareKeyIgnoresMvcc(firstKey, key) >= 0) {
         long previousBlockOffset = seekToBlock.getPrevBlockOffset();
         // The key we are interested in
         if (previousBlockOffset == -1) {
@@ -780,8 +777,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         // TODO shortcut: seek forward in this block to the last key of the
         // block.
       }
-      Cell firstKeyInCurrentBlock = new KeyValue.KeyOnlyKeyValue(Bytes.getBytes(firstKey));
-      loadBlockAndSeekToKey(seekToBlock, firstKeyInCurrentBlock, true, key, true);
+      loadBlockAndSeekToKey(seekToBlock, firstKey, true, key, true);
       return true;
     }
 
@@ -1033,7 +1029,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       this.nextIndexedKey = null;
     }
 
-    protected ByteBuffer getFirstKeyInBlock(HFileBlock curBlock) {
+    protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
       ByteBuffer buffer = curBlock.getBufferWithoutHeader();
       // It is safe to manipulate this buffer because we own the buffer object.
       buffer.rewind();
@@ -1042,7 +1038,10 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       ByteBuffer keyBuff = buffer.slice();
       keyBuff.limit(klen);
       keyBuff.rewind();
-      return keyBuff;
+      // Create a KeyOnlyKv now. 
+      // TODO : Will change when Buffer backed cells come
+      return new KeyValue.KeyOnlyKeyValue(keyBuff.array(), keyBuff.arrayOffset()
+          + keyBuff.position(), klen);
     }
 
     @Override
@@ -1556,8 +1555,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
-    protected ByteBuffer getFirstKeyInBlock(HFileBlock curBlock) {
-      return dataBlockEncoder.getFirstKeyInBlock(getEncodedBuffer(curBlock));
+    protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
+      return dataBlockEncoder.getFirstKeyCellInBlock(getEncodedBuffer(curBlock));
     }
 
     protected int loadBlockAndSeekToKey(HFileBlock seekToBlock, Cell nextIndexedKey,
