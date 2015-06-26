@@ -234,7 +234,7 @@ public class ReplicationSink {
     try {
       table = this.sharedHtableCon.getTable(tableName);
       for (List<Row> rows : allRows) {
-        table.batch(rows);
+        table.batch(rows, null);
       }
     } catch (InterruptedException ix) {
       throw (InterruptedIOException)new InterruptedIOException().initCause(ix);

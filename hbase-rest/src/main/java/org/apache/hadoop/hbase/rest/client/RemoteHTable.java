@@ -792,19 +792,8 @@ public class RemoteHTable implements Table {
   }
 
   @Override
-  public Object[] batch(List<? extends Row> actions) throws IOException {
-    throw new IOException("batch not supported");
-  }
-
-  @Override
   public <R> void batchCallback(List<? extends Row> actions, Object[] results,
       Batch.Callback<R> callback) throws IOException, InterruptedException {
-    throw new IOException("batchCallback not supported");
-  }
-
-  @Override
-  public <R> Object[] batchCallback(List<? extends Row> actions, Batch.Callback<R> callback)
-   throws IOException, InterruptedException {
     throw new IOException("batchCallback not supported");
   }
 

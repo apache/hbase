@@ -92,13 +92,13 @@ public class TestSizeFailures {
         puts.add(p);
 
         if (puts.size() == 1000) {
-          table.batch(puts, new Object[1000]);
+          table.batch(puts, null);
           puts.clear();
         }
       }
 
       if (puts.size() > 0) {
-        table.batch(puts, new Object[puts.size()]);
+        table.batch(puts, null);
       }
     }
   }

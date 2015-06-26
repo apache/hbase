@@ -20,18 +20,21 @@
 <%@ page contentType="text/html;charset=UTF-8"
   import="static org.apache.commons.lang.StringEscapeUtils.escapeXml"
   import="java.util.TreeMap"
+  import="java.util.List"
   import="java.util.Map"
   import="java.util.Set"
   import="java.util.Collection"
   import="org.apache.hadoop.conf.Configuration"
   import="org.apache.hadoop.hbase.client.HTable"
   import="org.apache.hadoop.hbase.client.Admin"
+  import="org.apache.hadoop.hbase.client.RegionLocator"
   import="org.apache.hadoop.hbase.HRegionInfo"
+  import="org.apache.hadoop.hbase.HRegionLocation"
   import="org.apache.hadoop.hbase.ServerName"
   import="org.apache.hadoop.hbase.ServerLoad"
   import="org.apache.hadoop.hbase.RegionLoad"
   import="org.apache.hadoop.hbase.HConstants"
-  import="org.apache.hadoop.hbase.master.HMaster" 
+  import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.hbase.zookeeper.MetaTableLocator"
   import="org.apache.hadoop.hbase.util.Bytes"
   import="org.apache.hadoop.hbase.util.FSUtils"
@@ -119,8 +122,8 @@
         </div><!--/.nav-collapse -->
     </div>
 </div>
-<% 
-if ( fqtn != null ) { 
+<%
+if ( fqtn != null ) {
   table = (HTable) master.getConnection().getTable(fqtn);
   if (table.getTableDescriptor().getRegionReplication() > 1) {
     tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
@@ -128,7 +131,7 @@ if ( fqtn != null ) {
   } else {
     tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
   }
-  if ( !readOnly && action != null ) { 
+  if ( !readOnly && action != null ) {
 %>
 <div class="container">
 
@@ -147,7 +150,7 @@ if ( fqtn != null ) {
       } else {
         admin.split(TableName.valueOf(fqtn));
       }
-    
+
     %> Split request accepted. <%
     } else if (action.equals("compact")) {
       if (key != null && key.length() > 0) {
@@ -201,6 +204,7 @@ if ( fqtn != null ) {
 </table>
 <%} else {
   Admin admin = master.getConnection().getAdmin();
+  RegionLocator r = master.getConnection().getRegionLocator(table.getName());
   try { %>
 <h2>Table Attributes</h2>
 <table class="table table-striped">
@@ -256,7 +260,7 @@ if ( fqtn != null ) {
     <table class="table table-striped">
       <tr>
        <th>Property</th>
-       <th>Value</th>       
+       <th>Value</th>
       </tr>
     <%
     Map<Bytes, Bytes> familyValues = family.getValues();
@@ -278,13 +282,13 @@ if ( fqtn != null ) {
 </table>
 <%
   Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
-  Map<HRegionInfo, ServerName> regions = table.getRegionLocations();
+  List<HRegionLocation> regions = r.getAllRegionLocations();
   if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
 <%
-  for (Map.Entry<HRegionInfo, ServerName> hriEntry : regions.entrySet()) {
-    HRegionInfo regionInfo = hriEntry.getKey();
-    ServerName addr = hriEntry.getValue();
+  for (HRegionLocation hriEntry : regions) {
+    HRegionInfo regionInfo = hriEntry.getRegionInfo();
+    ServerName addr = hriEntry.getServerName();
     long req = 0;
     float locality = 0.0f;
     String urlRegionServer = null;
@@ -339,8 +343,8 @@ if ( fqtn != null ) {
 <h2>Regions by Region Server</h2>
 <table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
 <%
-  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
-     ServerName addr = rdEntry.getKey();                                       
+  for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
+     ServerName addr = rdEntry.getKey();
      String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
 %>
 <tr>
@@ -399,8 +403,8 @@ Actions:
 <% } %>
 </div>
 </div>
-<% } 
-} else { // handle the case for fqtn is null with error message + redirect 
+<% }
+} else { // handle the case for fqtn is null with error message + redirect
 %>
 <div class="container">
     <div class="row inner_header">

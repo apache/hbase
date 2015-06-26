@@ -150,7 +150,7 @@ public class TestMultiParallel {
       try {
         try (Table t = connection.getTable(TEST_TABLE, executor)) {
           List<Put> puts = constructPutRequests(); // creates a Put for every region
-          t.batch(puts);
+          t.batch(puts, null);
           HashSet<ServerName> regionservers = new HashSet<ServerName>();
           try (RegionLocator locator = connection.getRegionLocator(TEST_TABLE)) {
             for (Row r : puts) {
@@ -173,7 +173,7 @@ public class TestMultiParallel {
 
     // load test data
     List<Put> puts = constructPutRequests();
-    table.batch(puts);
+    table.batch(puts, null);
 
     // create a list of gets and run it
     List<Row> gets = new ArrayList<Row>();
@@ -326,7 +326,8 @@ public class TestMultiParallel {
     // put multiple rows using a batch
     List<Put> puts = constructPutRequests();
 
-    Object[] results = table.batch(puts);
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     if (true) {
@@ -337,7 +338,8 @@ public class TestMultiParallel {
       liveRS.getRegionServer().abort("Aborting for tests", new Exception("testBatchWithPut"));
       puts = constructPutRequests();
       try {
-        results = table.batch(puts);
+        results = new Object[puts.size()];
+        table.batch(puts, results);
       } catch (RetriesExhaustedWithDetailsException ree) {
         LOG.info(ree.getExhaustiveDescription());
         table.close();
@@ -357,7 +359,8 @@ public class TestMultiParallel {
 
     // Load some data
     List<Put> puts = constructPutRequests();
-    Object[] results = table.batch(puts);
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
@@ -367,7 +370,8 @@ public class TestMultiParallel {
       delete.addFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
-    results = table.batch(deletes);
+    results= new Object[deletes.size()];
+    table.batch(deletes, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Get to make sure ...
@@ -386,7 +390,8 @@ public class TestMultiParallel {
 
     // Load some data
     List<Put> puts = constructPutRequests();
-    Object[] results = table.batch(puts);
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Deletes
@@ -420,7 +425,8 @@ public class TestMultiParallel {
       put.add(BYTES_FAMILY, qual, VALUE);
       puts.add(put);
     }
-    Object[] results = table.batch(puts);
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
 
     // validate
     validateSizeAndEmpty(results, 100);
@@ -434,7 +440,8 @@ public class TestMultiParallel {
       gets.add(get);
     }
 
-    Object[] multiRes = table.batch(gets);
+    Object[] multiRes = new Object[gets.size()];
+    table.batch(gets, multiRes);
 
     int idx = 0;
     for (Object r : multiRes) {
@@ -471,7 +478,8 @@ public class TestMultiParallel {
     actions.add(inc);
     actions.add(a);
 
-    Object[] multiRes = table.batch(actions);
+    Object[] multiRes = new Object[actions.size()];
+    table.batch(actions, multiRes);
     validateResult(multiRes[1], QUAL1, Bytes.toBytes("abcdef"));
     validateResult(multiRes[1], QUAL4, Bytes.toBytes("xyz"));
     validateResult(multiRes[0], QUAL2, Bytes.toBytes(2L));
@@ -577,7 +585,9 @@ public class TestMultiParallel {
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
 
     // Load some data to start
-    Object[] results = table.batch(constructPutRequests());
+    List<Put> puts = constructPutRequests();
+    Object[] results = new Object[puts.size()];
+    table.batch(puts, results);
     validateSizeAndEmpty(results, KEYS.length);
 
     // Batch: get, get, put(new col), delete, get, get of put, get of deleted,
@@ -621,7 +631,8 @@ public class TestMultiParallel {
     put.add(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
-    results = table.batch(actions);
+    results = new Object[actions.size()];
+    table.batch(actions, results);
 
     // Validation
 

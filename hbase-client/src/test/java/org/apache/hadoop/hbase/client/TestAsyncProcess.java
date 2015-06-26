@@ -867,7 +867,7 @@ public class TestAsyncProcess {
     MyAsyncProcess ap = new MyAsyncProcess(con, conf, con.nbThreads);
     ht.multiAp = ap;
 
-    ht.batch(gets, new Object[gets.size()]);
+    ht.batch(gets, null);
 
     Assert.assertEquals(ap.nbActions.get(), NB_REGS);
     Assert.assertEquals("1 multi response per server", 2, ap.nbMultiResponse.get());

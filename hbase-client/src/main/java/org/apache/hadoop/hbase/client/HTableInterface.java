@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -44,26 +43,6 @@ public interface HTableInterface extends Table {
    */
   @Deprecated
   byte[] getTableName();
-
-  /**
-   * @deprecated Use {@link #existsAll(java.util.List)}  instead.
-   */
-  @Deprecated
-  Boolean[] exists(List<Get> gets) throws IOException;
-
-
-  /**
-   * See {@link #setAutoFlush(boolean, boolean)}
-   *
-   * @param autoFlush
-   *          Whether or not to enable 'auto-flush'.
-   * @deprecated in 0.96. When called with setAutoFlush(false), this function also
-   *  set clearBufferOnFail to true, which is unexpected but kept for historical reasons.
-   *  Replace it with setAutoFlush(false, false) if this is exactly what you want, though
-   *  this is the method you want for most cases.
-   */
-  @Deprecated
-  void setAutoFlush(boolean autoFlush);
 
   /**
    * Turns 'auto-flush' on or off.
@@ -96,8 +75,7 @@ public interface HTableInterface extends Table {
    *          Whether to keep Put failures in the writeBuffer. If autoFlush is true, then
    *          the value of this parameter is ignored and clearBufferOnFail is set to true.
    *          Setting clearBufferOnFail to false is deprecated since 0.96.
-   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
-   *  {@link #setAutoFlush(boolean)}} instead.
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated.
    * @see BufferedMutator#flush()
    */
   @Deprecated
@@ -105,8 +83,8 @@ public interface HTableInterface extends Table {
 
   /**
    * Set the autoFlush behavior, without changing the value of {@code clearBufferOnFail}.
-   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Use
-   * {@link #setAutoFlush(boolean)} instead, or better still, move on to {@link BufferedMutator}
+   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated. Move on to
+   *             {@link BufferedMutator}
    */
   @Deprecated
   void setAutoFlushTo(boolean autoFlush);
@@ -157,23 +135,4 @@ public interface HTableInterface extends Table {
    */
   @Deprecated
   void setWriteBufferSize(long writeBufferSize) throws IOException;
-
-
-  /**
-   * Return the row that matches <i>row</i> exactly,
-   * or the one that immediately precedes it.
-   *
-   * @param row A row key.
-   * @param family Column family to include in the {@link Result}.
-   * @throws IOException if a remote or network exception occurs.
-   * @since 0.20.0
-   *
-   * @deprecated As of version 0.92 this method is deprecated without
-   * replacement. Since version 0.96+, you can use reversed scan.
-   * getRowOrBefore is used internally to find entries in hbase:meta and makes
-   * various assumptions about the table (which are true for hbase:meta but not
-   * in general) to be efficient.
-   */
-  @Deprecated
-  Result getRowOrBefore(byte[] row, byte[] family) throws IOException;
 }

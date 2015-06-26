@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
@@ -982,8 +983,9 @@ public class TestHCM {
        Put put4 = new Put(otherRow);
        put4.add(FAM_NAM, otherRow, otherRow);
 
-       // do multi
-       table.batch(Lists.newArrayList(put4, put3)); // first should be a valid row,
+      // do multi
+      ArrayList<Put> actions = Lists.newArrayList(put4, put3);
+      table.batch(actions, null); // first should be a valid row,
        // second we get RegionMovedException.
 
        setNumTries(conn, prevNumRetriesVal);

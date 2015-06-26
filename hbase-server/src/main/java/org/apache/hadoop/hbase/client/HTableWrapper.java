@@ -242,35 +242,10 @@ public final class HTableWrapper implements Table {
     table.batch(actions, results);
   }
 
-  /**
-   * {@inheritDoc}
-   * @deprecated If any exception is thrown by one of the actions, there is no way to
-   * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
-   */
-  @Deprecated
-  @Override
-  public Object[] batch(List<? extends Row> actions)
-      throws IOException, InterruptedException {
-    return table.batch(actions);
-  }
-
   @Override
   public <R> void batchCallback(List<? extends Row> actions, Object[] results,
       Batch.Callback<R> callback) throws IOException, InterruptedException {
     table.batchCallback(actions, results, callback);
-  }
-
-  /**
-   * {@inheritDoc}
-   * @deprecated If any exception is thrown by one of the actions, there is no way to
-   * retrieve the partially executed results. Use
-   * {@link #batchCallback(List, Object[], Batch.Callback)} instead.
-   */
-  @Deprecated
-  @Override
-  public <R> Object[] batchCallback(List<? extends Row> actions,
-      Batch.Callback<R> callback) throws IOException, InterruptedException {
-    return table.batchCallback(actions, callback);
   }
 
   @Override

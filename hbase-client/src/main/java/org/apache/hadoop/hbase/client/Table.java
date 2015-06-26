@@ -120,21 +120,6 @@ public interface Table extends Closeable {
     InterruptedException;
 
   /**
-   * Same as {@link #batch(List, Object[])}, but returns an array of
-   * results instead of using a results parameter reference.
-   *
-   * @param actions list of Get, Put, Delete, Increment, Append objects
-   * @return the results from the actions. A null in the return array means that
-   *         the call for that action failed, even after retries
-   * @throws IOException
-   * @since 0.90.0
-   * @deprecated If any exception is thrown by one of the actions, there is no way to
-   * retrieve the partially executed results. Use {@link #batch(List, Object[])} instead.
-   */
-  @Deprecated
-  Object[] batch(final List<? extends Row> actions) throws IOException, InterruptedException;
-
-  /**
    * Same as {@link #batch(List, Object[])}, but with a callback.
    * @since 0.96.0
    */
@@ -142,20 +127,6 @@ public interface Table extends Closeable {
     final List<? extends Row> actions, final Object[] results, final Batch.Callback<R> callback
   )
     throws IOException, InterruptedException;
-
-  /**
-   * Same as {@link #batch(List)}, but with a callback.
-   *
-   * @since 0.96.0
-   * @deprecated If any exception is thrown by one of the actions, there is no way to retrieve the
-   * partially executed results. Use {@link #batchCallback(List, Object[],
-   * org.apache.hadoop.hbase.client.coprocessor.Batch.Callback)} instead.
-   */
-  @Deprecated
-  <R> Object[] batchCallback(
-    List<? extends Row> actions, Batch.Callback<R> callback
-  ) throws IOException,
-    InterruptedException;
 
   /**
    * Extracts certain cells from a given row.
@@ -219,7 +190,7 @@ public interface Table extends Closeable {
 
   /**
    * Puts some data in the table.
-   * 
+   *
    * @param put The data to put.
    * @throws IOException if a remote or network exception occurs.
    * @since 0.20.0

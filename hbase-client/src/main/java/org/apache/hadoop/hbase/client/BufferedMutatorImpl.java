@@ -247,7 +247,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   /**
-   * This is used for legacy purposes in {@link HTable#getWriteBuffer()} only. This should not beÓ
+   * This is used for legacy purposes only. This should not beÓ
    * called from production uses.
    * @deprecated Going away when we drop public support for {@link HTableInterface}.
 Ó   */

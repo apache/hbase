@@ -52,7 +52,7 @@ import java.util.List;
  * extreme circumstances, such as JVM or machine failure, may cause some data loss.</p>
  *
  * <p>NOTE: This class replaces the functionality that used to be available via
- * {@link HTableInterface#setAutoFlush(boolean)} set to {@code false}.
+ *HTableInterface#setAutoFlush(boolean) set to {@code false}.
  * </p>
  *
  * <p>See also the {@code BufferedMutatorExample} in the hbase-examples module.</p>

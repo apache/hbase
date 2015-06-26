@@ -84,7 +84,10 @@ public class TestFromClientSideNoCodec {
       HTableInterface hti = (HTableInterface) ht;
       // Check getRowOrBefore
       byte[] f = fs[0];
-      r = hti.getRowOrBefore(row, f);
+      Get get = new Get(row);
+      get.setClosestRowBefore(true);
+      get.addFamily(f);
+      r = ht.get(get);
       assertTrue(r.toString(), r.containsColumn(f, f));
     }
     // Check scan.

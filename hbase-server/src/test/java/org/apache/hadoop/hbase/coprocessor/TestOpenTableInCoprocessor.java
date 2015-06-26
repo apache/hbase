@@ -104,7 +104,7 @@ public class TestOpenTableInCoprocessor {
       Put p = new Put(new byte[] { 'a' });
       p.add(family, null, new byte[] { 'a' });
       try {
-        table.batch(Collections.singletonList(put));
+        table.batch(Collections.singletonList(put), null);
       } catch (InterruptedException e1) {
         throw new IOException(e1);
       }

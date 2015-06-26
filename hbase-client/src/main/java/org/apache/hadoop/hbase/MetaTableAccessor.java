@@ -1457,7 +1457,7 @@ public class MetaTableAccessor {
       if (METALOG.isDebugEnabled()) {
         METALOG.debug(mutationsToString(mutations));
       }
-      t.batch(mutations, new Object[mutations.size()]);
+      t.batch(mutations, null);
     } catch (InterruptedException e) {
       InterruptedIOException ie = new InterruptedIOException(e.getMessage());
       ie.initCause(e);
