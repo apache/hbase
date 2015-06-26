@@ -26,7 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-
+import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
 // imports for classes still in regionserver.wal
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 
@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
  * {@link RegionGroupingProvider}.
  */
 @InterfaceAudience.Private
-class BoundedRegionGroupingProvider extends RegionGroupingProvider {
+public class BoundedRegionGroupingProvider extends RegionGroupingProvider {
   private static final Log LOG = LogFactory.getLog(BoundedRegionGroupingProvider.class);
 
   static final String NUM_REGION_GROUPS = "hbase.wal.regiongrouping.numgroups";
@@ -102,5 +102,58 @@ class BoundedRegionGroupingProvider extends RegionGroupingProvider {
     if (failure != null) {
       throw failure;
     }
+  }
+
+  /**
+   * iff the given WALFactory is using the BoundedRegionGroupingProvider for meta and/or non-meta,
+   * count the number of files (rolled and active). if either of them isn't, count 0
+   * for that provider.
+   * @param walFactory may not be null.
+   */
+  public static long getNumLogFiles(WALFactory walFactory) {
+    long result = 0;
+    if (walFactory.provider instanceof BoundedRegionGroupingProvider) {
+      BoundedRegionGroupingProvider groupProviders =
+          (BoundedRegionGroupingProvider)walFactory.provider;
+      for (int i = 0; i < groupProviders.delegates.length; i++) {
+        result +=
+            ((FSHLog)((DefaultWALProvider)(groupProviders.delegates[i])).log).getNumLogFiles();
+      }
+    }
+    WALProvider meta = walFactory.metaProvider.get();
+    if (meta instanceof BoundedRegionGroupingProvider) {
+      for (int i = 0; i < ((BoundedRegionGroupingProvider)meta).delegates.length; i++) {
+        result += ((FSHLog)
+            ((DefaultWALProvider)(((BoundedRegionGroupingProvider)meta).delegates[i])).log)
+            .getNumLogFiles();      }
+    }
+    return result;
+  }
+
+  /**
+   * iff the given WALFactory is using the BoundedRegionGroupingProvider for meta and/or non-meta,
+   * count the size of files (rolled and active). if either of them isn't, count 0
+   * for that provider.
+   * @param walFactory may not be null.
+   */
+  public static long getLogFileSize(WALFactory walFactory) {
+    long result = 0;
+    if (walFactory.provider instanceof BoundedRegionGroupingProvider) {
+      BoundedRegionGroupingProvider groupProviders =
+          (BoundedRegionGroupingProvider)walFactory.provider;
+      for (int i = 0; i < groupProviders.delegates.length; i++) {
+        result +=
+            ((FSHLog)((DefaultWALProvider)(groupProviders.delegates[i])).log).getLogFileSize();
+      }
+    }
+    WALProvider meta = walFactory.metaProvider.get();
+    if (meta instanceof BoundedRegionGroupingProvider) {
+      for (int i = 0; i < ((BoundedRegionGroupingProvider)meta).delegates.length; i++) {
+        result += ((FSHLog)
+            ((DefaultWALProvider)(((BoundedRegionGroupingProvider)meta).delegates[i])).log)
+            .getLogFileSize();
+      }
+    }
+    return result;
   }
 }

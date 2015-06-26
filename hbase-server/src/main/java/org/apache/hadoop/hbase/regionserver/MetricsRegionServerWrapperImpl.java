@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.wal.BoundedRegionGroupingProvider;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -516,14 +517,16 @@ class MetricsRegionServerWrapperImpl
       //If we've time traveled keep the last requests per second.
       if ((currentTime - lastRan) > 0) {
         long currentRequestCount = getTotalRequestCount();
-        requestsPerSecond = (currentRequestCount - lastRequestCount) / ((currentTime - lastRan) / 1000.0);
+        requestsPerSecond = (currentRequestCount - lastRequestCount) /
+            ((currentTime - lastRan) / 1000.0);
         lastRequestCount = currentRequestCount;
       }
       lastRan = currentTime;
 
-      numWALFiles = DefaultWALProvider.getNumLogFiles(regionServer.walFactory);
-      walFileSize = DefaultWALProvider.getLogFileSize(regionServer.walFactory);
-
+      numWALFiles = DefaultWALProvider.getNumLogFiles(regionServer.walFactory) +
+          BoundedRegionGroupingProvider.getNumLogFiles(regionServer.walFactory);
+      walFileSize = DefaultWALProvider.getLogFileSize(regionServer.walFactory) +
+          BoundedRegionGroupingProvider.getLogFileSize(regionServer.walFactory);
       //Copy over computed values so that no thread sees half computed values.
       numStores = tempNumStores;
       numStoreFiles = tempNumStoreFiles;
