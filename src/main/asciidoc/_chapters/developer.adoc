@@ -1339,6 +1339,10 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.1
 | Nick Dimiduk
+
+| 1.2
+| Sean Busbey
+
 |===
 
 [[code.standards]]
