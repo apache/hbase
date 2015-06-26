@@ -246,6 +246,7 @@ public class RpcServer implements RpcServerInterface {
   //of client connections
   private Listener listener = null;
   protected Responder responder = null;
+  protected AuthenticationTokenSecretManager authTokenSecretMgr = null;
   protected int numConnections = 0;
 
   protected HBaseRPCErrorHandler errorHandler = null;
@@ -2046,10 +2047,10 @@ public class RpcServer implements RpcServerInterface {
    */
   @Override
   public synchronized void startThreads() {
-    AuthenticationTokenSecretManager mgr = createSecretManager();
-    if (mgr != null) {
-      setSecretManager(mgr);
-      mgr.start();
+    authTokenSecretMgr = createSecretManager();
+    if (authTokenSecretMgr != null) {
+      setSecretManager(authTokenSecretMgr);
+      authTokenSecretMgr.start();
     }
     this.authManager = new ServiceAuthorizationManager();
     HBasePolicyProvider.init(conf, authManager);
@@ -2215,6 +2216,10 @@ public class RpcServer implements RpcServerInterface {
   public synchronized void stop() {
     LOG.info("Stopping server on " + port);
     running = false;
+    if (authTokenSecretMgr != null) {
+      authTokenSecretMgr.stop();
+      authTokenSecretMgr = null;
+    }
     listener.interrupt();
     listener.doStop();
     responder.interrupt();
