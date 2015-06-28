@@ -372,8 +372,8 @@ are combined counts. Request count is sum of hits and misses.</p>
     <tr>
         <th>Bucket Offset</th>
         <th>Allocation Size</th>
-        <th>Free Count</th>
-        <th>Used Count</th>
+        <th>Free Bytes</th>
+        <th>Used Bytes</th>
     </tr>
 <%for Bucket bucket: buckets %>
     <tr>
