@@ -242,7 +242,7 @@ public class Result implements CellScannable, CellScanner {
    *
    * WARNING do not use, expensive.  This does an arraycopy of the cell[]'s value.
    *
-   * Added to ease transition from  0.94 -> 0.96.
+   * Added to ease transition from  0.94 -&gt; 0.96.
    *
    * @deprecated as of 0.96, use {@link #rawCells()}
    * @return array of KeyValues, empty array if nothing in result.
@@ -272,7 +272,7 @@ public class Result implements CellScannable, CellScanner {
    *
    * WARNING do not use, expensive.  This does  an arraycopy of the cell[]'s value.
    *
-   * Added to ease transition from  0.94 -> 0.96.
+   * Added to ease transition from  0.94 -&gt; 0.96.
    *
    * @deprecated as of 0.96, use {@link #listCells()}
    * @return all sorted List of KeyValues; can be null if no cells in the result

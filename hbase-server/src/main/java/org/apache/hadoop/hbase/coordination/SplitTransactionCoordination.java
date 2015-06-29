@@ -81,8 +81,8 @@ public interface SplitTransactionCoordination {
    * @param std split transaction details
    * @param parent
    * @throws IOException If thrown, transaction failed. Call
-   *  {@link org.apache.hadoop.hbase.regionserver.
-   *  SplitTransaction#rollback(Server, RegionServerServices)}
+   *                     {@link org.apache.hadoop.hbase.regionserver.SplitTransaction#rollback(
+   *                         Server, RegionServerServices)}
    */
   void completeSplitTransaction(RegionServerServices services, Region first,
       Region second, SplitTransactionDetails std, Region parent) throws IOException;

@@ -144,19 +144,19 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   /**
    * Seek forward only (should be called reseekToKeyInBlock?).
-   * <p/>
-   * If the exact key is found look at the seekBefore variable and:<br/>
-   * - if true: go to the previous key if it's true<br/>
+   * <p>
+   * If the exact key is found look at the seekBefore variable and:<br>
+   * - if true: go to the previous key if it's true<br>
    * - if false: stay on the exact key
-   * <p/>
+   * </p><p>
    * If the exact key is not found, then go to the previous key *if possible*, but remember to
    * leave the scanner in a valid state if possible.
-   * <p/>
+   * </p>
    * @param keyOnlyBytes KeyValue format of a Cell's key at which to position the seeker
    * @param offset offset into the keyOnlyBytes array
    * @param length number of bytes of the keyOnlyBytes array to use
    * @param forceBeforeOnExactMatch if an exact match is found and seekBefore=true, back up 1 Cell
-   * @return 0 if the seeker is on the exact key<br/>
+   * @return 0 if the seeker is on the exact key<br>
    *         1 if the seeker is not on the key for any reason, including seekBefore being true
    */
   @Override

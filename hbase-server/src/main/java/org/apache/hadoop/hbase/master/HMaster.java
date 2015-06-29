@@ -1300,7 +1300,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
    * @return true if normalization step was performed successfully, false otherwise
    *   (specifically, if HMaster hasn't been initialized properly or normalization
    *   is globally disabled)
-   * @throws IOException, CoordinatedStateException
+   * @throws IOException
+   * @throws CoordinatedStateException
    */
   public boolean normalizeRegions() throws IOException, CoordinatedStateException {
     if (!this.initialized) {

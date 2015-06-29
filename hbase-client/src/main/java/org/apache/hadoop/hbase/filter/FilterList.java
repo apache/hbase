@@ -229,7 +229,7 @@ final public class FilterList extends Filter {
    *
    * When removing this, its body should be placed in transformCell.
    *
-   * This is for transition from 0.94 -> 0.96
+   * This is for transition from 0.94 -&gt; 0.96
    */
   @Deprecated
   @Override

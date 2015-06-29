@@ -280,7 +280,7 @@ public final class ProtobufUtil {
    * @param bytes Bytes to check.
    * @param offset offset to start at
    * @param len length to use
-   * @return True if passed <code>bytes</code> has {@link ProtobufMagic#PB_MAGIC} for a prefix.
+   * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes, int offset, int len) {
     if (bytes == null || len < PB_MAGIC.length) return false;

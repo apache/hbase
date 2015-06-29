@@ -555,7 +555,8 @@ public class KeyValueUtil {
 
   /**
    * Create a KeyValue reading from the raw InputStream. Named
-   * <code>iscreate</code> so doesn't clash with {@link #create(DataInput)}
+   * <code>iscreate</code> so doesn't clash with the <code>create(DataInput)</code> method
+   * added in 2.0
    *
    * @param in
    * @param withTags

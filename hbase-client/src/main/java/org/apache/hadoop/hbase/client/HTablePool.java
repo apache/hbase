@@ -170,8 +170,6 @@ public class HTablePool implements Closeable {
 
   /**
    * Get a reference to the specified table from the pool.
-   * <p>
-   * <p/>
    *
    * @param tableName
    *          table name
@@ -189,7 +187,6 @@ public class HTablePool implements Closeable {
 
   /**
    * Get a reference to the specified table from the pool.
-   * <p>
    *
    * Create a new one if one is not available.
    *
