@@ -492,13 +492,12 @@ public final class ByteBufferUtils {
     return output;
   }
 
-  public static int compareTo(ByteBuffer buf1, int o1, int len1, ByteBuffer buf2, int o2, int len2) {
-    if (buf1.hasArray() && buf2.hasArray()) {
-      return Bytes.compareTo(buf1.array(), buf1.arrayOffset() + o1, len1, buf2.array(),
-          buf2.arrayOffset() + o2, len2);
+  public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    if (UnsafeAccess.isAvailable()) {
+      return compareToUnsafe(buf1, o1, l1, buf2, o2, l2);
     }
-    int end1 = o1 + len1;
-    int end2 = o2 + len2;
+    int end1 = o1 + l1;
+    int end2 = o2 + l2;
     for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
       int a = buf1.get(i) & 0xFF;
       int b = buf2.get(j) & 0xFF;
@@ -506,7 +505,89 @@ public final class ByteBufferUtils {
         return a - b;
       }
     }
-    return len1 - len2;
+    return l1 - l2;
+  }
+
+  static int compareToUnsafe(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+    final int minLength = Math.min(l1, l2);
+    final int minWords = minLength / Bytes.SIZEOF_LONG;
+
+    /*
+     * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
+     * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
+     * 64-bit.
+     */
+    int j = minWords << 3; // Same as minWords * SIZEOF_LONG
+    for (int i = 0; i < j; i += Bytes.SIZEOF_LONG) {
+      long lw = UnsafeAccess.getAsLong(buf1, o1 + i);
+      long rw = UnsafeAccess.getAsLong(buf2, o2 + i);
+      long diff = lw ^ rw;
+      if (diff != 0) {
+        return lessThanUnsignedLong(lw, rw) ? -1 : 1;
+      }
+    }
+    int offset = j;
+
+    if (minLength - offset >= Bytes.SIZEOF_INT) {
+      int il = UnsafeAccess.getAsInt(buf1, o1 + offset);
+      int ir = UnsafeAccess.getAsInt(buf2, o2 + offset);
+      if (il != ir) {
+        return lessThanUnsignedInt(il, ir) ? -1 : 1;
+      }
+      offset += Bytes.SIZEOF_INT;
+    }
+    if (minLength - offset >= Bytes.SIZEOF_SHORT) {
+      short sl = UnsafeAccess.getAsShort(buf1, o1 + offset);
+      short sr = UnsafeAccess.getAsShort(buf2, o2 + offset);
+      if (sl != sr) {
+        return lessThanUnsignedShort(sl, sr) ? -1 : 1;
+      }
+      offset += Bytes.SIZEOF_SHORT;
+    }
+    if (minLength - offset == 1) {
+      int a = (buf1.get(o1 + offset) & 0xff);
+      int b = (buf2.get(o2 + offset) & 0xff);
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return l1 - l2;
+  }
+
+  /*
+   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
+   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  private static boolean lessThanUnsignedLong(long x1, long x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Long.reverseBytes(x1);
+      x2 = Long.reverseBytes(x2);
+    }
+    return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
+  }
+
+  /*
+   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
+   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  private static boolean lessThanUnsignedInt(int x1, int x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Integer.reverseBytes(x1);
+      x2 = Integer.reverseBytes(x2);
+    }
+    return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
+  }
+
+  /*
+   * Both values are passed as is read by Unsafe. When platform is Little Endian, have to convert
+   * to corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  private static boolean lessThanUnsignedShort(short x1, short x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Short.reverseBytes(x1);
+      x2 = Short.reverseBytes(x2);
+    }
+    return (x1 & 0xffff) < (x2 & 0xffff);
   }
 
   /**
