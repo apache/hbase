@@ -106,6 +106,7 @@ implements Configurable {
       for (int i = 0; i < splits.length; i++) {
         LOG.info(Bytes.toStringBinary(splits[i]));
       }
+      this.lastReduces = reduces;
     }
     int pos = Bytes.binarySearch(this.splits, key.get(), key.getOffset(),
       key.getLength());
@@ -138,5 +139,7 @@ implements Configurable {
     }
     LOG.info("startkey=" + Bytes.toStringBinary(startkey) +
         ", endkey=" + Bytes.toStringBinary(endkey));
+    // Reset last reduces count on change of Start / End key
+    this.lastReduces = -1;
   }
 }
