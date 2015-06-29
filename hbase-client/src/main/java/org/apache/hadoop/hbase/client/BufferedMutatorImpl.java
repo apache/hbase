@@ -23,6 +23,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.LinkedList;
@@ -52,7 +54,8 @@ public class BufferedMutatorImpl implements BufferedMutator {
   protected ClusterConnection connection; // non-final so can be overridden in test
   private final TableName tableName;
   private volatile Configuration conf;
-  private List<Row> writeAsyncBuffer = new LinkedList<>();
+  @VisibleForTesting
+  List<Row> writeAsyncBuffer = new LinkedList<>();
   private long writeBufferSize;
   private final int maxKeyValueSize;
   protected long currentWriteBufferSize = 0;
@@ -244,15 +247,5 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public long getWriteBufferSize() {
     return this.writeBufferSize;
-  }
-
-  /**
-   * This is used for legacy purposes only. This should not beÓ
-   * called from production uses.
-   * @deprecated Going away when we drop public support for {@link HTableInterface}.
-Ó   */
-  @Deprecated
-  public List<Row> getWriteBuffer() {
-    return this.writeAsyncBuffer;
   }
 }

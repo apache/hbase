@@ -729,13 +729,13 @@ public class TestAsyncProcess {
     //  puts, we may raise an exception in the middle of the list. It's then up to the caller to
     //  manage what was inserted, what was tried but failed, and what was not even tried.
     p = createPut(1, true);
-    Assert.assertEquals(0, mutator.getWriteBuffer().size());
+    Assert.assertEquals(0, mutator.writeAsyncBuffer.size());
     try {
       mutator.mutate(p);
       Assert.fail();
     } catch (RetriesExhaustedException expected) {
     }
-    Assert.assertEquals("the put should not been inserted.", 0, mutator.getWriteBuffer().size());
+    Assert.assertEquals("the put should not been inserted.", 0, mutator.writeAsyncBuffer.size());
   }
 
 
