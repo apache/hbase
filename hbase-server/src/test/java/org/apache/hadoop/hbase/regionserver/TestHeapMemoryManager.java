@@ -58,8 +58,9 @@ public class TestHeapMemoryManager {
   @Test
   public void testAutoTunerShouldBeOffWhenMaxMinRangesForMemstoreIsNotGiven() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(HeapMemorySizeUtil.MEMSTORE_SIZE_KEY, 0.02f);
     conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MAX_RANGE_KEY, 0.75f);
-    conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.05f);
+    conf.setFloat(HeapMemoryManager.BLOCK_CACHE_SIZE_MIN_RANGE_KEY, 0.03f);
     HeapMemoryManager manager = new HeapMemoryManager(new BlockCacheStub(0),
         new MemstoreFlusherStub(0), new RegionServerStub(conf), new RegionServerAccountingStub());
     assertFalse(manager.isTunerOn());
@@ -68,8 +69,9 @@ public class TestHeapMemoryManager {
   @Test
   public void testAutoTunerShouldBeOffWhenMaxMinRangesForBlockCacheIsNotGiven() throws Exception {
     Configuration conf = HBaseConfiguration.create();
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.02f);
     conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MAX_RANGE_KEY, 0.75f);
-    conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY, 0.05f);
+    conf.setFloat(HeapMemoryManager.MEMSTORE_SIZE_MIN_RANGE_KEY, 0.03f);
     HeapMemoryManager manager = new HeapMemoryManager(new BlockCacheStub(0),
         new MemstoreFlusherStub(0), new RegionServerStub(conf), new RegionServerAccountingStub());
     assertFalse(manager.isTunerOn());
