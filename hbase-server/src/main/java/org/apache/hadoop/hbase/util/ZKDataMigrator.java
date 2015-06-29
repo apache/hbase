@@ -40,7 +40,7 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 
 /**
- * Tool to migrate zookeeper data of older hbase versions(<0.95.0) to PB.
+ * Tool to migrate zookeeper data of older hbase versions(&lt;0.95.0) to PB.
  */
 public class ZKDataMigrator extends Configured implements Tool {
 

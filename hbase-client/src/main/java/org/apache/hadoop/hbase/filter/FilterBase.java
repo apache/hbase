@@ -86,7 +86,7 @@ public abstract class FilterBase extends Filter {
   /**
    * WARNING: please to not override this method.  Instead override {@link #transformCell(Cell)}.
    *
-   * This is for transition from 0.94 -> 0.96
+   * This is for transition from 0.94 -&gt; 0.96
    */
   @Override
   @Deprecated

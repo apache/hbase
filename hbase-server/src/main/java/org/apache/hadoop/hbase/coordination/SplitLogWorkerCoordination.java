@@ -34,7 +34,7 @@ import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Coordinated operations for {@link SplitLogWorker} and 
- * {@link org.apache.hadoop.hbase.regionserver.handler.HLogSplitterHandler} Important
+ * {@link org.apache.hadoop.hbase.regionserver.handler.WALSplitterHandler} Important
  * methods for SplitLogWorker: <BR>
  * {@link #isReady()} called from {@link SplitLogWorker#run()} to check whether the coordination is
  * ready to supply the tasks <BR>

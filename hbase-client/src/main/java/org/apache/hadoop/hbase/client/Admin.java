@@ -249,7 +249,7 @@ public interface Admin extends Abortable, Closeable {
    *    are repeated and if the split key has empty byte array.
    *
    * @param desc table descriptor for table
-   * @throws MasterNotRunningException if master is not running
+   * @throws org.apache.hadoop.hbase.MasterNotRunningException if master is not running
    * @throws org.apache.hadoop.hbase.TableExistsException if table already exists (If concurrent
    * threads, the table may have been created between test-for-existence and attempt-at-creation).
    * @throws IOException if a remote or network exception occurs

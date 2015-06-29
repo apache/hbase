@@ -261,7 +261,7 @@ public class ByteBloomFilter implements BloomFilter, BloomFilterWriter {
   }
 
   /**
-   * Determines & initializes bloom filter meta data from user config. Call
+   * Determines &amp; initializes bloom filter meta data from user config. Call
    * {@link #allocBloom()} to allocate bloom filter data.
    *
    * @param maxKeys Maximum expected number of keys that will be stored in this

@@ -36,13 +36,15 @@ import java.util.List;
  *
  * Logic in use:
  *
- *  - get all regions of a given table
- *  - get avg size S of each region (by total size of store files reported in RegionLoad)
- *  - If biggest region is bigger than S * 2, it is kindly requested to split,
+ *  <ol>
+ *  <li> get all regions of a given table
+ *  <li> get avg size S of each region (by total size of store files reported in RegionLoad)
+ *  <li> If biggest region is bigger than S * 2, it is kindly requested to split,
  *    and normalization stops
- *  - Otherwise, two smallest region R1 and its smallest neighbor R2 are kindly requested
- *    to merge, if R1 + R1 <  S, and normalization stops
- *  - Otherwise, no action is performed
+ *  <li> Otherwise, two smallest region R1 and its smallest neighbor R2 are kindly requested
+ *    to merge, if R1 + R1 &lt;  S, and normalization stops
+ *  <li> Otherwise, no action is performed
+ * </ol>
  */
 @InterfaceAudience.Private
 public class SimpleRegionNormalizer implements RegionNormalizer {

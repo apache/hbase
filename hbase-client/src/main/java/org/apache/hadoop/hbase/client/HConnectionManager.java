@@ -109,7 +109,7 @@ public class HConnectionManager extends ConnectionFactory {
    * {@link HConnectionKey}.
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   @Deprecated
   public static HConnection getConnection(final Configuration conf) throws IOException {
@@ -137,7 +137,7 @@ public class HConnectionManager extends ConnectionFactory {
    *
    * @param conf configuration
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   @Deprecated
   public static HConnection createConnection(Configuration conf) throws IOException {
@@ -163,7 +163,7 @@ public class HConnectionManager extends ConnectionFactory {
    * @param conf configuration
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool)
@@ -189,7 +189,7 @@ public class HConnectionManager extends ConnectionFactory {
    * @param conf configuration
    * @param user the user the connection is for
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   @Deprecated
   public static HConnection createConnection(Configuration conf, User user)
@@ -216,7 +216,7 @@ public class HConnectionManager extends ConnectionFactory {
    * @param pool the thread pool to use for batch operation in HTables used via this HConnection
    * @param user the user the connection is for
    * @return HConnection object for <code>conf</code>
-   * @throws ZooKeeperConnectionException
+   * @throws org.apache.hadoop.hbase.ZooKeeperConnectionException
    */
   @Deprecated
   public static HConnection createConnection(Configuration conf, ExecutorService pool, User user)

@@ -353,7 +353,6 @@ public class ReplicationAdmin implements Closeable {
    * Append the replicable table-cf config of the specified peer
    * @param id a short that identifies the cluster
    * @param tableCfs table-cfs config str
-   * @throws KeeperException
    */
   public void appendPeerTableCFs(String id, String tableCfs) throws ReplicationException {
     appendPeerTableCFs(id, parseTableCFsFromConfig(tableCfs));
@@ -363,7 +362,6 @@ public class ReplicationAdmin implements Closeable {
    * Append the replicable table-cf config of the specified peer
    * @param id a short that identifies the cluster
    * @param tableCfs A map from tableName to column family names
-   * @throws KeeperException
    */
   public void appendPeerTableCFs(String id, Map<TableName, ? extends Collection<String>> tableCfs)
       throws ReplicationException {

@@ -2500,7 +2500,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * @return Created KeyValue OR if we find a length of zero, we will return null which
    * can be useful marking a stream as done.
    * @throws IOException
-   * @{@link Deprecated} Use {@link KeyValueUtil#iscreate(InputStream, boolean)}
+   * @deprecated Use {@link KeyValueUtil#iscreate(InputStream, boolean)}
    */
   @Deprecated
   public static KeyValue iscreate(final InputStream in) throws IOException {

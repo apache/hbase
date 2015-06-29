@@ -55,8 +55,8 @@ import org.apache.hadoop.util.StringUtils;
  * single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in
- * {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilterWriter} and
- *  {@link HFileWriterWriterV2}. Examples of how to use the reader can be
+ * {@link org.apache.hadoop.hbase.util.CompoundBloomFilterWriter} and
+ *  {@link HFileWriterV2}. Examples of how to use the reader can be
  *  found in {@link HFileReaderV2} and
  *  {@link org.apache.hadoop.hbase.io.hfile.TestHFileBlockIndex}.
  */
