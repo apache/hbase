@@ -73,7 +73,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   protected Writer createTmpWriter(FileDetails fd, long smallestReadPoint) throws IOException {
     // make this writer with tags always because of possible new cells with tags.
     StoreFile.Writer writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
-        true, fd.maxMVCCReadpoint >= smallestReadPoint, true);
+      true, true, true);
     return writer;
   }
 
@@ -187,9 +187,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         hasMore = compactionScanner.next(cells, scannerContext);
         // output to writer:
         for (Cell c : cells) {
-          if (cleanSeqId && c.getSequenceId() <= smallestReadPoint) {
-            CellUtil.setSequenceId(c, 0);
-          }
           if (compactionScanner.isOutputDeleteMarkers() && CellUtil.isDelete(c)) {
             delFileWriter.append(c);
             deleteMarkersCount++;
