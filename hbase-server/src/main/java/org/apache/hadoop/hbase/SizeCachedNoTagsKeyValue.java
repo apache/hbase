@@ -43,11 +43,6 @@ public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
   }
 
   @Override
-  public long heapSizeWithoutTags() {
-    return super.heapSize();
-  }
-
-  @Override
   public int write(OutputStream out, boolean withTags) throws IOException {
     writeInt(out, this.length);
     out.write(this.bytes, this.offset, this.length);

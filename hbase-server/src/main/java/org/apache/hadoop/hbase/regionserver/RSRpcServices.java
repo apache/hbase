@@ -2336,7 +2336,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
               for (Result r : results) {
                 for (Cell cell : r.rawCells()) {
                   totalCellSize += CellUtil.estimatedSerializedSizeOf(cell);
-                  currentScanResultSize += CellUtil.estimatedHeapSizeOfWithoutTags(cell);
+                  currentScanResultSize += CellUtil.estimatedHeapSizeOf(cell);
                 }
               }
             }

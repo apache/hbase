@@ -59,9 +59,4 @@ public class SizeCachedKeyValue extends KeyValue {
   public long heapSize() {
     return super.heapSize() + HEAP_SIZE_OVERHEAD;
   }
-
-  @Override
-  public long heapSizeWithoutTags() {
-    return super.heapSizeWithoutTags() + HEAP_SIZE_OVERHEAD;
-  }
 }

@@ -2670,27 +2670,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   }
 
   /**
-   * This is a hack that should be removed once we don't care about matching
-   * up client- and server-side estimations of cell size. It needed to be
-   * backwards compatible with estimations done by older clients. We need to
-   * pretend that tags never exist and KeyValues aren't serialized with tag
-   * length included. See HBASE-13262 and HBASE-13303
-   */
-  @Deprecated
-  public long heapSizeWithoutTags() {
-    int sum = 0;
-    sum += ClassSize.OBJECT;// the KeyValue object itself
-    sum += ClassSize.REFERENCE;// pointer to "bytes"
-    sum += ClassSize.align(ClassSize.ARRAY);// "bytes"
-    sum += KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
-    sum += getKeyLength();
-    sum += getValueLength();
-    sum += 2 * Bytes.SIZEOF_INT;// offset, length
-    sum += Bytes.SIZEOF_LONG;// memstoreTS
-    return ClassSize.align(sum);
-  }
-
-  /**
    * A simple form of KeyValue that creates a keyvalue with only the key part of the byte[]
    * Mainly used in places where we need to compare two cells.  Avoids copying of bytes
    * In places like block index keys, we need to compare the key byte[] with a cell.
