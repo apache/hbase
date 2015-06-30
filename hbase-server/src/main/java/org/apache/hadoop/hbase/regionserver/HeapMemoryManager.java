@@ -108,6 +108,7 @@ public class HeapMemoryManager {
   }
 
   private boolean doInit(Configuration conf) {
+    boolean tuningEnabled = true;
     globalMemStorePercent = HeapMemorySizeUtil.getGlobalMemStorePercent(conf, false);
     blockCachePercent = conf.getFloat(HFILE_BLOCK_CACHE_SIZE_KEY,
         HConstants.HFILE_BLOCK_CACHE_SIZE_DEFAULT);
@@ -133,7 +134,7 @@ public class HeapMemoryManager {
     }
     if (globalMemStorePercent == globalMemStorePercentMinRange
         && globalMemStorePercent == globalMemStorePercentMaxRange) {
-      return false;
+      tuningEnabled = false;
     }
     // Initialize max and min range for block cache
     blockCachePercentMinRange = conf.getFloat(BLOCK_CACHE_SIZE_MIN_RANGE_KEY, blockCachePercent);
@@ -152,9 +153,9 @@ public class HeapMemoryManager {
       blockCachePercentMaxRange = blockCachePercent;
       conf.setFloat(BLOCK_CACHE_SIZE_MAX_RANGE_KEY, blockCachePercentMaxRange);
     }
-    if (blockCachePercent == blockCachePercentMinRange
+    if (tuningEnabled && blockCachePercent == blockCachePercentMinRange
         && blockCachePercent == blockCachePercentMaxRange) {
-      return false;
+      tuningEnabled = false;
     }
 
     int gml = (int) (globalMemStorePercentMaxRange * CONVERT_TO_PERCENTAGE);
@@ -180,7 +181,7 @@ public class HeapMemoryManager {
           + globalMemStorePercentMinRange + " and " + BLOCK_CACHE_SIZE_MAX_RANGE_KEY + " is "
           + blockCachePercentMaxRange);
     }
-    return true;
+    return tuningEnabled;
   }
 
   public void start() {
