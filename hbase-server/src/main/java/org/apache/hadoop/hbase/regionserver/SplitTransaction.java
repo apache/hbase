@@ -693,17 +693,29 @@ public class SplitTransaction {
     // The following code sets up a thread pool executor with as many slots as
     // there's files to split. It then fires up everything, waits for
     // completion and finally checks for any exception
-    int nbFiles = hstoreFilesToSplit.size();
+    int nbFiles = 0;
+    for (Map.Entry<byte[], List<StoreFile>> entry: hstoreFilesToSplit.entrySet()) {
+        nbFiles += entry.getValue().size();
+    }
     if (nbFiles == 0) {
       // no file needs to be splitted.
       return new Pair<Integer, Integer>(0,0);
     }
-    LOG.info("Preparing to split " + nbFiles + " storefiles for region " + this.parent);
+    // Default max #threads to use is the smaller of table's configured number of blocking store
+    // files or the available number of logical cores.
+    int defMaxThreads = Math.min(parent.conf.getInt(HStore.BLOCKING_STOREFILES_KEY,
+                HStore.DEFAULT_BLOCKING_STOREFILE_COUNT),
+            Runtime.getRuntime().availableProcessors());
+    // Max #threads is the smaller of the number of storefiles or the default max determined above.
+    int maxThreads = Math.min(parent.conf.getInt(HConstants.REGION_SPLIT_THREADS_MAX,
+                defMaxThreads), nbFiles);
+    LOG.info("Preparing to split " + nbFiles + " storefiles for region " + this.parent +
+            " using " + maxThreads + " threads");
     ThreadFactoryBuilder builder = new ThreadFactoryBuilder();
     builder.setNameFormat("StoreFileSplitter-%1$d");
     ThreadFactory factory = builder.build();
     ThreadPoolExecutor threadPool =
-      (ThreadPoolExecutor) Executors.newFixedThreadPool(nbFiles, factory);
+      (ThreadPoolExecutor) Executors.newFixedThreadPool(maxThreads, factory);
     List<Future<Pair<Path,Path>>> futures = new ArrayList<Future<Pair<Path,Path>>> (nbFiles);
 
     // Split each store file.
@@ -755,7 +767,12 @@ public class SplitTransaction {
     return new Pair<Integer, Integer>(created_a, created_b);
   }
 
-  private Pair<Path, Path> splitStoreFile(final byte[] family, final StoreFile sf) throws IOException {
+  private Pair<Path, Path> splitStoreFile(final byte[] family, final StoreFile sf)
+      throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Splitting started for store file: " + sf.getPath() + " for region: " +
+          this.parent);
+    }
     HRegionFileSystem fs = this.parent.getRegionFileSystem();
     String familyName = Bytes.toString(family);
 
@@ -765,6 +782,10 @@ public class SplitTransaction {
     Path path_b =
         fs.splitStoreFile(this.hri_b, familyName, sf, this.splitrow, true,
           this.parent.getSplitPolicy());
+    if (LOG.isDebugEnabled()) {
+        LOG.debug("Splitting complete for store file: " + sf.getPath() + " for region: " +
+                  this.parent);
+    }
     return new Pair<Path,Path>(path_a, path_b);
   }
 

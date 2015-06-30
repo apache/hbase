@@ -1148,6 +1148,13 @@ public final class HConstants {
       "hbase.heap.occupancy.high_water_mark";
   public static final float DEFAULT_HEAP_OCCUPANCY_HIGH_WATERMARK = 0.98f;
 
+  /**
+   * The max number of threads used for splitting storefiles in parallel during
+   * the region split process.
+   */
+  public static final String REGION_SPLIT_THREADS_MAX =
+    "hbase.regionserver.region.split.threads.max";
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
