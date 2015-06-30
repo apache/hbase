@@ -19,7 +19,11 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+import java.io.OutputStream;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class is an extension to ContentSizeCachedKeyValue where there are no tags in Cell.
@@ -41,5 +45,12 @@ public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
   @Override
   public long heapSizeWithoutTags() {
     return super.heapSize();
+  }
+
+  @Override
+  public int write(OutputStream out, boolean withTags) throws IOException {
+    writeInt(out, this.length);
+    out.write(this.bytes, this.offset, this.length);
+    return this.length + Bytes.SIZEOF_INT;
   }
 }
