@@ -1602,6 +1602,9 @@ possible configurations would overwhelm and obscure the important.
     <description>
       The period that ExpiredMobFileCleanerChore runs. The unit is second.
       The default value is one day.
+      The MOB file name uses only the date part of the file creation time in it. We use this
+      time for deciding TTL expiry of the files. So the removal of TTL expired files might be
+      delayed. The max delay might be 24 hrs.
     </description>
   </property>
   <property>
