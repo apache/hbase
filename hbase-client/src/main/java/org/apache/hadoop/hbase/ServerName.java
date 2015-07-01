@@ -229,7 +229,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
    */
   static String getServerName(String hostName, int port, long startcode) {
     final StringBuilder name = new StringBuilder(hostName.length() + 1 + 5 + 1 + 13);
-    name.append(hostName);
+    name.append(hostName.toLowerCase());
     name.append(SERVERNAME_SEPARATOR);
     name.append(port);
     name.append(SERVERNAME_SEPARATOR);
@@ -314,7 +314,7 @@ public class ServerName implements Comparable<ServerName>, Serializable {
       final ServerName right) {
     if (left == null) return false;
     if (right == null) return false;
-    return left.getHostname().equals(right.getHostname()) &&
+    return left.getHostname().compareToIgnoreCase(right.getHostname()) == 0 &&
       left.getPort() == right.getPort();
   }
 
