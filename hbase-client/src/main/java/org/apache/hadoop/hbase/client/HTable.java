@@ -302,30 +302,6 @@ public class HTable implements HTableInterface {
   }
 
   /**
-   * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
-   */
-  @Deprecated
-  public byte [][] getStartKeys() throws IOException {
-    return locator.getStartKeys();
-  }
-
-  /**
-   * @deprecated Use {@link RegionLocator#getEndKeys()} instead;
-   */
-  @Deprecated
-  public byte[][] getEndKeys() throws IOException {
-    return locator.getEndKeys();
-  }
-
-  /**
-   * @deprecated Use {@link RegionLocator#getStartEndKeys()} instead;
-   */
-  @Deprecated
-  public Pair<byte[][],byte[][]> getStartEndKeys() throws IOException {
-    return locator.getStartEndKeys();
-  }
-
-  /**
    * Get the corresponding start keys and regions for an arbitrary range of
    * keys.
    * <p>
