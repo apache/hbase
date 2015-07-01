@@ -60,7 +60,7 @@ import org.apache.hadoop.hbase.util.RollingStatCalculator;
  * <i>hbase.regionserver.heapmemory.autotuner.step.max</i>. If we are reverting the previous step
  * then we decrease step size to half. This decrease is similar to binary search where we try to
  * reach the most desired value. The minimum step size can be specified  in config by
- * <i>hbase.regionserver.heapmemory.autotuner.step.max</i>. In other cases we leave step size
+ * <i>hbase.regionserver.heapmemory.autotuner.step.min</i>. In other cases we leave step size
  * unchanged.
  */
 @InterfaceAudience.Private
@@ -217,6 +217,11 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
           // more flushes , increasing memstore size
           newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
           tunerLog += "Increasing memstore size as observed increase in number of flushes.";
+        } else if (blockedFlushCount > 0 && prevTuneDirection == StepDirection.NEUTRAL) {
+          // we do not want blocked flushes
+          newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
+          tunerLog += "Increasing memstore size as observed "
+                      + blockedFlushCount + " blocked flushes.";
         } else {
           // Default. Not enough facts to do tuning.
           newTuneDirection = StepDirection.NEUTRAL;
