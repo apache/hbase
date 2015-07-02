@@ -896,15 +896,15 @@ public class AssignmentManager {
         if (t instanceof RemoteException) {
           t = ((RemoteException)t).unwrapRemoteException();
         }
-        if (t instanceof RegionServerAbortedException) {
+        if (t instanceof RegionServerAbortedException
+            || t instanceof RegionServerStoppedException
+            || t instanceof ServerNotRunningYetException) {
           // RS is aborting, we cannot offline the region since the region may need to do WAL
           // recovery. Until we see  the RS expiration, we should retry.
           sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
             RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
 
-        } else if (t instanceof NotServingRegionException
-            || t instanceof RegionServerStoppedException
-            || t instanceof ServerNotRunningYetException) {
+        } else if (t instanceof NotServingRegionException) {
           LOG.debug("Offline " + region.getRegionNameAsString()
             + ", it's not any more on " + server, t);
           regionStates.updateRegionState(region, State.OFFLINE);
