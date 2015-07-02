@@ -944,7 +944,7 @@ public class AssignmentManager {
       final HRegionInfo region, final boolean forceNewPlan) {
     RegionState state = regionStates.getRegionState(region);
     if (state == null) {
-      LOG.warn("Assigning a region not in region states: " + region);
+      LOG.warn("Assigning but not in region states: " + region);
       state = regionStates.createRegionState(region);
     }
 
