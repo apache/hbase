@@ -65,6 +65,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
   protected int generateVerifyGap;
   protected Integer width;
   protected Integer wrapMultiplier;
+  protected boolean noReplicationSetup = false;
 
   private final String SOURCE_CLUSTER_OPT = "sourceCluster";
   private final String DEST_CLUSTER_OPT = "destCluster";
@@ -72,6 +73,7 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
   private final String NUM_MAPPERS_OPT = "numMappers";
   private final String OUTPUT_DIR_OPT = "outputDir";
   private final String NUM_REDUCERS_OPT = "numReducers";
+  private final String NO_REPLICATION_SETUP_OPT = "noReplicationSetup";
 
   /**
    * The gap (in seconds) from when data is finished being generated at the source
@@ -323,7 +325,9 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
       source = new ClusterID(getConf(), sourceClusterIdString);
       sink = new ClusterID(getConf(), sinkClusterIdString);
 
-      setupTablesAndReplication();
+      if (!noReplicationSetup) {
+        setupTablesAndReplication();
+      }
       int expectedNumNodes = 0;
       for (int i = 0; i < numIterations; i++) {
         LOG.info("Starting iteration = " + i);
@@ -353,11 +357,12 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     addRequiredOptWithArg("d", OUTPUT_DIR_OPT,
                           "Temporary directory where to write keys for the test");
 
-
     addOptWithArg("nm", NUM_MAPPERS_OPT,
                   "Number of mappers (default: " + DEFAULT_NUM_MAPPERS + ")");
     addOptWithArg("nr", NUM_REDUCERS_OPT,
                   "Number of reducers (default: " + DEFAULT_NUM_MAPPERS + ")");
+    addOptNoArg("nrs", NO_REPLICATION_SETUP_OPT,
+                  "Don't setup tables or configure replication before starting test");
     addOptWithArg("n", NUM_NODES_OPT,
                   "Number of nodes. This should be a multiple of width * wrapMultiplier."  +
                   " (default: " + DEFAULT_NUM_NODES + ")");
@@ -400,6 +405,10 @@ public class IntegrationTestReplication extends IntegrationTestBigLinkedList {
     wrapMultiplier = parseInt(cmd.getOptionValue(WRAP_MULTIPLIER_OPT,
                                                  Integer.toString(DEFAULT_WRAP_MULTIPLIER)),
                               1, Integer.MAX_VALUE);
+
+    if (cmd.hasOption(NO_REPLICATION_SETUP_OPT)) {
+      noReplicationSetup = true;
+    }
 
     if (numNodes % (width * wrapMultiplier) != 0) {
       throw new RuntimeException("numNodes must be a multiple of width and wrap multiplier");
