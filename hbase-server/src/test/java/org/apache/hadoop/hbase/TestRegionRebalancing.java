@@ -95,7 +95,6 @@ public class TestRegionRebalancing {
    * @throws InterruptedException
    */
   @Test (timeout=300000)
-  @SuppressWarnings("deprecation")
   public void testRebalanceOnRegionServerNumberChange()
   throws IOException, InterruptedException {
     try(Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
@@ -132,6 +131,7 @@ public class TestRegionRebalancing {
       // kill a region server - total of 2
       LOG.info("Stopped third server=" + UTIL.getHBaseCluster().stopRegionServer(2, false));
       UTIL.getHBaseCluster().waitOnRegionServer(2);
+      waitOnCrashProcessing();
       UTIL.getHBaseCluster().getMaster().balance();
       assertRegionsAreBalanced();
   
@@ -140,9 +140,9 @@ public class TestRegionRebalancing {
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
       LOG.info("Added fourth server=" +
           UTIL.getHBaseCluster().startRegionServer().getRegionServer().getServerName());
+      waitOnCrashProcessing();
       assert(UTIL.getHBaseCluster().getMaster().balance() == true);
       assertRegionsAreBalanced();
-  
       for (int i = 0; i < 6; i++){
         LOG.info("Adding " + (i + 5) + "th region server");
         UTIL.getHBaseCluster().startRegionServer();
@@ -150,6 +150,16 @@ public class TestRegionRebalancing {
       assert(UTIL.getHBaseCluster().getMaster().balance() == true);
       assertRegionsAreBalanced();
       regionLocator.close();
+    }
+  }
+
+  /**
+   * Wait on crash processing. Balancer won't run if processing a crashed server.
+   */
+  private void waitOnCrashProcessing() {
+    while (UTIL.getHBaseCluster().getMaster().getServerManager().areDeadServersInProgress()) {
+      LOG.info("Waiting on processing of crashed server before proceeding...");
+      Threads.sleep(1000);
     }
   }
 
