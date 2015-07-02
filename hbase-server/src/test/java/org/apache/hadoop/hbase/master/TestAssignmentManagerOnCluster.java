@@ -218,7 +218,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.deleteTable(Bytes.toBytes(table));
     }
   }
-  
+
   // Simulate a scenario where the AssignCallable and SSH are trying to assign a region
   @Test (timeout=60000)
   public void testAssignRegionBySSH() throws Exception {
@@ -248,15 +248,15 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.getHBaseCluster().killRegionServer(controlledServer);
       TEST_UTIL.getHBaseCluster().waitForRegionServerToStop(controlledServer, -1);
       AssignmentManager am = master.getAssignmentManager();
-      
+
       // Simulate the AssignCallable trying to assign the region. Have the region in OFFLINE state,
-      // but not in transition and the server is the dead 'controlledServer'  
+      // but not in transition and the server is the dead 'controlledServer'
       regionStates.createRegionState(hri, State.OFFLINE, controlledServer, null);
       am.assign(hri, true, true);
       // Region should remain OFFLINE and go to transition
       assertEquals(State.OFFLINE, regionStates.getRegionState(hri).getState());
       assertTrue (regionStates.isRegionInTransition(hri));
-      
+
       master.enableSSH(true);
       am.waitForAssignment(hri);
       assertTrue (regionStates.getRegionState(hri).isOpened());
@@ -336,7 +336,7 @@ public class TestAssignmentManagerOnCluster {
       TEST_UTIL.getMiniHBaseCluster().stopMaster(masterServerName);
       TEST_UTIL.getMiniHBaseCluster().startMaster();
       // Wait till master is active and is initialized
-      while (TEST_UTIL.getMiniHBaseCluster().getMaster() == null || 
+      while (TEST_UTIL.getMiniHBaseCluster().getMaster() == null ||
           !TEST_UTIL.getMiniHBaseCluster().getMaster().isInitialized()) {
         Threads.sleep(1);
       }
@@ -847,7 +847,7 @@ public class TestAssignmentManagerOnCluster {
       List<HRegionInfo> regions = new ArrayList<HRegionInfo>();
       regions.add(hri);
       am.assign(destServerName, regions);
-      
+
       // let region open continue
       MyRegionObserver.postOpenEnabled.set(false);
 
@@ -1028,12 +1028,6 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
-      // Try to unassign the dead region before SSH
-      am.unassign(hri, false);
-      // The region should be moved to offline since the server is dead
-      RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
-
       // Kill the hosting server, which doesn't have meta on it.
       cluster.killRegionServer(oldServerName);
       cluster.waitForRegionServerToStop(oldServerName, -1);
@@ -1158,12 +1152,6 @@ public class TestAssignmentManagerOnCluster {
       // Make sure the region is assigned on the dead server
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
-
-      // Try to unassign the dead region before SSH
-      am.unassign(hri, false);
-      // The region should be moved to offline since the server is dead
-      RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
 
       // Disable the table now.
       master.disableTable(hri.getTable());
