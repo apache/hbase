@@ -24,14 +24,14 @@
 <modelVersion>4.0.0</modelVersion>
 <groupId>org.apache.hbase</groupId>
 <artifactId>hbase-checkstyle</artifactId>
-<version>1.1.1-SNAPSHOT</version>
+<version>1.1.2-SNAPSHOT</version>
 <name>HBase - Checkstyle</name>
 <description>Module to hold Checkstyle properties for HBase.</description>
 
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>1.1.1-SNAPSHOT</version>
+    <version>1.1.2-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
 
