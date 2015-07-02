@@ -982,12 +982,6 @@ public class TestAssignmentManagerOnCluster {
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
-      // Try to unassign the dead region before SSH
-      am.unassign(hri);
-      // The region should be moved to offline since the server is dead
-      RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
-
       // Kill the hosting server, which doesn't have meta on it.
       cluster.killRegionServer(oldServerName);
       cluster.waitForRegionServerToStop(oldServerName, -1);
@@ -1060,12 +1054,6 @@ public class TestAssignmentManagerOnCluster {
       // Make sure the region is assigned on the dead server
       assertTrue(regionStates.isRegionOnline(hri));
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
-
-      // Try to unassign the dead region before SSH
-      am.unassign(hri);
-      // The region should be moved to offline since the server is dead
-      RegionState state = regionStates.getRegionState(hri);
-      assertTrue(state.isOffline());
 
       // Disable the table now.
       master.disableTable(hri.getTable());

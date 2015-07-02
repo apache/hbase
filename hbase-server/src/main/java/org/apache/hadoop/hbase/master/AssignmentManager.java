@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.quotas.RegionStateListener;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -393,7 +394,7 @@ public class AssignmentManager {
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
-   * @throws CoordinatedStateException 
+   * @throws CoordinatedStateException
    */
   void joinCluster()
   throws IOException, KeeperException, InterruptedException, CoordinatedStateException {
@@ -890,10 +891,18 @@ public class AssignmentManager {
         LOG.warn("Server " + server + " region CLOSE RPC returned false for " +
           region.getRegionNameAsString());
       } catch (Throwable t) {
+        long sleepTime = 0;
+        Configuration conf = this.server.getConfiguration();
         if (t instanceof RemoteException) {
           t = ((RemoteException)t).unwrapRemoteException();
         }
-        if (t instanceof NotServingRegionException
+        if (t instanceof RegionServerAbortedException) {
+          // RS is aborting, we cannot offline the region since the region may need to do WAL
+          // recovery. Until we see  the RS expiration, we should retry.
+          sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+            RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+
+        } else if (t instanceof NotServingRegionException
             || t instanceof RegionServerStoppedException
             || t instanceof ServerNotRunningYetException) {
           LOG.debug("Offline " + region.getRegionNameAsString()
@@ -903,27 +912,25 @@ public class AssignmentManager {
         } else if (t instanceof FailedServerException && i < maximumAttempts) {
           // In case the server is in the failed server list, no point to
           // retry too soon. Retry after the failed_server_expiry time
-          try {
-            Configuration conf = this.server.getConfiguration();
-            long sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
-              RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug(server + " is on failed server list; waiting "
-                + sleepTime + "ms", t);
-            }
-            Thread.sleep(sleepTime);
-          } catch (InterruptedException ie) {
-            LOG.warn("Failed to unassign "
-              + region.getRegionNameAsString() + " since interrupted", ie);
-            regionStates.updateRegionState(region, State.FAILED_CLOSE);
-            Thread.currentThread().interrupt();
-            return;
+          sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
+          RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug(server + " is on failed server list; waiting " + sleepTime + "ms", t);
           }
-        }
-
-        LOG.info("Server " + server + " returned " + t + " for "
-          + region.getRegionNameAsString() + ", try=" + i
-          + " of " + this.maximumAttempts, t);
+       }
+       try {
+         if (sleepTime > 0) {
+           Thread.sleep(sleepTime);
+         }
+       } catch (InterruptedException ie) {
+         LOG.warn("Interrupted unassign " + region.getRegionNameAsString(), ie);
+         Thread.currentThread().interrupt();
+         regionStates.updateRegionState(region, State.FAILED_CLOSE);
+         return;
+       }
+       LOG.info("Server " + server + " returned " + t + " for "
+         + region.getRegionNameAsString() + ", try=" + i
+         + " of " + this.maximumAttempts, t);
       }
     }
     // Run out of attempts
@@ -1320,7 +1327,7 @@ public class AssignmentManager {
           if (state == null || state.getServerName() == null) {
             // We don't know where the region is, offline it.
             // No need to send CLOSE RPC
-            LOG.warn("Attempting to unassign a region not in RegionStates"
+            LOG.warn("Attempting to unassign a region not in RegionStates "
               + region.getRegionNameAsString() + ", offlined");
             regionOffline(region);
             return;

@@ -114,7 +114,7 @@ public class TestWALPlayer {
         .getRootDir(), HConstants.HREGION_LOGDIR_NAME).toString();
 
     Configuration configuration= TEST_UTIL.getConfiguration();
-    WALPlayer player = new WALPlayer();
+    WALPlayer player = new WALPlayer(configuration);
     String optionName="_test_.name";
     configuration.set(optionName, "1000");
     player.setupTime(configuration, optionName);
