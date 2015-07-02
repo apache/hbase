@@ -124,7 +124,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     if (!ignoreSequenceid) {
       // Negate following comparisons so later edits show up first
       // mvccVersion: later sorts first
-      return Longs.compare(b.getMvccVersion(), a.getMvccVersion());
+      return Longs.compare(b.getSequenceId(), a.getSequenceId());
     } else {
       return c;
     }
@@ -399,30 +399,9 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
-  public final int compareRows(final Cell left, final Cell right) {
-    return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+  public int compareRows(final Cell left, final Cell right) {
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());
-  }
-
-  /**
-   * Compares the rows of two cells
-   * We explicitly pass the offset and length details of the cell to avoid re-parsing
-   * of the offset and length from the cell
-   * @param left the cell to be compared
-   * @param loffset the row offset of the left cell
-   * @param llength the row length of the left cell
-   * @param right the cell to be compared
-   * @param roffset the row offset of the right cell
-   * @param rlength the row length of the right cell
-   * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-   */
-  private final int compareRows(Cell left, int loffset, int llength, Cell right, int roffset,
-      int rlength) {
-    // TODO : for BB based cells all the hasArray based checks would happen
-    // here. But we may have
-    // to end up in multiple APIs accepting byte[] and BBs
-    return compareRows(left.getRowArray(), loffset, llength, right.getRowArray(), roffset,
-        rlength);
   }
 
   /**
@@ -441,25 +420,13 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger
    *         than byte[], -1 otherwise
    */
-  public final int compareRows(Cell left, byte[] right, int roffset,
+  public int compareRows(Cell left, byte[] right, int roffset,
       int rlength) {
     // TODO : for BB based cells all the hasArray based checks would happen
     // here. But we may have
     // to end up in multiple APIs accepting byte[] and BBs
-    return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
+    return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
         roffset, rlength);
-  }
-  /**
-   * Do not use comparing rows from hbase:meta. Meta table Cells have schema (table,startrow,hash)
-   * so can't be treated as plain byte arrays as this method does.
-   */
-  // TODO : CLEANUP : in order to do this we may have to modify some code
-  // HRegion.next() and will involve a
-  // Filter API change also. Better to do that later along with
-  // HBASE-11425/HBASE-13387.
-  public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
-      int rlength) {
-    return Bytes.compareTo(left, loffset, llength, right, roffset, rlength);
   }
 
   private static int compareWithoutRow(final Cell left, final Cell right) {
@@ -542,11 +509,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   // compare a key against row/fam/qual/ts/type
   public final int compareKeyBasedOnColHint(Cell nextIndexedCell, Cell currentCell, int foff,
       int flen, byte[] colHint, int coff, int clen, long ts, byte type) {
-
-    int compare = 0;
-    compare = compareRows(nextIndexedCell, nextIndexedCell.getRowOffset(),
-        nextIndexedCell.getRowLength(), currentCell, currentCell.getRowOffset(),
-        currentCell.getRowLength());
+    int compare = compareRows(nextIndexedCell, currentCell);
     if (compare != 0) {
       return compare;
     }
@@ -629,9 +592,20 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * {@link KeyValue}s.
    */
   public static class MetaCellComparator extends CellComparator {
- 
+
     @Override
-    public int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
+    public int compareRows(final Cell left, final Cell right) {
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+          right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    }
+
+    @Override
+    public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
+      return compareRows(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
+          roffset, rlength);
+    }
+
+    private int compareRows(byte[] left, int loffset, int llength, byte[] right, int roffset,
         int rlength) {
       int leftDelimiter = Bytes.searchDelimiterIndex(left, loffset, llength, HConstants.DELIMITER);
       int rightDelimiter = Bytes
@@ -662,7 +636,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
       // Now compare middlesection of row.
       lpart = (leftFarDelimiter < 0 ? llength + loffset : leftFarDelimiter) - leftDelimiter;
       rpart = (rightFarDelimiter < 0 ? rlength + roffset : rightFarDelimiter) - rightDelimiter;
-      result = super.compareRows(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
+      result = Bytes.compareTo(left, leftDelimiter, lpart, right, rightDelimiter, rpart);
       if (result != 0) {
         return result;
       } else {

@@ -554,7 +554,6 @@ public class SyncTable extends Configured implements Tool {
       }
     }
 
-    private static final CellComparator cellComparator = new CellComparator();
     /**
      * Compare row keys of the given Result objects.
      * Nulls are after non-nulls
@@ -565,7 +564,9 @@ public class SyncTable extends Configured implements Tool {
       } else if (r2 == null) {
         return -1; // target missing row
       } else {
-        return cellComparator.compareRows(r1, 0, r1.length, r2, 0, r2.length);
+        // Sync on no META tables only. We can directly do what CellComparator is doing inside.
+        // Never the call going to MetaCellComparator.
+        return Bytes.compareTo(r1, 0, r1.length, r2, 0, r2.length);
       }
     }
 

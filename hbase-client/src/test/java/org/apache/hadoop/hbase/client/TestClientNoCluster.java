@@ -39,7 +39,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -647,7 +646,7 @@ public class TestClientNoCluster extends Configured implements Tool {
     private final CellComparator delegate = CellComparator.META_COMPARATOR;
     @Override
     public int compare(byte[] left, byte[] right) {
-      return delegate.compareRows(left, 0, left.length, right, 0, right.length);
+      return delegate.compareRows(new KeyValue.KeyOnlyKeyValue(left), right, 0, right.length);
     }
   }
 

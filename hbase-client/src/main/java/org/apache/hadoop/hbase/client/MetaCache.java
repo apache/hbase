@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.CellComparator;
 
 /**
  * A cache implementation for region locations from meta.
@@ -85,9 +84,16 @@ public class MetaCache {
     // HConstants.EMPTY_END_ROW, signifying that the region we're
     // checking is actually the last region in the table.
     byte[] endKey = possibleRegion.getRegionLocation().getRegionInfo().getEndKey();
+    // Here we do direct Bytes.compareTo and not doing CellComparator/MetaCellComparator path.
+    // MetaCellComparator is for comparing against data in META table which need special handling.
+    // Not doing that is ok for this case because
+    // 1. We are getting the Region location for the given row in non META tables only. The compare
+    // checks the given row is within the end key of the found region. So META regions are not
+    // coming in here.
+    // 2. Even if META region comes in, its end key will be empty byte[] and so Bytes.equals(endKey,
+    // HConstants.EMPTY_END_ROW) check itself will pass.
     if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
-        getRowComparator(tableName).compareRows(
-            endKey, 0, endKey.length, row, 0, row.length) > 0) {
+        Bytes.compareTo(endKey, 0, endKey.length, row, 0, row.length) > 0) {
       return possibleRegion;
     }
 
@@ -95,10 +101,6 @@ public class MetaCache {
     return null;
   }
 
-  private CellComparator getRowComparator(TableName tableName) {
-    return TableName.META_TABLE_NAME.equals(tableName) ? CellComparator.META_COMPARATOR
-        : CellComparator.COMPARATOR;
-  }
   /**
    * Put a newly discovered HRegionLocation into the cache.
    * @param tableName The table name.
