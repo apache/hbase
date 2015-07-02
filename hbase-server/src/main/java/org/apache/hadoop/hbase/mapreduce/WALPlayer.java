@@ -86,13 +86,6 @@ public class WALPlayer extends Configured implements Tool {
   private final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
 
   /**
-   * @param conf The {@link Configuration} to use.
-   */
-  public WALPlayer(Configuration conf) {
-    super(conf);
-  }
-
-  /**
    * A mapper that just writes out KeyValues.
    * This one can be used together with {@link KeyValueSortReducer}
    */
@@ -334,7 +327,7 @@ public class WALPlayer extends Configured implements Tool {
    * @throws Exception When running the job fails.
    */
   public static void main(String[] args) throws Exception {
-    int ret = ToolRunner.run(new WALPlayer(HBaseConfiguration.create()), args);
+    int ret = ToolRunner.run(HBaseConfiguration.create(), new WALPlayer(), args);
     System.exit(ret);
   }
 

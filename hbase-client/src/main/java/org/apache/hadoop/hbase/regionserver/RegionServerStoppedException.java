@@ -25,7 +25,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Thrown by the region server when it is in shutting down state.
- * @see RegionServerAbortedException
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
