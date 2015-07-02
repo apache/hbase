@@ -1,5 +1,4 @@
 /**
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,22 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
 
-import java.io.IOException;
+package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
- * Thrown by the region server when it is in shutting down state.
- * @see RegionServerAbortedException
+ * Thrown by the region server when it is aborting.
  */
 @SuppressWarnings("serial")
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class RegionServerStoppedException extends IOException {
-  public RegionServerStoppedException(String s) {
+public class RegionServerAbortedException extends RegionServerStoppedException {
+  public RegionServerAbortedException(String s) {
     super(s);
   }
 }
