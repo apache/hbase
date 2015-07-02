@@ -980,9 +980,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws IOException
    */
   protected void checkOpen() throws IOException {
-    if (regionServer.isStopped() || regionServer.isAborted()) {
-      throw new RegionServerStoppedException("Server " + regionServer.serverName
-        + " not running" + (regionServer.isAborted() ? ", aborting" : ""));
+    if (regionServer.isAborted()) {
+      throw new RegionServerAbortedException("Server " + regionServer.serverName + " aborting");
+    }
+    if (regionServer.isStopped()) {
+      throw new RegionServerStoppedException("Server " + regionServer.serverName + " stopping");
     }
     if (!regionServer.fsOk) {
       throw new RegionServerStoppedException("File system not available");
