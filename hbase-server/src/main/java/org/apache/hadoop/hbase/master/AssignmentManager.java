@@ -1869,14 +1869,14 @@ public class AssignmentManager extends ZooKeeperListener {
           t = ((RemoteException)t).unwrapRemoteException();
         }
         boolean logRetries = true;
-        if (t instanceof RegionServerAbortedException) {
-          // RS is aborting, we cannot offline the region since the region may need to do WAL
-          // recovery. Until we see  the RS expiration, we should retry.
+        if (t instanceof RegionServerAbortedException
+            || t instanceof RegionServerStoppedException) {
+          // RS is aborting or stopping, we cannot offline the region since the region may need
+          // to do WAL recovery. Until we see  the RS expiration, we should retry.
           sleepTime = 1 + conf.getInt(RpcClient.FAILED_SERVER_EXPIRY_KEY,
             RpcClient.FAILED_SERVER_EXPIRY_DEFAULT);
 
         } else if (t instanceof NotServingRegionException
-            || t instanceof RegionServerStoppedException
             || t instanceof ServerNotRunningYetException) {
           LOG.debug("Offline " + region.getRegionNameAsString()
             + ", it's not any more on " + server, t);
