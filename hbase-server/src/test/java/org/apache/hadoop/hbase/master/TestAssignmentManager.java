@@ -83,6 +83,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
+import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -1610,5 +1611,80 @@ public class TestAssignmentManager {
       assertEquals(SERVERNAME_DEAD, regionStates.getRegionState(REGIONINFO).getServerName());
       am.shutdown();
     }
+  }
+
+  /**
+   * Tests close region call on a region server that is aborting
+   */
+  @Test (timeout=180000)
+  public void testCloseRegionOnAbortingRS() throws Exception {
+    this.server.getConfiguration().setInt("hbase.assignment.maximum.attempts", 2);
+
+    HRegionInfo hri = REGIONINFO;
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
+      server.getConfiguration());
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, balancer, null, null, master.getTableLockManager());
+    RegionStates regionStates = am.getRegionStates();
+
+    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_B, SERVERNAME_B);
+
+    // mock aborting region server
+    Mockito.when(this.serverManager.sendRegionClose(Mockito.eq(SERVERNAME_B), Mockito.eq(REGIONINFO),
+      Mockito.anyInt(), (ServerName)Mockito.any(), Mockito.anyBoolean()))
+      .thenThrow(new RegionServerAbortedException(""));
+
+    // try to unassign the region
+    am.unassign(hri);
+
+    // assert that the we have FAILED_CLOSE for region state
+    assertEquals(State.FAILED_CLOSE, regionStates.getRegionState(REGIONINFO).getState());
+    assertEquals(SERVERNAME_B, regionStates.getRegionState(REGIONINFO).getServerName());
+
+    am.shutdown();
+  }
+
+  /**
+   * Tests close region call on a region server that is not in onlineServer list
+   */
+  @Test (timeout=180000)
+  public void testCloseRegionOnServerNotOnline() throws Exception {
+    this.server.getConfiguration().setInt("hbase.assignment.maximum.attempts", 2);
+
+    HRegionInfo hri = REGIONINFO;
+    LoadBalancer balancer = LoadBalancerFactory.getLoadBalancer(
+      server.getConfiguration());
+    // Create an AM.
+    AssignmentManager am = new AssignmentManager(this.server,
+      this.serverManager, balancer, null, null, master.getTableLockManager()) {
+      @Override
+      protected boolean wasRegionOnDeadServerByMeta(HRegionInfo region, ServerName sn) {
+        return true;
+      };
+    };
+    RegionStates regionStates = am.getRegionStates();
+
+    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_B, SERVERNAME_B);
+
+    // mock that RS is expired, but not processed
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B))
+      .thenReturn(false);
+
+    // try to unassign the region
+    am.unassign(hri);
+
+    // assert that the we have OFFLINE
+    assertEquals(State.OFFLINE, regionStates.getRegionState(REGIONINFO).getState());
+
+    // try to assign the region before SSH
+    am.regionPlans.put(REGIONINFO.getEncodedName(),
+      new RegionPlan(REGIONINFO, null, SERVERNAME_A));
+    am.assign(hri, true, false);
+
+    // assert that the we still have OFFLINE
+    assertEquals(State.OFFLINE, regionStates.getRegionState(REGIONINFO).getState());
+
+    am.shutdown();
   }
 }
