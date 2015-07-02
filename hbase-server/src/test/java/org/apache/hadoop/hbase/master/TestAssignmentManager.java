@@ -1182,7 +1182,7 @@ public class TestAssignmentManager {
     // Create an AM.
     final AssignmentManagerWithExtrasForTesting am =
       setUpMockedAssignmentManager(this.server, this.serverManager);
-    // First set up region as being online on SERVERNAME_B.
+    // First set up region as being online on SERVERNAME_LIVE.
     am.getRegionStates().regionOnline(REGIONINFO, SERVERNAME_LIVE);
     // Now add region in pending open up in RIT
     RegionState state = new RegionState(REGIONINFO,
@@ -1628,10 +1628,10 @@ public class TestAssignmentManager {
       this.serverManager, balancer, null, null, master.getTableLockManager());
     RegionStates regionStates = am.getRegionStates();
 
-    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_B, SERVERNAME_B);
+    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_LIVE, SERVERNAME_LIVE);
 
     // mock aborting region server
-    Mockito.when(this.serverManager.sendRegionClose(Mockito.eq(SERVERNAME_B), Mockito.eq(REGIONINFO),
+    Mockito.when(this.serverManager.sendRegionClose(Mockito.eq(SERVERNAME_LIVE), Mockito.eq(REGIONINFO),
       Mockito.anyInt(), (ServerName)Mockito.any(), Mockito.anyBoolean()))
       .thenThrow(new RegionServerAbortedException(""));
 
@@ -1640,7 +1640,7 @@ public class TestAssignmentManager {
 
     // assert that the we have FAILED_CLOSE for region state
     assertEquals(State.FAILED_CLOSE, regionStates.getRegionState(REGIONINFO).getState());
-    assertEquals(SERVERNAME_B, regionStates.getRegionState(REGIONINFO).getServerName());
+    assertEquals(SERVERNAME_LIVE, regionStates.getRegionState(REGIONINFO).getServerName());
 
     am.shutdown();
   }
@@ -1665,10 +1665,10 @@ public class TestAssignmentManager {
     };
     RegionStates regionStates = am.getRegionStates();
 
-    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_B, SERVERNAME_B);
+    regionStates.createRegionState(hri, State.OPEN, SERVERNAME_LIVE, SERVERNAME_LIVE);
 
     // mock that RS is expired, but not processed
-    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B))
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_LIVE))
       .thenReturn(false);
 
     // try to unassign the region
@@ -1679,7 +1679,7 @@ public class TestAssignmentManager {
 
     // try to assign the region before SSH
     am.regionPlans.put(REGIONINFO.getEncodedName(),
-      new RegionPlan(REGIONINFO, null, SERVERNAME_A));
+      new RegionPlan(REGIONINFO, null, SERVERNAME_DEAD));
     am.assign(hri, true, false);
 
     // assert that the we still have OFFLINE
