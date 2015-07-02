@@ -659,6 +659,9 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
      * WALPlayer override that searches for keys loaded in the setup.
      */
     public static class WALSearcher extends WALPlayer {
+      public WALSearcher(Configuration conf) {
+        super(conf);
+      }
 
       /**
        * The actual searcher mapper.
@@ -728,12 +731,12 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       Path oldWalsDir = new Path(hbaseDir, HConstants.HREGION_OLDLOGDIR_NAME);
       LOG.info("Running Search with keys inputDir=" + inputDir +", numMappers=" + numMappers +
         " against " + getConf().get(HConstants.HBASE_DIR));
-      int ret = ToolRunner.run(getConf(), new WALSearcher(),
+      int ret = ToolRunner.run(getConf(), new WALSearcher(getConf()),
           new String [] {walsDir.toString(), ""});
       if (ret != 0) {
         return ret;
       }
-      return ToolRunner.run(getConf(), new WALSearcher(),
+      return ToolRunner.run(getConf(), new WALSearcher(getConf()),
           new String [] {oldWalsDir.toString(), ""});
     }
 
