@@ -579,6 +579,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
     FileSystem fs = tmpDir.getFileSystem(getConf());
     fs.setPermission(tmpDir, FsPermission.valueOf("-rwxrwxrwx"));
     fs.setPermission(botOut, FsPermission.valueOf("-rwxrwxrwx"));
+    fs.setPermission(topOut, FsPermission.valueOf("-rwxrwxrwx"));
 
     // Add these back at the *front* of the queue, so there's a lower
     // chance that the region will just split again before we get there.
