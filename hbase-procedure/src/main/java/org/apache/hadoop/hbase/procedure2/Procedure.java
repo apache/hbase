@@ -206,8 +206,16 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     }
 
     sb.append(" state=");
-    sb.append(getState());
+    toStringState(sb);
     return sb.toString();
+  }
+
+  /**
+   * Called from {@link #toString()} when interpolating {@link Procedure} state
+   * @param builder Append current {@link ProcedureState}
+   */
+  protected void toStringState(StringBuilder builder) {
+    builder.append(getState());
   }
 
   /**
