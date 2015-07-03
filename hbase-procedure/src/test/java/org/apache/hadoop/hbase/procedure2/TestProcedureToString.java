@@ -25,12 +25,11 @@ import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ServerCrashState;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
-import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-@Category({MasterTests.class, SmallTests.class})
+@Category({SmallTests.class})
 public class TestProcedureToString {
   /**
    * A do-nothing environment for BasicProcedure.
@@ -78,7 +77,7 @@ public class TestProcedureToString {
     }
   }
 
-  
+
 
   /**
    * Test that I can override the toString for its state value.
