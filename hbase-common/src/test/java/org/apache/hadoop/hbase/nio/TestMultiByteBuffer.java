@@ -277,4 +277,40 @@ public class TestMultiByteBuffer {
     assertEquals(l1, dup.getLong());
     assertEquals(l2, dup.getLong());
   }
+
+  @Test
+  public void testGetWithPosOnMultiBuffers() throws IOException {
+    byte[] b = new byte[4];
+    byte[] b1 = new byte[4];
+    ByteBuffer bb1 = ByteBuffer.wrap(b);
+    ByteBuffer bb2 = ByteBuffer.wrap(b1);
+    MultiByteBuffer mbb1 = new MultiByteBuffer(bb1, bb2);
+    mbb1.position(2);
+    mbb1.putInt(4);
+    int res = mbb1.getInt(2);
+    byte[] bres = new byte[4];
+    bres[0] = mbb1.get(2);
+    bres[1] = mbb1.get(3);
+    bres[2] = mbb1.get(4);
+    bres[3] = mbb1.get(5);
+    int expected = Bytes.toInt(bres);
+    assertEquals(res, expected);
+  }
+
+  @Test
+  public void testGetIntStrictlyForwardWithPosOnMultiBuffers() throws IOException {
+    byte[] b = new byte[4];
+    byte[] b1 = new byte[4];
+    ByteBuffer bb1 = ByteBuffer.wrap(b);
+    ByteBuffer bb2 = ByteBuffer.wrap(b1);
+    MultiByteBuffer mbb1 = new MultiByteBuffer(bb1, bb2);
+    mbb1.position(2);
+    mbb1.putInt(4);
+    mbb1.position(7);
+    mbb1.put((byte) 2);
+    mbb1.position(0);
+    mbb1.getIntStrictlyForward(4);
+    byte res = mbb1.get(7);
+    assertEquals((byte) 2, res);
+  }
 }

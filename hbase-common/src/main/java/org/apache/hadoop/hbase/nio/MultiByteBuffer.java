@@ -151,7 +151,7 @@ public class MultiByteBuffer {
    */
   private int getItemIndex(int elemIndex) {
     int index = 1;
-    while (elemIndex > this.itemBeginPos[index]) {
+    while (elemIndex >= this.itemBeginPos[index]) {
       index++;
       if (index == this.itemBeginPos.length) {
         throw new IndexOutOfBoundsException();
@@ -166,7 +166,7 @@ public class MultiByteBuffer {
    */
   private int getItemIndexFromCurItemIndex(int elemIndex) {
     int index = this.curItemIndex;
-    while (elemIndex < this.itemBeginPos[index]) {
+    while (elemIndex >= this.itemBeginPos[index]) {
       index++;
       if (index == this.itemBeginPos.length) {
         throw new IndexOutOfBoundsException();
