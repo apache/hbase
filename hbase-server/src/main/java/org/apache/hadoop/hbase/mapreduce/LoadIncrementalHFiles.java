@@ -827,8 +827,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
       HFileScanner scanner = halfReader.getScanner(false, false, false);
       scanner.seekTo();
       do {
-        KeyValue kv = KeyValueUtil.ensureKeyValue(scanner.getKeyValue());
-        halfWriter.append(kv);
+        halfWriter.append(scanner.getCell());
       } while (scanner.next());
 
       for (Map.Entry<byte[],byte[]> entry : fileInfo.entrySet()) {

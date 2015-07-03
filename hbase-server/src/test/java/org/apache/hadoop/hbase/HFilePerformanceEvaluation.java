@@ -411,7 +411,7 @@ public class HFilePerformanceEvaluation {
     void doRow(int i) throws Exception {
       if (this.scanner.next()) {
         // TODO: Fix. Make Scanner do Cells.
-        Cell c = this.scanner.getKeyValue();
+        Cell c = this.scanner.getCell();
         PerformanceEvaluationCommons.assertKey(format(i + 1), c);
         PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
       }
@@ -442,7 +442,7 @@ public class HFilePerformanceEvaluation {
         return;
       }
       // TODO: Fix scanner so it does Cells
-      Cell c = scanner.getKeyValue();
+      Cell c = scanner.getCell();
       PerformanceEvaluationCommons.assertKey(b, c);
       PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
     }
@@ -471,7 +471,7 @@ public class HFilePerformanceEvaluation {
         return;
       }
       // TODO: HFileScanner doesn't do Cells yet. Temporary fix.
-      c = scanner.getKeyValue();
+      c = scanner.getCell();
       // System.out.println("Found row: " +
       //  new String(c.getRowArray(), c.getRowOffset(), c.getRowLength()));
       PerformanceEvaluationCommons.assertKey(b, c);
@@ -480,7 +480,7 @@ public class HFilePerformanceEvaluation {
           LOG.info("NOTHING FOLLOWS");
           return;
         }
-        c = scanner.getKeyValue();
+        c = scanner.getCell();
         PerformanceEvaluationCommons.assertValueSize(c.getValueLength(), ROW_LENGTH);
       }
     }
@@ -510,7 +510,7 @@ public class HFilePerformanceEvaluation {
           return;
         }
         // TODO: Fix. Make scanner do Cells.
-        scanner.getKeyValue();
+        scanner.getCell();
       }
     }
 

@@ -353,7 +353,7 @@ public class TestCacheOnWrite {
 
     // iterate all the keyvalue from hfile
     while (scanner.next()) {
-      scanner.getKeyValue();
+      scanner.getCell();
     }
     reader.close();
   }

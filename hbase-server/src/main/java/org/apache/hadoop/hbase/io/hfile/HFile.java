@@ -393,7 +393,7 @@ public class HFile {
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 
-    byte[] getLastKey();
+    Cell getLastKey();
 
     Cell midkey() throws IOException;
 

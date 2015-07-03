@@ -140,11 +140,11 @@ public interface DataBlockEncoder {
     void setCurrentBuffer(ByteBuffer buffer);
 
     /**
-     * Does a deep copy of the key at the current position. A deep copy is
-     * necessary because buffers are reused in the decoder.
+     * From the current position creates a cell using the key part
+     * of the current buffer
      * @return key at current position
      */
-    ByteBuffer getKeyDeepCopy();
+    Cell getKey();
 
     /**
      * Does a shallow copy of the value at the current position. A shallow

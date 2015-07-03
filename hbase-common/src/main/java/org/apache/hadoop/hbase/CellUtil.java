@@ -894,9 +894,13 @@ public final class CellUtil {
     String value = null;
     if (verbose) {
       // TODO: pretty print tags as well
-      tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
-      value = Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
-        cell.getValueLength());
+      if (cell.getTagsLength() > 0) {
+        tag = Bytes.toStringBinary(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
+      }
+      if (!(cell instanceof KeyValue.KeyOnlyKeyValue)) {
+        value = Bytes.toStringBinary(cell.getValueArray(), cell.getValueOffset(),
+            cell.getValueLength());
+      }
     }
 
     builder

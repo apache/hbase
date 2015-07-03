@@ -225,7 +225,7 @@ public class TestHFileEncryption {
         assertTrue("Initial seekTo failed", scanner.seekTo());
         int i = 0;
         do {
-          Cell kv = scanner.getKeyValue();
+          Cell kv = scanner.getCell();
           assertTrue("Read back an unexpected or invalid KV",
               testKvs.contains(KeyValueUtil.ensureKeyValue(kv)));
           i++;

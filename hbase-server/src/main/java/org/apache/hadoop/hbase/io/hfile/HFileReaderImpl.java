@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -90,7 +89,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   private HFileDataBlockEncoder dataBlockEncoder = NoOpDataBlockEncoder.INSTANCE;
 
   /** Last key in the file. Filled in when we read in the file info */
-  private byte [] lastKey = null;
+  private Cell lastKeyCell = null;
 
   /** Average key length read from file info */
   private int avgKeyLen = -1;
@@ -216,7 +215,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     byte[] creationTimeBytes = fileInfo.get(FileInfo.CREATE_TIME_TS);
     this.hfileContext.setFileCreateTime(creationTimeBytes == null?  0:
         Bytes.toLong(creationTimeBytes));
-    lastKey = fileInfo.get(FileInfo.LASTKEY);
+    if (fileInfo.get(FileInfo.LASTKEY) != null) {
+      lastKeyCell = new KeyValue.KeyOnlyKeyValue(fileInfo.get(FileInfo.LASTKEY));
+    }
     avgKeyLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_KEY_LEN));
     avgValueLen = Bytes.toInt(fileInfo.get(FileInfo.AVG_VALUE_LEN));
     byte [] keyValueFormatVersion = fileInfo.get(HFileWriterImpl.KEY_VALUE_VERSION);
@@ -314,7 +315,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   private String toStringLastKey() {
-    return KeyValue.keyToString(getLastKey());
+    return CellUtil.toString(getLastKey(), false);
   }
 
   @Override
@@ -371,8 +372,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    */
   @Override
   public byte[] getLastRowKey() {
-    byte[] lastKey = getLastKey();
-    return lastKey == null? null: KeyValueUtil.createKeyValueFromKey(lastKey).getRow();
+    Cell lastKey = getLastKey();
+    return lastKey == null? null: CellUtil.cloneRow(lastKey);
   }
 
   /** @return number of KV entries in this HFile */
@@ -819,7 +820,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getKeyValue() {
+    public Cell getCell() {
       if (!isSeeked())
         return null;
 
@@ -838,12 +839,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public ByteBuffer getKey() {
+    public Cell getKey() {
       assertSeeked();
-      return ByteBuffer.wrap(
-          blockBuffer.array(),
+      return new KeyValue.KeyOnlyKeyValue(blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position()
-              + KEY_VALUE_LEN_SIZE, currKeyLen).slice();
+              + KEY_VALUE_LEN_SIZE, currKeyLen);
     }
 
     @Override
@@ -1365,13 +1365,13 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   /**
-   * @return Last key in the file. May be null if file has no entries. Note that
-   *         this is not the last row key, but rather the byte form of the last
-   *         KeyValue.
+   * @return Last key as cell in the file. May be null if file has no entries. Note that
+   *         this is not the last row key, but it is the Cell representation of the last
+   *         key
    */
   @Override
-  public byte[] getLastKey() {
-    return dataBlockIndexReader.isEmpty() ? null : lastKey;
+  public Cell getLastKey() {
+    return dataBlockIndexReader.isEmpty() ? null : lastKeyCell;
   }
 
   /**
@@ -1516,9 +1516,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public ByteBuffer getKey() {
+    public Cell getKey() {
       assertValidSeek();
-      return seeker.getKeyDeepCopy();
+      return seeker.getKey();
     }
 
     @Override
@@ -1528,7 +1528,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     @Override
-    public Cell getKeyValue() {
+    public Cell getCell() {
       if (block == null) {
         return null;
       }
@@ -1537,9 +1537,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     @Override
     public String getKeyString() {
-      ByteBuffer keyBuffer = getKey();
-      return Bytes.toStringBinary(keyBuffer.array(),
-          keyBuffer.arrayOffset(), keyBuffer.limit());
+      return CellUtil.toString(getKey(), true);
     }
 
     @Override

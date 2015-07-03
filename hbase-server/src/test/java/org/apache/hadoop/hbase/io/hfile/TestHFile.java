@@ -200,7 +200,7 @@ public class TestHFile extends HBaseTestCase {
     String value = "value";
     int i = start;
     for (; i < (start + n); i++) {
-      ByteBuffer key = scanner.getKey();
+      ByteBuffer key = ByteBuffer.wrap(((KeyValue)scanner.getKey()).getKey());
       ByteBuffer val = scanner.getValue();
       String keyStr = String.format(localFormatter, Integer.valueOf(i));
       String valStr = value + keyStr;
@@ -279,7 +279,7 @@ public class TestHFile extends HBaseTestCase {
     assertTrue("location lookup failed",
         scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50))) == 0);
     // read the key and see if it matches
-    ByteBuffer readKey = scanner.getKey();
+    ByteBuffer readKey = ByteBuffer.wrap(((KeyValue)scanner.getKey()).getKey());
     assertTrue("seeked key does not match", Arrays.equals(getSomeKey(50),
       Bytes.toBytes(readKey)));
 

@@ -126,7 +126,7 @@ public class TestHalfStoreFileReader {
     scanner.seekTo();
     Cell curr;
     do {
-      curr = scanner.getKeyValue();
+      curr = scanner.getCell();
       KeyValue reseekKv =
           getLastOnCol(curr);
       int ret = scanner.reseekTo(reseekKv);
@@ -223,7 +223,7 @@ public class TestHalfStoreFileReader {
       halfreader.loadFileInfo();
       final HFileScanner scanner = halfreader.getScanner(false, false);
       scanner.seekBefore(seekBefore);
-      return scanner.getKeyValue();
+      return scanner.getCell();
   }
 
   private KeyValue getLastOnCol(Cell curr) {

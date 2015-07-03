@@ -186,9 +186,8 @@ public class TestHFileSeek extends TestCase {
     Reader reader = HFile.createReaderFromStream(path, fsdis,
         fs.getFileStatus(path).getLen(), new CacheConfig(conf), conf);
     reader.loadFileInfo();
-    KeySampler kSampler =
-        new KeySampler(rng, ((KeyValue)reader.getFirstKey()).getKey(), reader.getLastKey(),
-            keyLenGen);
+    KeySampler kSampler = new KeySampler(rng, ((KeyValue) reader.getFirstKey()).getKey(),
+        ((KeyValue) reader.getLastKey()).getKey(), keyLenGen);
     HFileScanner scanner = reader.getScanner(false, USE_PREAD);
     BytesWritable key = new BytesWritable();
     timer.reset();
@@ -198,7 +197,7 @@ public class TestHFileSeek extends TestCase {
       byte [] k = new byte [key.getLength()];
       System.arraycopy(key.getBytes(), 0, k, 0, key.getLength());
       if (scanner.seekTo(KeyValueUtil.createKeyValueFromKey(k)) >= 0) {
-        ByteBuffer bbkey = scanner.getKey();
+        ByteBuffer bbkey = ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey());
         ByteBuffer bbval = scanner.getValue();
         totalBytes += bbkey.limit();
         totalBytes += bbval.limit();

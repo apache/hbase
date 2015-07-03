@@ -576,21 +576,21 @@ public class TestHFileBlockIndex {
           reader.getTrailer().getNumDataIndexLevels());
 
       assertTrue(Bytes.equals(keys[0], ((KeyValue)reader.getFirstKey()).getKey()));
-      assertTrue(Bytes.equals(keys[NUM_KV - 1], reader.getLastKey()));
+      assertTrue(Bytes.equals(keys[NUM_KV - 1], ((KeyValue)reader.getLastKey()).getKey()));
       LOG.info("Last key: " + Bytes.toStringBinary(keys[NUM_KV - 1]));
 
       for (boolean pread : new boolean[] { false, true }) {
         HFileScanner scanner = reader.getScanner(true, pread);
         for (int i = 0; i < NUM_KV; ++i) {
           checkSeekTo(keys, scanner, i);
-          checkKeyValue("i=" + i, keys[i], values[i], scanner.getKey(),
-              scanner.getValue());
+          checkKeyValue("i=" + i, keys[i], values[i],
+              ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
         }
         assertTrue(scanner.seekTo());
         for (int i = NUM_KV - 1; i >= 0; --i) {
           checkSeekTo(keys, scanner, i);
-          checkKeyValue("i=" + i, keys[i], values[i], scanner.getKey(),
-              scanner.getValue());
+          checkKeyValue("i=" + i, keys[i], values[i],
+              ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey()), scanner.getValue());
         }
       }
 

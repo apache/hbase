@@ -314,7 +314,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       HFileScanner scanner,  byte[] row) throws IOException {
     Cell pCell = null;
     do {
-      Cell cell = scanner.getKeyValue();
+      Cell cell = scanner.getCell();
       if (row != null && row.length != 0) {
         int result = CellComparator.COMPARATOR.compareRows(cell, row, 0, row.length);
         if (result > 0) {
@@ -482,7 +482,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       keyLen.update(curRowKeyLength);
 
       if (curRowBytes > maxRowBytes && prevCell != null) {
-        biggestRow = prevCell.getRow();
+        biggestRow = CellUtil.cloneRow(prevCell);
         maxRowBytes = curRowBytes;
       }
 

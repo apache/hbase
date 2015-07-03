@@ -74,8 +74,8 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
 
   @Override
-  public ByteBuffer getKeyDeepCopy() {
-    return KeyValueUtil.copyKeyToNewByteBuffer(ptSearcher.current());
+  public Cell getKey() {
+    return ptSearcher.current();
   }
 
 

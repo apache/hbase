@@ -172,7 +172,7 @@ public class TestStoreFile extends HBaseTestCase {
     // timestamp.
     Cell kv = reader.midkey();
     byte [] midRow = kv.getRow();
-    kv = KeyValueUtil.createKeyValueFromKey(reader.getLastKey());
+    kv = reader.getLastKey();
     byte [] finalRow = kv.getRow();
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
@@ -183,7 +183,7 @@ public class TestStoreFile extends HBaseTestCase {
     // keys from top half of the file.
     HFileScanner s = refHsf.createReader().getScanner(false, false);
     for(boolean first = true; (!s.isSeeked() && s.seekTo()) || s.next();) {
-      ByteBuffer bb = s.getKey();
+      ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
       kv = KeyValueUtil.createKeyValueFromKey(bb);
       if (first) {
         assertTrue(Bytes.equals(kv.getRow(), midRow));
@@ -343,7 +343,7 @@ public class TestStoreFile extends HBaseTestCase {
       HFileScanner topScanner = top.getScanner(false, false);
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
              (topScanner.isSeeked() && topScanner.next())) {
-        key = topScanner.getKey();
+        key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
 
         if ((topScanner.getReader().getComparator().compare(midKV, key.array(),
           key.arrayOffset(), key.limit())) > 0) {
@@ -361,8 +361,8 @@ public class TestStoreFile extends HBaseTestCase {
       HFileScanner bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
-        previous = bottomScanner.getKey();
-        key = bottomScanner.getKey();
+        previous = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
+        key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
         if (first) {
           first = false;
           LOG.info("First in bottom: " +
@@ -394,7 +394,7 @@ public class TestStoreFile extends HBaseTestCase {
       KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
       while ((!topScanner.isSeeked() && topScanner.seekTo()) ||
           topScanner.next()) {
-        key = topScanner.getKey();
+        key = ByteBuffer.wrap(((KeyValue) topScanner.getKey()).getKey());
         keyOnlyKV.setKey(key.array(), 0 + key.arrayOffset(), key.limit());
         assertTrue(topScanner.getReader().getComparator()
             .compare(keyOnlyKV, badmidkey, 0, badmidkey.length) >= 0);
@@ -429,7 +429,7 @@ public class TestStoreFile extends HBaseTestCase {
       bottomScanner = bottom.getScanner(false, false);
       while ((!bottomScanner.isSeeked() && bottomScanner.seekTo()) ||
           bottomScanner.next()) {
-        key = bottomScanner.getKey();
+        key = ByteBuffer.wrap(((KeyValue) bottomScanner.getKey()).getKey());
         if (first) {
           first = false;
           keyKV = KeyValueUtil.createKeyValueFromKey(key);

@@ -681,8 +681,7 @@ public class StoreFile {
     Cell midkey = this.reader.midkey();
     if (midkey != null) {
       Cell firstKey = this.reader.getFirstKey();
-      byte [] lk = this.reader.getLastKey();
-      KeyValue lastKey = KeyValueUtil.createKeyValueFromKey(lk, 0, lk.length);
+      Cell lastKey = this.reader.getLastKey();
       // if the midkey is the same as the first or last keys, we cannot (ever) split this region.
       if (comparator.compareRows(midkey, firstKey) == 0
           || comparator.compareRows(midkey, lastKey) == 0) {
@@ -1369,10 +1368,8 @@ public class StoreFile {
       KeyValue largestScanKeyValue = scan.isReversed() ? KeyValueUtil
           .createLastOnRow(scan.getStartRow()) : KeyValueUtil.createLastOnRow(scan
           .getStopRow());
-      // TODO this is in hot path? Optimize and avoid 2 extra object creations.
       Cell firstKeyKV = this.getFirstKey();
-      KeyValue.KeyOnlyKeyValue lastKeyKV = 
-          new KeyValue.KeyOnlyKeyValue(this.getLastKey(), 0, this.getLastKey().length);
+      Cell lastKeyKV = this.getLastKey();
       boolean nonOverLapping = ((getComparator().compare(firstKeyKV, largestScanKeyValue)) > 0
           && !Bytes
           .equals(scan.isReversed() ? scan.getStartRow() : scan.getStopRow(),
@@ -1483,7 +1480,7 @@ public class StoreFile {
       this.deleteFamilyBloomFilter = null;
     }
 
-    public byte[] getLastKey() {
+    public Cell getLastKey() {
       return reader.getLastKey();
     }
 

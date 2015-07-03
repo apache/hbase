@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -234,7 +235,7 @@ public class WALEditsReplaySink {
         List<Cell> cells = edit.getCells();
         for (Cell cell : cells) {
           // filtering WAL meta entries
-          setLocation(conn.locateRegion(tableName, cell.getRow()));
+          setLocation(conn.locateRegion(tableName, CellUtil.cloneRow(cell)));
           skip = true;
           break;
         }

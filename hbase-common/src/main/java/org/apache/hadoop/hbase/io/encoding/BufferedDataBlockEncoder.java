@@ -641,11 +641,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public ByteBuffer getKeyDeepCopy() {
-      ByteBuffer keyBuffer = ByteBuffer.allocate(current.keyLength);
-      keyBuffer.put(current.keyBuffer, 0, current.keyLength);
-      keyBuffer.rewind();
-      return keyBuffer;
+    public Cell getKey() {
+      byte[] key = new byte[current.keyLength];
+      System.arraycopy(current.keyBuffer, 0, key, 0, current.keyLength);
+      return new KeyValue.KeyOnlyKeyValue(key);
     }
 
     @Override

@@ -587,12 +587,12 @@ public class HRegionFileSystem {
         if (top) {
           //check if larger than last key.
           KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
-          byte[] lastKey = f.createReader().getLastKey();
+          Cell lastKey = f.createReader().getLastKey();
           // If lastKey is null means storefile is empty.
           if (lastKey == null) {
             return null;
           }
-          if (f.getReader().getComparator().compare(splitKey, lastKey, 0, lastKey.length) > 0) {
+          if (f.getReader().getComparator().compare(splitKey, lastKey) > 0) {
             return null;
           }
         } else {

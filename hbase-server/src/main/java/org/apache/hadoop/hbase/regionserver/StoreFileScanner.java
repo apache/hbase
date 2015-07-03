@@ -135,7 +135,7 @@ public class StoreFileScanner implements KeyValueScanner {
       // only seek if we aren't at the end. cur == null implies 'end'.
       if (cur != null) {
         hfs.next();
-        setCurrentCell(hfs.getKeyValue());
+        setCurrentCell(hfs.getCell());
         if (hasMVCCInfo || this.reader.isBulkLoaded()) {
           skipKVsNewerThanReadpoint();
         }
@@ -158,7 +158,7 @@ public class StoreFileScanner implements KeyValueScanner {
           return false;
         }
 
-        setCurrentCell(hfs.getKeyValue());
+        setCurrentCell(hfs.getCell());
 
         if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
           return skipKVsNewerThanReadpoint();
@@ -184,7 +184,7 @@ public class StoreFileScanner implements KeyValueScanner {
           this.cur = null;
           return false;
         }
-        setCurrentCell(hfs.getKeyValue());
+        setCurrentCell(hfs.getCell());
 
         if (!hasMVCCInfo && this.reader.isBulkLoaded()) {
           return skipKVsNewerThanReadpoint();
@@ -217,7 +217,7 @@ public class StoreFileScanner implements KeyValueScanner {
         && cur != null
         && (cur.getSequenceId() > readPt)) {
       hfs.next();
-      setCurrentCell(hfs.getKeyValue());
+      setCurrentCell(hfs.getCell());
       if (this.stopSkippingKVsIfNextRow
           && getComparator().compareRows(cur, startKV) > 0) {
         return false;
@@ -426,8 +426,8 @@ public class StoreFileScanner implements KeyValueScanner {
           this.cur = null;
           return false;
         }
-        KeyValue firstKeyOfPreviousRow = KeyValueUtil.createFirstOnRow(hfs.getKeyValue()
-            .getRowArray(), hfs.getKeyValue().getRowOffset(), hfs.getKeyValue().getRowLength());
+        Cell curCell = hfs.getCell();
+        Cell firstKeyOfPreviousRow = CellUtil.createFirstOnRow(curCell);
 
         if (seekCount != null) seekCount.incrementAndGet();
         if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
@@ -435,7 +435,7 @@ public class StoreFileScanner implements KeyValueScanner {
           return false;
         }
 
-        setCurrentCell(hfs.getKeyValue());
+        setCurrentCell(hfs.getCell());
         this.stopSkippingKVsIfNextRow = true;
         boolean resultOfSkipKVs;
         try {

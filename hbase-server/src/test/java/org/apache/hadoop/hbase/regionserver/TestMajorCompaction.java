@@ -355,7 +355,7 @@ public class TestMajorCompaction {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
-        byte [] row = scanner.getKeyValue().getRow();
+        byte [] row = scanner.getCell().getRow();
         if (Bytes.equals(row, STARTROW)) {
           count1++;
         } else if(Bytes.equals(row, secondRowBytes)) {

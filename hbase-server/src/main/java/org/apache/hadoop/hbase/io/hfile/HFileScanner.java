@@ -105,12 +105,11 @@ public interface HFileScanner extends Shipper {
    */
   boolean next() throws IOException;
   /**
-   * Gets a buffer view to the current key. You must call
+   * Gets the current key in the form of a cell. You must call
    * {@link #seekTo(Cell)} before this method.
-   * @return byte buffer for the key. The limit is set to the key size, and the
-   * position is 0, the start of the buffer view.
+   * @return gets the current key as a Cell.
    */
-  ByteBuffer getKey();
+  Cell getKey();
   /**
    * Gets a buffer view to the current value.  You must call
    * {@link #seekTo(Cell)} before this method.
@@ -120,9 +119,9 @@ public interface HFileScanner extends Shipper {
    */
   ByteBuffer getValue();
   /**
-   * @return Instance of {@link org.apache.hadoop.hbase.KeyValue}.
+   * @return Instance of {@link org.apache.hadoop.hbase.Cell}.
    */
-  Cell getKeyValue();
+  Cell getCell();
   /**
    * Convenience method to get a copy of the key as a string - interpreting the
    * bytes as UTF8. You must call {@link #seekTo(Cell)} before this method.

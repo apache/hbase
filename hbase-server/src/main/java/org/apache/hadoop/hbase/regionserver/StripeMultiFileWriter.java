@@ -343,7 +343,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
         doCreateWriter = true;
       }
       if (doCreateWriter) {
-        byte[] boundary = existingWriters.isEmpty() ? left : cell.getRow(); // make a copy
+        byte[] boundary = existingWriters.isEmpty() ? left : CellUtil.cloneRow(cell); // make a copy
         if (LOG.isDebugEnabled()) {
           LOG.debug("Creating new writer starting at [" + Bytes.toString(boundary) + "]");
         }
@@ -366,7 +366,7 @@ public abstract class StripeMultiFileWriter implements Compactor.CellSink {
       if (lastRowInCurrentWriter == null
           && existingWriters.size() < targetCount
           && cellsSeen >= targetCells) {
-        lastRowInCurrentWriter = cell.getRow(); // make a copy
+        lastRowInCurrentWriter = CellUtil.cloneRow(cell); // make a copy
         if (LOG.isDebugEnabled()) {
           LOG.debug("Preparing to start a new writer after [" + Bytes.toString(
               lastRowInCurrentWriter) + "] row; observed " + cellsSeen + " kvs and wrote out "
