@@ -164,6 +164,14 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
   }
 
   @Override
+  protected void toStringState(StringBuilder builder) {
+    super.toStringState(builder);
+    if (!isFinished() && getCurrentState() != null) {
+      builder.append(":").append(getCurrentState());
+    }
+  }
+
+  @Override
   protected void serializeStateData(final OutputStream stream) throws IOException {
     StateMachineProcedureData.Builder data = StateMachineProcedureData.newBuilder();
     for (int i = 0; i < stateCount; ++i) {
