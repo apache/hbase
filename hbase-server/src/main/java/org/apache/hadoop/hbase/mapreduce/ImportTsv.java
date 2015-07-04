@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -53,6 +54,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.Tool;
@@ -86,6 +88,9 @@ public class ImportTsv extends Configured implements Tool {
   public final static String JOB_NAME_CONF_KEY = "mapreduce.job.name";
   // TODO: the rest of these configs are used exclusively by TsvImporterMapper.
   // Move them out of the tool and let the mapper handle its own validation.
+  public final static String DRY_RUN_CONF_KEY = "importtsv.dry.run";
+  // If true, bad lines are logged to stderr. Default: false.
+  public final static String LOG_BAD_LINES_CONF_KEY = "importtsv.log.bad.lines";
   public final static String SKIP_LINES_CONF_KEY = "importtsv.skip.bad.lines";
   public final static String COLUMNS_CONF_KEY = "importtsv.columns";
   public final static String SEPARATOR_CONF_KEY = "importtsv.separator";
@@ -99,6 +104,11 @@ public class ImportTsv extends Configured implements Tool {
   final static Class DEFAULT_MAPPER = TsvImporterMapper.class;
   public final static String CREATE_TABLE_CONF_KEY = "create.table";
   public final static String NO_STRICT_COL_FAMILY = "no.strict";
+  /**
+   * If table didn't exist and was created in dry-run mode, this flag is
+   * flipped to delete it when MR ends.
+   */
+  private static boolean dryRunTableCreated;
 
   public static class TsvParser {
     /**
@@ -450,9 +460,10 @@ public class ImportTsv extends Configured implements Tool {
    * @return The newly created job.
    * @throws IOException When setting up the job fails.
    */
-  public static Job createSubmittableJob(Configuration conf, String[] args)
+  protected static Job createSubmittableJob(Configuration conf, String[] args)
       throws IOException, ClassNotFoundException {
     Job job = null;
+    boolean isDryRun = conf.getBoolean(DRY_RUN_CONF_KEY, false);
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Admin admin = connection.getAdmin()) {
         // Support non-XML supported characters
@@ -476,6 +487,7 @@ public class ImportTsv extends Configured implements Tool {
           FileInputFormat.setInputPaths(job, inputDir);
           job.setInputFormatClass(TextInputFormat.class);
           job.setMapperClass(mapperClass);
+          job.setMapOutputKeyClass(ImmutableBytesWritable.class);
           String hfileOutPath = conf.get(BULK_OUTPUT_CONF_KEY);
           String columns[] = conf.getStrings(COLUMNS_CONF_KEY);
           if(StringUtils.isNotEmpty(conf.get(CREDENTIALS_LOCATION))) {
@@ -486,13 +498,19 @@ public class ImportTsv extends Configured implements Tool {
 
           if (hfileOutPath != null) {
             if (!admin.tableExists(tableName)) {
-              String errorMsg = format("Table '%s' does not exist.", tableName);
+              LOG.warn(format("Table '%s' does not exist.", tableName));
               if ("yes".equalsIgnoreCase(conf.get(CREATE_TABLE_CONF_KEY, "yes"))) {
-                LOG.warn(errorMsg);
                 // TODO: this is backwards. Instead of depending on the existence of a table,
                 // create a sane splits file for HFileOutputFormat based on data sampling.
                 createTable(admin, tableName, columns);
+                if (isDryRun) {
+                  LOG.warn("Dry run: Table will be deleted at end of dry run.");
+                  dryRunTableCreated = true;
+                }
               } else {
+                String errorMsg =
+                    format("Table '%s' does not exist and '%s' is set to no.", tableName,
+                        CREATE_TABLE_CONF_KEY);
                 LOG.error(errorMsg);
                 throw new TableNotFoundException(errorMsg);
               }
@@ -523,21 +541,22 @@ public class ImportTsv extends Configured implements Tool {
                       + "=true.\n";
                   usage(msg);
                   System.exit(-1);
-                } 
+                }
               }
-              job.setReducerClass(PutSortReducer.class);
-              Path outputDir = new Path(hfileOutPath);
-              FileOutputFormat.setOutputPath(job, outputDir);
-              job.setMapOutputKeyClass(ImmutableBytesWritable.class);
               if (mapperClass.equals(TsvImporterTextMapper.class)) {
                 job.setMapOutputValueClass(Text.class);
                 job.setReducerClass(TextSortReducer.class);
               } else {
                 job.setMapOutputValueClass(Put.class);
                 job.setCombinerClass(PutCombiner.class);
+                job.setReducerClass(PutSortReducer.class);
               }
-              HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
-                  regionLocator);
+              if (!isDryRun) {
+                Path outputDir = new Path(hfileOutPath);
+                FileOutputFormat.setOutputPath(job, outputDir);
+                HFileOutputFormat2.configureIncrementalLoad(job, table.getTableDescriptor(),
+                    regionLocator);
+              }
             }
           } else {
             if (!admin.tableExists(tableName)) {
@@ -552,13 +571,20 @@ public class ImportTsv extends Configured implements Tool {
                   + " or custom mapper whose value type is Put.");
               System.exit(-1);
             }
-            // No reducers. Just write straight to table. Call initTableReducerJob
-            // to set up the TableOutputFormat.
-            TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null,
-                job);
+            if (!isDryRun) {
+              // No reducers. Just write straight to table. Call initTableReducerJob
+              // to set up the TableOutputFormat.
+              TableMapReduceUtil.initTableReducerJob(tableName.getNameAsString(), null, job);
+            }
             job.setNumReduceTasks(0);
           }
-
+          if (isDryRun) {
+            job.setOutputFormatClass(NullOutputFormat.class);
+            job.getConfiguration().setStrings("io.serializations",
+                job.getConfiguration().get("io.serializations"),
+                MutationSerialization.class.getName(), ResultSerialization.class.getName(),
+                KeyValueSerialization.class.getName());
+          }
           TableMapReduceUtil.addDependencyJars(job);
           TableMapReduceUtil.addDependencyJars(job.getConfiguration(),
               com.google.common.base.Function.class /* Guava used by TsvParser */);
@@ -579,7 +605,24 @@ public class ImportTsv extends Configured implements Tool {
       tableName, cfSet));
     admin.createTable(htd);
   }
-  
+
+  private static void deleteTable(Configuration conf, String[] args) {
+    TableName tableName = TableName.valueOf(args[0]);
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+         Admin admin = connection.getAdmin()) {
+      try {
+        admin.disableTable(tableName);
+      } catch (TableNotEnabledException e) {
+        LOG.debug("Dry mode: Table: " + tableName + " already disabled, so just deleting it.");
+      }
+      admin.deleteTable(tableName);
+    } catch (IOException e) {
+      LOG.error(format("***Dry run: Failed to delete table '%s'.***\n%s", tableName, e.toString()));
+      return;
+    }
+    LOG.info(format("Dry run: Deleted table '%s'.", tableName));
+  }
+
   private static Set<String> getColumnFamilies(String[] columns) {
     Set<String> cfSet = new HashSet<String>();
     for (String aColumn : columns) {
@@ -630,7 +673,10 @@ public class ImportTsv extends Configured implements Tool {
       "  Note: if you do not use this option, then the target table must already exist in HBase\n" +
       "\n" +
       "Other options that may be specified with -D include:\n" +
+      "  -D" + DRY_RUN_CONF_KEY + "=true - Dry run mode. Data is not actually populated into" +
+      " table. If table does not exist, it is created but deleted in the end.\n" +
       "  -D" + SKIP_LINES_CONF_KEY + "=false - fail if encountering an invalid line\n" +
+      "  -D" + LOG_BAD_LINES_CONF_KEY + "=true - logs invalid lines to stderr\n" +
       "  '-D" + SEPARATOR_CONF_KEY + "=|' - eg separate on pipes instead of tabs\n" +
       "  -D" + TIMESTAMP_CONF_KEY + "=currentTimeAsLong - use the specified timestamp for the import\n" +
       "  -D" + MAPPER_CONF_KEY + "=my.Mapper - A user-defined Mapper to use instead of " +
@@ -717,8 +763,13 @@ public class ImportTsv extends Configured implements Tool {
     // system time
     getConf().setLong(TIMESTAMP_CONF_KEY, timstamp);
 
+    dryRunTableCreated = false;
     Job job = createSubmittableJob(getConf(), otherArgs);
-    return job.waitForCompletion(true) ? 0 : 1;
+    boolean success = job.waitForCompletion(true);
+    if (dryRunTableCreated) {
+      deleteTable(getConf(), args);
+    }
+    return success ? 0 : 1;
   }
 
   public static void main(String[] args) throws Exception {
