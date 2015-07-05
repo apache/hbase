@@ -389,11 +389,9 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   }
 
   /**
-   * Compares the rows of the left and right cell
-   * For the hbase:meta case the 
-   * ({@link #compareRows(byte[], int, int, byte[], int, int)} is overridden such
-   * that it can handle the hbase:meta cells. The caller should ensure using the 
-   * appropriate comparator for hbase:meta
+   * Compares the rows of the left and right cell.
+   * For the hbase:meta case this method is overridden such that it can handle hbase:meta cells.
+   * The caller should ensure using the appropriate comparator for hbase:meta.
    * TODO : Handle BB cases here
    * @param left
    * @param right
