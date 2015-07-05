@@ -431,7 +431,7 @@ public class HFileWriterImpl implements HFile.Writer {
       final int leftLength, final byte[] rightArray, final int rightOffset, final int rightLength) {
     // rows are different
     int minLength = leftLength < rightLength ? leftLength : rightLength;
-    short diffIdx = 0;
+    int diffIdx = 0;
     while (diffIdx < minLength
         && leftArray[leftOffset + diffIdx] == rightArray[rightOffset + diffIdx]) {
       diffIdx++;
