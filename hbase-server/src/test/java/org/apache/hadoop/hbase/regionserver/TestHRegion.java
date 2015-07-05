@@ -3343,6 +3343,30 @@ public class TestHRegion {
     }
   }
 
+  /**
+   * Write an HFile block full with Cells whose qualifier that are identical between
+   * 0 and Short.MAX_VALUE. See HBASE-13329.
+   * @throws Exception
+   */
+  @Test
+  public void testLongQualifier() throws Exception {
+    String method = name.getMethodName();
+    TableName tableName = TableName.valueOf(method);
+    byte[] family = Bytes.toBytes("family");
+    this.region = initHRegion(tableName, method, CONF, family);
+    byte[] q = new byte[Short.MAX_VALUE+2];
+    Arrays.fill(q, 0, q.length-1, (byte)42);
+    for (byte i=0; i<10; i++) {
+      Put p = new Put(Bytes.toBytes("row"));
+      // qualifiers that differ past Short.MAX_VALUE
+      q[q.length-1]=i;
+      p.addColumn(family, q, q);
+      region.put(p);
+    }
+    region.flush(false);
+    HRegion.closeHRegion(this.region);
+    this.region = null;
+  }
   // ////////////////////////////////////////////////////////////////////////////
   // Split test
   // ////////////////////////////////////////////////////////////////////////////
