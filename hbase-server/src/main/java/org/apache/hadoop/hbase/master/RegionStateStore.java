@@ -170,15 +170,14 @@ public class RegionStateStore {
 
   void updateRegionState(long openSeqNum,
       RegionState newState, RegionState oldState) {
-  
+
     if (noPersistence) {
       return;
     }
-    
+
     HRegionInfo hri = newState.getRegion();
     try {
-      // update meta before checking for initialization.
-      // meta state stored in zk.
+       // Update meta before checking for initialization. Meta state stored in zk.
       if (hri.isMetaRegion()) {
         // persist meta state in MetaTableLocator (which in turn is zk storage currently)
         try {
@@ -200,19 +199,19 @@ public class RegionStateStore {
 
       int replicaId = hri.getReplicaId();
       Put put = new Put(MetaTableAccessor.getMetaKeyForRegion(hri));
-      StringBuilder info = new StringBuilder("Updating row ");
+      StringBuilder info = new StringBuilder("Updating hbase:meta row ");
       info.append(hri.getRegionNameAsString()).append(" with state=").append(state);
       if (serverName != null && !serverName.equals(oldServer)) {
         put.addImmutable(HConstants.CATALOG_FAMILY, getServerNameColumn(replicaId),
           Bytes.toBytes(serverName.getServerName()));
-        info.append("&sn=").append(serverName);
+        info.append(", sn=").append(serverName);
       }
       if (openSeqNum >= 0) {
         Preconditions.checkArgument(state == State.OPEN
           && serverName != null, "Open region should be on a server");
         MetaTableAccessor.addLocation(put, serverName, openSeqNum, -1, replicaId);
-        info.append("&openSeqNum=").append(openSeqNum);
-        info.append("&server=").append(serverName);
+        info.append(", openSeqNum=").append(openSeqNum);
+        info.append(", server=").append(serverName);
       }
       put.addImmutable(HConstants.CATALOG_FAMILY, getStateColumn(replicaId),
         Bytes.toBytes(state.name()));
