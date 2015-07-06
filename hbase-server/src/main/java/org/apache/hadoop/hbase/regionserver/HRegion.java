@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
@@ -5895,8 +5896,8 @@ public class HRegion implements HeapSize { // , Writable{
      */
     Descriptors.ServiceDescriptor serviceDesc = instance.getDescriptorForType();
     if (coprocessorServiceHandlers.containsKey(serviceDesc.getFullName())) {
-      LOG.error("Coprocessor service "+serviceDesc.getFullName()+
-          " already registered, rejecting request from "+instance
+      LOG.error("Coprocessor service " + serviceDesc.getFullName() +
+              " already registered, rejecting request from " + instance
       );
       return false;
     }
@@ -5962,6 +5963,11 @@ public class HRegion implements HeapSize { // , Writable{
 
     if (coprocessorHost != null) {
       coprocessorHost.postEndpointInvocation(service, methodName, request, responseBuilder);
+    }
+
+    IOException exception = ResponseConverter.getControllerException(controller);
+    if (exception != null) {
+      throw exception;
     }
 
     return responseBuilder.build();
