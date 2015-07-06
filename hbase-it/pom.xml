@@ -251,10 +251,12 @@
       <groupId>org.apache.htrace</groupId>
       <artifactId>htrace-core</artifactId>
     </dependency>
+    <!-- Hadoop needs Netty 3.x at test scope for the minicluster -->
     <dependency>
-      <groupId>org.jboss.netty</groupId>
+      <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
-      <version>3.2.4.Final</version>
+      <version>${netty.hadoop.version}</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
