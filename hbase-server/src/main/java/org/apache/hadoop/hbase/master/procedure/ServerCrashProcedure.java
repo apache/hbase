@@ -116,9 +116,9 @@ implements ServerProcedureInterface {
   private Set<HRegionInfo> regionsOnCrashedServer;
 
   /**
-   * Regions to assign. Usually some subset of {@link #regionsOnCrashedServer}
+   * Regions assigned. Usually some subset of {@link #regionsOnCrashedServer}.
    */
-  private List<HRegionInfo> regionsToAssign;
+  private List<HRegionInfo> regionsAssigned;
 
   private boolean distributedLogReplay = false;
   private boolean carryingMeta = false;
@@ -180,13 +180,13 @@ implements ServerProcedureInterface {
       this.cycles++;
     }
     MasterServices services = env.getMasterServices();
+    // Is master fully online? If not, yield. No processing of servers unless master is up
+    if (!services.getAssignmentManager().isFailoverCleanupDone()) {
+      throwProcedureYieldException("Waiting on master failover to complete");
+    }
     try {
       switch (state) {
       case SERVER_CRASH_START:
-        // Is master fully online? If not, yield. No processing of servers unless master is up
-        if (!services.getAssignmentManager().isFailoverCleanupDone()) {
-          throwProcedureYieldException("Waiting on master failover to complete");
-        }
         LOG.info("Start processing crashed " + this.serverName);
         start(env);
         // If carrying meta, process it first. Else, get list of regions on crashed server.
@@ -204,7 +204,7 @@ implements ServerProcedureInterface {
         // Where to go next? Depends on whether we should split logs at all or if we should do
         // distributed log splitting (DLS) vs distributed log replay (DLR).
         if (!this.shouldSplitWal) {
-          setNextState(ServerCrashState.SERVER_CRASH_CALC_REGIONS_TO_ASSIGN);
+          setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
         } else if (this.distributedLogReplay) {
           setNextState(ServerCrashState.SERVER_CRASH_PREPARE_LOG_REPLAY);
         } else {
@@ -222,34 +222,36 @@ implements ServerProcedureInterface {
 
       case SERVER_CRASH_PREPARE_LOG_REPLAY:
         prepareLogReplay(env, this.regionsOnCrashedServer);
-        setNextState(ServerCrashState.SERVER_CRASH_CALC_REGIONS_TO_ASSIGN);
+        setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
         break;
 
       case SERVER_CRASH_SPLIT_LOGS:
         splitLogs(env);
-        // If DLR, go to FINISH. Otherwise, if DLS, go to SERVER_CRASH_CALC_REGIONS_TO_ASSIGN
+        // If DLR, go to FINISH. Otherwise, if DLS, go to SERVER_CRASH_ASSIGN
         if (this.distributedLogReplay) setNextState(ServerCrashState.SERVER_CRASH_FINISH);
-        else setNextState(ServerCrashState.SERVER_CRASH_CALC_REGIONS_TO_ASSIGN);
-        break;
-
-      case SERVER_CRASH_CALC_REGIONS_TO_ASSIGN:
-        this.regionsToAssign = calcRegionsToAssign(env);
-        setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
+        else setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);
         break;
 
       case SERVER_CRASH_ASSIGN:
+        List<HRegionInfo> regionsToAssign = calcRegionsToAssign(env);
+
         // Assign may not be idempotent. SSH used to requeue the SSH if we got an IOE assigning
         // which is what we are mimicing here but it looks prone to double assignment if assign
         // fails midway. TODO: Test.
 
         // If no regions to assign, skip assign and skip to the finish.
-        boolean regions = this.regionsToAssign != null && !this.regionsToAssign.isEmpty();
+        boolean regions = regionsToAssign != null && !regionsToAssign.isEmpty();
         if (regions) {
-          if (!assign(env, this.regionsToAssign)) {
+          this.regionsAssigned = regionsToAssign;
+          if (!assign(env, regionsToAssign)) {
             throwProcedureYieldException("Failed assign; will retry");
           }
         }
-        if (regions && this.shouldSplitWal && distributedLogReplay) {
+        if (this.shouldSplitWal && distributedLogReplay) {
+          // Take this route even if there are apparently no regions assigned. This may be our
+          // second time through here; i.e. we assigned and crashed just about here. On second
+          // time through, there will be no regions because we assigned them in the previous step.
+          // Even though no regions, we need to go through here to clean up the DLR zk markers.
           setNextState(ServerCrashState.SERVER_CRASH_WAIT_ON_ASSIGN);
         } else {
           setNextState(ServerCrashState.SERVER_CRASH_FINISH);
@@ -257,15 +259,15 @@ implements ServerProcedureInterface {
         break;
 
       case SERVER_CRASH_WAIT_ON_ASSIGN:
-        // TODO: The list of regionsToAssign may be more than we actually assigned. See down in
+        // TODO: The list of regionsAssigned may be more than we actually assigned. See down in
         // AM #1629 around 'if (regionStates.wasRegionOnDeadServer(encodedName)) {' where where we
         // will skip assigning a region because it is/was on a dead server. Should never happen!
         // It was on this server. Worst comes to worst, we'll still wait here till other server is
         // processed.
 
         // If the wait on assign failed, yield -- if we have regions to assign.
-        if (this.regionsToAssign != null && !this.regionsToAssign.isEmpty()) {
-          if (!waitOnAssign(env, this.regionsToAssign)) {
+        if (this.regionsAssigned != null && !this.regionsAssigned.isEmpty()) {
+          if (!waitOnAssign(env, this.regionsAssigned)) {
             throwProcedureYieldException("Waiting on region assign");
           }
         }
@@ -367,8 +369,8 @@ implements ServerProcedureInterface {
   private void prepareLogReplay(final MasterProcedureEnv env, final Set<HRegionInfo> regions)
   throws IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Mark " + size(this.regionsOnCrashedServer) +
-        " regions-in-recovery from " + this.serverName);
+      LOG.debug("Mark " + size(this.regionsOnCrashedServer) + " regions-in-recovery from " +
+        this.serverName);
     }
     MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     AssignmentManager am = env.getMasterServices().getAssignmentManager();
@@ -439,8 +441,8 @@ implements ServerProcedureInterface {
               // If this region is in transition on the dead server, it must be
               // opening or pending_open, which should have been covered by
               // AM#cleanOutCrashedServerReferences
-              LOG.info("Skip assigning region " + hri.getRegionNameAsString()
-                + " because it has been opened in " + addressFromAM.getServerName());
+              LOG.info("Skip assigning " + hri.getRegionNameAsString()
+                + " because opened on " + addressFromAM.getServerName());
               continue;
             }
             if (rit != null) {
@@ -585,9 +587,9 @@ implements ServerProcedureInterface {
         state.addRegionsOnCrashedServer(HRegionInfo.convert(hri));
       }
     }
-    if (this.regionsToAssign != null && !this.regionsToAssign.isEmpty()) {
-      for (HRegionInfo hri: this.regionsToAssign) {
-        state.addRegionsToAssign(HRegionInfo.convert(hri));
+    if (this.regionsAssigned != null && !this.regionsAssigned.isEmpty()) {
+      for (HRegionInfo hri: this.regionsAssigned) {
+        state.addRegionsAssigned(HRegionInfo.convert(hri));
       }
     }
     state.build().writeDelimitedTo(stream);
@@ -612,11 +614,11 @@ implements ServerProcedureInterface {
         this.regionsOnCrashedServer.add(HRegionInfo.convert(ri));
       }
     }
-    size = state.getRegionsToAssignCount();
+    size = state.getRegionsAssignedCount();
     if (size > 0) {
-      this.regionsToAssign = new ArrayList<HRegionInfo>(size);
+      this.regionsAssigned = new ArrayList<HRegionInfo>(size);
       for (RegionInfo ri: state.getRegionsOnCrashedServerList()) {
-        this.regionsToAssign.add(HRegionInfo.convert(ri));
+        this.regionsAssigned.add(HRegionInfo.convert(ri));
       }
     }
   }

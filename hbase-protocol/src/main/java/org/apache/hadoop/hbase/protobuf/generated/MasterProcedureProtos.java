@@ -1100,21 +1100,21 @@ public final class MasterProcedureProtos {
      */
     SERVER_CRASH_PREPARE_LOG_REPLAY(5, 6),
     /**
-     * <code>SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;</code>
-     */
-    SERVER_CRASH_CALC_REGIONS_TO_ASSIGN(6, 7),
-    /**
      * <code>SERVER_CRASH_ASSIGN = 8;</code>
+     *
+     * <pre>
+     * Removed SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;
+     * </pre>
      */
-    SERVER_CRASH_ASSIGN(7, 8),
+    SERVER_CRASH_ASSIGN(6, 8),
     /**
      * <code>SERVER_CRASH_WAIT_ON_ASSIGN = 9;</code>
      */
-    SERVER_CRASH_WAIT_ON_ASSIGN(8, 9),
+    SERVER_CRASH_WAIT_ON_ASSIGN(7, 9),
     /**
      * <code>SERVER_CRASH_FINISH = 100;</code>
      */
-    SERVER_CRASH_FINISH(9, 100),
+    SERVER_CRASH_FINISH(8, 100),
     ;
 
     /**
@@ -1142,11 +1142,11 @@ public final class MasterProcedureProtos {
      */
     public static final int SERVER_CRASH_PREPARE_LOG_REPLAY_VALUE = 6;
     /**
-     * <code>SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;</code>
-     */
-    public static final int SERVER_CRASH_CALC_REGIONS_TO_ASSIGN_VALUE = 7;
-    /**
      * <code>SERVER_CRASH_ASSIGN = 8;</code>
+     *
+     * <pre>
+     * Removed SERVER_CRASH_CALC_REGIONS_TO_ASSIGN = 7;
+     * </pre>
      */
     public static final int SERVER_CRASH_ASSIGN_VALUE = 8;
     /**
@@ -1169,7 +1169,6 @@ public final class MasterProcedureProtos {
         case 4: return SERVER_CRASH_NO_SPLIT_LOGS;
         case 5: return SERVER_CRASH_SPLIT_LOGS;
         case 6: return SERVER_CRASH_PREPARE_LOG_REPLAY;
-        case 7: return SERVER_CRASH_CALC_REGIONS_TO_ASSIGN;
         case 8: return SERVER_CRASH_ASSIGN;
         case 9: return SERVER_CRASH_WAIT_ON_ASSIGN;
         case 100: return SERVER_CRASH_FINISH;
@@ -11406,29 +11405,29 @@ public final class MasterProcedureProtos {
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsOnCrashedServerOrBuilder(
         int index);
 
-    // repeated .RegionInfo regions_to_assign = 4;
+    // repeated .RegionInfo regions_assigned = 4;
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> 
-        getRegionsToAssignList();
+        getRegionsAssignedList();
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index);
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsAssigned(int index);
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    int getRegionsToAssignCount();
+    int getRegionsAssignedCount();
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
-        getRegionsToAssignOrBuilderList();
+        getRegionsAssignedOrBuilderList();
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsAssignedOrBuilder(
         int index);
 
     // optional bool carrying_meta = 5;
@@ -11530,10 +11529,10 @@ public final class MasterProcedureProtos {
             }
             case 34: {
               if (!((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-                regionsToAssign_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>();
+                regionsAssigned_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>();
                 mutable_bitField0_ |= 0x00000008;
               }
-              regionsToAssign_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry));
+              regionsAssigned_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.PARSER, extensionRegistry));
               break;
             }
             case 40: {
@@ -11558,7 +11557,7 @@ public final class MasterProcedureProtos {
           regionsOnCrashedServer_ = java.util.Collections.unmodifiableList(regionsOnCrashedServer_);
         }
         if (((mutable_bitField0_ & 0x00000008) == 0x00000008)) {
-          regionsToAssign_ = java.util.Collections.unmodifiableList(regionsToAssign_);
+          regionsAssigned_ = java.util.Collections.unmodifiableList(regionsAssigned_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -11666,40 +11665,40 @@ public final class MasterProcedureProtos {
       return regionsOnCrashedServer_.get(index);
     }
 
-    // repeated .RegionInfo regions_to_assign = 4;
-    public static final int REGIONS_TO_ASSIGN_FIELD_NUMBER = 4;
-    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsToAssign_;
+    // repeated .RegionInfo regions_assigned = 4;
+    public static final int REGIONS_ASSIGNED_FIELD_NUMBER = 4;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsAssigned_;
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsToAssignList() {
-      return regionsToAssign_;
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsAssignedList() {
+      return regionsAssigned_;
     }
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
-        getRegionsToAssignOrBuilderList() {
-      return regionsToAssign_;
+        getRegionsAssignedOrBuilderList() {
+      return regionsAssigned_;
     }
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    public int getRegionsToAssignCount() {
-      return regionsToAssign_.size();
+    public int getRegionsAssignedCount() {
+      return regionsAssigned_.size();
     }
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index) {
-      return regionsToAssign_.get(index);
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsAssigned(int index) {
+      return regionsAssigned_.get(index);
     }
     /**
-     * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+     * <code>repeated .RegionInfo regions_assigned = 4;</code>
      */
-    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsAssignedOrBuilder(
         int index) {
-      return regionsToAssign_.get(index);
+      return regionsAssigned_.get(index);
     }
 
     // optional bool carrying_meta = 5;
@@ -11738,7 +11737,7 @@ public final class MasterProcedureProtos {
       serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       distributedLogReplay_ = false;
       regionsOnCrashedServer_ = java.util.Collections.emptyList();
-      regionsToAssign_ = java.util.Collections.emptyList();
+      regionsAssigned_ = java.util.Collections.emptyList();
       carryingMeta_ = false;
       shouldSplitWal_ = true;
     }
@@ -11761,8 +11760,8 @@ public final class MasterProcedureProtos {
           return false;
         }
       }
-      for (int i = 0; i < getRegionsToAssignCount(); i++) {
-        if (!getRegionsToAssign(i).isInitialized()) {
+      for (int i = 0; i < getRegionsAssignedCount(); i++) {
+        if (!getRegionsAssigned(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -11783,8 +11782,8 @@ public final class MasterProcedureProtos {
       for (int i = 0; i < regionsOnCrashedServer_.size(); i++) {
         output.writeMessage(3, regionsOnCrashedServer_.get(i));
       }
-      for (int i = 0; i < regionsToAssign_.size(); i++) {
-        output.writeMessage(4, regionsToAssign_.get(i));
+      for (int i = 0; i < regionsAssigned_.size(); i++) {
+        output.writeMessage(4, regionsAssigned_.get(i));
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeBool(5, carryingMeta_);
@@ -11813,9 +11812,9 @@ public final class MasterProcedureProtos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(3, regionsOnCrashedServer_.get(i));
       }
-      for (int i = 0; i < regionsToAssign_.size(); i++) {
+      for (int i = 0; i < regionsAssigned_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(4, regionsToAssign_.get(i));
+          .computeMessageSize(4, regionsAssigned_.get(i));
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         size += com.google.protobuf.CodedOutputStream
@@ -11860,8 +11859,8 @@ public final class MasterProcedureProtos {
       }
       result = result && getRegionsOnCrashedServerList()
           .equals(other.getRegionsOnCrashedServerList());
-      result = result && getRegionsToAssignList()
-          .equals(other.getRegionsToAssignList());
+      result = result && getRegionsAssignedList()
+          .equals(other.getRegionsAssignedList());
       result = result && (hasCarryingMeta() == other.hasCarryingMeta());
       if (hasCarryingMeta()) {
         result = result && (getCarryingMeta()
@@ -11897,9 +11896,9 @@ public final class MasterProcedureProtos {
         hash = (37 * hash) + REGIONS_ON_CRASHED_SERVER_FIELD_NUMBER;
         hash = (53 * hash) + getRegionsOnCrashedServerList().hashCode();
       }
-      if (getRegionsToAssignCount() > 0) {
-        hash = (37 * hash) + REGIONS_TO_ASSIGN_FIELD_NUMBER;
-        hash = (53 * hash) + getRegionsToAssignList().hashCode();
+      if (getRegionsAssignedCount() > 0) {
+        hash = (37 * hash) + REGIONS_ASSIGNED_FIELD_NUMBER;
+        hash = (53 * hash) + getRegionsAssignedList().hashCode();
       }
       if (hasCarryingMeta()) {
         hash = (37 * hash) + CARRYING_META_FIELD_NUMBER;
@@ -12012,7 +12011,7 @@ public final class MasterProcedureProtos {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
           getServerNameFieldBuilder();
           getRegionsOnCrashedServerFieldBuilder();
-          getRegionsToAssignFieldBuilder();
+          getRegionsAssignedFieldBuilder();
         }
       }
       private static Builder create() {
@@ -12035,11 +12034,11 @@ public final class MasterProcedureProtos {
         } else {
           regionsOnCrashedServerBuilder_.clear();
         }
-        if (regionsToAssignBuilder_ == null) {
-          regionsToAssign_ = java.util.Collections.emptyList();
+        if (regionsAssignedBuilder_ == null) {
+          regionsAssigned_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000008);
         } else {
-          regionsToAssignBuilder_.clear();
+          regionsAssignedBuilder_.clear();
         }
         carryingMeta_ = false;
         bitField0_ = (bitField0_ & ~0x00000010);
@@ -12094,14 +12093,14 @@ public final class MasterProcedureProtos {
         } else {
           result.regionsOnCrashedServer_ = regionsOnCrashedServerBuilder_.build();
         }
-        if (regionsToAssignBuilder_ == null) {
+        if (regionsAssignedBuilder_ == null) {
           if (((bitField0_ & 0x00000008) == 0x00000008)) {
-            regionsToAssign_ = java.util.Collections.unmodifiableList(regionsToAssign_);
+            regionsAssigned_ = java.util.Collections.unmodifiableList(regionsAssigned_);
             bitField0_ = (bitField0_ & ~0x00000008);
           }
-          result.regionsToAssign_ = regionsToAssign_;
+          result.regionsAssigned_ = regionsAssigned_;
         } else {
-          result.regionsToAssign_ = regionsToAssignBuilder_.build();
+          result.regionsAssigned_ = regionsAssignedBuilder_.build();
         }
         if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
           to_bitField0_ |= 0x00000004;
@@ -12159,29 +12158,29 @@ public final class MasterProcedureProtos {
             }
           }
         }
-        if (regionsToAssignBuilder_ == null) {
-          if (!other.regionsToAssign_.isEmpty()) {
-            if (regionsToAssign_.isEmpty()) {
-              regionsToAssign_ = other.regionsToAssign_;
+        if (regionsAssignedBuilder_ == null) {
+          if (!other.regionsAssigned_.isEmpty()) {
+            if (regionsAssigned_.isEmpty()) {
+              regionsAssigned_ = other.regionsAssigned_;
               bitField0_ = (bitField0_ & ~0x00000008);
             } else {
-              ensureRegionsToAssignIsMutable();
-              regionsToAssign_.addAll(other.regionsToAssign_);
+              ensureRegionsAssignedIsMutable();
+              regionsAssigned_.addAll(other.regionsAssigned_);
             }
             onChanged();
           }
         } else {
-          if (!other.regionsToAssign_.isEmpty()) {
-            if (regionsToAssignBuilder_.isEmpty()) {
-              regionsToAssignBuilder_.dispose();
-              regionsToAssignBuilder_ = null;
-              regionsToAssign_ = other.regionsToAssign_;
+          if (!other.regionsAssigned_.isEmpty()) {
+            if (regionsAssignedBuilder_.isEmpty()) {
+              regionsAssignedBuilder_.dispose();
+              regionsAssignedBuilder_ = null;
+              regionsAssigned_ = other.regionsAssigned_;
               bitField0_ = (bitField0_ & ~0x00000008);
-              regionsToAssignBuilder_ = 
+              regionsAssignedBuilder_ = 
                 com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
-                   getRegionsToAssignFieldBuilder() : null;
+                   getRegionsAssignedFieldBuilder() : null;
             } else {
-              regionsToAssignBuilder_.addAllMessages(other.regionsToAssign_);
+              regionsAssignedBuilder_.addAllMessages(other.regionsAssigned_);
             }
           }
         }
@@ -12210,8 +12209,8 @@ public final class MasterProcedureProtos {
             return false;
           }
         }
-        for (int i = 0; i < getRegionsToAssignCount(); i++) {
-          if (!getRegionsToAssign(i).isInitialized()) {
+        for (int i = 0; i < getRegionsAssignedCount(); i++) {
+          if (!getRegionsAssigned(i).isInitialized()) {
             
             return false;
           }
@@ -12628,244 +12627,244 @@ public final class MasterProcedureProtos {
         return regionsOnCrashedServerBuilder_;
       }
 
-      // repeated .RegionInfo regions_to_assign = 4;
-      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsToAssign_ =
+      // repeated .RegionInfo regions_assigned = 4;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionsAssigned_ =
         java.util.Collections.emptyList();
-      private void ensureRegionsToAssignIsMutable() {
+      private void ensureRegionsAssignedIsMutable() {
         if (!((bitField0_ & 0x00000008) == 0x00000008)) {
-          regionsToAssign_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>(regionsToAssign_);
+          regionsAssigned_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo>(regionsAssigned_);
           bitField0_ |= 0x00000008;
          }
       }
 
       private com.google.protobuf.RepeatedFieldBuilder<
-          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionsToAssignBuilder_;
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionsAssignedBuilder_;
 
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsToAssignList() {
-        if (regionsToAssignBuilder_ == null) {
-          return java.util.Collections.unmodifiableList(regionsToAssign_);
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> getRegionsAssignedList() {
+        if (regionsAssignedBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(regionsAssigned_);
         } else {
-          return regionsToAssignBuilder_.getMessageList();
+          return regionsAssignedBuilder_.getMessageList();
         }
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public int getRegionsToAssignCount() {
-        if (regionsToAssignBuilder_ == null) {
-          return regionsToAssign_.size();
+      public int getRegionsAssignedCount() {
+        if (regionsAssignedBuilder_ == null) {
+          return regionsAssigned_.size();
         } else {
-          return regionsToAssignBuilder_.getCount();
+          return regionsAssignedBuilder_.getCount();
         }
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsToAssign(int index) {
-        if (regionsToAssignBuilder_ == null) {
-          return regionsToAssign_.get(index);
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionsAssigned(int index) {
+        if (regionsAssignedBuilder_ == null) {
+          return regionsAssigned_.get(index);
         } else {
-          return regionsToAssignBuilder_.getMessage(index);
+          return regionsAssignedBuilder_.getMessage(index);
         }
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder setRegionsToAssign(
+      public Builder setRegionsAssigned(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
-        if (regionsToAssignBuilder_ == null) {
+        if (regionsAssignedBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.set(index, value);
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.set(index, value);
           onChanged();
         } else {
-          regionsToAssignBuilder_.setMessage(index, value);
+          regionsAssignedBuilder_.setMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder setRegionsToAssign(
+      public Builder setRegionsAssigned(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
-        if (regionsToAssignBuilder_ == null) {
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.set(index, builderForValue.build());
+        if (regionsAssignedBuilder_ == null) {
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.set(index, builderForValue.build());
           onChanged();
         } else {
-          regionsToAssignBuilder_.setMessage(index, builderForValue.build());
+          regionsAssignedBuilder_.setMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder addRegionsToAssign(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
-        if (regionsToAssignBuilder_ == null) {
+      public Builder addRegionsAssigned(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
+        if (regionsAssignedBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.add(value);
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.add(value);
           onChanged();
         } else {
-          regionsToAssignBuilder_.addMessage(value);
+          regionsAssignedBuilder_.addMessage(value);
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder addRegionsToAssign(
+      public Builder addRegionsAssigned(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo value) {
-        if (regionsToAssignBuilder_ == null) {
+        if (regionsAssignedBuilder_ == null) {
           if (value == null) {
             throw new NullPointerException();
           }
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.add(index, value);
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.add(index, value);
           onChanged();
         } else {
-          regionsToAssignBuilder_.addMessage(index, value);
+          regionsAssignedBuilder_.addMessage(index, value);
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder addRegionsToAssign(
+      public Builder addRegionsAssigned(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
-        if (regionsToAssignBuilder_ == null) {
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.add(builderForValue.build());
+        if (regionsAssignedBuilder_ == null) {
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.add(builderForValue.build());
           onChanged();
         } else {
-          regionsToAssignBuilder_.addMessage(builderForValue.build());
+          regionsAssignedBuilder_.addMessage(builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder addRegionsToAssign(
+      public Builder addRegionsAssigned(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder builderForValue) {
-        if (regionsToAssignBuilder_ == null) {
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.add(index, builderForValue.build());
+        if (regionsAssignedBuilder_ == null) {
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.add(index, builderForValue.build());
           onChanged();
         } else {
-          regionsToAssignBuilder_.addMessage(index, builderForValue.build());
+          regionsAssignedBuilder_.addMessage(index, builderForValue.build());
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder addAllRegionsToAssign(
+      public Builder addAllRegionsAssigned(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> values) {
-        if (regionsToAssignBuilder_ == null) {
-          ensureRegionsToAssignIsMutable();
-          super.addAll(values, regionsToAssign_);
+        if (regionsAssignedBuilder_ == null) {
+          ensureRegionsAssignedIsMutable();
+          super.addAll(values, regionsAssigned_);
           onChanged();
         } else {
-          regionsToAssignBuilder_.addAllMessages(values);
+          regionsAssignedBuilder_.addAllMessages(values);
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder clearRegionsToAssign() {
-        if (regionsToAssignBuilder_ == null) {
-          regionsToAssign_ = java.util.Collections.emptyList();
+      public Builder clearRegionsAssigned() {
+        if (regionsAssignedBuilder_ == null) {
+          regionsAssigned_ = java.util.Collections.emptyList();
           bitField0_ = (bitField0_ & ~0x00000008);
           onChanged();
         } else {
-          regionsToAssignBuilder_.clear();
+          regionsAssignedBuilder_.clear();
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public Builder removeRegionsToAssign(int index) {
-        if (regionsToAssignBuilder_ == null) {
-          ensureRegionsToAssignIsMutable();
-          regionsToAssign_.remove(index);
+      public Builder removeRegionsAssigned(int index) {
+        if (regionsAssignedBuilder_ == null) {
+          ensureRegionsAssignedIsMutable();
+          regionsAssigned_.remove(index);
           onChanged();
         } else {
-          regionsToAssignBuilder_.remove(index);
+          regionsAssignedBuilder_.remove(index);
         }
         return this;
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionsToAssignBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder getRegionsAssignedBuilder(
           int index) {
-        return getRegionsToAssignFieldBuilder().getBuilder(index);
+        return getRegionsAssignedFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsToAssignOrBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder getRegionsAssignedOrBuilder(
           int index) {
-        if (regionsToAssignBuilder_ == null) {
-          return regionsToAssign_.get(index);  } else {
-          return regionsToAssignBuilder_.getMessageOrBuilder(index);
+        if (regionsAssignedBuilder_ == null) {
+          return regionsAssigned_.get(index);  } else {
+          return regionsAssignedBuilder_.getMessageOrBuilder(index);
         }
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
-           getRegionsToAssignOrBuilderList() {
-        if (regionsToAssignBuilder_ != null) {
-          return regionsToAssignBuilder_.getMessageOrBuilderList();
+           getRegionsAssignedOrBuilderList() {
+        if (regionsAssignedBuilder_ != null) {
+          return regionsAssignedBuilder_.getMessageOrBuilderList();
         } else {
-          return java.util.Collections.unmodifiableList(regionsToAssign_);
+          return java.util.Collections.unmodifiableList(regionsAssigned_);
         }
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsToAssignBuilder() {
-        return getRegionsToAssignFieldBuilder().addBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsAssignedBuilder() {
+        return getRegionsAssignedFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
-      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsToAssignBuilder(
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder addRegionsAssignedBuilder(
           int index) {
-        return getRegionsToAssignFieldBuilder().addBuilder(
+        return getRegionsAssignedFieldBuilder().addBuilder(
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionInfo regions_to_assign = 4;</code>
+       * <code>repeated .RegionInfo regions_assigned = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder> 
-           getRegionsToAssignBuilderList() {
-        return getRegionsToAssignFieldBuilder().getBuilderList();
+           getRegionsAssignedBuilderList() {
+        return getRegionsAssignedFieldBuilder().getBuilderList();
       }
       private com.google.protobuf.RepeatedFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
-          getRegionsToAssignFieldBuilder() {
-        if (regionsToAssignBuilder_ == null) {
-          regionsToAssignBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+          getRegionsAssignedFieldBuilder() {
+        if (regionsAssignedBuilder_ == null) {
+          regionsAssignedBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder>(
-                  regionsToAssign_,
+                  regionsAssigned_,
                   ((bitField0_ & 0x00000008) == 0x00000008),
                   getParentForChildren(),
                   isClean());
-          regionsToAssign_ = null;
+          regionsAssigned_ = null;
         }
-        return regionsToAssignBuilder_;
+        return regionsAssignedBuilder_;
       }
 
       // optional bool carrying_meta = 5;
@@ -13041,78 +13040,77 @@ public final class MasterProcedureProtos {
       "_table_state_check\030\003 \002(\010\"|\n\025DisableTable" +
       "StateData\022#\n\tuser_info\030\001 \002(\0132\020.UserInfor" +
       "mation\022\036\n\ntable_name\030\002 \002(\0132\n.TableName\022\036" +
-      "\n\026skip_table_state_check\030\003 \002(\010\"\347\001\n\024Serve" +
+      "\n\026skip_table_state_check\030\003 \002(\010\"\346\001\n\024Serve" +
       "rCrashStateData\022 \n\013server_name\030\001 \002(\0132\013.S" +
       "erverName\022\036\n\026distributed_log_replay\030\002 \001(",
       "\010\022.\n\031regions_on_crashed_server\030\003 \003(\0132\013.R" +
-      "egionInfo\022&\n\021regions_to_assign\030\004 \003(\0132\013.R" +
-      "egionInfo\022\025\n\rcarrying_meta\030\005 \001(\010\022\036\n\020shou" +
-      "ld_split_wal\030\006 \001(\010:\004true*\330\001\n\020CreateTable" +
-      "State\022\036\n\032CREATE_TABLE_PRE_OPERATION\020\001\022 \n" +
-      "\034CREATE_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n\030CREAT" +
-      "E_TABLE_ADD_TO_META\020\003\022\037\n\033CREATE_TABLE_AS" +
-      "SIGN_REGIONS\020\004\022\"\n\036CREATE_TABLE_UPDATE_DE" +
-      "SC_CACHE\020\005\022\037\n\033CREATE_TABLE_POST_OPERATIO" +
-      "N\020\006*\207\002\n\020ModifyTableState\022\030\n\024MODIFY_TABLE",
-      "_PREPARE\020\001\022\036\n\032MODIFY_TABLE_PRE_OPERATION" +
-      "\020\002\022(\n$MODIFY_TABLE_UPDATE_TABLE_DESCRIPT" +
-      "OR\020\003\022&\n\"MODIFY_TABLE_REMOVE_REPLICA_COLU" +
-      "MN\020\004\022!\n\035MODIFY_TABLE_DELETE_FS_LAYOUT\020\005\022" +
-      "\037\n\033MODIFY_TABLE_POST_OPERATION\020\006\022#\n\037MODI" +
-      "FY_TABLE_REOPEN_ALL_REGIONS\020\007*\212\002\n\022Trunca" +
-      "teTableState\022 \n\034TRUNCATE_TABLE_PRE_OPERA" +
-      "TION\020\001\022#\n\037TRUNCATE_TABLE_REMOVE_FROM_MET" +
-      "A\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_FS_LAYOUT\020\003\022" +
-      "#\n\037TRUNCATE_TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032",
-      "TRUNCATE_TABLE_ADD_TO_META\020\005\022!\n\035TRUNCATE" +
-      "_TABLE_ASSIGN_REGIONS\020\006\022!\n\035TRUNCATE_TABL" +
-      "E_POST_OPERATION\020\007*\337\001\n\020DeleteTableState\022" +
-      "\036\n\032DELETE_TABLE_PRE_OPERATION\020\001\022!\n\035DELET" +
-      "E_TABLE_REMOVE_FROM_META\020\002\022 \n\034DELETE_TAB" +
-      "LE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPD" +
-      "ATE_DESC_CACHE\020\004\022!\n\035DELETE_TABLE_UNASSIG" +
-      "N_REGIONS\020\005\022\037\n\033DELETE_TABLE_POST_OPERATI" +
-      "ON\020\006*\331\001\n\024AddColumnFamilyState\022\035\n\031ADD_COL" +
-      "UMN_FAMILY_PREPARE\020\001\022#\n\037ADD_COLUMN_FAMIL",
-      "Y_PRE_OPERATION\020\002\022-\n)ADD_COLUMN_FAMILY_U" +
-      "PDATE_TABLE_DESCRIPTOR\020\003\022$\n ADD_COLUMN_F" +
-      "AMILY_POST_OPERATION\020\004\022(\n$ADD_COLUMN_FAM" +
-      "ILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027ModifyColum" +
-      "nFamilyState\022 \n\034MODIFY_COLUMN_FAMILY_PRE" +
-      "PARE\020\001\022&\n\"MODIFY_COLUMN_FAMILY_PRE_OPERA" +
-      "TION\020\002\0220\n,MODIFY_COLUMN_FAMILY_UPDATE_TA" +
-      "BLE_DESCRIPTOR\020\003\022\'\n#MODIFY_COLUMN_FAMILY" +
-      "_POST_OPERATION\020\004\022+\n\'MODIFY_COLUMN_FAMIL" +
-      "Y_REOPEN_ALL_REGIONS\020\005*\226\002\n\027DeleteColumnF",
-      "amilyState\022 \n\034DELETE_COLUMN_FAMILY_PREPA" +
-      "RE\020\001\022&\n\"DELETE_COLUMN_FAMILY_PRE_OPERATI" +
-      "ON\020\002\0220\n,DELETE_COLUMN_FAMILY_UPDATE_TABL" +
-      "E_DESCRIPTOR\020\003\022)\n%DELETE_COLUMN_FAMILY_D" +
-      "ELETE_FS_LAYOUT\020\004\022\'\n#DELETE_COLUMN_FAMIL" +
-      "Y_POST_OPERATION\020\005\022+\n\'DELETE_COLUMN_FAMI" +
-      "LY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020EnableTableS" +
-      "tate\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022\036\n\032ENABLE" +
-      "_TABLE_PRE_OPERATION\020\002\022)\n%ENABLE_TABLE_S" +
-      "ET_ENABLING_TABLE_STATE\020\003\022$\n ENABLE_TABL",
-      "E_MARK_REGIONS_ONLINE\020\004\022(\n$ENABLE_TABLE_" +
-      "SET_ENABLED_TABLE_STATE\020\005\022\037\n\033ENABLE_TABL" +
-      "E_POST_OPERATION\020\006*\362\001\n\021DisableTableState" +
-      "\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037\n\033DISABLE_T" +
-      "ABLE_PRE_OPERATION\020\002\022+\n\'DISABLE_TABLE_SE" +
-      "T_DISABLING_TABLE_STATE\020\003\022&\n\"DISABLE_TAB" +
-      "LE_MARK_REGIONS_OFFLINE\020\004\022*\n&DISABLE_TAB" +
-      "LE_SET_DISABLED_TABLE_STATE\020\005\022 \n\034DISABLE" +
-      "_TABLE_POST_OPERATION\020\006*\305\002\n\020ServerCrashS" +
-      "tate\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_C",
-      "RASH_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_" +
-      "REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020" +
-      "\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER" +
-      "_CRASH_PREPARE_LOG_REPLAY\020\006\022\'\n#SERVER_CR" +
-      "ASH_CALC_REGIONS_TO_ASSIGN\020\007\022\027\n\023SERVER_C" +
-      "RASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_AS" +
-      "SIGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020dBK\n*org.a" +
-      "pache.hadoop.hbase.protobuf.generatedB\025M" +
-      "asterProcedureProtosH\001\210\001\001\240\001\001"
+      "egionInfo\022%\n\020regions_assigned\030\004 \003(\0132\013.Re" +
+      "gionInfo\022\025\n\rcarrying_meta\030\005 \001(\010\022\036\n\020shoul" +
+      "d_split_wal\030\006 \001(\010:\004true*\330\001\n\020CreateTableS" +
+      "tate\022\036\n\032CREATE_TABLE_PRE_OPERATION\020\001\022 \n\034" +
+      "CREATE_TABLE_WRITE_FS_LAYOUT\020\002\022\034\n\030CREATE" +
+      "_TABLE_ADD_TO_META\020\003\022\037\n\033CREATE_TABLE_ASS" +
+      "IGN_REGIONS\020\004\022\"\n\036CREATE_TABLE_UPDATE_DES" +
+      "C_CACHE\020\005\022\037\n\033CREATE_TABLE_POST_OPERATION" +
+      "\020\006*\207\002\n\020ModifyTableState\022\030\n\024MODIFY_TABLE_",
+      "PREPARE\020\001\022\036\n\032MODIFY_TABLE_PRE_OPERATION\020" +
+      "\002\022(\n$MODIFY_TABLE_UPDATE_TABLE_DESCRIPTO" +
+      "R\020\003\022&\n\"MODIFY_TABLE_REMOVE_REPLICA_COLUM" +
+      "N\020\004\022!\n\035MODIFY_TABLE_DELETE_FS_LAYOUT\020\005\022\037" +
+      "\n\033MODIFY_TABLE_POST_OPERATION\020\006\022#\n\037MODIF" +
+      "Y_TABLE_REOPEN_ALL_REGIONS\020\007*\212\002\n\022Truncat" +
+      "eTableState\022 \n\034TRUNCATE_TABLE_PRE_OPERAT" +
+      "ION\020\001\022#\n\037TRUNCATE_TABLE_REMOVE_FROM_META" +
+      "\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_FS_LAYOUT\020\003\022#" +
+      "\n\037TRUNCATE_TABLE_CREATE_FS_LAYOUT\020\004\022\036\n\032T",
+      "RUNCATE_TABLE_ADD_TO_META\020\005\022!\n\035TRUNCATE_" +
+      "TABLE_ASSIGN_REGIONS\020\006\022!\n\035TRUNCATE_TABLE" +
+      "_POST_OPERATION\020\007*\337\001\n\020DeleteTableState\022\036" +
+      "\n\032DELETE_TABLE_PRE_OPERATION\020\001\022!\n\035DELETE" +
+      "_TABLE_REMOVE_FROM_META\020\002\022 \n\034DELETE_TABL" +
+      "E_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELETE_TABLE_UPDA" +
+      "TE_DESC_CACHE\020\004\022!\n\035DELETE_TABLE_UNASSIGN" +
+      "_REGIONS\020\005\022\037\n\033DELETE_TABLE_POST_OPERATIO" +
+      "N\020\006*\331\001\n\024AddColumnFamilyState\022\035\n\031ADD_COLU" +
+      "MN_FAMILY_PREPARE\020\001\022#\n\037ADD_COLUMN_FAMILY",
+      "_PRE_OPERATION\020\002\022-\n)ADD_COLUMN_FAMILY_UP" +
+      "DATE_TABLE_DESCRIPTOR\020\003\022$\n ADD_COLUMN_FA" +
+      "MILY_POST_OPERATION\020\004\022(\n$ADD_COLUMN_FAMI" +
+      "LY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027ModifyColumn" +
+      "FamilyState\022 \n\034MODIFY_COLUMN_FAMILY_PREP" +
+      "ARE\020\001\022&\n\"MODIFY_COLUMN_FAMILY_PRE_OPERAT" +
+      "ION\020\002\0220\n,MODIFY_COLUMN_FAMILY_UPDATE_TAB" +
+      "LE_DESCRIPTOR\020\003\022\'\n#MODIFY_COLUMN_FAMILY_" +
+      "POST_OPERATION\020\004\022+\n\'MODIFY_COLUMN_FAMILY" +
+      "_REOPEN_ALL_REGIONS\020\005*\226\002\n\027DeleteColumnFa",
+      "milyState\022 \n\034DELETE_COLUMN_FAMILY_PREPAR" +
+      "E\020\001\022&\n\"DELETE_COLUMN_FAMILY_PRE_OPERATIO" +
+      "N\020\002\0220\n,DELETE_COLUMN_FAMILY_UPDATE_TABLE" +
+      "_DESCRIPTOR\020\003\022)\n%DELETE_COLUMN_FAMILY_DE" +
+      "LETE_FS_LAYOUT\020\004\022\'\n#DELETE_COLUMN_FAMILY" +
+      "_POST_OPERATION\020\005\022+\n\'DELETE_COLUMN_FAMIL" +
+      "Y_REOPEN_ALL_REGIONS\020\006*\350\001\n\020EnableTableSt" +
+      "ate\022\030\n\024ENABLE_TABLE_PREPARE\020\001\022\036\n\032ENABLE_" +
+      "TABLE_PRE_OPERATION\020\002\022)\n%ENABLE_TABLE_SE" +
+      "T_ENABLING_TABLE_STATE\020\003\022$\n ENABLE_TABLE",
+      "_MARK_REGIONS_ONLINE\020\004\022(\n$ENABLE_TABLE_S" +
+      "ET_ENABLED_TABLE_STATE\020\005\022\037\n\033ENABLE_TABLE" +
+      "_POST_OPERATION\020\006*\362\001\n\021DisableTableState\022" +
+      "\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037\n\033DISABLE_TA" +
+      "BLE_PRE_OPERATION\020\002\022+\n\'DISABLE_TABLE_SET" +
+      "_DISABLING_TABLE_STATE\020\003\022&\n\"DISABLE_TABL" +
+      "E_MARK_REGIONS_OFFLINE\020\004\022*\n&DISABLE_TABL" +
+      "E_SET_DISABLED_TABLE_STATE\020\005\022 \n\034DISABLE_" +
+      "TABLE_POST_OPERATION\020\006*\234\002\n\020ServerCrashSt" +
+      "ate\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_CR",
+      "ASH_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_R" +
+      "EGIONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020\004" +
+      "\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER_" +
+      "CRASH_PREPARE_LOG_REPLAY\020\006\022\027\n\023SERVER_CRA" +
+      "SH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_ASSI" +
+      "GN\020\t\022\027\n\023SERVER_CRASH_FINISH\020dBK\n*org.apa" +
+      "che.hadoop.hbase.protobuf.generatedB\025Mas" +
+      "terProcedureProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -13178,7 +13176,7 @@ public final class MasterProcedureProtos {
           internal_static_ServerCrashStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ServerCrashStateData_descriptor,
-              new java.lang.String[] { "ServerName", "DistributedLogReplay", "RegionsOnCrashedServer", "RegionsToAssign", "CarryingMeta", "ShouldSplitWal", });
+              new java.lang.String[] { "ServerName", "DistributedLogReplay", "RegionsOnCrashedServer", "RegionsAssigned", "CarryingMeta", "ShouldSplitWal", });
           return null;
         }
       };

@@ -447,7 +447,7 @@ public class ProcedureExecutor<TEnvironment> {
 
     // Initialize procedures executor
     for (int i = 0; i < numThreads; ++i) {
-      threads[i] = new Thread("ProcedureExecutorThread-" + i) {
+      threads[i] = new Thread("ProcedureExecutor-" + i) {
         @Override
         public void run() {
           execLoop();
