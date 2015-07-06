@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.ArrayList;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -63,6 +63,56 @@ public class TestMasterProcedureQueue {
   @After
   public void tearDown() throws IOException {
     assertEquals(0, queue.size());
+  }
+
+  @Test
+  public void testConcurrentCreateDelete() throws Exception {
+    final MasterProcedureQueue procQueue = queue;
+    final TableName table = TableName.valueOf("testtb");
+    final AtomicBoolean running = new AtomicBoolean(true);
+    final AtomicBoolean failure = new AtomicBoolean(false);
+    Thread createThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          while (running.get() && !failure.get()) {
+            if (procQueue.tryAcquireTableWrite(table, "create")) {
+              procQueue.releaseTableWrite(table);
+            }
+          }
+        } catch (Throwable e) {
+          LOG.error("create failed", e);
+          failure.set(true);
+        }
+      }
+    };
+
+    Thread deleteThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          while (running.get() && !failure.get()) {
+            if (procQueue.tryAcquireTableWrite(table, "delete")) {
+              procQueue.releaseTableWrite(table);
+            }
+            procQueue.markTableAsDeleted(table);
+          }
+        } catch (Throwable e) {
+          LOG.error("delete failed", e);
+          failure.set(true);
+        }
+      }
+    };
+
+    createThread.start();
+    deleteThread.start();
+    for (int i = 0; i < 100 && running.get() && !failure.get(); ++i) {
+      Thread.sleep(100);
+    }
+    running.set(false);
+    createThread.join();
+    deleteThread.join();
+    assertEquals(false, failure.get());
   }
 
   /**
