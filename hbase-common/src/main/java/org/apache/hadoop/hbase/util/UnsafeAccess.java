@@ -250,10 +250,28 @@ public final class UnsafeAccess {
     return theUnsafe.getLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
   }
 
+  /**
+   * Put an int value out to the specified ByteBuffer offset in big-endian format.
+   * @param buf the ByteBuffer to write to
+   * @param offset offset in the ByteBuffer
+   * @param val int to write out
+   * @return incremented offset
+   */
+  public static int putInt(ByteBuffer buf, int offset, int val) {
+    if (littleEndian) {
+      val = Integer.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putInt(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putInt(buf.array(), offset + buf.arrayOffset() + BYTE_ARRAY_BASE_OFFSET, val);
+    }
+    return offset + Bytes.SIZEOF_INT;
+  }
+
   // APIs to copy data. This will be direct memory location copy and will be much faster
   /**
-   * Copies the bytes from given array's offset to length part into the given buffer. Puts the bytes
-   * to buffer's current position.
+   * Copies the bytes from given array's offset to length part into the given buffer.
    * @param src
    * @param srcOffset
    * @param dest
@@ -274,7 +292,9 @@ public final class UnsafeAccess {
   }
 
   /**
-   * Copies specified number of bytes from given offset of 'in' ByteBuffer to the array.
+   * Copies specified number of bytes from given offset of {@code src} ByteBuffer to the
+   * {@code dest} array.
+   *
    * @param src
    * @param srcOffset
    * @param dest
@@ -293,5 +313,34 @@ public final class UnsafeAccess {
     }
     long destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET;
     theUnsafe.copyMemory(srcBase, srcAddress, dest, destAddress, length);
+  }
+
+  /**
+   * Copies specified number of bytes from given offset of {@code src} buffer into the {@code dest}
+   * buffer.
+   *
+   * @param src
+   * @param srcOffset
+   * @param dest
+   * @param destOffset
+   * @param length
+   */
+  public static void copy(ByteBuffer src, int srcOffset, ByteBuffer dest, int destOffset,
+      int length) {
+    long srcAddress, destAddress;
+    Object srcBase = null, destBase = null;
+    if (src.isDirect()) {
+      srcAddress = srcOffset + ((DirectBuffer) src).address();
+    } else {
+      srcAddress = srcOffset +  src.arrayOffset() + BYTE_ARRAY_BASE_OFFSET;
+      srcBase = src.array();
+    }
+    if (dest.isDirect()) {
+      destAddress = destOffset + ((DirectBuffer) dest).address();
+    } else {
+      destAddress = destOffset + BYTE_ARRAY_BASE_OFFSET + dest.arrayOffset();
+      destBase = dest.array();
+    }
+    theUnsafe.copyMemory(srcBase, srcAddress, destBase, destAddress, length);
   }
 }

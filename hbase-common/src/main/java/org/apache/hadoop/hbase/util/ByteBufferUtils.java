@@ -354,6 +354,23 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Copy one buffer's whole data to another. Write starts at the current position of 'out' buffer.
+   * Note : This will advance the position marker of {@code out} but not change the position maker
+   * for {@code in}. The position and limit of the {@code in} buffer to be set properly by caller.
+   * @param in source buffer
+   * @param out destination buffer
+   */
+  public static void copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out) {
+    if (UnsafeAccess.isAvailable()) {
+      int length = in.remaining();
+      UnsafeAccess.copy(in, in.position(), out, out.position(), length);
+      out.position(out.position() + length);
+    } else {
+      out.put(in);
+    }
+  }
+
+  /**
    * Copy from one buffer to another from given offset. This will be absolute positional copying and
    * won't affect the position of any of the buffers.
    * @param out
@@ -629,6 +646,21 @@ public final class ByteBufferUtils {
       return UnsafeAccess.toLong(buffer, offset);
     } else {
       return buffer.getLong(offset);
+    }
+  }
+
+  /**
+   * Put an int value out to the given ByteBuffer's current position in big-endian format.
+   * This also advances the position in buffer by int size.
+   * @param buffer the ByteBuffer to write to
+   * @param val int to write out
+   */
+  public static void putInt(ByteBuffer buffer, int val) {
+    if (UnsafeAccess.isAvailable()) {
+      int newPos = UnsafeAccess.putInt(buffer, buffer.position(), val);
+      buffer.position(newPos);
+    } else {
+      buffer.putInt(val);
     }
   }
 

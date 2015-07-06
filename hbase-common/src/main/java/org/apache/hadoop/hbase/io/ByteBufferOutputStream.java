@@ -28,6 +28,7 @@ import java.nio.channels.WritableByteChannel;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -89,7 +90,7 @@ public class ByteBufferOutputStream extends OutputStream {
       newSize = Math.max(newSize, buf.position() + extra);
       ByteBuffer newBuf = allocate(newSize, buf.isDirect());
       buf.flip();
-      newBuf.put(buf);
+      ByteBufferUtils.copyFromBufferToBuffer(buf, newBuf);
       buf = newBuf;
     }
   }
@@ -98,7 +99,6 @@ public class ByteBufferOutputStream extends OutputStream {
   @Override
   public void write(int b) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_BYTE);
-
     buf.put((byte)b);
   }
 
@@ -118,16 +118,13 @@ public class ByteBufferOutputStream extends OutputStream {
 
   @Override
   public void write(byte[] b) throws IOException {
-    checkSizeAndGrow(b.length);
-
-    buf.put(b);
+    write(b, 0, b.length);
   }
 
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
     checkSizeAndGrow(len);
-
-    buf.put(b, off, len);
+    ByteBufferUtils.copyFromArrayToBuffer(buf, b, off, len);
   }
 
   /**
@@ -138,7 +135,7 @@ public class ByteBufferOutputStream extends OutputStream {
    */
   public void writeInt(int i) throws IOException {
     checkSizeAndGrow(Bytes.SIZEOF_INT);
-    this.buf.putInt(i);
+    ByteBufferUtils.putInt(this.buf, i);
   }
 
   @Override
