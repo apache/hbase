@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -64,6 +65,56 @@ public class TestMasterProcedureQueue {
   @After
   public void tearDown() throws IOException {
     assertEquals(0, queue.size());
+  }
+
+  @Test
+  public void testConcurrentCreateDelete() throws Exception {
+    final MasterProcedureQueue procQueue = queue;
+    final TableName table = TableName.valueOf("testtb");
+    final AtomicBoolean running = new AtomicBoolean(true);
+    final AtomicBoolean failure = new AtomicBoolean(false);
+    Thread createThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          while (running.get() && !failure.get()) {
+            if (procQueue.tryAcquireTableExclusiveLock(table, "create")) {
+              procQueue.releaseTableExclusiveLock(table);
+            }
+          }
+        } catch (Throwable e) {
+          LOG.error("create failed", e);
+          failure.set(true);
+        }
+      }
+    };
+
+    Thread deleteThread = new Thread() {
+      @Override
+      public void run() {
+        try {
+          while (running.get() && !failure.get()) {
+            if (procQueue.tryAcquireTableExclusiveLock(table, "delete")) {
+              procQueue.releaseTableExclusiveLock(table);
+            }
+            procQueue.markTableAsDeleted(table);
+          }
+        } catch (Throwable e) {
+          LOG.error("delete failed", e);
+          failure.set(true);
+        }
+      }
+    };
+
+    createThread.start();
+    deleteThread.start();
+    for (int i = 0; i < 100 && running.get() && !failure.get(); ++i) {
+      Thread.sleep(100);
+    }
+    running.set(false);
+    createThread.join();
+    deleteThread.join();
+    assertEquals(false, failure.get());
   }
 
   /**

@@ -67,7 +67,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
    * server that was carrying meta should rise to the top of the queue (this is how it used to
    * work when we had handlers and ServerShutdownHandler ran). TODO: special handling of servers
    * that were carrying system tables on crash; do I need to have these servers have priority?
-   * 
+   *
    * <p>Apart from the special-casing of meta and system tables, fairq is what we want
    */
   private final ProcedureFairRunQueues<ServerName, RunQueue> serverFairQ;
@@ -366,7 +366,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
     if (queue != null) {
       lock.lock();
       try {
-        if (queue.isEmpty() && !queue.isLocked()) {
+        if (queue.isEmpty() && queue.acquireDeleteLock()) {
           tableFairQ.remove(table);
 
           // Remove the table lock
@@ -390,7 +390,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
     void addFront(Procedure proc);
     void addBack(Procedure proc);
     Long poll();
-    boolean isLocked();
+    boolean acquireDeleteLock();
   }
 
   /**
@@ -443,6 +443,10 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
     }
 
     @Override
+    public synchronized boolean acquireDeleteLock() {
+      return tryExclusiveLock();
+    }
+
     public synchronized boolean isLocked() {
       return isExclusiveLock() || sharedLock > 0;
     }
@@ -477,7 +481,7 @@ public class MasterProcedureQueue implements ProcedureRunnableSet {
     public synchronized void releaseExclusiveLock() {
       exclusiveLock = false;
     }
- 
+
     @Override
     public String toString() {
       return this.runnables.toString();
