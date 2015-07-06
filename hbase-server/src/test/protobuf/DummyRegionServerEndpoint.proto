@@ -30,4 +30,5 @@ message DummyResponse {
 
 service DummyService {
   rpc dummyCall(DummyRequest) returns(DummyResponse);
+  rpc dummyThrow(DummyRequest) returns(DummyResponse);
 }

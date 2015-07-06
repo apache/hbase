@@ -107,6 +107,7 @@ import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceCall;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
@@ -3213,10 +3214,11 @@ public class HRegionServer extends HasThread implements
     return result;
   }
 
-  public CoprocessorServiceResponse execRegionServerService(final RpcController controller,
+  public CoprocessorServiceResponse execRegionServerService(
+      @SuppressWarnings("UnusedParameters") final RpcController controller,
       final CoprocessorServiceRequest serviceRequest) throws ServiceException {
     try {
-      ServerRpcController execController = new ServerRpcController();
+      ServerRpcController serviceController = new ServerRpcController();
       CoprocessorServiceCall call = serviceRequest.getCall();
       String serviceName = call.getServiceName();
       String methodName = call.getMethodName();
@@ -3236,7 +3238,7 @@ public class HRegionServer extends HasThread implements
               .build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
-      service.callMethod(methodDesc, controller, request, new RpcCallback<Message>() {
+      service.callMethod(methodDesc, serviceController, request, new RpcCallback<Message>() {
         @Override
         public void run(Message message) {
           if (message != null) {
@@ -3244,10 +3246,11 @@ public class HRegionServer extends HasThread implements
           }
         }
       });
-      Message execResult = responseBuilder.build();
-      if (execController.getFailedOn() != null) {
-        throw execController.getFailedOn();
+      IOException exception = ResponseConverter.getControllerException(serviceController);
+      if (exception != null) {
+        throw exception;
       }
+      Message execResult = responseBuilder.build();
       ClientProtos.CoprocessorServiceResponse.Builder builder =
           ClientProtos.CoprocessorServiceResponse.newBuilder();
       builder.setRegion(RequestConverter.buildRegionSpecifier(RegionSpecifierType.REGION_NAME,
