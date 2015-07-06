@@ -36,12 +36,14 @@
   SnapshotDescription snapshot = null;
   SnapshotInfo.SnapshotStats stats = null;
   TableName snapshotTable = null;
+  boolean tableExists = false;
   try (Admin admin = master.getConnection().getAdmin()) {
     for (SnapshotDescription snapshotDesc: admin.listSnapshots()) {
       if (snapshotName.equals(snapshotDesc.getName())) {
         snapshot = snapshotDesc;
         stats = SnapshotInfo.getSnapshotStats(conf, snapshot);
         snapshotTable = TableName.valueOf(snapshot.getTable());
+        tableExists = admin.tableExists(snapshotTable);
         break;
       }
     }
@@ -104,32 +106,7 @@
         </div><!--/.nav-collapse -->
     </div>
 </div>
-<% if (isActionResultPage) { %>
-  <div class="container">
-    <div class="row inner_header">
-        <div class="page-header">
-          <h1>Snapshot action request...</h1>
-        </div>
-    </div>
-    <p><hr><p>
-<%
-  try (Admin admin = master.getConnection().getAdmin()) {
-    if (action.equals("restore")) {
-      admin.restoreSnapshot(snapshotName);
-      %> Restore Snapshot request accepted. <%
-    } else if (action.equals("clone")) {
-      if (cloneName != null && cloneName.length() > 0) {
-        admin.cloneSnapshot(snapshotName, TableName.valueOf(cloneName));
-        %> Clone from Snapshot request accepted. <%
-      } else {
-        %> Clone from Snapshot request failed, No table name specified. <%
-      }
-    }
-  }
-%>
-<p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
-</div>
-<% } else if (snapshot == null) { %>
+<% if (snapshot == null) { %>
   <div class="container">
   <div class="row inner_header">
     <div class="page-header">
@@ -154,8 +131,15 @@
         <th>State</th>
     </tr>
     <tr>
-        <td><a href="table.jsp?name=<%= snapshotTable.getNameAsString() %>">
-            <%= snapshotTable.getNameAsString() %></a></td>
+
+        <td>
+          <% if (tableExists) { %>
+            <a href="table.jsp?name=<%= snapshotTable.getNameAsString() %>">
+              <%= snapshotTable.getNameAsString() %></a>
+          <% } else { %>
+            <%= snapshotTable.getNameAsString() %>
+          <% } %>
+        </td>
         <td><%= new Date(snapshot.getCreationTime()) %></td>
         <td><%= snapshot.getType() %></td>
         <td><%= snapshot.getVersion() %></td>
@@ -195,47 +179,6 @@
 %>
 
 
-<% if (!readOnly && action == null && snapshot != null) { %>
-<p><hr><p>
-Actions:
-<p>
-<center>
-<table class="table table-striped" width="90%" >
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="clone">
-  <input type="hidden" name="name" value="<%= snapshotName %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Clone" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">New Table Name (clone):<input type="text" name="cloneName" size="40"></td>
-  <td style="border-style: none">
-    This action will create a new table by cloning the snapshot content.
-    There are no copies of data involved.
-    And writing on the newly created table will not influence the snapshot data.
-  </td>
-  </form>
-</tr>
-<tr><td style="border-style: none" colspan="4">&nbsp;</td></tr>
-<tr>
-  <form method="get">
-  <input type="hidden" name="action" value="restore">
-  <input type="hidden" name="name" value="<%= snapshotName %>">
-  <td style="border-style: none; text-align: center">
-      <input style="font-size: 12pt; width: 10em" type="submit" value="Restore" class="btn"></td>
-  <td style="border-style: none" width="5%">&nbsp;</td>
-  <td style="border-style: none">&nbsp;</td>
-  <td style="border-style: none">Restore a specified snapshot.
-  The restore will replace the content of the original table,
-  bringing back the content to the snapshot state.
-  The table must be disabled.</td>
-  </form>
-</tr>
-</table>
-</center>
-<p>
-</div>
-<% } %>
 <script src="/static/js/jquery.min.js" type="text/javascript"></script>
 <script src="/static/js/bootstrap.min.js" type="text/javascript"></script>
 
