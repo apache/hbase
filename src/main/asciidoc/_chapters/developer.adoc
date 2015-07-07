@@ -456,6 +456,7 @@ You then reference these generated poms when you build.
 For now, just be aware of the difference between HBase 1.x builds and those of HBase 0.96-0.98.
 This difference is important to the build instructions.
 
+[[maven.settings.xml]]
 .Example _~/.m2/settings.xml_ File
 ====
 Publishing to maven requires you sign the artifacts you want to upload.
@@ -637,12 +638,12 @@ Release needs to be tagged for the next step.
 . Deploy to the Maven Repository.
 +
 Next, deploy HBase to the Apache Maven repository, using the `apache-release` profile instead of the `release` profile when running the `mvn deploy` command.
-This profile invokes the Apache pom referenced by our pom files, and also signs your artifacts published to Maven, as long as the _settings.xml_ is configured correctly, as described in <<mvn.settings.file,mvn.settings.file>>.
+This profile invokes the Apache pom referenced by our pom files, and also signs your artifacts published to Maven, as long as the _settings.xml_ is configured correctly, as described in <<maven.settings.xml>>.
 +
 [source,bourne]
 ----
 
-$ mvn deploy -DskipTests -Papache-release
+$ mvn deploy -DskipTests -Papache-release -Prelease
 ----
 +
 This command copies all artifacts up to a temporary staging Apache mvn repository in an 'open' state.
@@ -720,7 +721,7 @@ Announce the release candidate on the mailing list and call a vote.
 [[maven.snapshot]]
 === Publishing a SNAPSHOT to maven
 
-Make sure your _settings.xml_ is set up properly, as in <<mvn.settings.file,mvn.settings.file>>.
+Make sure your _settings.xml_ is set up properly (see <<maven.settings.xml>>).
 Make sure the hbase version includes `-SNAPSHOT` as a suffix.
 Following is an example of publishing SNAPSHOTS of a release that had an hbase version of 0.96.0 in its poms.
 
@@ -1335,6 +1336,13 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.0
 | Enis Soztutar
+
+| 1.1
+| Nick Dimiduk
+
+| 1.2
+| Sean Busbey
+
 |===
 
 [[code.standards]]

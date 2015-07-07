@@ -294,9 +294,11 @@ You can skip the HDFS configuration to continue storing your data in the local f
 .Hadoop Configuration
 [NOTE]
 ====
-This procedure assumes that you have configured Hadoop and HDFS on your local system and or a remote system, and that they are running and available.
-It also assumes you are using Hadoop 2.
-Currently, the documentation on the Hadoop website does not include a quick start for Hadoop 2, but the guide at link:http://www.alexjf.net/blog/distributed-systems/hadoop-yarn-installation-definitive-guide          is a good starting point.
+This procedure assumes that you have configured Hadoop and HDFS on your local system and/or a remote
+system, and that they are running and available. It also assumes you are using Hadoop 2.
+The guide on
+link:http://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/SingleCluster.html[Setting up a Single Node Cluster]
+in the Hadoop documentation is a good starting point.
 ====
 
 

@@ -35,7 +35,7 @@ You can also manage the ZooKeeper ensemble independent of HBase and just point H
 To toggle HBase management of ZooKeeper, use the `HBASE_MANAGES_ZK` variable in _conf/hbase-env.sh_.
 This variable, which defaults to `true`, tells HBase whether to start/stop the ZooKeeper ensemble servers as part of HBase start/stop.
 
-When HBase manages the ZooKeeper ensemble, you can specify ZooKeeper configuration using its native _zoo.cfg_ file, or, the easier option is to just specify ZooKeeper options directly in _conf/hbase-site.xml_.
+When HBase manages the ZooKeeper ensemble, you can specify ZooKeeper configuration directly in _conf/hbase-site.xml_.
 A ZooKeeper configuration option can be set as a property in the HBase _hbase-site.xml_ XML configuration file by prefacing the ZooKeeper option name with `hbase.zookeeper.property`.
 For example, the `clientPort` setting in ZooKeeper can be changed by setting the `hbase.zookeeper.property.clientPort` property.
 For all default values used by HBase, including ZooKeeper configuration, see <<hbase_default_configurations,hbase default configurations>>.
@@ -124,8 +124,7 @@ To point HBase at an existing ZooKeeper cluster, one that is not managed by HBas
   export HBASE_MANAGES_ZK=false
 ----
 
-Next set ensemble locations and client port, if non-standard, in _hbase-site.xml_, or add a suitably configured _zoo.cfg_ to HBase's _CLASSPATH_.
-HBase will prefer the configuration found in _zoo.cfg_ over any settings in _hbase-site.xml_.
+Next set ensemble locations and client port, if non-standard, in _hbase-site.xml_.
 
 When HBase manages ZooKeeper, it will start/stop the ZooKeeper servers as a part of the regular start/stop scripts.
 If you would like to run ZooKeeper yourself, independent of HBase start/stop, you would do the following
@@ -312,20 +311,22 @@ Modify your _hbase-site.xml_ on each node that will run a master or regionserver
     <name>hbase.cluster.distributed</name>
     <value>true</value>
   </property>
+  <property>
+    <name>hbase.zookeeper.property.authProvider.1</name>
+    <value>org.apache.zookeeper.server.auth.SASLAuthenticationProvider</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.kerberos.removeHostFromPrincipal</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.zookeeper.property.kerberos.removeRealmFromPrincipal</name>
+    <value>true</value>
+  </property>
 </configuration>
 ----
 
 where `$ZK_NODES` is the comma-separated list of hostnames of the Zookeeper Quorum hosts.
-
-Add a _zoo.cfg_ for each Zookeeper Quorum host containing:
-
-[source,java]
-----
-
-authProvider.1=org.apache.zookeeper.server.auth.SASLAuthenticationProvider
-kerberos.removeHostFromPrincipal=true
-kerberos.removeRealmFromPrincipal=true
-----
 
 Also on each of these hosts, create a JAAS configuration file containing:
 
