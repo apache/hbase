@@ -1709,8 +1709,8 @@ public class HRegionServer extends HasThread implements
 
     // Leases is not a Thread. Internally it runs a daemon thread. If it gets
     // an unhandled exception, it will just exit.
-    this.leases.setName(getName() + ".leaseChecker");
-    this.leases.start();
+    Threads.setDaemonThreadRunning(this.leases.getThread(), getName() + ".leaseChecker",
+      uncaughtExceptionHandler);
 
     if (this.replicationSourceHandler == this.replicationSinkHandler &&
         this.replicationSourceHandler != null) {
