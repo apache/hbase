@@ -1102,7 +1102,23 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       boolean success = job.waitForCompletion(true);
 
-      return success ? 0 : 1;
+      if (success) {
+        Counters counters = job.getCounters();
+        if (null == counters) {
+          LOG.warn("Counters were null, cannot verify Job completion");
+          // We don't have access to the counters to know if we have "bad" counts
+          return 0;
+        }
+
+        // If we find no unexpected values, the job didn't outright fail
+        if (verifyUnexpectedValues(counters)) {
+          // We didn't check referenced+unreferenced counts, leave that to visual inspection
+          return 0;
+        }
+      }
+
+      // We failed
+      return 1;
     }
 
     public boolean verify(long expectedReferenced) throws Exception {
@@ -1112,14 +1128,34 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
 
       Counters counters = job.getCounters();
 
-      Counter referenced = counters.findCounter(Counts.REFERENCED);
-      Counter unreferenced = counters.findCounter(Counts.UNREFERENCED);
-      Counter undefined = counters.findCounter(Counts.UNDEFINED);
-      Counter multiref = counters.findCounter(Counts.EXTRAREFERENCES);
-      Counter lostfamilies = counters.findCounter(Counts.LOST_FAMILIES);
+      // Run through each check, even if we fail one early
+      boolean success = verifyExpectedValues(expectedReferenced, counters);
 
+      if (!verifyUnexpectedValues(counters)) {
+        // We found counter objects which imply failure
+        success = false;
+      }
+
+      if (!success) {
+        handleFailure(counters);
+      }
+      return success;
+    }
+
+    /**
+     * Verify the values in the Counters against the expected number of entries written.
+     *
+     * @param expectedReferenced
+     *          Expected number of referenced entrires
+     * @param counters
+     *          The Job's Counters object
+     * @return True if the values match what's expected, false otherwise
+     */
+    protected boolean verifyExpectedValues(long expectedReferenced, Counters counters) {
+      final Counter referenced = counters.findCounter(Counts.REFERENCED);
+      final Counter unreferenced = counters.findCounter(Counts.UNREFERENCED);
       boolean success = true;
-      //assert
+
       if (expectedReferenced != referenced.getValue()) {
         LOG.error("Expected referenced count does not match with actual referenced count. " +
             "expected referenced=" + expectedReferenced + " ,actual=" + referenced.getValue());
@@ -1127,11 +1163,27 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
       }
 
       if (unreferenced.getValue() > 0) {
+        final Counter multiref = counters.findCounter(Counts.EXTRAREFERENCES);
         boolean couldBeMultiRef = (multiref.getValue() == unreferenced.getValue());
         LOG.error("Unreferenced nodes were not expected. Unreferenced count=" + unreferenced.getValue()
             + (couldBeMultiRef ? "; could be due to duplicate random numbers" : ""));
         success = false;
       }
+
+      return success;
+    }
+
+    /**
+     * Verify that the Counters don't contain values which indicate an outright failure from the Reducers.
+     *
+     * @param counters
+     *          The Job's counters
+     * @return True if the "bad" counter objects are 0, false otherwise
+     */
+    protected boolean verifyUnexpectedValues(Counters counters) {
+      final Counter undefined = counters.findCounter(Counts.UNDEFINED);
+      final Counter lostfamilies = counters.findCounter(Counts.LOST_FAMILIES);
+      boolean success = true;
 
       if (undefined.getValue() > 0) {
         LOG.error("Found an undefined node. Undefined count=" + undefined.getValue());
@@ -1143,9 +1195,6 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
         success = false;
       }
 
-      if (!success) {
-        handleFailure(counters);
-      }
       return success;
     }
 
@@ -1545,9 +1594,10 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
   private void printCommands() {
     System.err.println("Commands:");
     System.err.println(" generator  Map only job that generates data.");
-    System.err.println(" verify     A map reduce job that looks for holes. Look at the counts ");
-    System.err.println("            after running. See REFERENCED and UNREFERENCED are ok. Any ");
-    System.err.println("            UNDEFINED counts are bad. Do not run with the Generator.");
+    System.err.println(" verify     A map reduce job that looks for holes. Check return code and");
+    System.err.println("            look at the counts after running. See REFERENCED and");
+    System.err.println("            UNREFERENCED are ok. Any UNDEFINED counts are bad. Do not run");
+    System.err.println("            with the Generator.");
     System.err.println(" walker     " +
       "Standalone program that starts following a linked list & emits timing info.");
     System.err.println(" print      Standalone program that prints nodes in the linked list.");
