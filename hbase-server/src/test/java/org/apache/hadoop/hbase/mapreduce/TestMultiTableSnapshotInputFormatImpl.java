@@ -38,7 +38,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
@@ -125,8 +124,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
         return false;
       }
       ScanWithEquals otherScan = (ScanWithEquals) obj;
-      return Objects.equals(this.startRow, otherScan.startRow) && Objects
-          .equals(this.stopRow, otherScan.stopRow);
+      return this.startRow.equals(otherScan.startRow) &&
+          this.stopRow.equals(otherScan.stopRow);
     }
 
     @Override
