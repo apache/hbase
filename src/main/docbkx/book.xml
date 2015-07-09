@@ -2690,13 +2690,6 @@ rs.close();
           
           <section>
             <title>Performance Improvements during Log Splitting</title>
-            <para>
-              WAL log splitting and recovery can be resource intensive and take a long time,
-              depending on the number of RegionServers involved in the crash and the size of the
-              regions. <xref linkend="distributed.log.splitting" /> and <xref
-                linkend="distributed.log.replay" /> were developed to improve
-              performance during log splitting.
-            </para>
             <section xml:id="distributed.log.splitting">
               <title>Distributed Log Splitting</title>
               <para><firstterm>Distributed Log Splitting</firstterm> was added in HBase version 0.92
@@ -2906,37 +2899,6 @@ ctime = Sat Jun 23 11:13:40 PDT 2012
                     there waiting for something that won’t happen.</para>
                 </step>
               </procedure>
-            </section>
-            <section xml:id="distributed.log.replay">
-              <title>Distributed Log Replay</title>
-              <para>After a RegionServer fails, its failed region is assigned to another
-                RegionServer, which is marked as "recovering" in ZooKeeper. A split log worker directly
-                replays edits from the WAL of the failed region server to the region at its new
-                location. When a region is in "recovering" state, it can accept writes but no reads
-                (including Append and Increment), region splits or merges. </para>
-              <para>Distributed Log Replay extends the <xref linkend="distributed.log.splitting" /> framework. It works by
-                directly replaying WAL edits to another RegionServer instead of creating
-                  <filename>recovered.edits</filename> files. It provides the following advantages
-                over distributed log splitting alone:</para>
-              <itemizedlist>
-                <listitem><para>It eliminates the overhead of writing and reading a large number of
-                  <filename>recovered.edits</filename> files. It is not unusual for thousands of
-                  <filename>recovered.edits</filename> files to be created and written concurrently
-                  during a RegionServer recovery. Many small random writes can degrade overall
-                  system performance.</para></listitem>
-                <listitem><para>It allows writes even when a region is in recovering state. It only takes seconds for a recovering region to accept writes again. 
-</para></listitem>
-              </itemizedlist>
-              <formalpara>
-                <title>Enabling Distributed Log Replay</title>
-                <para>To enable distributed log replay, set <varname>hbase.master.distributed.log.replay</varname> to
-                  true. This will be the default for HBase 0.99 (<link
-                    xlink:href="https://issues.apache.org/jira/browse/HBASE-10888">HBASE-10888</link>).</para>
-              </formalpara>
-              <para>You must also enable HFile version 3 (which is the default HFile format starting
-                in HBase 0.99. See <link
-                  xlink:href="https://issues.apache.org/jira/browse/HBASE-10855">HBASE-10855</link>).
-                Distributed log replay is unsafe for rolling upgrades.</para>
             </section>
           </section>
         </section>
