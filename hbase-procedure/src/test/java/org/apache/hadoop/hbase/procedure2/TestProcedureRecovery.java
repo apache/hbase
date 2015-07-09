@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Assert;
@@ -77,6 +76,9 @@ public class TestProcedureRecovery {
     procStore.start(PROCEDURE_EXECUTOR_SLOTS);
     procExecutor.start(PROCEDURE_EXECUTOR_SLOTS, true);
     procSleepInterval = 0;
+
+    ProcedureTestingUtility.setToggleKillBeforeStoreUpdate(procExecutor, false);
+    ProcedureTestingUtility.setKillBeforeStoreUpdate(procExecutor, false);
   }
 
   @After
@@ -284,6 +286,41 @@ public class TestProcedureRecovery {
     // The procedure is completed
     ProcedureResult result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertIsAbortException(result);
+  }
+
+  @Test(timeout=30000)
+  public void testCompletedProcWithSameNonce() throws Exception {
+    final long nonceGroup = 123;
+    final long nonce = 2222;
+    Procedure proc = new TestSingleStepProcedure();
+    // Submit a proc and wait for its completion
+    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc, nonceGroup, nonce);
+
+    // Restart
+    restart();
+    Procedure proc2 = new TestSingleStepProcedure();
+    // Submit a procedure with the same nonce and expect the same procedure would return.
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExecutor, proc2, nonceGroup, nonce);
+    assertTrue(procId == procId2);
+
+    ProcedureResult result = procExecutor.getResult(procId2);
+    ProcedureTestingUtility.assertProcNotFailed(result);
+  }
+
+  @Test(timeout=30000)
+  public void testRunningProcWithSameNonce() throws Exception {
+    final long nonceGroup = 456;
+    final long nonce = 33333;
+    Procedure proc = new TestMultiStepProcedure();
+    long procId = ProcedureTestingUtility.submitAndWait(procExecutor, proc, nonceGroup, nonce);
+
+    // Restart
+    restart();
+    Procedure proc2 = new TestMultiStepProcedure();
+    // Submit a procedure with the same nonce and expect the same procedure would return.
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExecutor, proc2, nonceGroup, nonce);
+    // The original proc is not completed and the new submission should have the same proc Id.
+    assertTrue(procId == procId2);
   }
 
   public static class TestStateMachineProcedure

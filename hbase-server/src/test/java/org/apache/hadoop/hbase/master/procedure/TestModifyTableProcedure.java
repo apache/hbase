@@ -27,6 +27,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -47,6 +48,9 @@ public class TestModifyTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestModifyTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  private static long nonceGroup = HConstants.NO_NONCE;
+  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -70,6 +74,9 @@ public class TestModifyTableProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
+    nonceGroup =
+        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
+    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -224,8 +231,8 @@ public class TestModifyTableProcedure {
     htd.setRegionReplication(3);
 
     // Start the Modify procedure && kill the executor
-    long procId =
-        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
@@ -266,8 +273,8 @@ public class TestModifyTableProcedure {
     htd.removeFamily(cf3.getBytes());
 
     // Start the Modify procedure && kill the executor
-    long procId =
-        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
     int numberOfSteps = ModifyTableState.values().length;
@@ -304,8 +311,8 @@ public class TestModifyTableProcedure {
     htd.addFamily(new HColumnDescriptor(familyName));
 
     // Start the Modify procedure && kill the executor
-    long procId =
-        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and rollback the step twice
     int numberOfSteps = ModifyTableState.values().length - 4; // failing in the middle of proc
@@ -341,8 +348,8 @@ public class TestModifyTableProcedure {
     htd.setRegionReplication(3);
 
     // Start the Modify procedure && kill the executor
-    long procId =
-        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and rollback the step twice
     int numberOfSteps = ModifyTableState.values().length - 4; // failing in the middle of proc
@@ -379,8 +386,8 @@ public class TestModifyTableProcedure {
     htd.setRegionReplication(3);
 
     // Start the Modify procedure && kill the executor
-    long procId =
-        procExec.submitProcedure(new ModifyTableProcedure(procExec.getEnvironment(), htd));
+    long procId = procExec.submitProcedure(
+      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Failing after MODIFY_TABLE_DELETE_FS_LAYOUT we should not trigger the rollback.
     // NOTE: the 5 (number of MODIFY_TABLE_DELETE_FS_LAYOUT + 1 step) is hardcoded,
