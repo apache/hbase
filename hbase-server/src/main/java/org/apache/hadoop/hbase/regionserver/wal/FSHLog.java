@@ -1844,7 +1844,7 @@ public class FSHLog implements WAL {
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
       } catch (Exception e) {
-        LOG.fatal("Could not append. Requesting close of wal", e);
+        LOG.warn("Could not append. Requesting close of wal", e);
         requestLogRoll();
         throw e;
       }
