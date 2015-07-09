@@ -875,11 +875,9 @@ public final class HConstants {
 
   public static final String LOCALHOST_IP = "127.0.0.1";
 
-  /** Conf key that enables unflushed WAL edits directly being replayed to region servers */
-  public static final String DISTRIBUTED_LOG_REPLAY_KEY = "hbase.master.distributed.log.replay";
-  /**
-   * Default 'distributed log replay' as true since hbase 1.1 (HBASE-12577)
+  /** Conf key that enables unflushed WAL edits directly being replayed to region servers
    */
+  public static final String DISTRIBUTED_LOG_REPLAY_KEY = "hbase.master.distributed.log.replay";
   public static final boolean DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG = false;
   public static final String DISALLOW_WRITES_IN_RECOVERING =
       "hbase.regionserver.disallow.writes.when.recovering";

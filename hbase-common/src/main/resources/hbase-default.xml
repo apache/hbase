@@ -284,17 +284,6 @@ possible configurations would overwhelm and obscure the important.
     <description>The WAL file writer implementation.</description>
   </property>
   <property>
-    <name>hbase.master.distributed.log.replay</name>
-    <value>true</value>
-    <description>Enable 'distributed log replay' as default engine splitting
-    WAL files on server crash.  This default is new in hbase 1.0.  To fall
-    back to the old mode 'distributed log splitter', set the value to
-    'false'.  'Disributed log replay' improves MTTR because it does not
-    write intermediate files.  'DLR' required that 'hfile.format.version'
-    be set to version 3 or higher. 
-    </description>
-  </property>
-  <property>
     <name>hbase.regionserver.global.memstore.size</name>
     <value></value>
     <description>Maximum size of all memstores in a region server before new
@@ -309,7 +298,7 @@ possible configurations would overwhelm and obscure the important.
     <value></value>
     <description>Maximum size of all memstores in a region server before flushes are forced.
       Defaults to 95% of hbase.regionserver.global.memstore.size (0.95).
-      A 100% value for this value causes the minimum possible flushing to occur when updates are 
+      A 100% value for this value causes the minimum possible flushing to occur when updates are
       blocked due to memstore limiting.
       The default value in this configuration has been intentionally left emtpy in order to
       honor the old hbase.regionserver.global.memstore.lowerLimit property if present.</description>
@@ -754,9 +743,9 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hstore.time.to.purge.deletes</name>
     <value>0</value>
-    <description>The amount of time to delay purging of delete markers with future timestamps. If 
-      unset, or set to 0, all delete markers, including those with future timestamps, are purged 
-      during the next major compaction. Otherwise, a delete marker is kept until the major compaction 
+    <description>The amount of time to delay purging of delete markers with future timestamps. If
+      unset, or set to 0, all delete markers, including those with future timestamps, are purged
+      during the next major compaction. Otherwise, a delete marker is kept until the major compaction
       which occurs after the marker's timestamp plus the value of this setting, in milliseconds.
     </description>
   </property>
@@ -800,7 +789,7 @@ possible configurations would overwhelm and obscure the important.
       <description>The HFile format version to use for new files.
       Version 3 adds support for tags in hfiles (See http://hbase.apache.org/book.html#hbase.tags).
       Distributed Log Replay requires that tags are enabled. Also see the configuration
-      'hbase.replication.rpc.codec'. 
+      'hbase.replication.rpc.codec'.
       </description>
   </property>
   <property>
@@ -1210,7 +1199,7 @@ possible configurations would overwhelm and obscure the important.
         fails, we will switch back to using HDFS checksums (so do not disable HDFS
         checksums!  And besides this feature applies to hfiles only, not to WALs).
         If this parameter is set to false, then hbase will not verify any checksums,
-        instead it will depend on checksum verification being done in the HDFS client.  
+        instead it will depend on checksum verification being done in the HDFS client.
     </description>
   </property>
   <property>
@@ -1344,11 +1333,11 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.procedure.regionserver.classes</name>
     <value></value>
-    <description>A comma-separated list of 
-    org.apache.hadoop.hbase.procedure.RegionServerProcedureManager procedure managers that are 
-    loaded by default on the active HRegionServer process. The lifecycle methods (init/start/stop) 
-    will be called by the active HRegionServer process to perform the specific globally barriered 
-    procedure. After implementing your own RegionServerProcedureManager, just put it in 
+    <description>A comma-separated list of
+    org.apache.hadoop.hbase.procedure.RegionServerProcedureManager procedure managers that are
+    loaded by default on the active HRegionServer process. The lifecycle methods (init/start/stop)
+    will be called by the active HRegionServer process to perform the specific globally barriered
+    procedure. After implementing your own RegionServerProcedureManager, just put it in
     HBase's classpath and add the fully qualified class name here.
     </description>
   </property>
@@ -1389,8 +1378,8 @@ possible configurations would overwhelm and obscure the important.
       which will tail the logs and replicate the mutatations to region replicas for tables that
       have region replication > 1. If this is enabled once, disabling this replication also
       requires disabling the replication peer using shell or ReplicationAdmin java class.
-      Replication to secondary region replicas works over standard inter-cluster replication. 
-      So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication" 
+      Replication to secondary region replicas works over standard inter-cluster replication.
+      So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"
       to true for this feature to work.
     </description>
   </property>
@@ -1398,12 +1387,12 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.http.filter.initializers</name>
     <value>org.apache.hadoop.hbase.http.lib.StaticUserWebFilter</value>
     <description>
-      A comma separated list of class names. Each class in the list must extend 
-      org.apache.hadoop.hbase.http.FilterInitializer. The corresponding Filter will 
-      be initialized. Then, the Filter will be applied to all user facing jsp 
-      and servlet web pages. 
+      A comma separated list of class names. Each class in the list must extend
+      org.apache.hadoop.hbase.http.FilterInitializer. The corresponding Filter will
+      be initialized. Then, the Filter will be applied to all user facing jsp
+      and servlet web pages.
       The ordering of the list defines the ordering of the filters.
-      The default StaticUserWebFilter add a user principal as defined by the 
+      The default StaticUserWebFilter add a user principal as defined by the
       hbase.http.staticuser.user property.
     </description>
   </property>
@@ -1419,7 +1408,7 @@ possible configurations would overwhelm and obscure the important.
     <name>hbase.http.max.threads</name>
     <value>10</value>
     <description>
-      The maximum number of threads that the HTTP Server will create in its 
+      The maximum number of threads that the HTTP Server will create in its
       ThreadPool.
     </description>
   </property>
@@ -1428,7 +1417,7 @@ possible configurations would overwhelm and obscure the important.
   	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
   	<description>
   		The codec that is to be used when replication is enabled so that
-  		the tags are also replicated. This is used along with HFileV3 which 
+  		the tags are also replicated. This is used along with HFileV3 which
   		supports tags in them.  If tags are not used or if the hfile version used
   		is HFileV2 then KeyValueCodec can be used as the replication codec. Note that
   		using KeyValueCodecWithTags for replication when there are no tags causes no harm.
