@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.NonceKey;
 
 /**
  * Once a Procedure completes the ProcedureExecutor takes all the useful
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ProcedureResult {
+  private final NonceKey nonceKey;
   private final RemoteProcedureException exception;
   private final long lastUpdate;
   private final long startTime;
@@ -37,19 +39,37 @@ public class ProcedureResult {
 
   private long clientAckTime = -1;
 
-  public ProcedureResult(final long startTime, final long lastUpdate,
+  public ProcedureResult(
+      final NonceKey nonceKey,
+      final long startTime,
+      final long lastUpdate,
       final RemoteProcedureException exception) {
-    this.lastUpdate = lastUpdate;
-    this.startTime = startTime;
-    this.exception = exception;
-    this.result = null;
+    this(nonceKey, exception, lastUpdate, startTime, null);
   }
 
-  public ProcedureResult(final long startTime, final long lastUpdate, final byte[] result) {
+  public ProcedureResult(
+      final NonceKey nonceKey,
+      final long startTime,
+      final long lastUpdate,
+      final byte[] result) {
+    this(nonceKey, null, lastUpdate, startTime, result);
+  }
+
+  public ProcedureResult(
+      final NonceKey nonceKey,
+      final RemoteProcedureException exception,
+      final long lastUpdate,
+      final long startTime,
+      final byte[] result) {
+    this.nonceKey = nonceKey;
+    this.exception = exception;
     this.lastUpdate = lastUpdate;
     this.startTime = startTime;
-    this.exception = null;
     this.result = result;
+  }
+
+  public NonceKey getNonceKey() {
+    return nonceKey;
   }
 
   public boolean isFailed() {

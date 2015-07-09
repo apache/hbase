@@ -25,6 +25,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
@@ -117,7 +118,7 @@ public class ProcedureTestingUtility {
     procStore.start(1);
     procExecutor.start(1, false);
     try {
-      return submitAndWait(procExecutor, proc);
+      return submitAndWait(procExecutor, proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
     } finally {
       procStore.stop(false);
       procExecutor.stop();
@@ -125,7 +126,13 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> long submitAndWait(ProcedureExecutor<TEnv> procExecutor, Procedure proc) {
-    long procId = procExecutor.submitProcedure(proc);
+    return submitAndWait(procExecutor, proc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+  }
+
+  public static <TEnv> long submitAndWait(ProcedureExecutor<TEnv> procExecutor, Procedure proc,
+      final long nonceGroup,
+      final long nonce) {
+    long procId = procExecutor.submitProcedure(proc, nonceGroup, nonce);
     waitProcedure(procExecutor, procId);
     return procId;
   }
