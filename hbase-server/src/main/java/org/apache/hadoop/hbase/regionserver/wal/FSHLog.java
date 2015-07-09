@@ -1242,7 +1242,7 @@ class FSHLog implements HLog, Syncable {
               // we need fail all the writes with txid <= txidToSync to avoid
               // 'data loss' where user get successful write response but can't
               // read the writes!
-              LOG.fatal("should never happen: has unsynced writes but writer is null!");
+              LOG.error("should never happen: has unsynced writes but writer is null!");
               asyncIOE = new IOException("has unsynced writes but writer is null!");
               failedTxid.set(this.txidToSync);
             } else {
@@ -1252,7 +1252,7 @@ class FSHLog implements HLog, Syncable {
             }
             postSync();
           } catch (IOException e) {
-            LOG.fatal("Error while AsyncSyncer sync, request close of hlog ", e);
+            LOG.warn("Error while AsyncSyncer sync, request close of hlog ", e);
             requestLogRoll();
 
             asyncIOE = e;
@@ -1529,7 +1529,7 @@ class FSHLog implements HLog, Syncable {
       }
       this.metrics.finishAppend(took, len);
     } catch (IOException e) {
-      LOG.fatal("Could not append. Requesting close of hlog", e);
+      LOG.warn("Could not append. Requesting close of hlog", e);
       requestLogRoll();
       throw e;
     }
