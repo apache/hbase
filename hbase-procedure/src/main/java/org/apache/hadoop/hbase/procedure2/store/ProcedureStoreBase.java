@@ -56,6 +56,14 @@ public abstract class ProcedureStoreBase implements ProcedureStore {
     return listeners.remove(listener);
   }
 
+  protected void sendPostSyncSignal() {
+    if (!this.listeners.isEmpty()) {
+      for (ProcedureStoreListener listener : this.listeners) {
+        listener.postSync();
+      }
+    }
+  }
+
   protected void sendAbortProcessSignal() {
     if (!this.listeners.isEmpty()) {
       for (ProcedureStoreListener listener : this.listeners) {

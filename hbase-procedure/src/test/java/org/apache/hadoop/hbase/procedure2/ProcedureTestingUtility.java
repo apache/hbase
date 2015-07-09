@@ -19,6 +19,8 @@
 package org.apache.hadoop.hbase.procedure2;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -181,5 +183,35 @@ public class ProcedureTestingUtility {
     Throwable cause = result.getException().getCause();
     assertTrue("expected abort exception, got "+ cause,
         cause instanceof ProcedureAbortedException);
+  }
+
+  public static class TestProcedure extends Procedure<Void> {
+    public TestProcedure() {}
+
+    public TestProcedure(long procId, long parentId) {
+      setProcId(procId);
+      if (parentId > 0) {
+        setParentProcId(parentId);
+      }
+    }
+
+    public void addStackId(final int index) {
+      addStackIndex(index);
+    }
+
+    @Override
+    protected Procedure[] execute(Void env) { return null; }
+
+    @Override
+    protected void rollback(Void env) { }
+
+    @Override
+    protected boolean abort(Void env) { return false; }
+
+    @Override
+    protected void serializeStateData(final OutputStream stream) throws IOException { }
+
+    @Override
+    protected void deserializeStateData(final InputStream stream) throws IOException { }
   }
 }
