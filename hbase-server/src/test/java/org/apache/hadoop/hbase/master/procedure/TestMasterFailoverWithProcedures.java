@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.master.procedure;
 
+import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
@@ -31,10 +32,12 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.procedure2.store.wal.TestWALProcedureStore.TestSequentialProcedure;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
@@ -45,7 +48,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,7 +55,6 @@ import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -64,6 +65,11 @@ public class TestMasterFailoverWithProcedures {
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static void setupConf(Configuration conf) {
+    // don't waste time retrying with the roll, the test is already slow enough.
+    conf.setInt("hbase.procedure.store.wal.max.retries.before.roll", 1);
+    conf.setInt("hbase.procedure.store.wal.wait.before.roll", 0);
+    conf.setInt("hbase.procedure.store.wal.max.roll.retries", 1);
+    conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 1);
   }
 
   @Before
@@ -95,6 +101,9 @@ public class TestMasterFailoverWithProcedures {
     final CountDownLatch masterStoreAbort = new CountDownLatch(1);
     masterStore.registerListener(new ProcedureStore.ProcedureStoreListener() {
       @Override
+      public void postSync() {}
+
+      @Override
       public void abortProcess() {
         LOG.debug("Abort store of Master");
         masterStoreAbort.countDown();
@@ -114,6 +123,9 @@ public class TestMasterFailoverWithProcedures {
     final CountDownLatch backupStore3Abort = new CountDownLatch(1);
     backupStore3.registerListener(new ProcedureStore.ProcedureStoreListener() {
       @Override
+      public void postSync() {}
+
+      @Override
       public void abortProcess() {
         LOG.debug("Abort store of backupMaster3");
         backupStore3Abort.countDown();
@@ -127,8 +139,13 @@ public class TestMasterFailoverWithProcedures {
     HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(TableName.valueOf("mtb"), "f");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
     LOG.debug("submit proc");
-    getMasterProcedureExecutor().submitProcedure(
-      new CreateTableProcedure(getMasterProcedureExecutor().getEnvironment(), htd, regions));
+    try {
+      getMasterProcedureExecutor().submitProcedure(
+        new CreateTableProcedure(getMasterProcedureExecutor().getEnvironment(), htd, regions));
+      fail("expected RuntimeException 'sync aborted'");
+    } catch (RuntimeException e) {
+      LOG.info("got " + e.getMessage());
+    }
     LOG.debug("wait master store abort");
     masterStoreAbort.await();
 
@@ -140,8 +157,50 @@ public class TestMasterFailoverWithProcedures {
     // wait the store in here to abort (the test will fail due to timeout if it doesn't)
     LOG.debug("wait the store to abort");
     backupStore3.getStoreTracker().setDeleted(1, false);
-    backupStore3.delete(1);
+    try {
+      backupStore3.delete(1);
+      fail("expected RuntimeException 'sync aborted'");
+    } catch (RuntimeException e) {
+      LOG.info("got " + e.getMessage());
+    }
     backupStore3Abort.await();
+  }
+
+  @Test(timeout=60000)
+  public void testWALfencingWithWALRolling() throws IOException {
+    final ProcedureStore procStore = getMasterProcedureExecutor().getStore();
+    assertTrue("expected WALStore for this test", procStore instanceof WALProcedureStore);
+
+    HMaster firstMaster = UTIL.getHBaseCluster().getMaster();
+
+    HMaster backupMaster3 = Mockito.mock(HMaster.class);
+    Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
+    Mockito.doReturn(true).when(backupMaster3).isActiveMaster();
+    final WALProcedureStore procStore2 = new WALProcedureStore(firstMaster.getConfiguration(),
+        firstMaster.getMasterFileSystem().getFileSystem(),
+        ((WALProcedureStore)procStore).getLogDir(),
+        new MasterProcedureEnv.WALStoreLeaseRecovery(backupMaster3));
+
+    // start a second store which should fence the first one out
+    LOG.info("Starting new WALProcedureStore");
+    procStore2.start(1);
+    procStore2.recoverLease();
+
+    LOG.info("Inserting into second WALProcedureStore");
+    // insert something to the second store then delete it, causing a WAL roll
+    Procedure proc2 = new TestSequentialProcedure();
+    procStore2.insert(proc2, null);
+    procStore2.rollWriterOrDie();
+
+    LOG.info("Inserting into first WALProcedureStore");
+    // insert something to the first store
+    proc2 = new TestSequentialProcedure();
+    try {
+      procStore.insert(proc2, null);
+      fail("expected RuntimeException 'sync aborted'");
+    } catch (RuntimeException e) {
+      LOG.info("got " + e.getMessage());
+    }
   }
 
   // ==========================================================================

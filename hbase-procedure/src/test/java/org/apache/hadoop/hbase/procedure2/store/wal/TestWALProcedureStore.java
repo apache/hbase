@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.SequentialProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore.ProcedureIterator;
@@ -353,36 +354,6 @@ public class TestWALProcedureStore {
         assertFalse(procIter.hasNext());
       }
     });
-  }
-
-  public static class TestProcedure extends Procedure<Void> {
-    public TestProcedure() {}
-
-    public TestProcedure(long procId, long parentId) {
-      setProcId(procId);
-      if (parentId > 0) {
-        setParentProcId(parentId);
-      }
-    }
-
-    public void addStackId(final int index) {
-      addStackIndex(index);
-    }
-
-    @Override
-    protected Procedure[] execute(Void env) { return null; }
-
-    @Override
-    protected void rollback(Void env) { }
-
-    @Override
-    protected boolean abort(Void env) { return false; }
-
-    @Override
-    protected void serializeStateData(final OutputStream stream) throws IOException { }
-
-    @Override
-    protected void deserializeStateData(final InputStream stream) throws IOException { }
   }
 
   private void corruptLog(final FileStatus logFile, final long dropBytes)

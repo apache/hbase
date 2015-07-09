@@ -75,6 +75,11 @@ public class MasterProcedureEnv {
     }
 
     @Override
+    public void postSync() {
+      // no-op
+    }
+
+    @Override
     public void abortProcess() {
       master.abort("The Procedure Store lost the lease");
     }
