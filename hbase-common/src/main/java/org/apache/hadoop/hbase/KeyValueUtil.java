@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IterableUtils;
-import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -222,26 +221,6 @@ public class KeyValueUtil {
   /*************** next/previous **********************************/
 
   /**
-   * Append single byte 0x00 to the end of the input row key
-   */
-  public static KeyValue createFirstKeyInNextRow(final Cell in){
-    byte[] nextRow = new byte[in.getRowLength() + 1];
-    System.arraycopy(in.getRowArray(), in.getRowOffset(), nextRow, 0, in.getRowLength());
-    nextRow[nextRow.length - 1] = 0;//maybe not necessary
-    return createFirstOnRow(nextRow);
-  }
-
-  /**
-   * Increment the row bytes and clear the other fields
-   */
-  public static KeyValue createFirstKeyInIncrementedRow(final Cell in){
-    byte[] thisRow = new SimpleMutableByteRange(in.getRowArray(), in.getRowOffset(),
-        in.getRowLength()).deepCopyToNewArray();
-    byte[] nextRow = Bytes.unsignedCopyAndIncrement(thisRow);
-    return createFirstOnRow(nextRow);
-  }
-
-  /**
    * Decrement the timestamp.  For tests (currently wasteful)
    *
    * Remember timestamps are sorted reverse chronologically.
@@ -285,53 +264,7 @@ public class KeyValueUtil {
     return new KeyValue(row, roffset, rlength, family, foffset, flength, qualifier, qoffset,
         qlength, HConstants.OLDEST_TIMESTAMP, Type.Minimum, null, 0, 0);
   }
-  
-  /**
-   * Creates a keyValue for the specified keyvalue larger than or equal to all other possible
-   * KeyValues that have the same row, family, qualifer.  Used for reseeking
-   * @param kv
-   * @return KeyValue
-   */
-  public static KeyValue createLastOnRow(Cell kv) {
-    return createLastOnRow(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), null, 0, 0,
-        null, 0, 0);
-  }
 
-  /**
-   * Similar to
-   * {@link #createLastOnRow(byte[], int, int, byte[], int, int, byte[], int, int)}
-   * but creates the last key on the row/column of this KV (the value part of
-   * the returned KV is always empty). Used in creating "fake keys" for the
-   * multi-column Bloom filter optimization to skip the row/column we already
-   * know is not in the file.
-   * 
-   * @param kv - cell
-   * @return the last key on the row/column of the given key-value pair
-   */
-  public static KeyValue createLastOnRowCol(Cell kv) {
-    return new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), kv.getQualifierArray(),
-        kv.getQualifierOffset(), kv.getQualifierLength(), HConstants.OLDEST_TIMESTAMP,
-        Type.Minimum, null, 0, 0);
-  }
-
-  /**
-   * Creates the first KV with the row/family/qualifier of this KV and the given
-   * timestamp. Uses the "maximum" KV type that guarantees that the new KV is
-   * the lowest possible for this combination of row, family, qualifier, and
-   * timestamp. This KV's own timestamp is ignored. While this function copies
-   * the value from this KV, it is normally used on key-only KVs.
-   * 
-   * @param kv - cell
-   * @param ts
-   */
-  public static KeyValue createFirstOnRowColTS(Cell kv, long ts) {
-    return new KeyValue(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), kv.getQualifierArray(),
-        kv.getQualifierOffset(), kv.getQualifierLength(), ts, Type.Maximum, kv.getValueArray(),
-        kv.getValueOffset(), kv.getValueLength());
-  }
-  
   /**
    * Create a KeyValue that is smaller than all other possible KeyValues
    * for the given row. That is any (valid) KeyValue on 'row' would sort
@@ -344,7 +277,6 @@ public class KeyValueUtil {
     return new KeyValue(row, roffset, rlength,
         null, 0, 0, null, 0, 0, HConstants.LATEST_TIMESTAMP, Type.Maximum, null, 0, 0);
   }
-  
 
   /**
    * Creates a KeyValue that is last on the specified row id. That is,
@@ -514,21 +446,6 @@ public class KeyValueUtil {
         flength, qualifier, qoffset, qlength, HConstants.LATEST_TIMESTAMP, KeyValue.Type.Maximum,
         null, 0, 0, null);
     return new KeyValue(buffer, boffset, len);
-  }
-
-  /**
-   * Creates the first KV with the row/family/qualifier of this KV and the
-   * given timestamp. Uses the "maximum" KV type that guarantees that the new
-   * KV is the lowest possible for this combination of row, family, qualifier,
-   * and timestamp. This KV's own timestamp is ignored. While this function
-   * copies the value from this KV, it is normally used on key-only KVs.
-   */
-  public static KeyValue createFirstOnRowColTS(KeyValue kv, long ts) {
-    return new KeyValue(
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-        kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength(),
-        ts, Type.Maximum, kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
   }
 
   /*************** misc **********************************/

@@ -46,8 +46,7 @@ public class BigDecimalColumnInterpreter extends ColumnInterpreter<BigDecimal, B
     if (kv == null || CellUtil.cloneValue(kv) == null) {
       return null;
     }
-    return Bytes.toBigDecimal(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength()).
-        setScale(2, RoundingMode.HALF_EVEN);
+    return CellUtil.getValueAsBigDecimal(kv).setScale(2, RoundingMode.HALF_EVEN);
   }
 
   @Override

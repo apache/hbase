@@ -144,7 +144,7 @@ public class TestPrefixTreeSearcher {
           KeyValue kv = rows.getInputs().get(i);
 
           //nextRow
-          KeyValue inputNextRow = KeyValueUtil.createFirstKeyInNextRow(kv);
+          Cell inputNextRow = CellUtil.createFirstOnNextRow(kv);
 
           CellScannerPosition position = beforeVsAfterOnMiss
               ? searcher.positionAtOrBefore(inputNextRow)

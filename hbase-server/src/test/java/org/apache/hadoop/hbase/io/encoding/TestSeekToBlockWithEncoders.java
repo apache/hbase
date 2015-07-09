@@ -25,9 +25,9 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -136,8 +136,7 @@ public class TestSeekToBlockWithEncoders {
     KeyValue kv4 = new KeyValue(Bytes.toBytes("row11baa"), Bytes.toBytes("f1"),
         Bytes.toBytes("q1"), Bytes.toBytes("val"));
     sampleKv.add(kv4);
-    KeyValue toSeek = KeyValueUtil.createLastOnRow(kv3.getRowArray(), kv3.getRowOffset(),
-        kv3.getRowLength(), null, 0, 0, null, 0, 0);
+    Cell toSeek = CellUtil.createLastOnRow(kv3);
     seekToTheKey(kv3, sampleKv, toSeek);
   }
 
@@ -250,7 +249,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv5, sampleKv, toSeek);
   }
 
-  private void seekToTheKey(KeyValue expected, List<KeyValue> kvs, KeyValue toSeek)
+  private void seekToTheKey(KeyValue expected, List<KeyValue> kvs, Cell toSeek)
       throws IOException {
     // create all seekers
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = new ArrayList<DataBlockEncoder.EncodedSeeker>();
@@ -278,11 +277,9 @@ public class TestSeekToBlockWithEncoders {
   }
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
-      KeyValue keyValue, KeyValue expected) {
+      Cell keyValue, KeyValue expected) {
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
-      seeker.seekToKeyInBlock(
-          new KeyValue.KeyOnlyKeyValue(keyValue.getBuffer(), keyValue.getKeyOffset(), keyValue
-              .getKeyLength()), false);
+      seeker.seekToKeyInBlock(keyValue, false);
       Cell keyValue2 = seeker.getKeyValue();
       assertEquals(expected, keyValue2);
       seeker.rewind();

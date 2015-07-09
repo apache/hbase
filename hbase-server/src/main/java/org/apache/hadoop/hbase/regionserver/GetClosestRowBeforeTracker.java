@@ -142,9 +142,7 @@ class GetClosestRowBeforeTracker {
         continue;
       }
       // Check column
-      int ret = Bytes.compareTo(kv.getQualifierArray(), kv.getQualifierOffset(),
-          kv.getQualifierLength(),
-        d.getQualifierArray(), d.getQualifierOffset(), d.getQualifierLength());
+      int ret = CellComparator.compareQualifiers(kv, d);
       if (ret <= -1) {
         // This delete is for an earlier column.
         continue;

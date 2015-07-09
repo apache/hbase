@@ -23,10 +23,10 @@ import java.util.NavigableSet;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.ScanQueryMatcher.MatchCode;
-import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This class is used for the tracking and enforcement of columns and numbers
@@ -123,19 +123,18 @@ public class ExplicitColumnTracker implements ColumnTracker {
       }
 
       // Compare specific column to current column
-      // TODO when cell is offheap backed, we won't use getQualifierArray()
-      int ret = Bytes.compareTo(column.getBuffer(), column.getOffset(), column.getLength(),
-          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      int ret = CellComparator.compareQualifiers(cell, column.getBuffer(), column.getOffset(),
+          column.getLength());
 
       // Column Matches. Return include code. The caller would call checkVersions
       // to limit the number of versions.
-      if(ret == 0) {
+      if (ret == 0) {
         return ScanQueryMatcher.MatchCode.INCLUDE;
       }
 
       resetTS();
 
-      if (ret > 0) {
+      if (ret < 0) {
         // The current KV is smaller than the column the ExplicitColumnTracker
         // is interested in, so seek to that column of interest.
         return ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
@@ -145,7 +144,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
       // is interested in. That means there is no more data for the column
       // of interest. Advance the ExplicitColumnTracker state to next
       // column of interest, and check again.
-      if (ret <= -1) {
+      if (ret > 0) {
         ++this.index;
         if (done()) {
           // No more to match, do not include, done with this row.
@@ -221,10 +220,10 @@ public class ExplicitColumnTracker implements ColumnTracker {
    */
   public void doneWithColumn(Cell cell) {
     while (this.column != null) {
-      int compare = Bytes.compareTo(column.getBuffer(), column.getOffset(), column.getLength(),
-          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
+      int compare = CellComparator.compareQualifiers(cell, column.getBuffer(), column.getOffset(),
+          column.getLength());
       resetTS();
-      if (compare <= 0) {
+      if (compare >= 0) {
         ++this.index;
         if (done()) {
           // Will not hit any more columns in this storefile
@@ -232,8 +231,7 @@ public class ExplicitColumnTracker implements ColumnTracker {
         } else {
           this.column = this.columns[this.index];
         }
-        if (compare <= -1)
-          continue;
+        if (compare > 0) continue;
       }
       return;
     }

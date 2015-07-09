@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.TestCellUtil.ByteBufferedCellImpl;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -86,5 +90,32 @@ public class TestCellComparator {
     kv1 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
     kv2 = new KeyValue(row1, fam1, qual1, 1l, Type.Put);
     assertTrue((comparator.compare(kv1, kv2.getKey(), 0, kv2.getKey().length)) == 0);
+  }
+
+  @Test
+  public void testCompareByteBufferedCell() {
+    byte[] r1 = Bytes.toBytes("row1");
+    byte[] r2 = Bytes.toBytes("row2");
+    byte[] f1 = Bytes.toBytes("cf1");
+    byte[] q1 = Bytes.toBytes("qual1");
+    byte[] q2 = Bytes.toBytes("qual2");
+    byte[] v = Bytes.toBytes("val1");
+    KeyValue kv = new KeyValue(r1, f1, q1, v);
+    ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell1 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    kv = new KeyValue(r2, f1, q1, v);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell2 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertEquals(0, CellComparator.compareColumns(bbCell1, bbCell2));
+    assertEquals(0, CellComparator.compareColumns(bbCell1, kv));
+    kv = new KeyValue(r2, f1, q2, v);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell3 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertEquals(0, CellComparator.compareFamilies(bbCell2, bbCell3));
+    assertTrue(CellComparator.compareQualifiers(bbCell2, bbCell3) < 0);
+    assertTrue(CellComparator.compareColumns(bbCell2, bbCell3) < 0);
+
+    assertEquals(0, CellComparator.COMPARATOR.compareRows(bbCell2, bbCell3));
+    assertTrue(CellComparator.COMPARATOR.compareRows(bbCell1, bbCell2) < 0);
   }
 }

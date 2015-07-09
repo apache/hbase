@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 import com.google.common.primitives.Longs;
@@ -36,8 +37,8 @@ import com.google.common.primitives.Longs;
  * takes account of the special formatting of the row where we have commas to delimit table from
  * regionname, from row.  See KeyValue for how it has a special comparator to do hbase:meta cells
  * and yet another for -ROOT-.
- * While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells format
- * should be taken into consideration, for which the instance of this comparator 
+ * While using this comparator for {{@link #compareRows(Cell, Cell)} et al, the hbase:meta cells
+ * format should be taken into consideration, for which the instance of this comparator
  * should be used.  In all other cases the static APIs in this comparator would be enough
  */
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(
@@ -90,8 +91,6 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @return an int greater than 0 if left is greater than right
    *                lesser than 0 if left is lesser than right
    *                equal to 0 if left is equal to right
-   * TODO : We will be moving over to 
-   * compare(Cell, Cell) so that the key is also converted to a cell
    */
   public final int compare(Cell left, byte[] key, int offset, int length) {
     // row
@@ -132,178 +131,102 @@ public class CellComparator implements Comparator<Cell>, Serializable {
 
   /**
    * Compares the family and qualifier part of the cell
-   * TODO : Handle BB cases here
    * @param left the left cell
    * @param right the right cell
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public final static int compareColumns(final Cell left, final Cell right) {
-    int lfoffset = left.getFamilyOffset();
-    int rfoffset = right.getFamilyOffset();
-    int lclength = left.getQualifierLength();
-    int rclength = right.getQualifierLength();
-    int lfamilylength = left.getFamilyLength();
-    int rfamilylength = right.getFamilyLength();
-    int diff = compareFamilies(left.getFamilyArray(), lfoffset, lfamilylength,
-        right.getFamilyArray(), rfoffset, rfamilylength);
+    int diff = compareFamilies(left, right);
     if (diff != 0) {
       return diff;
-    } else {
-      return compareQualifiers(left.getQualifierArray(), left.getQualifierOffset(), lclength,
-          right.getQualifierArray(), right.getQualifierOffset(), rclength);
     }
+    return compareQualifiers(left, right);
   }
 
-  /**
-   * Compares the family and qualifier part of the cell
-   * We explicitly pass the offset and length details of the cells to avoid
-   * re-parsing of the offset and length from the cell. Used only internally.
-   * @param left
-   * @param lfamilyOffset
-   * @param lfamilylength
-   * @param lqualOffset
-   * @param lQualLength
-   * @param right
-   * @param rfamilyOffset
-   * @param rfamilylength
-   * @param rqualOffset
-   * @param rqualLength
-   * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-   */
-  private final static int compareColumns(final Cell left, int lfamilyOffset, int lfamilylength,
-      int lqualOffset, int lQualLength, final Cell right, final int rfamilyOffset,
-      final int rfamilylength, final int rqualOffset, int rqualLength) {
-    int diff = compareFamilies(left.getFamilyArray(), lfamilyOffset, lfamilylength,
-        right.getFamilyArray(), rfamilyOffset, rfamilylength);
-    if (diff != 0) {
+  private final static int compareColumns(Cell left, byte[] right, int rfoffset, int rflength,
+      int rqoffset, int rqlength) {
+    int diff = compareFamilies(left, right, rfoffset, rflength);
+    if (diff != 0)
       return diff;
-    } else {
-      return compareQualifiers(left.getQualifierArray(), lqualOffset, lQualLength,
-          right.getQualifierArray(), rqualOffset, rqualLength);
-    }
-  }
-  
-  /**
-   * Compares the family and qualifier part of a cell with a serialized Key value byte[]
-   * We explicitly pass the offset and length details of the cells to avoid
-   * re-parsing of the offset and length from the cell. Used only internally.
-   * @param left the cell to be compared
-   * @param lfamilyOffset
-   * @param lfamilylength
-   * @param lqualOffset
-   * @param lQualLength
-   * @param right the serialized key value byte array to be compared
-   * @param rfamilyOffset
-   * @param rfamilylength
-   * @param rqualOffset
-   * @param rqualLength
-   * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-   */
-  private final static int compareColumns(final Cell left, final int lfamilyOffset,
-      final int lfamilylength, final int lqualOffset, final int lQualLength, final byte[] right,
-      final int rfamilyOffset, final int rfamilylength, final int rqualOffset,
-      final int rqualLength) {
-    int diff = compareFamilies(left.getFamilyArray(), lfamilyOffset, lfamilylength, right,
-        rfamilyOffset, rfamilylength);
-    if (diff != 0) {
-      return diff;
-    } else {
-      return compareQualifiers(left.getQualifierArray(), lqualOffset, lQualLength, right,
-          rqualOffset, rqualLength);
-    }
+    return compareQualifiers(left, right, rqoffset, rqlength);
   }
 
   /**
    * Compare the families of left and right cell
-   * TODO : Handle BB cases here
    * @param left
    * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public final static int compareFamilies(Cell left, Cell right) {
-    return compareFamilies(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(),
+          ((ByteBufferedCell) right).getFamilyByteBuffer(),
+          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), right.getFamilyLength());
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(),
+          right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
+    }
+    if (right instanceof ByteBufferedCell) {
+      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getFamilyByteBuffer(),
+          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), right.getFamilyLength(),
+          left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength()));
+    }
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
         right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
   }
 
-  /**
-   * We explicitly pass the offset and length details of the cells to avoid
-   * re-parsing of the offset and length from the cell. Used only internally.
-   * @param left
-   * @param lOffset
-   * @param lLength
-   * @param right
-   * @param rOffset
-   * @param rLength
-   * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-   */
-  private final static int compareFamilies(Cell left, int lOffset, int lLength, Cell right,
-      int rOffset, int rLength) {
-    return compareFamilies(left.getFamilyArray(), lOffset, lLength, right.getFamilyArray(),
-        rOffset, rLength);
-  }
-
-  private final static int compareFamilies(Cell left, int lOffset, int lLength, byte[] right,
-      int rOffset, int rLength) {
-    return compareFamilies(left.getFamilyArray(), lOffset, lLength, right, rOffset, rLength);
-  }
-
-  private final static int compareFamilies(byte[] leftFamily, int lFamOffset, int lFamLength,
-      byte[] rightFamily, int rFamOffset, int rFamLen) {
-    return Bytes.compareTo(leftFamily, lFamOffset, lFamLength, rightFamily, rFamOffset, rFamLen);
+  private final static int compareFamilies(Cell left, byte[] right, int roffset, int rlength) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(), right,
+          roffset, rlength);
+    }
+    return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
+        right, roffset, rlength);
   }
 
   /**
    * Compare the qualifiers part of the left and right cells.
-   * TODO : Handle BB cases here
    * @param left
    * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public final static int compareQualifiers(Cell left, Cell right) {
-    return compareQualifiers(left.getQualifierArray(), left.getQualifierOffset(),
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils
+          .compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+              ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(),
+              left.getQualifierLength(), ((ByteBufferedCell) right).getQualifierByteBuffer(),
+              ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(),
+              right.getQualifierLength());
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
+          right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
+    }
+    if (right instanceof ByteBufferedCell) {
+      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getQualifierByteBuffer(),
+          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(),
+          right.getQualifierLength(), left.getQualifierArray(), left.getQualifierOffset(),
+          left.getQualifierLength()));
+    }
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
         right.getQualifierLength());
   }
 
- /**
-  * We explicitly pass the offset and length details of the cells to avoid
-  * re-parsing of the offset and length from the cell. Used only internally.
-  * @param left
-  * @param lOffset
-  * @param lLength
-  * @param right
-  * @param rOffset
-  * @param rLength
-  * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-  */
-  private final static int compareQualifiers(Cell left, int lOffset, int lLength, Cell right,
-      int rOffset, int rLength) {
-    return compareQualifiers(left.getQualifierArray(), lOffset,
-        lLength, right.getQualifierArray(), rOffset,
-        rLength);
-  }
-
-  /**
-   * We explicitly pass the offset and length details of the cells to avoid
-   * re-parsing of the offset and length from the cell. Used only internally.
-   * @param left
-   * @param lOffset
-   * @param lLength
-   * @param right
-   * @param rOffset
-   * @param rLength
-   * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
-   */
-  private final static int compareQualifiers(Cell left, int lOffset, int lLength, byte[] right,
-      int rOffset, int rLength) {
-    return compareQualifiers(left.getQualifierArray(), lOffset,
-        lLength, right, rOffset,
-        rLength);
-  }
-
-  private static int compareQualifiers(byte[] leftCol, int lColOffset, int lColLength,
-      byte[] rightCol, int rColOffset, int rColLength) {
-    return Bytes.compareTo(leftCol, lColOffset, lColLength, rightCol, rColOffset, rColLength);
+  public final static int compareQualifiers(Cell left, byte[] right, int rOffset, int rLength) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
+          right, rOffset, rLength);
+    }
+    return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
+        left.getQualifierLength(), right, rOffset, rLength);
   }
 
   /**
@@ -312,7 +235,6 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * the "same-prefix" comparator. Note that we are assuming that row portions
    * of both KVs have already been parsed and found identical, and we don't
    * validate that assumption here.
-   * TODO :  we will have to handle BB cases here
    * @param commonPrefix
    *          the length of the common prefix of the two key-values being
    *          compared, including row length and row
@@ -348,7 +270,6 @@ public class CellComparator implements Comparator<Cell>, Serializable {
       return -1;
     }
 
-    int lfamilyoffset = left.getFamilyOffset();
     int rfamilyoffset = commonLength + roffset;
 
     // Column family length.
@@ -359,16 +280,12 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     boolean sameFamilySize = (lfamilylength == rfamilylength);
     if (!sameFamilySize) {
       // comparing column family is enough.
-      return compareFamilies(left, lfamilyoffset, lfamilylength, right,
-          rfamilyoffset, rfamilylength);
+      return compareFamilies(left, right, rfamilyoffset, rfamilylength);
     }
     // Compare family & qualifier together.
     // Families are same. Compare on qualifiers.
-    int lQualOffset = left.getQualifierOffset();
-    int lQualLength = left.getQualifierLength();
-    int comparison = compareColumns(left, lfamilyoffset, lfamilylength, lQualOffset, lQualLength,
-        right, rfamilyoffset, rfamilylength, rfamilyoffset + rfamilylength,
-        (rcolumnlength - rfamilylength));
+    int comparison = compareColumns(left, right, rfamilyoffset, rfamilylength, rfamilyoffset
+        + rfamilylength, (rcolumnlength - rfamilylength));
     if (comparison != 0) {
       return comparison;
     }
@@ -392,12 +309,27 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * Compares the rows of the left and right cell.
    * For the hbase:meta case this method is overridden such that it can handle hbase:meta cells.
    * The caller should ensure using the appropriate comparator for hbase:meta.
-   * TODO : Handle BB cases here
    * @param left
    * @param right
    * @return 0 if both cells are equal, 1 if left cell is bigger than right, -1 otherwise
    */
   public int compareRows(final Cell left, final Cell right) {
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(),
+          ((ByteBufferedCell) right).getRowByteBuffer(),
+          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), right.getRowLength());
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(),
+          right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    }
+    if (right instanceof ByteBufferedCell) {
+      return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getRowByteBuffer(),
+          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), right.getRowLength(),
+          left.getRowArray(), left.getRowOffset(), left.getRowLength()));
+    }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
@@ -418,11 +350,12 @@ public class CellComparator implements Comparator<Cell>, Serializable {
    * @return 0 if both cell and the byte[] are equal, 1 if the cell is bigger
    *         than byte[], -1 otherwise
    */
-  public int compareRows(Cell left, byte[] right, int roffset,
-      int rlength) {
-    // TODO : for BB based cells all the hasArray based checks would happen
-    // here. But we may have
-    // to end up in multiple APIs accepting byte[] and BBs
+  public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(), right,
+          roffset, rlength);
+    }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
         roffset, rlength);
   }
@@ -447,18 +380,12 @@ public class CellComparator implements Comparator<Cell>, Serializable {
         && right.getTypeByte() == Type.Minimum.getCode()) {
       return -1;
     }
-    boolean sameFamilySize = (lFamLength == rFamLength);
-    int lFamOffset = left.getFamilyOffset();
-    int rFamOffset = right.getFamilyOffset();
-    if (!sameFamilySize) {
+    if (lFamLength != rFamLength) {
       // comparing column family is enough.
-      return compareFamilies(left, lFamOffset, lFamLength, right, rFamOffset, rFamLength);
+      return compareFamilies(left, right);
     }
-    // Families are same. Compare on qualifiers.
-    int lQualOffset = left.getQualifierOffset();
-    int rQualOffset = right.getQualifierOffset();
-    int diff = compareColumns(left, lFamOffset, lFamLength, lQualOffset, lQualLength, right,
-        rFamOffset, rFamLength, rQualOffset, rQualLength);
+    // Compare cf:qualifier
+    int diff = compareColumns(left, right);
     if (diff != 0) return diff;
 
     diff = compareTimestamps(left, right);
@@ -521,24 +448,18 @@ public class CellComparator implements Comparator<Cell>, Serializable {
       // left is "bigger", i.e. it appears later in the sorted order
       return 1;
     }
-    int qualLen = currentCell.getQualifierLength();
     if (flen + clen == 0 && type == Type.Minimum.getCode()) {
       return -1;
     }
 
-    compare = compareFamilies(nextIndexedCell, nextIndexedCell.getFamilyOffset(),
-        nextIndexedCell.getFamilyLength(), currentCell, currentCell.getFamilyOffset(),
-        flen);
+    compare = compareFamilies(nextIndexedCell, currentCell);
     if (compare != 0) {
       return compare;
     }
     if (colHint == null) {
-      compare = compareQualifiers(nextIndexedCell, nextIndexedCell.getQualifierOffset(),
-          nextIndexedCell.getQualifierLength(), currentCell, currentCell.getQualifierOffset(),
-          qualLen);
+      compare = compareQualifiers(nextIndexedCell, currentCell);
     } else {
-      compare = compareQualifiers(nextIndexedCell, nextIndexedCell.getQualifierOffset(),
-          nextIndexedCell.getQualifierLength(), colHint, coff, clen);
+      compare = compareQualifiers(nextIndexedCell, colHint, coff, clen);
     }
     if (compare != 0) {
       return compare;

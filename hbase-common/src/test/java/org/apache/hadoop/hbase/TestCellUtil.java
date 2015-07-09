@@ -21,6 +21,8 @@ package org.apache.hadoop.hbase;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
@@ -29,6 +31,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Test;
@@ -430,5 +433,284 @@ public class TestCellUtil {
       verbose);
 
     // TODO: test with tags
+  }
+
+  @Test
+  public void testCloneCellFieldsFromByteBufferedCell() {
+    byte[] r = Bytes.toBytes("row1");
+    byte[] f = Bytes.toBytes("cf1");
+    byte[] q = Bytes.toBytes("qual1");
+    byte[] v = Bytes.toBytes("val1");
+    byte[] tags = Bytes.toBytes("tag1");
+    KeyValue kv = new KeyValue(r, f, q, 0, q.length, 1234L, Type.Put, v, 0, v.length, tags);
+    ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    byte[] rDest = CellUtil.cloneRow(bbCell);
+    assertTrue(Bytes.equals(r, rDest));
+    byte[] fDest = CellUtil.cloneFamily(bbCell);
+    assertTrue(Bytes.equals(f, fDest));
+    byte[] qDest = CellUtil.cloneQualifier(bbCell);
+    assertTrue(Bytes.equals(q, qDest));
+    byte[] vDest = CellUtil.cloneValue(bbCell);
+    assertTrue(Bytes.equals(v, vDest));
+    byte[] tDest = new byte[tags.length];
+    CellUtil.copyTagTo(bbCell, tDest, 0);
+    assertTrue(Bytes.equals(tags, tDest));
+  }
+
+  @Test
+  public void testMatchingCellFieldsFromByteBufferedCell() {
+    byte[] r = Bytes.toBytes("row1");
+    byte[] f = Bytes.toBytes("cf1");
+    byte[] q1 = Bytes.toBytes("qual1");
+    byte[] q2 = Bytes.toBytes("qual2");
+    byte[] v = Bytes.toBytes("val1");
+    byte[] tags = Bytes.toBytes("tag1");
+    KeyValue kv = new KeyValue(r, f, q1, 0, q1.length, 1234L, Type.Put, v, 0, v.length, tags);
+    ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell1 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    kv = new KeyValue(r, f, q2, 0, q2.length, 1234L, Type.Put, v, 0, v.length, tags);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell2 = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertTrue(CellUtil.matchingRows(bbCell1, bbCell2));
+    assertTrue(CellUtil.matchingRows(kv, bbCell2));
+    assertTrue(CellUtil.matchingRow(bbCell1, r));
+    assertTrue(CellUtil.matchingFamily(bbCell1, bbCell2));
+    assertTrue(CellUtil.matchingFamily(kv, bbCell2));
+    assertTrue(CellUtil.matchingFamily(bbCell1, f));
+    assertFalse(CellUtil.matchingQualifier(bbCell1, bbCell2));
+    assertTrue(CellUtil.matchingQualifier(kv, bbCell2));
+    assertTrue(CellUtil.matchingQualifier(bbCell1, q1));
+    assertTrue(CellUtil.matchingQualifier(bbCell2, q2));
+    assertTrue(CellUtil.matchingValue(bbCell1, bbCell2));
+    assertTrue(CellUtil.matchingValue(kv, bbCell2));
+    assertTrue(CellUtil.matchingValue(bbCell1, v));
+    assertFalse(CellUtil.matchingColumn(bbCell1, bbCell2));
+    assertTrue(CellUtil.matchingColumn(kv, bbCell2));
+    assertTrue(CellUtil.matchingColumn(bbCell1, f, q1));
+    assertTrue(CellUtil.matchingColumn(bbCell2, f, q2));
+  }
+
+  @Test
+  public void testCellFieldsAsPrimitiveTypesFromByteBufferedCell() {
+    int ri = 123;
+    byte[] r = Bytes.toBytes(ri);
+    byte[] f = Bytes.toBytes("cf1");
+    byte[] q = Bytes.toBytes("qual1");
+    long vl = 10981L;
+    byte[] v = Bytes.toBytes(vl);
+    KeyValue kv = new KeyValue(r, f, q, v);
+    ByteBuffer buffer = ByteBuffer.wrap(kv.getBuffer());
+    Cell bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertEquals(ri, CellUtil.getRowAsInt(bbCell));
+    assertEquals(vl, CellUtil.getValueAsLong(bbCell));
+    double vd = 3005.5;
+    v = Bytes.toBytes(vd);
+    kv = new KeyValue(r, f, q, v);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertEquals(vd, CellUtil.getValueAsDouble(bbCell), 0.0);
+    BigDecimal bd = new BigDecimal(9999);
+    v = Bytes.toBytes(bd);
+    kv = new KeyValue(r, f, q, v);
+    buffer = ByteBuffer.wrap(kv.getBuffer());
+    bbCell = new ByteBufferedCellImpl(buffer, 0, buffer.remaining());
+    assertEquals(bd, CellUtil.getValueAsBigDecimal(bbCell));
+  }
+
+  // TODO remove this test impl once we have a Cell implementation backed by ByteBuffer
+  public static class ByteBufferedCellImpl extends ByteBufferedCell {
+
+    private final ByteBuffer buffer;
+    private final int offset, length;
+
+    public ByteBufferedCellImpl(ByteBuffer buffer, int offset, int length) {
+      this.buffer = buffer;
+      this.offset = offset;
+      this.length = length;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return CellUtil.cloneRow(this);
+    }
+
+    @Override
+    public int getRowOffset() {
+      return 0;
+    }
+
+    @Override
+    public short getRowLength() {
+      return ByteBufferUtils.toShort(this.buffer, this.offset + KeyValue.ROW_OFFSET);
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return CellUtil.cloneFamily(this);
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return 0;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.buffer.get(getFamilyPositionInByteBuffer() - 1);
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return CellUtil.cloneQualifier(this);
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return getKeyLength()
+          - (int) KeyValue.getKeyDataStructureSize(getRowLength(), getFamilyLength(), 0);
+    }
+
+    private int getKeyLength() {
+      return ByteBufferUtils.toInt(this.buffer, this.offset);
+    }
+
+    @Override
+    public long getTimestamp() {
+      int tsOffset = this.offset + KeyValue.ROW_OFFSET + getKeyLength()
+          - KeyValue.TIMESTAMP_TYPE_SIZE;
+      return ByteBufferUtils.toLong(buffer, tsOffset);
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return KeyValue.Type.Put.getCode();
+    }
+
+    @Override
+    public long getMvccVersion() {
+      return 0;
+    }
+
+    @Override
+    public long getSequenceId() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return CellUtil.cloneValue(this);
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return ByteBufferUtils.toInt(this.buffer, this.offset + KeyValue.KEY_LENGTH_SIZE);
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      byte[] tDest = new byte[getTagsLength()];
+      CellUtil.copyTagTo(this, tDest, 0);
+      return tDest;
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getTagsLength() {
+      int tagsLen = this.length
+          - (getKeyLength() + getValueLength() + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE);
+      if (tagsLen > 0) {
+        tagsLen -= KeyValue.TAGS_LENGTH_SIZE;
+      }
+      return tagsLen;
+    }
+
+    @Override
+    public byte[] getValue() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] getFamily() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] getQualifier() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] getRow() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    ByteBuffer getRowByteBuffer() {
+      return this.buffer;
+    }
+
+    @Override
+    int getRowPositionInByteBuffer() {
+      return this.offset + KeyValue.ROW_KEY_OFFSET;
+    }
+
+    @Override
+    ByteBuffer getFamilyByteBuffer() {
+      return this.buffer;
+    }
+
+    @Override
+    int getFamilyPositionInByteBuffer() {
+      return this.offset + KeyValue.ROW_KEY_OFFSET + getRowLength() + Bytes.SIZEOF_BYTE;
+    }
+
+    @Override
+    ByteBuffer getQualifierByteBuffer() {
+      return this.buffer;
+    }
+
+    @Override
+    int getQualifierPositionInByteBuffer() {
+      return getFamilyPositionInByteBuffer() + getFamilyLength();
+    }
+
+    @Override
+    ByteBuffer getValueByteBuffer() {
+      return this.buffer;
+    }
+
+    @Override
+    int getValuePositionInByteBuffer() {
+      return this.offset + KeyValue.ROW_OFFSET + getKeyLength();
+    }
+
+    @Override
+    ByteBuffer getTagsByteBuffer() {
+      return this.buffer;
+    }
+
+    @Override
+    int getTagsPositionInByteBuffer() {
+      int tagsLen = getTagsLength();
+      if (tagsLen == 0) {
+        return this.offset + this.length;
+      }
+      return this.offset + this.length - tagsLen;
+    }
   }
 }

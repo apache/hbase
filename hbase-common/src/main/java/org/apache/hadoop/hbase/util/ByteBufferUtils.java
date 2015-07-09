@@ -21,12 +21,16 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.WritableUtils;
+
+import sun.nio.ch.DirectBuffer;
 
 /**
  * Utility functions for working with byte buffers, such as reading/writing
@@ -511,7 +515,21 @@ public final class ByteBufferUtils {
 
   public static int compareTo(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
     if (UnsafeAccess.isAvailable()) {
-      return compareToUnsafe(buf1, o1, l1, buf2, o2, l2);
+      long offset1Adj, offset2Adj;
+      Object refObj1 = null, refObj2 = null;
+      if (buf1.hasArray()) {
+        offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        refObj1 = buf1.array();
+      } else {
+        offset1Adj = o1 + ((DirectBuffer) buf1).address();
+      }
+      if (buf2.hasArray()) {
+        offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        refObj2 = buf2.array();
+      } else {
+        offset2Adj = o2 + ((DirectBuffer) buf2).address();
+      }
+      return compareToUnsafe(refObj1, offset1Adj, l1, refObj2, offset2Adj, l2);
     }
     int end1 = o1 + l1;
     int end2 = o2 + l2;
@@ -525,7 +543,32 @@ public final class ByteBufferUtils {
     return l1 - l2;
   }
 
-  static int compareToUnsafe(ByteBuffer buf1, int o1, int l1, ByteBuffer buf2, int o2, int l2) {
+  public static int compareTo(ByteBuffer buf1, int o1, int l1, byte[] buf2, int o2, int l2) {
+    if (UnsafeAccess.isAvailable()) {
+      long offset1Adj;
+      Object refObj1 = null;
+      if (buf1.hasArray()) {
+        offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+        refObj1 = buf1.array();
+      } else {
+        offset1Adj = o1 + ((DirectBuffer) buf1).address();
+      }
+      return compareToUnsafe(refObj1, offset1Adj, l1, buf2, o2
+          + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l2);
+    }
+    int end1 = o1 + l1;
+    int end2 = o2 + l2;
+    for (int i = o1, j = o2; i < end1 && j < end2; i++, j++) {
+      int a = buf1.get(i) & 0xFF;
+      int b = buf2[j] & 0xFF;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return l1 - l2;
+  }
+
+  static int compareToUnsafe(Object obj1, long o1, int l1, Object obj2, long o2, int l2) {
     final int minLength = Math.min(l1, l2);
     final int minWords = minLength / Bytes.SIZEOF_LONG;
 
@@ -536,8 +579,8 @@ public final class ByteBufferUtils {
      */
     int j = minWords << 3; // Same as minWords * SIZEOF_LONG
     for (int i = 0; i < j; i += Bytes.SIZEOF_LONG) {
-      long lw = UnsafeAccess.getAsLong(buf1, o1 + i);
-      long rw = UnsafeAccess.getAsLong(buf2, o2 + i);
+      long lw = UnsafeAccess.theUnsafe.getLong(obj1, o1 + i);
+      long rw = UnsafeAccess.theUnsafe.getLong(obj2, o2 + i);
       long diff = lw ^ rw;
       if (diff != 0) {
         return lessThanUnsignedLong(lw, rw) ? -1 : 1;
@@ -546,24 +589,24 @@ public final class ByteBufferUtils {
     int offset = j;
 
     if (minLength - offset >= Bytes.SIZEOF_INT) {
-      int il = UnsafeAccess.getAsInt(buf1, o1 + offset);
-      int ir = UnsafeAccess.getAsInt(buf2, o2 + offset);
+      int il = UnsafeAccess.theUnsafe.getInt(obj1, o1 + offset);
+      int ir = UnsafeAccess.theUnsafe.getInt(obj2, o2 + offset);
       if (il != ir) {
         return lessThanUnsignedInt(il, ir) ? -1 : 1;
       }
       offset += Bytes.SIZEOF_INT;
     }
     if (minLength - offset >= Bytes.SIZEOF_SHORT) {
-      short sl = UnsafeAccess.getAsShort(buf1, o1 + offset);
-      short sr = UnsafeAccess.getAsShort(buf2, o2 + offset);
+      short sl = UnsafeAccess.theUnsafe.getShort(obj1, o1 + offset);
+      short sr = UnsafeAccess.theUnsafe.getShort(obj2, o2 + offset);
       if (sl != sr) {
         return lessThanUnsignedShort(sl, sr) ? -1 : 1;
       }
       offset += Bytes.SIZEOF_SHORT;
     }
     if (minLength - offset == 1) {
-      int a = (buf1.get(o1 + offset) & 0xff);
-      int b = (buf2.get(o2 + offset) & 0xff);
+      int a = (UnsafeAccess.theUnsafe.getByte(obj1, o1 + offset) & 0xff);
+      int b = (UnsafeAccess.theUnsafe.getByte(obj2, o2 + offset) & 0xff);
       if (a != b) {
         return a - b;
       }
@@ -662,6 +705,34 @@ public final class ByteBufferUtils {
     } else {
       buffer.putInt(val);
     }
+  }
+
+  /**
+   * Reads a double value at the given buffer's offset.
+   * @param buffer
+   * @param offset offset where double is
+   * @return double value at offset
+   */
+  public static double toDouble(ByteBuffer buffer, int offset) {
+    return Double.longBitsToDouble(toLong(buffer, offset));
+  }
+
+  /**
+   * Reads a BigDecimal value at the given buffer's offset.
+   * @param buffer
+   * @param offset
+   * @return BigDecimal value at offset
+   */
+  public static BigDecimal toBigDecimal(ByteBuffer buffer, int offset, int length) {
+    if (buffer == null || length < Bytes.SIZEOF_INT + 1 ||
+      (offset + length > buffer.limit())) {
+      return null;
+    }
+
+    int scale = toInt(buffer, offset);
+    byte[] tcBytes = new byte[length - Bytes.SIZEOF_INT];
+    copyFromBufferToArray(tcBytes, buffer, offset + Bytes.SIZEOF_INT, 0, length - Bytes.SIZEOF_INT);
+    return new BigDecimal(new BigInteger(tcBytes), scale);
   }
 
   /**

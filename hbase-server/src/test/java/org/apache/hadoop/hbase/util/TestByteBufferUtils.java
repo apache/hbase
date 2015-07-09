@@ -372,4 +372,32 @@ public class TestByteBufferUtils {
     assertEquals(i, Bytes.toInt(b, 3));
     assertEquals(l, Bytes.toLong(b, 7));
   }
+
+  @Test
+  public void testCompareTo() {
+    ByteBuffer bb1 = ByteBuffer.allocate(135);
+    ByteBuffer bb2 = ByteBuffer.allocate(135);
+    byte[] b = new byte[71];
+    fillBB(bb1, (byte) 5);
+    fillBB(bb2, (byte) 5);
+    fillArray(b, (byte) 5);
+    assertEquals(0, ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()));
+    assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), b, 0, b.length) > 0);
+    bb2.put(134, (byte) 6);
+    assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()) < 0);
+    bb2.put(6, (byte) 4);
+    assertTrue(ByteBufferUtils.compareTo(bb1, 0, bb1.remaining(), bb2, 0, bb2.remaining()) > 0);
+  }
+
+  private static void fillBB(ByteBuffer bb, byte b) {
+    for (int i = bb.position(); i < bb.limit(); i++) {
+      bb.put(i, b);
+    }
+  }
+
+  private static void fillArray(byte[] bb, byte b) {
+    for (int i = 0; i < bb.length; i++) {
+      bb[i] = b;
+    }
+  }
 }

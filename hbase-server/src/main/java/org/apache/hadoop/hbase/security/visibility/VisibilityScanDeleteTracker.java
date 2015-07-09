@@ -26,6 +26,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.Tag;
@@ -71,8 +73,6 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   public void add(Cell delCell) {
     //Cannot call super.add because need to find if the delete needs to be considered
     long timestamp = delCell.getTimestamp();
-    int qualifierOffset = delCell.getQualifierOffset();
-    int qualifierLength = delCell.getQualifierLength();
     byte type = delCell.getTypeByte();
     if (type == KeyValue.Type.DeleteFamily.getCode()) {
       hasFamilyStamp = true;
@@ -88,8 +88,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
     }
     // new column, or more general delete type
     if (deleteBuffer != null) {
-      if (Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength, delCell.getQualifierArray(),
-          qualifierOffset, qualifierLength) != 0) {
+      if (!(CellUtil.matchingQualifier(delCell, deleteBuffer, deleteOffset, deleteLength))) {
         // A case where there are deletes for a column qualifier but there are
         // no corresponding puts for them. Rare case.
         visibilityTagsDeleteColumns = null;
@@ -106,8 +105,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
       }
     }
     deleteBuffer = delCell.getQualifierArray();
-    deleteOffset = qualifierOffset;
-    deleteLength = qualifierLength;
+    deleteOffset = delCell.getQualifierOffset();
+    deleteLength = delCell.getQualifierLength();
     deleteType = type;
     deleteTimestamp = timestamp;
     extractDeleteCellVisTags(delCell, KeyValue.Type.codeToType(type));
@@ -189,8 +188,6 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
   @Override
   public DeleteResult isDeleted(Cell cell) {
     long timestamp = cell.getTimestamp();
-    int qualifierOffset = cell.getQualifierOffset();
-    int qualifierLength = cell.getQualifierLength();
     try {
       if (hasFamilyStamp) {
         if (visibilityTagsDeleteFamily != null) {
@@ -247,9 +244,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         }
       }
       if (deleteBuffer != null) {
-        int ret = Bytes.compareTo(deleteBuffer, deleteOffset, deleteLength,
-            cell.getQualifierArray(), qualifierOffset, qualifierLength);
-
+        int ret = CellComparator.compareQualifiers(cell, deleteBuffer, deleteOffset, deleteLength);
         if (ret == 0) {
           if (deleteType == KeyValue.Type.DeleteColumn.getCode()) {
             if (visibilityTagsDeleteColumns != null) {
@@ -295,7 +290,7 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
               }
             }
           }
-        } else if (ret < 0) {
+        } else if (ret > 0) {
           // Next column case.
           deleteBuffer = null;
           visibilityTagsDeleteColumns = null;
@@ -303,7 +298,8 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
         } else {
           throw new IllegalStateException("isDeleted failed: deleteBuffer="
               + Bytes.toStringBinary(deleteBuffer, deleteOffset, deleteLength) + ", qualifier="
-              + Bytes.toStringBinary(cell.getQualifierArray(), qualifierOffset, qualifierLength)
+              + Bytes.toStringBinary(cell.getQualifierArray(), cell.getQualifierOffset(),
+                  cell.getQualifierLength())
               + ", timestamp=" + timestamp + ", comparison result: " + ret);
         }
       }

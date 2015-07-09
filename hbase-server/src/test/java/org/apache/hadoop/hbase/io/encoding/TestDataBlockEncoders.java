@@ -215,7 +215,7 @@ public class TestDataBlockEncoders {
     for (boolean seekBefore : new boolean[] { false, true }) {
       checkSeekingConsistency(encodedSeekers, seekBefore, sampleKv.get(sampleKv.size() - 1));
       KeyValue midKv = sampleKv.get(sampleKv.size() / 2);
-      KeyValue lastMidKv =KeyValueUtil.createLastOnRowCol(midKv);
+      Cell lastMidKv =CellUtil.createLastOnRowCol(midKv);
       checkSeekingConsistency(encodedSeekers, seekBefore, lastMidKv);
     }
   }
@@ -329,7 +329,7 @@ public class TestDataBlockEncoders {
   }
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
-      boolean seekBefore, KeyValue keyValue) {
+      boolean seekBefore, Cell keyValue) {
     ByteBuffer expectedKeyValue = null;
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;

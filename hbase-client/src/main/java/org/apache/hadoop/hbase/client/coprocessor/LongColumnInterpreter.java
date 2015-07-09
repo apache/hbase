@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.client.coprocessor;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.coprocessor.ColumnInterpreter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg;
@@ -43,7 +44,7 @@ public class LongColumnInterpreter extends ColumnInterpreter<Long, Long,
       throws IOException {
     if (kv == null || kv.getValueLength() != Bytes.SIZEOF_LONG)
       return null;
-    return Bytes.toLong(kv.getValueArray(), kv.getValueOffset());
+    return CellUtil.getValueAsLong(kv);
   }
 
    @Override

@@ -68,6 +68,7 @@ public class CellCodec implements Codec {
      */
     private void write(final byte [] bytes, final int offset, final int length)
     throws IOException {
+      // TODO add BB backed os check and do for write. Pass Cell
       this.out.write(Bytes.toBytes(length));
       this.out.write(bytes, offset, length);
     }

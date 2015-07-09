@@ -22,9 +22,9 @@ import java.util.Map;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 /**
@@ -58,8 +58,8 @@ class VisibilityLabelFilter extends FilterBase {
   @Override
   public ReturnCode filterKeyValue(Cell cell) throws IOException {
     if (curFamily.getBytes() == null
-        || (Bytes.compareTo(curFamily.getBytes(), curFamily.getOffset(), curFamily.getLength(),
-            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()) != 0)) {
+        || !(CellUtil.matchingFamily(cell, curFamily.getBytes(), curFamily.getOffset(),
+            curFamily.getLength()))) {
       curFamily.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
       // For this family, all the columns can have max of curFamilyMaxVersions versions. No need to
       // consider the older versions for visibility label check.
@@ -69,9 +69,8 @@ class VisibilityLabelFilter extends FilterBase {
       curQualifier.unset();
     }
     if (curQualifier.getBytes() == null
-        || (Bytes.compareTo(curQualifier.getBytes(), curQualifier.getOffset(),
-            curQualifier.getLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()) != 0)) {
+        || !(CellUtil.matchingQualifier(cell, curQualifier.getBytes(), curQualifier.getOffset(),
+            curQualifier.getLength()))) {
       curQualifier.set(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength());
       curQualMetVersions = 0;

@@ -342,7 +342,7 @@ public class StoreFileScanner implements KeyValueScanner {
         // a higher timestamp than the max timestamp in this file. We know that
         // the next point when we have to consider this file again is when we
         // pass the max timestamp of this file (with the same row/column).
-        setCurrentCell(KeyValueUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
+        setCurrentCell(CellUtil.createFirstOnRowColTS(kv, maxTimestampInFile));
       } else {
         // This will be the case e.g. when we need to seek to the next
         // row/column, and we don't know exactly what they are, so we set the
@@ -360,7 +360,7 @@ public class StoreFileScanner implements KeyValueScanner {
     // key/value and the store scanner will progress to the next column. This
     // is obviously not a "real real" seek, but unlike the fake KV earlier in
     // this method, we want this to be propagated to ScanQueryMatcher.
-    setCurrentCell(KeyValueUtil.createLastOnRowCol(kv));
+    setCurrentCell(CellUtil.createLastOnRowCol(kv));
 
     realSeekDone = true;
     return true;
@@ -419,8 +419,7 @@ public class StoreFileScanner implements KeyValueScanner {
   public boolean seekToPreviousRow(Cell key) throws IOException {
     try {
       try {
-        KeyValue seekKey = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
-            key.getRowLength());
+        Cell seekKey = CellUtil.createFirstOnRow(key);
         if (seekCount != null) seekCount.incrementAndGet();
         if (!hfs.seekBefore(seekKey)) {
           this.cur = null;

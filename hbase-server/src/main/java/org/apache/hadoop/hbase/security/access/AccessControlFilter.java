@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteRange;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
 
 /**
@@ -98,8 +97,8 @@ class AccessControlFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
     if (prevFam.getBytes() == null
-        || (Bytes.compareTo(prevFam.getBytes(), prevFam.getOffset(), prevFam.getLength(),
-            cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength()) != 0)) {
+        || !(CellUtil.matchingFamily(cell, prevFam.getBytes(), prevFam.getOffset(),
+            prevFam.getLength()))) {
       prevFam.set(cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength());
       // Similar to VisibilityLabelFilter
       familyMaxVersions = cfVsMaxVersions.get(prevFam);
@@ -107,9 +106,8 @@ class AccessControlFilter extends FilterBase {
       prevQual.unset();
     }
     if (prevQual.getBytes() == null
-        || (Bytes.compareTo(prevQual.getBytes(), prevQual.getOffset(),
-            prevQual.getLength(), cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength()) != 0)) {
+        || !(CellUtil.matchingQualifier(cell, prevQual.getBytes(), prevQual.getOffset(),
+            prevQual.getLength()))) {
       prevQual.set(cell.getQualifierArray(), cell.getQualifierOffset(),
           cell.getQualifierLength());
       currentVersions = 0;

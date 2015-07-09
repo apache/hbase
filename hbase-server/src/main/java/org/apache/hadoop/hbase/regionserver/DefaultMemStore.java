@@ -971,8 +971,7 @@ public class DefaultMemStore implements MemStore {
      */
     @Override
     public synchronized boolean seekToPreviousRow(Cell key) {
-      Cell firstKeyOnRow = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
-          key.getRowLength());
+      Cell firstKeyOnRow = CellUtil.createFirstOnRow(key);
       SortedSet<Cell> cellHead = cellSetAtCreation.headSet(firstKeyOnRow);
       Cell cellSetBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
       SortedSet<Cell> snapshotHead = snapshotAtCreation
@@ -984,8 +983,7 @@ public class DefaultMemStore implements MemStore {
         theNext = null;
         return false;
       }
-      Cell firstKeyOnPreviousRow = KeyValueUtil.createFirstOnRow(lastCellBeforeRow.getRowArray(),
-          lastCellBeforeRow.getRowOffset(), lastCellBeforeRow.getRowLength());
+      Cell firstKeyOnPreviousRow = CellUtil.createFirstOnRow(lastCellBeforeRow);
       this.stopSkippingCellsIfNextRow = true;
       seek(firstKeyOnPreviousRow);
       this.stopSkippingCellsIfNextRow = false;
@@ -1006,8 +1004,7 @@ public class DefaultMemStore implements MemStore {
       if (higherCell == null) {
         return false;
       }
-      Cell firstCellOnLastRow = KeyValueUtil.createFirstOnRow(higherCell.getRowArray(),
-          higherCell.getRowOffset(), higherCell.getRowLength());
+      Cell firstCellOnLastRow = CellUtil.createFirstOnRow(higherCell);
       if (seek(firstCellOnLastRow)) {
         return true;
       } else {

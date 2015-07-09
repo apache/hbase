@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.HConstants.EMPTY_BYTE_ARRAY;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
@@ -114,27 +115,55 @@ public final class CellUtil {
   /******************** copyTo **********************************/
 
   public static int copyRowTo(Cell cell, byte[] destination, int destinationOffset) {
-    System.arraycopy(cell.getRowArray(), cell.getRowOffset(), destination, destinationOffset,
-      cell.getRowLength());
-    return destinationOffset + cell.getRowLength();
+    short rowLen = cell.getRowLength();
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+          ((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), destinationOffset, rowLen);
+    } else {
+      System.arraycopy(cell.getRowArray(), cell.getRowOffset(), destination, destinationOffset,
+          rowLen);
+    }
+    return destinationOffset + rowLen;
   }
 
   public static int copyFamilyTo(Cell cell, byte[] destination, int destinationOffset) {
-    System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(), destination, destinationOffset,
-      cell.getFamilyLength());
-    return destinationOffset + cell.getFamilyLength();
+    byte fLen = cell.getFamilyLength();
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+          ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), destinationOffset, fLen);
+    } else {
+      System.arraycopy(cell.getFamilyArray(), cell.getFamilyOffset(), destination,
+          destinationOffset, fLen);
+    }
+    return destinationOffset + fLen;
   }
 
   public static int copyQualifierTo(Cell cell, byte[] destination, int destinationOffset) {
-    System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(), destination,
-      destinationOffset, cell.getQualifierLength());
-    return destinationOffset + cell.getQualifierLength();
+    int qlen = cell.getQualifierLength();
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+          ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), destinationOffset, qlen);
+    } else {
+      System.arraycopy(cell.getQualifierArray(), cell.getQualifierOffset(), destination,
+          destinationOffset, qlen);
+    }
+    return destinationOffset + qlen;
   }
 
   public static int copyValueTo(Cell cell, byte[] destination, int destinationOffset) {
-    System.arraycopy(cell.getValueArray(), cell.getValueOffset(), destination, destinationOffset,
-        cell.getValueLength());
-    return destinationOffset + cell.getValueLength();
+    int vlen = cell.getValueLength();
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+          ((ByteBufferedCell) cell).getValueByteBuffer(),
+          ((ByteBufferedCell) cell).getValuePositionInByteBuffer(), destinationOffset, vlen);
+    } else {
+      System.arraycopy(cell.getValueArray(), cell.getValueOffset(), destination, destinationOffset,
+          vlen);
+    }
+    return destinationOffset + vlen;
   }
 
   /**
@@ -145,14 +174,25 @@ public final class CellUtil {
    * @return position after tags
    */
   public static int copyTagTo(Cell cell, byte[] destination, int destinationOffset) {
-    System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
-        cell.getTagsLength());
-    return destinationOffset + cell.getTagsLength();
+    int tlen = cell.getTagsLength();
+    if (cell instanceof ByteBufferedCell) {
+      ByteBufferUtils.copyFromBufferToArray(destination,
+          ((ByteBufferedCell) cell).getTagsByteBuffer(),
+          ((ByteBufferedCell) cell).getTagsPositionInByteBuffer(), destinationOffset, tlen);
+    } else {
+      System.arraycopy(cell.getTagsArray(), cell.getTagsOffset(), destination, destinationOffset,
+          tlen);
+    }
+    return destinationOffset + tlen;
   }
 
   /********************* misc *************************************/
 
   public static byte getRowByte(Cell cell, int index) {
+    if (cell instanceof ByteBufferedCell) {
+      return ((ByteBufferedCell) cell).getRowByteBuffer().get(
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer() + index);
+    }
     return cell.getRowArray()[cell.getRowOffset() + index];
   }
 
@@ -162,7 +202,14 @@ public final class CellUtil {
     return buffer;
   }
 
+  /**
+   * @param cell
+   * @return cell's qualifier wrapped into a ByteBuffer.
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   */
+  @Deprecated
   public static ByteBuffer getQualifierBufferShallowCopy(Cell cell) {
+    // No usage of this in code.
     ByteBuffer buffer = ByteBuffer.wrap(cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength());
     return buffer;
@@ -374,10 +421,12 @@ public final class CellUtil {
    * @param left
    * @param right
    * @return True if the rows in <code>left</code> and <code>right</code> Cells match
+   * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0.
+   *             Instead use {@link #matchingRows(Cell, Cell)}
    */
+  @Deprecated
   public static boolean matchingRow(final Cell left, final Cell right) {
-    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
-        right.getRowArray(), right.getRowOffset(), right.getRowLength());
+    return matchingRows(left, right);
   }
 
   public static boolean matchingRow(final Cell left, final byte[] buf) {
@@ -389,11 +438,35 @@ public final class CellUtil {
 
   public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
       final int length) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(), buf, offset,
+          length) == 0;
+    }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(), buf, offset,
         length);
   }
 
   public static boolean matchingFamily(final Cell left, final Cell right) {
+    byte lfamlength = left.getFamilyLength();
+    byte rfamlength = right.getFamilyLength();
+    if (lfamlength != rfamlength) return false;
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), lfamlength,
+          ((ByteBufferedCell) right).getFamilyByteBuffer(),
+          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), rfamlength) == 0;
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), lfamlength,
+          right.getFamilyArray(), right.getFamilyOffset(), rfamlength) == 0;
+    }
+    if (right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getFamilyByteBuffer(),
+          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), rfamlength,
+          left.getFamilyArray(), left.getFamilyOffset(), lfamlength) == 0;
+    }
     return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
         right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
   }
@@ -407,11 +480,35 @@ public final class CellUtil {
 
   public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
       final int length) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(), buf,
+          offset, length) == 0;
+    }
     return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
         offset, length);
   }
 
   public static boolean matchingQualifier(final Cell left, final Cell right) {
+    int lqlength = left.getQualifierLength();
+    int rqlength = right.getQualifierLength();
+    if (lqlength != rqlength) return false;
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), lqlength,
+          ((ByteBufferedCell) right).getQualifierByteBuffer(),
+          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(), rqlength) == 0;
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), lqlength,
+          right.getQualifierArray(), right.getQualifierOffset(), rqlength) == 0;
+    }
+    if (right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getQualifierByteBuffer(),
+          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(), rqlength,
+          left.getQualifierArray(), left.getQualifierOffset(), lqlength) == 0;
+    }
     return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
         right.getQualifierLength());
@@ -445,6 +542,11 @@ public final class CellUtil {
     if (buf == null) {
       return left.getQualifierLength() == 0;
     }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
+          buf, offset, length) == 0;
+    }
     return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), buf, offset, length);
   }
@@ -469,11 +571,35 @@ public final class CellUtil {
   }
 
   public static boolean matchingValue(final Cell left, final Cell right) {
-    return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(),
-        right.getValueArray(), right.getValueOffset(), right.getValueLength());
+    int lvlength = left.getValueLength();
+    int rvlength = right.getValueLength();
+    if (lvlength != rvlength) return false;
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getValueByteBuffer(),
+          ((ByteBufferedCell) left).getValuePositionInByteBuffer(), lvlength,
+          ((ByteBufferedCell) right).getValueByteBuffer(),
+          ((ByteBufferedCell) right).getValuePositionInByteBuffer(), rvlength) == 0;
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getValueByteBuffer(),
+          ((ByteBufferedCell) left).getValuePositionInByteBuffer(), lvlength,
+          right.getValueArray(), right.getValueOffset(), rvlength) == 0;
+    }
+    if (right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getValueByteBuffer(),
+          ((ByteBufferedCell) right).getValuePositionInByteBuffer(), rvlength,
+          left.getValueArray(), left.getValueOffset(), lvlength) == 0;
+    }
+    return Bytes.equals(left.getValueArray(), left.getValueOffset(), lvlength,
+        right.getValueArray(), right.getValueOffset(), rvlength);
   }
 
   public static boolean matchingValue(final Cell left, final byte[] buf) {
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getValueByteBuffer(),
+          ((ByteBufferedCell) left).getValuePositionInByteBuffer(), left.getValueLength(), buf, 0,
+          buf.length) == 0;
+    }
     return Bytes.equals(left.getValueArray(), left.getValueOffset(), left.getValueLength(), buf, 0,
         buf.length);
   }
@@ -967,66 +1093,100 @@ public final class CellUtil {
   public static boolean matchingRows(final Cell left, final Cell right) {
     short lrowlength = left.getRowLength();
     short rrowlength = right.getRowLength();
-    return matchingRows(left, lrowlength, right, rrowlength);
-  }
-
-  /**
-   * @param left
-   * @param lrowlength
-   * @param right
-   * @param rrowlength
-   * @return True if rows match.
-   */
-  private static boolean matchingRows(final Cell left, final short lrowlength, final Cell right,
-      final short rrowlength) {
-    return lrowlength == rrowlength
-        && matchingRows(left.getRowArray(), left.getRowOffset(), lrowlength, right.getRowArray(),
-            right.getRowOffset(), rrowlength);
-  }
-
-  /**
-   * Compare rows. Just calls Bytes.equals, but it's good to have this
-   * encapsulated.
-   * 
-   * @param left
-   *          Left row array.
-   * @param loffset
-   *          Left row offset.
-   * @param llength
-   *          Left row length.
-   * @param right
-   *          Right row array.
-   * @param roffset
-   *          Right row offset.
-   * @param rlength
-   *          Right row length.
-   * @return Whether rows are the same row.
-   */
-  private static boolean matchingRows(final byte[] left, final int loffset, final int llength,
-      final byte[] right, final int roffset, final int rlength) {
-    return Bytes.equals(left, loffset, llength, right, roffset, rlength);
+    if (lrowlength != rrowlength) return false;
+    if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), lrowlength,
+          ((ByteBufferedCell) right).getRowByteBuffer(),
+          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), rrowlength) == 0;
+    }
+    if (left instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), lrowlength, right.getRowArray(),
+          right.getRowOffset(), rrowlength) == 0;
+    }
+    if (right instanceof ByteBufferedCell) {
+      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getRowByteBuffer(),
+          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), rrowlength, left.getRowArray(),
+          left.getRowOffset(), lrowlength) == 0;
+    }
+    return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
+        right.getRowArray(), right.getRowOffset(), right.getRowLength());
   }
 
   /**
    * Compares the row and column of two keyvalues for equality
-   * 
+   *
    * @param left
    * @param right
    * @return True if same row and column.
    */
   public static boolean matchingRowColumn(final Cell left, final Cell right) {
-    short lrowlength = left.getRowLength();
-    short rrowlength = right.getRowLength();
-
-    if ((lrowlength + left.getFamilyLength() + left.getQualifierLength()) != (rrowlength
-        + right.getFamilyLength() + right.getQualifierLength())) {
+    if ((left.getRowLength() + left.getFamilyLength() + left.getQualifierLength()) != (right
+        .getRowLength() + right.getFamilyLength() + right.getQualifierLength())) {
       return false;
     }
 
-    if (!matchingRows(left, lrowlength, right, rrowlength)) {
+    if (!matchingRows(left, right)) {
       return false;
     }
     return matchingColumn(left, right);
+  }
+
+  /**
+   * Converts the rowkey bytes of the given cell into an int value
+   *
+   * @param cell
+   * @return rowkey as int
+   */
+  public static int getRowAsInt(Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return ByteBufferUtils.toInt(((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer());
+    }
+    return Bytes.toInt(cell.getRowArray(), cell.getRowOffset());
+  }
+
+  /**
+   * Converts the value bytes of the given cell into a long value
+   *
+   * @param cell
+   * @return value as long
+   */
+  public static long getValueAsLong(Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return ByteBufferUtils.toLong(((ByteBufferedCell) cell).getValueByteBuffer(),
+          ((ByteBufferedCell) cell).getValuePositionInByteBuffer());
+    }
+    return Bytes.toLong(cell.getValueArray(), cell.getValueOffset());
+  }
+
+  /**
+   * Converts the value bytes of the given cell into a double value
+   *
+   * @param cell
+   * @return value as double
+   */
+  public static double getValueAsDouble(Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return ByteBufferUtils.toDouble(((ByteBufferedCell) cell).getValueByteBuffer(),
+          ((ByteBufferedCell) cell).getValuePositionInByteBuffer());
+    }
+    return Bytes.toDouble(cell.getValueArray(), cell.getValueOffset());
+  }
+
+  /**
+   * Converts the value bytes of the given cell into a BigDecimal
+   *
+   * @param cell
+   * @return value as BigDecimal
+   */
+  public static BigDecimal getValueAsBigDecimal(Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return ByteBufferUtils.toBigDecimal(((ByteBufferedCell) cell).getValueByteBuffer(),
+          ((ByteBufferedCell) cell).getValuePositionInByteBuffer(), cell.getValueLength());
+    }
+    return Bytes.toBigDecimal(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**
@@ -1037,6 +1197,71 @@ public final class CellUtil {
    */
   public static Cell createFirstOnRow(final Cell cell) {
     return new FirstOnRowFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  /**
+   * Create a Cell that is smaller than all other possible Cells for the given Cell row's next row.
+   * Makes the next row's rowkey by appending single byte 0x00 to the end of current row key.
+   */
+  public static Cell createFirstOnNextRow(final Cell cell) {
+    byte[] nextRow = new byte[cell.getRowLength() + 1];
+    copyRowTo(cell, nextRow, 0);
+    nextRow[nextRow.length - 1] = 0;// maybe not necessary
+    return new FirstOnRowFakeCell(nextRow, 0, (short) nextRow.length);
+  }
+
+  /**
+   * Create a Cell that is smaller than all other possible Cells for the given Cell's rk:cf and
+   * passed qualifier.
+   *
+   * @param cell
+   * @param qArray
+   * @param qoffest
+   * @param qlength
+   * @return Last possible Cell on passed Cell's rk:cf and passed qualifier.
+   */
+  public static Cell createFirstOnRowCol(final Cell cell, byte[] qArray, int qoffest, int qlength) {
+    return new FirstOnRowColumnFakeCell(cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        qArray, qoffest, qlength);
+  }
+
+  /**
+   * Creates the first cell with the row/family/qualifier of this cell and the given timestamp.
+   * Uses the "maximum" type that guarantees that the new cell is the lowest possible for this
+   * combination of row, family, qualifier, and timestamp. This cell's own timestamp is ignored.
+   *
+   * @param cell - cell
+   * @param ts
+   */
+  public static Cell createFirstOnRowColTS(Cell cell, long ts) {
+    return new FirstOnRowColumnTSFakeCell(cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(), ts);
+  }
+
+  /**
+   * Create a Cell that is larger than all other possible Cells for the given Cell's row.
+   *
+   * @param cell
+   * @return Last possible Cell on passed Cell's row.
+   */
+  public static Cell createLastOnRow(final Cell cell) {
+    return new LastOnRowFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  /**
+   * Create a Cell that is larger than all other possible Cells for the given Cell's rk:cf:q. Used
+   * in creating "fake keys" for the multi-column Bloom filter optimization to skip the row/column
+   * we already know is not in the file.
+   *
+   * @param cell
+   * @return Last possible Cell on passed Cell's rk:cf:q.
+   */
+  public static Cell createLastOnRowCol(final Cell cell) {
+    return new LastOnRowColumnFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
   }
 
   @InterfaceAudience.Private
@@ -1151,12 +1376,12 @@ public final class CellUtil {
   @InterfaceAudience.Private
   private static class FirstOnRowFakeCell extends FakeCell {
     private final byte[] rowArray;
-    private final int roffest;
+    private final int roffset;
     private final short rlength;
 
     public FirstOnRowFakeCell(final byte[] row, int roffset, short rlength) {
       this.rowArray = row;
-      this.roffest = roffset;
+      this.roffset = roffset;
       this.rlength = rlength;
     }
 
@@ -1167,7 +1392,7 @@ public final class CellUtil {
 
     @Override
     public int getRowOffset() {
-      return this.roffest;
+      return this.roffset;
     }
 
     @Override
@@ -1187,7 +1412,189 @@ public final class CellUtil {
 
     @Override
     public byte[] getRow() {
-      return Bytes.copy(this.rowArray, this.roffest, this.rlength);
+      return Bytes.copy(this.rowArray, this.roffset, this.rlength);
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowColumnFakeCell extends FirstOnRowFakeCell {
+    private final byte[] fArray;
+    private final int foffset;
+    private final byte flength;
+    private final byte[] qArray;
+    private final int qoffset;
+    private final int qlength;
+
+    public FirstOnRowColumnFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+        int foffset, byte flength, byte[] qArray, int qoffset, int qlength) {
+      super(rArray, roffset, rlength);
+      this.fArray = fArray;
+      this.foffset = foffset;
+      this.flength = flength;
+      this.qArray = qArray;
+      this.qoffset = qoffset;
+      this.qlength = qlength;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.fArray;
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return this.foffset;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.flength;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return this.qArray;
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return this.qoffset;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.qlength;
+    }
+
+    @Override
+    public byte[] getFamily() {
+      return Bytes.copy(this.fArray, this.foffset, this.flength);
+    }
+
+    @Override
+    public byte[] getQualifier() {
+      return Bytes.copy(this.qArray, this.qoffset, this.qlength);
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowColumnTSFakeCell extends FirstOnRowColumnFakeCell {
+
+    private long ts;
+
+    public FirstOnRowColumnTSFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+        int foffset, byte flength, byte[] qArray, int qoffset, int qlength, long ts) {
+      super(rArray, roffset, rlength, fArray, foffset, flength, qArray, qoffset, qlength);
+      this.ts = ts;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return this.ts;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class LastOnRowFakeCell extends FakeCell {
+    private final byte[] rowArray;
+    private final int roffset;
+    private final short rlength;
+
+    public LastOnRowFakeCell(byte[] row, int roffset, short rlength) {
+      this.rowArray = row;
+      this.roffset = roffset;
+      this.rlength = rlength;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.rowArray;
+    }
+
+    @Override
+    public int getRowOffset() {
+      return this.roffset;
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rlength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.OLDEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.Minimum.getCode();
+    }
+
+    @Override
+    public byte[] getRow() {
+      return Bytes.copy(this.rowArray, this.roffset, this.rlength);
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class LastOnRowColumnFakeCell extends LastOnRowFakeCell {
+    private final byte[] fArray;
+    private final int foffset;
+    private final byte flength;
+    private final byte[] qArray;
+    private final int qoffset;
+    private final int qlength;
+
+    public LastOnRowColumnFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+        int foffset, byte flength, byte[] qArray, int qoffset, int qlength) {
+      super(rArray, roffset, rlength);
+      this.fArray = fArray;
+      this.foffset = foffset;
+      this.flength = flength;
+      this.qArray = qArray;
+      this.qoffset = qoffset;
+      this.qlength = qlength;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.fArray;
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return this.foffset;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.flength;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return this.qArray;
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return this.qoffset;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.qlength;
+    }
+
+    @Override
+    public byte[] getFamily() {
+      return Bytes.copy(this.fArray, this.foffset, this.flength);
+    }
+
+    @Override
+    public byte[] getQualifier() {
+      return Bytes.copy(this.qArray, this.qoffset, this.qlength);
     }
   }
 }

@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagRewriteCell;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
@@ -3520,13 +3521,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         }
 
         // Rewrite the cell with the updated set of tags
-
-        cells.set(i, new KeyValue(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-          cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
-          cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
-          cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
-          newTags));
+        cells.set(i, new TagRewriteCell(cell, Tag.fromList(newTags)));
       }
     }
   }
@@ -6845,6 +6840,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   newCell.getQualifierArray(), newCell.getQualifierOffset(),
                   cell.getQualifierLength());
                 // copy in the value
+                // TODO handle when oldCell is BBBacked
                 System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
                   newCell.getValueArray(), newCell.getValueOffset(),
                   oldCell.getValueLength());
@@ -6866,15 +6862,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   List<Tag> newTags = new ArrayList<Tag>(1);
                   newTags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(append.getTTL())));
                   // Add the new TTL tag
-                  newCell = new KeyValue(cell.getRowArray(), cell.getRowOffset(),
-                      cell.getRowLength(),
-                    cell.getFamilyArray(), cell.getFamilyOffset(),
-                      cell.getFamilyLength(),
-                    cell.getQualifierArray(), cell.getQualifierOffset(),
-                      cell.getQualifierLength(),
-                    cell.getTimestamp(), KeyValue.Type.codeToType(cell.getTypeByte()),
-                    cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(),
-                    newTags);
+                  newCell = new TagRewriteCell(cell, Tag.fromList(newTags));
                 } else {
                   newCell = cell;
                 }
@@ -7076,7 +7064,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 c = results.get(idx);
                 ts = Math.max(now, c.getTimestamp());
                 if(c.getValueLength() == Bytes.SIZEOF_LONG) {
-                  amount += Bytes.toLong(c.getValueArray(), c.getValueOffset(), Bytes.SIZEOF_LONG);
+                  amount += CellUtil.getValueAsLong(c);
                 } else {
                   // throw DoNotRetryIOException instead of IllegalArgumentException
                   throw new org.apache.hadoop.hbase.DoNotRetryIOException(

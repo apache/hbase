@@ -171,11 +171,10 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
     Map<String, List<Integer>> userAuths = new HashMap<String, List<Integer>>();
     for (List<Cell> cells : labelDetails) {
       for (Cell cell : cells) {
-        if (Bytes.equals(cell.getQualifierArray(), cell.getQualifierOffset(),
-            cell.getQualifierLength(), LABEL_QUALIFIER, 0, LABEL_QUALIFIER.length)) {
+        if (CellUtil.matchingQualifier(cell, LABEL_QUALIFIER)) {
           labels.put(
               Bytes.toString(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength()),
-              Bytes.toInt(cell.getRowArray(), cell.getRowOffset()));
+              CellUtil.getRowAsInt(cell));
         } else {
           // These are user cells who has authorization for this label
           String user = Bytes.toString(cell.getQualifierArray(), cell.getQualifierOffset(),
@@ -185,7 +184,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
             auths = new ArrayList<Integer>();
             userAuths.put(user, auths);
           }
-          auths.add(Bytes.toInt(cell.getRowArray(), cell.getRowOffset()));
+          auths.add(CellUtil.getRowAsInt(cell));
         }
       }
     }
@@ -276,7 +275,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         int labelOrdinal = this.labelsCache.getLabelOrdinal(authLabelStr);
         assert labelOrdinal > 0;
         Delete d = new Delete(Bytes.toBytes(labelOrdinal));
-        d.deleteColumns(LABELS_TABLE_FAMILY, user);
+        d.addColumns(LABELS_TABLE_FAMILY, user);
         deletes.add(d);
       } else {
         // This label is not set for the user.
@@ -341,7 +340,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        int ordinal = CellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);
@@ -378,7 +377,7 @@ public class DefaultVisibilityLabelServiceImpl implements VisibilityLabelService
         scanner.next(results);
         if (results.isEmpty()) break;
         Cell cell = results.get(0);
-        int ordinal = Bytes.toInt(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+        int ordinal = CellUtil.getRowAsInt(cell);
         String label = this.labelsCache.getLabel(ordinal);
         if (label != null) {
           auths.add(label);

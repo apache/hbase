@@ -439,8 +439,6 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
       final InternalScanner s, final Cell curRowCell, final boolean hasMore) throws IOException {
-    // TODO when cell is backed by DirectByteBuffer, we would need to copy row bytes to temp byte[]
-    // and call old method for BC.
     return postScannerFilterRow(e, s, curRowCell.getRowArray(), curRowCell.getRowOffset(),
         curRowCell.getRowLength(), hasMore);
   }

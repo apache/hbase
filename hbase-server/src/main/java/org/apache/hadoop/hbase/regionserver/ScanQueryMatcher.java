@@ -544,23 +544,15 @@ public class ScanQueryMatcher {
   public Cell getKeyForNextColumn(Cell kv) {
     ColumnCount nextColumn = columns.getColumnHint();
     if (nextColumn == null) {
-      return KeyValueUtil.createLastOnRow(
-          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-          kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
+      return CellUtil.createLastOnRowCol(kv);
     } else {
-      return KeyValueUtil.createFirstOnRow(
-          kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-          kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(),
-          nextColumn.getBuffer(), nextColumn.getOffset(), nextColumn.getLength());
+      return CellUtil.createFirstOnRowCol(kv, nextColumn.getBuffer(), nextColumn.getOffset(),
+          nextColumn.getLength());
     }
   }
 
-  public Cell getKeyForNextRow(Cell kv) {
-    return KeyValueUtil.createLastOnRow(
-        kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(),
-        null, 0, 0,
-        null, 0, 0);
+  public Cell getKeyForNextRow(Cell c) {
+    return CellUtil.createLastOnRow(c);
   }
 
   /**

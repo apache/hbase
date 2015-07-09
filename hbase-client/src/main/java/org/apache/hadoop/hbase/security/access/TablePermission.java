@@ -22,8 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -37,7 +36,6 @@ import org.apache.hadoop.hbase.util.Bytes;
  */
 @InterfaceAudience.Private
 public class TablePermission extends Permission {
-  private static final Log LOG = LogFactory.getLog(TablePermission.class);
 
   private TableName table;
   private byte[] family;
@@ -248,15 +246,11 @@ public class TablePermission extends Permission {
       return false;
     }
 
-    if (family != null &&
-        (Bytes.compareTo(family, 0, family.length,
-            kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength()) != 0)) {
+    if (family != null && !(CellUtil.matchingFamily(kv, family))) {
       return false;
     }
 
-    if (qualifier != null &&
-        (Bytes.compareTo(qualifier, 0, qualifier.length,
-            kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()) != 0)) {
+    if (qualifier != null && !(CellUtil.matchingQualifier(kv, qualifier))) {
       return false;
     }
 

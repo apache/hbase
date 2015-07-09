@@ -797,8 +797,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         + " followed by a " + "smaller key " + kv + " in cf " + store;
   }
 
-  protected boolean seekToNextRow(Cell kv) throws IOException {
-    return reseek(KeyValueUtil.createLastOnRow(kv));
+  protected boolean seekToNextRow(Cell c) throws IOException {
+    return reseek(CellUtil.createLastOnRow(c));
   }
 
   /**
