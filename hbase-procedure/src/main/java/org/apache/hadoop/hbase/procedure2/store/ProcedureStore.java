@@ -39,6 +39,11 @@ public interface ProcedureStore {
    */
   public interface ProcedureStoreListener {
     /**
+     * triggered when the store sync is completed.
+     */
+    void postSync();
+
+    /**
      * triggered when the store is not able to write out data.
      * the main process should abort.
      */

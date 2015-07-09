@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.FileNotFoundException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.LinkedTransferQueue;
@@ -52,6 +53,9 @@ import org.apache.hadoop.hbase.procedure2.store.ProcedureStoreTracker;
 import org.apache.hadoop.hbase.procedure2.util.ByteSlot;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader;
+import org.apache.hadoop.hbase.util.Threads;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * WAL implementation of the ProcedureStore.
@@ -65,7 +69,25 @@ public class WALProcedureStore implements ProcedureStore {
     void recoverFileLease(FileSystem fs, Path path) throws IOException;
   }
 
-  private static final int MAX_RETRIES_BEFORE_ABORT = 3;
+  private static final String MAX_RETRIES_BEFORE_ROLL_CONF_KEY =
+    "hbase.procedure.store.wal.max.retries.before.roll";
+  private static final int DEFAULT_MAX_RETRIES_BEFORE_ROLL = 3;
+
+  private static final String WAIT_BEFORE_ROLL_CONF_KEY =
+    "hbase.procedure.store.wal.wait.before.roll";
+  private static final int DEFAULT_WAIT_BEFORE_ROLL = 500;
+
+  private static final String ROLL_RETRIES_CONF_KEY =
+    "hbase.procedure.store.wal.max.roll.retries";
+  private static final int DEFAULT_ROLL_RETRIES = 3;
+
+  private static final String MAX_SYNC_FAILURE_ROLL_CONF_KEY =
+    "hbase.procedure.store.wal.sync.failure.roll.max";
+  private static final int DEFAULT_MAX_SYNC_FAILURE_ROLL = 3;
+
+  private static final String PERIODIC_ROLL_CONF_KEY =
+    "hbase.procedure.store.wal.periodic.roll.msec";
+  private static final int DEFAULT_PERIODIC_ROLL = 60 * 60 * 1000; // 1h
 
   private static final String SYNC_WAIT_MSEC_CONF_KEY = "hbase.procedure.store.wal.sync.wait.msec";
   private static final int DEFAULT_SYNC_WAIT_MSEC = 100;
@@ -93,16 +115,22 @@ public class WALProcedureStore implements ProcedureStore {
   private final Path logDir;
 
   private AtomicBoolean inSync = new AtomicBoolean(false);
+  private AtomicReference<Throwable> syncException = new AtomicReference<>();
   private LinkedTransferQueue<ByteSlot> slotsCache = null;
   private Set<ProcedureWALFile> corruptedLogs = null;
   private AtomicLong totalSynced = new AtomicLong(0);
+  private AtomicLong lastRollTs = new AtomicLong(0);
   private FSDataOutputStream stream = null;
-  private long lastRollTs = 0;
   private long flushLogId = 0;
   private int slotIndex = 0;
   private Thread syncThread;
   private ByteSlot[] slots;
 
+  private int maxRetriesBeforeRoll;
+  private int maxSyncFailureRoll;
+  private int waitBeforeRoll;
+  private int rollRetries;
+  private int periodicRollMsec;
   private long rollThreshold;
   private boolean useHsync;
   private int syncWaitMsec;
@@ -129,7 +157,13 @@ public class WALProcedureStore implements ProcedureStore {
     }
 
     // Tunings
+    maxRetriesBeforeRoll =
+      conf.getInt(MAX_RETRIES_BEFORE_ROLL_CONF_KEY, DEFAULT_MAX_RETRIES_BEFORE_ROLL);
+    maxSyncFailureRoll = conf.getInt(MAX_SYNC_FAILURE_ROLL_CONF_KEY, DEFAULT_MAX_SYNC_FAILURE_ROLL);
+    waitBeforeRoll = conf.getInt(WAIT_BEFORE_ROLL_CONF_KEY, DEFAULT_WAIT_BEFORE_ROLL);
+    rollRetries = conf.getInt(ROLL_RETRIES_CONF_KEY, DEFAULT_ROLL_RETRIES);
     rollThreshold = conf.getLong(ROLL_THRESHOLD_CONF_KEY, DEFAULT_ROLL_THRESHOLD);
+    periodicRollMsec = conf.getInt(PERIODIC_ROLL_CONF_KEY, DEFAULT_PERIODIC_ROLL);
     syncWaitMsec = conf.getInt(SYNC_WAIT_MSEC_CONF_KEY, DEFAULT_SYNC_WAIT_MSEC);
     useHsync = conf.getBoolean(USE_HSYNC_CONF_KEY, DEFAULT_USE_HSYNC);
 
@@ -137,11 +171,11 @@ public class WALProcedureStore implements ProcedureStore {
     syncThread = new Thread("WALProcedureStoreSyncThread") {
       @Override
       public void run() {
-        while (running.get()) {
-          try {
-            syncLoop();
-          } catch (IOException e) {
-            LOG.error("Got an exception from the sync-loop", e);
+        try {
+          syncLoop();
+        } catch (Throwable e) {
+          LOG.error("Got an exception from the sync-loop", e);
+          if (!isSyncAborted()) {
             sendAbortProcessSignal();
           }
         }
@@ -160,6 +194,7 @@ public class WALProcedureStore implements ProcedureStore {
     if (lock.tryLock()) {
       try {
         waitCond.signalAll();
+        syncCond.signalAll();
       } finally {
         lock.unlock();
       }
@@ -315,6 +350,9 @@ public class WALProcedureStore implements ProcedureStore {
     // Update the store tracker
     synchronized (storeTracker) {
       storeTracker.insert(proc, subprocs);
+      if (logId == flushLogId) {
+        checkAndTryRoll();
+      }
     }
   }
 
@@ -347,6 +385,7 @@ public class WALProcedureStore implements ProcedureStore {
       storeTracker.update(proc);
       if (logId == flushLogId) {
         removeOldLogs = storeTracker.isUpdated();
+        checkAndTryRoll();
       }
     }
 
@@ -382,8 +421,10 @@ public class WALProcedureStore implements ProcedureStore {
     synchronized (storeTracker) {
       storeTracker.delete(procId);
       if (logId == flushLogId) {
-        if (storeTracker.isEmpty() && totalSynced.get() > rollThreshold) {
-          removeOldLogs = rollWriterOrDie(logId + 1);
+        if (storeTracker.isEmpty() || storeTracker.isUpdated()) {
+          removeOldLogs = checkAndTryRoll();
+        } else {
+          checkAndTryRoll();
         }
       }
     }
@@ -404,14 +445,23 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   private long pushData(final ByteSlot slot) {
-    assert isRunning() && !logs.isEmpty() : "recoverLease() must be called before inserting data";
-    long logId = -1;
+    if (!isRunning()) {
+      throw new RuntimeException("the store must be running before inserting data");
+    }
+    if (logs.isEmpty()) {
+      throw new RuntimeException("recoverLease() must be called before inserting data");
+    }
 
+    long logId = -1;
     lock.lock();
     try {
       // Wait for the sync to be completed
       while (true) {
-        if (inSync.get()) {
+        if (!isRunning()) {
+          throw new RuntimeException("store no longer running");
+        } else if (isSyncAborted()) {
+          throw new RuntimeException("sync aborted", syncException.get());
+        } else if (inSync.get()) {
           syncCond.await();
         } else if (slotIndex == slots.length) {
           slotCond.signal();
@@ -439,72 +489,101 @@ public class WALProcedureStore implements ProcedureStore {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       sendAbortProcessSignal();
+      throw new RuntimeException(e);
     } finally {
       lock.unlock();
+      if (isSyncAborted()) {
+        throw new RuntimeException("sync aborted", syncException.get());
+      }
     }
     return logId;
   }
 
-  private void syncLoop() throws IOException {
+  private boolean isSyncAborted() {
+    return syncException.get() != null;
+  }
+
+  private void syncLoop() throws Throwable {
     inSync.set(false);
-    while (running.get()) {
-      lock.lock();
-      try {
-        // Wait until new data is available
-        if (slotIndex == 0) {
-          if (LOG.isTraceEnabled()) {
-            float rollTsSec = (System.currentTimeMillis() - lastRollTs) / 1000.0f;
-            LOG.trace(String.format("Waiting for data. flushed=%s (%s/sec)",
-                      StringUtils.humanSize(totalSynced.get()),
-                      StringUtils.humanSize(totalSynced.get() / rollTsSec)));
-          }
-          waitCond.await();
+    lock.lock();
+    try {
+      while (isRunning()) {
+        try {
+          // Wait until new data is available
           if (slotIndex == 0) {
-            // no data.. probably a stop()
-            continue;
+            if (LOG.isTraceEnabled()) {
+              float rollTsSec = getMillisFromLastRoll() / 1000.0f;
+              LOG.trace(String.format("Waiting for data. flushed=%s (%s/sec)",
+                        StringUtils.humanSize(totalSynced.get()),
+                        StringUtils.humanSize(totalSynced.get() / rollTsSec)));
+            }
+
+            waitCond.await(getMillisToNextPeriodicRoll(), TimeUnit.MILLISECONDS);
+            if (slotIndex == 0) {
+              // no data.. probably a stop()
+              checkAndTryRoll();
+              continue;
+            }
           }
-        }
 
-        // Wait SYNC_WAIT_MSEC or the signal of "slots full" before flushing
-        long syncWaitSt = System.currentTimeMillis();
-        if (slotIndex != slots.length) {
-          slotCond.await(syncWaitMsec, TimeUnit.MILLISECONDS);
-        }
-        long syncWaitMs = System.currentTimeMillis() - syncWaitSt;
-        if (LOG.isTraceEnabled() && (syncWaitMs > 10 || slotIndex < slots.length)) {
-          float rollSec = (System.currentTimeMillis() - lastRollTs) / 1000.0f;
-          LOG.trace("Sync wait " + StringUtils.humanTimeDiff(syncWaitMs) +
-                    ", slotIndex=" + slotIndex +
-                    ", totalSynced=" + StringUtils.humanSize(totalSynced.get()) +
-                    " " + StringUtils.humanSize(totalSynced.get() / rollSec) + "/sec");
-        }
+          // Wait SYNC_WAIT_MSEC or the signal of "slots full" before flushing
+          long syncWaitSt = System.currentTimeMillis();
+          if (slotIndex != slots.length) {
+            slotCond.await(syncWaitMsec, TimeUnit.MILLISECONDS);
+          }
+          long syncWaitMs = System.currentTimeMillis() - syncWaitSt;
+          if (LOG.isTraceEnabled() && (syncWaitMs > 10 || slotIndex < slots.length)) {
+            float rollSec = getMillisFromLastRoll() / 1000.0f;
+            LOG.trace(String.format("Sync wait %s, slotIndex=%s , totalSynced=%s/sec",
+                      StringUtils.humanTimeDiff(syncWaitMs), slotIndex,
+                      StringUtils.humanSize(totalSynced.get()),
+                      StringUtils.humanSize(totalSynced.get() / rollSec)));
+          }
 
 
-        inSync.set(true);
-        totalSynced.addAndGet(syncSlots());
-        slotIndex = 0;
-        inSync.set(false);
-        syncCond.signalAll();
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        sendAbortProcessSignal();
-      } finally {
-        lock.unlock();
+          inSync.set(true);
+          totalSynced.addAndGet(syncSlots());
+          slotIndex = 0;
+          inSync.set(false);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          sendAbortProcessSignal();
+          syncException.compareAndSet(null, e);
+          throw e;
+        } catch (Throwable t) {
+          syncException.compareAndSet(null, t);
+          throw t;
+        } finally {
+          syncCond.signalAll();
+        }
       }
+    } finally {
+      lock.unlock();
     }
   }
 
-  private long syncSlots() {
+  private long syncSlots() throws Throwable {
     int retry = 0;
+    int logRolled = 0;
     long totalSynced = 0;
     do {
       try {
         totalSynced = syncSlots(stream, slots, 0, slotIndex);
         break;
       } catch (Throwable e) {
-        if (++retry == MAX_RETRIES_BEFORE_ABORT) {
-          LOG.error("Sync slot failed, abort.", e);
-          sendAbortProcessSignal();
+        if (++retry >= maxRetriesBeforeRoll) {
+          if (logRolled >= maxSyncFailureRoll) {
+            LOG.error("Sync slots after log roll failed, abort.", e);
+            sendAbortProcessSignal();
+            throw e;
+          }
+
+          if (!rollWriterOrDie()) {
+            throw e;
+          }
+
+          logRolled++;
+          retry = 0;
         }
       }
     } while (running.get());
@@ -525,12 +604,21 @@ public class WALProcedureStore implements ProcedureStore {
     } else {
       stream.hflush();
     }
+    sendPostSyncSignal();
 
     if (LOG.isTraceEnabled()) {
       LOG.trace("Sync slots=" + count + '/' + slots.length +
                 ", flushed=" + StringUtils.humanSize(totalSynced));
     }
     return totalSynced;
+  }
+
+  protected void sendPostSyncSignal() {
+    if (!this.listeners.isEmpty()) {
+      for (ProcedureStoreListener listener : this.listeners) {
+        listener.postSync();
+      }
+    }
   }
 
   private void sendAbortProcessSignal() {
@@ -541,14 +629,49 @@ public class WALProcedureStore implements ProcedureStore {
     }
   }
 
-  private boolean rollWriterOrDie(final long logId) {
-    try {
-      return rollWriter(logId);
-    } catch (IOException e) {
-      LOG.warn("Unable to roll the log", e);
-      sendAbortProcessSignal();
-      return false;
+  @VisibleForTesting
+  public boolean rollWriterOrDie() {
+    for (int i = 1; i <= rollRetries; ++i) {
+      try {
+        if (rollWriter()) {
+          return true;
+        }
+      } catch (IOException e) {
+        LOG.warn("Unable to roll the log, attempt=" + i, e);
+        Threads.sleepWithoutInterrupt(waitBeforeRoll);
+      }
     }
+    LOG.fatal("Unable to roll the log");
+    sendAbortProcessSignal();
+    throw new RuntimeException("unable to roll the log");
+  }
+
+  protected boolean checkAndTryRoll() {
+    if (!isRunning()) return false;
+
+    if (totalSynced.get() > rollThreshold || getMillisToNextPeriodicRoll() <= 0) {
+      try {
+        return rollWriter();
+      } catch (IOException e) {
+        LOG.warn("Unable to roll the log", e);
+      }
+    }
+    return false;
+  }
+
+  private long getMillisToNextPeriodicRoll() {
+    if (lastRollTs.get() > 0 && periodicRollMsec > 0) {
+      return periodicRollMsec - getMillisFromLastRoll();
+    }
+    return Long.MAX_VALUE;
+  }
+
+  private long getMillisFromLastRoll() {
+    return (System.currentTimeMillis() - lastRollTs.get());
+  }
+
+  protected boolean rollWriter() throws IOException {
+    return rollWriter(flushLogId + 1);
   }
 
   private boolean rollWriter(final long logId) throws IOException {
@@ -580,7 +703,7 @@ public class WALProcedureStore implements ProcedureStore {
       stream = newStream;
       flushLogId = logId;
       totalSynced.set(0);
-      lastRollTs = System.currentTimeMillis();
+      lastRollTs.set(System.currentTimeMillis());
       logs.add(new ProcedureWALFile(fs, newLogFile, header, startPos));
     } finally {
       lock.unlock();
