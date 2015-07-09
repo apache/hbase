@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -263,7 +264,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * - hadoop.ipc wrapped exceptions
    * - nested exceptions
    *
-   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException
+   * Looks for: RegionMovedException / RegionOpeningException / RegionTooBusyException /
+   *            ThrottlingException
    * @return null if we didn't find the exception, the exception otherwise.
    */
   public static Throwable findException(Object exception) {
@@ -273,7 +275,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     Throwable cur = (Throwable) exception;
     while (cur != null) {
       if (cur instanceof RegionMovedException || cur instanceof RegionOpeningException
-          || cur instanceof RegionTooBusyException) {
+          || cur instanceof RegionTooBusyException || cur instanceof ThrottlingException) {
         return cur;
       }
       if (cur instanceof RemoteException) {
@@ -1840,7 +1842,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     HRegionInfo regionInfo = oldLocation.getRegionInfo();
     Throwable cause = findException(exception);
     if (cause != null) {
-      if (cause instanceof RegionTooBusyException || cause instanceof RegionOpeningException) {
+      if (cause instanceof RegionTooBusyException || cause instanceof RegionOpeningException
+          || cause instanceof ThrottlingException) {
         // We know that the region is still on this region server
         return;
       }
