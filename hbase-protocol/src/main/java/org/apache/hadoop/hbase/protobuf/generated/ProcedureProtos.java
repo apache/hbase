@@ -382,6 +382,34 @@ public final class ProcedureProtos {
      * </pre>
      */
     com.google.protobuf.ByteString getStateData();
+
+    // optional uint64 nonce_group = 13 [default = 0];
+    /**
+     * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+     *
+     * <pre>
+     * Nonce to prevent same procedure submit by multiple times
+     * </pre>
+     */
+    boolean hasNonceGroup();
+    /**
+     * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+     *
+     * <pre>
+     * Nonce to prevent same procedure submit by multiple times
+     * </pre>
+     */
+    long getNonceGroup();
+
+    // optional uint64 nonce = 14 [default = 0];
+    /**
+     * <code>optional uint64 nonce = 14 [default = 0];</code>
+     */
+    boolean hasNonce();
+    /**
+     * <code>optional uint64 nonce = 14 [default = 0];</code>
+     */
+    long getNonce();
   }
   /**
    * Protobuf type {@code Procedure}
@@ -527,6 +555,16 @@ public final class ProcedureProtos {
             case 98: {
               bitField0_ |= 0x00000400;
               stateData_ = input.readBytes();
+              break;
+            }
+            case 104: {
+              bitField0_ |= 0x00000800;
+              nonceGroup_ = input.readUInt64();
+              break;
+            }
+            case 112: {
+              bitField0_ |= 0x00001000;
+              nonce_ = input.readUInt64();
               break;
             }
           }
@@ -899,6 +937,46 @@ public final class ProcedureProtos {
       return stateData_;
     }
 
+    // optional uint64 nonce_group = 13 [default = 0];
+    public static final int NONCE_GROUP_FIELD_NUMBER = 13;
+    private long nonceGroup_;
+    /**
+     * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+     *
+     * <pre>
+     * Nonce to prevent same procedure submit by multiple times
+     * </pre>
+     */
+    public boolean hasNonceGroup() {
+      return ((bitField0_ & 0x00000800) == 0x00000800);
+    }
+    /**
+     * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+     *
+     * <pre>
+     * Nonce to prevent same procedure submit by multiple times
+     * </pre>
+     */
+    public long getNonceGroup() {
+      return nonceGroup_;
+    }
+
+    // optional uint64 nonce = 14 [default = 0];
+    public static final int NONCE_FIELD_NUMBER = 14;
+    private long nonce_;
+    /**
+     * <code>optional uint64 nonce = 14 [default = 0];</code>
+     */
+    public boolean hasNonce() {
+      return ((bitField0_ & 0x00001000) == 0x00001000);
+    }
+    /**
+     * <code>optional uint64 nonce = 14 [default = 0];</code>
+     */
+    public long getNonce() {
+      return nonce_;
+    }
+
     private void initFields() {
       className_ = "";
       parentId_ = 0L;
@@ -912,6 +990,8 @@ public final class ProcedureProtos {
       exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
       result_ = com.google.protobuf.ByteString.EMPTY;
       stateData_ = com.google.protobuf.ByteString.EMPTY;
+      nonceGroup_ = 0L;
+      nonce_ = 0L;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -981,6 +1061,12 @@ public final class ProcedureProtos {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         output.writeBytes(12, stateData_);
       }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        output.writeUInt64(13, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        output.writeUInt64(14, nonce_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -1042,6 +1128,14 @@ public final class ProcedureProtos {
       if (((bitField0_ & 0x00000400) == 0x00000400)) {
         size += com.google.protobuf.CodedOutputStream
           .computeBytesSize(12, stateData_);
+      }
+      if (((bitField0_ & 0x00000800) == 0x00000800)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(13, nonceGroup_);
+      }
+      if (((bitField0_ & 0x00001000) == 0x00001000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(14, nonce_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -1123,6 +1217,16 @@ public final class ProcedureProtos {
         result = result && getStateData()
             .equals(other.getStateData());
       }
+      result = result && (hasNonceGroup() == other.hasNonceGroup());
+      if (hasNonceGroup()) {
+        result = result && (getNonceGroup()
+            == other.getNonceGroup());
+      }
+      result = result && (hasNonce() == other.hasNonce());
+      if (hasNonce()) {
+        result = result && (getNonce()
+            == other.getNonce());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -1183,6 +1287,14 @@ public final class ProcedureProtos {
       if (hasStateData()) {
         hash = (37 * hash) + STATE_DATA_FIELD_NUMBER;
         hash = (53 * hash) + getStateData().hashCode();
+      }
+      if (hasNonceGroup()) {
+        hash = (37 * hash) + NONCE_GROUP_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonceGroup());
+      }
+      if (hasNonce()) {
+        hash = (37 * hash) + NONCE_FIELD_NUMBER;
+        hash = (53 * hash) + hashLong(getNonce());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -1327,6 +1439,10 @@ public final class ProcedureProtos {
         bitField0_ = (bitField0_ & ~0x00000400);
         stateData_ = com.google.protobuf.ByteString.EMPTY;
         bitField0_ = (bitField0_ & ~0x00000800);
+        nonceGroup_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00001000);
+        nonce_ = 0L;
+        bitField0_ = (bitField0_ & ~0x00002000);
         return this;
       }
 
@@ -1408,6 +1524,14 @@ public final class ProcedureProtos {
           to_bitField0_ |= 0x00000400;
         }
         result.stateData_ = stateData_;
+        if (((from_bitField0_ & 0x00001000) == 0x00001000)) {
+          to_bitField0_ |= 0x00000800;
+        }
+        result.nonceGroup_ = nonceGroup_;
+        if (((from_bitField0_ & 0x00002000) == 0x00002000)) {
+          to_bitField0_ |= 0x00001000;
+        }
+        result.nonce_ = nonce_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -1470,6 +1594,12 @@ public final class ProcedureProtos {
         }
         if (other.hasStateData()) {
           setStateData(other.getStateData());
+        }
+        if (other.hasNonceGroup()) {
+          setNonceGroup(other.getNonceGroup());
+        }
+        if (other.hasNonce()) {
+          setNonce(other.getNonce());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -2270,6 +2400,88 @@ public final class ProcedureProtos {
       public Builder clearStateData() {
         bitField0_ = (bitField0_ & ~0x00000800);
         stateData_ = getDefaultInstance().getStateData();
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce_group = 13 [default = 0];
+      private long nonceGroup_ ;
+      /**
+       * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+       *
+       * <pre>
+       * Nonce to prevent same procedure submit by multiple times
+       * </pre>
+       */
+      public boolean hasNonceGroup() {
+        return ((bitField0_ & 0x00001000) == 0x00001000);
+      }
+      /**
+       * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+       *
+       * <pre>
+       * Nonce to prevent same procedure submit by multiple times
+       * </pre>
+       */
+      public long getNonceGroup() {
+        return nonceGroup_;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+       *
+       * <pre>
+       * Nonce to prevent same procedure submit by multiple times
+       * </pre>
+       */
+      public Builder setNonceGroup(long value) {
+        bitField0_ |= 0x00001000;
+        nonceGroup_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce_group = 13 [default = 0];</code>
+       *
+       * <pre>
+       * Nonce to prevent same procedure submit by multiple times
+       * </pre>
+       */
+      public Builder clearNonceGroup() {
+        bitField0_ = (bitField0_ & ~0x00001000);
+        nonceGroup_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      // optional uint64 nonce = 14 [default = 0];
+      private long nonce_ ;
+      /**
+       * <code>optional uint64 nonce = 14 [default = 0];</code>
+       */
+      public boolean hasNonce() {
+        return ((bitField0_ & 0x00002000) == 0x00002000);
+      }
+      /**
+       * <code>optional uint64 nonce = 14 [default = 0];</code>
+       */
+      public long getNonce() {
+        return nonce_;
+      }
+      /**
+       * <code>optional uint64 nonce = 14 [default = 0];</code>
+       */
+      public Builder setNonce(long value) {
+        bitField0_ |= 0x00002000;
+        nonce_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional uint64 nonce = 14 [default = 0];</code>
+       */
+      public Builder clearNonce() {
+        bitField0_ = (bitField0_ & ~0x00002000);
+        nonce_ = 0L;
         onChanged();
         return this;
       }
@@ -7124,33 +7336,34 @@ public final class ProcedureProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Procedure.proto\032\023ErrorHandling.proto\"\217" +
+      "\n\017Procedure.proto\032\023ErrorHandling.proto\"\271" +
       "\002\n\tProcedure\022\022\n\nclass_name\030\001 \002(\t\022\021\n\tpare" +
       "nt_id\030\002 \001(\004\022\017\n\007proc_id\030\003 \002(\004\022\022\n\nstart_ti" +
       "me\030\004 \002(\004\022\r\n\005owner\030\005 \001(\t\022\036\n\005state\030\006 \002(\0162\017" +
       ".ProcedureState\022\020\n\010stack_id\030\007 \003(\r\022\023\n\013las" +
       "t_update\030\010 \002(\004\022\017\n\007timeout\030\t \001(\r\022+\n\texcep" +
       "tion\030\n \001(\0132\030.ForeignExceptionMessage\022\016\n\006" +
-      "result\030\013 \001(\014\022\022\n\nstate_data\030\014 \001(\014\"+\n\027Sequ" +
-      "entialProcedureData\022\020\n\010executed\030\001 \002(\010\"*\n" +
-      "\031StateMachineProcedureData\022\r\n\005state\030\001 \003(",
-      "\r\"X\n\022ProcedureWALHeader\022\017\n\007version\030\001 \002(\r" +
-      "\022\014\n\004type\030\002 \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_pr" +
-      "oc_id\030\004 \002(\004\";\n\023ProcedureWALTrailer\022\017\n\007ve" +
-      "rsion\030\001 \002(\r\022\023\n\013tracker_pos\030\002 \002(\004\"\214\001\n\025Pro" +
-      "cedureStoreTracker\0220\n\004node\030\001 \003(\0132\".Proce" +
-      "dureStoreTracker.TrackerNode\032A\n\013TrackerN" +
-      "ode\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004\022\017" +
-      "\n\007deleted\030\003 \003(\004\"\266\001\n\021ProcedureWALEntry\022%\n" +
-      "\004type\030\001 \002(\0162\027.ProcedureWALEntry.Type\022\035\n\t" +
-      "procedure\030\002 \003(\0132\n.Procedure\022\017\n\007proc_id\030\003",
-      " \001(\004\"J\n\004Type\022\007\n\003EOF\020\001\022\010\n\004INIT\020\002\022\n\n\006INSER" +
-      "T\020\003\022\n\n\006UPDATE\020\004\022\n\n\006DELETE\020\005\022\013\n\007COMPACT\020\006" +
-      "*p\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014\n\010" +
-      "RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIMEO" +
-      "UT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*or" +
-      "g.apache.hadoop.hbase.protobuf.generated" +
-      "B\017ProcedureProtosH\001\210\001\001\240\001\001"
+      "result\030\013 \001(\014\022\022\n\nstate_data\030\014 \001(\014\022\026\n\013nonc" +
+      "e_group\030\r \001(\004:\0010\022\020\n\005nonce\030\016 \001(\004:\0010\"+\n\027Se" +
+      "quentialProcedureData\022\020\n\010executed\030\001 \002(\010\"",
+      "*\n\031StateMachineProcedureData\022\r\n\005state\030\001 " +
+      "\003(\r\"X\n\022ProcedureWALHeader\022\017\n\007version\030\001 \002" +
+      "(\r\022\014\n\004type\030\002 \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_" +
+      "proc_id\030\004 \002(\004\";\n\023ProcedureWALTrailer\022\017\n\007" +
+      "version\030\001 \002(\r\022\023\n\013tracker_pos\030\002 \002(\004\"\214\001\n\025P" +
+      "rocedureStoreTracker\0220\n\004node\030\001 \003(\0132\".Pro" +
+      "cedureStoreTracker.TrackerNode\032A\n\013Tracke" +
+      "rNode\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004" +
+      "\022\017\n\007deleted\030\003 \003(\004\"\266\001\n\021ProcedureWALEntry\022" +
+      "%\n\004type\030\001 \002(\0162\027.ProcedureWALEntry.Type\022\035",
+      "\n\tprocedure\030\002 \003(\0132\n.Procedure\022\017\n\007proc_id" +
+      "\030\003 \001(\004\"J\n\004Type\022\007\n\003EOF\020\001\022\010\n\004INIT\020\002\022\n\n\006INS" +
+      "ERT\020\003\022\n\n\006UPDATE\020\004\022\n\n\006DELETE\020\005\022\013\n\007COMPACT" +
+      "\020\006*p\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014" +
+      "\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIM" +
+      "EOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*" +
+      "org.apache.hadoop.hbase.protobuf.generat" +
+      "edB\017ProcedureProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -7162,7 +7375,7 @@ public final class ProcedureProtos {
           internal_static_Procedure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_Procedure_descriptor,
-              new java.lang.String[] { "ClassName", "ParentId", "ProcId", "StartTime", "Owner", "State", "StackId", "LastUpdate", "Timeout", "Exception", "Result", "StateData", });
+              new java.lang.String[] { "ClassName", "ParentId", "ProcId", "StartTime", "Owner", "State", "StackId", "LastUpdate", "Timeout", "Exception", "Result", "StateData", "NonceGroup", "Nonce", });
           internal_static_SequentialProcedureData_descriptor =
             getDescriptor().getMessageTypes().get(1);
           internal_static_SequentialProcedureData_fieldAccessorTable = new
