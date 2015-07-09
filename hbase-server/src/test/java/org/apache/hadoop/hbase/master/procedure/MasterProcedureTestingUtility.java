@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Durability;
+import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -424,6 +425,14 @@ public class MasterProcedureTestingUtility {
       put.add(family, q, value);
     }
     return put;
+  }
+
+  public static long generateNonceGroup(final HMaster master) {
+    return master.getConnection().getNonceGenerator().getNonceGroup();
+  }
+
+  public static long generateNonce(final HMaster master) {
+    return master.getConnection().getNonceGenerator().newNonce();
   }
 
   public static class InjectAbortOnLoadListener

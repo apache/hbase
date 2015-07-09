@@ -348,8 +348,11 @@ public class MasterRpcServices extends RSRpcServices
   public AddColumnResponse addColumn(RpcController controller,
       AddColumnRequest req) throws ServiceException {
     try {
-      master.addColumn(ProtobufUtil.toTableName(req.getTableName()),
-        HColumnDescriptor.convert(req.getColumnFamilies()));
+      master.addColumn(
+        ProtobufUtil.toTableName(req.getTableName()),
+        HColumnDescriptor.convert(req.getColumnFamilies()),
+        req.getNonceGroup(),
+        req.getNonce());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -416,7 +419,8 @@ public class MasterRpcServices extends RSRpcServices
     HTableDescriptor hTableDescriptor = HTableDescriptor.convert(req.getTableSchema());
     byte [][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
-      long procId = master.createTable(hTableDescriptor, splitKeys);
+      long procId =
+          master.createTable(hTableDescriptor, splitKeys, req.getNonceGroup(), req.getNonce());
       return CreateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -427,8 +431,11 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteColumnResponse deleteColumn(RpcController controller,
       DeleteColumnRequest req) throws ServiceException {
     try {
-      master.deleteColumn(ProtobufUtil.toTableName(req.getTableName()),
-        req.getColumnName().toByteArray());
+      master.deleteColumn(
+        ProtobufUtil.toTableName(req.getTableName()),
+        req.getColumnName().toByteArray(),
+        req.getNonceGroup(),
+        req.getNonce());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -472,7 +479,8 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteTableResponse deleteTable(RpcController controller,
       DeleteTableRequest request) throws ServiceException {
     try {
-      long procId = master.deleteTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.deleteTable(ProtobufUtil.toTableName(
+        request.getTableName()), request.getNonceGroup(), request.getNonce());
       return DeleteTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -483,9 +491,11 @@ public class MasterRpcServices extends RSRpcServices
   public TruncateTableResponse truncateTable(RpcController controller, TruncateTableRequest request)
       throws ServiceException {
     try {
-      long procId =
-          master.truncateTable(ProtobufUtil.toTableName(request.getTableName()),
-            request.getPreserveSplits());
+      long procId = master.truncateTable(
+        ProtobufUtil.toTableName(request.getTableName()),
+        request.getPreserveSplits(),
+        request.getNonceGroup(),
+        request.getNonce());
       return TruncateTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -496,7 +506,10 @@ public class MasterRpcServices extends RSRpcServices
   public DisableTableResponse disableTable(RpcController controller,
       DisableTableRequest request) throws ServiceException {
     try {
-      long procId = master.disableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.disableTable(
+        ProtobufUtil.toTableName(request.getTableName()),
+        request.getNonceGroup(),
+        request.getNonce());
       return DisableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -582,7 +595,10 @@ public class MasterRpcServices extends RSRpcServices
   public EnableTableResponse enableTable(RpcController controller,
       EnableTableRequest request) throws ServiceException {
     try {
-      long procId = master.enableTable(ProtobufUtil.toTableName(request.getTableName()));
+      long procId = master.enableTable(
+        ProtobufUtil.toTableName(request.getTableName()),
+        request.getNonceGroup(),
+        request.getNonce());
       return EnableTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1069,8 +1085,11 @@ public class MasterRpcServices extends RSRpcServices
   public ModifyColumnResponse modifyColumn(RpcController controller,
       ModifyColumnRequest req) throws ServiceException {
     try {
-      master.modifyColumn(ProtobufUtil.toTableName(req.getTableName()),
-        HColumnDescriptor.convert(req.getColumnFamilies()));
+      master.modifyColumn(
+        ProtobufUtil.toTableName(req.getTableName()),
+        HColumnDescriptor.convert(req.getColumnFamilies()),
+        req.getNonceGroup(),
+        req.getNonce());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1093,8 +1112,11 @@ public class MasterRpcServices extends RSRpcServices
   public ModifyTableResponse modifyTable(RpcController controller,
       ModifyTableRequest req) throws ServiceException {
     try {
-      master.modifyTable(ProtobufUtil.toTableName(req.getTableName()),
-        HTableDescriptor.convert(req.getTableSchema()));
+      master.modifyTable(
+        ProtobufUtil.toTableName(req.getTableName()),
+        HTableDescriptor.convert(req.getTableSchema()),
+        req.getNonceGroup(),
+        req.getNonce());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

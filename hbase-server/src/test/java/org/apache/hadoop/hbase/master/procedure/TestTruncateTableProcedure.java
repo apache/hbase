@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
@@ -34,7 +35,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.Truncate
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,15 +43,16 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestTruncateTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestTruncateTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+
+  private static long nonceGroup = HConstants.NO_NONCE;
+  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -77,6 +78,10 @@ public class TestTruncateTableProcedure {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     assertTrue("expected executor to be running", procExec.isRunning());
+
+    nonceGroup =
+        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
+    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -210,7 +215,9 @@ public class TestTruncateTableProcedure {
 
     // Start the Truncate procedure && kill the executor
     long procId = procExec.submitProcedure(
-      new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits));
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits),
+      nonceGroup,
+      nonce);
 
     // Restart the executor and execute the step twice
     // NOTE: the 7 (number of TruncateTableState steps) is hardcoded,
