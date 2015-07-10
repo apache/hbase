@@ -660,52 +660,52 @@ public class TestCellUtil {
     }
 
     @Override
-    ByteBuffer getRowByteBuffer() {
+    public ByteBuffer getRowByteBuffer() {
       return this.buffer;
     }
 
     @Override
-    int getRowPositionInByteBuffer() {
+    public int getRowPositionInByteBuffer() {
       return this.offset + KeyValue.ROW_KEY_OFFSET;
     }
 
     @Override
-    ByteBuffer getFamilyByteBuffer() {
+    public ByteBuffer getFamilyByteBuffer() {
       return this.buffer;
     }
 
     @Override
-    int getFamilyPositionInByteBuffer() {
+    public int getFamilyPositionInByteBuffer() {
       return this.offset + KeyValue.ROW_KEY_OFFSET + getRowLength() + Bytes.SIZEOF_BYTE;
     }
 
     @Override
-    ByteBuffer getQualifierByteBuffer() {
+    public ByteBuffer getQualifierByteBuffer() {
       return this.buffer;
     }
 
     @Override
-    int getQualifierPositionInByteBuffer() {
+    public int getQualifierPositionInByteBuffer() {
       return getFamilyPositionInByteBuffer() + getFamilyLength();
     }
 
     @Override
-    ByteBuffer getValueByteBuffer() {
+    public ByteBuffer getValueByteBuffer() {
       return this.buffer;
     }
 
     @Override
-    int getValuePositionInByteBuffer() {
+    public int getValuePositionInByteBuffer() {
       return this.offset + KeyValue.ROW_OFFSET + getKeyLength();
     }
 
     @Override
-    ByteBuffer getTagsByteBuffer() {
+    public ByteBuffer getTagsByteBuffer() {
       return this.buffer;
     }
 
     @Override
-    int getTagsPositionInByteBuffer() {
+    public int getTagsPositionInByteBuffer() {
       int tagsLen = getTagsLength();
       if (tagsLen == 0) {
         return this.offset + this.length;

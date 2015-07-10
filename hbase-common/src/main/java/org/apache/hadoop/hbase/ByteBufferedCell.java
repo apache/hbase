@@ -36,50 +36,50 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return The {@link ByteBuffer} containing the row bytes.
    */
-  abstract ByteBuffer getRowByteBuffer();
+  public abstract ByteBuffer getRowByteBuffer();
 
   /**
    * @return Position in the {@link ByteBuffer} where row bytes start
    */
-  abstract int getRowPositionInByteBuffer();
+  public abstract int getRowPositionInByteBuffer();
 
   /**
    * @return The {@link ByteBuffer} containing the column family bytes.
    */
-  abstract ByteBuffer getFamilyByteBuffer();
+  public abstract ByteBuffer getFamilyByteBuffer();
 
   /**
    * @return Position in the {@link ByteBuffer} where column family bytes start
    */
-  abstract int getFamilyPositionInByteBuffer();
+  public abstract int getFamilyPositionInByteBuffer();
 
   /**
    * @return The {@link ByteBuffer} containing the column qualifier bytes.
    */
-  abstract ByteBuffer getQualifierByteBuffer();
+  public abstract ByteBuffer getQualifierByteBuffer();
 
   /**
    * @return Position in the {@link ByteBuffer} where column qualifier bytes start
    */
-  abstract int getQualifierPositionInByteBuffer();
+  public abstract int getQualifierPositionInByteBuffer();
 
   /**
    * @return The {@link ByteBuffer} containing the value bytes.
    */
-  abstract ByteBuffer getValueByteBuffer();
+  public abstract ByteBuffer getValueByteBuffer();
 
   /**
    * @return Position in the {@link ByteBuffer} where value bytes start
    */
-  abstract int getValuePositionInByteBuffer();
+  public abstract int getValuePositionInByteBuffer();
 
   /**
    * @return The {@link ByteBuffer} containing the tag bytes.
    */
-  abstract ByteBuffer getTagsByteBuffer();
+  public abstract ByteBuffer getTagsByteBuffer();
 
   /**
    * @return Position in the {@link ByteBuffer} where tag bytes start
    */
-  abstract int getTagsPositionInByteBuffer();
+  public abstract int getTagsPositionInByteBuffer();
 }
