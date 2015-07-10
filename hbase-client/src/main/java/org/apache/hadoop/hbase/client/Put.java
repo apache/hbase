@@ -167,7 +167,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * This expects that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
+   * that should not be exposed publicly.
    */
+  @InterfaceAudience.Private
   public Put addImmutable(byte[] family, byte [] qualifier, byte [] value, Tag[] tag) {
     return addImmutable(family, qualifier, this.ts, value, tag);
   }
@@ -226,7 +229,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * This expects that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
+   * that should not be exposed publicly.
    */
+  @InterfaceAudience.Private
   public Put addImmutable(byte[] family, byte[] qualifier, long ts, byte[] value, Tag[] tag) {
     List<Cell> list = getCellList(family);
     KeyValue kv = createPutKeyValue(family, qualifier, ts, value, tag);
@@ -238,7 +244,10 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   /**
    * This expects that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
+   * <p>Marked as audience Private as of 1.2.0. {@link Tag} is an internal implementation detail
+   * that should not be exposed publicly.
    */
+  @InterfaceAudience.Private
   public Put addImmutable(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value,
                           Tag[] tag) {
     if (ts < 0) {
