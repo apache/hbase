@@ -166,6 +166,10 @@ public class ProcedureTestingUtility {
   public static class TestProcedure extends Procedure<Void> {
     public TestProcedure() {}
 
+    public TestProcedure(long procId) {
+      this(procId, 0);
+    }
+
     public TestProcedure(long procId, long parentId) {
       setProcId(procId);
       if (parentId > 0) {

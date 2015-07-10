@@ -671,7 +671,22 @@ public class WALProcedureStore implements ProcedureStore {
   }
 
   protected boolean rollWriter() throws IOException {
-    return rollWriter(flushLogId + 1);
+    // Create new state-log
+    if (!rollWriter(flushLogId + 1)) {
+      LOG.warn("someone else has already created log " + flushLogId);
+      return false;
+    }
+
+    // We have the lease on the log,
+    // but we should check if someone else has created new files
+    if (getMaxLogId(getLogFiles()) > flushLogId) {
+      LOG.warn("Someone else created new logs. Expected maxLogId < " + flushLogId);
+      logs.getLast().removeFile();
+      return false;
+    }
+
+    // We have the lease on the log
+    return true;
   }
 
   private boolean rollWriter(final long logId) throws IOException {
