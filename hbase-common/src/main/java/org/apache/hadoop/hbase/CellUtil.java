@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * Utility methods helpful slinging {@link Cell} instances.
+ * Some methods below are for internal use only and are marked InterfaceAudience.Private at the
+ * method level.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -182,6 +184,12 @@ public final class CellUtil {
         HConstants.EMPTY_BYTE_ARRAY, 0, HConstants.EMPTY_BYTE_ARRAY.length);
   }
 
+  /**
+   * Marked as audience Private as of 1.2.0.
+   * Creating a Cell with a memstoreTS/mvcc is an internal implementation detail not for
+   * public use.
+   */
+  @InterfaceAudience.Private
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
@@ -190,6 +198,12 @@ public final class CellUtil {
     return keyValue;
   }
 
+  /**
+   * Marked as audience Private as of 1.2.0.
+   * Creating a Cell with tags and a memstoreTS/mvcc is an internal implementation detail not for
+   * public use.
+   */
+  @InterfaceAudience.Private
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, final byte type, final byte[] value, byte[] tags, final long memstoreTS) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp,
@@ -198,6 +212,12 @@ public final class CellUtil {
     return keyValue;
   }
 
+  /**
+   * Marked as audience Private as of 1.2.0.
+   * Creating a Cell with tags is an internal implementation detail not for
+   * public use.
+   */
+  @InterfaceAudience.Private
   public static Cell createCell(final byte[] row, final byte[] family, final byte[] qualifier,
       final long timestamp, Type type, final byte[] value, byte[] tags) {
     KeyValue keyValue = new KeyValue(row, family, qualifier, timestamp, type, value, tags);
@@ -641,10 +661,13 @@ public final class CellUtil {
 
   /**
    * Sets the given seqId to the cell.
+   * Marked as audience Private as of 1.2.0.
+   * Setting a Cell sequenceid is an internal implementation detail not for general public use.
    * @param cell
    * @param seqId
    * @throws IOException when the passed cell is not of type {@link SettableSequenceId}
    */
+  @InterfaceAudience.Private
   public static void setSequenceId(Cell cell, long seqId) throws IOException {
     if (cell instanceof SettableSequenceId) {
       ((SettableSequenceId) cell).setSequenceId(seqId);
