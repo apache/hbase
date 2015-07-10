@@ -48,16 +48,15 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.PerformanceEvaluation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -73,8 +72,10 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
@@ -343,6 +344,7 @@ public class TestHFileOutputFormat2  {
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     RegionLocator regionLocator = Mockito.mock(RegionLocator.class);
     setupMockStartKeys(regionLocator);
+    setupMockTableName(regionLocator);
     HFileOutputFormat2.configureIncrementalLoad(job, new HTableDescriptor(), regionLocator);
     assertEquals(job.getNumReduceTasks(), 4);
   }
@@ -372,40 +374,62 @@ public class TestHFileOutputFormat2  {
   @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
-    doIncrementalLoadTest(false);
+    doIncrementalLoadTest(false, false);
   }
 
   @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
-    doIncrementalLoadTest(true);
+    doIncrementalLoadTest(true, false);
   }
 
-  private void doIncrementalLoadTest(
-      boolean shouldChangeRegions) throws Exception {
+  /**
+   * Test for HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY = true This test could only check the
+   * correctness of original logic if LOCALITY_SENSITIVE_CONF_KEY is set to true. Because
+   * MiniHBaseCluster always run with single hostname (and different ports), it's not possible to
+   * check the region locality by comparing region locations and DN hostnames. When MiniHBaseCluster
+   * supports explicit hostnames parameter (just like MiniDFSCluster does), we could test region
+   * locality features more easily.
+   */
+  @Test
+  public void testMRIncrementalLoadWithLocality() throws Exception {
+    LOG.info("\nStarting test testMRIncrementalLoadWithLocality\n");
+    doIncrementalLoadTest(false, true);
+    doIncrementalLoadTest(true, true);
+  }
+
+  private void doIncrementalLoadTest(boolean shouldChangeRegions, boolean shouldKeepLocality)
+      throws Exception {
     util = new HBaseTestingUtility();
     Configuration conf = util.getConfiguration();
-    byte[][] splitKeys = generateRandomSplitKeys(4);
-    util.startMiniCluster();
-    try {
-      HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
-      Admin admin = table.getConnection().getAdmin();
-      Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
-      assertEquals("Should start with empty table",
-          0, util.countRows(table));
-      int numRegions = -1;
-      try (RegionLocator r = table.getRegionLocator()) {
-        numRegions = r.getStartKeys().length;
-      }
-      assertEquals("Should make 5 regions", numRegions, 5);
+    conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, shouldKeepLocality);
+    int hostCount = 1;
+    int regionNum = 5;
+    if (shouldKeepLocality) {
+      // We should change host count higher than hdfs replica count when MiniHBaseCluster supports
+      // explicit hostnames parameter just like MiniDFSCluster does.
+      hostCount = 3;
+      regionNum = 20;
+    }
+    byte[][] splitKeys = generateRandomSplitKeys(regionNum - 1);
+    String[] hostnames = new String[hostCount];
+    for (int i = 0; i < hostCount; ++i) {
+      hostnames[i] = "datanode_" + i;
+    }
+    util.startMiniCluster(1, hostCount, hostnames);
+
+    HTable table = util.createTable(TABLE_NAME, FAMILIES, splitKeys);
+    Path testDir = util.getDataTestDirOnTestFS("testLocalMRIncrementalLoad");
+    try (RegionLocator r = table.getRegionLocator(); Admin admin = table.getConnection().getAdmin()) {
+      assertEquals("Should start with empty table", 0, util.countRows(table));
+      int numRegions = r.getStartKeys().length;
+      assertEquals("Should make " + regionNum + " regions", numRegions, regionNum);
 
       // Generate the bulk load files
       util.startMiniMapReduceCluster();
       runIncrementalPELoad(conf, table.getTableDescriptor(), table.getRegionLocator(), testDir);
       // This doesn't write into the table, just makes files
-      assertEquals("HFOF should not touch actual table",
-          0, util.countRows(table));
-
+      assertEquals("HFOF should not touch actual table", 0, util.countRows(table));
 
       // Make sure that a directory was created for every CF
       int dir = 0;
@@ -422,8 +446,8 @@ public class TestHFileOutputFormat2  {
       if (shouldChangeRegions) {
         LOG.info("Changing regions in table");
         admin.disableTable(table.getName());
-        while(util.getMiniHBaseCluster().getMaster().getAssignmentManager().
-            getRegionStates().isRegionsInTransition()) {
+        while (util.getMiniHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+            .isRegionsInTransition()) {
           Threads.sleep(200);
           LOG.info("Waiting on table to finish disabling");
         }
@@ -431,8 +455,8 @@ public class TestHFileOutputFormat2  {
         byte[][] newSplitKeys = generateRandomSplitKeys(14);
         table = util.createTable(TABLE_NAME, FAMILIES, newSplitKeys);
 
-        while (table.getRegionLocator().getAllRegionLocations().size() != 15 ||
-            !admin.isTableAvailable(table.getName())) {
+        while (table.getRegionLocator().getAllRegionLocations().size() != 15
+            || !admin.isTableAvailable(table.getName())) {
           Thread.sleep(200);
           LOG.info("Waiting for new region assignment to happen");
         }
@@ -443,8 +467,8 @@ public class TestHFileOutputFormat2  {
 
       // Ensure data shows up
       int expectedRows = NMapInputFormat.getNumMapTasks(conf) * ROWSPERSPLIT;
-      assertEquals("LoadIncrementalHFiles should put expected data in table",
-          expectedRows, util.countRows(table));
+      assertEquals("LoadIncrementalHFiles should put expected data in table", expectedRows,
+        util.countRows(table));
       Scan scan = new Scan();
       ResultScanner results = table.getScanner(scan);
       for (Result res : results) {
@@ -458,6 +482,17 @@ public class TestHFileOutputFormat2  {
       results.close();
       String tableDigestBefore = util.checksumRows(table);
 
+      // Check region locality
+      HDFSBlocksDistribution hbd = new HDFSBlocksDistribution();
+      for (HRegion region : util.getHBaseCluster().getRegions(TABLE_NAME)) {
+        hbd.add(region.getHDFSBlocksDistribution());
+      }
+      for (String hostname : hostnames) {
+        float locality = hbd.getBlockLocalityIndex(hostname);
+        LOG.info("locality of [" + hostname + "]: " + locality);
+        assertEquals(100, (int) (locality * 100));
+      }
+
       // Cause regions to reopen
       admin.disableTable(TABLE_NAME);
       while (!admin.isTableDisabled(TABLE_NAME)) {
@@ -466,9 +501,11 @@ public class TestHFileOutputFormat2  {
       }
       admin.enableTable(TABLE_NAME);
       util.waitTableAvailable(TABLE_NAME);
-      assertEquals("Data should remain after reopening of regions",
-          tableDigestBefore, util.checksumRows(table));
+      assertEquals("Data should remain after reopening of regions", tableDigestBefore,
+        util.checksumRows(table));
     } finally {
+      testDir.getFileSystem(conf).delete(testDir, true);
+      util.deleteTable(TABLE_NAME);
       util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
@@ -796,6 +833,11 @@ public class TestHFileOutputFormat2  {
     Mockito.doReturn(mockKeys).when(table).getStartKeys();
   }
 
+  private void setupMockTableName(RegionLocator table) throws IOException {
+    TableName mockTableName = TableName.valueOf("mock_table");
+    Mockito.doReturn(mockTableName).when(table).getName();
+  }
+
   /**
    * Test that {@link HFileOutputFormat2} RecordWriter uses compression and
    * bloom filter settings from the column family descriptor
@@ -825,6 +867,8 @@ public class TestHFileOutputFormat2  {
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
       conf.set("hbase.fs.tmp.dir", dir.toString());
+      // turn locality off to eliminate getRegionLocation fail-and-retry time when writing kvs
+      conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
