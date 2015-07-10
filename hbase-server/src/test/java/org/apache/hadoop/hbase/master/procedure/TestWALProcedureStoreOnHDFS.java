@@ -187,6 +187,7 @@ public class TestWALProcedureStoreOnHDFS {
     UTIL.getDFSCluster().restartDataNode(dnCount);
     for (long i = 2; i < 100; ++i) {
       store.insert(new TestProcedure(i, -1), null);
+      waitForNumReplicas(3);
       Thread.sleep(100);
       if ((i % 30) == 0) {
         LOG.info("Restart Data Node");
@@ -194,5 +195,19 @@ public class TestWALProcedureStoreOnHDFS {
       }
     }
     assertTrue(store.isRunning());
+  }
+
+  public void waitForNumReplicas(int numReplicas) throws Exception {
+    while (UTIL.getDFSCluster().getDataNodes().size() < numReplicas) {
+      Thread.sleep(100);
+    }
+
+    for (int i = 0; i < numReplicas; ++i) {
+      for (DataNode dn: UTIL.getDFSCluster().getDataNodes()) {
+        while (!dn.isDatanodeFullyStarted()) {
+          Thread.sleep(100);
+        }
+      }
+    }
   }
 }
