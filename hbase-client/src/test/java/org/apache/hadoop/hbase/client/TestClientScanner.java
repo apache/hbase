@@ -21,9 +21,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyInt;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,6 +37,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -496,4 +502,69 @@ public class TestClientScanner {
       assertFalse(cs.advance());
     }
   }
+
+  /**
+   * Tests the case where all replicas of a region throw an exception. It should not cause a hang
+   * but the exception should propagate to the client
+   */
+  @Test (timeout = 30000)
+  public void testExceptionsFromReplicasArePropagated() throws IOException {
+    scan.setConsistency(Consistency.TIMELINE);
+
+    // Mock a caller which calls the callable for ScannerCallableWithReplicas,
+    // but throws an exception for the actual scanner calls via callWithRetries.
+    rpcFactory = new MockRpcRetryingCallerFactory(conf);
+    conf.set(RpcRetryingCallerFactory.CUSTOM_CALLER_CONF_KEY,
+      MockRpcRetryingCallerFactory.class.getName());
+
+    // mock 3 replica locations
+    when(clusterConn.locateRegion((TableName)any(), (byte[])any(), anyBoolean(),
+      anyBoolean(), anyInt())).thenReturn(new RegionLocations(null, null, null));
+
+    try (MockClientScanner scanner = new MockClientScanner(conf, scan, TableName.valueOf("table"),
+      clusterConn, rpcFactory, controllerFactory, pool, Integer.MAX_VALUE)) {
+      Iterator<Result> iter = scanner.iterator();
+      while (iter.hasNext()) {
+        iter.next();
+      }
+      fail("Should have failed with RetriesExhaustedException");
+    } catch (RetriesExhaustedException expected) {
+
+    }
+  }
+
+  public static class MockRpcRetryingCallerFactory extends RpcRetryingCallerFactory {
+
+    public MockRpcRetryingCallerFactory(Configuration conf) {
+      super(conf);
+    }
+
+    @Override
+    public <T> RpcRetryingCaller<T> newCaller() {
+      return new RpcRetryingCaller<T>() {
+        @Override
+        public void cancel() {
+        }
+        @Override
+        public T callWithRetries(RetryingCallable<T> callable, int callTimeout)
+            throws IOException, RuntimeException {
+          throw new IOException("Scanner exception");
+        }
+
+        @Override
+        public T callWithoutRetries(RetryingCallable<T> callable, int callTimeout)
+            throws IOException, RuntimeException {
+          try {
+            return callable.call(callTimeout);
+          } catch (IOException e) {
+            throw e;
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+    }
+
+  }
+
 }
