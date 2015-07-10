@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
-import org.apache.hadoop.hbase.procedure2.store.wal.TestWALProcedureStore.TestSequentialProcedure;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
@@ -166,12 +166,31 @@ public class TestMasterFailoverWithProcedures {
     backupStore3Abort.await();
   }
 
-  @Test(timeout=60000)
+  /**
+   * Tests proper fencing in case the current WAL store is fenced
+   */
+  @Test
+  public void testWALfencingWithoutWALRolling() throws IOException {
+    testWALfencing(false);
+  }
+
+  /**
+   * Tests proper fencing in case the current WAL store does not receive writes until after the
+   * new WAL does a couple of WAL rolls.
+   */
+  @Test
   public void testWALfencingWithWALRolling() throws IOException {
+    testWALfencing(true);
+  }
+
+  public void testWALfencing(boolean walRolls) throws IOException {
     final ProcedureStore procStore = getMasterProcedureExecutor().getStore();
     assertTrue("expected WALStore for this test", procStore instanceof WALProcedureStore);
 
     HMaster firstMaster = UTIL.getHBaseCluster().getMaster();
+
+    // cause WAL rolling after a delete in WAL:
+    firstMaster.getConfiguration().setLong("hbase.procedure.store.wal.roll.threshold", 1);
 
     HMaster backupMaster3 = Mockito.mock(HMaster.class);
     Mockito.doReturn(firstMaster.getConfiguration()).when(backupMaster3).getConfiguration();
@@ -186,20 +205,27 @@ public class TestMasterFailoverWithProcedures {
     procStore2.start(1);
     procStore2.recoverLease();
 
-    LOG.info("Inserting into second WALProcedureStore");
-    // insert something to the second store then delete it, causing a WAL roll
-    Procedure proc2 = new TestSequentialProcedure();
-    procStore2.insert(proc2, null);
-    procStore2.rollWriterOrDie();
+    // before writing back to the WAL store, optionally do a couple of WAL rolls (which causes
+    // to delete the old WAL files).
+    if (walRolls) {
+      LOG.info("Inserting into second WALProcedureStore, causing WAL rolls");
+      for (int i = 0; i < 512; i++) {
+        // insert something to the second store then delete it, causing a WAL roll(s)
+        Procedure proc2 = new TestProcedure(i);
+        procStore2.insert(proc2, null);
+        procStore2.delete(proc2.getProcId()); // delete the procedure so that the WAL is removed later
+      }
+    }
 
+    // Now, insert something to the first store, should fail.
+    // If the store does a WAL roll and continue with another logId without checking higher logIds
+    // it will incorrectly succeed.
     LOG.info("Inserting into first WALProcedureStore");
-    // insert something to the first store
-    proc2 = new TestSequentialProcedure();
     try {
-      procStore.insert(proc2, null);
-      fail("expected RuntimeException 'sync aborted'");
-    } catch (RuntimeException e) {
-      LOG.info("got " + e.getMessage());
+      procStore.insert(new TestProcedure(11), null);
+      fail("Inserting into Procedure Store should have failed");
+    } catch (Exception ex) {
+      LOG.info("Received expected exception", ex);
     }
   }
 
