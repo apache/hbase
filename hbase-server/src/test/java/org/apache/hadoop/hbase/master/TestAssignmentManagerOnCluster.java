@@ -1056,7 +1056,7 @@ public class TestAssignmentManagerOnCluster {
       assertEquals(oldServerName, regionStates.getRegionServerOfRegion(hri));
 
       // Disable the table now.
-      master.disableTable(hri.getTable(), HConstants.NO_NONCE, HConstants.NO_NONCE);
+      master.disableTable(hri.getTable());
 
       // Kill the hosting server, which doesn't have meta on it.
       cluster.killRegionServer(oldServerName);

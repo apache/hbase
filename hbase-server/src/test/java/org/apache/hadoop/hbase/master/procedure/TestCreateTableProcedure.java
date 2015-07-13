@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -43,16 +43,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, MediumTests.class})
 public class TestCreateTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestCreateTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -76,9 +76,6 @@ public class TestCreateTableProcedure {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -128,43 +125,18 @@ public class TestCreateTableProcedure {
 
     // create the table
     long procId1 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // create another with the same name
     ProcedurePrepareLatch latch2 = new ProcedurePrepareLatch.CompatibilityLatch();
     long procId2 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2),
-      nonceGroup + 1,
-      nonce + 1);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions, latch2));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
 
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     latch2.await();
-  }
-
-  @Test(timeout=60000)
-  public void testCreateTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testCreateTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-    final HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f");
-    final HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, null);
-
-    // create the table
-    long procId1 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
-
-    // create another with the same name
-    long procId2 = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId1));
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000)
@@ -180,7 +152,7 @@ public class TestCreateTableProcedure {
     HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // Restart the executor and execute the step twice
     // NOTE: the 6 (number of CreateTableState steps) is hardcoded,
@@ -208,7 +180,7 @@ public class TestCreateTableProcedure {
     htd.setRegionReplication(3);
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
-      new CreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // NOTE: the 4 (number of CreateTableState steps) is hardcoded,
     //       so you have to look at this test at least once when you add a new step.
@@ -238,7 +210,7 @@ public class TestCreateTableProcedure {
     HTableDescriptor htd = MasterProcedureTestingUtility.createHTD(tableName, "f1", "f2");
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
-      new FaultyCreateTableProcedure(procExec.getEnvironment(), htd, regions), nonceGroup, nonce);
+      new FaultyCreateTableProcedure(procExec.getEnvironment(), htd, regions));
 
     // NOTE: the 4 (number of CreateTableState steps) is hardcoded,
     //       so you have to look at this test at least once when you add a new step.
