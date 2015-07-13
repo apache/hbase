@@ -305,7 +305,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   SnapshotManager snapshotManager;
   // monitor for distributed procedures
   MasterProcedureManagerHost mpmHost;
-
+  
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
 
@@ -355,7 +355,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
-      ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
+        ", hbase.cluster.distributed=" + this.conf.getBoolean(HConstants.CLUSTER_DISTRIBUTED, false));
 
     // Disable usage of meta replicas in the master
     this.conf.setBoolean(HConstants.USE_META_REPLICAS, false);
@@ -1435,11 +1435,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public long createTable(
-      final HTableDescriptor hTableDescriptor,
-      final byte [][] splitKeys,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long createTable(HTableDescriptor hTableDescriptor,
+      byte [][] splitKeys) throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
@@ -1460,10 +1457,8 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     //       TableExistsException by saying if the schema is the same or not.
     ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
     long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(
-        procedureExecutor.getEnvironment(), hTableDescriptor, newRegions, latch),
-      nonceGroup,
-      nonce);
+      new CreateTableProcedure(procedureExecutor.getEnvironment(),
+        hTableDescriptor, newRegions, latch));
     latch.await();
 
     if (cpHost != null) {
@@ -1701,10 +1696,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public long deleteTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long deleteTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDeleteTable(tableName);
@@ -1714,9 +1706,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // TODO: We can handle/merge duplicate request
     ProcedurePrepareLatch latch = ProcedurePrepareLatch.createLatch();
     long procId = this.procedureExecutor.submitProcedure(
-      new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch),
-      nonceGroup,
-      nonce);
+        new DeleteTableProcedure(procedureExecutor.getEnvironment(), tableName, latch));
     latch.await();
 
     if (cpHost != null) {
@@ -1727,11 +1717,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void truncateTable(
-      final TableName tableName,
-      final boolean preserveSplits,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public void truncateTable(TableName tableName, boolean preserveSplits) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preTruncateTable(tableName);
@@ -1739,9 +1725,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     LOG.info(getClientIdAuditPrefix() + " truncate " + tableName);
 
     long procId = this.procedureExecutor.submitProcedure(
-      new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits),
-      nonceGroup,
-      nonce);
+        new TruncateTableProcedure(procedureExecutor.getEnvironment(), tableName, preserveSplits));
     ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
 
     if (cpHost != null) {
@@ -1750,11 +1734,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void addColumn(
-      final TableName tableName,
-      final HColumnDescriptor columnDescriptor,
-      final long nonceGroup,
-      final long nonce)
+  public void addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor)
       throws IOException {
     checkInitialized();
     checkCompression(columnDescriptor);
@@ -1765,10 +1745,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new AddColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnDescriptor),
-      nonceGroup,
-      nonce);
+    long procId =
+        this.procedureExecutor.submitProcedure(new AddColumnFamilyProcedure(procedureExecutor
+            .getEnvironment(), tableName, columnDescriptor));
     ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, columnDescriptor);
@@ -1776,11 +1755,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void modifyColumn(
-      final TableName tableName,
-      final HColumnDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
+  public void modifyColumn(TableName tableName, HColumnDescriptor descriptor)
       throws IOException {
     checkInitialized();
     checkCompression(descriptor);
@@ -1793,10 +1768,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
 
     // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new ModifyColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, descriptor),
-      nonceGroup,
-      nonce);
+    long procId =
+        this.procedureExecutor.submitProcedure(new ModifyColumnFamilyProcedure(procedureExecutor
+            .getEnvironment(), tableName, descriptor));
     ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
 
     if (cpHost != null) {
@@ -1805,11 +1779,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void deleteColumn(
-      final TableName tableName,
-      final byte[] columnName,
-      final long nonceGroup,
-      final long nonce)
+  public void deleteColumn(final TableName tableName, final byte[] columnName)
       throws IOException {
     checkInitialized();
     if (cpHost != null) {
@@ -1820,10 +1790,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
 
     // Execute the operation synchronously - wait for the operation to complete before continuing.
-    long procId = this.procedureExecutor.submitProcedure(
-      new DeleteColumnFamilyProcedure(procedureExecutor.getEnvironment(), tableName, columnName),
-      nonceGroup,
-      nonce);
+    long procId =
+        this.procedureExecutor.submitProcedure(new DeleteColumnFamilyProcedure(procedureExecutor
+            .getEnvironment(), tableName, columnName));
     ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
 
     if (cpHost != null) {
@@ -1832,10 +1801,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public long enableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long enableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preEnableTable(tableName);
@@ -1844,10 +1810,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Execute the operation asynchronously - client will check the progress of the operation
     final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
-    long procId = this.procedureExecutor.submitProcedure(
-      new EnableTableProcedure(procedureExecutor.getEnvironment(), tableName, false, prepareLatch),
-      nonceGroup,
-      nonce);
+    long procId =
+        this.procedureExecutor.submitProcedure(new EnableTableProcedure(procedureExecutor
+            .getEnvironment(), tableName, false, prepareLatch));
     // Before returning to client, we want to make sure that the table is prepared to be
     // enabled (the table is locked and the table state is set).
     //
@@ -1862,10 +1827,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public long disableTable(
-      final TableName tableName,
-      final long nonceGroup,
-      final long nonce) throws IOException {
+  public long disableTable(final TableName tableName) throws IOException {
     checkInitialized();
     if (cpHost != null) {
       cpHost.preDisableTable(tableName);
@@ -1875,10 +1837,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // Execute the operation asynchronously - client will check the progress of the operation
     final ProcedurePrepareLatch prepareLatch = ProcedurePrepareLatch.createLatch();
     // Execute the operation asynchronously - client will check the progress of the operation
-    long procId = this.procedureExecutor.submitProcedure(
-      new DisableTableProcedure(procedureExecutor.getEnvironment(), tableName, false, prepareLatch),
-      nonceGroup,
-      nonce);
+    long procId =
+        this.procedureExecutor.submitProcedure(new DisableTableProcedure(procedureExecutor
+            .getEnvironment(), tableName, false, prepareLatch));
     // Before returning to client, we want to make sure that the table is prepared to be
     // enabled (the table is locked and the table state is set).
     //
@@ -1929,11 +1890,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void modifyTable(
-      final TableName tableName,
-      final HTableDescriptor descriptor,
-      final long nonceGroup,
-      final long nonce)
+  public void modifyTable(final TableName tableName, final HTableDescriptor descriptor)
       throws IOException {
     checkInitialized();
     sanityCheckTableDescriptor(descriptor);
@@ -1945,9 +1902,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
 
     // Execute the operation synchronously - wait for the operation completes before continuing.
     long procId = this.procedureExecutor.submitProcedure(
-      new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor),
-      nonceGroup,
-      nonce);
+        new ModifyTableProcedure(procedureExecutor.getEnvironment(), descriptor));
 
     ProcedureSyncWait.waitForProcedureToComplete(procedureExecutor, procId);
 
@@ -2102,7 +2057,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return cpHost;
   }
-
+  
   @Override
   public MasterQuotaManager getMasterQuotaManager() {
     return quotaManager;

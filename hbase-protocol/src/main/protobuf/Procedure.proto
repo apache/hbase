@@ -54,10 +54,6 @@ message Procedure {
   optional ForeignExceptionMessage exception = 10;
   optional bytes result = 11;           // opaque (user) result structure
   optional bytes state_data = 12;       // opaque (user) procedure internal-state
-
-  // Nonce to prevent same procedure submit by multiple times
-  optional uint64 nonce_group = 13 [default = 0];
-  optional uint64 nonce = 14 [default = 0];
 }
 
 /**
