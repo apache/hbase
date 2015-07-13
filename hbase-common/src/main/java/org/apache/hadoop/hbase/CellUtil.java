@@ -1336,11 +1336,6 @@ public final class CellUtil {
     }
 
     @Override
-    public long getMvccVersion() {
-      return getSequenceId();
-    }
-
-    @Override
     public long getSequenceId() {
       return 0;
     }
@@ -1373,26 +1368,6 @@ public final class CellUtil {
     @Override
     public int getTagsLength() {
       return 0;
-    }
-
-    @Override
-    public byte[] getValue() {
-      return EMPTY_BYTE_ARRAY;
-    }
-
-    @Override
-    public byte[] getFamily() {
-      return EMPTY_BYTE_ARRAY;
-    }
-
-    @Override
-    public byte[] getQualifier() {
-      return EMPTY_BYTE_ARRAY;
-    }
-
-    @Override
-    public byte[] getRow() {
-      return EMPTY_BYTE_ARRAY;
     }
   }
 
@@ -1431,11 +1406,6 @@ public final class CellUtil {
     @Override
     public byte getTypeByte() {
       return Type.Maximum.getCode();
-    }
-
-    @Override
-    public byte[] getRow() {
-      return Bytes.copy(this.rowArray, this.roffset, this.rlength);
     }
   }
 
@@ -1487,16 +1457,6 @@ public final class CellUtil {
     @Override
     public int getQualifierLength() {
       return this.qlength;
-    }
-
-    @Override
-    public byte[] getFamily() {
-      return Bytes.copy(this.fArray, this.foffset, this.flength);
-    }
-
-    @Override
-    public byte[] getQualifier() {
-      return Bytes.copy(this.qArray, this.qoffset, this.qlength);
     }
   }
 
@@ -1553,11 +1513,6 @@ public final class CellUtil {
     public byte getTypeByte() {
       return Type.Minimum.getCode();
     }
-
-    @Override
-    public byte[] getRow() {
-      return Bytes.copy(this.rowArray, this.roffset, this.rlength);
-    }
   }
 
   @InterfaceAudience.Private
@@ -1608,16 +1563,6 @@ public final class CellUtil {
     @Override
     public int getQualifierLength() {
       return this.qlength;
-    }
-
-    @Override
-    public byte[] getFamily() {
-      return Bytes.copy(this.fArray, this.foffset, this.flength);
-    }
-
-    @Override
-    public byte[] getQualifier() {
-      return Bytes.copy(this.qArray, this.qoffset, this.qlength);
     }
   }
 }

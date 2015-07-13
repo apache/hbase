@@ -315,12 +315,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     }
 
     @Override
-    @Deprecated
-    public long getMvccVersion() {
-      return getSequenceId();
-    }
-
-    @Override
     public long getSequenceId() {
       return seqId;
     }
@@ -353,30 +347,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     @Override
     public int getTagsLength() {
       return this.tagsLength;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getValue() {
-      return this.val;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getFamily() {
-      return this.fam;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getQualifier() {
-      return this.qual;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getRow() {
-      return this.row;
     }
 
     @Override

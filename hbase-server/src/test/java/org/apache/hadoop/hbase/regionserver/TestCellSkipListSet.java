@@ -25,6 +25,7 @@ import junit.framework.TestCase;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -49,15 +50,18 @@ public class TestCellSkipListSet extends TestCase {
     assertEquals(1, this.csls.size());
     Cell first = this.csls.first();
     assertTrue(kv.equals(first));
-    assertTrue(Bytes.equals(kv.getValue(), first.getValue()));
+    assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
+      first.getValueArray(), first.getValueOffset(), first.getValueLength()));
     // Now try overwritting
     byte [] overwriteValue = Bytes.toBytes("overwrite");
     KeyValue overwrite = new KeyValue(bytes, bytes, bytes, overwriteValue);
     this.csls.add(overwrite);
     assertEquals(1, this.csls.size());
     first = this.csls.first();
-    assertTrue(Bytes.equals(overwrite.getValue(), first.getValue()));
-    assertFalse(Bytes.equals(overwrite.getValue(), kv.getValue()));
+    assertTrue(Bytes.equals(overwrite.getValueArray(), overwrite.getValueOffset(),
+      overwrite.getValueLength(), first.getValueArray(), first.getValueOffset(),
+      first.getValueLength()));
+    assertFalse(Bytes.equals(CellUtil.cloneValue(overwrite), CellUtil.cloneValue(kv)));
   }
 
   public void testIterator() throws Exception {
@@ -71,8 +75,10 @@ public class TestCellSkipListSet extends TestCase {
     // Assert that we added 'total' values and that they are in order
     int count = 0;
     for (Cell kv: this.csls) {
-      assertEquals("" + count, Bytes.toString(kv.getQualifier()));
-      assertTrue(Bytes.equals(kv.getValue(), value1));
+      assertEquals("" + count,
+        Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+      assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value1,
+        0, value1.length));
       count++;
     }
     assertEquals(total, count);
@@ -83,9 +89,11 @@ public class TestCellSkipListSet extends TestCase {
     // Assert that we added 'total' values and that they are in order and that
     // we are getting back value2
     count = 0;
-    for (Cell kv: this.csls) {
-      assertEquals("" + count, Bytes.toString(kv.getQualifier()));
-      assertTrue(Bytes.equals(kv.getValue(), value2));
+    for (Cell kv : this.csls) {
+      assertEquals("" + count,
+        Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+      assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value2,
+        0, value2.length));
       count++;
     }
     assertEquals(total, count);
@@ -103,8 +111,10 @@ public class TestCellSkipListSet extends TestCase {
     int count = 0;
     for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
       Cell kv = i.next();
-      assertEquals("" + (total - (count + 1)), Bytes.toString(kv.getQualifier()));
-      assertTrue(Bytes.equals(kv.getValue(), value1));
+      assertEquals("" + (total - (count + 1)),
+        Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+      assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value1,
+        0, value1.length));
       count++;
     }
     assertEquals(total, count);
@@ -117,8 +127,10 @@ public class TestCellSkipListSet extends TestCase {
     count = 0;
     for (Iterator<Cell> i = this.csls.descendingIterator(); i.hasNext();) {
       Cell kv = i.next();
-      assertEquals("" + (total - (count + 1)), Bytes.toString(kv.getQualifier()));
-      assertTrue(Bytes.equals(kv.getValue(), value2));
+      assertEquals("" + (total - (count + 1)),
+        Bytes.toString(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength()));
+      assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value2,
+        0, value2.length));
       count++;
     }
     assertEquals(total, count);
@@ -145,8 +157,10 @@ public class TestCellSkipListSet extends TestCase {
       this.csls.add(new KeyValue(bytes, bytes, Bytes.toBytes("" + i), value2));
     }
     tail = this.csls.tailSet(splitter);
-    assertTrue(Bytes.equals(tail.first().getValue(), value2));
+    assertTrue(Bytes.equals(tail.first().getValueArray(), tail.first().getValueOffset(),
+      tail.first().getValueLength(), value2, 0, value2.length));
     head = this.csls.headSet(splitter);
-    assertTrue(Bytes.equals(head.first().getValue(), value2));
+    assertTrue(Bytes.equals(head.first().getValueArray(), head.first().getValueOffset(),
+      head.first().getValueLength(), value2, 0, value2.length));
   }
 }

@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,9 +28,9 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RpcRetryingCallerFactory;
 import org.apache.hadoop.hbase.client.Table;
@@ -49,12 +48,9 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.WALCoprocessorEnvironment;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.ReplicateWALEntryResponse;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint.ReplicateContext;
@@ -65,6 +61,8 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -81,9 +79,6 @@ import com.google.common.collect.Lists;
  */
 @Category({ReplicationTests.class, MediumTests.class})
 public class TestRegionReplicaReplicationEndpointNoMaster {
-
-  private static final Log LOG = LogFactory.getLog(
-    TestRegionReplicaReplicationEndpointNoMaster.class);
 
   private static final int NB_SERVERS = 2;
   private static TableName tableName = TableName.valueOf(
@@ -193,7 +188,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
       throws IOException, RuntimeException {
     Entry entry;
     while ((entry = entries.poll()) != null) {
-      byte[] row = entry.getEdit().getCells().get(0).getRow();
+      byte[] row = CellUtil.cloneRow(entry.getEdit().getCells().get(0));
       RegionLocations locations = connection.locateRegion(tableName, row, true, true);
       RegionReplicaReplayCallable callable = new RegionReplicaReplayCallable(connection,
         RpcControllerFactory.instantiate(connection.getConfiguration()),
@@ -298,7 +293,9 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
 
     Assert.assertEquals(1000, entries.size());
     for (Entry e: entries) {
-      if (Integer.parseInt(Bytes.toString(e.getEdit().getCells().get(0).getValue())) % 2 == 0) {
+      Cell _c = e.getEdit().getCells().get(0);
+      if (Integer.parseInt(
+        Bytes.toString(_c.getValueArray(), _c.getValueOffset(), _c.getValueLength())) % 2 == 0) {
         e.getKey().setOrigLogSeqNum(1); // simulate dist log replay by setting orig seq id
       }
     }

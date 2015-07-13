@@ -329,9 +329,9 @@ public class AccessController extends BaseMasterAndRegionObserver
             List<KeyValue> kvList = (List<KeyValue>)family.getValue();
             for (KeyValue kv : kvList) {
               if (!authManager.authorize(user, tableName, family.getKey(),
-                      kv.getQualifier(), permRequest)) {
-                return AuthResult.deny(request, "Failed qualifier check", user,
-                    permRequest, tableName, makeFamilyMap(family.getKey(), kv.getQualifier()));
+                CellUtil.cloneQualifier(kv), permRequest)) {
+                return AuthResult.deny(request, "Failed qualifier check", user, permRequest,
+                  tableName, makeFamilyMap(family.getKey(), CellUtil.cloneQualifier(kv)));
               }
             }
           }
@@ -749,7 +749,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           }
         }
       } else if (entry.getValue() == null) {
-        get.addFamily(col);        
+        get.addFamily(col);
       } else {
         throw new RuntimeException("Unhandled collection type " +
           entry.getValue().getClass().getName());
@@ -1308,7 +1308,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
       NamespaceDescriptor ns) throws IOException {
-    // We require only global permission so that 
+    // We require only global permission so that
     // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
     requireGlobalPermission("modifyNamespace", Action.ADMIN, ns.getName());
   }

@@ -27,6 +27,7 @@ import java.util.ConcurrentModificationException;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -106,8 +107,8 @@ public class TestPutDeleteEtcCellIteration {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
       KeyValue kv = (KeyValue)cell;
-      assertTrue(Bytes.equals(kv.getFamily(), bytes));
-      assertTrue(Bytes.equals(kv.getValue(), bytes));
+      assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), bytes));
+      assertTrue(Bytes.equals(CellUtil.cloneValue(kv), bytes));
     }
     assertEquals(COUNT, index);
   }
@@ -125,8 +126,8 @@ public class TestPutDeleteEtcCellIteration {
       int value = index;
       byte [] bytes = Bytes.toBytes(index++);
       KeyValue kv = (KeyValue)cell;
-      assertTrue(Bytes.equals(kv.getFamily(), bytes));
-      long a = Bytes.toLong(kv.getValue());
+      assertTrue(Bytes.equals(CellUtil.cloneFamily(kv), bytes));
+      long a = Bytes.toLong(CellUtil.cloneValue(kv));
       assertEquals(value, a);
     }
     assertEquals(COUNT, index);

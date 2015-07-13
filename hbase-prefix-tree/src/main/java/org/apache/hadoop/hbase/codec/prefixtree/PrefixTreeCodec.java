@@ -102,7 +102,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
         ByteBufferUtils.skip(result, keyValueLength);
         offset += keyValueLength;
         if (includesMvcc) {
-          ByteBufferUtils.writeVLong(result, currentCell.getMvccVersion());
+          ByteBufferUtils.writeVLong(result, currentCell.getSequenceId());
         }
       }
       result.position(result.limit());//make it appear as if we were appending

@@ -131,16 +131,11 @@ public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell
   }
 
   @Override
-  public long getMvccVersion() {
+  public long getSequenceId() {
     if (!includeMvccVersion) {
       return 0L;
     }
     return mvccVersion;
-  }
-
-  @Override
-  public long getSequenceId() {
-    return getMvccVersion();
   }
 
   @Override
@@ -206,27 +201,6 @@ public class PrefixTreeCell implements Cell, SettableSequenceId, Comparable<Cell
   @Override
   public byte getTypeByte() {
     return type.getCode();
-  }
-
-  /* Deprecated methods pushed into the Cell interface */
-  @Override
-  public byte[] getValue() {
-    return CellUtil.cloneValue(this);
-  }
-
-  @Override
-  public byte[] getFamily() {
-    return CellUtil.cloneFamily(this);
-  }
-
-  @Override
-  public byte[] getQualifier() {
-    return CellUtil.cloneQualifier(this);
-  }
-
-  @Override
-  public byte[] getRow() {
-    return CellUtil.cloneRow(this);
   }
 
   /************************* helper methods *************************/

@@ -66,10 +66,10 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 import com.google.common.collect.ImmutableList;
 
@@ -221,13 +221,13 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       List<Mutation> metaEntries) throws IOException {
     ctPreSplitBeforePONR.incrementAndGet();
   }
-  
+
   @Override
   public void preSplitAfterPONR(
       ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
     ctPreSplitAfterPONR.incrementAndGet();
   }
-  
+
   @Override
   public void postSplit(ObserverContext<RegionCoprocessorEnvironment> c, Region l, Region r) {
     ctPostSplit.incrementAndGet();
@@ -370,7 +370,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit,
       final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap  = put.getFamilyCellMap();
@@ -384,20 +384,23 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       KeyValue kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(),
-          TestRegionObserverInterface.A));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.A, 0,
+        TestRegionObserverInterface.A.length));
       cells = familyMap.get(TestRegionObserverInterface.B);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(),
-          TestRegionObserverInterface.B));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.B, 0,
+        TestRegionObserverInterface.B.length));
       cells = familyMap.get(TestRegionObserverInterface.C);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(),
-          TestRegionObserverInterface.C));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.C, 0,
+        TestRegionObserverInterface.C.length));
     }
     ctPrePut.incrementAndGet();
   }
@@ -418,25 +421,31 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
       KeyValue kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.A));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.A, 0,
+        TestRegionObserverInterface.A.length));
       cells = familyMap.get(TestRegionObserverInterface.B);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
       kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.B));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.B, 0,
+        TestRegionObserverInterface.B.length));
       cells = familyMap.get(TestRegionObserverInterface.C);
       assertNotNull(cells);
       assertNotNull(cells.get(0));
       // KeyValue v1 expectation.  Cast for now until we go all Cell all the time. TODO
       kv = (KeyValue)cells.get(0);
-      assertTrue(Bytes.equals(kv.getQualifier(), TestRegionObserverInterface.C));
+      assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength(), TestRegionObserverInterface.C, 0,
+        TestRegionObserverInterface.C.length));
     }
     ctPostPut.incrementAndGet();
   }
 
   @Override
-  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  public void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap  = delete.getFamilyCellMap();
@@ -456,7 +465,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  public void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit,
       final Durability durability) throws IOException {
     Map<byte[], List<Cell>> familyMap  = delete.getFamilyCellMap();
@@ -467,7 +476,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
     ctBeforeDelete.set(0);
     ctPostDeleted.incrementAndGet();
   }
-  
+
   @Override
   public void preBatchMutate(ObserverContext<RegionCoprocessorEnvironment> c,
       MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {
@@ -604,7 +613,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e, 
+  public Result preAppendAfterRowLock(ObserverContext<RegionCoprocessorEnvironment> e,
       Append append) throws IOException {
     ctPreAppendAfterRowLock.incrementAndGet();
     return null;
@@ -724,7 +733,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean hadPostPut() {
     return ctPostPut.get() > 0;
   }
-  
+
   public boolean hadPreBatchMutate() {
     return ctPreBatchMutate.get() > 0;
   }
@@ -784,7 +793,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean hadPreIncrement() {
     return ctPreIncrement.get() > 0;
   }
-  
+
   public boolean hadPreIncrementAfterRowLock() {
     return ctPreIncrementAfterRowLock.get() > 0;
   }
@@ -808,7 +817,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public boolean hadPrePreparedDeleteTS() {
     return ctPrePrepareDeleteTS.get() > 0;
   }
-  
+
   public boolean hadPreWALRestore() {
     return ctPreWALRestore.get() > 0;
   }
@@ -874,7 +883,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   public int getCtPreSplit() {
     return ctPreSplit.get();
   }
-  
+
   public int getCtPreSplitBeforePONR() {
     return ctPreSplitBeforePONR.get();
   }

@@ -181,7 +181,7 @@ public class TestRowEncoder {
     // assert keys are equal (doesn't compare values)
     Assert.assertEquals(expected, actual);
     if (includeMemstoreTS) {
-      Assert.assertEquals(expected.getMvccVersion(), actual.getMvccVersion());
+      Assert.assertEquals(expected.getSequenceId(), actual.getSequenceId());
     }
     // assert values equal
     Assert.assertTrue(Bytes.equals(expected.getValueArray(), expected.getValueOffset(),

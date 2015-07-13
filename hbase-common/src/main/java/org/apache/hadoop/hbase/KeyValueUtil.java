@@ -81,7 +81,7 @@ public class KeyValueUtil {
   public static int lengthWithMvccVersion(final KeyValue kv, final boolean includeMvccVersion) {
     int length = kv.getLength();
     if (includeMvccVersion) {
-      length += WritableUtils.getVIntSize(kv.getMvccVersion());
+      length += WritableUtils.getVIntSize(kv.getSequenceId());
     }
     return length;
   }
@@ -101,7 +101,7 @@ public class KeyValueUtil {
   public static KeyValue copyToNewKeyValue(final Cell cell) {
     byte[] bytes = copyToNewByteArray(cell);
     KeyValue kvCell = new KeyValue(bytes, 0, bytes.length);
-    kvCell.setSequenceId(cell.getMvccVersion());
+    kvCell.setSequenceId(cell.getSequenceId());
     return kvCell;
   }
 
@@ -173,9 +173,9 @@ public class KeyValueUtil {
     bb.limit(bb.position() + kv.getLength());
     bb.put(kv.getBuffer(), kv.getOffset(), kv.getLength());
     if (includeMvccVersion) {
-      int numMvccVersionBytes = WritableUtils.getVIntSize(kv.getMvccVersion());
+      int numMvccVersionBytes = WritableUtils.getVIntSize(kv.getSequenceId());
       ByteBufferUtils.extendLimit(bb, numMvccVersionBytes);
-      ByteBufferUtils.writeVLong(bb, kv.getMvccVersion());
+      ByteBufferUtils.writeVLong(bb, kv.getSequenceId());
     }
   }
 

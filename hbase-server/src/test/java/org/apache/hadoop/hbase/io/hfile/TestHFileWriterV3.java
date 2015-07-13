@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
@@ -160,7 +159,7 @@ public class TestHFileWriterV3 {
     writer.appendMetaBlock("CAPITAL_OF_FRANCE", new Text("Paris"));
 
     writer.close();
-    
+
 
     FSDataInputStream fsdis = fs.open(hfilePath);
 
@@ -192,12 +191,12 @@ public class TestHFileWriterV3 {
     // the root level.
     dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX), trailer.getDataIndexCount());
-    
+
     if (findMidKey) {
       Cell midkey = dataBlockIndexReader.midkey();
       assertNotNull("Midkey should not be null", midkey);
     }
-    
+
     // Meta index.
     metaBlockIndexReader.readRootIndex(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
@@ -240,7 +239,7 @@ public class TestHFileWriterV3 {
           tagValue = new byte[tagLen];
           buf.get(tagValue);
         }
-      
+
         if (includeMemstoreTS) {
           ByteArrayInputStream byte_input = new ByteArrayInputStream(buf.array(), buf.arrayOffset()
               + buf.position(), buf.remaining());
@@ -251,11 +250,13 @@ public class TestHFileWriterV3 {
         }
 
         // A brute-force check to see that all keys and values are correct.
-        assertTrue(Bytes.compareTo(key, keyValues.get(entriesRead).getKey()) == 0);
-        assertTrue(Bytes.compareTo(value, keyValues.get(entriesRead).getValue()) == 0);
+        KeyValue kv = keyValues.get(entriesRead);
+        assertTrue(Bytes.compareTo(key, kv.getKey()) == 0);
+        assertTrue(Bytes.compareTo(value, 0, value.length, kv.getValueArray(), kv.getValueOffset(),
+          kv.getValueLength()) == 0);
         if (useTags) {
           assertNotNull(tagValue);
-          KeyValue tkv =  keyValues.get(entriesRead);
+          KeyValue tkv =  kv;
           assertEquals(tagValue.length, tkv.getTagsLength());
           assertTrue(Bytes.compareTo(tagValue, 0, tagValue.length, tkv.getTagsArray(),
               tkv.getTagsOffset(), tkv.getTagsLength()) == 0);

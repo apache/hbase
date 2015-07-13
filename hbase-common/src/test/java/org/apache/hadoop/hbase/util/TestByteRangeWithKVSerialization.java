@@ -40,7 +40,7 @@ public class TestByteRangeWithKVSerialization {
     pbr.put((byte) (tagsLen >> 8 & 0xff));
     pbr.put((byte) (tagsLen & 0xff));
     pbr.put(kv.getTagsArray(), kv.getTagsOffset(), tagsLen);
-    pbr.putVLong(kv.getMvccVersion());
+    pbr.putVLong(kv.getSequenceId());
   }
 
   static KeyValue readCell(PositionedByteRange pbr) throws Exception {
@@ -88,7 +88,7 @@ public class TestByteRangeWithKVSerialization {
       Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(),
           kv.getTagsLength(), kv1.getTagsArray(), kv1.getTagsOffset(),
           kv1.getTagsLength()));
-      Assert.assertEquals(kv1.getMvccVersion(), kv.getMvccVersion());
+      Assert.assertEquals(kv1.getSequenceId(), kv.getSequenceId());
     }
   }
 }

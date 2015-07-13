@@ -24,13 +24,12 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.SettableSequenceId;
+import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -257,11 +256,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public long getMvccVersion() {
-      return memstoreTS;
-    }
-
-    @Override
     public long getSequenceId() {
       return memstoreTS;
     }
@@ -303,30 +297,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    @Deprecated
-    public byte[] getValue() {
-      throw new UnsupportedOperationException("getValue() not supported");
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getFamily() {
-      throw new UnsupportedOperationException("getFamily() not supported");
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getQualifier() {
-      throw new UnsupportedOperationException("getQualifier() not supported");
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getRow() {
-      throw new UnsupportedOperationException("getRow() not supported");
-    }
-
-    @Override
     public String toString() {
       return KeyValue.keyToString(this.keyBuffer, 0, KeyValueUtil.keyLength(this)) + "/vlen="
           + getValueLength() + "/seqid=" + memstoreTS;
@@ -334,7 +304,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     public Cell shallowCopy() {
       return new ClonedSeekerState(currentBuffer, keyBuffer, currentKey.getRowLength(),
-          currentKey.getFamilyOffset(), currentKey.getFamilyLength(), keyLength, 
+          currentKey.getFamilyOffset(), currentKey.getFamilyLength(), keyLength,
           currentKey.getQualifierOffset(), currentKey.getQualifierLength(),
           currentKey.getTimestamp(), currentKey.getTypeByte(), valueLength, valueOffset,
           memstoreTS, tagsOffset, tagsLength, tagCompressionContext, tagsBuffer);
@@ -342,9 +312,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
   }
 
   /**
-   * Copies only the key part of the keybuffer by doing a deep copy and passes the 
+   * Copies only the key part of the keybuffer by doing a deep copy and passes the
    * seeker state members for taking a clone.
-   * Note that the value byte[] part is still pointing to the currentBuffer and the 
+   * Note that the value byte[] part is still pointing to the currentBuffer and the
    * represented by the valueOffset and valueLength
    */
   // We return this as a Cell to the upper layers of read flow and might try setting a new SeqId
@@ -372,7 +342,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     private byte[] cloneTagsBuffer;
     private long seqId;
     private TagCompressionContext tagCompressionContext;
-    
+
     protected ClonedSeekerState(ByteBuffer currentBuffer, byte[] keyBuffer, short rowLength,
         int familyOffset, byte familyLength, int keyLength, int qualOffset, int qualLength,
         long timeStamp, byte typeByte, int valueLen, int valueOffset, long seqId,
@@ -456,12 +426,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    @Deprecated
-    public long getMvccVersion() {
-      return getSequenceId();
-    }
-
-    @Override
     public long getSequenceId() {
       return seqId;
     }
@@ -500,30 +464,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     @Override
     public int getTagsLength() {
       return tagsLength;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getValue() {
-      return CellUtil.cloneValue(this);
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getFamily() {
-      return CellUtil.cloneFamily(this);
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getQualifier() {
-      return CellUtil.cloneQualifier(this);
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getRow() {
-      return CellUtil.cloneRow(this);
     }
 
     @Override

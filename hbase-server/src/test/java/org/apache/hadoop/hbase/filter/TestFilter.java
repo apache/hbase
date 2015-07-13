@@ -534,7 +534,7 @@ public class TestFilter {
       ArrayList<Cell> values = new ArrayList<Cell>();
       boolean isMoreResults = scanner.next(values);
       if (!isMoreResults
-          || !Bytes.toString(values.get(0).getRow()).startsWith(prefix)) {
+          || !Bytes.toString(CellUtil.cloneRow(values.get(0))).startsWith(prefix)) {
         Assert.assertTrue(
             "The WhileMatchFilter should now filter all remaining",
             filter.filterAllRemaining());
@@ -581,7 +581,7 @@ public class TestFilter {
 
 
   /**
-   * The following filter simulates a pre-0.96 filter where filterRow() is defined while 
+   * The following filter simulates a pre-0.96 filter where filterRow() is defined while
    * hasFilterRow() returns false
    */
   static class OldTestFilter extends FilterBase {
@@ -592,25 +592,25 @@ public class TestFilter {
     public boolean hasFilterRow() {
       return false;
     }
-    
+
     @Override
     public boolean filterRow() {
       // always filter out rows
       return true;
     }
-    
+
     @Override
     public ReturnCode filterKeyValue(Cell ignored) throws IOException {
       return ReturnCode.INCLUDE;
     }
   }
-  
+
   /**
-   * The following test is to ensure old(such as hbase0.94) filterRow() can be correctly fired in 
-   * 0.96+ code base.  
-   * 
+   * The following test is to ensure old(such as hbase0.94) filterRow() can be correctly fired in
+   * 0.96+ code base.
+   *
    * See HBASE-10366
-   * 
+   *
    * @throws Exception
    */
   @Test
@@ -1558,7 +1558,7 @@ public class TestFilter {
     };
 
     for(KeyValue kv : srcKVs) {
-      Put put = new Put(kv.getRow()).add(kv);
+      Put put = new Put(CellUtil.cloneRow(kv)).add(kv);
       put.setDurability(Durability.SKIP_WAL);
       this.region.put(put);
     }
@@ -1597,7 +1597,7 @@ public class TestFilter {
 
     // Add QUALIFIERS_ONE[1] to ROWS_THREE[0] with VALUES[0]
     KeyValue kvA = new KeyValue(ROWS_THREE[0], FAMILIES[0], QUALIFIERS_ONE[1], VALUES[0]);
-    this.region.put(new Put(kvA.getRow()).add(kvA));
+    this.region.put(new Put(CellUtil.cloneRow(kvA)).add(kvA));
 
     // Match VALUES[1] against QUALIFIERS_ONE[1] with filterIfMissing = true
     // Expect 1 row (3)
@@ -1971,7 +1971,7 @@ public class TestFilter {
       verifyScanFullNoValues(s, expectedKVs, useLen);
     }
   }
-  
+
   /**
    * Filter which makes sleeps for a second between each row of a scan.
    * This can be useful for manual testing of bugs like HBASE-5973. For example:
@@ -1984,7 +1984,7 @@ public class TestFilter {
    */
   public static class SlowScanFilter extends FilterBase {
     private static Thread ipcHandlerThread = null;
-    
+
     @Override
     public byte [] toByteArray() {return null;}
 
@@ -2099,5 +2099,5 @@ public class TestFilter {
     WAL wal = ((HRegion)testRegion).getWAL();
     ((HRegion)testRegion).close();
     wal.close();
-  }      
+  }
 }

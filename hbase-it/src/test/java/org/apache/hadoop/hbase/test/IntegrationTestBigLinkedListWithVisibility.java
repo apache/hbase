@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -74,24 +75,24 @@ import org.junit.experimental.categories.Category;
 
 /**
  * IT test used to verify the deletes with visibility labels.
- * The test creates three tables tablename_0, tablename_1 and tablename_2 and each table 
+ * The test creates three tables tablename_0, tablename_1 and tablename_2 and each table
  * is associated with a unique pair of labels.
- * Another common table with the name 'commontable' is created and it has the data combined 
- * from all these 3 tables such that there are 3 versions of every row but the visibility label 
- * in every row corresponds to the table from which the row originated.  
- * Then deletes are issued to the common table by selecting the visibility label 
- * associated with each of the smaller tables. 
- * After the delete is issued with one set of visibility labels we try to scan the common table 
- * with each of the visibility pairs defined for the 3 tables.  
- * So after the first delete is issued, a scan with the first set of visibility labels would 
- * return zero result whereas the scan issued with the other two sets of visibility labels 
- * should return all the rows corresponding to that set of visibility labels.  The above 
- * process of delete and scan is repeated until after the last set of visibility labels are 
+ * Another common table with the name 'commontable' is created and it has the data combined
+ * from all these 3 tables such that there are 3 versions of every row but the visibility label
+ * in every row corresponds to the table from which the row originated.
+ * Then deletes are issued to the common table by selecting the visibility label
+ * associated with each of the smaller tables.
+ * After the delete is issued with one set of visibility labels we try to scan the common table
+ * with each of the visibility pairs defined for the 3 tables.
+ * So after the first delete is issued, a scan with the first set of visibility labels would
+ * return zero result whereas the scan issued with the other two sets of visibility labels
+ * should return all the rows corresponding to that set of visibility labels.  The above
+ * process of delete and scan is repeated until after the last set of visibility labels are
  * used for the deletes the common table should not return any row.
- * 
- * To use this 
+ *
+ * To use this
  * ./hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedListWithVisibility Loop 1 1 20000 /tmp 1 10000
- * or 
+ * or
  * ./hbase org.apache.hadoop.hbase.IntegrationTestsDriver -r .*IntegrationTestBigLinkedListWithVisibility.*
  */
 @Category(IntegrationTests.class)
@@ -211,7 +212,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
           for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
             Put put = new Put(current[i]);
             put.add(FAMILY_NAME, COLUMN_PREV, prev == null ? NO_KEY : prev[i]);
-            
+
             if (count >= 0) {
               put.add(FAMILY_NAME, COLUMN_COUNT, Bytes.toBytes(count + i));
             }
@@ -331,7 +332,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     @Override
     protected void processKV(ImmutableBytesWritable key, Result result,
         org.apache.hadoop.mapreduce.Mapper.Context context, Put put,
-        org.apache.hadoop.hbase.client.Delete delete) throws 
+        org.apache.hadoop.hbase.client.Delete delete) throws
         IOException, InterruptedException {
       String visibilityExps = split[index * 2] + OR + split[(index * 2) + 1];
       for (Cell kv : result.rawCells()) {
@@ -343,7 +344,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
           delete = new Delete(key.get());
         }
         delete.setCellVisibility(new CellVisibility(visibilityExps));
-        delete.deleteFamily(kv.getFamily());
+        delete.deleteFamily(CellUtil.cloneFamily(kv));
       }
       if (delete != null) {
         context.write(key, delete);
@@ -356,14 +357,14 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
     super.addOptions();
     addOptWithArg("u", USER_OPT, "User name");
   }
-  
+
   @Override
   protected void processOptions(CommandLine cmd) {
     super.processOptions(cmd);
     if (cmd.hasOption(USER_OPT)) {
       userName = cmd.getOptionValue(USER_OPT);
     }
-    
+
   }
   @Override
   public void setUpCluster() throws Exception {
@@ -561,7 +562,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       }
     }
 
-    private void verify(int numReducers, long expectedNumNodes, 
+    private void verify(int numReducers, long expectedNumNodes,
         Path iterationOutput, Verify verify) throws Exception {
       verify.setConf(getConf());
       int retCode = verify.run(iterationOutput, numReducers);

@@ -3973,8 +3973,8 @@ public class TestHRegion {
             if (previousKV != null) {
               if (Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue) != 0) {
                 LOG.warn("These two KV should have the same value." + " Previous KV:" + previousKV
-                    + "(memStoreTS:" + previousKV.getMvccVersion() + ")" + ", New KV: " + kv
-                    + "(memStoreTS:" + kv.getMvccVersion() + ")");
+                    + "(memStoreTS:" + previousKV.getSequenceId() + ")" + ", New KV: " + kv
+                    + "(memStoreTS:" + kv.getSequenceId() + ")");
                 assertEquals(0, Bytes.compareTo(CellUtil.cloneValue(previousKV), thisValue));
               }
             }
@@ -5132,17 +5132,20 @@ public class TestHRegion {
       List<Cell> currRow = new ArrayList<Cell>();
       boolean hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowC, 0, rowC.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowB, 0, rowB.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowA, 0, rowA.length));
       assertFalse(hasNext);
       scanner.close();
     } finally {
@@ -5189,17 +5192,20 @@ public class TestHRegion {
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowC, 0, rowC.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowB, 0, rowB.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowA, 0, rowA.length));
       assertFalse(hasNext);
       scanner.close();
     } finally {
@@ -5243,17 +5249,20 @@ public class TestHRegion {
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowC, 0, rowC.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowB, 0, rowB.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowA));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowA, 0, rowA.length));
       assertFalse(hasNext);
       scanner.close();
     } finally {
@@ -5311,17 +5320,20 @@ public class TestHRegion {
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowD, 0, rowD.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowC, 0, rowC.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowB, 0, rowB.length));
       assertFalse(hasNext);
       scanner.close();
 
@@ -5332,7 +5344,8 @@ public class TestHRegion {
       scanner = region.getScanner(scan);
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowD, 0, rowD.length));
       scanner.close();
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -5391,17 +5404,20 @@ public class TestHRegion {
       InternalScanner scanner = region.getScanner(scan);
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowD, 0, rowD.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowC));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowC, 0, rowC.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowB));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowB, 0, rowB.length));
       assertFalse(hasNext);
       scanner.close();
 
@@ -5412,7 +5428,8 @@ public class TestHRegion {
       scanner = region.getScanner(scan);
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), rowD));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), rowD, 0, rowD.length));
       scanner.close();
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -5536,42 +5553,49 @@ public class TestHRegion {
       // "row4" takes 2 next() calls since batch=3
       hasNext = scanner.next(currRow);
       assertEquals(3, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row4, 0, row4.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow.get(0).getRowLength(), row4, 0,
+        row4.length));
       assertTrue(hasNext);
       // 2. scan out "row3" (2 kv)
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row3, 0, row3.length));
       assertTrue(hasNext);
       // 3. scan out "row2" (4 kvs)
       // "row2" takes 2 next() calls since batch=3
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(3, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row2, 0, row2.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row2, 0, row2.length));
       assertTrue(hasNext);
       // 4. scan out "row1" (2 kv)
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(2, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row1, 0, row1.length));
       assertTrue(hasNext);
       // 5. scan out "row0" (1 kv)
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row0));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row0, 0, row0.length));
       assertFalse(hasNext);
 
       scanner.close();
@@ -5632,22 +5656,26 @@ public class TestHRegion {
       List<Cell> currRow = new ArrayList<Cell>();
       boolean hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row4));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row4, 0, row4.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row3));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row3, 0, row3.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row2));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row2, 0, row2.length));
       assertTrue(hasNext);
       currRow.clear();
       hasNext = scanner.next(currRow);
       assertEquals(1, currRow.size());
-      assertTrue(Bytes.equals(currRow.get(0).getRow(), row1));
+      assertTrue(Bytes.equals(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(), currRow
+          .get(0).getRowLength(), row1, 0, row1.length));
       assertFalse(hasNext);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
@@ -5699,7 +5727,8 @@ public class TestHRegion {
       int verify = startRow + 2 * numRows - 1;
       do {
         more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
+          currRow.get(0).getRowLength()), verify + "");
         verify--;
         currRow.clear();
       } while(more);
@@ -5712,7 +5741,8 @@ public class TestHRegion {
       verify = startRow + 2 * numRows - 1;
       do {
         more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
+          currRow.get(0).getRowLength()), verify + "");
         verify--;
         currRow.clear();
       } while(more);
@@ -5725,7 +5755,8 @@ public class TestHRegion {
       verify = startRow + numRows - 1;
       do {
         more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
+          currRow.get(0).getRowLength()), verify + "");
         verify--;
         currRow.clear();
       } while(more);
@@ -5738,7 +5769,8 @@ public class TestHRegion {
       verify = startRow + numRows - 1;
       do {
         more = scanner.next(currRow);
-        assertEquals(Bytes.toString(currRow.get(0).getRow()), verify + "");
+        assertEquals(Bytes.toString(currRow.get(0).getRowArray(), currRow.get(0).getRowOffset(),
+          currRow.get(0).getRowLength()), verify + "");
         verify--;
         currRow.clear();
       } while(more);

@@ -34,8 +34,6 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import junit.framework.Assert;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -90,6 +88,8 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
+
+import junit.framework.Assert;
 
 /**
  * Simple test for {@link KeyValueSortReducer} and {@link HFileOutputFormat}.
@@ -201,8 +201,11 @@ public class TestHFileOutputFormat  {
       KeyValue original = kv.clone();
       writer.write(new ImmutableBytesWritable(), kv);
       assertFalse(original.equals(kv));
-      assertTrue(Bytes.equals(original.getRow(), kv.getRow()));
-      assertTrue(CellUtil.matchingColumn(original, kv.getFamily(), kv.getQualifier()));
+      assertTrue(Bytes.equals(original.getRowArray(), original.getRowOffset(),
+        original.getRowLength(), kv.getRowArray(), kv.getRowOffset(), kv.getRowLength()));
+      assertTrue(CellUtil.matchingColumn(original, kv.getFamilyArray(), kv.getFamilyOffset(),
+        kv.getFamilyLength(), kv.getQualifierArray(), kv.getQualifierOffset(),
+        kv.getQualifierLength()));
       assertNotSame(original.getTimestamp(), kv.getTimestamp());
       assertNotSame(HConstants.LATEST_TIMESTAMP, kv.getTimestamp());
 

@@ -70,11 +70,11 @@ public class TestSeekTo {
     return paramList;
   }
   static boolean switchKVs = false;
-  
+
   public TestSeekTo(DataBlockEncoding encoding) {
     this.encoding = encoding;
   }
-  
+
   @Before
   public void setUp() {
     //reset
@@ -107,7 +107,8 @@ public class TestSeekTo {
     }
   }
   static String toRowStr(Cell kv) {
-    return Bytes.toString(KeyValueUtil.ensureKeyValue(kv).getRow());
+    KeyValue c = KeyValueUtil.ensureKeyValue(kv);
+    return Bytes.toString(c.getRowArray(), c.getRowOffset(), c.getRowLength());
   }
 
   Path makeNewFile(TagUsage tagUsage) throws IOException {
@@ -338,7 +339,7 @@ public class TestSeekTo {
     Configuration conf = TEST_UTIL.getConfiguration();
     HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
     reader.loadFileInfo();
-    HFileBlockIndex.BlockIndexReader blockIndexReader = 
+    HFileBlockIndex.BlockIndexReader blockIndexReader =
       reader.getDataBlockIndexReader();
     System.out.println(blockIndexReader.toString());
     // falls before the start of the file.

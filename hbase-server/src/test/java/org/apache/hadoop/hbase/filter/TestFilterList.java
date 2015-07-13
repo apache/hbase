@@ -266,7 +266,7 @@ public class TestFilterList {
     byte[] r1 = Bytes.toBytes("Row1");
     byte[] r11 = Bytes.toBytes("Row11");
     byte[] r2 = Bytes.toBytes("Row2");
-  
+
     FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new PrefixFilter(r1));
     flist.filterRowKey(KeyValueUtil.createFirstOnRow(r1));
@@ -276,7 +276,7 @@ public class TestFilterList {
     flist.reset();
     flist.filterRowKey(KeyValueUtil.createFirstOnRow(r2));
     assertEquals(flist.filterKeyValue(new KeyValue(r2,r2,r2)), ReturnCode.SKIP);
-  
+
     flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new AlwaysNextColFilter());
     flist.addFilter(new PrefixFilter(r1));
@@ -298,7 +298,7 @@ public class TestFilterList {
     byte[] r1 = Bytes.toBytes("Row1");
     byte[] r11 = Bytes.toBytes("Row11");
     byte[] r2 = Bytes.toBytes("Row2");
-  
+
     FilterList flist = new FilterList(FilterList.Operator.MUST_PASS_ONE);
     flist.addFilter(new AlwaysNextColFilter());
     flist.addFilter(new InclusiveStopFilter(r1));
@@ -390,7 +390,7 @@ public class TestFilterList {
         Arrays.asList(new Filter[] { includeFilter, alternateIncludeFilter, alternateFilter }));
     // INCLUDE, INCLUDE, INCLUDE_AND_NEXT_COL.
     assertEquals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL, mpOnefilterList.filterKeyValue(null));
-    // INCLUDE, SKIP, INCLUDE. 
+    // INCLUDE, SKIP, INCLUDE.
     assertEquals(Filter.ReturnCode.INCLUDE, mpOnefilterList.filterKeyValue(null));
 
     // Check must pass all filter.
@@ -398,7 +398,7 @@ public class TestFilterList {
         Arrays.asList(new Filter[] { includeFilter, alternateIncludeFilter, alternateFilter }));
     // INCLUDE, INCLUDE, INCLUDE_AND_NEXT_COL.
     assertEquals(Filter.ReturnCode.INCLUDE_AND_NEXT_COL, mpAllfilterList.filterKeyValue(null));
-    // INCLUDE, SKIP, INCLUDE. 
+    // INCLUDE, SKIP, INCLUDE.
     assertEquals(Filter.ReturnCode.SKIP, mpAllfilterList.filterKeyValue(null));
   }
 
@@ -417,7 +417,7 @@ public class TestFilterList {
       public byte [] toByteArray() {
         return null;
       }
-      
+
       @Override
       public ReturnCode filterKeyValue(Cell ignored) throws IOException {
         return ReturnCode.INCLUDE;
@@ -541,12 +541,13 @@ public class TestFilterList {
     // Value for fam:qual1 should be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual1));
     final KeyValue transformedQual1 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual1));
-    assertEquals(0, transformedQual1.getValue().length);
+    assertEquals(0, transformedQual1.getValueLength());
 
     // Value for fam:qual2 should not be stripped:
     assertEquals(Filter.ReturnCode.INCLUDE, flist.filterKeyValue(kvQual2));
     final KeyValue transformedQual2 = KeyValueUtil.ensureKeyValue(flist.transformCell(kvQual2));
-    assertEquals("value", Bytes.toString(transformedQual2.getValue()));
+    assertEquals("value", Bytes.toString(transformedQual2.getValueArray(),
+      transformedQual2.getValueOffset(), transformedQual2.getValueLength()));
 
     // Other keys should be skipped:
     assertEquals(Filter.ReturnCode.SKIP, flist.filterKeyValue(kvQual3));

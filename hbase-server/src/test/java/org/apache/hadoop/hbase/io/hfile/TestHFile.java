@@ -18,9 +18,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -242,7 +239,7 @@ public class TestHFile extends HBaseTestCase {
 
   /**
    * test none codecs
-   * @param useTags 
+   * @param useTags
    */
   void basicWithSomeCodec(String codec, boolean useTags) throws IOException {
     if (useTags) {
@@ -311,12 +308,12 @@ public class TestHFile extends HBaseTestCase {
       writer.appendMetaBlock("HFileMeta" + i, new Writable() {
         private int val;
         public Writable setVal(int val) { this.val = val; return this; }
-        
+
         @Override
         public void write(DataOutput out) throws IOException {
           out.write(("something to test" + val).getBytes());
         }
-        
+
         @Override
         public void readFields(DataInput in) throws IOException { }
       }.setVal(i));
@@ -330,7 +327,7 @@ public class TestHFile extends HBaseTestCase {
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
       ByteBuffer actual = reader.getMetaBlock("HFileMeta" + i, false);
-      ByteBuffer expected = 
+      ByteBuffer expected =
         ByteBuffer.wrap(("something to test" + i).getBytes());
       assertEquals("failed to match metadata",
         Bytes.toStringBinary(expected), Bytes.toStringBinary(actual));
@@ -377,7 +374,7 @@ public class TestHFile extends HBaseTestCase {
   @Test
   public void testNullMetaBlocks() throws Exception {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    for (Compression.Algorithm compressAlgo : 
+    for (Compression.Algorithm compressAlgo :
         HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
       Path mFile = new Path(ROOT_DIR, "nometa_" + compressAlgo + ".hfile");
       FSDataOutputStream fout = createFSOutput(mFile);
@@ -512,8 +509,8 @@ public class TestHFile extends HBaseTestCase {
     newKey = HFileWriterImpl.getMidpoint(keyComparator, kv1, kv2);
     assertTrue(keyComparator.compare(kv1, newKey) < 0);
     assertTrue((keyComparator.compare(kv2, newKey)) > 0);
-    assertTrue(Arrays.equals(newKey.getFamily(), family));
-    assertTrue(Arrays.equals(newKey.getQualifier(), qualB));
+    assertTrue(Arrays.equals(CellUtil.cloneFamily(newKey), family));
+    assertTrue(Arrays.equals(CellUtil.cloneQualifier(newKey), qualB));
     assertTrue(newKey.getTimestamp() == HConstants.LATEST_TIMESTAMP);
     assertTrue(newKey.getTypeByte() == Type.Maximum.getCode());
 

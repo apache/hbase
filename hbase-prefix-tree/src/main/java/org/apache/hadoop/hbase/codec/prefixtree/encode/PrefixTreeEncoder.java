@@ -296,9 +296,9 @@ public class PrefixTreeEncoder implements CellOutputStream {
 
     // memstore timestamps
     if (includeMvccVersion) {
-      mvccVersions[totalCells] = cell.getMvccVersion();
-      mvccVersionEncoder.add(cell.getMvccVersion());
-      totalUnencodedBytes += WritableUtils.getVIntSize(cell.getMvccVersion());
+      mvccVersions[totalCells] = cell.getSequenceId();
+      mvccVersionEncoder.add(cell.getSequenceId());
+      totalUnencodedBytes += WritableUtils.getVIntSize(cell.getSequenceId());
     }else{
       //must overwrite in case there was a previous version in this array slot
       mvccVersions[totalCells] = 0L;

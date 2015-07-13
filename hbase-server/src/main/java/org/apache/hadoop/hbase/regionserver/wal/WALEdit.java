@@ -288,7 +288,7 @@ public class WALEdit implements Writable, HeapSize {
 
   public static FlushDescriptor getFlushDescriptor(Cell cell) throws IOException {
     if (CellUtil.matchingColumn(cell, METAFAMILY, FLUSH)) {
-      return FlushDescriptor.parseFrom(cell.getValue());
+      return FlushDescriptor.parseFrom(CellUtil.cloneValue(cell));
     }
     return null;
   }
@@ -302,7 +302,7 @@ public class WALEdit implements Writable, HeapSize {
 
   public static RegionEventDescriptor getRegionEventDescriptor(Cell cell) throws IOException {
     if (CellUtil.matchingColumn(cell, METAFAMILY, REGION_EVENT)) {
-      return RegionEventDescriptor.parseFrom(cell.getValue());
+      return RegionEventDescriptor.parseFrom(CellUtil.cloneValue(cell));
     }
     return null;
   }
@@ -336,7 +336,7 @@ public class WALEdit implements Writable, HeapSize {
    */
   public static CompactionDescriptor getCompaction(Cell kv) throws IOException {
     if (CellUtil.matchingColumn(kv, METAFAMILY, COMPACTION)) {
-      return CompactionDescriptor.parseFrom(kv.getValue());
+      return CompactionDescriptor.parseFrom(CellUtil.cloneValue(kv));
     }
     return null;
   }
@@ -365,7 +365,7 @@ public class WALEdit implements Writable, HeapSize {
    */
   public static WALProtos.BulkLoadDescriptor getBulkLoadDescriptor(Cell cell) throws IOException {
     if (CellUtil.matchingColumn(cell, METAFAMILY, BULK_LOAD)) {
-      return WALProtos.BulkLoadDescriptor.parseFrom(cell.getValue());
+      return WALProtos.BulkLoadDescriptor.parseFrom(CellUtil.cloneValue(cell));
     }
     return null;
   }

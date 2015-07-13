@@ -50,7 +50,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -406,7 +405,7 @@ public class TestVisibilityLabelsReplication {
           for (Cell cell : edits) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
             if (cf == null) {
-              cf = kv.getFamily();
+              cf = CellUtil.cloneFamily(kv);
             }
             Tag tag = new Tag((byte) NON_VIS_TAG_TYPE, attribute);
             List<Tag> tagList = new ArrayList<Tag>();
@@ -414,10 +413,6 @@ public class TestVisibilityLabelsReplication {
             tagList.addAll(kv.getTags());
             byte[] fromList = Tag.fromList(tagList);
             TagRewriteCell newcell = new TagRewriteCell(kv, fromList);
-            KeyValue newKV = new KeyValue(kv.getRow(), 0, kv.getRowLength(), kv.getFamily(), 0,
-                kv.getFamilyLength(), kv.getQualifier(), 0, kv.getQualifierLength(),
-                kv.getTimestamp(), KeyValue.Type.codeToType(kv.getType()), kv.getValue(), 0,
-                kv.getValueLength(), tagList);
             ((List<Cell>) updatedCells).add(newcell);
           }
         }

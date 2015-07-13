@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Map;
+import java.util.TreeMap;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,12 +53,6 @@ import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
-import java.io.IOException;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * A tool to replay WAL files as a M/R job.
@@ -106,8 +106,8 @@ public class WALPlayer extends Configured implements Tool {
         if (Bytes.equals(table, key.getTablename().getName())) {
           for (Cell cell : value.getCells()) {
             KeyValue kv = KeyValueUtil.ensureKeyValue(cell);
-            if (WALEdit.isMetaEditFamily(kv.getFamily())) continue;
-            context.write(new ImmutableBytesWritable(kv.getRow()), kv);
+            if (WALEdit.isMetaEditFamily(kv)) continue;
+            context.write(new ImmutableBytesWritable(CellUtil.cloneRow(kv)), kv);
           }
         }
       } catch (InterruptedException e) {
@@ -149,7 +149,7 @@ public class WALPlayer extends Configured implements Tool {
           Cell lastCell = null;
           for (Cell cell : value.getCells()) {
             // filtering WAL meta entries
-            if (WALEdit.isMetaEditFamily(cell.getFamily())) continue;
+            if (WALEdit.isMetaEditFamily(cell)) continue;
 
             // Allow a subclass filter out this cell.
             if (filter(context, cell)) {
@@ -163,9 +163,9 @@ public class WALPlayer extends Configured implements Tool {
                 if (put != null) context.write(tableOut, put);
                 if (del != null) context.write(tableOut, del);
                 if (CellUtil.isDelete(cell)) {
-                  del = new Delete(cell.getRow());
+                  del = new Delete(CellUtil.cloneRow(cell));
                 } else {
-                  put = new Put(cell.getRow());
+                  put = new Put(CellUtil.cloneRow(cell));
                 }
               }
               if (CellUtil.isDelete(cell)) {

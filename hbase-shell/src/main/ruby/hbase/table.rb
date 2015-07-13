@@ -224,7 +224,8 @@ EOF
 
       # Fetch cell value
       cell = result.listCells[0]
-      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
+      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValueArray, 
+        cell.getValueOffset, cell.getValueLength)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -371,8 +372,10 @@ EOF
       # Print out results.  Result can be Cell or RowResult.
       res = {}
       result.listCells.each do |c|
-        family = String.from_java_bytes(c.getFamily)
-        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
+        family = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getFamilyArray,
+          c.getFamilyOffset, c.getFamilyLength)
+        qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifierArray,
+          c.getQualifierOffset, c.getQualifierLength)
 
         column = "#{family}:#{qualifier}"
         value = to_string(column, c, maxlength)
@@ -403,7 +406,8 @@ EOF
 
       # Fetch cell value
       cell = result.listCells[0]
-      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValue)
+      org.apache.hadoop.hbase.util.Bytes::toLong(cell.getValueArray, 
+        cell.getValueOffset, cell.getValueLength)
     end
 
     def _hash_to_scan(args)
@@ -505,8 +509,10 @@ EOF
         key = org.apache.hadoop.hbase.util.Bytes::toStringBinary(row.getRow)
 
         row.listCells.each do |c|
-          family = String.from_java_bytes(c.getFamily)
-          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifier)
+          family = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getFamilyArray,
+            c.getFamilyOffset, c.getFamilyLength)
+          qualifier = org.apache.hadoop.hbase.util.Bytes::toStringBinary(c.getQualifierArray,
+            c.getQualifierOffset, c.getQualifierLength)
 
           column = "#{family}:#{qualifier}"
           cell = to_string(column, c, maxlength)
@@ -640,14 +646,17 @@ EOF
     def to_string(column, kv, maxlength = -1)
       if is_meta_table?
         if column == 'info:regioninfo' or column == 'info:splitA' or column == 'info:splitB'
-          hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValue)
+          hri = org.apache.hadoop.hbase.HRegionInfo.parseFromOrNull(kv.getValueArray,
+            kv.getValueOffset, kv.getValueLength)
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
         if column == 'info:serverstartcode'
           if kv.getValue.length > 0
-            str_val = org.apache.hadoop.hbase.util.Bytes.toLong(kv.getValue)
+            str_val = org.apache.hadoop.hbase.util.Bytes.toLong(kv.getValueArray, 
+              kv.getValueOffset, kv.getValueLength)
           else
-            str_val = org.apache.hadoop.hbase.util.Bytes.toStringBinary(kv.getValue)
+            str_val = org.apache.hadoop.hbase.util.Bytes.toStringBinary(kv.getValueArray,
+              kv.getValueOffset, kv.getValueLength)
           end
           return "timestamp=%d, value=%s" % [kv.getTimestamp, str_val]
         end
@@ -679,7 +688,7 @@ EOF
         end
       end
       method = eval(klazz_name).method(converter)
-      return method.call(kv.getValue) # apply the converter
+      return method.call(org.apache.hadoop.hbase.CellUtil.cloneValue(kv)) # apply the converter
     end
 
     # if the column spec contains CONVERTER information, to get rid of :CONVERTER info from column pair.

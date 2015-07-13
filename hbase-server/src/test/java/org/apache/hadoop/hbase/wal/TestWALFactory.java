@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -51,6 +52,12 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
+import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
+import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -67,14 +74,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
-
-// imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 
 /**
  * WAL tests that can be reused across providers.
@@ -521,8 +520,9 @@ public class TestWALFactory {
         assertTrue(Bytes.equals(info.getEncodedNameAsBytes(), key.getEncodedRegionName()));
         assertTrue(htd.getTableName().equals(key.getTablename()));
         Cell cell = val.getCells().get(0);
-        assertTrue(Bytes.equals(row, cell.getRow()));
-        assertEquals((byte)(i + '0'), cell.getValue()[0]);
+        assertTrue(Bytes.equals(row, 0, row.length, cell.getRowArray(), cell.getRowOffset(),
+          cell.getRowLength()));
+        assertEquals((byte)(i + '0'), CellUtil.cloneValue(cell)[0]);
         System.out.println(key + " " + val);
       }
     } finally {
@@ -574,8 +574,9 @@ public class TestWALFactory {
         assertTrue(Bytes.equals(hri.getEncodedNameAsBytes(),
           entry.getKey().getEncodedRegionName()));
         assertTrue(htd.getTableName().equals(entry.getKey().getTablename()));
-        assertTrue(Bytes.equals(row, val.getRow()));
-        assertEquals((byte)(idx + '0'), val.getValue()[0]);
+        assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
+          val.getRowLength()));
+        assertEquals((byte) (idx + '0'), CellUtil.cloneValue(val)[0]);
         System.out.println(entry.getKey() + " " + val);
         idx++;
       }
@@ -687,9 +688,10 @@ public class TestWALFactory {
         assertEquals(tableName, entry.getKey().getTablename());
         int idx = 0;
         for (Cell val : entry.getEdit().getCells()) {
-          assertTrue(Bytes.equals(row, val.getRow()));
+          assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
+            val.getRowLength()));
           String value = i + "" + idx;
-          assertArrayEquals(Bytes.toBytes(value), val.getValue());
+          assertArrayEquals(Bytes.toBytes(value), CellUtil.cloneValue(val));
           idx++;
         }
       }

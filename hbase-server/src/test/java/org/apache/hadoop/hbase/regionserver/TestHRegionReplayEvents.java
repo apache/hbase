@@ -279,7 +279,7 @@ public class TestHRegionReplayEvents {
     if (WALEdit.isMetaEditFamily(entry.getEdit().getCells().get(0))) {
       return 0; // handled elsewhere
     }
-    Put put = new Put(entry.getEdit().getCells().get(0).getRow());
+    Put put = new Put(CellUtil.cloneRow(entry.getEdit().getCells().get(0)));
     for (Cell cell : entry.getEdit().getCells()) put.add(cell);
     put.setDurability(Durability.SKIP_WAL);
     MutationReplay mutation = new MutationReplay(MutationType.PUT, put, 0, 0);

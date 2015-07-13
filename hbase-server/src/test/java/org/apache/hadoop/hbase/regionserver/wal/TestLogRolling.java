@@ -510,7 +510,8 @@ public class TestLogRolling  {
           while ((entry = reader.next()) != null) {
             LOG.debug("#"+entry.getKey().getLogSeqNum()+": "+entry.getEdit().getCells());
             for (Cell cell : entry.getEdit().getCells()) {
-              loggedRows.add(Bytes.toStringBinary(cell.getRow()));
+              loggedRows.add(Bytes.toStringBinary(cell.getRowArray(), cell.getRowOffset(),
+                cell.getRowLength()));
             }
           }
         } catch (EOFException e) {

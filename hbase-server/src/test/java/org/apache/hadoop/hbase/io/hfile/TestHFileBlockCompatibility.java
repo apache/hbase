@@ -480,7 +480,7 @@ public class TestHFileBlockCompatibility {
       this.dataBlockEncoder.encode(kv, dataBlockEncodingCtx, this.userDataStream);
       this.unencodedDataSizeWritten += kv.getLength();
       if (dataBlockEncodingCtx.getHFileContext().isIncludesMvcc()) {
-        this.unencodedDataSizeWritten += WritableUtils.getVIntSize(kv.getMvccVersion());
+        this.unencodedDataSizeWritten += WritableUtils.getVIntSize(kv.getSequenceId());
       }
     }
 

@@ -139,12 +139,6 @@ public class TestPayloadCarryingRpcController {
               }
 
               @Override
-              public long getMvccVersion() {
-                // unused
-                return 0;
-              }
-
-              @Override
               public long getSequenceId() {
                 // unused
                 return 0;
@@ -179,30 +173,6 @@ public class TestPayloadCarryingRpcController {
 
               @Override
               public byte[] getTagsArray() {
-                // unused
-                return null;
-              }
-
-              @Override
-              public byte[] getValue() {
-                // unused
-                return null;
-              }
-
-              @Override
-              public byte[] getFamily() {
-                // unused
-                return null;
-              }
-
-              @Override
-              public byte[] getQualifier() {
-                // unused
-                return null;
-              }
-
-              @Override
-              public byte[] getRow() {
                 // unused
                 return null;
               }

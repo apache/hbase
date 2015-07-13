@@ -125,7 +125,7 @@ public class TestHFileWriterV2 {
     writer.appendMetaBlock("CAPITAL_OF_FRANCE", new Text("Paris"));
 
     writer.close();
-    
+
 
     FSDataInputStream fsdis = fs.open(hfilePath);
 
@@ -144,7 +144,7 @@ public class TestHFileWriterV2 {
                         .withIncludesTags(false)
                         .withCompression(compressAlgo)
                         .build();
-    
+
     HFileBlock.FSReader blockReader = new HFileBlock.FSReaderImpl(fsdis, fileSize, meta);
     // Comparator class name is stored in the trailer in version 2.
     CellComparator comparator = trailer.createComparator();
@@ -162,12 +162,12 @@ public class TestHFileWriterV2 {
     dataBlockIndexReader.readMultiLevelIndexRoot(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX),
         trailer.getDataIndexCount());
-    
+
     if (findMidKey) {
       Cell midkey = dataBlockIndexReader.midkey();
       assertNotNull("Midkey should not be null", midkey);
     }
-    
+
     // Meta index.
     metaBlockIndexReader.readRootIndex(
         blockIter.nextBlockWithBlockType(BlockType.ROOT_INDEX)
@@ -215,8 +215,10 @@ public class TestHFileWriterV2 {
         }
 
         // A brute-force check to see that all keys and values are correct.
-        assertTrue(Bytes.compareTo(key, keyValues.get(entriesRead).getKey()) == 0);
-        assertTrue(Bytes.compareTo(value, keyValues.get(entriesRead).getValue()) == 0);
+        KeyValue kv = keyValues.get(entriesRead);
+        assertTrue(Bytes.compareTo(key, kv.getKey()) == 0);
+        assertTrue(Bytes.compareTo(value, 0, value.length, kv.getValueArray(), kv.getValueOffset(),
+          kv.getValueLength()) == 0);
 
         ++entriesRead;
       }

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -102,7 +103,7 @@ public class TestHalfStoreFileReader {
     HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
     r.loadFileInfo();
     Cell midKV = r.midkey();
-    byte[] midkey = ((KeyValue.KeyOnlyKeyValue)midKV).getRow();
+    byte[] midkey = CellUtil.cloneRow(midKV);
 
     //System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
 
@@ -167,7 +168,7 @@ public class TestHalfStoreFileReader {
       HFile.Reader r = HFile.createReader(fs, p, cacheConf, conf);
       r.loadFileInfo();
       Cell midKV = r.midkey();
-      byte[] midkey = ((KeyValue.KeyOnlyKeyValue)midKV).getRow();
+      byte[] midkey = CellUtil.cloneRow(midKV);
 
       Reference bottom = new Reference(midkey, Reference.Range.bottom);
       Reference top = new Reference(midkey, Reference.Range.top);

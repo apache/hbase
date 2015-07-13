@@ -37,6 +37,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -51,11 +52,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
-import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -63,14 +59,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.DefaultWALProvider;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
+import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests invocation of the
@@ -216,14 +217,14 @@ public class TestWALObserver {
     List<Cell> cells = edit.getCells();
 
     for (Cell cell : cells) {
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[0])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[0])) {
         foundFamily0 = true;
       }
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[2])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[2])) {
         foundFamily2 = true;
       }
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[1])) {
-        if (!Arrays.equals(cell.getValue(), TEST_VALUE[1])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[1])) {
+        if (!Arrays.equals(CellUtil.cloneValue(cell), TEST_VALUE[1])) {
           modifiedFamily1 = true;
         }
       }
@@ -244,14 +245,14 @@ public class TestWALObserver {
     foundFamily2 = false;
     modifiedFamily1 = false;
     for (Cell cell : cells) {
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[0])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[0])) {
         foundFamily0 = true;
       }
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[2])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[2])) {
         foundFamily2 = true;
       }
-      if (Arrays.equals(cell.getFamily(), TEST_FAMILY[1])) {
-        if (!Arrays.equals(cell.getValue(), TEST_VALUE[1])) {
+      if (Arrays.equals(CellUtil.cloneFamily(cell), TEST_FAMILY[1])) {
+        if (!Arrays.equals(CellUtil.cloneValue(cell), TEST_VALUE[1])) {
           modifiedFamily1 = true;
         }
       }
@@ -462,7 +463,7 @@ public class TestWALObserver {
   /*
    * Creates an HRI around an HTD that has <code>tableName</code> and three
    * column families named.
-   * 
+   *
    * @param tableName Name of table to use when we create HTableDescriptor.
    */
   private HRegionInfo createBasic3FamilyHRegionInfo(final String tableName) {
@@ -496,7 +497,7 @@ public class TestWALObserver {
 
   /**
    * Copied from HRegion.
-   * 
+   *
    * @param familyMap
    *          map of family->edits
    * @param walEdit

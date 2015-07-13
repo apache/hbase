@@ -33,11 +33,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -45,13 +45,13 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.WALPlayer.WALKeyValueMapper;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
+import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
@@ -123,7 +123,7 @@ public class TestWALPlayer {
         new String[] {walInputDir, TABLENAME1.getNameAsString(),
         TABLENAME2.getNameAsString() }));
 
-    
+
     // verify the WAL was player into table 2
     Get g = new Get(ROW);
     Result r = t2.get(g);
@@ -151,15 +151,13 @@ public class TestWALPlayer {
     WALKey key = mock(WALKey.class);
     when(key.getTablename()).thenReturn(TableName.valueOf("table"));
     @SuppressWarnings("unchecked")
-    Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue>.Context context =
-        mock(Context.class);
+    Mapper<WALKey, WALEdit, ImmutableBytesWritable, KeyValue>.Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(configuration);
 
     WALEdit value = mock(WALEdit.class);
     ArrayList<Cell> values = new ArrayList<Cell>();
-    KeyValue kv1 = mock(KeyValue.class);
-    when(kv1.getFamily()).thenReturn(Bytes.toBytes("family"));
-    when(kv1.getRow()).thenReturn(Bytes.toBytes("row"));
+    KeyValue kv1 = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"), null);
+
     values.add(kv1);
     when(value.getCells()).thenReturn(values);
     mapper.setup(context);
@@ -171,7 +169,7 @@ public class TestWALPlayer {
         ImmutableBytesWritable writer = (ImmutableBytesWritable) invocation.getArguments()[0];
         KeyValue key = (KeyValue) invocation.getArguments()[1];
         assertEquals("row", Bytes.toString(writer.get()));
-        assertEquals("row", Bytes.toString(key.getRow()));
+        assertEquals("row", Bytes.toString(CellUtil.cloneRow(key)));
         return null;
       }
     }).when(context).write(any(ImmutableBytesWritable.class), any(KeyValue.class));

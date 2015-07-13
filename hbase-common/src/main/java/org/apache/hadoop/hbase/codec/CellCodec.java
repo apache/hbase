@@ -56,7 +56,7 @@ public class CellCodec implements Codec {
       // Value
       write(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
       // MvccVersion
-      this.out.write(Bytes.toBytes(cell.getMvccVersion()));
+      this.out.write(Bytes.toBytes(cell.getSequenceId()));
     }
 
     /**

@@ -107,12 +107,6 @@ public class TagRewriteCell implements Cell, SettableSequenceId, SettableTimesta
   }
 
   @Override
-  @Deprecated
-  public long getMvccVersion() {
-    return getSequenceId();
-  }
-
-  @Override
   public long getSequenceId() {
     return cell.getSequenceId();
   }
@@ -149,30 +143,6 @@ public class TagRewriteCell implements Cell, SettableSequenceId, SettableTimesta
       return 0;
     }
     return this.tags.length;
-  }
-
-  @Override
-  @Deprecated
-  public byte[] getValue() {
-    return cell.getValue();
-  }
-
-  @Override
-  @Deprecated
-  public byte[] getFamily() {
-    return cell.getFamily();
-  }
-
-  @Override
-  @Deprecated
-  public byte[] getQualifier() {
-    return cell.getQualifier();
-  }
-
-  @Override
-  @Deprecated
-  public byte[] getRow() {
-    return cell.getRow();
   }
 
   @Override

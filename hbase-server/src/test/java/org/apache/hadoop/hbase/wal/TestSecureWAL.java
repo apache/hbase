@@ -39,19 +39,16 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.log4j.Level;
-
-// imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -123,12 +120,12 @@ public class TestSecureWAL {
       List<Cell> cells = entry.getEdit().getCells();
       assertTrue("Should be one KV per WALEdit", cells.size() == 1);
       for (Cell cell: cells) {
-        byte[] thisRow = cell.getRow();
-        assertTrue("Incorrect row", Bytes.equals(thisRow, row));
-        byte[] thisFamily = cell.getFamily();
-        assertTrue("Incorrect family", Bytes.equals(thisFamily, family));
-        byte[] thisValue = cell.getValue();
-        assertTrue("Incorrect value", Bytes.equals(thisValue, value));
+        assertTrue("Incorrect row", Bytes.equals(cell.getRowArray(), cell.getRowOffset(),
+          cell.getRowLength(), row, 0, row.length));
+        assertTrue("Incorrect family", Bytes.equals(cell.getFamilyArray(), cell.getFamilyOffset(),
+          cell.getFamilyLength(), family, 0, family.length));
+        assertTrue("Incorrect value", Bytes.equals(cell.getValueArray(), cell.getValueOffset(),
+          cell.getValueLength(), value, 0, value.length));
       }
     }
     assertEquals("Should have read back as many KVs as written", total, count);

@@ -93,7 +93,8 @@ public class TestKeyValue extends TestCase {
   private void check(final byte [] row, final byte [] family, byte [] qualifier,
     final long timestamp, final byte [] value) {
     KeyValue kv = new KeyValue(row, family, qualifier, timestamp, value);
-    assertTrue(Bytes.compareTo(kv.getRow(), row) == 0);
+    assertTrue(Bytes.compareTo(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), row, 0,
+      row.length) == 0);
     assertTrue(CellUtil.matchingColumn(kv, family, qualifier));
     // Call toString to make sure it works.
     LOG.info(kv.toString());
@@ -390,9 +391,10 @@ public class TestKeyValue extends TestCase {
         // keys are still the same
         assertTrue(kv1.equals(kv1ko));
         // but values are not
-        assertTrue(kv1ko.getValue().length == (useLen?Bytes.SIZEOF_INT:0));
+        assertTrue(kv1ko.getValueLength() == (useLen?Bytes.SIZEOF_INT:0));
         if (useLen) {
-          assertEquals(kv1.getValueLength(), Bytes.toInt(kv1ko.getValue()));
+          assertEquals(kv1.getValueLength(),
+            Bytes.toInt(kv1ko.getValueArray(), kv1ko.getValueOffset(), kv1ko.getValueLength()));
         }
       }
     }
@@ -442,10 +444,14 @@ public class TestKeyValue extends TestCase {
     KeyValue kv = new KeyValue(row, cf, q, HConstants.LATEST_TIMESTAMP, value, new Tag[] {
         new Tag((byte) 1, metaValue1), new Tag((byte) 2, metaValue2) });
     assertTrue(kv.getTagsLength() > 0);
-    assertTrue(Bytes.equals(kv.getRow(), row));
-    assertTrue(Bytes.equals(kv.getFamily(), cf));
-    assertTrue(Bytes.equals(kv.getQualifier(), q));
-    assertTrue(Bytes.equals(kv.getValue(), value));
+    assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), row, 0,
+      row.length));
+    assertTrue(Bytes.equals(kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength(), cf, 0,
+      cf.length));
+    assertTrue(Bytes.equals(kv.getQualifierArray(), kv.getQualifierOffset(),
+      kv.getQualifierLength(), q, 0, q.length));
+    assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(), value, 0,
+      value.length));
     List<Tag> tags = kv.getTags();
     assertNotNull(tags);
     assertEquals(2, tags.size());
@@ -492,7 +498,7 @@ public class TestKeyValue extends TestCase {
     Bytes.equals(next.getValue(), metaValue2);
     assertFalse(tagItr.hasNext());
   }
-  
+
   public void testMetaKeyComparator() {
     CellComparator c = CellComparator.META_COMPARATOR;
     long now = System.currentTimeMillis();
@@ -500,23 +506,23 @@ public class TestKeyValue extends TestCase {
     KeyValue a = new KeyValue(Bytes.toBytes("table1"), now);
     KeyValue b = new KeyValue(Bytes.toBytes("table2"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table1,111"), now);
     b = new KeyValue(Bytes.toBytes("table2"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table1"), now);
     b = new KeyValue(Bytes.toBytes("table2,111"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table,111"), now);
     b = new KeyValue(Bytes.toBytes("table,2222"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table,111,aaaa"), now);
     b = new KeyValue(Bytes.toBytes("table,2222"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table,111"), now);
     b = new KeyValue(Bytes.toBytes("table,2222.bbb"), now);
     assertTrue(c.compare(a, b) < 0);
@@ -524,7 +530,7 @@ public class TestKeyValue extends TestCase {
     a = new KeyValue(Bytes.toBytes("table,,aaaa"), now);
     b = new KeyValue(Bytes.toBytes("table,111,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table,111,aaaa"), now);
     b = new KeyValue(Bytes.toBytes("table,111,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
@@ -532,7 +538,7 @@ public class TestKeyValue extends TestCase {
     a = new KeyValue(Bytes.toBytes("table,111,xxxx"), now);
     b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
-    
+
     a = new KeyValue(Bytes.toBytes("table,111,11,xxx"), now);
     b = new KeyValue(Bytes.toBytes("table,111,222,bbb"), now);
     assertTrue(c.compare(a, b) < 0);
@@ -590,12 +596,6 @@ public class TestKeyValue extends TestCase {
       return this.kv.getTagsOffset();
     }
 
-    // used to achieve atomic operations in the memstore.
-    @Override
-    public long getMvccVersion() {
-      return this.kv.getMvccVersion();
-    }
-
     /**
      * used to achieve atomic operations in the memstore.
      */
@@ -613,7 +613,7 @@ public class TestKeyValue extends TestCase {
     }
 
     /**
-     * 
+     *
      * @return Timestamp
      */
     @Override
@@ -727,34 +727,6 @@ public class TestKeyValue extends TestCase {
     @Override
     public int getQualifierLength() {
       return this.kv.getQualifierLength();
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getValue() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getFamily() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getQualifier() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    @Deprecated
-    public byte[] getRow() {
-      // TODO Auto-generated method stub
-      return null;
     }
 
     /**

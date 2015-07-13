@@ -393,7 +393,7 @@ public class HBaseFsck extends Configured implements Closeable {
           LOG.info("Failed to create lock file " + hbckLockFilePath.getName()
               + ", try=" + (retryCounter.getAttemptTimes() + 1) + " of "
               + retryCounter.getMaxAttempts());
-          LOG.debug("Failed to create lock file " + hbckLockFilePath.getName(), 
+          LOG.debug("Failed to create lock file " + hbckLockFilePath.getName(),
               ioe);
           try {
             exception = ioe;
@@ -880,7 +880,7 @@ public class HBaseFsck extends Configured implements Closeable {
           hf = HFile.createReader(fs, hfile.getPath(), cacheConf, getConf());
           hf.loadFileInfo();
           Cell startKv = hf.getFirstKey();
-          start = startKv.getRow();
+          start = CellUtil.cloneRow(startKv);
           Cell endKv = hf.getLastKey();
           end = CellUtil.cloneRow(endKv);
         } catch (IOException ioe) {
@@ -2685,10 +2685,10 @@ public class HBaseFsck extends Configured implements Closeable {
         }
         regionsFromMeta = Ordering.natural().immutableSortedCopy(regions);
       }
-      
+
       return regionsFromMeta;
     }
-    
+
     private class IntegrityFixSuggester extends TableIntegrityErrorHandlerImpl {
       ErrorReporter errors;
 

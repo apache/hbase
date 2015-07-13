@@ -58,7 +58,7 @@ public class CellCodecWithTags implements Codec {
       // Tags
       write(cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength());
       // MvccVersion
-      this.out.write(Bytes.toBytes(cell.getMvccVersion()));
+      this.out.write(Bytes.toBytes(cell.getSequenceId()));
     }
 
     /**

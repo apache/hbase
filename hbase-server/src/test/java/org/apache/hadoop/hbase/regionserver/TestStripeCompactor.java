@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -175,7 +176,7 @@ public class TestStripeCompactor {
     List<byte[]> boundaries = new ArrayList<byte[]>();
     boundaries.add(left);
     for (int i = 1; i < output.length; ++i) {
-      boundaries.add(output[i][0].getRow());
+      boundaries.add(CellUtil.cloneRow(output[i][0]));
     }
     boundaries.add(right);
     writers.verifyBoundaries(boundaries.toArray(new byte[][] {}));

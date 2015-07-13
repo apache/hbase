@@ -34,14 +34,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.HFileLink;
@@ -54,6 +53,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -171,9 +172,9 @@ public class TestStoreFile extends HBaseTestCase {
     // may be in middle of row.  Create new one with empty column and
     // timestamp.
     Cell kv = reader.midkey();
-    byte [] midRow = kv.getRow();
+    byte [] midRow = CellUtil.cloneRow(kv);
     kv = reader.getLastKey();
-    byte [] finalRow = kv.getRow();
+    byte [] finalRow = CellUtil.cloneRow(kv);
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
     Path refPath = splitStoreFile(regionFs, splitHri, TEST_FAMILY, hsf, midRow, true);
@@ -186,11 +187,13 @@ public class TestStoreFile extends HBaseTestCase {
       ByteBuffer bb = ByteBuffer.wrap(((KeyValue) s.getKey()).getKey());
       kv = KeyValueUtil.createKeyValueFromKey(bb);
       if (first) {
-        assertTrue(Bytes.equals(kv.getRow(), midRow));
+        assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), midRow, 0,
+          midRow.length));
         first = false;
       }
     }
-    assertTrue(Bytes.equals(kv.getRow(), finalRow));
+    assertTrue(Bytes.equals(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength(), finalRow, 0,
+      finalRow.length));
   }
 
   @Test
@@ -301,7 +304,7 @@ public class TestStoreFile extends HBaseTestCase {
     // Now confirm that I can read from the ref to link
     HFileScanner sB = hsfB.createReader().getScanner(false, false);
     sB.seekTo();
-    
+
     //count++ as seekTo() will advance the scanner
     count++;
     while (sB.next()) {
@@ -316,7 +319,7 @@ public class TestStoreFile extends HBaseTestCase {
       throws IOException {
     Cell midkey = f.createReader().midkey();
     KeyValue midKV = (KeyValue)midkey;
-    byte [] midRow = midKV.getRow();
+    byte [] midRow = CellUtil.cloneRow(midKV);
     // Create top split.
     HRegionInfo topHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
         null, midRow);
@@ -384,9 +387,9 @@ public class TestStoreFile extends HBaseTestCase {
       assertTrue(fs.exists(f.getPath()));
       topPath = splitStoreFile(regionFs, topHri, TEST_FAMILY, f, badmidkey, true);
       bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, badmidkey, false);
-      
+
       assertNull(bottomPath);
-      
+
       top = new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE).createReader();
       // Now read from the top.
       first = true;
@@ -402,7 +405,8 @@ public class TestStoreFile extends HBaseTestCase {
           first = false;
           KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
           LOG.info("First top when key < bottom: " + keyKV);
-          String tmp = Bytes.toString(keyKV.getRow());
+          String tmp =
+              Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
           for (int i = 0; i < tmp.length(); i++) {
             assertTrue(tmp.charAt(i) == 'a');
           }
@@ -410,7 +414,7 @@ public class TestStoreFile extends HBaseTestCase {
       }
       KeyValue keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last top when key < bottom: " + keyKV);
-      String tmp = Bytes.toString(keyKV.getRow());
+      String tmp = Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
       for (int i = 0; i < tmp.length(); i++) {
         assertTrue(tmp.charAt(i) == 'z');
       }
@@ -434,7 +438,7 @@ public class TestStoreFile extends HBaseTestCase {
           first = false;
           keyKV = KeyValueUtil.createKeyValueFromKey(key);
           LOG.info("First bottom when key > top: " + keyKV);
-          tmp = Bytes.toString(keyKV.getRow());
+          tmp = Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
           for (int i = 0; i < tmp.length(); i++) {
             assertTrue(tmp.charAt(i) == 'a');
           }
@@ -443,7 +447,8 @@ public class TestStoreFile extends HBaseTestCase {
       keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(Bytes.toString(keyKV.getRow()).charAt(i) == 'z');
+        assertTrue(Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength())
+            .charAt(i) == 'z');
       }
     } finally {
       if (top != null) {
@@ -500,7 +505,7 @@ public class TestStoreFile extends HBaseTestCase {
         + ", expected no more than " + maxFalsePos + ")",
         falsePos <= maxFalsePos);
   }
-  
+
   private static final int BLOCKSIZE_SMALL = 8192;
 
   @Test
@@ -909,7 +914,7 @@ public class TestStoreFile extends HBaseTestCase {
       KeyValue keyv1 = KeyValueUtil.ensureKeyValue(kv1);
       KeyValue keyv2 = KeyValueUtil.ensureKeyValue(kv2);
       assertTrue(Bytes.compareTo(
-          keyv1.getBuffer(), keyv1.getKeyOffset(), keyv1.getKeyLength(), 
+          keyv1.getBuffer(), keyv1.getKeyOffset(), keyv1.getKeyLength(),
           keyv2.getBuffer(), keyv2.getKeyOffset(), keyv2.getKeyLength()) == 0);
       assertTrue(Bytes.compareTo(
           kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength(),

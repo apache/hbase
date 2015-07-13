@@ -285,7 +285,7 @@ public class TestBulkLoad {
 
     @Override
     protected boolean matchesSafely(WALEdit item) {
-      assertTrue(Arrays.equals(item.getCells().get(0).getQualifier(), typeBytes));
+      assertTrue(Arrays.equals(CellUtil.cloneQualifier(item.getCells().get(0)), typeBytes));
       BulkLoadDescriptor desc;
       try {
         desc = WALEdit.getBulkLoadDescriptor(item.getCells().get(0));

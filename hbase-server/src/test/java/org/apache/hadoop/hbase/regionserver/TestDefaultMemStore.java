@@ -70,7 +70,7 @@ public class TestDefaultMemStore extends TestCase {
   private static final int QUALIFIER_COUNT = ROW_COUNT;
   private static final byte [] FAMILY = Bytes.toBytes("column");
   private MultiVersionConsistencyControl mvcc;
-  private AtomicLong startSeqNum = new AtomicLong(0); 
+  private AtomicLong startSeqNum = new AtomicLong(0);
 
   @Override
   public void setUp() throws Exception {
@@ -88,7 +88,9 @@ public class TestDefaultMemStore extends TestCase {
     this.memstore.add(samekey);
     Cell found = this.memstore.cellSet.first();
     assertEquals(1, this.memstore.cellSet.size());
-    assertTrue(Bytes.toString(found.getValue()), CellUtil.matchingValue(samekey, found));
+    assertTrue(
+      Bytes.toString(found.getValueArray(), found.getValueOffset(), found.getValueLength()),
+      CellUtil.matchingValue(samekey, found));
   }
 
   /**
@@ -179,7 +181,7 @@ public class TestDefaultMemStore extends TestCase {
   /**
    * A simple test which verifies the 3 possible states when scanning across snapshot.
    * @throws IOException
-   * @throws CloneNotSupportedException 
+   * @throws CloneNotSupportedException
    */
   public void testScanAcrossSnapshot2() throws IOException, CloneNotSupportedException {
     // we are going to the scanning across snapshot with two kvs
@@ -843,7 +845,7 @@ public class TestDefaultMemStore extends TestCase {
     assert(newSize > oldSize);
     //The kv1 should be removed.
     assert(memstore.cellSet.size() == 2);
-    
+
     KeyValue kv4 = KeyValueTestUtil.create("r", "f", "q", 104, "v");
     kv4.setSequenceId(1);
     l.clear(); l.add(kv4);
@@ -855,12 +857,12 @@ public class TestDefaultMemStore extends TestCase {
   }
 
   ////////////////////////////////////
-  // Test for periodic memstore flushes 
+  // Test for periodic memstore flushes
   // based on time of oldest edit
   ////////////////////////////////////
 
   /**
-   * Tests that the timeOfOldestEdit is updated correctly for the 
+   * Tests that the timeOfOldestEdit is updated correctly for the
    * various edit operations in memstore.
    * @throws Exception
    */
@@ -876,7 +878,7 @@ public class TestDefaultMemStore extends TestCase {
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"));
       t = memstore.timeOfOldestEdit();
       assertTrue(t == 1234);
-      // snapshot() will reset timeOfOldestEdit. The method will also assert the 
+      // snapshot() will reset timeOfOldestEdit. The method will also assert the
       // value is reset to Long.MAX_VALUE
       t = runSnapshot(memstore);
 
@@ -903,7 +905,7 @@ public class TestDefaultMemStore extends TestCase {
    * Tests the HRegion.shouldFlush method - adds an edit in the memstore
    * and checks that shouldFlush returns true, and another where it disables
    * the periodic flush functionality and tests whether shouldFlush returns
-   * false. 
+   * false.
    * @throws Exception
    */
   public void testShouldFlush() throws Exception {
@@ -973,7 +975,7 @@ public class TestDefaultMemStore extends TestCase {
     long t = 1234;
     @Override
     public long currentTime() {
-      return t; 
+      return t;
     }
     public void setCurrentTimeMillis(long t) {
       this.t = t;

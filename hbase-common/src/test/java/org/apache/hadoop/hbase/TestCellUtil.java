@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -155,12 +157,6 @@ public class TestCellUtil {
     }
 
     @Override
-    public long getMvccVersion() {
-      // TODO Auto-generated method stub
-      return 0;
-    }
-
-    @Override
     public byte[] getValueArray() {
       // TODO Auto-generated method stub
       return null;
@@ -188,30 +184,6 @@ public class TestCellUtil {
     public int getTagsOffset() {
       // TODO Auto-generated method stub
       return 0;
-    }
-
-    @Override
-    public byte[] getValue() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public byte[] getFamily() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public byte[] getQualifier() {
-      // TODO Auto-generated method stub
-      return null;
-    }
-
-    @Override
-    public byte[] getRow() {
-      // TODO Auto-generated method stub
-      return null;
     }
 
     @Override
@@ -593,11 +565,6 @@ public class TestCellUtil {
     }
 
     @Override
-    public long getMvccVersion() {
-      return 0;
-    }
-
-    @Override
     public long getSequenceId() {
       return 0;
     }
@@ -637,26 +604,6 @@ public class TestCellUtil {
         tagsLen -= KeyValue.TAGS_LENGTH_SIZE;
       }
       return tagsLen;
-    }
-
-    @Override
-    public byte[] getValue() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public byte[] getFamily() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public byte[] getQualifier() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public byte[] getRow() {
-      throw new UnsupportedOperationException();
     }
 
     @Override

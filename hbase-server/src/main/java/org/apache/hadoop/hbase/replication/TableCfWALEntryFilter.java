@@ -25,9 +25,10 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 public class TableCfWALEntryFilter implements WALEntryFilter {
 
@@ -62,7 +63,7 @@ public class TableCfWALEntryFilter implements WALEntryFilter {
         Cell cell = cells.get(i);
         // ignore(remove) kv if its cf isn't in the replicable cf list
         // (empty cfs means all cfs of this table are replicable)
-        if ((cfs != null && !cfs.contains(Bytes.toString(cell.getFamily())))) {
+        if ((cfs != null && !cfs.contains(Bytes.toString(CellUtil.cloneFamily(cell))))) {
           cells.remove(i);
         }
       }

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -354,7 +355,7 @@ public class RegionReplicaReplicationEndpoint extends HBaseReplicationEndpoint {
       }
 
       sinkWriter.append(buffer.getTableName(), buffer.getEncodedRegionName(),
-        entries.get(0).getEdit().getCells().get(0).getRow(), entries);
+        CellUtil.cloneRow(entries.get(0).getEdit().getCells().get(0)), entries);
     }
 
     @Override

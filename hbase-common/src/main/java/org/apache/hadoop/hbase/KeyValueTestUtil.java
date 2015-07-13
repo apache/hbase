@@ -73,9 +73,9 @@ public class KeyValueTestUtil {
 
   /**
    * Checks whether KeyValues from kvCollection2 are contained in kvCollection1.
-   * 
+   *
    * The comparison is made without distinguishing MVCC version of the KeyValues
-   * 
+   *
    * @param kvCollection1
    * @param kvCollection2
    * @return true if KeyValues from kvCollection2 are contained in kvCollection1
@@ -91,7 +91,7 @@ public class KeyValueTestUtil {
     }
     return true;
   }
-  
+
   public static List<KeyValue> rewindThenToList(final ByteBuffer bb,
       final boolean includesMemstoreTS, final boolean useTags) {
     bb.rewind();
@@ -161,15 +161,16 @@ public class KeyValueTestUtil {
   }
 
   protected static String getRowString(final KeyValue kv) {
-    return Bytes.toStringBinary(kv.getRow());
+    return Bytes.toStringBinary(kv.getRowArray(), kv.getRowOffset(), kv.getRowLength());
   }
 
   protected static String getFamilyString(final KeyValue kv) {
-    return Bytes.toStringBinary(kv.getFamily());
+    return Bytes.toStringBinary(kv.getFamilyArray(), kv.getFamilyOffset(), kv.getFamilyLength());
   }
 
   protected static String getQualifierString(final KeyValue kv) {
-    return Bytes.toStringBinary(kv.getQualifier());
+    return Bytes.toStringBinary(kv.getQualifierArray(), kv.getQualifierOffset(),
+      kv.getQualifierLength());
   }
 
   protected static String getTimestampString(final KeyValue kv) {
@@ -177,11 +178,11 @@ public class KeyValueTestUtil {
   }
 
   protected static String getTypeString(final KeyValue kv) {
-    return KeyValue.Type.codeToType(kv.getType()).toString();
+    return KeyValue.Type.codeToType(kv.getTypeByte()).toString();
   }
 
   protected static String getValueString(final KeyValue kv) {
-    return Bytes.toStringBinary(kv.getValue());
+    return Bytes.toStringBinary(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength());
   }
 
 }

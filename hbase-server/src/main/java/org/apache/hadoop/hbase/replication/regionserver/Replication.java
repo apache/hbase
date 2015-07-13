@@ -244,7 +244,7 @@ public class Replication extends WALActionsListener.Base implements
         new TreeMap<byte[], Integer>(Bytes.BYTES_COMPARATOR);
     byte[] family;
     for (Cell cell : logEdit.getCells()) {
-      family = cell.getFamily();
+      family = CellUtil.cloneFamily(cell);
       // This is expected and the KV should not be replicated
       if (CellUtil.matchingFamily(cell, WALEdit.METAFAMILY)) continue;
       // Unexpected, has a tendency to happen in unit tests

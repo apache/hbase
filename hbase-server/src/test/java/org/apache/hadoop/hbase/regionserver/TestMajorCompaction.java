@@ -76,7 +76,7 @@ public class TestMajorCompaction {
   private static final Log LOG = LogFactory.getLog(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
-  
+
   private Region r = null;
   private HTableDescriptor htd = null;
   private static final byte [] COLUMN_FAMILY = fam1;
@@ -355,7 +355,7 @@ public class TestMajorCompaction {
       HFileScanner scanner = f.getReader().getScanner(false, false);
       scanner.seekTo();
       do {
-        byte [] row = scanner.getCell().getRow();
+        byte [] row = CellUtil.cloneRow(scanner.getCell());
         if (Bytes.equals(row, STARTROW)) {
           count1++;
         } else if(Bytes.equals(row, secondRowBytes)) {
@@ -434,7 +434,7 @@ public class TestMajorCompaction {
     assertNotNull("Expected to receive a compaction request", request);
     assertEquals(
       "User-requested major compaction should always occur, even if there are too many store files",
-      true, 
+      true,
       request.isMajor());
   }
 
@@ -457,7 +457,7 @@ public class TestMajorCompaction {
       List<Cell> results = new ArrayList<Cell>();
       boolean result = s.next(results);
       assertTrue(!results.isEmpty());
-      r.delete(new Delete(results.get(0).getRow()));
+      r.delete(new Delete(CellUtil.cloneRow(results.get(0))));
       if (!result) break;
     } while (true);
     s.close();

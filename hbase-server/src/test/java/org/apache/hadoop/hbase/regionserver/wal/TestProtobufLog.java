@@ -26,12 +26,11 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -62,8 +61,6 @@ import org.junit.rules.TestName;
  */
 @Category({RegionServerTests.class, MediumTests.class})
 public class TestProtobufLog {
-  private static final Log LOG = LogFactory.getLog(TestProtobufLog.class);
-
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   protected FileSystem fs;
@@ -189,9 +186,10 @@ public class TestProtobufLog {
         assertEquals(tableName, entry.getKey().getTablename());
         int idx = 0;
         for (Cell val : entry.getEdit().getCells()) {
-          assertTrue(Bytes.equals(row, val.getRow()));
+          assertTrue(Bytes.equals(row, 0, row.length, val.getRowArray(), val.getRowOffset(),
+            val.getRowLength()));
           String value = i + "" + idx;
-          assertArrayEquals(Bytes.toBytes(value), val.getValue());
+          assertArrayEquals(Bytes.toBytes(value), CellUtil.cloneValue(val));
           idx++;
         }
       }

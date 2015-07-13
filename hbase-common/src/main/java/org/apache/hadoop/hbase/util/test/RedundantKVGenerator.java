@@ -301,7 +301,7 @@ public class RedundantKVGenerator {
     for (KeyValue kv : keyValues) {
       totalSize += kv.getLength();
       if (includesMemstoreTS) {
-        totalSize += WritableUtils.getVIntSize(kv.getMvccVersion());
+        totalSize += WritableUtils.getVIntSize(kv.getSequenceId());
       }
     }
 
@@ -309,7 +309,7 @@ public class RedundantKVGenerator {
     for (KeyValue kv : keyValues) {
       result.put(kv.getBuffer(), kv.getOffset(), kv.getLength());
       if (includesMemstoreTS) {
-        ByteBufferUtils.writeVLong(result, kv.getMvccVersion());
+        ByteBufferUtils.writeVLong(result, kv.getSequenceId());
       }
     }
     return result;

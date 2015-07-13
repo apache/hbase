@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -131,7 +132,7 @@ public class TestHFileBlock {
 
       // generate it or repeat, it should compress well
       if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        row = keyValues.get(randomizer.nextInt(keyValues.size())).getRow();
+        row = CellUtil.cloneRow(keyValues.get(randomizer.nextInt(keyValues.size())));
       } else {
         row = new byte[FIELD_LENGTH];
         randomizer.nextBytes(row);
@@ -140,17 +141,16 @@ public class TestHFileBlock {
         family = new byte[FIELD_LENGTH];
         randomizer.nextBytes(family);
       } else {
-        family = keyValues.get(0).getFamily();
+        family = CellUtil.cloneFamily(keyValues.get(0));
       }
       if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        qualifier = keyValues.get(
-            randomizer.nextInt(keyValues.size())).getQualifier();
+        qualifier = CellUtil.cloneQualifier(keyValues.get(randomizer.nextInt(keyValues.size())));
       } else {
         qualifier = new byte[FIELD_LENGTH];
         randomizer.nextBytes(qualifier);
       }
       if (0 < i && randomizer.nextFloat() < CHANCE_TO_REPEAT) {
-        value = keyValues.get(randomizer.nextInt(keyValues.size())).getValue();
+        value = CellUtil.cloneValue(keyValues.get(randomizer.nextInt(keyValues.size())));
       } else {
         value = new byte[FIELD_LENGTH];
         randomizer.nextBytes(value);
@@ -837,7 +837,7 @@ public class TestHFileBlock {
                           .withBytesPerCheckSum(HFile.DEFAULT_BYTES_PER_CHECKSUM)
                           .withChecksumType(ChecksumType.NULL).build();
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
-          HFileBlock.FILL_HEADER, -1, 
+          HFileBlock.FILL_HEADER, -1,
           0, meta);
       long byteBufferExpectedSize =
           ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)

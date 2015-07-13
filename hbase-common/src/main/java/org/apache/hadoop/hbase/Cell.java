@@ -44,12 +44,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
  * the goal of sorting newer cells first.
  * </p>
  * <p>
- * This interface should not include methods that allocate new byte[]'s such as those used in client
- * or debugging code. These users should use the methods found in the {@link CellUtil} class.
- * Currently for to minimize the impact of existing applications moving between 0.94 and 0.96, we
- * include the costly helper methods marked as deprecated.   
- * </p>
- * <p>
  * Cell implements Comparable&lt;Cell&gt; which is only meaningful when
  * comparing to other keys in the
  * same table. It uses CellComparator which does not work on the -ROOT- and hbase:meta tables.
@@ -146,19 +140,7 @@ public interface Cell {
   byte getTypeByte();
 
 
-  //6) MvccVersion
-
-  /**
-   * @deprecated as of 1.0, use {@link Cell#getSequenceId()}
-   * 
-   * Internal use only. A region-specific sequence ID given to each operation. It always exists for
-   * cells in the memstore but is not retained forever. It may survive several flushes, but
-   * generally becomes irrelevant after the cell's row is no longer involved in any operations that
-   * require strict consistency.
-   * @return mvccVersion (always &gt;= 0 if exists), or 0 if it no longer exists
-   */
-  @Deprecated
-  long getMvccVersion();
+  //6) SequenceId
 
   /**
    * A region-specific unique monotonically increasing sequence ID given to each Cell. It always
@@ -187,7 +169,7 @@ public interface Cell {
    * @return Number of value bytes.  Must be &lt; valueArray.length - offset.
    */
   int getValueLength();
-  
+
   /**
    * @return the tags byte array
    */
@@ -202,44 +184,4 @@ public interface Cell {
    * @return the total length of the tags in the Cell.
    */
   int getTagsLength();
-  
-  /**
-   * WARNING do not use, expensive.  This gets an arraycopy of the cell's value.
-   *
-   * Added to ease transition from  0.94 -&gt; 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link CellUtil#cloneValue(Cell)}
-   */
-  @Deprecated
-  byte[] getValue();
-  
-  /**
-   * WARNING do not use, expensive.  This gets an arraycopy of the cell's family. 
-   *
-   * Added to ease transition from  0.94 -&gt; 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link CellUtil#cloneFamily(Cell)}
-   */
-  @Deprecated
-  byte[] getFamily();
-
-  /**
-   * WARNING do not use, expensive.  This gets an arraycopy of the cell's qualifier.
-   *
-   * Added to ease transition from  0.94 -&gt; 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link CellUtil#cloneQualifier(Cell)}
-   */
-  @Deprecated
-  byte[] getQualifier();
-
-  /**
-   * WARNING do not use, expensive.  this gets an arraycopy of the cell's row.
-   *
-   * Added to ease transition from  0.94 -&gt; 0.96.
-   * 
-   * @deprecated as of 0.96, use {@link CellUtil#getRowByte(Cell, int)}
-   */
-  @Deprecated
-  byte[] getRow();
 }

@@ -115,7 +115,8 @@ public class RemoteHTable implements Table {
             if (o instanceof byte[]) {
               sb.append(Bytes.toStringBinary((byte[])o));
             } else if (o instanceof KeyValue) {
-              sb.append(Bytes.toStringBinary(((KeyValue)o).getQualifier()));
+              sb.append(Bytes.toStringBinary(((KeyValue) o).getRowArray(),
+                ((KeyValue) o).getRowOffset(), ((KeyValue) o).getRowLength()));
             } else {
               throw new RuntimeException("object type not handled");
             }

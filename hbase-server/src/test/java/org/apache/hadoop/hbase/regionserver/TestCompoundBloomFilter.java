@@ -207,8 +207,8 @@ public class TestCompoundBloomFilter {
       // Test for false negatives (not allowed).
       int numChecked = 0;
       for (KeyValue kv : kvs) {
-        byte[] row = kv.getRow();
-        boolean present = isInBloom(scanner, row, kv.getQualifier());
+        byte[] row = CellUtil.cloneRow(kv);
+        boolean present = isInBloom(scanner, row, CellUtil.cloneQualifier(kv));
         assertTrue(testIdMsg + " Bloom filter false negative on row "
             + Bytes.toStringBinary(row) + " after " + numChecked
             + " successful checks", present);
@@ -358,9 +358,10 @@ public class TestCompoundBloomFilter {
     KeyValue rowKV = KeyValueUtil.createKeyValueFromKey(rowKey);
     KeyValue rowColKV = KeyValueUtil.createKeyValueFromKey(rowColKey);
     assertEquals(rowKV.getTimestamp(), rowColKV.getTimestamp());
-    assertEquals(Bytes.toStringBinary(rowKV.getRow()),
-        Bytes.toStringBinary(rowColKV.getRow()));
-    assertEquals(0, rowKV.getQualifier().length);
+    assertEquals(Bytes.toStringBinary(rowKV.getRowArray(), rowKV.getRowOffset(),
+      rowKV.getRowLength()), Bytes.toStringBinary(rowColKV.getRowArray(), rowColKV.getRowOffset(),
+      rowColKV.getRowLength()));
+    assertEquals(0, rowKV.getQualifierLength());
   }
 
 

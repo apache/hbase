@@ -34,6 +34,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
@@ -168,7 +169,7 @@ public class StripeStoreFileManager
     // Order matters for this call.
     result.addSublist(state.level0Files);
     if (!state.stripeFiles.isEmpty()) {
-      int lastStripeIndex = findStripeForRow(targetKey.getRow(), false);
+      int lastStripeIndex = findStripeForRow(CellUtil.cloneRow(targetKey), false);
       for (int stripeIndex = lastStripeIndex; stripeIndex >= 0; --stripeIndex) {
         result.addSublist(state.stripeFiles.get(stripeIndex));
       }

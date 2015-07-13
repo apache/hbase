@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.column.data;
 
 import java.util.List;
 
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.codec.prefixtree.column.TestColumnData;
 import org.apache.hadoop.hbase.util.ByteRange;
@@ -40,7 +41,7 @@ public class TestColumnDataRandom implements TestColumnData {
     ByteRangeSet sortedColumns = new ByteRangeTreeSet();
     List<KeyValue> d = generator.generateTestKeyValues(numColumns);
     for (KeyValue col : d) {
-      ByteRange colRange = new SimpleMutableByteRange(col.getQualifier());
+      ByteRange colRange = new SimpleMutableByteRange(CellUtil.cloneQualifier(col));
       inputs.add(colRange);
       sortedColumns.add(colRange);
     }

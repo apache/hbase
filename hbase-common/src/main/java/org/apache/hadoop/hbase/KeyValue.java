@@ -50,12 +50,13 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * An HBase Key/Value. This is the fundamental HBase Type.
  * <p>
- * HBase applications and users should use the Cell interface and avoid directly using KeyValue
- * and member functions not defined in Cell.
+ * HBase applications and users should use the Cell interface and avoid directly using KeyValue and
+ * member functions not defined in Cell.
  * <p>
- * If being used client-side, the primary methods to access individual fields are {@link #getRow()},
- * {@link #getFamily()}, {@link #getQualifier()}, {@link #getTimestamp()}, and {@link #getValue()}.
- * These methods allocate new byte arrays and return copies. Avoid their use server-side.
+ * If being used client-side, the primary methods to access individual fields are
+ * {@link #getRowArray()}, {@link #getFamilyArray()}, {@link #getQualifierArray()},
+ * {@link #getTimestamp()}, and {@link #getValueArray()}. These methods allocate new byte arrays
+ * and return copies. Avoid their use server-side.
  * <p>
  * Instances of this class are immutable. They do not implement Comparable but Comparators are
  * provided. Comparators change with context, whether user table or a catalog table comparison. Its
@@ -64,23 +65,20 @@ import com.google.common.annotations.VisibleForTesting;
  * <p>
  * KeyValue wraps a byte array and takes offsets and lengths into passed array at where to start
  * interpreting the content as KeyValue. The KeyValue format inside a byte array is:
- * <code>&lt;keylength&gt; &lt;valuelength&gt; &lt;key&gt; &lt;value&gt;</code>
- * Key is further decomposed as:
- * <code>&lt;rowlength&gt; &lt;row&gt; &lt;columnfamilylength&gt;
+ * <code>&lt;keylength&gt; &lt;valuelength&gt; &lt;key&gt; &lt;value&gt;</code> Key is further
+ * decomposed as: <code>&lt;rowlength&gt; &lt;row&gt; &lt;columnfamilylength&gt;
  * &lt;columnfamily&gt; &lt;columnqualifier&gt;
- * &lt;timestamp&gt; &lt;keytype&gt;</code>
- * The <code>rowlength</code> maximum is <code>Short.MAX_SIZE</code>, column family length maximum
- * is <code>Byte.MAX_SIZE</code>, and column qualifier + key length must be &lt;
- * <code>Integer.MAX_SIZE</code>. The column does not contain the family/qualifier delimiter,
- * {@link #COLUMN_FAMILY_DELIMITER}<br>
+ * &lt;timestamp&gt; &lt;keytype&gt;</code> The <code>rowlength</code> maximum is
+ * <code>Short.MAX_SIZE</code>, column family length maximum is <code>Byte.MAX_SIZE</code>, and
+ * column qualifier + key length must be &lt; <code>Integer.MAX_SIZE</code>. The column does not
+ * contain the family/qualifier delimiter, {@link #COLUMN_FAMILY_DELIMITER}<br>
  * KeyValue can optionally contain Tags. When it contains tags, it is added in the byte array after
  * the value part. The format for this part is: <code>&lt;tagslength&gt;&lt;tagsbytes&gt;</code>.
  * <code>tagslength</code> maximum is <code>Short.MAX_SIZE</code>. The <code>tagsbytes</code>
  * contain one or more tags where as each tag is of the form
- * <code>&lt;taglength&gt;&lt;tagtype&gt;&lt;tagbytes&gt;</code>.
- * <code>tagtype</code> is one byte and
- * <code>taglength</code> maximum is <code>Short.MAX_SIZE</code> and it includes 1 byte type length
- * and actual tag bytes length.
+ * <code>&lt;taglength&gt;&lt;tagtype&gt;&lt;tagbytes&gt;</code>. <code>tagtype</code> is one byte
+ * and <code>taglength</code> maximum is <code>Short.MAX_SIZE</code> and it includes 1 byte type
+ * length and actual tag bytes length.
  */
 @InterfaceAudience.Private
 public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
@@ -295,12 +293,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   }
 
   /** Here be dragons **/
-
-  // used to achieve atomic operations in the memstore.
-  @Override
-  public long getMvccVersion() {
-    return this.getSequenceId();
-  }
 
   /**
    * used to achieve atomic operations in the memstore.
@@ -1172,9 +1164,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
    */
   public Map<String, Object> toStringMap() {
     Map<String, Object> stringMap = new HashMap<String, Object>();
-    stringMap.put("row", Bytes.toStringBinary(getRow()));
-    stringMap.put("family", Bytes.toStringBinary(getFamily()));
-    stringMap.put("qualifier", Bytes.toStringBinary(getQualifier()));
+    stringMap.put("row", Bytes.toStringBinary(getRowArray(), getRowOffset(), getRowLength()));
+    stringMap.put("family",
+      Bytes.toStringBinary(getFamilyArray(), getFamilyOffset(), getFamilyLength()));
+    stringMap.put("qualifier",
+      Bytes.toStringBinary(getQualifierArray(), getQualifierOffset(), getQualifierLength()));
     stringMap.put("timestamp", getTimestamp());
     stringMap.put("vlen", getValueLength());
     List<Tag> tags = getTags();
@@ -1472,10 +1466,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   //---------------------------------------------------------------------------
 
   /**
-   * Do not use unless you have to.  Used internally for compacting and testing.
-   *
-   * Use {@link #getRow()}, {@link #getFamily()}, {@link #getQualifier()}, and
-   * {@link #getValue()} if accessing a KeyValue client-side.
+   * Do not use unless you have to. Used internally for compacting and testing. Use
+   * {@link #getRowArray()}, {@link #getFamilyArray()}, {@link #getQualifierArray()}, and
+   * {@link #getValueArray()} if accessing a KeyValue client-side.
    * @return Copy of the key portion only.
    */
   public byte [] getKey() {
@@ -1483,33 +1476,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     byte [] key = new byte[keylength];
     System.arraycopy(getBuffer(), getKeyOffset(), key, 0, keylength);
     return key;
-  }
-
-  /**
-   * Returns value in a new byte array.
-   * Primarily for use client-side. If server-side, use
-   * {@link #getBuffer()} with appropriate offsets and lengths instead to
-   * save on allocations.
-   * @return Value in a new byte array.
-   */
-  @Override
-  @Deprecated // use CellUtil.getValueArray()
-  public byte [] getValue() {
-    return CellUtil.cloneValue(this);
-  }
-
-  /**
-   * Primarily for use client-side.  Returns the row of this KeyValue in a new
-   * byte array.<p>
-   *
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and
-   * lengths instead.
-   * @return Row in a new byte array.
-   */
-  @Override
-  @Deprecated // use CellUtil.getRowArray()
-  public byte [] getRow() {
-    return CellUtil.cloneRow(this);
   }
 
   /**
@@ -1554,35 +1520,6 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
   @Deprecated // use CellUtil#isDelete
   public boolean isDelete() {
     return KeyValue.isDelete(getType());
-  }
-
-  /**
-   * Primarily for use client-side.  Returns the family of this KeyValue in a
-   * new byte array.<p>
-   *
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and
-   * lengths instead.
-   * @return Returns family. Makes a copy.
-   */
-  @Override
-  @Deprecated // use CellUtil.getFamilyArray
-  public byte [] getFamily() {
-    return CellUtil.cloneFamily(this);
-  }
-
-  /**
-   * Primarily for use client-side.  Returns the column qualifier of this
-   * KeyValue in a new byte array.<p>
-   *
-   * If server-side, use {@link #getBuffer()} with appropriate offsets and
-   * lengths instead.
-   * Use {@link #getBuffer()} with appropriate offsets and lengths instead.
-   * @return Returns qualifier. Makes a copy.
-   */
-  @Override
-  @Deprecated // use CellUtil.getQualifierArray
-  public byte [] getQualifier() {
-    return CellUtil.cloneQualifier(this);
   }
 
   /**

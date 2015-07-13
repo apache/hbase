@@ -329,7 +329,7 @@ public class ScanQueryMatcher {
      *    they affect
      */
     byte typeByte = cell.getTypeByte();
-    long mvccVersion = cell.getMvccVersion();
+    long mvccVersion = cell.getSequenceId();
     if (CellUtil.isDelete(cell)) {
       if (keepDeletedCells == KeepDeletedCells.FALSE
           || (keepDeletedCells == KeepDeletedCells.TTL && timestamp < ttl)) {
