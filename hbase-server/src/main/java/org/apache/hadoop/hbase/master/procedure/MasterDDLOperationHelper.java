@@ -91,7 +91,8 @@ public final class MasterDDLOperationHelper {
       final MasterProcedureEnv env,
       final TableName tableName,
       List<HRegionInfo> regionInfoList,
-      final byte[] familyName) throws IOException {
+      final byte[] familyName,
+      boolean hasMob) throws IOException {
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing family=" + Bytes.toString(familyName) + " from table=" + tableName);
@@ -101,7 +102,7 @@ public final class MasterDDLOperationHelper {
     }
     for (HRegionInfo hri : regionInfoList) {
       // Delete the family directory in FS for all the regions one by one
-      mfs.deleteFamilyFromFS(hri, familyName);
+      mfs.deleteFamilyFromFS(hri, familyName, hasMob);
     }
   }
 

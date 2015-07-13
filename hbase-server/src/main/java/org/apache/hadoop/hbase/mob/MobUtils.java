@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -869,5 +870,28 @@ public class MobUtils {
     } catch (IllegalArgumentException e) {
       return false;
     }
+  }
+  
+  /**
+   * Archive mob store files
+   * @param conf The current configuration.
+   * @param fs The current file system.
+   * @param mobRegionInfo The mob family region info.
+   * @param mobFamilyDir The mob family directory.
+   * @param family The name of the column family.
+   * @throws IOException
+   */
+  public static void archiveMobStoreFiles(Configuration conf, FileSystem fs,
+      HRegionInfo mobRegionInfo, Path mobFamilyDir, byte[] family) throws IOException {
+    // disable the block cache.
+    Configuration copyOfConf = HBaseConfiguration.create(conf);
+    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
+    CacheConfig cacheConfig = new CacheConfig(copyOfConf);
+    FileStatus[] fileStatus = FSUtils.listStatus(fs, mobFamilyDir);
+    List<StoreFile> storeFileList = new ArrayList<StoreFile>();
+    for (FileStatus file : fileStatus) {
+      storeFileList.add(new StoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE));
+    }
+    HFileArchiver.archiveStoreFiles(conf, fs, mobRegionInfo, mobFamilyDir, family, storeFileList);
   }
 }

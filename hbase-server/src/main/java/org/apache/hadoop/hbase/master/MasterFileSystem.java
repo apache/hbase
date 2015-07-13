@@ -46,9 +46,10 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
@@ -573,7 +574,7 @@ public class MasterFileSystem {
     //      @see HRegion.checkRegioninfoOnFilesystem()
   }
 
-  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName)
+  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName, boolean hasMob)
       throws IOException {
     // archive family store files
     Path tableDir = FSUtils.getTableDir(rootdir, region.getTable());
@@ -588,6 +589,22 @@ public class MasterFileSystem {
             + Bytes.toString(familyName) + " from FileSystem for region "
             + region.getRegionNameAsString() + "(" + region.getEncodedName()
             + ")");
+      }
+    }
+    // archive and delete mob files
+    if (hasMob) {
+      Path mobTableDir =
+          FSUtils.getTableDir(new Path(getRootDir(), MobConstants.MOB_DIR_NAME), region.getTable());
+      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(region.getTable());
+      Path mobFamilyDir =
+          new Path(mobTableDir,
+              new Path(mobRegionInfo.getEncodedName(), Bytes.toString(familyName)));
+      // archive mob family store files
+      MobUtils.archiveMobStoreFiles(conf, fs, mobRegionInfo, mobFamilyDir, familyName);
+      if (!fs.delete(mobFamilyDir, true)) {
+        throw new IOException("Could not delete mob store files for family "
+            + Bytes.toString(familyName) + " from FileSystem region "
+            + mobRegionInfo.getRegionNameAsString() + "(" + mobRegionInfo.getEncodedName() + ")");
       }
     }
   }

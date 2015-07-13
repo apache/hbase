@@ -312,7 +312,7 @@ public class AddColumnFamilyProcedure
       // Remove the column family from file system and update the table descriptor to
       // the before-add-column-family-state
       MasterDDLOperationHelper.deleteColumnFamilyFromFileSystem(env, tableName,
-        getRegionInfoList(env), cfDescriptor.getName());
+        getRegionInfoList(env), cfDescriptor.getName(), cfDescriptor.isMobEnabled());
 
       env.getMasterServices().getTableDescriptors().add(unmodifiedHTableDescriptor);
 
