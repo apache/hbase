@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -47,9 +47,6 @@ public class TestEnableTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestEnableTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -73,9 +70,6 @@ public class TestEnableTableProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -97,35 +91,12 @@ public class TestEnableTableProcedure {
 
     // Enable the table
     long procId = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+      new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
     MasterProcedureTestingUtility.validateTableIsEnabled(UTIL.getHBaseCluster().getMaster(),
       tableName);
-  }
-
-  @Test(timeout = 60000)
-  public void testEnableTableTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testEnableTableTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
-    UTIL.getHBaseAdmin().disableTable(tableName);
-
-    // Enable the table
-    long procId1 = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(
-      new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
   }
 
   @Test(timeout=60000, expected=TableNotDisabledException.class)
@@ -137,7 +108,7 @@ public class TestEnableTableProcedure {
 
     // Enable the table - expect failure
     long procId1 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
     ProcedureResult result = procExec.getResult(procId1);
@@ -147,9 +118,7 @@ public class TestEnableTableProcedure {
 
     // Enable the table with skipping table state check flag (simulate recovery scenario)
     long procId2 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, true),
-        nonceGroup + 1,
-        nonce + 1);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, true));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -157,9 +126,7 @@ public class TestEnableTableProcedure {
     // Enable the table - expect failure from ProcedurePrepareLatch
     final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
     long procId3 = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch),
-        nonceGroup + 2,
-        nonce + 2);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false, prepareLatch));
     prepareLatch.await();
     Assert.fail("Enable should throw exception through latch.");
   }
@@ -179,7 +146,7 @@ public class TestEnableTableProcedure {
 
     // Start the Enable procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = EnableTableState.values().length;
@@ -207,7 +174,7 @@ public class TestEnableTableProcedure {
 
     // Start the Enable procedure && kill the executor
     long procId = procExec.submitProcedure(
-        new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
 
     int numberOfSteps = EnableTableState.values().length - 2; // failing in the middle of proc
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(

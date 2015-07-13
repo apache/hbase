@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Matchers;
@@ -67,10 +66,6 @@ public class TestHBaseAdminNoCluster {
    * @throws MasterNotRunningException
    * @throws ServiceException
    */
-  //TODO: Clean up, with Procedure V2 and nonce to prevent the same procedure to call mulitple
-  // time, this test is invalid anymore. Just keep the test around for some time before
-  // fully removing it.
-  @Ignore
   @Test
   public void testMasterMonitorCallableRetries()
   throws MasterNotRunningException, ZooKeeperConnectionException, IOException, ServiceException {

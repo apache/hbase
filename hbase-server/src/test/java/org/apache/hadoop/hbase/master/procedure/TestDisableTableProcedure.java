@@ -24,7 +24,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -34,6 +33,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DisableTableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -47,9 +47,6 @@ public class TestDisableTableProcedure {
   private static final Log LOG = LogFactory.getLog(TestDisableTableProcedure.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
 
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
@@ -73,9 +70,6 @@ public class TestDisableTableProcedure {
   @Before
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
   }
 
   @After
@@ -96,7 +90,7 @@ public class TestDisableTableProcedure {
 
     // Disable the table
     long procId = procExec.submitProcedure(
-      new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+      new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
@@ -113,7 +107,7 @@ public class TestDisableTableProcedure {
 
     // Disable the table
     long procId1 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+        procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
@@ -122,7 +116,7 @@ public class TestDisableTableProcedure {
 
     // Disable the table again - expect failure
     long procId2 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false), nonceGroup + 1, nonce + 1);
+        procExec.getEnvironment(), tableName, false));
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureResult result = procExec.getResult(procId2);
@@ -135,7 +129,7 @@ public class TestDisableTableProcedure {
       final ProcedurePrepareLatch prepareLatch = new ProcedurePrepareLatch.CompatibilityLatch();
 
       long procId3 = procExec.submitProcedure(new DisableTableProcedure(
-          procExec.getEnvironment(), tableName, false, prepareLatch), nonceGroup + 2, nonce + 2);
+          procExec.getEnvironment(), tableName, false, prepareLatch));
       prepareLatch.await();
       Assert.fail("Disable should throw exception through latch.");
     } catch (TableNotEnabledException tnee) {
@@ -153,29 +147,6 @@ public class TestDisableTableProcedure {
       tableName);
   }
 
-  @Test(timeout = 60000)
-  public void testDisableTableTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testDisableTableTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2");
-
-    // Disable the table
-    long procId1 = procExec.submitProcedure(new DisableTableProcedure(
-        procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(new DisableTableProcedure(
-      procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
-    // Wait the completion
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-    assertTrue(procId1 == procId2);
-  }
-
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
@@ -189,8 +160,9 @@ public class TestDisableTableProcedure {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
     // Start the Disable procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+    long procId =
+        procExec.submitProcedure(new DisableTableProcedure(procExec.getEnvironment(), tableName,
+            false));
 
     // Restart the executor and execute the step twice
     int numberOfSteps = DisableTableState.values().length;
