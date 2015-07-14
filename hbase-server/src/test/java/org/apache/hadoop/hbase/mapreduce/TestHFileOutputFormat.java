@@ -335,7 +335,6 @@ public class TestHFileOutputFormat  {
     job.setWorkingDirectory(util.getDataTestDir("testJobConfiguration"));
     HTable table = Mockito.mock(HTable.class);
     setupMockStartKeys(table);
-    setupMockTableName(table);
     HFileOutputFormat.configureIncrementalLoad(job, table);
     assertEquals(job.getNumReduceTasks(), 4);
   }
@@ -777,11 +776,6 @@ public class TestHFileOutputFormat  {
     Mockito.doReturn(mockKeys).when(table).getStartKeys();
   }
 
-  private void setupMockTableName(HTable table) throws IOException {
-    TableName mockTableName = TableName.valueOf("mock_table");
-    Mockito.doReturn(mockTableName).when(table).getName();
-  }
-
   /**
    * Test that {@link HFileOutputFormat} RecordWriter uses compression and
    * bloom filter settings from the column family descriptor
@@ -810,9 +804,6 @@ public class TestHFileOutputFormat  {
       // pollutes the GZip codec pool with an incompatible compressor.
       conf.set("io.seqfile.compression.type", "NONE");
       conf.set("hbase.fs.tmp.dir", dir.toString());
-      // turn locality off to eliminate getRegionLocation fail-and-retry time when writing kvs
-      conf.setBoolean(HFileOutputFormat2.LOCALITY_SENSITIVE_CONF_KEY, false);
-
       Job job = new Job(conf, "testLocalMRIncrementalLoad");
       job.setWorkingDirectory(util.getDataTestDirOnTestFS("testColumnFamilySettings"));
       setupRandomGeneratorMapper(job);
