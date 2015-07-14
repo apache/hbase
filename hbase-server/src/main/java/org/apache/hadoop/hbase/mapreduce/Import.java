@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -482,8 +481,6 @@ public class Import {
         + " Filter#filterKeyValue(KeyValue) method to determine if the KeyValue should be added;"
         + " Filter.ReturnCode#INCLUDE and #INCLUDE_AND_NEXT_COL will be considered as including"
         + " the KeyValue.");
-    System.err.println("To import data exported from HBase 0.94, use");
-    System.err.println("  -Dhbase.import.version=0.94");
     System.err.println("For performance consider the following options:\n"
         + "  -Dmapred.map.tasks.speculative.execution=false\n"
         + "  -Dmapred.reduce.tasks.speculative.execution=false\n"
@@ -540,16 +537,6 @@ public class Import {
       // Flush all the regions of the table
       flushRegionsIfNecessary(conf);
     }
-    long inputRecords = job.getCounters().findCounter(TaskCounter.MAP_INPUT_RECORDS).getValue();
-    long outputRecords = job.getCounters().findCounter(TaskCounter.MAP_OUTPUT_RECORDS).getValue();
-    if (outputRecords < inputRecords) {
-      System.err.println("Warning, not all records were imported (maybe filtered out).");
-      if (outputRecords == 0) {
-        System.err.println("If the data was exported from HBase 0.94 "+
-            "consider using -Dhbase.import.version=0.94.");
-      }
-    }
-
     System.exit(job.waitForCompletion(true) ? 0 : 1);
   }
 }
