@@ -569,7 +569,7 @@ Checkin the _CHANGES.txt_ and any version changes.
 
 . Update the documentation.
 +
-Update the documentation under _src/main/docbkx_.
+Update the documentation under _src/main/asciidoc_.
 This usually involves copying the latest from trunk and making version-particular adjustments to suit this release candidate version. 
 
 . Build the source tarball.
@@ -1846,13 +1846,13 @@ The instructions and preferences around the way to create patches have changed, 
   This is the indication that the patch was not created with `--no-prefix`.
 +
 ----
-diff --git a/src/main/docbkx/developer.xml b/src/main/docbkx/developer.xml
+diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
 ----
 
 * If the first line of the patch looks similar to the following (without the `a` and `b`), the patch was created with +git diff --no-prefix+ and you need to add `-p0` to the +git apply+                                        command below.
 +
 ----
-diff --git src/main/docbkx/developer.xml src/main/docbkx/developer.xml
+diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
 ----
 
 +
