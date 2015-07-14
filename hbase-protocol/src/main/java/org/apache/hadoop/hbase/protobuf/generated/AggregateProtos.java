@@ -50,17 +50,17 @@ public final class AggregateProtos {
     com.google.protobuf.ByteString
         getInterpreterClassNameBytes();
 
-    // required .Scan scan = 2;
+    // required .hbase.pb.Scan scan = 2;
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     boolean hasScan();
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan();
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder();
 
@@ -75,7 +75,7 @@ public final class AggregateProtos {
     com.google.protobuf.ByteString getInterpreterSpecificBytes();
   }
   /**
-   * Protobuf type {@code AggregateRequest}
+   * Protobuf type {@code hbase.pb.AggregateRequest}
    */
   public static final class AggregateRequest extends
       com.google.protobuf.GeneratedMessage
@@ -162,12 +162,12 @@ public final class AggregateProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.Builder.class);
     }
@@ -255,23 +255,23 @@ public final class AggregateProtos {
       }
     }
 
-    // required .Scan scan = 2;
+    // required .hbase.pb.Scan scan = 2;
     public static final int SCAN_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan scan_;
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     public boolean hasScan() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan() {
       return scan_;
     }
     /**
-     * <code>required .Scan scan = 2;</code>
+     * <code>required .hbase.pb.Scan scan = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder() {
       return scan_;
@@ -487,19 +487,19 @@ public final class AggregateProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code AggregateRequest}
+     * Protobuf type {@code hbase.pb.AggregateRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest.Builder.class);
       }
@@ -544,7 +544,7 @@ public final class AggregateProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateRequest getDefaultInstanceForType() {
@@ -767,18 +767,18 @@ public final class AggregateProtos {
         return this;
       }
 
-      // required .Scan scan = 2;
+      // required .hbase.pb.Scan scan = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan scan_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder> scanBuilder_;
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public boolean hasScan() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan getScan() {
         if (scanBuilder_ == null) {
@@ -788,7 +788,7 @@ public final class AggregateProtos {
         }
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public Builder setScan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan value) {
         if (scanBuilder_ == null) {
@@ -804,7 +804,7 @@ public final class AggregateProtos {
         return this;
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public Builder setScan(
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder builderForValue) {
@@ -818,7 +818,7 @@ public final class AggregateProtos {
         return this;
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public Builder mergeScan(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan value) {
         if (scanBuilder_ == null) {
@@ -837,7 +837,7 @@ public final class AggregateProtos {
         return this;
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public Builder clearScan() {
         if (scanBuilder_ == null) {
@@ -850,7 +850,7 @@ public final class AggregateProtos {
         return this;
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder getScanBuilder() {
         bitField0_ |= 0x00000002;
@@ -858,7 +858,7 @@ public final class AggregateProtos {
         return getScanFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder getScanOrBuilder() {
         if (scanBuilder_ != null) {
@@ -868,7 +868,7 @@ public final class AggregateProtos {
         }
       }
       /**
-       * <code>required .Scan scan = 2;</code>
+       * <code>required .hbase.pb.Scan scan = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Scan.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanOrBuilder> 
@@ -920,7 +920,7 @@ public final class AggregateProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:AggregateRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.AggregateRequest)
     }
 
     static {
@@ -928,7 +928,7 @@ public final class AggregateProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:AggregateRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AggregateRequest)
   }
 
   public interface AggregateResponseOrBuilder
@@ -986,7 +986,7 @@ public final class AggregateProtos {
     com.google.protobuf.ByteString getSecondPart();
   }
   /**
-   * Protobuf type {@code AggregateResponse}
+   * Protobuf type {@code hbase.pb.AggregateResponse}
    */
   public static final class AggregateResponse extends
       com.google.protobuf.GeneratedMessage
@@ -1066,12 +1066,12 @@ public final class AggregateProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse.Builder.class);
     }
@@ -1325,19 +1325,19 @@ public final class AggregateProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code AggregateResponse}
+     * Protobuf type {@code hbase.pb.AggregateResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse.class, org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse.Builder.class);
       }
@@ -1375,7 +1375,7 @@ public final class AggregateProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_AggregateResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.internal_static_hbase_pb_AggregateResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse getDefaultInstanceForType() {
@@ -1630,7 +1630,7 @@ public final class AggregateProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:AggregateResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.AggregateResponse)
     }
 
     static {
@@ -1638,11 +1638,11 @@ public final class AggregateProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:AggregateResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AggregateResponse)
   }
 
   /**
-   * Protobuf service {@code AggregateService}
+   * Protobuf service {@code hbase.pb.AggregateService}
    *
    * <pre>
    ** Refer to the AggregateImplementation class for an overview of the 
@@ -1655,7 +1655,7 @@ public final class AggregateProtos {
 
     public interface Interface {
       /**
-       * <code>rpc GetMax(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetMax(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getMax(
           com.google.protobuf.RpcController controller,
@@ -1663,7 +1663,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetMin(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetMin(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getMin(
           com.google.protobuf.RpcController controller,
@@ -1671,7 +1671,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetSum(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetSum(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getSum(
           com.google.protobuf.RpcController controller,
@@ -1679,7 +1679,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetRowNum(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetRowNum(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getRowNum(
           com.google.protobuf.RpcController controller,
@@ -1687,7 +1687,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetAvg(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetAvg(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getAvg(
           com.google.protobuf.RpcController controller,
@@ -1695,7 +1695,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetStd(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetStd(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getStd(
           com.google.protobuf.RpcController controller,
@@ -1703,7 +1703,7 @@ public final class AggregateProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
       /**
-       * <code>rpc GetMedian(.AggregateRequest) returns (.AggregateResponse);</code>
+       * <code>rpc GetMedian(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
        */
       public abstract void getMedian(
           com.google.protobuf.RpcController controller,
@@ -1872,7 +1872,7 @@ public final class AggregateProtos {
     }
 
     /**
-     * <code>rpc GetMax(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetMax(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getMax(
         com.google.protobuf.RpcController controller,
@@ -1880,7 +1880,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetMin(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetMin(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getMin(
         com.google.protobuf.RpcController controller,
@@ -1888,7 +1888,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetSum(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetSum(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getSum(
         com.google.protobuf.RpcController controller,
@@ -1896,7 +1896,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetRowNum(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetRowNum(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getRowNum(
         com.google.protobuf.RpcController controller,
@@ -1904,7 +1904,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetAvg(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetAvg(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getAvg(
         com.google.protobuf.RpcController controller,
@@ -1912,7 +1912,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetStd(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetStd(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getStd(
         com.google.protobuf.RpcController controller,
@@ -1920,7 +1920,7 @@ public final class AggregateProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AggregateProtos.AggregateResponse> done);
 
     /**
-     * <code>rpc GetMedian(.AggregateRequest) returns (.AggregateResponse);</code>
+     * <code>rpc GetMedian(.hbase.pb.AggregateRequest) returns (.hbase.pb.AggregateResponse);</code>
      */
     public abstract void getMedian(
         com.google.protobuf.RpcController controller,
@@ -2301,19 +2301,19 @@ public final class AggregateProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:AggregateService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AggregateService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_AggregateRequest_descriptor;
+    internal_static_hbase_pb_AggregateRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_AggregateRequest_fieldAccessorTable;
+      internal_static_hbase_pb_AggregateRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_AggregateResponse_descriptor;
+    internal_static_hbase_pb_AggregateResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_AggregateResponse_fieldAccessorTable;
+      internal_static_hbase_pb_AggregateResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -2323,40 +2323,43 @@ public final class AggregateProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Aggregate.proto\032\014Client.proto\"k\n\020Aggre" +
-      "gateRequest\022\036\n\026interpreter_class_name\030\001 " +
-      "\002(\t\022\023\n\004scan\030\002 \002(\0132\005.Scan\022\"\n\032interpreter_" +
-      "specific_bytes\030\003 \001(\014\"<\n\021AggregateRespons" +
-      "e\022\022\n\nfirst_part\030\001 \003(\014\022\023\n\013second_part\030\002 \001" +
-      "(\0142\357\002\n\020AggregateService\022/\n\006GetMax\022\021.Aggr" +
-      "egateRequest\032\022.AggregateResponse\022/\n\006GetM" +
-      "in\022\021.AggregateRequest\032\022.AggregateRespons" +
-      "e\022/\n\006GetSum\022\021.AggregateRequest\032\022.Aggrega" +
-      "teResponse\0222\n\tGetRowNum\022\021.AggregateReque",
-      "st\032\022.AggregateResponse\022/\n\006GetAvg\022\021.Aggre" +
-      "gateRequest\032\022.AggregateResponse\022/\n\006GetSt" +
-      "d\022\021.AggregateRequest\032\022.AggregateResponse" +
-      "\0222\n\tGetMedian\022\021.AggregateRequest\032\022.Aggre" +
-      "gateResponseBE\n*org.apache.hadoop.hbase." +
-      "protobuf.generatedB\017AggregateProtosH\001\210\001\001" +
-      "\240\001\001"
+      "\n\017Aggregate.proto\022\010hbase.pb\032\014Client.prot" +
+      "o\"t\n\020AggregateRequest\022\036\n\026interpreter_cla" +
+      "ss_name\030\001 \002(\t\022\034\n\004scan\030\002 \002(\0132\016.hbase.pb.S" +
+      "can\022\"\n\032interpreter_specific_bytes\030\003 \001(\014\"" +
+      "<\n\021AggregateResponse\022\022\n\nfirst_part\030\001 \003(\014" +
+      "\022\023\n\013second_part\030\002 \001(\0142\355\003\n\020AggregateServi" +
+      "ce\022A\n\006GetMax\022\032.hbase.pb.AggregateRequest" +
+      "\032\033.hbase.pb.AggregateResponse\022A\n\006GetMin\022" +
+      "\032.hbase.pb.AggregateRequest\032\033.hbase.pb.A" +
+      "ggregateResponse\022A\n\006GetSum\022\032.hbase.pb.Ag",
+      "gregateRequest\032\033.hbase.pb.AggregateRespo" +
+      "nse\022D\n\tGetRowNum\022\032.hbase.pb.AggregateReq" +
+      "uest\032\033.hbase.pb.AggregateResponse\022A\n\006Get" +
+      "Avg\022\032.hbase.pb.AggregateRequest\032\033.hbase." +
+      "pb.AggregateResponse\022A\n\006GetStd\022\032.hbase.p" +
+      "b.AggregateRequest\032\033.hbase.pb.AggregateR" +
+      "esponse\022D\n\tGetMedian\022\032.hbase.pb.Aggregat" +
+      "eRequest\032\033.hbase.pb.AggregateResponseBE\n" +
+      "*org.apache.hadoop.hbase.protobuf.genera" +
+      "tedB\017AggregateProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_AggregateRequest_descriptor =
+          internal_static_hbase_pb_AggregateRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_AggregateRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_AggregateRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_AggregateRequest_descriptor,
+              internal_static_hbase_pb_AggregateRequest_descriptor,
               new java.lang.String[] { "InterpreterClassName", "Scan", "InterpreterSpecificBytes", });
-          internal_static_AggregateResponse_descriptor =
+          internal_static_hbase_pb_AggregateResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_AggregateResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_AggregateResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_AggregateResponse_descriptor,
+              internal_static_hbase_pb_AggregateResponse_descriptor,
               new java.lang.String[] { "FirstPart", "SecondPart", });
           return null;
         }

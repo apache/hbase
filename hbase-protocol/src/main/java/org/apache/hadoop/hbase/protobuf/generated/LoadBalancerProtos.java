@@ -22,7 +22,7 @@ public final class LoadBalancerProtos {
     boolean getBalancerOn();
   }
   /**
-   * Protobuf type {@code LoadBalancerState}
+   * Protobuf type {@code hbase.pb.LoadBalancerState}
    */
   public static final class LoadBalancerState extends
       com.google.protobuf.GeneratedMessage
@@ -91,12 +91,12 @@ public final class LoadBalancerProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_LoadBalancerState_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_hbase_pb_LoadBalancerState_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_LoadBalancerState_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_hbase_pb_LoadBalancerState_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerState.class, org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerState.Builder.class);
     }
@@ -281,19 +281,19 @@ public final class LoadBalancerProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code LoadBalancerState}
+     * Protobuf type {@code hbase.pb.LoadBalancerState}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerStateOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_LoadBalancerState_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_hbase_pb_LoadBalancerState_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_LoadBalancerState_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_hbase_pb_LoadBalancerState_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerState.class, org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerState.Builder.class);
       }
@@ -329,7 +329,7 @@ public final class LoadBalancerProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_LoadBalancerState_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.internal_static_hbase_pb_LoadBalancerState_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos.LoadBalancerState getDefaultInstanceForType() {
@@ -431,7 +431,7 @@ public final class LoadBalancerProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:LoadBalancerState)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.LoadBalancerState)
     }
 
     static {
@@ -439,14 +439,14 @@ public final class LoadBalancerProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:LoadBalancerState)
+    // @@protoc_insertion_point(class_scope:hbase.pb.LoadBalancerState)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_LoadBalancerState_descriptor;
+    internal_static_hbase_pb_LoadBalancerState_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_LoadBalancerState_fieldAccessorTable;
+      internal_static_hbase_pb_LoadBalancerState_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -456,21 +456,21 @@ public final class LoadBalancerProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022LoadBalancer.proto\"(\n\021LoadBalancerStat" +
-      "e\022\023\n\013balancer_on\030\001 \001(\010BE\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\022LoadBalanc" +
-      "erProtosH\001\240\001\001"
+      "\n\022LoadBalancer.proto\022\010hbase.pb\"(\n\021LoadBa" +
+      "lancerState\022\023\n\013balancer_on\030\001 \001(\010BE\n*org." +
+      "apache.hadoop.hbase.protobuf.generatedB\022" +
+      "LoadBalancerProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_LoadBalancerState_descriptor =
+          internal_static_hbase_pb_LoadBalancerState_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_LoadBalancerState_fieldAccessorTable = new
+          internal_static_hbase_pb_LoadBalancerState_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_LoadBalancerState_descriptor,
+              internal_static_hbase_pb_LoadBalancerState_descriptor,
               new java.lang.String[] { "BalancerOn", });
           return null;
         }

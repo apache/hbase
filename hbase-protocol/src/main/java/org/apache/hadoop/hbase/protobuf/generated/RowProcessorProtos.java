@@ -72,7 +72,7 @@ public final class RowProcessorProtos {
     long getNonce();
   }
   /**
-   * Protobuf type {@code ProcessRequest}
+   * Protobuf type {@code hbase.pb.ProcessRequest}
    */
   public static final class ProcessRequest extends
       com.google.protobuf.GeneratedMessage
@@ -161,12 +161,12 @@ public final class RowProcessorProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.Builder.class);
     }
@@ -541,19 +541,19 @@ public final class RowProcessorProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcessRequest}
+     * Protobuf type {@code hbase.pb.ProcessRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest.Builder.class);
       }
@@ -597,7 +597,7 @@ public final class RowProcessorProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessRequest getDefaultInstanceForType() {
@@ -952,7 +952,7 @@ public final class RowProcessorProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcessRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcessRequest)
     }
 
     static {
@@ -960,7 +960,7 @@ public final class RowProcessorProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcessRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcessRequest)
   }
 
   public interface ProcessResponseOrBuilder
@@ -977,7 +977,7 @@ public final class RowProcessorProtos {
     com.google.protobuf.ByteString getRowProcessorResult();
   }
   /**
-   * Protobuf type {@code ProcessResponse}
+   * Protobuf type {@code hbase.pb.ProcessResponse}
    */
   public static final class ProcessResponse extends
       com.google.protobuf.GeneratedMessage
@@ -1046,12 +1046,12 @@ public final class RowProcessorProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.Builder.class);
     }
@@ -1240,19 +1240,19 @@ public final class RowProcessorProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcessResponse}
+     * Protobuf type {@code hbase.pb.ProcessResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.class, org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse.Builder.class);
       }
@@ -1288,7 +1288,7 @@ public final class RowProcessorProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_ProcessResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.internal_static_hbase_pb_ProcessResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RowProcessorProtos.ProcessResponse getDefaultInstanceForType() {
@@ -1397,7 +1397,7 @@ public final class RowProcessorProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcessResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcessResponse)
     }
 
     static {
@@ -1405,11 +1405,11 @@ public final class RowProcessorProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcessResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcessResponse)
   }
 
   /**
-   * Protobuf service {@code RowProcessorService}
+   * Protobuf service {@code hbase.pb.RowProcessorService}
    */
   public static abstract class RowProcessorService
       implements com.google.protobuf.Service {
@@ -1417,7 +1417,7 @@ public final class RowProcessorProtos {
 
     public interface Interface {
       /**
-       * <code>rpc Process(.ProcessRequest) returns (.ProcessResponse);</code>
+       * <code>rpc Process(.hbase.pb.ProcessRequest) returns (.hbase.pb.ProcessResponse);</code>
        */
       public abstract void process(
           com.google.protobuf.RpcController controller,
@@ -1502,7 +1502,7 @@ public final class RowProcessorProtos {
     }
 
     /**
-     * <code>rpc Process(.ProcessRequest) returns (.ProcessResponse);</code>
+     * <code>rpc Process(.hbase.pb.ProcessRequest) returns (.hbase.pb.ProcessResponse);</code>
      */
     public abstract void process(
         com.google.protobuf.RpcController controller,
@@ -1637,19 +1637,19 @@ public final class RowProcessorProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:RowProcessorService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RowProcessorService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcessRequest_descriptor;
+    internal_static_hbase_pb_ProcessRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcessRequest_fieldAccessorTable;
+      internal_static_hbase_pb_ProcessRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcessResponse_descriptor;
+    internal_static_hbase_pb_ProcessResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcessResponse_fieldAccessorTable;
+      internal_static_hbase_pb_ProcessResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1659,33 +1659,34 @@ public final class RowProcessorProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\022RowProcessor.proto\"\261\001\n\016ProcessRequest\022" +
-      " \n\030row_processor_class_name\030\001 \002(\t\022.\n&row" +
-      "_processor_initializer_message_name\030\002 \001(" +
-      "\t\022)\n!row_processor_initializer_message\030\003" +
-      " \001(\014\022\023\n\013nonce_group\030\004 \001(\004\022\r\n\005nonce\030\005 \001(\004" +
-      "\"/\n\017ProcessResponse\022\034\n\024row_processor_res" +
-      "ult\030\001 \002(\0142C\n\023RowProcessorService\022,\n\007Proc" +
-      "ess\022\017.ProcessRequest\032\020.ProcessResponseBH" +
-      "\n*org.apache.hadoop.hbase.protobuf.gener" +
-      "atedB\022RowProcessorProtosH\001\210\001\001\240\001\001"
+      "\n\022RowProcessor.proto\022\010hbase.pb\"\261\001\n\016Proce" +
+      "ssRequest\022 \n\030row_processor_class_name\030\001 " +
+      "\002(\t\022.\n&row_processor_initializer_message" +
+      "_name\030\002 \001(\t\022)\n!row_processor_initializer" +
+      "_message\030\003 \001(\014\022\023\n\013nonce_group\030\004 \001(\004\022\r\n\005n" +
+      "once\030\005 \001(\004\"/\n\017ProcessResponse\022\034\n\024row_pro" +
+      "cessor_result\030\001 \002(\0142U\n\023RowProcessorServi" +
+      "ce\022>\n\007Process\022\030.hbase.pb.ProcessRequest\032" +
+      "\031.hbase.pb.ProcessResponseBH\n*org.apache" +
+      ".hadoop.hbase.protobuf.generatedB\022RowPro",
+      "cessorProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_ProcessRequest_descriptor =
+          internal_static_hbase_pb_ProcessRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_ProcessRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcessRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcessRequest_descriptor,
+              internal_static_hbase_pb_ProcessRequest_descriptor,
               new java.lang.String[] { "RowProcessorClassName", "RowProcessorInitializerMessageName", "RowProcessorInitializerMessage", "NonceGroup", "Nonce", });
-          internal_static_ProcessResponse_descriptor =
+          internal_static_hbase_pb_ProcessResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_ProcessResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcessResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcessResponse_descriptor,
+              internal_static_hbase_pb_ProcessResponse_descriptor,
               new java.lang.String[] { "RowProcessorResult", });
           return null;
         }

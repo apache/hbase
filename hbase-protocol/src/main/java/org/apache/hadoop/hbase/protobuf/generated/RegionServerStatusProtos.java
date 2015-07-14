@@ -93,7 +93,7 @@ public final class RegionServerStatusProtos {
         getUseThisHostnameInsteadBytes();
   }
   /**
-   * Protobuf type {@code RegionServerStartupRequest}
+   * Protobuf type {@code hbase.pb.RegionServerStartupRequest}
    */
   public static final class RegionServerStartupRequest extends
       com.google.protobuf.GeneratedMessage
@@ -177,12 +177,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.Builder.class);
     }
@@ -541,19 +541,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionServerStartupRequest}
+     * Protobuf type {@code hbase.pb.RegionServerStartupRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest.Builder.class);
       }
@@ -595,7 +595,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest getDefaultInstanceForType() {
@@ -944,7 +944,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionServerStartupRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerStartupRequest)
     }
 
     static {
@@ -952,15 +952,15 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerStartupRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerStartupRequest)
   }
 
   public interface RegionServerStartupResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .NameStringPair map_entries = 1;
+    // repeated .hbase.pb.NameStringPair map_entries = 1;
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -972,7 +972,7 @@ public final class RegionServerStatusProtos {
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getMapEntriesList();
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -983,7 +983,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getMapEntries(int index);
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -994,7 +994,7 @@ public final class RegionServerStatusProtos {
      */
     int getMapEntriesCount();
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1006,7 +1006,7 @@ public final class RegionServerStatusProtos {
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getMapEntriesOrBuilderList();
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1019,7 +1019,7 @@ public final class RegionServerStatusProtos {
         int index);
   }
   /**
-   * Protobuf type {@code RegionServerStartupResponse}
+   * Protobuf type {@code hbase.pb.RegionServerStartupResponse}
    */
   public static final class RegionServerStartupResponse extends
       com.google.protobuf.GeneratedMessage
@@ -1094,12 +1094,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.Builder.class);
     }
@@ -1119,11 +1119,11 @@ public final class RegionServerStatusProtos {
       return PARSER;
     }
 
-    // repeated .NameStringPair map_entries = 1;
+    // repeated .hbase.pb.NameStringPair map_entries = 1;
     public static final int MAP_ENTRIES_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_;
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1136,7 +1136,7 @@ public final class RegionServerStatusProtos {
       return mapEntries_;
     }
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1150,7 +1150,7 @@ public final class RegionServerStatusProtos {
       return mapEntries_;
     }
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1163,7 +1163,7 @@ public final class RegionServerStatusProtos {
       return mapEntries_.size();
     }
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1176,7 +1176,7 @@ public final class RegionServerStatusProtos {
       return mapEntries_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair map_entries = 1;</code>
+     * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
      *
      * <pre>
      **
@@ -1341,19 +1341,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionServerStartupResponse}
+     * Protobuf type {@code hbase.pb.RegionServerStartupResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse.Builder.class);
       }
@@ -1394,7 +1394,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerStartupResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerStartupResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse getDefaultInstanceForType() {
@@ -1495,7 +1495,7 @@ public final class RegionServerStatusProtos {
       }
       private int bitField0_;
 
-      // repeated .NameStringPair map_entries = 1;
+      // repeated .hbase.pb.NameStringPair map_entries = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> mapEntries_ =
         java.util.Collections.emptyList();
       private void ensureMapEntriesIsMutable() {
@@ -1509,7 +1509,7 @@ public final class RegionServerStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> mapEntriesBuilder_;
 
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1526,7 +1526,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1543,7 +1543,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1560,7 +1560,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1584,7 +1584,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1605,7 +1605,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1628,7 +1628,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1652,7 +1652,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1673,7 +1673,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1694,7 +1694,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1715,7 +1715,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1735,7 +1735,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1755,7 +1755,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1769,7 +1769,7 @@ public final class RegionServerStatusProtos {
         return getMapEntriesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1786,7 +1786,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1804,7 +1804,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1818,7 +1818,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1833,7 +1833,7 @@ public final class RegionServerStatusProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair map_entries = 1;</code>
+       * <code>repeated .hbase.pb.NameStringPair map_entries = 1;</code>
        *
        * <pre>
        **
@@ -1861,7 +1861,7 @@ public final class RegionServerStatusProtos {
         return mapEntriesBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionServerStartupResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerStartupResponse)
     }
 
     static {
@@ -1869,29 +1869,29 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerStartupResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerStartupResponse)
   }
 
   public interface RegionServerReportRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     boolean hasServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
 
-    // optional .ServerLoad load = 2;
+    // optional .hbase.pb.ServerLoad load = 2;
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -1899,7 +1899,7 @@ public final class RegionServerStatusProtos {
      */
     boolean hasLoad();
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -1907,7 +1907,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad getLoad();
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -1916,7 +1916,7 @@ public final class RegionServerStatusProtos {
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder getLoadOrBuilder();
   }
   /**
-   * Protobuf type {@code RegionServerReportRequest}
+   * Protobuf type {@code hbase.pb.RegionServerReportRequest}
    */
   public static final class RegionServerReportRequest extends
       com.google.protobuf.GeneratedMessage
@@ -2006,12 +2006,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.Builder.class);
     }
@@ -2032,33 +2032,33 @@ public final class RegionServerStatusProtos {
     }
 
     private int bitField0_;
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     public boolean hasServer() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
       return server_;
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
       return server_;
     }
 
-    // optional .ServerLoad load = 2;
+    // optional .hbase.pb.ServerLoad load = 2;
     public static final int LOAD_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad load_;
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -2068,7 +2068,7 @@ public final class RegionServerStatusProtos {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -2078,7 +2078,7 @@ public final class RegionServerStatusProtos {
       return load_;
     }
     /**
-     * <code>optional .ServerLoad load = 2;</code>
+     * <code>optional .hbase.pb.ServerLoad load = 2;</code>
      *
      * <pre>
      ** load the server is under 
@@ -2267,19 +2267,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionServerReportRequest}
+     * Protobuf type {@code hbase.pb.RegionServerReportRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest.Builder.class);
       }
@@ -2327,7 +2327,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest getDefaultInstanceForType() {
@@ -2425,18 +2425,18 @@ public final class RegionServerStatusProtos {
       }
       private int bitField0_;
 
-      // required .ServerName server = 1;
+      // required .hbase.pb.ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public boolean hasServer() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer() {
         if (serverBuilder_ == null) {
@@ -2446,7 +2446,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public Builder setServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
@@ -2462,7 +2462,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public Builder setServer(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -2476,7 +2476,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public Builder mergeServer(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverBuilder_ == null) {
@@ -2495,7 +2495,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public Builder clearServer() {
         if (serverBuilder_ == null) {
@@ -2508,7 +2508,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerBuilder() {
         bitField0_ |= 0x00000001;
@@ -2516,7 +2516,7 @@ public final class RegionServerStatusProtos {
         return getServerFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder() {
         if (serverBuilder_ != null) {
@@ -2526,7 +2526,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
@@ -2542,12 +2542,12 @@ public final class RegionServerStatusProtos {
         return serverBuilder_;
       }
 
-      // optional .ServerLoad load = 2;
+      // optional .hbase.pb.ServerLoad load = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad load_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoad.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.ServerLoadOrBuilder> loadBuilder_;
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2557,7 +2557,7 @@ public final class RegionServerStatusProtos {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2571,7 +2571,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2591,7 +2591,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2609,7 +2609,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2632,7 +2632,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2649,7 +2649,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2661,7 +2661,7 @@ public final class RegionServerStatusProtos {
         return getLoadFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2675,7 +2675,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>optional .ServerLoad load = 2;</code>
+       * <code>optional .hbase.pb.ServerLoad load = 2;</code>
        *
        * <pre>
        ** load the server is under 
@@ -2695,7 +2695,7 @@ public final class RegionServerStatusProtos {
         return loadBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionServerReportRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerReportRequest)
     }
 
     static {
@@ -2703,14 +2703,14 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerReportRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerReportRequest)
   }
 
   public interface RegionServerReportResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code RegionServerReportResponse}
+   * Protobuf type {@code hbase.pb.RegionServerReportResponse}
    */
   public static final class RegionServerReportResponse extends
       com.google.protobuf.GeneratedMessage
@@ -2773,12 +2773,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.Builder.class);
     }
@@ -2929,19 +2929,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionServerReportResponse}
+     * Protobuf type {@code hbase.pb.RegionServerReportResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse.Builder.class);
       }
@@ -2975,7 +2975,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionServerReportResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionServerReportResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse getDefaultInstanceForType() {
@@ -3033,7 +3033,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionServerReportResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerReportResponse)
     }
 
     static {
@@ -3041,15 +3041,15 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerReportResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerReportResponse)
   }
 
   public interface ReportRSFatalErrorRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3057,7 +3057,7 @@ public final class RegionServerStatusProtos {
      */
     boolean hasServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3065,7 +3065,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3101,7 +3101,7 @@ public final class RegionServerStatusProtos {
         getErrorMessageBytes();
   }
   /**
-   * Protobuf type {@code ReportRSFatalErrorRequest}
+   * Protobuf type {@code hbase.pb.ReportRSFatalErrorRequest}
    */
   public static final class ReportRSFatalErrorRequest extends
       com.google.protobuf.GeneratedMessage
@@ -3183,12 +3183,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.Builder.class);
     }
@@ -3209,11 +3209,11 @@ public final class RegionServerStatusProtos {
     }
 
     private int bitField0_;
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3223,7 +3223,7 @@ public final class RegionServerStatusProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3233,7 +3233,7 @@ public final class RegionServerStatusProtos {
       return server_;
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** name of the server experiencing the error 
@@ -3475,19 +3475,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReportRSFatalErrorRequest}
+     * Protobuf type {@code hbase.pb.ReportRSFatalErrorRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest.Builder.class);
       }
@@ -3530,7 +3530,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest getDefaultInstanceForType() {
@@ -3624,12 +3624,12 @@ public final class RegionServerStatusProtos {
       }
       private int bitField0_;
 
-      // required .ServerName server = 1;
+      // required .hbase.pb.ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3639,7 +3639,7 @@ public final class RegionServerStatusProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3653,7 +3653,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3673,7 +3673,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3691,7 +3691,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3714,7 +3714,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3731,7 +3731,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3743,7 +3743,7 @@ public final class RegionServerStatusProtos {
         return getServerFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3757,7 +3757,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** name of the server experiencing the error 
@@ -3875,7 +3875,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReportRSFatalErrorRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReportRSFatalErrorRequest)
     }
 
     static {
@@ -3883,14 +3883,14 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReportRSFatalErrorRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReportRSFatalErrorRequest)
   }
 
   public interface ReportRSFatalErrorResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code ReportRSFatalErrorResponse}
+   * Protobuf type {@code hbase.pb.ReportRSFatalErrorResponse}
    */
   public static final class ReportRSFatalErrorResponse extends
       com.google.protobuf.GeneratedMessage
@@ -3953,12 +3953,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.Builder.class);
     }
@@ -4109,19 +4109,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReportRSFatalErrorResponse}
+     * Protobuf type {@code hbase.pb.ReportRSFatalErrorResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse.Builder.class);
       }
@@ -4155,7 +4155,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRSFatalErrorResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse getDefaultInstanceForType() {
@@ -4213,7 +4213,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReportRSFatalErrorResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReportRSFatalErrorResponse)
     }
 
     static {
@@ -4221,7 +4221,7 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReportRSFatalErrorResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReportRSFatalErrorResponse)
   }
 
   public interface GetLastFlushedSequenceIdRequestOrBuilder
@@ -4246,7 +4246,7 @@ public final class RegionServerStatusProtos {
     com.google.protobuf.ByteString getRegionName();
   }
   /**
-   * Protobuf type {@code GetLastFlushedSequenceIdRequest}
+   * Protobuf type {@code hbase.pb.GetLastFlushedSequenceIdRequest}
    */
   public static final class GetLastFlushedSequenceIdRequest extends
       com.google.protobuf.GeneratedMessage
@@ -4315,12 +4315,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.Builder.class);
     }
@@ -4517,19 +4517,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetLastFlushedSequenceIdRequest}
+     * Protobuf type {@code hbase.pb.GetLastFlushedSequenceIdRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest.Builder.class);
       }
@@ -4565,7 +4565,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest getDefaultInstanceForType() {
@@ -4690,7 +4690,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetLastFlushedSequenceIdRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetLastFlushedSequenceIdRequest)
     }
 
     static {
@@ -4698,7 +4698,7 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetLastFlushedSequenceIdRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetLastFlushedSequenceIdRequest)
   }
 
   public interface GetLastFlushedSequenceIdResponseOrBuilder
@@ -4722,9 +4722,9 @@ public final class RegionServerStatusProtos {
      */
     long getLastFlushedSequenceId();
 
-    // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+    // repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4733,7 +4733,7 @@ public final class RegionServerStatusProtos {
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> 
         getStoreLastFlushedSequenceIdList();
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4741,7 +4741,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId getStoreLastFlushedSequenceId(int index);
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4749,7 +4749,7 @@ public final class RegionServerStatusProtos {
      */
     int getStoreLastFlushedSequenceIdCount();
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4758,7 +4758,7 @@ public final class RegionServerStatusProtos {
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> 
         getStoreLastFlushedSequenceIdOrBuilderList();
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4768,7 +4768,7 @@ public final class RegionServerStatusProtos {
         int index);
   }
   /**
-   * Protobuf type {@code GetLastFlushedSequenceIdResponse}
+   * Protobuf type {@code hbase.pb.GetLastFlushedSequenceIdResponse}
    */
   public static final class GetLastFlushedSequenceIdResponse extends
       com.google.protobuf.GeneratedMessage
@@ -4848,12 +4848,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.Builder.class);
     }
@@ -4898,11 +4898,11 @@ public final class RegionServerStatusProtos {
       return lastFlushedSequenceId_;
     }
 
-    // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+    // repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;
     public static final int STORE_LAST_FLUSHED_SEQUENCE_ID_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> storeLastFlushedSequenceId_;
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4912,7 +4912,7 @@ public final class RegionServerStatusProtos {
       return storeLastFlushedSequenceId_;
     }
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4923,7 +4923,7 @@ public final class RegionServerStatusProtos {
       return storeLastFlushedSequenceId_;
     }
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4933,7 +4933,7 @@ public final class RegionServerStatusProtos {
       return storeLastFlushedSequenceId_.size();
     }
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -4943,7 +4943,7 @@ public final class RegionServerStatusProtos {
       return storeLastFlushedSequenceId_.get(index);
     }
     /**
-     * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+     * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
      *
      * <pre>
      ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5126,19 +5126,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetLastFlushedSequenceIdResponse}
+     * Protobuf type {@code hbase.pb.GetLastFlushedSequenceIdResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse.Builder.class);
       }
@@ -5181,7 +5181,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_GetLastFlushedSequenceIdResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse getDefaultInstanceForType() {
@@ -5344,7 +5344,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // repeated .StoreSequenceId store_last_flushed_sequence_id = 2;
+      // repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId> storeLastFlushedSequenceId_ =
         java.util.Collections.emptyList();
       private void ensureStoreLastFlushedSequenceIdIsMutable() {
@@ -5358,7 +5358,7 @@ public final class RegionServerStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.Builder, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceIdOrBuilder> storeLastFlushedSequenceIdBuilder_;
 
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5372,7 +5372,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5386,7 +5386,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5400,7 +5400,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5421,7 +5421,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5439,7 +5439,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5459,7 +5459,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5480,7 +5480,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5498,7 +5498,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5516,7 +5516,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5534,7 +5534,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5551,7 +5551,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5568,7 +5568,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5579,7 +5579,7 @@ public final class RegionServerStatusProtos {
         return getStoreLastFlushedSequenceIdFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5593,7 +5593,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5608,7 +5608,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5619,7 +5619,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.getDefaultInstance());
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5631,7 +5631,7 @@ public final class RegionServerStatusProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.StoreSequenceId.getDefaultInstance());
       }
       /**
-       * <code>repeated .StoreSequenceId store_last_flushed_sequence_id = 2;</code>
+       * <code>repeated .hbase.pb.StoreSequenceId store_last_flushed_sequence_id = 2;</code>
        *
        * <pre>
        ** the last WAL sequence id flushed from MemStore to HFile for stores of the region 
@@ -5656,7 +5656,7 @@ public final class RegionServerStatusProtos {
         return storeLastFlushedSequenceIdBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetLastFlushedSequenceIdResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetLastFlushedSequenceIdResponse)
     }
 
     static {
@@ -5664,25 +5664,25 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetLastFlushedSequenceIdResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetLastFlushedSequenceIdResponse)
   }
 
   public interface RegionStateTransitionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .RegionStateTransition.TransitionCode transition_code = 1;
+    // required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;
     /**
-     * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+     * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
      */
     boolean hasTransitionCode();
     /**
-     * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+     * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode getTransitionCode();
 
-    // repeated .RegionInfo region_info = 2;
+    // repeated .hbase.pb.RegionInfo region_info = 2;
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -5691,7 +5691,7 @@ public final class RegionServerStatusProtos {
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> 
         getRegionInfoList();
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -5699,7 +5699,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getRegionInfo(int index);
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -5707,7 +5707,7 @@ public final class RegionServerStatusProtos {
      */
     int getRegionInfoCount();
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -5716,7 +5716,7 @@ public final class RegionServerStatusProtos {
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> 
         getRegionInfoOrBuilderList();
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -5744,7 +5744,7 @@ public final class RegionServerStatusProtos {
     long getOpenSeqNum();
   }
   /**
-   * Protobuf type {@code RegionStateTransition}
+   * Protobuf type {@code hbase.pb.RegionStateTransition}
    */
   public static final class RegionStateTransition extends
       com.google.protobuf.GeneratedMessage
@@ -5835,12 +5835,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionStateTransition_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionStateTransition_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionStateTransition_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionStateTransition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder.class);
     }
@@ -5861,7 +5861,7 @@ public final class RegionServerStatusProtos {
     }
 
     /**
-     * Protobuf enum {@code RegionStateTransition.TransitionCode}
+     * Protobuf enum {@code hbase.pb.RegionStateTransition.TransitionCode}
      */
     public enum TransitionCode
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -6036,31 +6036,31 @@ public final class RegionServerStatusProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:RegionStateTransition.TransitionCode)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.RegionStateTransition.TransitionCode)
     }
 
     private int bitField0_;
-    // required .RegionStateTransition.TransitionCode transition_code = 1;
+    // required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;
     public static final int TRANSITION_CODE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode transitionCode_;
     /**
-     * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+     * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
      */
     public boolean hasTransitionCode() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+     * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode getTransitionCode() {
       return transitionCode_;
     }
 
-    // repeated .RegionInfo region_info = 2;
+    // repeated .hbase.pb.RegionInfo region_info = 2;
     public static final int REGION_INFO_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionInfo_;
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -6070,7 +6070,7 @@ public final class RegionServerStatusProtos {
       return regionInfo_;
     }
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -6081,7 +6081,7 @@ public final class RegionServerStatusProtos {
       return regionInfo_;
     }
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -6091,7 +6091,7 @@ public final class RegionServerStatusProtos {
       return regionInfo_.size();
     }
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -6101,7 +6101,7 @@ public final class RegionServerStatusProtos {
       return regionInfo_.get(index);
     }
     /**
-     * <code>repeated .RegionInfo region_info = 2;</code>
+     * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
      *
      * <pre>
      ** Mutliple regions are involved during merging/splitting 
@@ -6325,19 +6325,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionStateTransition}
+     * Protobuf type {@code hbase.pb.RegionStateTransition}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionStateTransition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionStateTransition_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionStateTransition_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionStateTransition_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder.class);
       }
@@ -6382,7 +6382,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_RegionStateTransition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_RegionStateTransition_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition getDefaultInstanceForType() {
@@ -6503,22 +6503,22 @@ public final class RegionServerStatusProtos {
       }
       private int bitField0_;
 
-      // required .RegionStateTransition.TransitionCode transition_code = 1;
+      // required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;
       private org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode transitionCode_ = org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode.OPENED;
       /**
-       * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+       * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
        */
       public boolean hasTransitionCode() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+       * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode getTransitionCode() {
         return transitionCode_;
       }
       /**
-       * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+       * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
        */
       public Builder setTransitionCode(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode value) {
         if (value == null) {
@@ -6530,7 +6530,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .RegionStateTransition.TransitionCode transition_code = 1;</code>
+       * <code>required .hbase.pb.RegionStateTransition.TransitionCode transition_code = 1;</code>
        */
       public Builder clearTransitionCode() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -6539,7 +6539,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // repeated .RegionInfo region_info = 2;
+      // repeated .hbase.pb.RegionInfo region_info = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo> regionInfo_ =
         java.util.Collections.emptyList();
       private void ensureRegionInfoIsMutable() {
@@ -6553,7 +6553,7 @@ public final class RegionServerStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder> regionInfoBuilder_;
 
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6567,7 +6567,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6581,7 +6581,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6595,7 +6595,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6616,7 +6616,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6634,7 +6634,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6654,7 +6654,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6675,7 +6675,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6693,7 +6693,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6711,7 +6711,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6729,7 +6729,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6746,7 +6746,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6763,7 +6763,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6774,7 +6774,7 @@ public final class RegionServerStatusProtos {
         return getRegionInfoFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6788,7 +6788,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6803,7 +6803,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6814,7 +6814,7 @@ public final class RegionServerStatusProtos {
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6826,7 +6826,7 @@ public final class RegionServerStatusProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionInfo region_info = 2;</code>
+       * <code>repeated .hbase.pb.RegionInfo region_info = 2;</code>
        *
        * <pre>
        ** Mutliple regions are involved during merging/splitting 
@@ -6900,7 +6900,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionStateTransition)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionStateTransition)
     }
 
     static {
@@ -6908,15 +6908,15 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionStateTransition)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionStateTransition)
   }
 
   public interface ReportRegionStateTransitionRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -6924,7 +6924,7 @@ public final class RegionServerStatusProtos {
      */
     boolean hasServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -6932,7 +6932,7 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -6940,33 +6940,33 @@ public final class RegionServerStatusProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerOrBuilder();
 
-    // repeated .RegionStateTransition transition = 2;
+    // repeated .hbase.pb.RegionStateTransition transition = 2;
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> 
         getTransitionList();
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition getTransition(int index);
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     int getTransitionCount();
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder> 
         getTransitionOrBuilderList();
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder getTransitionOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code ReportRegionStateTransitionRequest}
+   * Protobuf type {@code hbase.pb.ReportRegionStateTransitionRequest}
    */
   public static final class ReportRegionStateTransitionRequest extends
       com.google.protobuf.GeneratedMessage
@@ -7054,12 +7054,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest.Builder.class);
     }
@@ -7080,11 +7080,11 @@ public final class RegionServerStatusProtos {
     }
 
     private int bitField0_;
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -7094,7 +7094,7 @@ public final class RegionServerStatusProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -7104,7 +7104,7 @@ public final class RegionServerStatusProtos {
       return server_;
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      ** This region server's server name 
@@ -7114,36 +7114,36 @@ public final class RegionServerStatusProtos {
       return server_;
     }
 
-    // repeated .RegionStateTransition transition = 2;
+    // repeated .hbase.pb.RegionStateTransition transition = 2;
     public static final int TRANSITION_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> transition_;
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> getTransitionList() {
       return transition_;
     }
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder> 
         getTransitionOrBuilderList() {
       return transition_;
     }
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     public int getTransitionCount() {
       return transition_.size();
     }
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition getTransition(int index) {
       return transition_.get(index);
     }
     /**
-     * <code>repeated .RegionStateTransition transition = 2;</code>
+     * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder getTransitionOrBuilder(
         int index) {
@@ -7326,19 +7326,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReportRegionStateTransitionRequest}
+     * Protobuf type {@code hbase.pb.ReportRegionStateTransitionRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest.Builder.class);
       }
@@ -7386,7 +7386,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest getDefaultInstanceForType() {
@@ -7508,12 +7508,12 @@ public final class RegionServerStatusProtos {
       }
       private int bitField0_;
 
-      // required .ServerName server = 1;
+      // required .hbase.pb.ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7523,7 +7523,7 @@ public final class RegionServerStatusProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7537,7 +7537,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7557,7 +7557,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7575,7 +7575,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7598,7 +7598,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7615,7 +7615,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7627,7 +7627,7 @@ public final class RegionServerStatusProtos {
         return getServerFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7641,7 +7641,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        ** This region server's server name 
@@ -7661,7 +7661,7 @@ public final class RegionServerStatusProtos {
         return serverBuilder_;
       }
 
-      // repeated .RegionStateTransition transition = 2;
+      // repeated .hbase.pb.RegionStateTransition transition = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> transition_ =
         java.util.Collections.emptyList();
       private void ensureTransitionIsMutable() {
@@ -7675,7 +7675,7 @@ public final class RegionServerStatusProtos {
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder> transitionBuilder_;
 
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> getTransitionList() {
         if (transitionBuilder_ == null) {
@@ -7685,7 +7685,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public int getTransitionCount() {
         if (transitionBuilder_ == null) {
@@ -7695,7 +7695,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition getTransition(int index) {
         if (transitionBuilder_ == null) {
@@ -7705,7 +7705,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder setTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition value) {
@@ -7722,7 +7722,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder setTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder builderForValue) {
@@ -7736,7 +7736,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder addTransition(org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition value) {
         if (transitionBuilder_ == null) {
@@ -7752,7 +7752,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder addTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition value) {
@@ -7769,7 +7769,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder addTransition(
           org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder builderForValue) {
@@ -7783,7 +7783,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder addTransition(
           int index, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder builderForValue) {
@@ -7797,7 +7797,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder addAllTransition(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition> values) {
@@ -7811,7 +7811,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder clearTransition() {
         if (transitionBuilder_ == null) {
@@ -7824,7 +7824,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public Builder removeTransition(int index) {
         if (transitionBuilder_ == null) {
@@ -7837,14 +7837,14 @@ public final class RegionServerStatusProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder getTransitionBuilder(
           int index) {
         return getTransitionFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder getTransitionOrBuilder(
           int index) {
@@ -7854,7 +7854,7 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransitionOrBuilder> 
            getTransitionOrBuilderList() {
@@ -7865,14 +7865,14 @@ public final class RegionServerStatusProtos {
         }
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder addTransitionBuilder() {
         return getTransitionFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder addTransitionBuilder(
           int index) {
@@ -7880,7 +7880,7 @@ public final class RegionServerStatusProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionStateTransition transition = 2;</code>
+       * <code>repeated .hbase.pb.RegionStateTransition transition = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.Builder> 
            getTransitionBuilderList() {
@@ -7901,7 +7901,7 @@ public final class RegionServerStatusProtos {
         return transitionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReportRegionStateTransitionRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReportRegionStateTransitionRequest)
     }
 
     static {
@@ -7909,7 +7909,7 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReportRegionStateTransitionRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReportRegionStateTransitionRequest)
   }
 
   public interface ReportRegionStateTransitionResponseOrBuilder
@@ -7943,7 +7943,7 @@ public final class RegionServerStatusProtos {
         getErrorMessageBytes();
   }
   /**
-   * Protobuf type {@code ReportRegionStateTransitionResponse}
+   * Protobuf type {@code hbase.pb.ReportRegionStateTransitionResponse}
    */
   public static final class ReportRegionStateTransitionResponse extends
       com.google.protobuf.GeneratedMessage
@@ -8012,12 +8012,12 @@ public final class RegionServerStatusProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse.Builder.class);
     }
@@ -8241,19 +8241,19 @@ public final class RegionServerStatusProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReportRegionStateTransitionResponse}
+     * Protobuf type {@code hbase.pb.ReportRegionStateTransitionResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse.class, org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse.Builder.class);
       }
@@ -8289,7 +8289,7 @@ public final class RegionServerStatusProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_ReportRegionStateTransitionResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse getDefaultInstanceForType() {
@@ -8458,7 +8458,7 @@ public final class RegionServerStatusProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReportRegionStateTransitionResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReportRegionStateTransitionResponse)
     }
 
     static {
@@ -8466,11 +8466,11 @@ public final class RegionServerStatusProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReportRegionStateTransitionResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReportRegionStateTransitionResponse)
   }
 
   /**
-   * Protobuf service {@code RegionServerStatusService}
+   * Protobuf service {@code hbase.pb.RegionServerStatusService}
    */
   public static abstract class RegionServerStatusService
       implements com.google.protobuf.Service {
@@ -8478,7 +8478,7 @@ public final class RegionServerStatusProtos {
 
     public interface Interface {
       /**
-       * <code>rpc RegionServerStartup(.RegionServerStartupRequest) returns (.RegionServerStartupResponse);</code>
+       * <code>rpc RegionServerStartup(.hbase.pb.RegionServerStartupRequest) returns (.hbase.pb.RegionServerStartupResponse);</code>
        *
        * <pre>
        ** Called when a region server first starts. 
@@ -8490,7 +8490,7 @@ public final class RegionServerStatusProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse> done);
 
       /**
-       * <code>rpc RegionServerReport(.RegionServerReportRequest) returns (.RegionServerReportResponse);</code>
+       * <code>rpc RegionServerReport(.hbase.pb.RegionServerReportRequest) returns (.hbase.pb.RegionServerReportResponse);</code>
        *
        * <pre>
        ** Called to report the load the RegionServer is under. 
@@ -8502,7 +8502,7 @@ public final class RegionServerStatusProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse> done);
 
       /**
-       * <code>rpc ReportRSFatalError(.ReportRSFatalErrorRequest) returns (.ReportRSFatalErrorResponse);</code>
+       * <code>rpc ReportRSFatalError(.hbase.pb.ReportRSFatalErrorRequest) returns (.hbase.pb.ReportRSFatalErrorResponse);</code>
        *
        * <pre>
        **
@@ -8516,7 +8516,7 @@ public final class RegionServerStatusProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse> done);
 
       /**
-       * <code>rpc GetLastFlushedSequenceId(.GetLastFlushedSequenceIdRequest) returns (.GetLastFlushedSequenceIdResponse);</code>
+       * <code>rpc GetLastFlushedSequenceId(.hbase.pb.GetLastFlushedSequenceIdRequest) returns (.hbase.pb.GetLastFlushedSequenceIdResponse);</code>
        *
        * <pre>
        ** Called to get the sequence id of the last MemStore entry flushed to an
@@ -8530,7 +8530,7 @@ public final class RegionServerStatusProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse> done);
 
       /**
-       * <code>rpc ReportRegionStateTransition(.ReportRegionStateTransitionRequest) returns (.ReportRegionStateTransitionResponse);</code>
+       * <code>rpc ReportRegionStateTransition(.hbase.pb.ReportRegionStateTransitionRequest) returns (.hbase.pb.ReportRegionStateTransitionResponse);</code>
        *
        * <pre>
        **
@@ -8678,7 +8678,7 @@ public final class RegionServerStatusProtos {
     }
 
     /**
-     * <code>rpc RegionServerStartup(.RegionServerStartupRequest) returns (.RegionServerStartupResponse);</code>
+     * <code>rpc RegionServerStartup(.hbase.pb.RegionServerStartupRequest) returns (.hbase.pb.RegionServerStartupResponse);</code>
      *
      * <pre>
      ** Called when a region server first starts. 
@@ -8690,7 +8690,7 @@ public final class RegionServerStatusProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse> done);
 
     /**
-     * <code>rpc RegionServerReport(.RegionServerReportRequest) returns (.RegionServerReportResponse);</code>
+     * <code>rpc RegionServerReport(.hbase.pb.RegionServerReportRequest) returns (.hbase.pb.RegionServerReportResponse);</code>
      *
      * <pre>
      ** Called to report the load the RegionServer is under. 
@@ -8702,7 +8702,7 @@ public final class RegionServerStatusProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse> done);
 
     /**
-     * <code>rpc ReportRSFatalError(.ReportRSFatalErrorRequest) returns (.ReportRSFatalErrorResponse);</code>
+     * <code>rpc ReportRSFatalError(.hbase.pb.ReportRSFatalErrorRequest) returns (.hbase.pb.ReportRSFatalErrorResponse);</code>
      *
      * <pre>
      **
@@ -8716,7 +8716,7 @@ public final class RegionServerStatusProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse> done);
 
     /**
-     * <code>rpc GetLastFlushedSequenceId(.GetLastFlushedSequenceIdRequest) returns (.GetLastFlushedSequenceIdResponse);</code>
+     * <code>rpc GetLastFlushedSequenceId(.hbase.pb.GetLastFlushedSequenceIdRequest) returns (.hbase.pb.GetLastFlushedSequenceIdResponse);</code>
      *
      * <pre>
      ** Called to get the sequence id of the last MemStore entry flushed to an
@@ -8730,7 +8730,7 @@ public final class RegionServerStatusProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse> done);
 
     /**
-     * <code>rpc ReportRegionStateTransition(.ReportRegionStateTransitionRequest) returns (.ReportRegionStateTransitionResponse);</code>
+     * <code>rpc ReportRegionStateTransition(.hbase.pb.ReportRegionStateTransitionRequest) returns (.hbase.pb.ReportRegionStateTransitionResponse);</code>
      *
      * <pre>
      **
@@ -9036,64 +9036,64 @@ public final class RegionServerStatusProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerStatusService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerStatusService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionServerStartupRequest_descriptor;
+    internal_static_hbase_pb_RegionServerStartupRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionServerStartupRequest_fieldAccessorTable;
+      internal_static_hbase_pb_RegionServerStartupRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionServerStartupResponse_descriptor;
+    internal_static_hbase_pb_RegionServerStartupResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionServerStartupResponse_fieldAccessorTable;
+      internal_static_hbase_pb_RegionServerStartupResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionServerReportRequest_descriptor;
+    internal_static_hbase_pb_RegionServerReportRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionServerReportRequest_fieldAccessorTable;
+      internal_static_hbase_pb_RegionServerReportRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionServerReportResponse_descriptor;
+    internal_static_hbase_pb_RegionServerReportResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionServerReportResponse_fieldAccessorTable;
+      internal_static_hbase_pb_RegionServerReportResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReportRSFatalErrorRequest_descriptor;
+    internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReportRSFatalErrorRequest_fieldAccessorTable;
+      internal_static_hbase_pb_ReportRSFatalErrorRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReportRSFatalErrorResponse_descriptor;
+    internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReportRSFatalErrorResponse_fieldAccessorTable;
+      internal_static_hbase_pb_ReportRSFatalErrorResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetLastFlushedSequenceIdRequest_descriptor;
+    internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable;
+      internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetLastFlushedSequenceIdResponse_descriptor;
+    internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable;
+      internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionStateTransition_descriptor;
+    internal_static_hbase_pb_RegionStateTransition_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionStateTransition_fieldAccessorTable;
+      internal_static_hbase_pb_RegionStateTransition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReportRegionStateTransitionRequest_descriptor;
+    internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReportRegionStateTransitionRequest_fieldAccessorTable;
+      internal_static_hbase_pb_ReportRegionStateTransitionRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReportRegionStateTransitionResponse_descriptor;
+    internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReportRegionStateTransitionResponse_fieldAccessorTable;
+      internal_static_hbase_pb_ReportRegionStateTransitionResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -9103,121 +9103,126 @@ public final class RegionServerStatusProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\030RegionServerStatus.proto\032\013HBase.proto\032" +
-      "\023ClusterStatus.proto\"\205\001\n\032RegionServerSta" +
-      "rtupRequest\022\014\n\004port\030\001 \002(\r\022\031\n\021server_star" +
-      "t_code\030\002 \002(\004\022\033\n\023server_current_time\030\003 \002(" +
-      "\004\022!\n\031use_this_hostname_instead\030\004 \001(\t\"C\n\033" +
-      "RegionServerStartupResponse\022$\n\013map_entri" +
-      "es\030\001 \003(\0132\017.NameStringPair\"S\n\031RegionServe" +
-      "rReportRequest\022\033\n\006server\030\001 \002(\0132\013.ServerN" +
-      "ame\022\031\n\004load\030\002 \001(\0132\013.ServerLoad\"\034\n\032Region" +
-      "ServerReportResponse\"O\n\031ReportRSFatalErr",
-      "orRequest\022\033\n\006server\030\001 \002(\0132\013.ServerName\022\025" +
-      "\n\rerror_message\030\002 \002(\t\"\034\n\032ReportRSFatalEr" +
-      "rorResponse\"6\n\037GetLastFlushedSequenceIdR" +
-      "equest\022\023\n\013region_name\030\001 \002(\014\"~\n GetLastFl" +
-      "ushedSequenceIdResponse\022 \n\030last_flushed_" +
-      "sequence_id\030\001 \002(\004\0228\n\036store_last_flushed_" +
-      "sequence_id\030\002 \003(\0132\020.StoreSequenceId\"\322\002\n\025" +
-      "RegionStateTransition\022>\n\017transition_code" +
-      "\030\001 \002(\0162%.RegionStateTransition.Transitio" +
-      "nCode\022 \n\013region_info\030\002 \003(\0132\013.RegionInfo\022",
-      "\024\n\014open_seq_num\030\003 \001(\004\"\300\001\n\016TransitionCode" +
-      "\022\n\n\006OPENED\020\000\022\017\n\013FAILED_OPEN\020\001\022\n\n\006CLOSED\020" +
-      "\002\022\022\n\016READY_TO_SPLIT\020\003\022\022\n\016READY_TO_MERGE\020" +
-      "\004\022\016\n\nSPLIT_PONR\020\005\022\016\n\nMERGE_PONR\020\006\022\t\n\005SPL" +
-      "IT\020\007\022\n\n\006MERGED\020\010\022\022\n\016SPLIT_REVERTED\020\t\022\022\n\016" +
-      "MERGE_REVERTED\020\n\"m\n\"ReportRegionStateTra" +
-      "nsitionRequest\022\033\n\006server\030\001 \002(\0132\013.ServerN" +
-      "ame\022*\n\ntransition\030\002 \003(\0132\026.RegionStateTra" +
-      "nsition\"<\n#ReportRegionStateTransitionRe" +
-      "sponse\022\025\n\rerror_message\030\001 \001(\t2\326\003\n\031Region",
-      "ServerStatusService\022P\n\023RegionServerStart" +
-      "up\022\033.RegionServerStartupRequest\032\034.Region" +
-      "ServerStartupResponse\022M\n\022RegionServerRep" +
-      "ort\022\032.RegionServerReportRequest\032\033.Region" +
-      "ServerReportResponse\022M\n\022ReportRSFatalErr" +
-      "or\022\032.ReportRSFatalErrorRequest\032\033.ReportR" +
-      "SFatalErrorResponse\022_\n\030GetLastFlushedSeq" +
-      "uenceId\022 .GetLastFlushedSequenceIdReques" +
-      "t\032!.GetLastFlushedSequenceIdResponse\022h\n\033" +
-      "ReportRegionStateTransition\022#.ReportRegi",
-      "onStateTransitionRequest\032$.ReportRegionS" +
-      "tateTransitionResponseBN\n*org.apache.had" +
-      "oop.hbase.protobuf.generatedB\030RegionServ" +
-      "erStatusProtosH\001\210\001\001\240\001\001"
+      "\n\030RegionServerStatus.proto\022\010hbase.pb\032\013HB" +
+      "ase.proto\032\023ClusterStatus.proto\"\205\001\n\032Regio" +
+      "nServerStartupRequest\022\014\n\004port\030\001 \002(\r\022\031\n\021s" +
+      "erver_start_code\030\002 \002(\004\022\033\n\023server_current" +
+      "_time\030\003 \002(\004\022!\n\031use_this_hostname_instead" +
+      "\030\004 \001(\t\"L\n\033RegionServerStartupResponse\022-\n" +
+      "\013map_entries\030\001 \003(\0132\030.hbase.pb.NameString" +
+      "Pair\"e\n\031RegionServerReportRequest\022$\n\006ser" +
+      "ver\030\001 \002(\0132\024.hbase.pb.ServerName\022\"\n\004load\030" +
+      "\002 \001(\0132\024.hbase.pb.ServerLoad\"\034\n\032RegionSer",
+      "verReportResponse\"X\n\031ReportRSFatalErrorR" +
+      "equest\022$\n\006server\030\001 \002(\0132\024.hbase.pb.Server" +
+      "Name\022\025\n\rerror_message\030\002 \002(\t\"\034\n\032ReportRSF" +
+      "atalErrorResponse\"6\n\037GetLastFlushedSeque" +
+      "nceIdRequest\022\023\n\013region_name\030\001 \002(\014\"\207\001\n Ge" +
+      "tLastFlushedSequenceIdResponse\022 \n\030last_f" +
+      "lushed_sequence_id\030\001 \002(\004\022A\n\036store_last_f" +
+      "lushed_sequence_id\030\002 \003(\0132\031.hbase.pb.Stor" +
+      "eSequenceId\"\344\002\n\025RegionStateTransition\022G\n" +
+      "\017transition_code\030\001 \002(\0162..hbase.pb.Region",
+      "StateTransition.TransitionCode\022)\n\013region" +
+      "_info\030\002 \003(\0132\024.hbase.pb.RegionInfo\022\024\n\014ope" +
+      "n_seq_num\030\003 \001(\004\"\300\001\n\016TransitionCode\022\n\n\006OP" +
+      "ENED\020\000\022\017\n\013FAILED_OPEN\020\001\022\n\n\006CLOSED\020\002\022\022\n\016R" +
+      "EADY_TO_SPLIT\020\003\022\022\n\016READY_TO_MERGE\020\004\022\016\n\nS" +
+      "PLIT_PONR\020\005\022\016\n\nMERGE_PONR\020\006\022\t\n\005SPLIT\020\007\022\n" +
+      "\n\006MERGED\020\010\022\022\n\016SPLIT_REVERTED\020\t\022\022\n\016MERGE_" +
+      "REVERTED\020\n\"\177\n\"ReportRegionStateTransitio" +
+      "nRequest\022$\n\006server\030\001 \002(\0132\024.hbase.pb.Serv" +
+      "erName\0223\n\ntransition\030\002 \003(\0132\037.hbase.pb.Re",
+      "gionStateTransition\"<\n#ReportRegionState" +
+      "TransitionResponse\022\025\n\rerror_message\030\001 \001(" +
+      "\t2\260\004\n\031RegionServerStatusService\022b\n\023Regio" +
+      "nServerStartup\022$.hbase.pb.RegionServerSt" +
+      "artupRequest\032%.hbase.pb.RegionServerStar" +
+      "tupResponse\022_\n\022RegionServerReport\022#.hbas" +
+      "e.pb.RegionServerReportRequest\032$.hbase.p" +
+      "b.RegionServerReportResponse\022_\n\022ReportRS" +
+      "FatalError\022#.hbase.pb.ReportRSFatalError" +
+      "Request\032$.hbase.pb.ReportRSFatalErrorRes",
+      "ponse\022q\n\030GetLastFlushedSequenceId\022).hbas" +
+      "e.pb.GetLastFlushedSequenceIdRequest\032*.h" +
+      "base.pb.GetLastFlushedSequenceIdResponse" +
+      "\022z\n\033ReportRegionStateTransition\022,.hbase." +
+      "pb.ReportRegionStateTransitionRequest\032-." +
+      "hbase.pb.ReportRegionStateTransitionResp" +
+      "onseBN\n*org.apache.hadoop.hbase.protobuf" +
+      ".generatedB\030RegionServerStatusProtosH\001\210\001" +
+      "\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_RegionServerStartupRequest_descriptor =
+          internal_static_hbase_pb_RegionServerStartupRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_RegionServerStartupRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionServerStartupRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionServerStartupRequest_descriptor,
+              internal_static_hbase_pb_RegionServerStartupRequest_descriptor,
               new java.lang.String[] { "Port", "ServerStartCode", "ServerCurrentTime", "UseThisHostnameInstead", });
-          internal_static_RegionServerStartupResponse_descriptor =
+          internal_static_hbase_pb_RegionServerStartupResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_RegionServerStartupResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionServerStartupResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionServerStartupResponse_descriptor,
+              internal_static_hbase_pb_RegionServerStartupResponse_descriptor,
               new java.lang.String[] { "MapEntries", });
-          internal_static_RegionServerReportRequest_descriptor =
+          internal_static_hbase_pb_RegionServerReportRequest_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_RegionServerReportRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionServerReportRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionServerReportRequest_descriptor,
+              internal_static_hbase_pb_RegionServerReportRequest_descriptor,
               new java.lang.String[] { "Server", "Load", });
-          internal_static_RegionServerReportResponse_descriptor =
+          internal_static_hbase_pb_RegionServerReportResponse_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_RegionServerReportResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionServerReportResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionServerReportResponse_descriptor,
+              internal_static_hbase_pb_RegionServerReportResponse_descriptor,
               new java.lang.String[] { });
-          internal_static_ReportRSFatalErrorRequest_descriptor =
+          internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_ReportRSFatalErrorRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_ReportRSFatalErrorRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReportRSFatalErrorRequest_descriptor,
+              internal_static_hbase_pb_ReportRSFatalErrorRequest_descriptor,
               new java.lang.String[] { "Server", "ErrorMessage", });
-          internal_static_ReportRSFatalErrorResponse_descriptor =
+          internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_ReportRSFatalErrorResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_ReportRSFatalErrorResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReportRSFatalErrorResponse_descriptor,
+              internal_static_hbase_pb_ReportRSFatalErrorResponse_descriptor,
               new java.lang.String[] { });
-          internal_static_GetLastFlushedSequenceIdRequest_descriptor =
+          internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_GetLastFlushedSequenceIdRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetLastFlushedSequenceIdRequest_descriptor,
+              internal_static_hbase_pb_GetLastFlushedSequenceIdRequest_descriptor,
               new java.lang.String[] { "RegionName", });
-          internal_static_GetLastFlushedSequenceIdResponse_descriptor =
+          internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
-          internal_static_GetLastFlushedSequenceIdResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetLastFlushedSequenceIdResponse_descriptor,
+              internal_static_hbase_pb_GetLastFlushedSequenceIdResponse_descriptor,
               new java.lang.String[] { "LastFlushedSequenceId", "StoreLastFlushedSequenceId", });
-          internal_static_RegionStateTransition_descriptor =
+          internal_static_hbase_pb_RegionStateTransition_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_RegionStateTransition_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionStateTransition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionStateTransition_descriptor,
+              internal_static_hbase_pb_RegionStateTransition_descriptor,
               new java.lang.String[] { "TransitionCode", "RegionInfo", "OpenSeqNum", });
-          internal_static_ReportRegionStateTransitionRequest_descriptor =
+          internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor =
             getDescriptor().getMessageTypes().get(9);
-          internal_static_ReportRegionStateTransitionRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_ReportRegionStateTransitionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReportRegionStateTransitionRequest_descriptor,
+              internal_static_hbase_pb_ReportRegionStateTransitionRequest_descriptor,
               new java.lang.String[] { "Server", "Transition", });
-          internal_static_ReportRegionStateTransitionResponse_descriptor =
+          internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor =
             getDescriptor().getMessageTypes().get(10);
-          internal_static_ReportRegionStateTransitionResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_ReportRegionStateTransitionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReportRegionStateTransitionResponse_descriptor,
+              internal_static_hbase_pb_ReportRegionStateTransitionResponse_descriptor,
               new java.lang.String[] { "ErrorMessage", });
           return null;
         }

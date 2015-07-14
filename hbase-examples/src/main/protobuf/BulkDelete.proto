@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+package hbase.pb;
+
 option java_package = "org.apache.hadoop.hbase.coprocessor.example.generated";
 option java_outer_classname = "BulkDeleteProtos";
 option java_generic_services = true;

@@ -67,7 +67,7 @@ public final class ErrorHandlingProtos {
     int getLineNumber();
   }
   /**
-   * Protobuf type {@code StackTraceElementMessage}
+   * Protobuf type {@code hbase.pb.StackTraceElementMessage}
    *
    * <pre>
    **
@@ -157,12 +157,12 @@ public final class ErrorHandlingProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_StackTraceElementMessage_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_StackTraceElementMessage_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_StackTraceElementMessage_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_StackTraceElementMessage_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder.class);
     }
@@ -527,7 +527,7 @@ public final class ErrorHandlingProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code StackTraceElementMessage}
+     * Protobuf type {@code hbase.pb.StackTraceElementMessage}
      *
      * <pre>
      **
@@ -540,12 +540,12 @@ public final class ErrorHandlingProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_StackTraceElementMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_StackTraceElementMessage_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_StackTraceElementMessage_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_StackTraceElementMessage_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder.class);
       }
@@ -587,7 +587,7 @@ public final class ErrorHandlingProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_StackTraceElementMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_StackTraceElementMessage_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage getDefaultInstanceForType() {
@@ -938,7 +938,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:StackTraceElementMessage)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.StackTraceElementMessage)
     }
 
     static {
@@ -946,7 +946,7 @@ public final class ErrorHandlingProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:StackTraceElementMessage)
+    // @@protoc_insertion_point(class_scope:hbase.pb.StackTraceElementMessage)
   }
 
   public interface GenericExceptionMessageOrBuilder
@@ -992,33 +992,33 @@ public final class ErrorHandlingProtos {
      */
     com.google.protobuf.ByteString getErrorInfo();
 
-    // repeated .StackTraceElementMessage trace = 4;
+    // repeated .hbase.pb.StackTraceElementMessage trace = 4;
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> 
         getTraceList();
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage getTrace(int index);
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     int getTraceCount();
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder> 
         getTraceOrBuilderList();
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code GenericExceptionMessage}
+   * Protobuf type {@code hbase.pb.GenericExceptionMessage}
    *
    * <pre>
    **
@@ -1116,12 +1116,12 @@ public final class ErrorHandlingProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_GenericExceptionMessage_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_GenericExceptionMessage_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_GenericExceptionMessage_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_GenericExceptionMessage_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder.class);
     }
@@ -1244,36 +1244,36 @@ public final class ErrorHandlingProtos {
       return errorInfo_;
     }
 
-    // repeated .StackTraceElementMessage trace = 4;
+    // repeated .hbase.pb.StackTraceElementMessage trace = 4;
     public static final int TRACE_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> trace_;
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> getTraceList() {
       return trace_;
     }
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder> 
         getTraceOrBuilderList() {
       return trace_;
     }
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     public int getTraceCount() {
       return trace_.size();
     }
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage getTrace(int index) {
       return trace_.get(index);
     }
     /**
-     * <code>repeated .StackTraceElementMessage trace = 4;</code>
+     * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
         int index) {
@@ -1476,7 +1476,7 @@ public final class ErrorHandlingProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GenericExceptionMessage}
+     * Protobuf type {@code hbase.pb.GenericExceptionMessage}
      *
      * <pre>
      **
@@ -1491,12 +1491,12 @@ public final class ErrorHandlingProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_GenericExceptionMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_GenericExceptionMessage_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_GenericExceptionMessage_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_GenericExceptionMessage_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder.class);
       }
@@ -1543,7 +1543,7 @@ public final class ErrorHandlingProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_GenericExceptionMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_GenericExceptionMessage_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage getDefaultInstanceForType() {
@@ -1849,7 +1849,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
 
-      // repeated .StackTraceElementMessage trace = 4;
+      // repeated .hbase.pb.StackTraceElementMessage trace = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> trace_ =
         java.util.Collections.emptyList();
       private void ensureTraceIsMutable() {
@@ -1863,7 +1863,7 @@ public final class ErrorHandlingProtos {
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder> traceBuilder_;
 
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> getTraceList() {
         if (traceBuilder_ == null) {
@@ -1873,7 +1873,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public int getTraceCount() {
         if (traceBuilder_ == null) {
@@ -1883,7 +1883,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage getTrace(int index) {
         if (traceBuilder_ == null) {
@@ -1893,7 +1893,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder setTrace(
           int index, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage value) {
@@ -1910,7 +1910,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder setTrace(
           int index, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder builderForValue) {
@@ -1924,7 +1924,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder addTrace(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage value) {
         if (traceBuilder_ == null) {
@@ -1940,7 +1940,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder addTrace(
           int index, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage value) {
@@ -1957,7 +1957,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder addTrace(
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder builderForValue) {
@@ -1971,7 +1971,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder addTrace(
           int index, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder builderForValue) {
@@ -1985,7 +1985,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder addAllTrace(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage> values) {
@@ -1999,7 +1999,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder clearTrace() {
         if (traceBuilder_ == null) {
@@ -2012,7 +2012,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public Builder removeTrace(int index) {
         if (traceBuilder_ == null) {
@@ -2025,14 +2025,14 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder getTraceBuilder(
           int index) {
         return getTraceFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder getTraceOrBuilder(
           int index) {
@@ -2042,7 +2042,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessageOrBuilder> 
            getTraceOrBuilderList() {
@@ -2053,14 +2053,14 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder addTraceBuilder() {
         return getTraceFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.getDefaultInstance());
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder addTraceBuilder(
           int index) {
@@ -2068,7 +2068,7 @@ public final class ErrorHandlingProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.getDefaultInstance());
       }
       /**
-       * <code>repeated .StackTraceElementMessage trace = 4;</code>
+       * <code>repeated .hbase.pb.StackTraceElementMessage trace = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.StackTraceElementMessage.Builder> 
            getTraceBuilderList() {
@@ -2089,7 +2089,7 @@ public final class ErrorHandlingProtos {
         return traceBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:GenericExceptionMessage)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GenericExceptionMessage)
     }
 
     static {
@@ -2097,7 +2097,7 @@ public final class ErrorHandlingProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GenericExceptionMessage)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GenericExceptionMessage)
   }
 
   public interface ForeignExceptionMessageOrBuilder
@@ -2118,22 +2118,22 @@ public final class ErrorHandlingProtos {
     com.google.protobuf.ByteString
         getSourceBytes();
 
-    // optional .GenericExceptionMessage generic_exception = 2;
+    // optional .hbase.pb.GenericExceptionMessage generic_exception = 2;
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     boolean hasGenericException();
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage getGenericException();
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder();
   }
   /**
-   * Protobuf type {@code ForeignExceptionMessage}
+   * Protobuf type {@code hbase.pb.ForeignExceptionMessage}
    *
    * <pre>
    **
@@ -2221,12 +2221,12 @@ public final class ErrorHandlingProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_ForeignExceptionMessage_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_ForeignExceptionMessage_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_ForeignExceptionMessage_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_ForeignExceptionMessage_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder.class);
     }
@@ -2290,23 +2290,23 @@ public final class ErrorHandlingProtos {
       }
     }
 
-    // optional .GenericExceptionMessage generic_exception = 2;
+    // optional .hbase.pb.GenericExceptionMessage generic_exception = 2;
     public static final int GENERIC_EXCEPTION_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage genericException_;
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     public boolean hasGenericException() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage getGenericException() {
       return genericException_;
     }
     /**
-     * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+     * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder() {
       return genericException_;
@@ -2477,7 +2477,7 @@ public final class ErrorHandlingProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ForeignExceptionMessage}
+     * Protobuf type {@code hbase.pb.ForeignExceptionMessage}
      *
      * <pre>
      **
@@ -2490,12 +2490,12 @@ public final class ErrorHandlingProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_ForeignExceptionMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_ForeignExceptionMessage_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_ForeignExceptionMessage_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_ForeignExceptionMessage_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.class, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder.class);
       }
@@ -2538,7 +2538,7 @@ public final class ErrorHandlingProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_ForeignExceptionMessage_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.internal_static_hbase_pb_ForeignExceptionMessage_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage getDefaultInstanceForType() {
@@ -2694,18 +2694,18 @@ public final class ErrorHandlingProtos {
         return this;
       }
 
-      // optional .GenericExceptionMessage generic_exception = 2;
+      // optional .hbase.pb.GenericExceptionMessage generic_exception = 2;
       private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage genericException_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder> genericExceptionBuilder_;
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public boolean hasGenericException() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage getGenericException() {
         if (genericExceptionBuilder_ == null) {
@@ -2715,7 +2715,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public Builder setGenericException(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage value) {
         if (genericExceptionBuilder_ == null) {
@@ -2731,7 +2731,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public Builder setGenericException(
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder builderForValue) {
@@ -2745,7 +2745,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public Builder mergeGenericException(org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage value) {
         if (genericExceptionBuilder_ == null) {
@@ -2764,7 +2764,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public Builder clearGenericException() {
         if (genericExceptionBuilder_ == null) {
@@ -2777,7 +2777,7 @@ public final class ErrorHandlingProtos {
         return this;
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder getGenericExceptionBuilder() {
         bitField0_ |= 0x00000002;
@@ -2785,7 +2785,7 @@ public final class ErrorHandlingProtos {
         return getGenericExceptionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder getGenericExceptionOrBuilder() {
         if (genericExceptionBuilder_ != null) {
@@ -2795,7 +2795,7 @@ public final class ErrorHandlingProtos {
         }
       }
       /**
-       * <code>optional .GenericExceptionMessage generic_exception = 2;</code>
+       * <code>optional .hbase.pb.GenericExceptionMessage generic_exception = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.GenericExceptionMessageOrBuilder> 
@@ -2811,7 +2811,7 @@ public final class ErrorHandlingProtos {
         return genericExceptionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ForeignExceptionMessage)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ForeignExceptionMessage)
     }
 
     static {
@@ -2819,24 +2819,24 @@ public final class ErrorHandlingProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ForeignExceptionMessage)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ForeignExceptionMessage)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_StackTraceElementMessage_descriptor;
+    internal_static_hbase_pb_StackTraceElementMessage_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_StackTraceElementMessage_fieldAccessorTable;
+      internal_static_hbase_pb_StackTraceElementMessage_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GenericExceptionMessage_descriptor;
+    internal_static_hbase_pb_GenericExceptionMessage_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GenericExceptionMessage_fieldAccessorTable;
+      internal_static_hbase_pb_GenericExceptionMessage_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ForeignExceptionMessage_descriptor;
+    internal_static_hbase_pb_ForeignExceptionMessage_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ForeignExceptionMessage_fieldAccessorTable;
+      internal_static_hbase_pb_ForeignExceptionMessage_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -2846,40 +2846,41 @@ public final class ErrorHandlingProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023ErrorHandling.proto\"p\n\030StackTraceEleme" +
-      "ntMessage\022\027\n\017declaring_class\030\001 \001(\t\022\023\n\013me" +
-      "thod_name\030\002 \001(\t\022\021\n\tfile_name\030\003 \001(\t\022\023\n\013li" +
-      "ne_number\030\004 \001(\005\"|\n\027GenericExceptionMessa" +
-      "ge\022\022\n\nclass_name\030\001 \001(\t\022\017\n\007message\030\002 \001(\t\022" +
-      "\022\n\nerror_info\030\003 \001(\014\022(\n\005trace\030\004 \003(\0132\031.Sta" +
-      "ckTraceElementMessage\"^\n\027ForeignExceptio" +
-      "nMessage\022\016\n\006source\030\001 \001(\t\0223\n\021generic_exce" +
-      "ption\030\002 \001(\0132\030.GenericExceptionMessageBF\n" +
-      "*org.apache.hadoop.hbase.protobuf.genera",
-      "tedB\023ErrorHandlingProtosH\001\240\001\001"
+      "\n\023ErrorHandling.proto\022\010hbase.pb\"p\n\030Stack" +
+      "TraceElementMessage\022\027\n\017declaring_class\030\001" +
+      " \001(\t\022\023\n\013method_name\030\002 \001(\t\022\021\n\tfile_name\030\003" +
+      " \001(\t\022\023\n\013line_number\030\004 \001(\005\"\205\001\n\027GenericExc" +
+      "eptionMessage\022\022\n\nclass_name\030\001 \001(\t\022\017\n\007mes" +
+      "sage\030\002 \001(\t\022\022\n\nerror_info\030\003 \001(\014\0221\n\005trace\030" +
+      "\004 \003(\0132\".hbase.pb.StackTraceElementMessag" +
+      "e\"g\n\027ForeignExceptionMessage\022\016\n\006source\030\001" +
+      " \001(\t\022<\n\021generic_exception\030\002 \001(\0132!.hbase." +
+      "pb.GenericExceptionMessageBF\n*org.apache",
+      ".hadoop.hbase.protobuf.generatedB\023ErrorH" +
+      "andlingProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_StackTraceElementMessage_descriptor =
+          internal_static_hbase_pb_StackTraceElementMessage_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_StackTraceElementMessage_fieldAccessorTable = new
+          internal_static_hbase_pb_StackTraceElementMessage_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_StackTraceElementMessage_descriptor,
+              internal_static_hbase_pb_StackTraceElementMessage_descriptor,
               new java.lang.String[] { "DeclaringClass", "MethodName", "FileName", "LineNumber", });
-          internal_static_GenericExceptionMessage_descriptor =
+          internal_static_hbase_pb_GenericExceptionMessage_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_GenericExceptionMessage_fieldAccessorTable = new
+          internal_static_hbase_pb_GenericExceptionMessage_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GenericExceptionMessage_descriptor,
+              internal_static_hbase_pb_GenericExceptionMessage_descriptor,
               new java.lang.String[] { "ClassName", "Message", "ErrorInfo", "Trace", });
-          internal_static_ForeignExceptionMessage_descriptor =
+          internal_static_hbase_pb_ForeignExceptionMessage_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_ForeignExceptionMessage_fieldAccessorTable = new
+          internal_static_hbase_pb_ForeignExceptionMessage_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ForeignExceptionMessage_descriptor,
+              internal_static_hbase_pb_ForeignExceptionMessage_descriptor,
               new java.lang.String[] { "Source", "GenericException", });
           return null;
         }

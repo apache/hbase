@@ -9,7 +9,7 @@ public final class HBaseProtos {
       com.google.protobuf.ExtensionRegistry registry) {
   }
   /**
-   * Protobuf enum {@code CompareType}
+   * Protobuf enum {@code hbase.pb.CompareType}
    *
    * <pre>
    * Comparison operators 
@@ -136,11 +136,11 @@ public final class HBaseProtos {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:CompareType)
+    // @@protoc_insertion_point(enum_scope:hbase.pb.CompareType)
   }
 
   /**
-   * Protobuf enum {@code TimeUnit}
+   * Protobuf enum {@code hbase.pb.TimeUnit}
    */
   public enum TimeUnit
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -263,7 +263,7 @@ public final class HBaseProtos {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:TimeUnit)
+    // @@protoc_insertion_point(enum_scope:hbase.pb.TimeUnit)
   }
 
   public interface TableNameOrBuilder
@@ -290,7 +290,7 @@ public final class HBaseProtos {
     com.google.protobuf.ByteString getQualifier();
   }
   /**
-   * Protobuf type {@code TableName}
+   * Protobuf type {@code hbase.pb.TableName}
    *
    * <pre>
    **
@@ -369,12 +369,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableName_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableName_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableName_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableName_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder.class);
     }
@@ -600,7 +600,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TableName}
+     * Protobuf type {@code hbase.pb.TableName}
      *
      * <pre>
      **
@@ -612,12 +612,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableName_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableName_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableName_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableName_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder.class);
       }
@@ -655,7 +655,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableName_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableName_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getDefaultInstanceForType() {
@@ -811,7 +811,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TableName)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TableName)
     }
 
     static {
@@ -819,103 +819,103 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TableName)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TableName)
   }
 
   public interface TableSchemaOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     boolean hasTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
 
-    // repeated .BytesBytesPair attributes = 2;
+    // repeated .hbase.pb.BytesBytesPair attributes = 2;
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getAttributesList();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index);
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     int getAttributesCount();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getAttributesOrBuilderList();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
         int index);
 
-    // repeated .ColumnFamilySchema column_families = 3;
+    // repeated .hbase.pb.ColumnFamilySchema column_families = 3;
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> 
         getColumnFamiliesList();
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies(int index);
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     int getColumnFamiliesCount();
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> 
         getColumnFamiliesOrBuilderList();
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder getColumnFamiliesOrBuilder(
         int index);
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getConfigurationList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     int getConfigurationCount();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code TableSchema}
+   * Protobuf type {@code hbase.pb.TableSchema}
    *
    * <pre>
    **
@@ -1031,12 +1031,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableSchema_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableSchema_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableSchema_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableSchema_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder.class);
     }
@@ -1057,130 +1057,130 @@ public final class HBaseProtos {
     }
 
     private int bitField0_;
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
-    // repeated .BytesBytesPair attributes = 2;
+    // repeated .hbase.pb.BytesBytesPair attributes = 2;
     public static final int ATTRIBUTES_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> attributes_;
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getAttributesList() {
       return attributes_;
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getAttributesOrBuilderList() {
       return attributes_;
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public int getAttributesCount() {
       return attributes_.size();
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index) {
       return attributes_.get(index);
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
         int index) {
       return attributes_.get(index);
     }
 
-    // repeated .ColumnFamilySchema column_families = 3;
+    // repeated .hbase.pb.ColumnFamilySchema column_families = 3;
     public static final int COLUMN_FAMILIES_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> columnFamilies_;
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> getColumnFamiliesList() {
       return columnFamilies_;
     }
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> 
         getColumnFamiliesOrBuilderList() {
       return columnFamilies_;
     }
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     public int getColumnFamiliesCount() {
       return columnFamilies_.size();
     }
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies(int index) {
       return columnFamilies_.get(index);
     }
     /**
-     * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+     * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder getColumnFamiliesOrBuilder(
         int index) {
       return columnFamilies_.get(index);
     }
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     public static final int CONFIGURATION_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public int getConfigurationCount() {
       return configuration_.size();
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
       return configuration_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index) {
@@ -1401,7 +1401,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TableSchema}
+     * Protobuf type {@code hbase.pb.TableSchema}
      *
      * <pre>
      **
@@ -1414,12 +1414,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchemaOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableSchema_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableSchema_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableSchema_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableSchema_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema.Builder.class);
       }
@@ -1481,7 +1481,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TableSchema_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TableSchema_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema getDefaultInstanceForType() {
@@ -1683,18 +1683,18 @@ public final class HBaseProtos {
       }
       private int bitField0_;
 
-      // optional .TableName table_name = 1;
+      // optional .hbase.pb.TableName table_name = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -1704,7 +1704,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -1720,7 +1720,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
@@ -1734,7 +1734,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -1753,7 +1753,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
@@ -1766,7 +1766,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
@@ -1774,7 +1774,7 @@ public final class HBaseProtos {
         return getTableNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
@@ -1784,7 +1784,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
@@ -1800,7 +1800,7 @@ public final class HBaseProtos {
         return tableNameBuilder_;
       }
 
-      // repeated .BytesBytesPair attributes = 2;
+      // repeated .hbase.pb.BytesBytesPair attributes = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> attributes_ =
         java.util.Collections.emptyList();
       private void ensureAttributesIsMutable() {
@@ -1814,7 +1814,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> attributesBuilder_;
 
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getAttributesList() {
         if (attributesBuilder_ == null) {
@@ -1824,7 +1824,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public int getAttributesCount() {
         if (attributesBuilder_ == null) {
@@ -1834,7 +1834,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index) {
         if (attributesBuilder_ == null) {
@@ -1844,7 +1844,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder setAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -1861,7 +1861,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder setAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -1875,7 +1875,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (attributesBuilder_ == null) {
@@ -1891,7 +1891,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -1908,7 +1908,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -1922,7 +1922,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -1936,7 +1936,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAllAttributes(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
@@ -1950,7 +1950,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder clearAttributes() {
         if (attributesBuilder_ == null) {
@@ -1963,7 +1963,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder removeAttributes(int index) {
         if (attributesBuilder_ == null) {
@@ -1976,14 +1976,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getAttributesBuilder(
           int index) {
         return getAttributesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
           int index) {
@@ -1993,7 +1993,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
            getAttributesOrBuilderList() {
@@ -2004,14 +2004,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addAttributesBuilder() {
         return getAttributesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addAttributesBuilder(
           int index) {
@@ -2019,7 +2019,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
            getAttributesBuilderList() {
@@ -2040,7 +2040,7 @@ public final class HBaseProtos {
         return attributesBuilder_;
       }
 
-      // repeated .ColumnFamilySchema column_families = 3;
+      // repeated .hbase.pb.ColumnFamilySchema column_families = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> columnFamilies_ =
         java.util.Collections.emptyList();
       private void ensureColumnFamiliesIsMutable() {
@@ -2054,7 +2054,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> columnFamiliesBuilder_;
 
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> getColumnFamiliesList() {
         if (columnFamiliesBuilder_ == null) {
@@ -2064,7 +2064,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public int getColumnFamiliesCount() {
         if (columnFamiliesBuilder_ == null) {
@@ -2074,7 +2074,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getColumnFamilies(int index) {
         if (columnFamiliesBuilder_ == null) {
@@ -2084,7 +2084,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder setColumnFamilies(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema value) {
@@ -2101,7 +2101,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder setColumnFamilies(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder builderForValue) {
@@ -2115,7 +2115,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder addColumnFamilies(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema value) {
         if (columnFamiliesBuilder_ == null) {
@@ -2131,7 +2131,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder addColumnFamilies(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema value) {
@@ -2148,7 +2148,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder addColumnFamilies(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder builderForValue) {
@@ -2162,7 +2162,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder addColumnFamilies(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder builderForValue) {
@@ -2176,7 +2176,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder addAllColumnFamilies(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema> values) {
@@ -2190,7 +2190,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder clearColumnFamilies() {
         if (columnFamiliesBuilder_ == null) {
@@ -2203,7 +2203,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public Builder removeColumnFamilies(int index) {
         if (columnFamiliesBuilder_ == null) {
@@ -2216,14 +2216,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder getColumnFamiliesBuilder(
           int index) {
         return getColumnFamiliesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder getColumnFamiliesOrBuilder(
           int index) {
@@ -2233,7 +2233,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder> 
            getColumnFamiliesOrBuilderList() {
@@ -2244,14 +2244,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder addColumnFamiliesBuilder() {
         return getColumnFamiliesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance());
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder addColumnFamiliesBuilder(
           int index) {
@@ -2259,7 +2259,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.getDefaultInstance());
       }
       /**
-       * <code>repeated .ColumnFamilySchema column_families = 3;</code>
+       * <code>repeated .hbase.pb.ColumnFamilySchema column_families = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder> 
            getColumnFamiliesBuilderList() {
@@ -2280,7 +2280,7 @@ public final class HBaseProtos {
         return columnFamiliesBuilder_;
       }
 
-      // repeated .NameStringPair configuration = 4;
+      // repeated .hbase.pb.NameStringPair configuration = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
         java.util.Collections.emptyList();
       private void ensureConfigurationIsMutable() {
@@ -2294,7 +2294,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
 
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
         if (configurationBuilder_ == null) {
@@ -2304,7 +2304,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public int getConfigurationCount() {
         if (configurationBuilder_ == null) {
@@ -2314,7 +2314,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -2324,7 +2324,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -2341,7 +2341,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -2355,7 +2355,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (configurationBuilder_ == null) {
@@ -2371,7 +2371,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -2388,7 +2388,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -2402,7 +2402,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -2416,7 +2416,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addAllConfiguration(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
@@ -2430,7 +2430,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder clearConfiguration() {
         if (configurationBuilder_ == null) {
@@ -2443,7 +2443,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder removeConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -2456,14 +2456,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
           int index) {
         return getConfigurationFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
           int index) {
@@ -2473,7 +2473,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getConfigurationOrBuilderList() {
@@ -2484,14 +2484,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
         return getConfigurationFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
           int index) {
@@ -2499,7 +2499,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getConfigurationBuilderList() {
@@ -2520,7 +2520,7 @@ public final class HBaseProtos {
         return configurationBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:TableSchema)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TableSchema)
     }
 
     static {
@@ -2528,7 +2528,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TableSchema)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TableSchema)
   }
 
   public interface ColumnFamilySchemaOrBuilder
@@ -2544,58 +2544,58 @@ public final class HBaseProtos {
      */
     com.google.protobuf.ByteString getName();
 
-    // repeated .BytesBytesPair attributes = 2;
+    // repeated .hbase.pb.BytesBytesPair attributes = 2;
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getAttributesList();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index);
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     int getAttributesCount();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getAttributesOrBuilderList();
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
         int index);
 
-    // repeated .NameStringPair configuration = 3;
+    // repeated .hbase.pb.NameStringPair configuration = 3;
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getConfigurationList();
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     int getConfigurationCount();
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList();
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code ColumnFamilySchema}
+   * Protobuf type {@code hbase.pb.ColumnFamilySchema}
    *
    * <pre>
    **
@@ -2692,12 +2692,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ColumnFamilySchema_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ColumnFamilySchema_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ColumnFamilySchema_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ColumnFamilySchema_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder.class);
     }
@@ -2734,72 +2734,72 @@ public final class HBaseProtos {
       return name_;
     }
 
-    // repeated .BytesBytesPair attributes = 2;
+    // repeated .hbase.pb.BytesBytesPair attributes = 2;
     public static final int ATTRIBUTES_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> attributes_;
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getAttributesList() {
       return attributes_;
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getAttributesOrBuilderList() {
       return attributes_;
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public int getAttributesCount() {
       return attributes_.size();
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index) {
       return attributes_.get(index);
     }
     /**
-     * <code>repeated .BytesBytesPair attributes = 2;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
         int index) {
       return attributes_.get(index);
     }
 
-    // repeated .NameStringPair configuration = 3;
+    // repeated .hbase.pb.NameStringPair configuration = 3;
     public static final int CONFIGURATION_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     public int getConfigurationCount() {
       return configuration_.size();
     }
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
       return configuration_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair configuration = 3;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index) {
@@ -2998,7 +2998,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ColumnFamilySchema}
+     * Protobuf type {@code hbase.pb.ColumnFamilySchema}
      *
      * <pre>
      **
@@ -3011,12 +3011,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchemaOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ColumnFamilySchema_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ColumnFamilySchema_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ColumnFamilySchema_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ColumnFamilySchema_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema.Builder.class);
       }
@@ -3066,7 +3066,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ColumnFamilySchema_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ColumnFamilySchema_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema getDefaultInstanceForType() {
@@ -3257,7 +3257,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // repeated .BytesBytesPair attributes = 2;
+      // repeated .hbase.pb.BytesBytesPair attributes = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> attributes_ =
         java.util.Collections.emptyList();
       private void ensureAttributesIsMutable() {
@@ -3271,7 +3271,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> attributesBuilder_;
 
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getAttributesList() {
         if (attributesBuilder_ == null) {
@@ -3281,7 +3281,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public int getAttributesCount() {
         if (attributesBuilder_ == null) {
@@ -3291,7 +3291,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getAttributes(int index) {
         if (attributesBuilder_ == null) {
@@ -3301,7 +3301,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder setAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -3318,7 +3318,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder setAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -3332,7 +3332,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (attributesBuilder_ == null) {
@@ -3348,7 +3348,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -3365,7 +3365,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -3379,7 +3379,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAttributes(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -3393,7 +3393,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder addAllAttributes(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
@@ -3407,7 +3407,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder clearAttributes() {
         if (attributesBuilder_ == null) {
@@ -3420,7 +3420,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public Builder removeAttributes(int index) {
         if (attributesBuilder_ == null) {
@@ -3433,14 +3433,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getAttributesBuilder(
           int index) {
         return getAttributesFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getAttributesOrBuilder(
           int index) {
@@ -3450,7 +3450,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
            getAttributesOrBuilderList() {
@@ -3461,14 +3461,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addAttributesBuilder() {
         return getAttributesFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addAttributesBuilder(
           int index) {
@@ -3476,7 +3476,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair attributes = 2;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair attributes = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
            getAttributesBuilderList() {
@@ -3497,7 +3497,7 @@ public final class HBaseProtos {
         return attributesBuilder_;
       }
 
-      // repeated .NameStringPair configuration = 3;
+      // repeated .hbase.pb.NameStringPair configuration = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
         java.util.Collections.emptyList();
       private void ensureConfigurationIsMutable() {
@@ -3511,7 +3511,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
 
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
         if (configurationBuilder_ == null) {
@@ -3521,7 +3521,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public int getConfigurationCount() {
         if (configurationBuilder_ == null) {
@@ -3531,7 +3531,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -3541,7 +3541,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -3558,7 +3558,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -3572,7 +3572,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder addConfiguration(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (configurationBuilder_ == null) {
@@ -3588,7 +3588,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -3605,7 +3605,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder addConfiguration(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -3619,7 +3619,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -3633,7 +3633,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder addAllConfiguration(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
@@ -3647,7 +3647,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder clearConfiguration() {
         if (configurationBuilder_ == null) {
@@ -3660,7 +3660,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public Builder removeConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -3673,14 +3673,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
           int index) {
         return getConfigurationFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
           int index) {
@@ -3690,7 +3690,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getConfigurationOrBuilderList() {
@@ -3701,14 +3701,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
         return getConfigurationFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
           int index) {
@@ -3716,7 +3716,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 3;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getConfigurationBuilderList() {
@@ -3737,7 +3737,7 @@ public final class HBaseProtos {
         return configurationBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ColumnFamilySchema)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ColumnFamilySchema)
     }
 
     static {
@@ -3745,7 +3745,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ColumnFamilySchema)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ColumnFamilySchema)
   }
 
   public interface RegionInfoOrBuilder
@@ -3761,17 +3761,17 @@ public final class HBaseProtos {
      */
     long getRegionId();
 
-    // required .TableName table_name = 2;
+    // required .hbase.pb.TableName table_name = 2;
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     boolean hasTableName();
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
 
@@ -3826,7 +3826,7 @@ public final class HBaseProtos {
     int getReplicaId();
   }
   /**
-   * Protobuf type {@code RegionInfo}
+   * Protobuf type {@code hbase.pb.RegionInfo}
    *
    * <pre>
    **
@@ -3938,12 +3938,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionInfo_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionInfo_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder.class);
     }
@@ -3980,23 +3980,23 @@ public final class HBaseProtos {
       return regionId_;
     }
 
-    // required .TableName table_name = 2;
+    // required .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
     /**
-     * <code>required .TableName table_name = 2;</code>
+     * <code>required .hbase.pb.TableName table_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
@@ -4344,7 +4344,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionInfo}
+     * Protobuf type {@code hbase.pb.RegionInfo}
      *
      * <pre>
      **
@@ -4356,12 +4356,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionInfo_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo.Builder.class);
       }
@@ -4414,7 +4414,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionInfo_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo getDefaultInstanceForType() {
@@ -4574,18 +4574,18 @@ public final class HBaseProtos {
         return this;
       }
 
-      // required .TableName table_name = 2;
+      // required .hbase.pb.TableName table_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -4595,7 +4595,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -4611,7 +4611,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
@@ -4625,7 +4625,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -4644,7 +4644,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
@@ -4657,7 +4657,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
@@ -4665,7 +4665,7 @@ public final class HBaseProtos {
         return getTableNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
@@ -4675,7 +4675,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>required .TableName table_name = 2;</code>
+       * <code>required .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
@@ -4862,7 +4862,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionInfo)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionInfo)
     }
 
     static {
@@ -4870,39 +4870,39 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionInfo)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionInfo)
   }
 
   public interface FavoredNodesOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .ServerName favored_node = 1;
+    // repeated .hbase.pb.ServerName favored_node = 1;
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> 
         getFavoredNodeList();
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getFavoredNode(int index);
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     int getFavoredNodeCount();
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getFavoredNodeOrBuilderList();
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getFavoredNodeOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code FavoredNodes}
+   * Protobuf type {@code hbase.pb.FavoredNodes}
    *
    * <pre>
    **
@@ -4982,12 +4982,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_FavoredNodes_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_FavoredNodes_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes.Builder.class);
     }
@@ -5007,36 +5007,36 @@ public final class HBaseProtos {
       return PARSER;
     }
 
-    // repeated .ServerName favored_node = 1;
+    // repeated .hbase.pb.ServerName favored_node = 1;
     public static final int FAVORED_NODE_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNode_;
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getFavoredNodeList() {
       return favoredNode_;
     }
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
         getFavoredNodeOrBuilderList() {
       return favoredNode_;
     }
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     public int getFavoredNodeCount() {
       return favoredNode_.size();
     }
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getFavoredNode(int index) {
       return favoredNode_.get(index);
     }
     /**
-     * <code>repeated .ServerName favored_node = 1;</code>
+     * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getFavoredNodeOrBuilder(
         int index) {
@@ -5194,7 +5194,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code FavoredNodes}
+     * Protobuf type {@code hbase.pb.FavoredNodes}
      *
      * <pre>
      **
@@ -5206,12 +5206,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodesOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_FavoredNodes_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_FavoredNodes_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes.Builder.class);
       }
@@ -5252,7 +5252,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_FavoredNodes_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_FavoredNodes_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.FavoredNodes getDefaultInstanceForType() {
@@ -5353,7 +5353,7 @@ public final class HBaseProtos {
       }
       private int bitField0_;
 
-      // repeated .ServerName favored_node = 1;
+      // repeated .hbase.pb.ServerName favored_node = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> favoredNode_ =
         java.util.Collections.emptyList();
       private void ensureFavoredNodeIsMutable() {
@@ -5367,7 +5367,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> favoredNodeBuilder_;
 
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> getFavoredNodeList() {
         if (favoredNodeBuilder_ == null) {
@@ -5377,7 +5377,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public int getFavoredNodeCount() {
         if (favoredNodeBuilder_ == null) {
@@ -5387,7 +5387,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getFavoredNode(int index) {
         if (favoredNodeBuilder_ == null) {
@@ -5397,7 +5397,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder setFavoredNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
@@ -5414,7 +5414,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder setFavoredNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -5428,7 +5428,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder addFavoredNode(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (favoredNodeBuilder_ == null) {
@@ -5444,7 +5444,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder addFavoredNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
@@ -5461,7 +5461,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder addFavoredNode(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -5475,7 +5475,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder addFavoredNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -5489,7 +5489,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder addAllFavoredNode(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName> values) {
@@ -5503,7 +5503,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder clearFavoredNode() {
         if (favoredNodeBuilder_ == null) {
@@ -5516,7 +5516,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public Builder removeFavoredNode(int index) {
         if (favoredNodeBuilder_ == null) {
@@ -5529,14 +5529,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getFavoredNodeBuilder(
           int index) {
         return getFavoredNodeFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getFavoredNodeOrBuilder(
           int index) {
@@ -5546,7 +5546,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
            getFavoredNodeOrBuilderList() {
@@ -5557,14 +5557,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addFavoredNodeBuilder() {
         return getFavoredNodeFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder addFavoredNodeBuilder(
           int index) {
@@ -5572,7 +5572,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance());
       }
       /**
-       * <code>repeated .ServerName favored_node = 1;</code>
+       * <code>repeated .hbase.pb.ServerName favored_node = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder> 
            getFavoredNodeBuilderList() {
@@ -5593,7 +5593,7 @@ public final class HBaseProtos {
         return favoredNodeBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:FavoredNodes)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.FavoredNodes)
     }
 
     static {
@@ -5601,19 +5601,19 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:FavoredNodes)
+    // @@protoc_insertion_point(class_scope:hbase.pb.FavoredNodes)
   }
 
   public interface RegionSpecifierOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .RegionSpecifier.RegionSpecifierType type = 1;
+    // required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;
     /**
-     * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+     * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
      */
     boolean hasType();
     /**
-     * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+     * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType getType();
 
@@ -5628,7 +5628,7 @@ public final class HBaseProtos {
     com.google.protobuf.ByteString getValue();
   }
   /**
-   * Protobuf type {@code RegionSpecifier}
+   * Protobuf type {@code hbase.pb.RegionSpecifier}
    *
    * <pre>
    **
@@ -5716,12 +5716,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionSpecifier_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionSpecifier_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionSpecifier_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionSpecifier_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder.class);
     }
@@ -5742,7 +5742,7 @@ public final class HBaseProtos {
     }
 
     /**
-     * Protobuf enum {@code RegionSpecifier.RegionSpecifierType}
+     * Protobuf enum {@code hbase.pb.RegionSpecifier.RegionSpecifierType}
      */
     public enum RegionSpecifierType
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -5836,21 +5836,21 @@ public final class HBaseProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:RegionSpecifier.RegionSpecifierType)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.RegionSpecifier.RegionSpecifierType)
     }
 
     private int bitField0_;
-    // required .RegionSpecifier.RegionSpecifierType type = 1;
+    // required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType type_;
     /**
-     * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+     * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+     * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType getType() {
       return type_;
@@ -6045,7 +6045,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionSpecifier}
+     * Protobuf type {@code hbase.pb.RegionSpecifier}
      *
      * <pre>
      **
@@ -6060,12 +6060,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifierOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionSpecifier_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionSpecifier_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionSpecifier_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionSpecifier_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.Builder.class);
       }
@@ -6103,7 +6103,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionSpecifier_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionSpecifier_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier getDefaultInstanceForType() {
@@ -6187,22 +6187,22 @@ public final class HBaseProtos {
       }
       private int bitField0_;
 
-      // required .RegionSpecifier.RegionSpecifierType type = 1;
+      // required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType.REGION_NAME;
       /**
-       * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+       * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+       * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType getType() {
         return type_;
       }
       /**
-       * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+       * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType value) {
         if (value == null) {
@@ -6214,7 +6214,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>required .RegionSpecifier.RegionSpecifierType type = 1;</code>
+       * <code>required .hbase.pb.RegionSpecifier.RegionSpecifierType type = 1;</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -6259,7 +6259,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionSpecifier)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionSpecifier)
     }
 
     static {
@@ -6267,7 +6267,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionSpecifier)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionSpecifier)
   }
 
   public interface TimeRangeOrBuilder
@@ -6294,7 +6294,7 @@ public final class HBaseProtos {
     long getTo();
   }
   /**
-   * Protobuf type {@code TimeRange}
+   * Protobuf type {@code hbase.pb.TimeRange}
    *
    * <pre>
    **
@@ -6376,12 +6376,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TimeRange_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TimeRange_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TimeRange_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TimeRange_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.Builder.class);
     }
@@ -6599,7 +6599,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TimeRange}
+     * Protobuf type {@code hbase.pb.TimeRange}
      *
      * <pre>
      **
@@ -6614,12 +6614,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRangeOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TimeRange_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TimeRange_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TimeRange_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TimeRange_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange.Builder.class);
       }
@@ -6657,7 +6657,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_TimeRange_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_TimeRange_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TimeRange getDefaultInstanceForType() {
@@ -6799,7 +6799,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TimeRange)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TimeRange)
     }
 
     static {
@@ -6807,7 +6807,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TimeRange)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TimeRange)
   }
 
   public interface ServerNameOrBuilder
@@ -6849,7 +6849,7 @@ public final class HBaseProtos {
     long getStartCode();
   }
   /**
-   * Protobuf type {@code ServerName}
+   * Protobuf type {@code hbase.pb.ServerName}
    *
    * <pre>
    **
@@ -6933,12 +6933,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ServerName_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ServerName_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ServerName_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ServerName_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder.class);
     }
@@ -7220,7 +7220,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ServerName}
+     * Protobuf type {@code hbase.pb.ServerName}
      *
      * <pre>
      **
@@ -7232,12 +7232,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ServerName_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ServerName_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ServerName_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ServerName_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder.class);
       }
@@ -7277,7 +7277,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ServerName_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ServerName_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getDefaultInstanceForType() {
@@ -7506,7 +7506,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ServerName)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ServerName)
     }
 
     static {
@@ -7514,7 +7514,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ServerName)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ServerName)
   }
 
   public interface CoprocessorOrBuilder
@@ -7536,7 +7536,7 @@ public final class HBaseProtos {
         getNameBytes();
   }
   /**
-   * Protobuf type {@code Coprocessor}
+   * Protobuf type {@code hbase.pb.Coprocessor}
    */
   public static final class Coprocessor extends
       com.google.protobuf.GeneratedMessage
@@ -7605,12 +7605,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_Coprocessor_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_Coprocessor_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_Coprocessor_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_Coprocessor_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder.class);
     }
@@ -7826,19 +7826,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Coprocessor}
+     * Protobuf type {@code hbase.pb.Coprocessor}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.CoprocessorOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_Coprocessor_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_Coprocessor_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_Coprocessor_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_Coprocessor_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor.Builder.class);
       }
@@ -7874,7 +7874,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_Coprocessor_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_Coprocessor_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.Coprocessor getDefaultInstanceForType() {
@@ -8023,7 +8023,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Coprocessor)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Coprocessor)
     }
 
     static {
@@ -8031,7 +8031,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Coprocessor)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Coprocessor)
   }
 
   public interface NameStringPairOrBuilder
@@ -8068,7 +8068,7 @@ public final class HBaseProtos {
         getValueBytes();
   }
   /**
-   * Protobuf type {@code NameStringPair}
+   * Protobuf type {@code hbase.pb.NameStringPair}
    */
   public static final class NameStringPair extends
       com.google.protobuf.GeneratedMessage
@@ -8142,12 +8142,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameStringPair_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameStringPair_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameStringPair_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameStringPair_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder.class);
     }
@@ -8427,19 +8427,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code NameStringPair}
+     * Protobuf type {@code hbase.pb.NameStringPair}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameStringPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameStringPair_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameStringPair_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameStringPair_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder.class);
       }
@@ -8477,7 +8477,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameStringPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameStringPair_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getDefaultInstanceForType() {
@@ -8713,7 +8713,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:NameStringPair)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.NameStringPair)
     }
 
     static {
@@ -8721,7 +8721,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:NameStringPair)
+    // @@protoc_insertion_point(class_scope:hbase.pb.NameStringPair)
   }
 
   public interface NameBytesPairOrBuilder
@@ -8753,7 +8753,7 @@ public final class HBaseProtos {
     com.google.protobuf.ByteString getValue();
   }
   /**
-   * Protobuf type {@code NameBytesPair}
+   * Protobuf type {@code hbase.pb.NameBytesPair}
    */
   public static final class NameBytesPair extends
       com.google.protobuf.GeneratedMessage
@@ -8827,12 +8827,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameBytesPair_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameBytesPair_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameBytesPair_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameBytesPair_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder.class);
     }
@@ -9081,19 +9081,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code NameBytesPair}
+     * Protobuf type {@code hbase.pb.NameBytesPair}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPairOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameBytesPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameBytesPair_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameBytesPair_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameBytesPair_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair.Builder.class);
       }
@@ -9131,7 +9131,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameBytesPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameBytesPair_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameBytesPair getDefaultInstanceForType() {
@@ -9323,7 +9323,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:NameBytesPair)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.NameBytesPair)
     }
 
     static {
@@ -9331,7 +9331,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:NameBytesPair)
+    // @@protoc_insertion_point(class_scope:hbase.pb.NameBytesPair)
   }
 
   public interface BytesBytesPairOrBuilder
@@ -9358,7 +9358,7 @@ public final class HBaseProtos {
     com.google.protobuf.ByteString getSecond();
   }
   /**
-   * Protobuf type {@code BytesBytesPair}
+   * Protobuf type {@code hbase.pb.BytesBytesPair}
    */
   public static final class BytesBytesPair extends
       com.google.protobuf.GeneratedMessage
@@ -9432,12 +9432,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BytesBytesPair_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BytesBytesPair_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BytesBytesPair_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BytesBytesPair_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder.class);
     }
@@ -9663,19 +9663,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code BytesBytesPair}
+     * Protobuf type {@code hbase.pb.BytesBytesPair}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BytesBytesPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BytesBytesPair_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BytesBytesPair_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BytesBytesPair_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder.class);
       }
@@ -9713,7 +9713,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BytesBytesPair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BytesBytesPair_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getDefaultInstanceForType() {
@@ -9869,7 +9869,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:BytesBytesPair)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.BytesBytesPair)
     }
 
     static {
@@ -9877,7 +9877,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:BytesBytesPair)
+    // @@protoc_insertion_point(class_scope:hbase.pb.BytesBytesPair)
   }
 
   public interface NameInt64PairOrBuilder
@@ -9909,7 +9909,7 @@ public final class HBaseProtos {
     long getValue();
   }
   /**
-   * Protobuf type {@code NameInt64Pair}
+   * Protobuf type {@code hbase.pb.NameInt64Pair}
    */
   public static final class NameInt64Pair extends
       com.google.protobuf.GeneratedMessage
@@ -9983,12 +9983,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameInt64Pair_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameInt64Pair_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameInt64Pair_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameInt64Pair_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder.class);
     }
@@ -10233,19 +10233,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code NameInt64Pair}
+     * Protobuf type {@code hbase.pb.NameInt64Pair}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64PairOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameInt64Pair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameInt64Pair_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameInt64Pair_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameInt64Pair_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair.Builder.class);
       }
@@ -10283,7 +10283,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NameInt64Pair_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NameInt64Pair_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameInt64Pair getDefaultInstanceForType() {
@@ -10468,7 +10468,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:NameInt64Pair)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.NameInt64Pair)
     }
 
     static {
@@ -10476,7 +10476,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:NameInt64Pair)
+    // @@protoc_insertion_point(class_scope:hbase.pb.NameInt64Pair)
   }
 
   public interface SnapshotDescriptionOrBuilder
@@ -10534,13 +10534,13 @@ public final class HBaseProtos {
      */
     long getCreationTime();
 
-    // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
+    // optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];
     /**
-     * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
      */
     boolean hasType();
     /**
-     * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type getType();
 
@@ -10570,7 +10570,7 @@ public final class HBaseProtos {
         getOwnerBytes();
   }
   /**
-   * Protobuf type {@code SnapshotDescription}
+   * Protobuf type {@code hbase.pb.SnapshotDescription}
    *
    * <pre>
    **
@@ -10675,12 +10675,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_SnapshotDescription_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_SnapshotDescription_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Builder.class);
     }
@@ -10701,7 +10701,7 @@ public final class HBaseProtos {
     }
 
     /**
-     * Protobuf enum {@code SnapshotDescription.Type}
+     * Protobuf enum {@code hbase.pb.SnapshotDescription.Type}
      */
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -10788,7 +10788,7 @@ public final class HBaseProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:SnapshotDescription.Type)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SnapshotDescription.Type)
     }
 
     private int bitField0_;
@@ -10906,17 +10906,17 @@ public final class HBaseProtos {
       return creationTime_;
     }
 
-    // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
+    // optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];
     public static final int TYPE_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type type_;
     /**
-     * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+     * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type getType() {
       return type_;
@@ -11218,7 +11218,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SnapshotDescription}
+     * Protobuf type {@code hbase.pb.SnapshotDescription}
      *
      * <pre>
      **
@@ -11230,12 +11230,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_SnapshotDescription_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_SnapshotDescription_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Builder.class);
       }
@@ -11281,7 +11281,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_SnapshotDescription_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_SnapshotDescription_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription getDefaultInstanceForType() {
@@ -11600,22 +11600,22 @@ public final class HBaseProtos {
         return this;
       }
 
-      // optional .SnapshotDescription.Type type = 4 [default = FLUSH];
+      // optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type type_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type.FLUSH;
       /**
-       * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type getType() {
         return type_;
       }
       /**
-       * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type value) {
         if (value == null) {
@@ -11627,7 +11627,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>optional .SnapshotDescription.Type type = 4 [default = FLUSH];</code>
+       * <code>optional .hbase.pb.SnapshotDescription.Type type = 4 [default = FLUSH];</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000008);
@@ -11743,7 +11743,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SnapshotDescription)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SnapshotDescription)
     }
 
     static {
@@ -11751,7 +11751,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SnapshotDescription)
+    // @@protoc_insertion_point(class_scope:hbase.pb.SnapshotDescription)
   }
 
   public interface ProcedureDescriptionOrBuilder
@@ -11821,33 +11821,33 @@ public final class HBaseProtos {
      */
     long getCreationTime();
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getConfigurationList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     int getConfigurationCount();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code ProcedureDescription}
+   * Protobuf type {@code hbase.pb.ProcedureDescription}
    *
    * <pre>
    **
@@ -11942,12 +11942,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ProcedureDescription_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ProcedureDescription_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ProcedureDescription_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ProcedureDescription_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription.Builder.class);
     }
@@ -12094,36 +12094,36 @@ public final class HBaseProtos {
       return creationTime_;
     }
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     public static final int CONFIGURATION_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public int getConfigurationCount() {
       return configuration_.size();
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
       return configuration_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index) {
@@ -12336,7 +12336,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcedureDescription}
+     * Protobuf type {@code hbase.pb.ProcedureDescription}
      *
      * <pre>
      **
@@ -12348,12 +12348,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescriptionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ProcedureDescription_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ProcedureDescription_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ProcedureDescription_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ProcedureDescription_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription.Builder.class);
       }
@@ -12400,7 +12400,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_ProcedureDescription_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_ProcedureDescription_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription getDefaultInstanceForType() {
@@ -12761,7 +12761,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // repeated .NameStringPair configuration = 4;
+      // repeated .hbase.pb.NameStringPair configuration = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
         java.util.Collections.emptyList();
       private void ensureConfigurationIsMutable() {
@@ -12775,7 +12775,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
 
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
         if (configurationBuilder_ == null) {
@@ -12785,7 +12785,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public int getConfigurationCount() {
         if (configurationBuilder_ == null) {
@@ -12795,7 +12795,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -12805,7 +12805,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -12822,7 +12822,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -12836,7 +12836,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (configurationBuilder_ == null) {
@@ -12852,7 +12852,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -12869,7 +12869,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -12883,7 +12883,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -12897,7 +12897,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addAllConfiguration(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
@@ -12911,7 +12911,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder clearConfiguration() {
         if (configurationBuilder_ == null) {
@@ -12924,7 +12924,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder removeConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -12937,14 +12937,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
           int index) {
         return getConfigurationFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
           int index) {
@@ -12954,7 +12954,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getConfigurationOrBuilderList() {
@@ -12965,14 +12965,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
         return getConfigurationFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
           int index) {
@@ -12980,7 +12980,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getConfigurationBuilderList() {
@@ -13001,7 +13001,7 @@ public final class HBaseProtos {
         return configurationBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcedureDescription)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureDescription)
     }
 
     static {
@@ -13009,14 +13009,14 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcedureDescription)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureDescription)
   }
 
   public interface EmptyMsgOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code EmptyMsg}
+   * Protobuf type {@code hbase.pb.EmptyMsg}
    */
   public static final class EmptyMsg extends
       com.google.protobuf.GeneratedMessage
@@ -13079,12 +13079,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_EmptyMsg_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_EmptyMsg_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_EmptyMsg_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_EmptyMsg_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg.Builder.class);
     }
@@ -13235,19 +13235,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code EmptyMsg}
+     * Protobuf type {@code hbase.pb.EmptyMsg}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsgOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_EmptyMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_EmptyMsg_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_EmptyMsg_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_EmptyMsg_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg.Builder.class);
       }
@@ -13281,7 +13281,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_EmptyMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_EmptyMsg_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.EmptyMsg getDefaultInstanceForType() {
@@ -13339,7 +13339,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:EmptyMsg)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.EmptyMsg)
     }
 
     static {
@@ -13347,7 +13347,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:EmptyMsg)
+    // @@protoc_insertion_point(class_scope:hbase.pb.EmptyMsg)
   }
 
   public interface LongMsgOrBuilder
@@ -13364,7 +13364,7 @@ public final class HBaseProtos {
     long getLongMsg();
   }
   /**
-   * Protobuf type {@code LongMsg}
+   * Protobuf type {@code hbase.pb.LongMsg}
    */
   public static final class LongMsg extends
       com.google.protobuf.GeneratedMessage
@@ -13433,12 +13433,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_LongMsg_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LongMsg_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_LongMsg_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LongMsg_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg.Builder.class);
     }
@@ -13627,19 +13627,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code LongMsg}
+     * Protobuf type {@code hbase.pb.LongMsg}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsgOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_LongMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LongMsg_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_LongMsg_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LongMsg_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg.Builder.class);
       }
@@ -13675,7 +13675,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_LongMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_LongMsg_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.LongMsg getDefaultInstanceForType() {
@@ -13781,7 +13781,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:LongMsg)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.LongMsg)
     }
 
     static {
@@ -13789,7 +13789,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:LongMsg)
+    // @@protoc_insertion_point(class_scope:hbase.pb.LongMsg)
   }
 
   public interface DoubleMsgOrBuilder
@@ -13806,7 +13806,7 @@ public final class HBaseProtos {
     double getDoubleMsg();
   }
   /**
-   * Protobuf type {@code DoubleMsg}
+   * Protobuf type {@code hbase.pb.DoubleMsg}
    */
   public static final class DoubleMsg extends
       com.google.protobuf.GeneratedMessage
@@ -13875,12 +13875,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_DoubleMsg_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_DoubleMsg_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.Builder.class);
     }
@@ -14069,19 +14069,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code DoubleMsg}
+     * Protobuf type {@code hbase.pb.DoubleMsg}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsgOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_DoubleMsg_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_DoubleMsg_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg.Builder.class);
       }
@@ -14117,7 +14117,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_DoubleMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_DoubleMsg_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.DoubleMsg getDefaultInstanceForType() {
@@ -14223,7 +14223,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:DoubleMsg)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.DoubleMsg)
     }
 
     static {
@@ -14231,7 +14231,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:DoubleMsg)
+    // @@protoc_insertion_point(class_scope:hbase.pb.DoubleMsg)
   }
 
   public interface BigDecimalMsgOrBuilder
@@ -14248,7 +14248,7 @@ public final class HBaseProtos {
     com.google.protobuf.ByteString getBigdecimalMsg();
   }
   /**
-   * Protobuf type {@code BigDecimalMsg}
+   * Protobuf type {@code hbase.pb.BigDecimalMsg}
    */
   public static final class BigDecimalMsg extends
       com.google.protobuf.GeneratedMessage
@@ -14317,12 +14317,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BigDecimalMsg_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BigDecimalMsg_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BigDecimalMsg_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BigDecimalMsg_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg.Builder.class);
     }
@@ -14511,19 +14511,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code BigDecimalMsg}
+     * Protobuf type {@code hbase.pb.BigDecimalMsg}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsgOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BigDecimalMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BigDecimalMsg_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BigDecimalMsg_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BigDecimalMsg_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg.Builder.class);
       }
@@ -14559,7 +14559,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_BigDecimalMsg_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_BigDecimalMsg_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BigDecimalMsg getDefaultInstanceForType() {
@@ -14668,7 +14668,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:BigDecimalMsg)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.BigDecimalMsg)
     }
 
     static {
@@ -14676,7 +14676,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:BigDecimalMsg)
+    // @@protoc_insertion_point(class_scope:hbase.pb.BigDecimalMsg)
   }
 
   public interface UUIDOrBuilder
@@ -14703,7 +14703,7 @@ public final class HBaseProtos {
     long getMostSigBits();
   }
   /**
-   * Protobuf type {@code UUID}
+   * Protobuf type {@code hbase.pb.UUID}
    */
   public static final class UUID extends
       com.google.protobuf.GeneratedMessage
@@ -14777,12 +14777,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_UUID_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_UUID_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_UUID_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_UUID_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder.class);
     }
@@ -15008,19 +15008,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code UUID}
+     * Protobuf type {@code hbase.pb.UUID}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUIDOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_UUID_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_UUID_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_UUID_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_UUID_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID.Builder.class);
       }
@@ -15058,7 +15058,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_UUID_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_UUID_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.UUID getDefaultInstanceForType() {
@@ -15208,7 +15208,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:UUID)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.UUID)
     }
 
     static {
@@ -15216,7 +15216,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:UUID)
+    // @@protoc_insertion_point(class_scope:hbase.pb.UUID)
   }
 
   public interface NamespaceDescriptorOrBuilder
@@ -15232,33 +15232,33 @@ public final class HBaseProtos {
      */
     com.google.protobuf.ByteString getName();
 
-    // repeated .NameStringPair configuration = 2;
+    // repeated .hbase.pb.NameStringPair configuration = 2;
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getConfigurationList();
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     int getConfigurationCount();
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList();
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code NamespaceDescriptor}
+   * Protobuf type {@code hbase.pb.NamespaceDescriptor}
    */
   public static final class NamespaceDescriptor extends
       com.google.protobuf.GeneratedMessage
@@ -15338,12 +15338,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NamespaceDescriptor_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NamespaceDescriptor_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NamespaceDescriptor_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder.class);
     }
@@ -15380,36 +15380,36 @@ public final class HBaseProtos {
       return name_;
     }
 
-    // repeated .NameStringPair configuration = 2;
+    // repeated .hbase.pb.NameStringPair configuration = 2;
     public static final int CONFIGURATION_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     public int getConfigurationCount() {
       return configuration_.size();
     }
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
       return configuration_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair configuration = 2;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index) {
@@ -15588,19 +15588,19 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code NamespaceDescriptor}
+     * Protobuf type {@code hbase.pb.NamespaceDescriptor}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NamespaceDescriptor_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NamespaceDescriptor_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NamespaceDescriptor_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder.class);
       }
@@ -15643,7 +15643,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_NamespaceDescriptor_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_NamespaceDescriptor_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getDefaultInstanceForType() {
@@ -15793,7 +15793,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // repeated .NameStringPair configuration = 2;
+      // repeated .hbase.pb.NameStringPair configuration = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
         java.util.Collections.emptyList();
       private void ensureConfigurationIsMutable() {
@@ -15807,7 +15807,7 @@ public final class HBaseProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
 
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
         if (configurationBuilder_ == null) {
@@ -15817,7 +15817,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public int getConfigurationCount() {
         if (configurationBuilder_ == null) {
@@ -15827,7 +15827,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -15837,7 +15837,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -15854,7 +15854,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -15868,7 +15868,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder addConfiguration(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (configurationBuilder_ == null) {
@@ -15884,7 +15884,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -15901,7 +15901,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder addConfiguration(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -15915,7 +15915,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -15929,7 +15929,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder addAllConfiguration(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
@@ -15943,7 +15943,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder clearConfiguration() {
         if (configurationBuilder_ == null) {
@@ -15956,7 +15956,7 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public Builder removeConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -15969,14 +15969,14 @@ public final class HBaseProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
           int index) {
         return getConfigurationFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
           int index) {
@@ -15986,7 +15986,7 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getConfigurationOrBuilderList() {
@@ -15997,14 +15997,14 @@ public final class HBaseProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
         return getConfigurationFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
           int index) {
@@ -16012,7 +16012,7 @@ public final class HBaseProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 2;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getConfigurationBuilderList() {
@@ -16033,7 +16033,7 @@ public final class HBaseProtos {
         return configurationBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:NamespaceDescriptor)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.NamespaceDescriptor)
     }
 
     static {
@@ -16041,7 +16041,7 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:NamespaceDescriptor)
+    // @@protoc_insertion_point(class_scope:hbase.pb.NamespaceDescriptor)
   }
 
   public interface RegionServerInfoOrBuilder
@@ -16058,7 +16058,7 @@ public final class HBaseProtos {
     int getInfoPort();
   }
   /**
-   * Protobuf type {@code RegionServerInfo}
+   * Protobuf type {@code hbase.pb.RegionServerInfo}
    *
    * <pre>
    **
@@ -16132,12 +16132,12 @@ public final class HBaseProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionServerInfo_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionServerInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionServerInfo_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo.Builder.class);
     }
@@ -16322,7 +16322,7 @@ public final class HBaseProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionServerInfo}
+     * Protobuf type {@code hbase.pb.RegionServerInfo}
      *
      * <pre>
      **
@@ -16334,12 +16334,12 @@ public final class HBaseProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionServerInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionServerInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionServerInfo_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo.Builder.class);
       }
@@ -16375,7 +16375,7 @@ public final class HBaseProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_RegionServerInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_RegionServerInfo_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo getDefaultInstanceForType() {
@@ -16477,7 +16477,7 @@ public final class HBaseProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionServerInfo)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerInfo)
     }
 
     static {
@@ -16485,119 +16485,119 @@ public final class HBaseProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionServerInfo)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionServerInfo)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TableName_descriptor;
+    internal_static_hbase_pb_TableName_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TableName_fieldAccessorTable;
+      internal_static_hbase_pb_TableName_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TableSchema_descriptor;
+    internal_static_hbase_pb_TableSchema_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TableSchema_fieldAccessorTable;
+      internal_static_hbase_pb_TableSchema_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ColumnFamilySchema_descriptor;
+    internal_static_hbase_pb_ColumnFamilySchema_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ColumnFamilySchema_fieldAccessorTable;
+      internal_static_hbase_pb_ColumnFamilySchema_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionInfo_descriptor;
+    internal_static_hbase_pb_RegionInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionInfo_fieldAccessorTable;
+      internal_static_hbase_pb_RegionInfo_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_FavoredNodes_descriptor;
+    internal_static_hbase_pb_FavoredNodes_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_FavoredNodes_fieldAccessorTable;
+      internal_static_hbase_pb_FavoredNodes_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionSpecifier_descriptor;
+    internal_static_hbase_pb_RegionSpecifier_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionSpecifier_fieldAccessorTable;
+      internal_static_hbase_pb_RegionSpecifier_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TimeRange_descriptor;
+    internal_static_hbase_pb_TimeRange_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TimeRange_fieldAccessorTable;
+      internal_static_hbase_pb_TimeRange_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ServerName_descriptor;
+    internal_static_hbase_pb_ServerName_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ServerName_fieldAccessorTable;
+      internal_static_hbase_pb_ServerName_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Coprocessor_descriptor;
+    internal_static_hbase_pb_Coprocessor_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Coprocessor_fieldAccessorTable;
+      internal_static_hbase_pb_Coprocessor_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_NameStringPair_descriptor;
+    internal_static_hbase_pb_NameStringPair_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_NameStringPair_fieldAccessorTable;
+      internal_static_hbase_pb_NameStringPair_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_NameBytesPair_descriptor;
+    internal_static_hbase_pb_NameBytesPair_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_NameBytesPair_fieldAccessorTable;
+      internal_static_hbase_pb_NameBytesPair_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_BytesBytesPair_descriptor;
+    internal_static_hbase_pb_BytesBytesPair_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_BytesBytesPair_fieldAccessorTable;
+      internal_static_hbase_pb_BytesBytesPair_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_NameInt64Pair_descriptor;
+    internal_static_hbase_pb_NameInt64Pair_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_NameInt64Pair_fieldAccessorTable;
+      internal_static_hbase_pb_NameInt64Pair_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SnapshotDescription_descriptor;
+    internal_static_hbase_pb_SnapshotDescription_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SnapshotDescription_fieldAccessorTable;
+      internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureDescription_descriptor;
+    internal_static_hbase_pb_ProcedureDescription_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureDescription_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureDescription_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_EmptyMsg_descriptor;
+    internal_static_hbase_pb_EmptyMsg_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_EmptyMsg_fieldAccessorTable;
+      internal_static_hbase_pb_EmptyMsg_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_LongMsg_descriptor;
+    internal_static_hbase_pb_LongMsg_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_LongMsg_fieldAccessorTable;
+      internal_static_hbase_pb_LongMsg_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_DoubleMsg_descriptor;
+    internal_static_hbase_pb_DoubleMsg_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_DoubleMsg_fieldAccessorTable;
+      internal_static_hbase_pb_DoubleMsg_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_BigDecimalMsg_descriptor;
+    internal_static_hbase_pb_BigDecimalMsg_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_BigDecimalMsg_fieldAccessorTable;
+      internal_static_hbase_pb_BigDecimalMsg_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UUID_descriptor;
+    internal_static_hbase_pb_UUID_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UUID_fieldAccessorTable;
+      internal_static_hbase_pb_UUID_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_NamespaceDescriptor_descriptor;
+    internal_static_hbase_pb_NamespaceDescriptor_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_NamespaceDescriptor_fieldAccessorTable;
+      internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionServerInfo_descriptor;
+    internal_static_hbase_pb_RegionServerInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionServerInfo_fieldAccessorTable;
+      internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -16607,53 +16607,56 @@ public final class HBaseProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HBase.proto\032\nCell.proto\"1\n\tTableName\022\021" +
-      "\n\tnamespace\030\001 \002(\014\022\021\n\tqualifier\030\002 \002(\014\"\250\001\n" +
-      "\013TableSchema\022\036\n\ntable_name\030\001 \001(\0132\n.Table" +
-      "Name\022#\n\nattributes\030\002 \003(\0132\017.BytesBytesPai" +
-      "r\022,\n\017column_families\030\003 \003(\0132\023.ColumnFamil" +
-      "ySchema\022&\n\rconfiguration\030\004 \003(\0132\017.NameStr" +
-      "ingPair\"o\n\022ColumnFamilySchema\022\014\n\004name\030\001 " +
-      "\002(\014\022#\n\nattributes\030\002 \003(\0132\017.BytesBytesPair" +
-      "\022&\n\rconfiguration\030\003 \003(\0132\017.NameStringPair" +
-      "\"\232\001\n\nRegionInfo\022\021\n\tregion_id\030\001 \002(\004\022\036\n\nta",
-      "ble_name\030\002 \002(\0132\n.TableName\022\021\n\tstart_key\030" +
-      "\003 \001(\014\022\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022" +
-      "\r\n\005split\030\006 \001(\010\022\025\n\nreplica_id\030\007 \001(\005:\0010\"1\n" +
-      "\014FavoredNodes\022!\n\014favored_node\030\001 \003(\0132\013.Se" +
-      "rverName\"\225\001\n\017RegionSpecifier\0222\n\004type\030\001 \002" +
-      "(\0162$.RegionSpecifier.RegionSpecifierType" +
-      "\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpecifierType\022\017" +
-      "\n\013REGION_NAME\020\001\022\027\n\023ENCODED_REGION_NAME\020\002" +
-      "\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022\n\n\002to\030\002 \001(\004\"" +
-      "A\n\nServerName\022\021\n\thost_name\030\001 \002(\t\022\014\n\004port",
-      "\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033\n\013Coprocesso" +
-      "r\022\014\n\004name\030\001 \002(\t\"-\n\016NameStringPair\022\014\n\004nam" +
-      "e\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNameBytesPair\022" +
-      "\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014\"/\n\016BytesByt" +
-      "esPair\022\r\n\005first\030\001 \002(\014\022\016\n\006second\030\002 \002(\014\",\n" +
-      "\rNameInt64Pair\022\014\n\004name\030\001 \001(\t\022\r\n\005value\030\002 " +
-      "\001(\003\"\314\001\n\023SnapshotDescription\022\014\n\004name\030\001 \002(" +
-      "\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:" +
-      "\0010\022.\n\004type\030\004 \001(\0162\031.SnapshotDescription.T" +
-      "ype:\005FLUSH\022\017\n\007version\030\005 \001(\005\022\r\n\005owner\030\006 \001",
-      "(\t\".\n\004Type\022\014\n\010DISABLED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tS" +
-      "KIPFLUSH\020\002\"}\n\024ProcedureDescription\022\021\n\tsi" +
-      "gnature\030\001 \002(\t\022\020\n\010instance\030\002 \001(\t\022\030\n\rcreat" +
-      "ion_time\030\003 \001(\003:\0010\022&\n\rconfiguration\030\004 \003(\013" +
-      "2\017.NameStringPair\"\n\n\010EmptyMsg\"\033\n\007LongMsg" +
-      "\022\020\n\010long_msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndoubl" +
-      "e_msg\030\001 \002(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdecim" +
-      "al_msg\030\001 \002(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001" +
-      " \002(\004\022\025\n\rmost_sig_bits\030\002 \002(\004\"K\n\023Namespace" +
-      "Descriptor\022\014\n\004name\030\001 \002(\014\022&\n\rconfiguratio",
-      "n\030\002 \003(\0132\017.NameStringPair\"$\n\020RegionServer" +
+      "\n\013HBase.proto\022\010hbase.pb\032\nCell.proto\"1\n\tT" +
+      "ableName\022\021\n\tnamespace\030\001 \002(\014\022\021\n\tqualifier" +
+      "\030\002 \002(\014\"\314\001\n\013TableSchema\022\'\n\ntable_name\030\001 \001" +
+      "(\0132\023.hbase.pb.TableName\022,\n\nattributes\030\002 " +
+      "\003(\0132\030.hbase.pb.BytesBytesPair\0225\n\017column_" +
+      "families\030\003 \003(\0132\034.hbase.pb.ColumnFamilySc" +
+      "hema\022/\n\rconfiguration\030\004 \003(\0132\030.hbase.pb.N" +
+      "ameStringPair\"\201\001\n\022ColumnFamilySchema\022\014\n\004" +
+      "name\030\001 \002(\014\022,\n\nattributes\030\002 \003(\0132\030.hbase.p" +
+      "b.BytesBytesPair\022/\n\rconfiguration\030\003 \003(\0132",
+      "\030.hbase.pb.NameStringPair\"\243\001\n\nRegionInfo" +
+      "\022\021\n\tregion_id\030\001 \002(\004\022\'\n\ntable_name\030\002 \002(\0132" +
+      "\023.hbase.pb.TableName\022\021\n\tstart_key\030\003 \001(\014\022" +
+      "\017\n\007end_key\030\004 \001(\014\022\017\n\007offline\030\005 \001(\010\022\r\n\005spl" +
+      "it\030\006 \001(\010\022\025\n\nreplica_id\030\007 \001(\005:\0010\":\n\014Favor" +
+      "edNodes\022*\n\014favored_node\030\001 \003(\0132\024.hbase.pb" +
+      ".ServerName\"\236\001\n\017RegionSpecifier\022;\n\004type\030" +
+      "\001 \002(\0162-.hbase.pb.RegionSpecifier.RegionS" +
+      "pecifierType\022\r\n\005value\030\002 \002(\014\"?\n\023RegionSpe" +
+      "cifierType\022\017\n\013REGION_NAME\020\001\022\027\n\023ENCODED_R",
+      "EGION_NAME\020\002\"%\n\tTimeRange\022\014\n\004from\030\001 \001(\004\022" +
+      "\n\n\002to\030\002 \001(\004\"A\n\nServerName\022\021\n\thost_name\030\001" +
+      " \002(\t\022\014\n\004port\030\002 \001(\r\022\022\n\nstart_code\030\003 \001(\004\"\033" +
+      "\n\013Coprocessor\022\014\n\004name\030\001 \002(\t\"-\n\016NameStrin" +
+      "gPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \002(\t\",\n\rNa" +
+      "meBytesPair\022\014\n\004name\030\001 \002(\t\022\r\n\005value\030\002 \001(\014" +
+      "\"/\n\016BytesBytesPair\022\r\n\005first\030\001 \002(\014\022\016\n\006sec" +
+      "ond\030\002 \002(\014\",\n\rNameInt64Pair\022\014\n\004name\030\001 \001(\t" +
+      "\022\r\n\005value\030\002 \001(\003\"\325\001\n\023SnapshotDescription\022" +
+      "\014\n\004name\030\001 \002(\t\022\r\n\005table\030\002 \001(\t\022\030\n\rcreation",
+      "_time\030\003 \001(\003:\0010\0227\n\004type\030\004 \001(\0162\".hbase.pb." +
+      "SnapshotDescription.Type:\005FLUSH\022\017\n\007versi" +
+      "on\030\005 \001(\005\022\r\n\005owner\030\006 \001(\t\".\n\004Type\022\014\n\010DISAB" +
+      "LED\020\000\022\t\n\005FLUSH\020\001\022\r\n\tSKIPFLUSH\020\002\"\206\001\n\024Proc" +
+      "edureDescription\022\021\n\tsignature\030\001 \002(\t\022\020\n\010i" +
+      "nstance\030\002 \001(\t\022\030\n\rcreation_time\030\003 \001(\003:\0010\022" +
+      "/\n\rconfiguration\030\004 \003(\0132\030.hbase.pb.NameSt" +
+      "ringPair\"\n\n\010EmptyMsg\"\033\n\007LongMsg\022\020\n\010long_" +
+      "msg\030\001 \002(\003\"\037\n\tDoubleMsg\022\022\n\ndouble_msg\030\001 \002" +
+      "(\001\"\'\n\rBigDecimalMsg\022\026\n\016bigdecimal_msg\030\001 ",
+      "\002(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rm" +
+      "ost_sig_bits\030\002 \002(\004\"T\n\023NamespaceDescripto" +
+      "r\022\014\n\004name\030\001 \002(\014\022/\n\rconfiguration\030\002 \003(\0132\030" +
+      ".hbase.pb.NameStringPair\"$\n\020RegionServer" +
       "Info\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022\010\n" +
       "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
       "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
       "EATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSE" +
       "CONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECOND" +
-      "S\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006" +
+      "S\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006",
       "\022\010\n\004DAYS\020\007B>\n*org.apache.hadoop.hbase.pr" +
       "otobuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
@@ -16662,137 +16665,137 @@ public final class HBaseProtos {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_TableName_descriptor =
+          internal_static_hbase_pb_TableName_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_TableName_fieldAccessorTable = new
+          internal_static_hbase_pb_TableName_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TableName_descriptor,
+              internal_static_hbase_pb_TableName_descriptor,
               new java.lang.String[] { "Namespace", "Qualifier", });
-          internal_static_TableSchema_descriptor =
+          internal_static_hbase_pb_TableSchema_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_TableSchema_fieldAccessorTable = new
+          internal_static_hbase_pb_TableSchema_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TableSchema_descriptor,
+              internal_static_hbase_pb_TableSchema_descriptor,
               new java.lang.String[] { "TableName", "Attributes", "ColumnFamilies", "Configuration", });
-          internal_static_ColumnFamilySchema_descriptor =
+          internal_static_hbase_pb_ColumnFamilySchema_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_ColumnFamilySchema_fieldAccessorTable = new
+          internal_static_hbase_pb_ColumnFamilySchema_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ColumnFamilySchema_descriptor,
+              internal_static_hbase_pb_ColumnFamilySchema_descriptor,
               new java.lang.String[] { "Name", "Attributes", "Configuration", });
-          internal_static_RegionInfo_descriptor =
+          internal_static_hbase_pb_RegionInfo_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_RegionInfo_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionInfo_descriptor,
+              internal_static_hbase_pb_RegionInfo_descriptor,
               new java.lang.String[] { "RegionId", "TableName", "StartKey", "EndKey", "Offline", "Split", "ReplicaId", });
-          internal_static_FavoredNodes_descriptor =
+          internal_static_hbase_pb_FavoredNodes_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_FavoredNodes_fieldAccessorTable = new
+          internal_static_hbase_pb_FavoredNodes_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_FavoredNodes_descriptor,
+              internal_static_hbase_pb_FavoredNodes_descriptor,
               new java.lang.String[] { "FavoredNode", });
-          internal_static_RegionSpecifier_descriptor =
+          internal_static_hbase_pb_RegionSpecifier_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_RegionSpecifier_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionSpecifier_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionSpecifier_descriptor,
+              internal_static_hbase_pb_RegionSpecifier_descriptor,
               new java.lang.String[] { "Type", "Value", });
-          internal_static_TimeRange_descriptor =
+          internal_static_hbase_pb_TimeRange_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_TimeRange_fieldAccessorTable = new
+          internal_static_hbase_pb_TimeRange_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TimeRange_descriptor,
+              internal_static_hbase_pb_TimeRange_descriptor,
               new java.lang.String[] { "From", "To", });
-          internal_static_ServerName_descriptor =
+          internal_static_hbase_pb_ServerName_descriptor =
             getDescriptor().getMessageTypes().get(7);
-          internal_static_ServerName_fieldAccessorTable = new
+          internal_static_hbase_pb_ServerName_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ServerName_descriptor,
+              internal_static_hbase_pb_ServerName_descriptor,
               new java.lang.String[] { "HostName", "Port", "StartCode", });
-          internal_static_Coprocessor_descriptor =
+          internal_static_hbase_pb_Coprocessor_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_Coprocessor_fieldAccessorTable = new
+          internal_static_hbase_pb_Coprocessor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Coprocessor_descriptor,
+              internal_static_hbase_pb_Coprocessor_descriptor,
               new java.lang.String[] { "Name", });
-          internal_static_NameStringPair_descriptor =
+          internal_static_hbase_pb_NameStringPair_descriptor =
             getDescriptor().getMessageTypes().get(9);
-          internal_static_NameStringPair_fieldAccessorTable = new
+          internal_static_hbase_pb_NameStringPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_NameStringPair_descriptor,
+              internal_static_hbase_pb_NameStringPair_descriptor,
               new java.lang.String[] { "Name", "Value", });
-          internal_static_NameBytesPair_descriptor =
+          internal_static_hbase_pb_NameBytesPair_descriptor =
             getDescriptor().getMessageTypes().get(10);
-          internal_static_NameBytesPair_fieldAccessorTable = new
+          internal_static_hbase_pb_NameBytesPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_NameBytesPair_descriptor,
+              internal_static_hbase_pb_NameBytesPair_descriptor,
               new java.lang.String[] { "Name", "Value", });
-          internal_static_BytesBytesPair_descriptor =
+          internal_static_hbase_pb_BytesBytesPair_descriptor =
             getDescriptor().getMessageTypes().get(11);
-          internal_static_BytesBytesPair_fieldAccessorTable = new
+          internal_static_hbase_pb_BytesBytesPair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_BytesBytesPair_descriptor,
+              internal_static_hbase_pb_BytesBytesPair_descriptor,
               new java.lang.String[] { "First", "Second", });
-          internal_static_NameInt64Pair_descriptor =
+          internal_static_hbase_pb_NameInt64Pair_descriptor =
             getDescriptor().getMessageTypes().get(12);
-          internal_static_NameInt64Pair_fieldAccessorTable = new
+          internal_static_hbase_pb_NameInt64Pair_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_NameInt64Pair_descriptor,
+              internal_static_hbase_pb_NameInt64Pair_descriptor,
               new java.lang.String[] { "Name", "Value", });
-          internal_static_SnapshotDescription_descriptor =
+          internal_static_hbase_pb_SnapshotDescription_descriptor =
             getDescriptor().getMessageTypes().get(13);
-          internal_static_SnapshotDescription_fieldAccessorTable = new
+          internal_static_hbase_pb_SnapshotDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SnapshotDescription_descriptor,
+              internal_static_hbase_pb_SnapshotDescription_descriptor,
               new java.lang.String[] { "Name", "Table", "CreationTime", "Type", "Version", "Owner", });
-          internal_static_ProcedureDescription_descriptor =
+          internal_static_hbase_pb_ProcedureDescription_descriptor =
             getDescriptor().getMessageTypes().get(14);
-          internal_static_ProcedureDescription_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureDescription_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureDescription_descriptor,
+              internal_static_hbase_pb_ProcedureDescription_descriptor,
               new java.lang.String[] { "Signature", "Instance", "CreationTime", "Configuration", });
-          internal_static_EmptyMsg_descriptor =
+          internal_static_hbase_pb_EmptyMsg_descriptor =
             getDescriptor().getMessageTypes().get(15);
-          internal_static_EmptyMsg_fieldAccessorTable = new
+          internal_static_hbase_pb_EmptyMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_EmptyMsg_descriptor,
+              internal_static_hbase_pb_EmptyMsg_descriptor,
               new java.lang.String[] { });
-          internal_static_LongMsg_descriptor =
+          internal_static_hbase_pb_LongMsg_descriptor =
             getDescriptor().getMessageTypes().get(16);
-          internal_static_LongMsg_fieldAccessorTable = new
+          internal_static_hbase_pb_LongMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_LongMsg_descriptor,
+              internal_static_hbase_pb_LongMsg_descriptor,
               new java.lang.String[] { "LongMsg", });
-          internal_static_DoubleMsg_descriptor =
+          internal_static_hbase_pb_DoubleMsg_descriptor =
             getDescriptor().getMessageTypes().get(17);
-          internal_static_DoubleMsg_fieldAccessorTable = new
+          internal_static_hbase_pb_DoubleMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_DoubleMsg_descriptor,
+              internal_static_hbase_pb_DoubleMsg_descriptor,
               new java.lang.String[] { "DoubleMsg", });
-          internal_static_BigDecimalMsg_descriptor =
+          internal_static_hbase_pb_BigDecimalMsg_descriptor =
             getDescriptor().getMessageTypes().get(18);
-          internal_static_BigDecimalMsg_fieldAccessorTable = new
+          internal_static_hbase_pb_BigDecimalMsg_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_BigDecimalMsg_descriptor,
+              internal_static_hbase_pb_BigDecimalMsg_descriptor,
               new java.lang.String[] { "BigdecimalMsg", });
-          internal_static_UUID_descriptor =
+          internal_static_hbase_pb_UUID_descriptor =
             getDescriptor().getMessageTypes().get(19);
-          internal_static_UUID_fieldAccessorTable = new
+          internal_static_hbase_pb_UUID_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UUID_descriptor,
+              internal_static_hbase_pb_UUID_descriptor,
               new java.lang.String[] { "LeastSigBits", "MostSigBits", });
-          internal_static_NamespaceDescriptor_descriptor =
+          internal_static_hbase_pb_NamespaceDescriptor_descriptor =
             getDescriptor().getMessageTypes().get(20);
-          internal_static_NamespaceDescriptor_fieldAccessorTable = new
+          internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_NamespaceDescriptor_descriptor,
+              internal_static_hbase_pb_NamespaceDescriptor_descriptor,
               new java.lang.String[] { "Name", "Configuration", });
-          internal_static_RegionServerInfo_descriptor =
+          internal_static_hbase_pb_RegionServerInfo_descriptor =
             getDescriptor().getMessageTypes().get(21);
-          internal_static_RegionServerInfo_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionServerInfo_descriptor,
+              internal_static_hbase_pb_RegionServerInfo_descriptor,
               new java.lang.String[] { "InfoPort", });
           return null;
         }

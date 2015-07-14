@@ -9,7 +9,7 @@ public final class ProcedureProtos {
       com.google.protobuf.ExtensionRegistry registry) {
   }
   /**
-   * Protobuf enum {@code ProcedureState}
+   * Protobuf enum {@code hbase.pb.ProcedureState}
    */
   public enum ProcedureState
       implements com.google.protobuf.ProtocolMessageEnum {
@@ -171,7 +171,7 @@ public final class ProcedureProtos {
       this.value = value;
     }
 
-    // @@protoc_insertion_point(enum_scope:ProcedureState)
+    // @@protoc_insertion_point(enum_scope:hbase.pb.ProcedureState)
   }
 
   public interface ProcedureOrBuilder
@@ -257,9 +257,9 @@ public final class ProcedureProtos {
     com.google.protobuf.ByteString
         getOwnerBytes();
 
-    // required .ProcedureState state = 6;
+    // required .hbase.pb.ProcedureState state = 6;
     /**
-     * <code>required .ProcedureState state = 6;</code>
+     * <code>required .hbase.pb.ProcedureState state = 6;</code>
      *
      * <pre>
      * internal "runtime" state
@@ -267,7 +267,7 @@ public final class ProcedureProtos {
      */
     boolean hasState();
     /**
-     * <code>required .ProcedureState state = 6;</code>
+     * <code>required .hbase.pb.ProcedureState state = 6;</code>
      *
      * <pre>
      * internal "runtime" state
@@ -321,9 +321,9 @@ public final class ProcedureProtos {
      */
     int getTimeout();
 
-    // optional .ForeignExceptionMessage exception = 10;
+    // optional .hbase.pb.ForeignExceptionMessage exception = 10;
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -331,7 +331,7 @@ public final class ProcedureProtos {
      */
     boolean hasException();
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -339,7 +339,7 @@ public final class ProcedureProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage getException();
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -412,7 +412,7 @@ public final class ProcedureProtos {
     long getNonce();
   }
   /**
-   * Protobuf type {@code Procedure}
+   * Protobuf type {@code hbase.pb.Procedure}
    *
    * <pre>
    **
@@ -584,12 +584,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_Procedure_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_Procedure_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_Procedure_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_Procedure_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder.class);
     }
@@ -764,11 +764,11 @@ public final class ProcedureProtos {
       }
     }
 
-    // required .ProcedureState state = 6;
+    // required .hbase.pb.ProcedureState state = 6;
     public static final int STATE_FIELD_NUMBER = 6;
     private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState state_;
     /**
-     * <code>required .ProcedureState state = 6;</code>
+     * <code>required .hbase.pb.ProcedureState state = 6;</code>
      *
      * <pre>
      * internal "runtime" state
@@ -778,7 +778,7 @@ public final class ProcedureProtos {
       return ((bitField0_ & 0x00000020) == 0x00000020);
     }
     /**
-     * <code>required .ProcedureState state = 6;</code>
+     * <code>required .hbase.pb.ProcedureState state = 6;</code>
      *
      * <pre>
      * internal "runtime" state
@@ -855,11 +855,11 @@ public final class ProcedureProtos {
       return timeout_;
     }
 
-    // optional .ForeignExceptionMessage exception = 10;
+    // optional .hbase.pb.ForeignExceptionMessage exception = 10;
     public static final int EXCEPTION_FIELD_NUMBER = 10;
     private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage exception_;
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -869,7 +869,7 @@ public final class ProcedureProtos {
       return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -879,7 +879,7 @@ public final class ProcedureProtos {
       return exception_;
     }
     /**
-     * <code>optional .ForeignExceptionMessage exception = 10;</code>
+     * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
      *
      * <pre>
      * user state/results
@@ -1368,7 +1368,7 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Procedure}
+     * Protobuf type {@code hbase.pb.Procedure}
      *
      * <pre>
      **
@@ -1380,12 +1380,12 @@ public final class ProcedureProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_Procedure_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_Procedure_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_Procedure_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_Procedure_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder.class);
       }
@@ -1452,7 +1452,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_Procedure_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_Procedure_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getDefaultInstanceForType() {
@@ -1935,10 +1935,10 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // required .ProcedureState state = 6;
+      // required .hbase.pb.ProcedureState state = 6;
       private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState state_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState.INITIALIZING;
       /**
-       * <code>required .ProcedureState state = 6;</code>
+       * <code>required .hbase.pb.ProcedureState state = 6;</code>
        *
        * <pre>
        * internal "runtime" state
@@ -1948,7 +1948,7 @@ public final class ProcedureProtos {
         return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
-       * <code>required .ProcedureState state = 6;</code>
+       * <code>required .hbase.pb.ProcedureState state = 6;</code>
        *
        * <pre>
        * internal "runtime" state
@@ -1958,7 +1958,7 @@ public final class ProcedureProtos {
         return state_;
       }
       /**
-       * <code>required .ProcedureState state = 6;</code>
+       * <code>required .hbase.pb.ProcedureState state = 6;</code>
        *
        * <pre>
        * internal "runtime" state
@@ -1974,7 +1974,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>required .ProcedureState state = 6;</code>
+       * <code>required .hbase.pb.ProcedureState state = 6;</code>
        *
        * <pre>
        * internal "runtime" state
@@ -2147,12 +2147,12 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // optional .ForeignExceptionMessage exception = 10;
+      // optional .hbase.pb.ForeignExceptionMessage exception = 10;
       private org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage exception_ = org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage.Builder, org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessageOrBuilder> exceptionBuilder_;
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2162,7 +2162,7 @@ public final class ProcedureProtos {
         return ((bitField0_ & 0x00000200) == 0x00000200);
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2176,7 +2176,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2196,7 +2196,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2214,7 +2214,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2237,7 +2237,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2254,7 +2254,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2266,7 +2266,7 @@ public final class ProcedureProtos {
         return getExceptionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2280,7 +2280,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>optional .ForeignExceptionMessage exception = 10;</code>
+       * <code>optional .hbase.pb.ForeignExceptionMessage exception = 10;</code>
        *
        * <pre>
        * user state/results
@@ -2486,7 +2486,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Procedure)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Procedure)
     }
 
     static {
@@ -2494,7 +2494,7 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Procedure)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Procedure)
   }
 
   public interface SequentialProcedureDataOrBuilder
@@ -2511,7 +2511,7 @@ public final class ProcedureProtos {
     boolean getExecuted();
   }
   /**
-   * Protobuf type {@code SequentialProcedureData}
+   * Protobuf type {@code hbase.pb.SequentialProcedureData}
    *
    * <pre>
    **
@@ -2585,12 +2585,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_SequentialProcedureData_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_SequentialProcedureData_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_SequentialProcedureData_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_SequentialProcedureData_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData.Builder.class);
     }
@@ -2779,7 +2779,7 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SequentialProcedureData}
+     * Protobuf type {@code hbase.pb.SequentialProcedureData}
      *
      * <pre>
      **
@@ -2791,12 +2791,12 @@ public final class ProcedureProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureDataOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_SequentialProcedureData_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_SequentialProcedureData_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_SequentialProcedureData_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_SequentialProcedureData_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData.Builder.class);
       }
@@ -2832,7 +2832,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_SequentialProcedureData_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_SequentialProcedureData_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.SequentialProcedureData getDefaultInstanceForType() {
@@ -2938,7 +2938,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SequentialProcedureData)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SequentialProcedureData)
     }
 
     static {
@@ -2946,7 +2946,7 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SequentialProcedureData)
+    // @@protoc_insertion_point(class_scope:hbase.pb.SequentialProcedureData)
   }
 
   public interface StateMachineProcedureDataOrBuilder
@@ -2967,7 +2967,7 @@ public final class ProcedureProtos {
     int getState(int index);
   }
   /**
-   * Protobuf type {@code StateMachineProcedureData}
+   * Protobuf type {@code hbase.pb.StateMachineProcedureData}
    *
    * <pre>
    **
@@ -3060,12 +3060,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StateMachineProcedureData_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_StateMachineProcedureData_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StateMachineProcedureData_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_StateMachineProcedureData_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData.Builder.class);
     }
@@ -3258,7 +3258,7 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code StateMachineProcedureData}
+     * Protobuf type {@code hbase.pb.StateMachineProcedureData}
      *
      * <pre>
      **
@@ -3270,12 +3270,12 @@ public final class ProcedureProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureDataOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StateMachineProcedureData_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_StateMachineProcedureData_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StateMachineProcedureData_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_StateMachineProcedureData_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData.Builder.class);
       }
@@ -3311,7 +3311,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_StateMachineProcedureData_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_StateMachineProcedureData_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.StateMachineProcedureData getDefaultInstanceForType() {
@@ -3452,7 +3452,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:StateMachineProcedureData)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.StateMachineProcedureData)
     }
 
     static {
@@ -3460,7 +3460,7 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:StateMachineProcedureData)
+    // @@protoc_insertion_point(class_scope:hbase.pb.StateMachineProcedureData)
   }
 
   public interface ProcedureWALHeaderOrBuilder
@@ -3507,7 +3507,7 @@ public final class ProcedureProtos {
     long getMinProcId();
   }
   /**
-   * Protobuf type {@code ProcedureWALHeader}
+   * Protobuf type {@code hbase.pb.ProcedureWALHeader}
    *
    * <pre>
    **
@@ -3596,12 +3596,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALHeader_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALHeader_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.Builder.class);
     }
@@ -3901,7 +3901,7 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcedureWALHeader}
+     * Protobuf type {@code hbase.pb.ProcedureWALHeader}
      *
      * <pre>
      **
@@ -3913,12 +3913,12 @@ public final class ProcedureProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeaderOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALHeader_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALHeader_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader.Builder.class);
       }
@@ -3960,7 +3960,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALHeader_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALHeader getDefaultInstanceForType() {
@@ -4198,7 +4198,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcedureWALHeader)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureWALHeader)
     }
 
     static {
@@ -4206,7 +4206,7 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcedureWALHeader)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureWALHeader)
   }
 
   public interface ProcedureWALTrailerOrBuilder
@@ -4233,7 +4233,7 @@ public final class ProcedureProtos {
     long getTrackerPos();
   }
   /**
-   * Protobuf type {@code ProcedureWALTrailer}
+   * Protobuf type {@code hbase.pb.ProcedureWALTrailer}
    *
    * <pre>
    **
@@ -4312,12 +4312,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALTrailer_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALTrailer_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.Builder.class);
     }
@@ -4543,7 +4543,7 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcedureWALTrailer}
+     * Protobuf type {@code hbase.pb.ProcedureWALTrailer}
      *
      * <pre>
      **
@@ -4555,12 +4555,12 @@ public final class ProcedureProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALTrailer_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALTrailer_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer.Builder.class);
       }
@@ -4598,7 +4598,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALTrailer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALTrailer_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALTrailer getDefaultInstanceForType() {
@@ -4748,7 +4748,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcedureWALTrailer)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureWALTrailer)
     }
 
     static {
@@ -4756,39 +4756,39 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcedureWALTrailer)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureWALTrailer)
   }
 
   public interface ProcedureStoreTrackerOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .ProcedureStoreTracker.TrackerNode node = 1;
+    // repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> 
         getNodeList();
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode getNode(int index);
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     int getNodeCount();
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder> 
         getNodeOrBuilderList();
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder getNodeOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code ProcedureStoreTracker}
+   * Protobuf type {@code hbase.pb.ProcedureStoreTracker}
    */
   public static final class ProcedureStoreTracker extends
       com.google.protobuf.GeneratedMessage
@@ -4863,12 +4863,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.Builder.class);
     }
@@ -4930,7 +4930,7 @@ public final class ProcedureProtos {
       long getDeleted(int index);
     }
     /**
-     * Protobuf type {@code ProcedureStoreTracker.TrackerNode}
+     * Protobuf type {@code hbase.pb.ProcedureStoreTracker.TrackerNode}
      */
     public static final class TrackerNode extends
         com.google.protobuf.GeneratedMessage
@@ -5047,12 +5047,12 @@ public final class ProcedureProtos {
       }
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_TrackerNode_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_TrackerNode_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder.class);
       }
@@ -5325,19 +5325,19 @@ public final class ProcedureProtos {
         return builder;
       }
       /**
-       * Protobuf type {@code ProcedureStoreTracker.TrackerNode}
+       * Protobuf type {@code hbase.pb.ProcedureStoreTracker.TrackerNode}
        */
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
          implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_TrackerNode_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor;
         }
 
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_TrackerNode_fieldAccessorTable
+          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_fieldAccessorTable
               .ensureFieldAccessorsInitialized(
                   org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder.class);
         }
@@ -5377,7 +5377,7 @@ public final class ProcedureProtos {
 
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_TrackerNode_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor;
         }
 
         public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode getDefaultInstanceForType() {
@@ -5645,7 +5645,7 @@ public final class ProcedureProtos {
           return this;
         }
 
-        // @@protoc_insertion_point(builder_scope:ProcedureStoreTracker.TrackerNode)
+        // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureStoreTracker.TrackerNode)
       }
 
       static {
@@ -5653,39 +5653,39 @@ public final class ProcedureProtos {
         defaultInstance.initFields();
       }
 
-      // @@protoc_insertion_point(class_scope:ProcedureStoreTracker.TrackerNode)
+      // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureStoreTracker.TrackerNode)
     }
 
-    // repeated .ProcedureStoreTracker.TrackerNode node = 1;
+    // repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;
     public static final int NODE_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> node_;
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> getNodeList() {
       return node_;
     }
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder> 
         getNodeOrBuilderList() {
       return node_;
     }
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     public int getNodeCount() {
       return node_.size();
     }
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode getNode(int index) {
       return node_.get(index);
     }
     /**
-     * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+     * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder getNodeOrBuilder(
         int index) {
@@ -5843,19 +5843,19 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcedureStoreTracker}
+     * Protobuf type {@code hbase.pb.ProcedureStoreTracker}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTrackerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.Builder.class);
       }
@@ -5896,7 +5896,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureStoreTracker_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureStoreTracker_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker getDefaultInstanceForType() {
@@ -5997,7 +5997,7 @@ public final class ProcedureProtos {
       }
       private int bitField0_;
 
-      // repeated .ProcedureStoreTracker.TrackerNode node = 1;
+      // repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> node_ =
         java.util.Collections.emptyList();
       private void ensureNodeIsMutable() {
@@ -6011,7 +6011,7 @@ public final class ProcedureProtos {
           org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder> nodeBuilder_;
 
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> getNodeList() {
         if (nodeBuilder_ == null) {
@@ -6021,7 +6021,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public int getNodeCount() {
         if (nodeBuilder_ == null) {
@@ -6031,7 +6031,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode getNode(int index) {
         if (nodeBuilder_ == null) {
@@ -6041,7 +6041,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder setNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode value) {
@@ -6058,7 +6058,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder setNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder builderForValue) {
@@ -6072,7 +6072,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder addNode(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode value) {
         if (nodeBuilder_ == null) {
@@ -6088,7 +6088,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder addNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode value) {
@@ -6105,7 +6105,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder addNode(
           org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder builderForValue) {
@@ -6119,7 +6119,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder addNode(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder builderForValue) {
@@ -6133,7 +6133,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder addAllNode(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode> values) {
@@ -6147,7 +6147,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder clearNode() {
         if (nodeBuilder_ == null) {
@@ -6160,7 +6160,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public Builder removeNode(int index) {
         if (nodeBuilder_ == null) {
@@ -6173,14 +6173,14 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder getNodeBuilder(
           int index) {
         return getNodeFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder getNodeOrBuilder(
           int index) {
@@ -6190,7 +6190,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNodeOrBuilder> 
            getNodeOrBuilderList() {
@@ -6201,14 +6201,14 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder addNodeBuilder() {
         return getNodeFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.getDefaultInstance());
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder addNodeBuilder(
           int index) {
@@ -6216,7 +6216,7 @@ public final class ProcedureProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.getDefaultInstance());
       }
       /**
-       * <code>repeated .ProcedureStoreTracker.TrackerNode node = 1;</code>
+       * <code>repeated .hbase.pb.ProcedureStoreTracker.TrackerNode node = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureStoreTracker.TrackerNode.Builder> 
            getNodeBuilderList() {
@@ -6237,7 +6237,7 @@ public final class ProcedureProtos {
         return nodeBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcedureStoreTracker)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureStoreTracker)
     }
 
     static {
@@ -6245,43 +6245,43 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcedureStoreTracker)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureStoreTracker)
   }
 
   public interface ProcedureWALEntryOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ProcedureWALEntry.Type type = 1;
+    // required .hbase.pb.ProcedureWALEntry.Type type = 1;
     /**
-     * <code>required .ProcedureWALEntry.Type type = 1;</code>
+     * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
      */
     boolean hasType();
     /**
-     * <code>required .ProcedureWALEntry.Type type = 1;</code>
+     * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type getType();
 
-    // repeated .Procedure procedure = 2;
+    // repeated .hbase.pb.Procedure procedure = 2;
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> 
         getProcedureList();
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index);
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     int getProcedureCount();
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
         getProcedureOrBuilderList();
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
         int index);
@@ -6297,7 +6297,7 @@ public final class ProcedureProtos {
     long getProcId();
   }
   /**
-   * Protobuf type {@code ProcedureWALEntry}
+   * Protobuf type {@code hbase.pb.ProcedureWALEntry}
    */
   public static final class ProcedureWALEntry extends
       com.google.protobuf.GeneratedMessage
@@ -6388,12 +6388,12 @@ public final class ProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALEntry_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALEntry_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALEntry_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALEntry_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Builder.class);
     }
@@ -6414,7 +6414,7 @@ public final class ProcedureProtos {
     }
 
     /**
-     * Protobuf enum {@code ProcedureWALEntry.Type}
+     * Protobuf enum {@code hbase.pb.ProcedureWALEntry.Type}
      */
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -6528,56 +6528,56 @@ public final class ProcedureProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:ProcedureWALEntry.Type)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.ProcedureWALEntry.Type)
     }
 
     private int bitField0_;
-    // required .ProcedureWALEntry.Type type = 1;
+    // required .hbase.pb.ProcedureWALEntry.Type type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type type_;
     /**
-     * <code>required .ProcedureWALEntry.Type type = 1;</code>
+     * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ProcedureWALEntry.Type type = 1;</code>
+     * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type getType() {
       return type_;
     }
 
-    // repeated .Procedure procedure = 2;
+    // repeated .hbase.pb.Procedure procedure = 2;
     public static final int PROCEDURE_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> procedure_;
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> getProcedureList() {
       return procedure_;
     }
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
         getProcedureOrBuilderList() {
       return procedure_;
     }
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     public int getProcedureCount() {
       return procedure_.size();
     }
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index) {
       return procedure_.get(index);
     }
     /**
-     * <code>repeated .Procedure procedure = 2;</code>
+     * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
         int index) {
@@ -6789,19 +6789,19 @@ public final class ProcedureProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ProcedureWALEntry}
+     * Protobuf type {@code hbase.pb.ProcedureWALEntry}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntryOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALEntry_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALEntry_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALEntry_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALEntry_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.class, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Builder.class);
       }
@@ -6846,7 +6846,7 @@ public final class ProcedureProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_ProcedureWALEntry_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.internal_static_hbase_pb_ProcedureWALEntry_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry getDefaultInstanceForType() {
@@ -6967,22 +6967,22 @@ public final class ProcedureProtos {
       }
       private int bitField0_;
 
-      // required .ProcedureWALEntry.Type type = 1;
+      // required .hbase.pb.ProcedureWALEntry.Type type = 1;
       private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.EOF;
       /**
-       * <code>required .ProcedureWALEntry.Type type = 1;</code>
+       * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ProcedureWALEntry.Type type = 1;</code>
+       * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type getType() {
         return type_;
       }
       /**
-       * <code>required .ProcedureWALEntry.Type type = 1;</code>
+       * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type value) {
         if (value == null) {
@@ -6994,7 +6994,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>required .ProcedureWALEntry.Type type = 1;</code>
+       * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -7003,7 +7003,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // repeated .Procedure procedure = 2;
+      // repeated .hbase.pb.Procedure procedure = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> procedure_ =
         java.util.Collections.emptyList();
       private void ensureProcedureIsMutable() {
@@ -7017,7 +7017,7 @@ public final class ProcedureProtos {
           org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> procedureBuilder_;
 
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> getProcedureList() {
         if (procedureBuilder_ == null) {
@@ -7027,7 +7027,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public int getProcedureCount() {
         if (procedureBuilder_ == null) {
@@ -7037,7 +7037,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index) {
         if (procedureBuilder_ == null) {
@@ -7047,7 +7047,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder setProcedure(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
@@ -7064,7 +7064,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder setProcedure(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
@@ -7078,7 +7078,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder addProcedure(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
         if (procedureBuilder_ == null) {
@@ -7094,7 +7094,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder addProcedure(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
@@ -7111,7 +7111,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder addProcedure(
           org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
@@ -7125,7 +7125,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder addProcedure(
           int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
@@ -7139,7 +7139,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder addAllProcedure(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> values) {
@@ -7153,7 +7153,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder clearProcedure() {
         if (procedureBuilder_ == null) {
@@ -7166,7 +7166,7 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public Builder removeProcedure(int index) {
         if (procedureBuilder_ == null) {
@@ -7179,14 +7179,14 @@ public final class ProcedureProtos {
         return this;
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder getProcedureBuilder(
           int index) {
         return getProcedureFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
           int index) {
@@ -7196,7 +7196,7 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
            getProcedureOrBuilderList() {
@@ -7207,14 +7207,14 @@ public final class ProcedureProtos {
         }
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder addProcedureBuilder() {
         return getProcedureFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance());
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder addProcedureBuilder(
           int index) {
@@ -7222,7 +7222,7 @@ public final class ProcedureProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance());
       }
       /**
-       * <code>repeated .Procedure procedure = 2;</code>
+       * <code>repeated .hbase.pb.Procedure procedure = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder> 
            getProcedureBuilderList() {
@@ -7276,7 +7276,7 @@ public final class ProcedureProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ProcedureWALEntry)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ProcedureWALEntry)
     }
 
     static {
@@ -7284,49 +7284,49 @@ public final class ProcedureProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ProcedureWALEntry)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ProcedureWALEntry)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Procedure_descriptor;
+    internal_static_hbase_pb_Procedure_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Procedure_fieldAccessorTable;
+      internal_static_hbase_pb_Procedure_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SequentialProcedureData_descriptor;
+    internal_static_hbase_pb_SequentialProcedureData_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SequentialProcedureData_fieldAccessorTable;
+      internal_static_hbase_pb_SequentialProcedureData_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_StateMachineProcedureData_descriptor;
+    internal_static_hbase_pb_StateMachineProcedureData_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_StateMachineProcedureData_fieldAccessorTable;
+      internal_static_hbase_pb_StateMachineProcedureData_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureWALHeader_descriptor;
+    internal_static_hbase_pb_ProcedureWALHeader_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureWALHeader_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureWALHeader_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureWALTrailer_descriptor;
+    internal_static_hbase_pb_ProcedureWALTrailer_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureWALTrailer_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureWALTrailer_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureStoreTracker_descriptor;
+    internal_static_hbase_pb_ProcedureStoreTracker_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureStoreTracker_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureStoreTracker_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureStoreTracker_TrackerNode_descriptor;
+    internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureStoreTracker_TrackerNode_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ProcedureWALEntry_descriptor;
+    internal_static_hbase_pb_ProcedureWALEntry_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ProcedureWALEntry_fieldAccessorTable;
+      internal_static_hbase_pb_ProcedureWALEntry_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -7336,87 +7336,89 @@ public final class ProcedureProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017Procedure.proto\032\023ErrorHandling.proto\"\271" +
-      "\002\n\tProcedure\022\022\n\nclass_name\030\001 \002(\t\022\021\n\tpare" +
-      "nt_id\030\002 \001(\004\022\017\n\007proc_id\030\003 \002(\004\022\022\n\nstart_ti" +
-      "me\030\004 \002(\004\022\r\n\005owner\030\005 \001(\t\022\036\n\005state\030\006 \002(\0162\017" +
-      ".ProcedureState\022\020\n\010stack_id\030\007 \003(\r\022\023\n\013las" +
-      "t_update\030\010 \002(\004\022\017\n\007timeout\030\t \001(\r\022+\n\texcep" +
-      "tion\030\n \001(\0132\030.ForeignExceptionMessage\022\016\n\006" +
-      "result\030\013 \001(\014\022\022\n\nstate_data\030\014 \001(\014\022\026\n\013nonc" +
-      "e_group\030\r \001(\004:\0010\022\020\n\005nonce\030\016 \001(\004:\0010\"+\n\027Se" +
-      "quentialProcedureData\022\020\n\010executed\030\001 \002(\010\"",
-      "*\n\031StateMachineProcedureData\022\r\n\005state\030\001 " +
-      "\003(\r\"X\n\022ProcedureWALHeader\022\017\n\007version\030\001 \002" +
-      "(\r\022\014\n\004type\030\002 \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_" +
-      "proc_id\030\004 \002(\004\";\n\023ProcedureWALTrailer\022\017\n\007" +
-      "version\030\001 \002(\r\022\023\n\013tracker_pos\030\002 \002(\004\"\214\001\n\025P" +
-      "rocedureStoreTracker\0220\n\004node\030\001 \003(\0132\".Pro" +
-      "cedureStoreTracker.TrackerNode\032A\n\013Tracke" +
-      "rNode\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004" +
-      "\022\017\n\007deleted\030\003 \003(\004\"\266\001\n\021ProcedureWALEntry\022" +
-      "%\n\004type\030\001 \002(\0162\027.ProcedureWALEntry.Type\022\035",
-      "\n\tprocedure\030\002 \003(\0132\n.Procedure\022\017\n\007proc_id" +
-      "\030\003 \001(\004\"J\n\004Type\022\007\n\003EOF\020\001\022\010\n\004INIT\020\002\022\n\n\006INS" +
-      "ERT\020\003\022\n\n\006UPDATE\020\004\022\n\n\006DELETE\020\005\022\013\n\007COMPACT" +
-      "\020\006*p\n\016ProcedureState\022\020\n\014INITIALIZING\020\001\022\014" +
-      "\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003\022\023\n\017WAITING_TIM" +
-      "EOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n\010FINISHED\020\006BE\n*" +
-      "org.apache.hadoop.hbase.protobuf.generat" +
-      "edB\017ProcedureProtosH\001\210\001\001\240\001\001"
+      "\n\017Procedure.proto\022\010hbase.pb\032\023ErrorHandli" +
+      "ng.proto\"\313\002\n\tProcedure\022\022\n\nclass_name\030\001 \002" +
+      "(\t\022\021\n\tparent_id\030\002 \001(\004\022\017\n\007proc_id\030\003 \002(\004\022\022" +
+      "\n\nstart_time\030\004 \002(\004\022\r\n\005owner\030\005 \001(\t\022\'\n\005sta" +
+      "te\030\006 \002(\0162\030.hbase.pb.ProcedureState\022\020\n\010st" +
+      "ack_id\030\007 \003(\r\022\023\n\013last_update\030\010 \002(\004\022\017\n\007tim" +
+      "eout\030\t \001(\r\0224\n\texception\030\n \001(\0132!.hbase.pb" +
+      ".ForeignExceptionMessage\022\016\n\006result\030\013 \001(\014" +
+      "\022\022\n\nstate_data\030\014 \001(\014\022\026\n\013nonce_group\030\r \001(" +
+      "\004:\0010\022\020\n\005nonce\030\016 \001(\004:\0010\"+\n\027SequentialProc",
+      "edureData\022\020\n\010executed\030\001 \002(\010\"*\n\031StateMach" +
+      "ineProcedureData\022\r\n\005state\030\001 \003(\r\"X\n\022Proce" +
+      "dureWALHeader\022\017\n\007version\030\001 \002(\r\022\014\n\004type\030\002" +
+      " \002(\r\022\016\n\006log_id\030\003 \002(\004\022\023\n\013min_proc_id\030\004 \002(" +
+      "\004\";\n\023ProcedureWALTrailer\022\017\n\007version\030\001 \002(" +
+      "\r\022\023\n\013tracker_pos\030\002 \002(\004\"\225\001\n\025ProcedureStor" +
+      "eTracker\0229\n\004node\030\001 \003(\0132+.hbase.pb.Proced" +
+      "ureStoreTracker.TrackerNode\032A\n\013TrackerNo" +
+      "de\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004\022\017\n" +
+      "\007deleted\030\003 \003(\004\"\310\001\n\021ProcedureWALEntry\022.\n\004",
+      "type\030\001 \002(\0162 .hbase.pb.ProcedureWALEntry." +
+      "Type\022&\n\tprocedure\030\002 \003(\0132\023.hbase.pb.Proce" +
+      "dure\022\017\n\007proc_id\030\003 \001(\004\"J\n\004Type\022\007\n\003EOF\020\001\022\010" +
+      "\n\004INIT\020\002\022\n\n\006INSERT\020\003\022\n\n\006UPDATE\020\004\022\n\n\006DELE" +
+      "TE\020\005\022\013\n\007COMPACT\020\006*p\n\016ProcedureState\022\020\n\014I" +
+      "NITIALIZING\020\001\022\014\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003" +
+      "\022\023\n\017WAITING_TIMEOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n" +
+      "\010FINISHED\020\006BE\n*org.apache.hadoop.hbase.p" +
+      "rotobuf.generatedB\017ProcedureProtosH\001\210\001\001\240" +
+      "\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_Procedure_descriptor =
+          internal_static_hbase_pb_Procedure_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_Procedure_fieldAccessorTable = new
+          internal_static_hbase_pb_Procedure_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Procedure_descriptor,
+              internal_static_hbase_pb_Procedure_descriptor,
               new java.lang.String[] { "ClassName", "ParentId", "ProcId", "StartTime", "Owner", "State", "StackId", "LastUpdate", "Timeout", "Exception", "Result", "StateData", "NonceGroup", "Nonce", });
-          internal_static_SequentialProcedureData_descriptor =
+          internal_static_hbase_pb_SequentialProcedureData_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_SequentialProcedureData_fieldAccessorTable = new
+          internal_static_hbase_pb_SequentialProcedureData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SequentialProcedureData_descriptor,
+              internal_static_hbase_pb_SequentialProcedureData_descriptor,
               new java.lang.String[] { "Executed", });
-          internal_static_StateMachineProcedureData_descriptor =
+          internal_static_hbase_pb_StateMachineProcedureData_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_StateMachineProcedureData_fieldAccessorTable = new
+          internal_static_hbase_pb_StateMachineProcedureData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_StateMachineProcedureData_descriptor,
+              internal_static_hbase_pb_StateMachineProcedureData_descriptor,
               new java.lang.String[] { "State", });
-          internal_static_ProcedureWALHeader_descriptor =
+          internal_static_hbase_pb_ProcedureWALHeader_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_ProcedureWALHeader_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureWALHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureWALHeader_descriptor,
+              internal_static_hbase_pb_ProcedureWALHeader_descriptor,
               new java.lang.String[] { "Version", "Type", "LogId", "MinProcId", });
-          internal_static_ProcedureWALTrailer_descriptor =
+          internal_static_hbase_pb_ProcedureWALTrailer_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_ProcedureWALTrailer_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureWALTrailer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureWALTrailer_descriptor,
+              internal_static_hbase_pb_ProcedureWALTrailer_descriptor,
               new java.lang.String[] { "Version", "TrackerPos", });
-          internal_static_ProcedureStoreTracker_descriptor =
+          internal_static_hbase_pb_ProcedureStoreTracker_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_ProcedureStoreTracker_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureStoreTracker_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureStoreTracker_descriptor,
+              internal_static_hbase_pb_ProcedureStoreTracker_descriptor,
               new java.lang.String[] { "Node", });
-          internal_static_ProcedureStoreTracker_TrackerNode_descriptor =
-            internal_static_ProcedureStoreTracker_descriptor.getNestedTypes().get(0);
-          internal_static_ProcedureStoreTracker_TrackerNode_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor =
+            internal_static_hbase_pb_ProcedureStoreTracker_descriptor.getNestedTypes().get(0);
+          internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureStoreTracker_TrackerNode_descriptor,
+              internal_static_hbase_pb_ProcedureStoreTracker_TrackerNode_descriptor,
               new java.lang.String[] { "StartId", "Updated", "Deleted", });
-          internal_static_ProcedureWALEntry_descriptor =
+          internal_static_hbase_pb_ProcedureWALEntry_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_ProcedureWALEntry_fieldAccessorTable = new
+          internal_static_hbase_pb_ProcedureWALEntry_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ProcedureWALEntry_descriptor,
+              internal_static_hbase_pb_ProcedureWALEntry_descriptor,
               new java.lang.String[] { "Type", "Procedure", "ProcId", });
           return null;
         }

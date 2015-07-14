@@ -11,9 +11,9 @@ public final class ZooKeeperProtos {
   public interface MetaRegionServerOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -22,7 +22,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -31,7 +31,7 @@ public final class ZooKeeperProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServer();
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -62,9 +62,9 @@ public final class ZooKeeperProtos {
      */
     int getRpcVersion();
 
-    // optional .RegionState.State state = 3;
+    // optional .hbase.pb.RegionState.State state = 3;
     /**
-     * <code>optional .RegionState.State state = 3;</code>
+     * <code>optional .hbase.pb.RegionState.State state = 3;</code>
      *
      * <pre>
      * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -72,7 +72,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasState();
     /**
-     * <code>optional .RegionState.State state = 3;</code>
+     * <code>optional .hbase.pb.RegionState.State state = 3;</code>
      *
      * <pre>
      * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -81,7 +81,7 @@ public final class ZooKeeperProtos {
     org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State getState();
   }
   /**
-   * Protobuf type {@code MetaRegionServer}
+   * Protobuf type {@code hbase.pb.MetaRegionServer}
    *
    * <pre>
    **
@@ -179,12 +179,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_MetaRegionServer_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_MetaRegionServer_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.Builder.class);
     }
@@ -205,11 +205,11 @@ public final class ZooKeeperProtos {
     }
 
     private int bitField0_;
-    // required .ServerName server = 1;
+    // required .hbase.pb.ServerName server = 1;
     public static final int SERVER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_;
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -220,7 +220,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -231,7 +231,7 @@ public final class ZooKeeperProtos {
       return server_;
     }
     /**
-     * <code>required .ServerName server = 1;</code>
+     * <code>required .hbase.pb.ServerName server = 1;</code>
      *
      * <pre>
      * The ServerName hosting the meta region currently, or destination server,
@@ -270,11 +270,11 @@ public final class ZooKeeperProtos {
       return rpcVersion_;
     }
 
-    // optional .RegionState.State state = 3;
+    // optional .hbase.pb.RegionState.State state = 3;
     public static final int STATE_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_;
     /**
-     * <code>optional .RegionState.State state = 3;</code>
+     * <code>optional .hbase.pb.RegionState.State state = 3;</code>
      *
      * <pre>
      * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -284,7 +284,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .RegionState.State state = 3;</code>
+     * <code>optional .hbase.pb.RegionState.State state = 3;</code>
      *
      * <pre>
      * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -484,7 +484,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code MetaRegionServer}
+     * Protobuf type {@code hbase.pb.MetaRegionServer}
      *
      * <pre>
      **
@@ -496,12 +496,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_MetaRegionServer_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_MetaRegionServer_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer.Builder.class);
       }
@@ -546,7 +546,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_MetaRegionServer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_MetaRegionServer_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MetaRegionServer getDefaultInstanceForType() {
@@ -641,12 +641,12 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .ServerName server = 1;
+      // required .hbase.pb.ServerName server = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName server_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverBuilder_;
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -657,7 +657,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -672,7 +672,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -693,7 +693,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -712,7 +712,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -736,7 +736,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -754,7 +754,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -767,7 +767,7 @@ public final class ZooKeeperProtos {
         return getServerFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -782,7 +782,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server = 1;</code>
+       * <code>required .hbase.pb.ServerName server = 1;</code>
        *
        * <pre>
        * The ServerName hosting the meta region currently, or destination server,
@@ -860,10 +860,10 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // optional .RegionState.State state = 3;
+      // optional .hbase.pb.RegionState.State state = 3;
       private org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State state_ = org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.RegionState.State.OFFLINE;
       /**
-       * <code>optional .RegionState.State state = 3;</code>
+       * <code>optional .hbase.pb.RegionState.State state = 3;</code>
        *
        * <pre>
        * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -873,7 +873,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .RegionState.State state = 3;</code>
+       * <code>optional .hbase.pb.RegionState.State state = 3;</code>
        *
        * <pre>
        * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -883,7 +883,7 @@ public final class ZooKeeperProtos {
         return state_;
       }
       /**
-       * <code>optional .RegionState.State state = 3;</code>
+       * <code>optional .hbase.pb.RegionState.State state = 3;</code>
        *
        * <pre>
        * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -899,7 +899,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .RegionState.State state = 3;</code>
+       * <code>optional .hbase.pb.RegionState.State state = 3;</code>
        *
        * <pre>
        * State of the region transition. OPEN means fully operational 'hbase:meta'
@@ -912,7 +912,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:MetaRegionServer)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.MetaRegionServer)
     }
 
     static {
@@ -920,15 +920,15 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:MetaRegionServer)
+    // @@protoc_insertion_point(class_scope:hbase.pb.MetaRegionServer)
   }
 
   public interface MasterOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ServerName master = 1;
+    // required .hbase.pb.ServerName master = 1;
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -936,7 +936,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasMaster();
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -944,7 +944,7 @@ public final class ZooKeeperProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getMaster();
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -981,7 +981,7 @@ public final class ZooKeeperProtos {
     int getInfoPort();
   }
   /**
-   * Protobuf type {@code Master}
+   * Protobuf type {@code hbase.pb.Master}
    *
    * <pre>
    **
@@ -1073,12 +1073,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Master_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Master_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Master_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Master_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.Builder.class);
     }
@@ -1099,11 +1099,11 @@ public final class ZooKeeperProtos {
     }
 
     private int bitField0_;
-    // required .ServerName master = 1;
+    // required .hbase.pb.ServerName master = 1;
     public static final int MASTER_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName master_;
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -1113,7 +1113,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -1123,7 +1123,7 @@ public final class ZooKeeperProtos {
       return master_;
     }
     /**
-     * <code>required .ServerName master = 1;</code>
+     * <code>required .hbase.pb.ServerName master = 1;</code>
      *
      * <pre>
      * The ServerName of the current Master
@@ -1363,7 +1363,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Master}
+     * Protobuf type {@code hbase.pb.Master}
      *
      * <pre>
      **
@@ -1375,12 +1375,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.MasterOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Master_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Master_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Master_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Master_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master.Builder.class);
       }
@@ -1425,7 +1425,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Master_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Master_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Master getDefaultInstanceForType() {
@@ -1520,12 +1520,12 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .ServerName master = 1;
+      // required .hbase.pb.ServerName master = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName master_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> masterBuilder_;
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1535,7 +1535,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1549,7 +1549,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1569,7 +1569,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1587,7 +1587,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1610,7 +1610,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1627,7 +1627,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1639,7 +1639,7 @@ public final class ZooKeeperProtos {
         return getMasterFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1653,7 +1653,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName master = 1;</code>
+       * <code>required .hbase.pb.ServerName master = 1;</code>
        *
        * <pre>
        * The ServerName of the current Master
@@ -1755,7 +1755,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Master)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Master)
     }
 
     static {
@@ -1763,7 +1763,7 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Master)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Master)
   }
 
   public interface ClusterUpOrBuilder
@@ -1800,7 +1800,7 @@ public final class ZooKeeperProtos {
         getStartDateBytes();
   }
   /**
-   * Protobuf type {@code ClusterUp}
+   * Protobuf type {@code hbase.pb.ClusterUp}
    *
    * <pre>
    **
@@ -1874,12 +1874,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ClusterUp_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ClusterUp_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ClusterUp_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ClusterUp_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUp.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUp.Builder.class);
     }
@@ -2110,7 +2110,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ClusterUp}
+     * Protobuf type {@code hbase.pb.ClusterUp}
      *
      * <pre>
      **
@@ -2122,12 +2122,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUpOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ClusterUp_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ClusterUp_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ClusterUp_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ClusterUp_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUp.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUp.Builder.class);
       }
@@ -2163,7 +2163,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ClusterUp_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ClusterUp_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ClusterUp getDefaultInstanceForType() {
@@ -2342,7 +2342,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ClusterUp)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ClusterUp)
     }
 
     static {
@@ -2350,7 +2350,7 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ClusterUp)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ClusterUp)
   }
 
   public interface RegionTransitionOrBuilder
@@ -2402,9 +2402,9 @@ public final class ZooKeeperProtos {
      */
     long getCreateTime();
 
-    // required .ServerName server_name = 4;
+    // required .hbase.pb.ServerName server_name = 4;
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2412,7 +2412,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasServerName();
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2420,7 +2420,7 @@ public final class ZooKeeperProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2439,7 +2439,7 @@ public final class ZooKeeperProtos {
     com.google.protobuf.ByteString getPayload();
   }
   /**
-   * Protobuf type {@code RegionTransition}
+   * Protobuf type {@code hbase.pb.RegionTransition}
    *
    * <pre>
    **
@@ -2542,12 +2542,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RegionTransition_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_RegionTransition_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RegionTransition_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_RegionTransition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.Builder.class);
     }
@@ -2632,11 +2632,11 @@ public final class ZooKeeperProtos {
       return createTime_;
     }
 
-    // required .ServerName server_name = 4;
+    // required .hbase.pb.ServerName server_name = 4;
     public static final int SERVER_NAME_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2646,7 +2646,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2656,7 +2656,7 @@ public final class ZooKeeperProtos {
       return serverName_;
     }
     /**
-     * <code>required .ServerName server_name = 4;</code>
+     * <code>required .hbase.pb.ServerName server_name = 4;</code>
      *
      * <pre>
      * The region server where the transition will happen or is happening
@@ -2918,7 +2918,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RegionTransition}
+     * Protobuf type {@code hbase.pb.RegionTransition}
      *
      * <pre>
      **
@@ -2931,12 +2931,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransitionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RegionTransition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_RegionTransition_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RegionTransition_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_RegionTransition_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition.Builder.class);
       }
@@ -2985,7 +2985,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_RegionTransition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_RegionTransition_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionTransition getDefaultInstanceForType() {
@@ -3240,12 +3240,12 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // required .ServerName server_name = 4;
+      // required .hbase.pb.ServerName server_name = 4;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3255,7 +3255,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3269,7 +3269,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3289,7 +3289,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3307,7 +3307,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3330,7 +3330,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3347,7 +3347,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3359,7 +3359,7 @@ public final class ZooKeeperProtos {
         return getServerNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3373,7 +3373,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server_name = 4;</code>
+       * <code>required .hbase.pb.ServerName server_name = 4;</code>
        *
        * <pre>
        * The region server where the transition will happen or is happening
@@ -3429,7 +3429,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RegionTransition)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RegionTransition)
     }
 
     static {
@@ -3437,48 +3437,48 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RegionTransition)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RegionTransition)
   }
 
   public interface SplitLogTaskOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .SplitLogTask.State state = 1;
+    // required .hbase.pb.SplitLogTask.State state = 1;
     /**
-     * <code>required .SplitLogTask.State state = 1;</code>
+     * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
      */
     boolean hasState();
     /**
-     * <code>required .SplitLogTask.State state = 1;</code>
+     * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State getState();
 
-    // required .ServerName server_name = 2;
+    // required .hbase.pb.ServerName server_name = 2;
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     boolean hasServerName();
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName();
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder();
 
-    // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+    // optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
     /**
-     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
      */
     boolean hasMode();
     /**
-     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode();
   }
   /**
-   * Protobuf type {@code SplitLogTask}
+   * Protobuf type {@code hbase.pb.SplitLogTask}
    *
    * <pre>
    **
@@ -3583,12 +3583,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_SplitLogTask_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_SplitLogTask_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_SplitLogTask_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_SplitLogTask_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.Builder.class);
     }
@@ -3609,7 +3609,7 @@ public final class ZooKeeperProtos {
     }
 
     /**
-     * Protobuf enum {@code SplitLogTask.State}
+     * Protobuf enum {@code hbase.pb.SplitLogTask.State}
      */
     public enum State
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -3714,11 +3714,11 @@ public final class ZooKeeperProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:SplitLogTask.State)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SplitLogTask.State)
     }
 
     /**
-     * Protobuf enum {@code SplitLogTask.RecoveryMode}
+     * Protobuf enum {@code hbase.pb.SplitLogTask.RecoveryMode}
      */
     public enum RecoveryMode
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -3805,59 +3805,59 @@ public final class ZooKeeperProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:SplitLogTask.RecoveryMode)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SplitLogTask.RecoveryMode)
     }
 
     private int bitField0_;
-    // required .SplitLogTask.State state = 1;
+    // required .hbase.pb.SplitLogTask.State state = 1;
     public static final int STATE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State state_;
     /**
-     * <code>required .SplitLogTask.State state = 1;</code>
+     * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
      */
     public boolean hasState() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .SplitLogTask.State state = 1;</code>
+     * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State getState() {
       return state_;
     }
 
-    // required .ServerName server_name = 2;
+    // required .hbase.pb.ServerName server_name = 2;
     public static final int SERVER_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_;
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     public boolean hasServerName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
       return serverName_;
     }
     /**
-     * <code>required .ServerName server_name = 2;</code>
+     * <code>required .hbase.pb.ServerName server_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
       return serverName_;
     }
 
-    // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+    // optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
     public static final int MODE_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode mode_;
     /**
-     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
      */
     public boolean hasMode() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+     * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
       return mode_;
@@ -4057,7 +4057,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SplitLogTask}
+     * Protobuf type {@code hbase.pb.SplitLogTask}
      *
      * <pre>
      **
@@ -4070,12 +4070,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTaskOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_SplitLogTask_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_SplitLogTask_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_SplitLogTask_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_SplitLogTask_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.Builder.class);
       }
@@ -4120,7 +4120,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_SplitLogTask_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_SplitLogTask_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask getDefaultInstanceForType() {
@@ -4219,22 +4219,22 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .SplitLogTask.State state = 1;
+      // required .hbase.pb.SplitLogTask.State state = 1;
       private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State.UNASSIGNED;
       /**
-       * <code>required .SplitLogTask.State state = 1;</code>
+       * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
        */
       public boolean hasState() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .SplitLogTask.State state = 1;</code>
+       * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State getState() {
         return state_;
       }
       /**
-       * <code>required .SplitLogTask.State state = 1;</code>
+       * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
        */
       public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.State value) {
         if (value == null) {
@@ -4246,7 +4246,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .SplitLogTask.State state = 1;</code>
+       * <code>required .hbase.pb.SplitLogTask.State state = 1;</code>
        */
       public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -4255,18 +4255,18 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // required .ServerName server_name = 2;
+      // required .hbase.pb.ServerName server_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName serverName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> serverNameBuilder_;
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public boolean hasServerName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getServerName() {
         if (serverNameBuilder_ == null) {
@@ -4276,7 +4276,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public Builder setServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverNameBuilder_ == null) {
@@ -4292,7 +4292,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public Builder setServerName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -4306,7 +4306,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public Builder mergeServerName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (serverNameBuilder_ == null) {
@@ -4325,7 +4325,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public Builder clearServerName() {
         if (serverNameBuilder_ == null) {
@@ -4338,7 +4338,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getServerNameBuilder() {
         bitField0_ |= 0x00000002;
@@ -4346,7 +4346,7 @@ public final class ZooKeeperProtos {
         return getServerNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getServerNameOrBuilder() {
         if (serverNameBuilder_ != null) {
@@ -4356,7 +4356,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>required .ServerName server_name = 2;</code>
+       * <code>required .hbase.pb.ServerName server_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
@@ -4372,22 +4372,22 @@ public final class ZooKeeperProtos {
         return serverNameBuilder_;
       }
 
-      // optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
+      // optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];
       private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode mode_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode.UNKNOWN;
       /**
-       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
        */
       public boolean hasMode() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode getMode() {
         return mode_;
       }
       /**
-       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
        */
       public Builder setMode(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode value) {
         if (value == null) {
@@ -4399,7 +4399,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
+       * <code>optional .hbase.pb.SplitLogTask.RecoveryMode mode = 3 [default = UNKNOWN];</code>
        */
       public Builder clearMode() {
         bitField0_ = (bitField0_ & ~0x00000004);
@@ -4408,7 +4408,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SplitLogTask)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SplitLogTask)
     }
 
     static {
@@ -4416,15 +4416,15 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SplitLogTask)
+    // @@protoc_insertion_point(class_scope:hbase.pb.SplitLogTask)
   }
 
   public interface TableOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .Table.State state = 1 [default = ENABLED];
+    // required .hbase.pb.Table.State state = 1 [default = ENABLED];
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -4434,7 +4434,7 @@ public final class ZooKeeperProtos {
      */
     boolean hasState();
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -4445,7 +4445,7 @@ public final class ZooKeeperProtos {
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State getState();
   }
   /**
-   * Protobuf type {@code Table}
+   * Protobuf type {@code hbase.pb.Table}
    *
    * <pre>
    **
@@ -4525,12 +4525,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Table_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Table_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.Builder.class);
     }
@@ -4551,7 +4551,7 @@ public final class ZooKeeperProtos {
     }
 
     /**
-     * Protobuf enum {@code Table.State}
+     * Protobuf enum {@code hbase.pb.Table.State}
      *
      * <pre>
      * Table's current state
@@ -4651,15 +4651,15 @@ public final class ZooKeeperProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:Table.State)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.Table.State)
     }
 
     private int bitField0_;
-    // required .Table.State state = 1 [default = ENABLED];
+    // required .hbase.pb.Table.State state = 1 [default = ENABLED];
     public static final int STATE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State state_;
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -4671,7 +4671,7 @@ public final class ZooKeeperProtos {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .Table.State state = 1 [default = ENABLED];</code>
+     * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
      *
      * <pre>
      * This is the table's state.  If no znode for a table,
@@ -4835,7 +4835,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Table}
+     * Protobuf type {@code hbase.pb.Table}
      *
      * <pre>
      **
@@ -4847,12 +4847,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Table_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Table_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.Builder.class);
       }
@@ -4888,7 +4888,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_Table_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_Table_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table getDefaultInstanceForType() {
@@ -4961,10 +4961,10 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .Table.State state = 1 [default = ENABLED];
+      // required .hbase.pb.Table.State state = 1 [default = ENABLED];
       private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table.State.ENABLED;
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -4976,7 +4976,7 @@ public final class ZooKeeperProtos {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -4988,7 +4988,7 @@ public final class ZooKeeperProtos {
         return state_;
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -5006,7 +5006,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .Table.State state = 1 [default = ENABLED];</code>
+       * <code>required .hbase.pb.Table.State state = 1 [default = ENABLED];</code>
        *
        * <pre>
        * This is the table's state.  If no znode for a table,
@@ -5021,7 +5021,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Table)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Table)
     }
 
     static {
@@ -5029,7 +5029,7 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Table)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Table)
   }
 
   public interface ReplicationPeerOrBuilder
@@ -5080,58 +5080,58 @@ public final class ZooKeeperProtos {
     com.google.protobuf.ByteString
         getReplicationEndpointImplBytes();
 
-    // repeated .BytesBytesPair data = 3;
+    // repeated .hbase.pb.BytesBytesPair data = 3;
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getDataList();
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index);
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     int getDataCount();
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getDataOrBuilderList();
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
         int index);
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> 
         getConfigurationList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index);
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     int getConfigurationCount();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList();
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code ReplicationPeer}
+   * Protobuf type {@code hbase.pb.ReplicationPeer}
    *
    * <pre>
    **
@@ -5232,12 +5232,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationPeer_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationPeer_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder.class);
     }
@@ -5359,72 +5359,72 @@ public final class ZooKeeperProtos {
       }
     }
 
-    // repeated .BytesBytesPair data = 3;
+    // repeated .hbase.pb.BytesBytesPair data = 3;
     public static final int DATA_FIELD_NUMBER = 3;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> data_;
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getDataList() {
       return data_;
     }
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getDataOrBuilderList() {
       return data_;
     }
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     public int getDataCount() {
       return data_.size();
     }
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index) {
       return data_.get(index);
     }
     /**
-     * <code>repeated .BytesBytesPair data = 3;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
         int index) {
       return data_.get(index);
     }
 
-    // repeated .NameStringPair configuration = 4;
+    // repeated .hbase.pb.NameStringPair configuration = 4;
     public static final int CONFIGURATION_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_;
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
         getConfigurationOrBuilderList() {
       return configuration_;
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public int getConfigurationCount() {
       return configuration_.size();
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
       return configuration_.get(index);
     }
     /**
-     * <code>repeated .NameStringPair configuration = 4;</code>
+     * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
         int index) {
@@ -5640,7 +5640,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReplicationPeer}
+     * Protobuf type {@code hbase.pb.ReplicationPeer}
      *
      * <pre>
      **
@@ -5652,12 +5652,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeerOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationPeer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationPeer_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer.Builder.class);
       }
@@ -5709,7 +5709,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationPeer_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationPeer_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationPeer getDefaultInstanceForType() {
@@ -6053,7 +6053,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // repeated .BytesBytesPair data = 3;
+      // repeated .hbase.pb.BytesBytesPair data = 3;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> data_ =
         java.util.Collections.emptyList();
       private void ensureDataIsMutable() {
@@ -6067,7 +6067,7 @@ public final class ZooKeeperProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> dataBuilder_;
 
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getDataList() {
         if (dataBuilder_ == null) {
@@ -6077,7 +6077,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public int getDataCount() {
         if (dataBuilder_ == null) {
@@ -6087,7 +6087,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getData(int index) {
         if (dataBuilder_ == null) {
@@ -6097,7 +6097,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder setData(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -6114,7 +6114,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder setData(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -6128,7 +6128,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder addData(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (dataBuilder_ == null) {
@@ -6144,7 +6144,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder addData(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -6161,7 +6161,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder addData(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -6175,7 +6175,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder addData(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -6189,7 +6189,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder addAllData(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
@@ -6203,7 +6203,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder clearData() {
         if (dataBuilder_ == null) {
@@ -6216,7 +6216,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public Builder removeData(int index) {
         if (dataBuilder_ == null) {
@@ -6229,14 +6229,14 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getDataBuilder(
           int index) {
         return getDataFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getDataOrBuilder(
           int index) {
@@ -6246,7 +6246,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
            getDataOrBuilderList() {
@@ -6257,14 +6257,14 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addDataBuilder() {
         return getDataFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addDataBuilder(
           int index) {
@@ -6272,7 +6272,7 @@ public final class ZooKeeperProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair data = 3;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair data = 3;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
            getDataBuilderList() {
@@ -6293,7 +6293,7 @@ public final class ZooKeeperProtos {
         return dataBuilder_;
       }
 
-      // repeated .NameStringPair configuration = 4;
+      // repeated .hbase.pb.NameStringPair configuration = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> configuration_ =
         java.util.Collections.emptyList();
       private void ensureConfigurationIsMutable() {
@@ -6307,7 +6307,7 @@ public final class ZooKeeperProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> configurationBuilder_;
 
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> getConfigurationList() {
         if (configurationBuilder_ == null) {
@@ -6317,7 +6317,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public int getConfigurationCount() {
         if (configurationBuilder_ == null) {
@@ -6327,7 +6327,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair getConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -6337,7 +6337,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -6354,7 +6354,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder setConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -6368,7 +6368,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
         if (configurationBuilder_ == null) {
@@ -6384,7 +6384,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair value) {
@@ -6401,7 +6401,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -6415,7 +6415,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addConfiguration(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder builderForValue) {
@@ -6429,7 +6429,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder addAllConfiguration(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair> values) {
@@ -6443,7 +6443,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder clearConfiguration() {
         if (configurationBuilder_ == null) {
@@ -6456,7 +6456,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public Builder removeConfiguration(int index) {
         if (configurationBuilder_ == null) {
@@ -6469,14 +6469,14 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder getConfigurationBuilder(
           int index) {
         return getConfigurationFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder getConfigurationOrBuilder(
           int index) {
@@ -6486,7 +6486,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPairOrBuilder> 
            getConfigurationOrBuilderList() {
@@ -6497,14 +6497,14 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder() {
         return getConfigurationFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder addConfigurationBuilder(
           int index) {
@@ -6512,7 +6512,7 @@ public final class ZooKeeperProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .NameStringPair configuration = 4;</code>
+       * <code>repeated .hbase.pb.NameStringPair configuration = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair.Builder> 
            getConfigurationBuilderList() {
@@ -6533,7 +6533,7 @@ public final class ZooKeeperProtos {
         return configurationBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReplicationPeer)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationPeer)
     }
 
     static {
@@ -6541,24 +6541,24 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReplicationPeer)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationPeer)
   }
 
   public interface ReplicationStateOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .ReplicationState.State state = 1;
+    // required .hbase.pb.ReplicationState.State state = 1;
     /**
-     * <code>required .ReplicationState.State state = 1;</code>
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
      */
     boolean hasState();
     /**
-     * <code>required .ReplicationState.State state = 1;</code>
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State getState();
   }
   /**
-   * Protobuf type {@code ReplicationState}
+   * Protobuf type {@code hbase.pb.ReplicationState}
    *
    * <pre>
    **
@@ -6638,12 +6638,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationState_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationState_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationState_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationState_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.Builder.class);
     }
@@ -6664,7 +6664,7 @@ public final class ZooKeeperProtos {
     }
 
     /**
-     * Protobuf enum {@code ReplicationState.State}
+     * Protobuf enum {@code hbase.pb.ReplicationState.State}
      */
     public enum State
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -6742,21 +6742,21 @@ public final class ZooKeeperProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:ReplicationState.State)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.ReplicationState.State)
     }
 
     private int bitField0_;
-    // required .ReplicationState.State state = 1;
+    // required .hbase.pb.ReplicationState.State state = 1;
     public static final int STATE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State state_;
     /**
-     * <code>required .ReplicationState.State state = 1;</code>
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
      */
     public boolean hasState() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .ReplicationState.State state = 1;</code>
+     * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State getState() {
       return state_;
@@ -6914,7 +6914,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReplicationState}
+     * Protobuf type {@code hbase.pb.ReplicationState}
      *
      * <pre>
      **
@@ -6926,12 +6926,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationStateOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationState_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationState_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationState_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationState_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.Builder.class);
       }
@@ -6967,7 +6967,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationState_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationState_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState getDefaultInstanceForType() {
@@ -7040,22 +7040,22 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // required .ReplicationState.State state = 1;
+      // required .hbase.pb.ReplicationState.State state = 1;
       private org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State state_ = org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State.ENABLED;
       /**
-       * <code>required .ReplicationState.State state = 1;</code>
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
        */
       public boolean hasState() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .ReplicationState.State state = 1;</code>
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State getState() {
         return state_;
       }
       /**
-       * <code>required .ReplicationState.State state = 1;</code>
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
        */
       public Builder setState(org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationState.State value) {
         if (value == null) {
@@ -7067,7 +7067,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>required .ReplicationState.State state = 1;</code>
+       * <code>required .hbase.pb.ReplicationState.State state = 1;</code>
        */
       public Builder clearState() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -7076,7 +7076,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReplicationState)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationState)
     }
 
     static {
@@ -7084,7 +7084,7 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReplicationState)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationState)
   }
 
   public interface ReplicationHLogPositionOrBuilder
@@ -7101,7 +7101,7 @@ public final class ZooKeeperProtos {
     long getPosition();
   }
   /**
-   * Protobuf type {@code ReplicationHLogPosition}
+   * Protobuf type {@code hbase.pb.ReplicationHLogPosition}
    *
    * <pre>
    **
@@ -7175,12 +7175,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationHLogPosition_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationHLogPosition_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPosition.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPosition.Builder.class);
     }
@@ -7369,7 +7369,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReplicationHLogPosition}
+     * Protobuf type {@code hbase.pb.ReplicationHLogPosition}
      *
      * <pre>
      **
@@ -7381,12 +7381,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPositionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationHLogPosition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationHLogPosition_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPosition.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPosition.Builder.class);
       }
@@ -7422,7 +7422,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationHLogPosition_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationHLogPosition getDefaultInstanceForType() {
@@ -7528,7 +7528,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReplicationHLogPosition)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationHLogPosition)
     }
 
     static {
@@ -7536,7 +7536,7 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReplicationHLogPosition)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationHLogPosition)
   }
 
   public interface ReplicationLockOrBuilder
@@ -7558,7 +7558,7 @@ public final class ZooKeeperProtos {
         getLockOwnerBytes();
   }
   /**
-   * Protobuf type {@code ReplicationLock}
+   * Protobuf type {@code hbase.pb.ReplicationLock}
    *
    * <pre>
    **
@@ -7632,12 +7632,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationLock_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationLock_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationLock_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationLock_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLock.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLock.Builder.class);
     }
@@ -7853,7 +7853,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ReplicationLock}
+     * Protobuf type {@code hbase.pb.ReplicationLock}
      *
      * <pre>
      **
@@ -7865,12 +7865,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLockOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationLock_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationLock_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationLock_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationLock_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLock.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLock.Builder.class);
       }
@@ -7906,7 +7906,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_ReplicationLock_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_ReplicationLock_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.ReplicationLock getDefaultInstanceForType() {
@@ -8055,7 +8055,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ReplicationLock)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ReplicationLock)
     }
 
     static {
@@ -8063,37 +8063,37 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ReplicationLock)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ReplicationLock)
   }
 
   public interface TableLockOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     boolean hasTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
 
-    // optional .ServerName lock_owner = 2;
+    // optional .hbase.pb.ServerName lock_owner = 2;
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     boolean hasLockOwner();
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getLockOwner();
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getLockOwnerOrBuilder();
 
@@ -8143,7 +8143,7 @@ public final class ZooKeeperProtos {
     long getCreateTime();
   }
   /**
-   * Protobuf type {@code TableLock}
+   * Protobuf type {@code hbase.pb.TableLock}
    *
    * <pre>
    **
@@ -8258,12 +8258,12 @@ public final class ZooKeeperProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_TableLock_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_TableLock_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_TableLock_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_TableLock_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.Builder.class);
     }
@@ -8284,45 +8284,45 @@ public final class ZooKeeperProtos {
     }
 
     private int bitField0_;
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
     }
 
-    // optional .ServerName lock_owner = 2;
+    // optional .hbase.pb.ServerName lock_owner = 2;
     public static final int LOCK_OWNER_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_;
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     public boolean hasLockOwner() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getLockOwner() {
       return lockOwner_;
     }
     /**
-     * <code>optional .ServerName lock_owner = 2;</code>
+     * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getLockOwnerOrBuilder() {
       return lockOwner_;
@@ -8664,7 +8664,7 @@ public final class ZooKeeperProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TableLock}
+     * Protobuf type {@code hbase.pb.TableLock}
      *
      * <pre>
      **
@@ -8676,12 +8676,12 @@ public final class ZooKeeperProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLockOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_TableLock_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_TableLock_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_TableLock_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_TableLock_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.class, org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock.Builder.class);
       }
@@ -8737,7 +8737,7 @@ public final class ZooKeeperProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_TableLock_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.internal_static_hbase_pb_TableLock_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.TableLock getDefaultInstanceForType() {
@@ -8863,18 +8863,18 @@ public final class ZooKeeperProtos {
       }
       private int bitField0_;
 
-      // optional .TableName table_name = 1;
+      // optional .hbase.pb.TableName table_name = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -8884,7 +8884,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -8900,7 +8900,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
@@ -8914,7 +8914,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -8933,7 +8933,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
@@ -8946,7 +8946,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
@@ -8954,7 +8954,7 @@ public final class ZooKeeperProtos {
         return getTableNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
@@ -8964,7 +8964,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
@@ -8980,18 +8980,18 @@ public final class ZooKeeperProtos {
         return tableNameBuilder_;
       }
 
-      // optional .ServerName lock_owner = 2;
+      // optional .hbase.pb.ServerName lock_owner = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName lockOwner_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> lockOwnerBuilder_;
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public boolean hasLockOwner() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName getLockOwner() {
         if (lockOwnerBuilder_ == null) {
@@ -9001,7 +9001,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public Builder setLockOwner(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (lockOwnerBuilder_ == null) {
@@ -9017,7 +9017,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public Builder setLockOwner(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder builderForValue) {
@@ -9031,7 +9031,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public Builder mergeLockOwner(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName value) {
         if (lockOwnerBuilder_ == null) {
@@ -9050,7 +9050,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public Builder clearLockOwner() {
         if (lockOwnerBuilder_ == null) {
@@ -9063,7 +9063,7 @@ public final class ZooKeeperProtos {
         return this;
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder getLockOwnerBuilder() {
         bitField0_ |= 0x00000002;
@@ -9071,7 +9071,7 @@ public final class ZooKeeperProtos {
         return getLockOwnerFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder getLockOwnerOrBuilder() {
         if (lockOwnerBuilder_ != null) {
@@ -9081,7 +9081,7 @@ public final class ZooKeeperProtos {
         }
       }
       /**
-       * <code>optional .ServerName lock_owner = 2;</code>
+       * <code>optional .hbase.pb.ServerName lock_owner = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ServerNameOrBuilder> 
@@ -9270,7 +9270,7 @@ public final class ZooKeeperProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TableLock)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TableLock)
     }
 
     static {
@@ -9278,64 +9278,64 @@ public final class ZooKeeperProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TableLock)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TableLock)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_MetaRegionServer_descriptor;
+    internal_static_hbase_pb_MetaRegionServer_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_MetaRegionServer_fieldAccessorTable;
+      internal_static_hbase_pb_MetaRegionServer_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Master_descriptor;
+    internal_static_hbase_pb_Master_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Master_fieldAccessorTable;
+      internal_static_hbase_pb_Master_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ClusterUp_descriptor;
+    internal_static_hbase_pb_ClusterUp_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ClusterUp_fieldAccessorTable;
+      internal_static_hbase_pb_ClusterUp_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RegionTransition_descriptor;
+    internal_static_hbase_pb_RegionTransition_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RegionTransition_fieldAccessorTable;
+      internal_static_hbase_pb_RegionTransition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SplitLogTask_descriptor;
+    internal_static_hbase_pb_SplitLogTask_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SplitLogTask_fieldAccessorTable;
+      internal_static_hbase_pb_SplitLogTask_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Table_descriptor;
+    internal_static_hbase_pb_Table_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Table_fieldAccessorTable;
+      internal_static_hbase_pb_Table_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReplicationPeer_descriptor;
+    internal_static_hbase_pb_ReplicationPeer_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReplicationPeer_fieldAccessorTable;
+      internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReplicationState_descriptor;
+    internal_static_hbase_pb_ReplicationState_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReplicationState_fieldAccessorTable;
+      internal_static_hbase_pb_ReplicationState_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReplicationHLogPosition_descriptor;
+    internal_static_hbase_pb_ReplicationHLogPosition_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReplicationHLogPosition_fieldAccessorTable;
+      internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ReplicationLock_descriptor;
+    internal_static_hbase_pb_ReplicationLock_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ReplicationLock_fieldAccessorTable;
+      internal_static_hbase_pb_ReplicationLock_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TableLock_descriptor;
+    internal_static_hbase_pb_TableLock_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TableLock_fieldAccessorTable;
+      internal_static_hbase_pb_TableLock_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -9345,111 +9345,114 @@ public final class ZooKeeperProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ZooKeeper.proto\032\013HBase.proto\032\023ClusterS" +
-      "tatus.proto\"g\n\020MetaRegionServer\022\033\n\006serve" +
-      "r\030\001 \002(\0132\013.ServerName\022\023\n\013rpc_version\030\002 \001(" +
-      "\r\022!\n\005state\030\003 \001(\0162\022.RegionState.State\"M\n\006" +
-      "Master\022\033\n\006master\030\001 \002(\0132\013.ServerName\022\023\n\013r" +
-      "pc_version\030\002 \001(\r\022\021\n\tinfo_port\030\003 \001(\r\"\037\n\tC" +
-      "lusterUp\022\022\n\nstart_date\030\001 \002(\t\"\210\001\n\020RegionT" +
-      "ransition\022\027\n\017event_type_code\030\001 \002(\r\022\023\n\013re" +
-      "gion_name\030\002 \002(\014\022\023\n\013create_time\030\003 \002(\004\022 \n\013" +
-      "server_name\030\004 \002(\0132\013.ServerName\022\017\n\007payloa",
-      "d\030\005 \001(\014\"\214\002\n\014SplitLogTask\022\"\n\005state\030\001 \002(\0162" +
-      "\023.SplitLogTask.State\022 \n\013server_name\030\002 \002(" +
-      "\0132\013.ServerName\0221\n\004mode\030\003 \001(\0162\032.SplitLogT" +
-      "ask.RecoveryMode:\007UNKNOWN\"C\n\005State\022\016\n\nUN" +
-      "ASSIGNED\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004D" +
-      "ONE\020\003\022\007\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007UNKNOW" +
-      "N\020\000\022\021\n\rLOG_SPLITTING\020\001\022\016\n\nLOG_REPLAY\020\002\"n" +
-      "\n\005Table\022$\n\005state\030\001 \002(\0162\014.Table.State:\007EN" +
-      "ABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020" +
-      "\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"\215\001\n\017Repli",
-      "cationPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027replic" +
-      "ationEndpointImpl\030\002 \001(\t\022\035\n\004data\030\003 \003(\0132\017." +
-      "BytesBytesPair\022&\n\rconfiguration\030\004 \003(\0132\017." +
-      "NameStringPair\"^\n\020ReplicationState\022&\n\005st" +
-      "ate\030\001 \002(\0162\027.ReplicationState.State\"\"\n\005St" +
-      "ate\022\013\n\007ENABLED\020\000\022\014\n\010DISABLED\020\001\"+\n\027Replic" +
-      "ationHLogPosition\022\020\n\010position\030\001 \002(\003\"%\n\017R" +
-      "eplicationLock\022\022\n\nlock_owner\030\001 \002(\t\"\230\001\n\tT" +
-      "ableLock\022\036\n\ntable_name\030\001 \001(\0132\n.TableName" +
-      "\022\037\n\nlock_owner\030\002 \001(\0132\013.ServerName\022\021\n\tthr",
-      "ead_id\030\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017\n\007purpo" +
-      "se\030\005 \001(\t\022\023\n\013create_time\030\006 \001(\003BE\n*org.apa" +
-      "che.hadoop.hbase.protobuf.generatedB\017Zoo" +
-      "KeeperProtosH\001\210\001\001\240\001\001"
+      "\n\017ZooKeeper.proto\022\010hbase.pb\032\013HBase.proto" +
+      "\032\023ClusterStatus.proto\"y\n\020MetaRegionServe" +
+      "r\022$\n\006server\030\001 \002(\0132\024.hbase.pb.ServerName\022" +
+      "\023\n\013rpc_version\030\002 \001(\r\022*\n\005state\030\003 \001(\0162\033.hb" +
+      "ase.pb.RegionState.State\"V\n\006Master\022$\n\006ma" +
+      "ster\030\001 \002(\0132\024.hbase.pb.ServerName\022\023\n\013rpc_" +
+      "version\030\002 \001(\r\022\021\n\tinfo_port\030\003 \001(\r\"\037\n\tClus" +
+      "terUp\022\022\n\nstart_date\030\001 \002(\t\"\221\001\n\020RegionTran" +
+      "sition\022\027\n\017event_type_code\030\001 \002(\r\022\023\n\013regio" +
+      "n_name\030\002 \002(\014\022\023\n\013create_time\030\003 \002(\004\022)\n\013ser",
+      "ver_name\030\004 \002(\0132\024.hbase.pb.ServerName\022\017\n\007" +
+      "payload\030\005 \001(\014\"\247\002\n\014SplitLogTask\022+\n\005state\030" +
+      "\001 \002(\0162\034.hbase.pb.SplitLogTask.State\022)\n\013s" +
+      "erver_name\030\002 \002(\0132\024.hbase.pb.ServerName\022:" +
+      "\n\004mode\030\003 \001(\0162#.hbase.pb.SplitLogTask.Rec" +
+      "overyMode:\007UNKNOWN\"C\n\005State\022\016\n\nUNASSIGNE" +
+      "D\020\000\022\t\n\005OWNED\020\001\022\014\n\010RESIGNED\020\002\022\010\n\004DONE\020\003\022\007" +
+      "\n\003ERR\020\004\">\n\014RecoveryMode\022\013\n\007UNKNOWN\020\000\022\021\n\r" +
+      "LOG_SPLITTING\020\001\022\016\n\nLOG_REPLAY\020\002\"w\n\005Table" +
+      "\022-\n\005state\030\001 \002(\0162\025.hbase.pb.Table.State:\007",
+      "ENABLED\"?\n\005State\022\013\n\007ENABLED\020\000\022\014\n\010DISABLE" +
+      "D\020\001\022\r\n\tDISABLING\020\002\022\014\n\010ENABLING\020\003\"\237\001\n\017Rep" +
+      "licationPeer\022\022\n\nclusterkey\030\001 \002(\t\022\037\n\027repl" +
+      "icationEndpointImpl\030\002 \001(\t\022&\n\004data\030\003 \003(\0132" +
+      "\030.hbase.pb.BytesBytesPair\022/\n\rconfigurati" +
+      "on\030\004 \003(\0132\030.hbase.pb.NameStringPair\"g\n\020Re" +
+      "plicationState\022/\n\005state\030\001 \002(\0162 .hbase.pb" +
+      ".ReplicationState.State\"\"\n\005State\022\013\n\007ENAB" +
+      "LED\020\000\022\014\n\010DISABLED\020\001\"+\n\027ReplicationHLogPo" +
+      "sition\022\020\n\010position\030\001 \002(\003\"%\n\017ReplicationL",
+      "ock\022\022\n\nlock_owner\030\001 \002(\t\"\252\001\n\tTableLock\022\'\n" +
+      "\ntable_name\030\001 \001(\0132\023.hbase.pb.TableName\022(" +
+      "\n\nlock_owner\030\002 \001(\0132\024.hbase.pb.ServerName" +
+      "\022\021\n\tthread_id\030\003 \001(\003\022\021\n\tis_shared\030\004 \001(\010\022\017" +
+      "\n\007purpose\030\005 \001(\t\022\023\n\013create_time\030\006 \001(\003BE\n*" +
+      "org.apache.hadoop.hbase.protobuf.generat" +
+      "edB\017ZooKeeperProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_MetaRegionServer_descriptor =
+          internal_static_hbase_pb_MetaRegionServer_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_MetaRegionServer_fieldAccessorTable = new
+          internal_static_hbase_pb_MetaRegionServer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_MetaRegionServer_descriptor,
+              internal_static_hbase_pb_MetaRegionServer_descriptor,
               new java.lang.String[] { "Server", "RpcVersion", "State", });
-          internal_static_Master_descriptor =
+          internal_static_hbase_pb_Master_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_Master_fieldAccessorTable = new
+          internal_static_hbase_pb_Master_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Master_descriptor,
+              internal_static_hbase_pb_Master_descriptor,
               new java.lang.String[] { "Master", "RpcVersion", "InfoPort", });
-          internal_static_ClusterUp_descriptor =
+          internal_static_hbase_pb_ClusterUp_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_ClusterUp_fieldAccessorTable = new
+          internal_static_hbase_pb_ClusterUp_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ClusterUp_descriptor,
+              internal_static_hbase_pb_ClusterUp_descriptor,
               new java.lang.String[] { "StartDate", });
-          internal_static_RegionTransition_descriptor =
+          internal_static_hbase_pb_RegionTransition_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_RegionTransition_fieldAccessorTable = new
+          internal_static_hbase_pb_RegionTransition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RegionTransition_descriptor,
+              internal_static_hbase_pb_RegionTransition_descriptor,
               new java.lang.String[] { "EventTypeCode", "RegionName", "CreateTime", "ServerName", "Payload", });
-          internal_static_SplitLogTask_descriptor =
+          internal_static_hbase_pb_SplitLogTask_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_SplitLogTask_fieldAccessorTable = new
+          internal_static_hbase_pb_SplitLogTask_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SplitLogTask_descriptor,
+              internal_static_hbase_pb_SplitLogTask_descriptor,
               new java.lang.String[] { "State", "ServerName", "Mode", });
-          internal_static_Table_descriptor =
+          internal_static_hbase_pb_Table_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_Table_fieldAccessorTable = new
+          internal_static_hbase_pb_Table_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Table_descriptor,
+              internal_static_hbase_pb_Table_descriptor,
               new java.lang.String[] { "State", });
-          internal_static_ReplicationPeer_descriptor =
+          internal_static_hbase_pb_ReplicationPeer_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_ReplicationPeer_fieldAccessorTable = new
+          internal_static_hbase_pb_ReplicationPeer_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReplicationPeer_descriptor,
+              internal_static_hbase_pb_ReplicationPeer_descriptor,
               new java.lang.String[] { "Clusterkey", "ReplicationEndpointImpl", "Data", "Configuration", });
-          internal_static_ReplicationState_descriptor =
+          internal_static_hbase_pb_ReplicationState_descriptor =
             getDescriptor().getMessageTypes().get(7);
-          internal_static_ReplicationState_fieldAccessorTable = new
+          internal_static_hbase_pb_ReplicationState_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReplicationState_descriptor,
+              internal_static_hbase_pb_ReplicationState_descriptor,
               new java.lang.String[] { "State", });
-          internal_static_ReplicationHLogPosition_descriptor =
+          internal_static_hbase_pb_ReplicationHLogPosition_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_ReplicationHLogPosition_fieldAccessorTable = new
+          internal_static_hbase_pb_ReplicationHLogPosition_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReplicationHLogPosition_descriptor,
+              internal_static_hbase_pb_ReplicationHLogPosition_descriptor,
               new java.lang.String[] { "Position", });
-          internal_static_ReplicationLock_descriptor =
+          internal_static_hbase_pb_ReplicationLock_descriptor =
             getDescriptor().getMessageTypes().get(9);
-          internal_static_ReplicationLock_fieldAccessorTable = new
+          internal_static_hbase_pb_ReplicationLock_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ReplicationLock_descriptor,
+              internal_static_hbase_pb_ReplicationLock_descriptor,
               new java.lang.String[] { "LockOwner", });
-          internal_static_TableLock_descriptor =
+          internal_static_hbase_pb_TableLock_descriptor =
             getDescriptor().getMessageTypes().get(10);
-          internal_static_TableLock_fieldAccessorTable = new
+          internal_static_hbase_pb_TableLock_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TableLock_descriptor,
+              internal_static_hbase_pb_TableLock_descriptor,
               new java.lang.String[] { "TableName", "LockOwner", "ThreadId", "IsShared", "Purpose", "CreateTime", });
           return null;
         }

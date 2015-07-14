@@ -18,6 +18,7 @@
 
 // ZNode data in hbase are serialized protobufs with a four byte
 // 'magic' 'PBUF' prefix.
+package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "ZooKeeperProtos";
