@@ -11,33 +11,33 @@ public final class HFileProtos {
   public interface FileInfoProtoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .BytesBytesPair map_entry = 1;
+    // repeated .hbase.pb.BytesBytesPair map_entry = 1;
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> 
         getMapEntryList();
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index);
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     int getMapEntryCount();
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getMapEntryOrBuilderList();
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code FileInfoProto}
+   * Protobuf type {@code hbase.pb.FileInfoProto}
    *
    * <pre>
    * Map of name/values
@@ -116,12 +116,12 @@ public final class HFileProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileInfoProto_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileInfoProto_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
     }
@@ -141,36 +141,36 @@ public final class HFileProtos {
       return PARSER;
     }
 
-    // repeated .BytesBytesPair map_entry = 1;
+    // repeated .hbase.pb.BytesBytesPair map_entry = 1;
     public static final int MAP_ENTRY_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_;
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getMapEntryList() {
       return mapEntry_;
     }
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
         getMapEntryOrBuilderList() {
       return mapEntry_;
     }
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     public int getMapEntryCount() {
       return mapEntry_.size();
     }
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index) {
       return mapEntry_.get(index);
     }
     /**
-     * <code>repeated .BytesBytesPair map_entry = 1;</code>
+     * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
         int index) {
@@ -328,7 +328,7 @@ public final class HFileProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code FileInfoProto}
+     * Protobuf type {@code hbase.pb.FileInfoProto}
      *
      * <pre>
      * Map of name/values
@@ -339,12 +339,12 @@ public final class HFileProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProtoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileInfoProto_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileInfoProto_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto.Builder.class);
       }
@@ -385,7 +385,7 @@ public final class HFileProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileInfoProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileInfoProto_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileInfoProto getDefaultInstanceForType() {
@@ -486,7 +486,7 @@ public final class HFileProtos {
       }
       private int bitField0_;
 
-      // repeated .BytesBytesPair map_entry = 1;
+      // repeated .hbase.pb.BytesBytesPair map_entry = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> mapEntry_ =
         java.util.Collections.emptyList();
       private void ensureMapEntryIsMutable() {
@@ -500,7 +500,7 @@ public final class HFileProtos {
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> mapEntryBuilder_;
 
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> getMapEntryList() {
         if (mapEntryBuilder_ == null) {
@@ -510,7 +510,7 @@ public final class HFileProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public int getMapEntryCount() {
         if (mapEntryBuilder_ == null) {
@@ -520,7 +520,7 @@ public final class HFileProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair getMapEntry(int index) {
         if (mapEntryBuilder_ == null) {
@@ -530,7 +530,7 @@ public final class HFileProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder setMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -547,7 +547,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder setMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -561,7 +561,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder addMapEntry(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
         if (mapEntryBuilder_ == null) {
@@ -577,7 +577,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder addMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair value) {
@@ -594,7 +594,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder addMapEntry(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -608,7 +608,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder addMapEntry(
           int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder builderForValue) {
@@ -622,7 +622,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder addAllMapEntry(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair> values) {
@@ -636,7 +636,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder clearMapEntry() {
         if (mapEntryBuilder_ == null) {
@@ -649,7 +649,7 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public Builder removeMapEntry(int index) {
         if (mapEntryBuilder_ == null) {
@@ -662,14 +662,14 @@ public final class HFileProtos {
         return this;
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder getMapEntryBuilder(
           int index) {
         return getMapEntryFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder getMapEntryOrBuilder(
           int index) {
@@ -679,7 +679,7 @@ public final class HFileProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPairOrBuilder> 
            getMapEntryOrBuilderList() {
@@ -690,14 +690,14 @@ public final class HFileProtos {
         }
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addMapEntryBuilder() {
         return getMapEntryFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder addMapEntryBuilder(
           int index) {
@@ -705,7 +705,7 @@ public final class HFileProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.getDefaultInstance());
       }
       /**
-       * <code>repeated .BytesBytesPair map_entry = 1;</code>
+       * <code>repeated .hbase.pb.BytesBytesPair map_entry = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.BytesBytesPair.Builder> 
            getMapEntryBuilderList() {
@@ -726,7 +726,7 @@ public final class HFileProtos {
         return mapEntryBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:FileInfoProto)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.FileInfoProto)
     }
 
     static {
@@ -734,7 +734,7 @@ public final class HFileProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:FileInfoProto)
+    // @@protoc_insertion_point(class_scope:hbase.pb.FileInfoProto)
   }
 
   public interface FileTrailerProtoOrBuilder
@@ -876,7 +876,7 @@ public final class HFileProtos {
     com.google.protobuf.ByteString getEncryptionKey();
   }
   /**
-   * Protobuf type {@code FileTrailerProto}
+   * Protobuf type {@code hbase.pb.FileTrailerProto}
    *
    * <pre>
    * HFile file trailer
@@ -1009,12 +1009,12 @@ public final class HFileProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileTrailerProto_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileTrailerProto_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
     }
@@ -1622,7 +1622,7 @@ public final class HFileProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code FileTrailerProto}
+     * Protobuf type {@code hbase.pb.FileTrailerProto}
      *
      * <pre>
      * HFile file trailer
@@ -1633,12 +1633,12 @@ public final class HFileProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProtoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileTrailerProto_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileTrailerProto_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.class, org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto.Builder.class);
       }
@@ -1698,7 +1698,7 @@ public final class HFileProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_FileTrailerProto_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.HFileProtos.internal_static_hbase_pb_FileTrailerProto_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.HFileProtos.FileTrailerProto getDefaultInstanceForType() {
@@ -2326,7 +2326,7 @@ public final class HFileProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:FileTrailerProto)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.FileTrailerProto)
     }
 
     static {
@@ -2334,19 +2334,19 @@ public final class HFileProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:FileTrailerProto)
+    // @@protoc_insertion_point(class_scope:hbase.pb.FileTrailerProto)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_FileInfoProto_descriptor;
+    internal_static_hbase_pb_FileInfoProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_FileInfoProto_fieldAccessorTable;
+      internal_static_hbase_pb_FileInfoProto_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_FileTrailerProto_descriptor;
+    internal_static_hbase_pb_FileTrailerProto_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_FileTrailerProto_fieldAccessorTable;
+      internal_static_hbase_pb_FileTrailerProto_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -2356,37 +2356,38 @@ public final class HFileProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\013HFile.proto\032\013HBase.proto\"3\n\rFileInfoPr" +
-      "oto\022\"\n\tmap_entry\030\001 \003(\0132\017.BytesBytesPair\"" +
-      "\221\003\n\020FileTrailerProto\022\030\n\020file_info_offset" +
-      "\030\001 \001(\004\022 \n\030load_on_open_data_offset\030\002 \001(\004" +
-      "\022$\n\034uncompressed_data_index_size\030\003 \001(\004\022 " +
-      "\n\030total_uncompressed_bytes\030\004 \001(\004\022\030\n\020data" +
-      "_index_count\030\005 \001(\r\022\030\n\020meta_index_count\030\006" +
-      " \001(\r\022\023\n\013entry_count\030\007 \001(\004\022\035\n\025num_data_in" +
-      "dex_levels\030\010 \001(\r\022\037\n\027first_data_block_off" +
-      "set\030\t \001(\004\022\036\n\026last_data_block_offset\030\n \001(",
-      "\004\022\035\n\025comparator_class_name\030\013 \001(\t\022\031\n\021comp" +
-      "ression_codec\030\014 \001(\r\022\026\n\016encryption_key\030\r " +
-      "\001(\014BA\n*org.apache.hadoop.hbase.protobuf." +
-      "generatedB\013HFileProtosH\001\210\001\001\240\001\001"
+      "\n\013HFile.proto\022\010hbase.pb\032\013HBase.proto\"<\n\r" +
+      "FileInfoProto\022+\n\tmap_entry\030\001 \003(\0132\030.hbase" +
+      ".pb.BytesBytesPair\"\221\003\n\020FileTrailerProto\022" +
+      "\030\n\020file_info_offset\030\001 \001(\004\022 \n\030load_on_ope" +
+      "n_data_offset\030\002 \001(\004\022$\n\034uncompressed_data" +
+      "_index_size\030\003 \001(\004\022 \n\030total_uncompressed_" +
+      "bytes\030\004 \001(\004\022\030\n\020data_index_count\030\005 \001(\r\022\030\n" +
+      "\020meta_index_count\030\006 \001(\r\022\023\n\013entry_count\030\007" +
+      " \001(\004\022\035\n\025num_data_index_levels\030\010 \001(\r\022\037\n\027f" +
+      "irst_data_block_offset\030\t \001(\004\022\036\n\026last_dat",
+      "a_block_offset\030\n \001(\004\022\035\n\025comparator_class" +
+      "_name\030\013 \001(\t\022\031\n\021compression_codec\030\014 \001(\r\022\026" +
+      "\n\016encryption_key\030\r \001(\014BA\n*org.apache.had" +
+      "oop.hbase.protobuf.generatedB\013HFileProto" +
+      "sH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_FileInfoProto_descriptor =
+          internal_static_hbase_pb_FileInfoProto_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_FileInfoProto_fieldAccessorTable = new
+          internal_static_hbase_pb_FileInfoProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_FileInfoProto_descriptor,
+              internal_static_hbase_pb_FileInfoProto_descriptor,
               new java.lang.String[] { "MapEntry", });
-          internal_static_FileTrailerProto_descriptor =
+          internal_static_hbase_pb_FileTrailerProto_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_FileTrailerProto_fieldAccessorTable = new
+          internal_static_hbase_pb_FileTrailerProto_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_FileTrailerProto_descriptor,
+              internal_static_hbase_pb_FileTrailerProto_descriptor,
               new java.lang.String[] { "FileInfoOffset", "LoadOnOpenDataOffset", "UncompressedDataIndexSize", "TotalUncompressedBytes", "DataIndexCount", "MetaIndexCount", "EntryCount", "NumDataIndexLevels", "FirstDataBlockOffset", "LastDataBlockOffset", "ComparatorClassName", "CompressionCodec", "EncryptionKey", });
           return null;
         }

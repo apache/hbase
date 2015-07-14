@@ -42,7 +42,7 @@ public final class RPCProtos {
         getRealUserBytes();
   }
   /**
-   * Protobuf type {@code UserInformation}
+   * Protobuf type {@code hbase.pb.UserInformation}
    *
    * <pre>
    * User Information proto.  Included in ConnectionHeader on connection setup
@@ -120,12 +120,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_UserInformation_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_UserInformation_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_UserInformation_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_UserInformation_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder.class);
     }
@@ -401,7 +401,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code UserInformation}
+     * Protobuf type {@code hbase.pb.UserInformation}
      *
      * <pre>
      * User Information proto.  Included in ConnectionHeader on connection setup
@@ -412,12 +412,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_UserInformation_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_UserInformation_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_UserInformation_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_UserInformation_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder.class);
       }
@@ -455,7 +455,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_UserInformation_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_UserInformation_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getDefaultInstanceForType() {
@@ -687,7 +687,7 @@ public final class RPCProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:UserInformation)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.UserInformation)
     }
 
     static {
@@ -695,7 +695,7 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:UserInformation)
+    // @@protoc_insertion_point(class_scope:hbase.pb.UserInformation)
   }
 
   public interface VersionInfoOrBuilder
@@ -792,7 +792,7 @@ public final class RPCProtos {
         getSrcChecksumBytes();
   }
   /**
-   * Protobuf type {@code VersionInfo}
+   * Protobuf type {@code hbase.pb.VersionInfo}
    *
    * <pre>
    * Rpc client version info proto. Included in ConnectionHeader on connection setup
@@ -890,12 +890,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_VersionInfo_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_VersionInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_VersionInfo_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_VersionInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder.class);
     }
@@ -1431,7 +1431,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code VersionInfo}
+     * Protobuf type {@code hbase.pb.VersionInfo}
      *
      * <pre>
      * Rpc client version info proto. Included in ConnectionHeader on connection setup
@@ -1442,12 +1442,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_VersionInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_VersionInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_VersionInfo_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_VersionInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder.class);
       }
@@ -1493,7 +1493,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_VersionInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_VersionInfo_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo getDefaultInstanceForType() {
@@ -2077,7 +2077,7 @@ public final class RPCProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:VersionInfo)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.VersionInfo)
     }
 
     static {
@@ -2085,23 +2085,23 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:VersionInfo)
+    // @@protoc_insertion_point(class_scope:hbase.pb.VersionInfo)
   }
 
   public interface ConnectionHeaderOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .UserInformation user_info = 1;
+    // optional .hbase.pb.UserInformation user_info = 1;
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     boolean hasUserInfo();
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getUserInfo();
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder();
 
@@ -2180,22 +2180,22 @@ public final class RPCProtos {
     com.google.protobuf.ByteString
         getCellBlockCompressorClassBytes();
 
-    // optional .VersionInfo version_info = 5;
+    // optional .hbase.pb.VersionInfo version_info = 5;
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     boolean hasVersionInfo();
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo getVersionInfo();
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder getVersionInfoOrBuilder();
   }
   /**
-   * Protobuf type {@code ConnectionHeader}
+   * Protobuf type {@code hbase.pb.ConnectionHeader}
    *
    * <pre>
    * This is sent on connection setup after the connection preamble is sent.
@@ -2304,12 +2304,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ConnectionHeader_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeader_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ConnectionHeader_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.Builder.class);
     }
@@ -2330,23 +2330,23 @@ public final class RPCProtos {
     }
 
     private int bitField0_;
-    // optional .UserInformation user_info = 1;
+    // optional .hbase.pb.UserInformation user_info = 1;
     public static final int USER_INFO_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation userInfo_;
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     public boolean hasUserInfo() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getUserInfo() {
       return userInfo_;
     }
     /**
-     * <code>optional .UserInformation user_info = 1;</code>
+     * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder() {
       return userInfo_;
@@ -2511,23 +2511,23 @@ public final class RPCProtos {
       }
     }
 
-    // optional .VersionInfo version_info = 5;
+    // optional .hbase.pb.VersionInfo version_info = 5;
     public static final int VERSION_INFO_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo versionInfo_;
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     public boolean hasVersionInfo() {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo getVersionInfo() {
       return versionInfo_;
     }
     /**
-     * <code>optional .VersionInfo version_info = 5;</code>
+     * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder getVersionInfoOrBuilder() {
       return versionInfo_;
@@ -2761,7 +2761,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ConnectionHeader}
+     * Protobuf type {@code hbase.pb.ConnectionHeader}
      *
      * <pre>
      * This is sent on connection setup after the connection preamble is sent.
@@ -2772,12 +2772,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeaderOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ConnectionHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeader_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ConnectionHeader_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader.Builder.class);
       }
@@ -2831,7 +2831,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ConnectionHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ConnectionHeader_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader getDefaultInstanceForType() {
@@ -2954,18 +2954,18 @@ public final class RPCProtos {
       }
       private int bitField0_;
 
-      // optional .UserInformation user_info = 1;
+      // optional .hbase.pb.UserInformation user_info = 1;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation userInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder> userInfoBuilder_;
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public boolean hasUserInfo() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation getUserInfo() {
         if (userInfoBuilder_ == null) {
@@ -2975,7 +2975,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public Builder setUserInfo(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation value) {
         if (userInfoBuilder_ == null) {
@@ -2991,7 +2991,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public Builder setUserInfo(
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder builderForValue) {
@@ -3005,7 +3005,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public Builder mergeUserInfo(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation value) {
         if (userInfoBuilder_ == null) {
@@ -3024,7 +3024,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public Builder clearUserInfo() {
         if (userInfoBuilder_ == null) {
@@ -3037,7 +3037,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder getUserInfoBuilder() {
         bitField0_ |= 0x00000001;
@@ -3045,7 +3045,7 @@ public final class RPCProtos {
         return getUserInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder() {
         if (userInfoBuilder_ != null) {
@@ -3055,7 +3055,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .UserInformation user_info = 1;</code>
+       * <code>optional .hbase.pb.UserInformation user_info = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.UserInformationOrBuilder> 
@@ -3353,18 +3353,18 @@ public final class RPCProtos {
         return this;
       }
 
-      // optional .VersionInfo version_info = 5;
+      // optional .hbase.pb.VersionInfo version_info = 5;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo versionInfo_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder> versionInfoBuilder_;
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public boolean hasVersionInfo() {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo getVersionInfo() {
         if (versionInfoBuilder_ == null) {
@@ -3374,7 +3374,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public Builder setVersionInfo(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo value) {
         if (versionInfoBuilder_ == null) {
@@ -3390,7 +3390,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public Builder setVersionInfo(
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder builderForValue) {
@@ -3404,7 +3404,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public Builder mergeVersionInfo(org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo value) {
         if (versionInfoBuilder_ == null) {
@@ -3423,7 +3423,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public Builder clearVersionInfo() {
         if (versionInfoBuilder_ == null) {
@@ -3436,7 +3436,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder getVersionInfoBuilder() {
         bitField0_ |= 0x00000010;
@@ -3444,7 +3444,7 @@ public final class RPCProtos {
         return getVersionInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder getVersionInfoOrBuilder() {
         if (versionInfoBuilder_ != null) {
@@ -3454,7 +3454,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .VersionInfo version_info = 5;</code>
+       * <code>optional .hbase.pb.VersionInfo version_info = 5;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfoOrBuilder> 
@@ -3470,7 +3470,7 @@ public final class RPCProtos {
         return versionInfoBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ConnectionHeader)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ConnectionHeader)
     }
 
     static {
@@ -3478,7 +3478,7 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ConnectionHeader)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ConnectionHeader)
   }
 
   public interface CellBlockMetaOrBuilder
@@ -3503,7 +3503,7 @@ public final class RPCProtos {
     int getLength();
   }
   /**
-   * Protobuf type {@code CellBlockMeta}
+   * Protobuf type {@code hbase.pb.CellBlockMeta}
    *
    * <pre>
    * Optional Cell block Message.  Included in client RequestHeader
@@ -3576,12 +3576,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_CellBlockMeta_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_CellBlockMeta_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_CellBlockMeta_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_CellBlockMeta_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder.class);
     }
@@ -3774,7 +3774,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code CellBlockMeta}
+     * Protobuf type {@code hbase.pb.CellBlockMeta}
      *
      * <pre>
      * Optional Cell block Message.  Included in client RequestHeader
@@ -3785,12 +3785,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_CellBlockMeta_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_CellBlockMeta_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_CellBlockMeta_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_CellBlockMeta_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder.class);
       }
@@ -3826,7 +3826,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_CellBlockMeta_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_CellBlockMeta_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta getDefaultInstanceForType() {
@@ -3944,7 +3944,7 @@ public final class RPCProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:CellBlockMeta)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CellBlockMeta)
     }
 
     static {
@@ -3952,7 +3952,7 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:CellBlockMeta)
+    // @@protoc_insertion_point(class_scope:hbase.pb.CellBlockMeta)
   }
 
   public interface ExceptionResponseOrBuilder
@@ -4071,7 +4071,7 @@ public final class RPCProtos {
     boolean getDoNotRetry();
   }
   /**
-   * Protobuf type {@code ExceptionResponse}
+   * Protobuf type {@code hbase.pb.ExceptionResponse}
    *
    * <pre>
    * At the RPC layer, this message is used to carry
@@ -4165,12 +4165,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ExceptionResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ExceptionResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ExceptionResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.Builder.class);
     }
@@ -4615,7 +4615,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ExceptionResponse}
+     * Protobuf type {@code hbase.pb.ExceptionResponse}
      *
      * <pre>
      * At the RPC layer, this message is used to carry
@@ -4627,12 +4627,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ExceptionResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ExceptionResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ExceptionResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.Builder.class);
       }
@@ -4676,7 +4676,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ExceptionResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ExceptionResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse getDefaultInstanceForType() {
@@ -5161,7 +5161,7 @@ public final class RPCProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ExceptionResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ExceptionResponse)
     }
 
     static {
@@ -5169,7 +5169,7 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ExceptionResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ExceptionResponse)
   }
 
   public interface RequestHeaderOrBuilder
@@ -5193,17 +5193,17 @@ public final class RPCProtos {
      */
     int getCallId();
 
-    // optional .RPCTInfo trace_info = 2;
+    // optional .hbase.pb.RPCTInfo trace_info = 2;
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     boolean hasTraceInfo();
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo();
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder();
 
@@ -5240,9 +5240,9 @@ public final class RPCProtos {
      */
     boolean getRequestParam();
 
-    // optional .CellBlockMeta cell_block_meta = 5;
+    // optional .hbase.pb.CellBlockMeta cell_block_meta = 5;
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5250,7 +5250,7 @@ public final class RPCProtos {
      */
     boolean hasCellBlockMeta();
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5258,7 +5258,7 @@ public final class RPCProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta getCellBlockMeta();
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5287,7 +5287,7 @@ public final class RPCProtos {
     int getPriority();
   }
   /**
-   * Protobuf type {@code RequestHeader}
+   * Protobuf type {@code hbase.pb.RequestHeader}
    *
    * <pre>
    * Header sent making a request.
@@ -5401,12 +5401,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RequestHeader_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_RequestHeader_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RequestHeader_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_RequestHeader_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader.Builder.class);
     }
@@ -5451,23 +5451,23 @@ public final class RPCProtos {
       return callId_;
     }
 
-    // optional .RPCTInfo trace_info = 2;
+    // optional .hbase.pb.RPCTInfo trace_info = 2;
     public static final int TRACE_INFO_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo traceInfo_;
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     public boolean hasTraceInfo() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo() {
       return traceInfo_;
     }
     /**
-     * <code>optional .RPCTInfo trace_info = 2;</code>
+     * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
       return traceInfo_;
@@ -5540,11 +5540,11 @@ public final class RPCProtos {
       return requestParam_;
     }
 
-    // optional .CellBlockMeta cell_block_meta = 5;
+    // optional .hbase.pb.CellBlockMeta cell_block_meta = 5;
     public static final int CELL_BLOCK_META_FIELD_NUMBER = 5;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_;
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5554,7 +5554,7 @@ public final class RPCProtos {
       return ((bitField0_ & 0x00000010) == 0x00000010);
     }
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5564,7 +5564,7 @@ public final class RPCProtos {
       return cellBlockMeta_;
     }
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -5833,7 +5833,7 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RequestHeader}
+     * Protobuf type {@code hbase.pb.RequestHeader}
      *
      * <pre>
      * Header sent making a request.
@@ -5844,12 +5844,12 @@ public final class RPCProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeaderOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RequestHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_RequestHeader_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RequestHeader_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_RequestHeader_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader.Builder.class);
       }
@@ -5905,7 +5905,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_RequestHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_RequestHeader_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader getDefaultInstanceForType() {
@@ -6068,18 +6068,18 @@ public final class RPCProtos {
         return this;
       }
 
-      // optional .RPCTInfo trace_info = 2;
+      // optional .hbase.pb.RPCTInfo trace_info = 2;
       private org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo traceInfo_ = org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder> traceInfoBuilder_;
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public boolean hasTraceInfo() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getTraceInfo() {
         if (traceInfoBuilder_ == null) {
@@ -6089,7 +6089,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public Builder setTraceInfo(org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo value) {
         if (traceInfoBuilder_ == null) {
@@ -6105,7 +6105,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public Builder setTraceInfo(
           org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder builderForValue) {
@@ -6119,7 +6119,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public Builder mergeTraceInfo(org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo value) {
         if (traceInfoBuilder_ == null) {
@@ -6138,7 +6138,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public Builder clearTraceInfo() {
         if (traceInfoBuilder_ == null) {
@@ -6151,7 +6151,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder getTraceInfoBuilder() {
         bitField0_ |= 0x00000002;
@@ -6159,7 +6159,7 @@ public final class RPCProtos {
         return getTraceInfoFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder getTraceInfoOrBuilder() {
         if (traceInfoBuilder_ != null) {
@@ -6169,7 +6169,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .RPCTInfo trace_info = 2;</code>
+       * <code>optional .hbase.pb.RPCTInfo trace_info = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder> 
@@ -6308,12 +6308,12 @@ public final class RPCProtos {
         return this;
       }
 
-      // optional .CellBlockMeta cell_block_meta = 5;
+      // optional .hbase.pb.CellBlockMeta cell_block_meta = 5;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder> cellBlockMetaBuilder_;
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6323,7 +6323,7 @@ public final class RPCProtos {
         return ((bitField0_ & 0x00000010) == 0x00000010);
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6337,7 +6337,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6357,7 +6357,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6375,7 +6375,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6398,7 +6398,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6415,7 +6415,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6427,7 +6427,7 @@ public final class RPCProtos {
         return getCellBlockMetaFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6441,7 +6441,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 5;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 5;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -6514,7 +6514,7 @@ public final class RPCProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RequestHeader)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RequestHeader)
     }
 
     static {
@@ -6522,7 +6522,7 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RequestHeader)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RequestHeader)
   }
 
   public interface ResponseHeaderOrBuilder
@@ -6538,9 +6538,9 @@ public final class RPCProtos {
      */
     int getCallId();
 
-    // optional .ExceptionResponse exception = 2;
+    // optional .hbase.pb.ExceptionResponse exception = 2;
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6548,7 +6548,7 @@ public final class RPCProtos {
      */
     boolean hasException();
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6556,7 +6556,7 @@ public final class RPCProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse getException();
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6564,9 +6564,9 @@ public final class RPCProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponseOrBuilder getExceptionOrBuilder();
 
-    // optional .CellBlockMeta cell_block_meta = 3;
+    // optional .hbase.pb.CellBlockMeta cell_block_meta = 3;
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6574,7 +6574,7 @@ public final class RPCProtos {
      */
     boolean hasCellBlockMeta();
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6582,7 +6582,7 @@ public final class RPCProtos {
      */
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta getCellBlockMeta();
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6591,7 +6591,7 @@ public final class RPCProtos {
     org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder getCellBlockMetaOrBuilder();
   }
   /**
-   * Protobuf type {@code ResponseHeader}
+   * Protobuf type {@code hbase.pb.ResponseHeader}
    */
   public static final class ResponseHeader extends
       com.google.protobuf.GeneratedMessage
@@ -6686,12 +6686,12 @@ public final class RPCProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ResponseHeader_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ResponseHeader_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ResponseHeader_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ResponseHeader_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader.Builder.class);
     }
@@ -6728,11 +6728,11 @@ public final class RPCProtos {
       return callId_;
     }
 
-    // optional .ExceptionResponse exception = 2;
+    // optional .hbase.pb.ExceptionResponse exception = 2;
     public static final int EXCEPTION_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse exception_;
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6742,7 +6742,7 @@ public final class RPCProtos {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6752,7 +6752,7 @@ public final class RPCProtos {
       return exception_;
     }
     /**
-     * <code>optional .ExceptionResponse exception = 2;</code>
+     * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
      *
      * <pre>
      * If present, then request threw an exception and no response message (else we presume one)
@@ -6762,11 +6762,11 @@ public final class RPCProtos {
       return exception_;
     }
 
-    // optional .CellBlockMeta cell_block_meta = 3;
+    // optional .hbase.pb.CellBlockMeta cell_block_meta = 3;
     public static final int CELL_BLOCK_META_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_;
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6776,7 +6776,7 @@ public final class RPCProtos {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6786,7 +6786,7 @@ public final class RPCProtos {
       return cellBlockMeta_;
     }
     /**
-     * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+     * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
      *
      * <pre>
      * If present, then an encoded data block follows.
@@ -6978,19 +6978,19 @@ public final class RPCProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ResponseHeader}
+     * Protobuf type {@code hbase.pb.ResponseHeader}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeaderOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ResponseHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ResponseHeader_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ResponseHeader_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ResponseHeader_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader.class, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader.Builder.class);
       }
@@ -7040,7 +7040,7 @@ public final class RPCProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_ResponseHeader_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.RPCProtos.internal_static_hbase_pb_ResponseHeader_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ResponseHeader getDefaultInstanceForType() {
@@ -7164,12 +7164,12 @@ public final class RPCProtos {
         return this;
       }
 
-      // optional .ExceptionResponse exception = 2;
+      // optional .hbase.pb.ExceptionResponse exception = 2;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse exception_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponse.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ExceptionResponseOrBuilder> exceptionBuilder_;
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7179,7 +7179,7 @@ public final class RPCProtos {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7193,7 +7193,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7213,7 +7213,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7231,7 +7231,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7254,7 +7254,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7271,7 +7271,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7283,7 +7283,7 @@ public final class RPCProtos {
         return getExceptionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7297,7 +7297,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .ExceptionResponse exception = 2;</code>
+       * <code>optional .hbase.pb.ExceptionResponse exception = 2;</code>
        *
        * <pre>
        * If present, then request threw an exception and no response message (else we presume one)
@@ -7317,12 +7317,12 @@ public final class RPCProtos {
         return exceptionBuilder_;
       }
 
-      // optional .CellBlockMeta cell_block_meta = 3;
+      // optional .hbase.pb.CellBlockMeta cell_block_meta = 3;
       private org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta cellBlockMeta_ = org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta.Builder, org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMetaOrBuilder> cellBlockMetaBuilder_;
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7332,7 +7332,7 @@ public final class RPCProtos {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7346,7 +7346,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7366,7 +7366,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7384,7 +7384,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7407,7 +7407,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7424,7 +7424,7 @@ public final class RPCProtos {
         return this;
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7436,7 +7436,7 @@ public final class RPCProtos {
         return getCellBlockMetaFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7450,7 +7450,7 @@ public final class RPCProtos {
         }
       }
       /**
-       * <code>optional .CellBlockMeta cell_block_meta = 3;</code>
+       * <code>optional .hbase.pb.CellBlockMeta cell_block_meta = 3;</code>
        *
        * <pre>
        * If present, then an encoded data block follows.
@@ -7470,7 +7470,7 @@ public final class RPCProtos {
         return cellBlockMetaBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:ResponseHeader)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ResponseHeader)
     }
 
     static {
@@ -7478,44 +7478,44 @@ public final class RPCProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ResponseHeader)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ResponseHeader)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UserInformation_descriptor;
+    internal_static_hbase_pb_UserInformation_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UserInformation_fieldAccessorTable;
+      internal_static_hbase_pb_UserInformation_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VersionInfo_descriptor;
+    internal_static_hbase_pb_VersionInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VersionInfo_fieldAccessorTable;
+      internal_static_hbase_pb_VersionInfo_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ConnectionHeader_descriptor;
+    internal_static_hbase_pb_ConnectionHeader_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ConnectionHeader_fieldAccessorTable;
+      internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_CellBlockMeta_descriptor;
+    internal_static_hbase_pb_CellBlockMeta_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_CellBlockMeta_fieldAccessorTable;
+      internal_static_hbase_pb_CellBlockMeta_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ExceptionResponse_descriptor;
+    internal_static_hbase_pb_ExceptionResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ExceptionResponse_fieldAccessorTable;
+      internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RequestHeader_descriptor;
+    internal_static_hbase_pb_RequestHeader_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RequestHeader_fieldAccessorTable;
+      internal_static_hbase_pb_RequestHeader_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ResponseHeader_descriptor;
+    internal_static_hbase_pb_ResponseHeader_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ResponseHeader_fieldAccessorTable;
+      internal_static_hbase_pb_ResponseHeader_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -7525,76 +7525,78 @@ public final class RPCProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\tRPC.proto\032\rTracing.proto\032\013HBase.proto\"" +
-      "<\n\017UserInformation\022\026\n\016effective_user\030\001 \002" +
-      "(\t\022\021\n\treal_user\030\002 \001(\t\"o\n\013VersionInfo\022\017\n\007" +
-      "version\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revision\030\003" +
-      " \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014src_" +
-      "checksum\030\006 \002(\t\"\266\001\n\020ConnectionHeader\022#\n\tu" +
-      "ser_info\030\001 \001(\0132\020.UserInformation\022\024\n\014serv" +
-      "ice_name\030\002 \001(\t\022\036\n\026cell_block_codec_class" +
-      "\030\003 \001(\t\022#\n\033cell_block_compressor_class\030\004 " +
-      "\001(\t\022\"\n\014version_info\030\005 \001(\0132\014.VersionInfo\"",
-      "\037\n\rCellBlockMeta\022\016\n\006length\030\001 \001(\r\"|\n\021Exce" +
-      "ptionResponse\022\034\n\024exception_class_name\030\001 " +
-      "\001(\t\022\023\n\013stack_trace\030\002 \001(\t\022\020\n\010hostname\030\003 \001" +
-      "(\t\022\014\n\004port\030\004 \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"\246" +
-      "\001\n\rRequestHeader\022\017\n\007call_id\030\001 \001(\r\022\035\n\ntra" +
-      "ce_info\030\002 \001(\0132\t.RPCTInfo\022\023\n\013method_name\030" +
-      "\003 \001(\t\022\025\n\rrequest_param\030\004 \001(\010\022\'\n\017cell_blo" +
-      "ck_meta\030\005 \001(\0132\016.CellBlockMeta\022\020\n\010priorit" +
-      "y\030\006 \001(\r\"q\n\016ResponseHeader\022\017\n\007call_id\030\001 \001" +
-      "(\r\022%\n\texception\030\002 \001(\0132\022.ExceptionRespons",
-      "e\022\'\n\017cell_block_meta\030\003 \001(\0132\016.CellBlockMe" +
-      "taB<\n*org.apache.hadoop.hbase.protobuf.g" +
-      "eneratedB\tRPCProtosH\001\240\001\001"
+      "\n\tRPC.proto\022\010hbase.pb\032\rTracing.proto\032\013HB" +
+      "ase.proto\"<\n\017UserInformation\022\026\n\016effectiv" +
+      "e_user\030\001 \002(\t\022\021\n\treal_user\030\002 \001(\t\"o\n\013Versi" +
+      "onInfo\022\017\n\007version\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010" +
+      "revision\030\003 \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004date\030\005 \002" +
+      "(\t\022\024\n\014src_checksum\030\006 \002(\t\"\310\001\n\020ConnectionH" +
+      "eader\022,\n\tuser_info\030\001 \001(\0132\031.hbase.pb.User" +
+      "Information\022\024\n\014service_name\030\002 \001(\t\022\036\n\026cel" +
+      "l_block_codec_class\030\003 \001(\t\022#\n\033cell_block_" +
+      "compressor_class\030\004 \001(\t\022+\n\014version_info\030\005",
+      " \001(\0132\025.hbase.pb.VersionInfo\"\037\n\rCellBlock" +
+      "Meta\022\016\n\006length\030\001 \001(\r\"|\n\021ExceptionRespons" +
+      "e\022\034\n\024exception_class_name\030\001 \001(\t\022\023\n\013stack" +
+      "_trace\030\002 \001(\t\022\020\n\010hostname\030\003 \001(\t\022\014\n\004port\030\004" +
+      " \001(\005\022\024\n\014do_not_retry\030\005 \001(\010\"\270\001\n\rRequestHe" +
+      "ader\022\017\n\007call_id\030\001 \001(\r\022&\n\ntrace_info\030\002 \001(" +
+      "\0132\022.hbase.pb.RPCTInfo\022\023\n\013method_name\030\003 \001" +
+      "(\t\022\025\n\rrequest_param\030\004 \001(\010\0220\n\017cell_block_" +
+      "meta\030\005 \001(\0132\027.hbase.pb.CellBlockMeta\022\020\n\010p" +
+      "riority\030\006 \001(\r\"\203\001\n\016ResponseHeader\022\017\n\007call",
+      "_id\030\001 \001(\r\022.\n\texception\030\002 \001(\0132\033.hbase.pb." +
+      "ExceptionResponse\0220\n\017cell_block_meta\030\003 \001" +
+      "(\0132\027.hbase.pb.CellBlockMetaB<\n*org.apach" +
+      "e.hadoop.hbase.protobuf.generatedB\tRPCPr" +
+      "otosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_UserInformation_descriptor =
+          internal_static_hbase_pb_UserInformation_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_UserInformation_fieldAccessorTable = new
+          internal_static_hbase_pb_UserInformation_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UserInformation_descriptor,
+              internal_static_hbase_pb_UserInformation_descriptor,
               new java.lang.String[] { "EffectiveUser", "RealUser", });
-          internal_static_VersionInfo_descriptor =
+          internal_static_hbase_pb_VersionInfo_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_VersionInfo_fieldAccessorTable = new
+          internal_static_hbase_pb_VersionInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VersionInfo_descriptor,
+              internal_static_hbase_pb_VersionInfo_descriptor,
               new java.lang.String[] { "Version", "Url", "Revision", "User", "Date", "SrcChecksum", });
-          internal_static_ConnectionHeader_descriptor =
+          internal_static_hbase_pb_ConnectionHeader_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_ConnectionHeader_fieldAccessorTable = new
+          internal_static_hbase_pb_ConnectionHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ConnectionHeader_descriptor,
+              internal_static_hbase_pb_ConnectionHeader_descriptor,
               new java.lang.String[] { "UserInfo", "ServiceName", "CellBlockCodecClass", "CellBlockCompressorClass", "VersionInfo", });
-          internal_static_CellBlockMeta_descriptor =
+          internal_static_hbase_pb_CellBlockMeta_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_CellBlockMeta_fieldAccessorTable = new
+          internal_static_hbase_pb_CellBlockMeta_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_CellBlockMeta_descriptor,
+              internal_static_hbase_pb_CellBlockMeta_descriptor,
               new java.lang.String[] { "Length", });
-          internal_static_ExceptionResponse_descriptor =
+          internal_static_hbase_pb_ExceptionResponse_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_ExceptionResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_ExceptionResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ExceptionResponse_descriptor,
+              internal_static_hbase_pb_ExceptionResponse_descriptor,
               new java.lang.String[] { "ExceptionClassName", "StackTrace", "Hostname", "Port", "DoNotRetry", });
-          internal_static_RequestHeader_descriptor =
+          internal_static_hbase_pb_RequestHeader_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_RequestHeader_fieldAccessorTable = new
+          internal_static_hbase_pb_RequestHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RequestHeader_descriptor,
+              internal_static_hbase_pb_RequestHeader_descriptor,
               new java.lang.String[] { "CallId", "TraceInfo", "MethodName", "RequestParam", "CellBlockMeta", "Priority", });
-          internal_static_ResponseHeader_descriptor =
+          internal_static_hbase_pb_ResponseHeader_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_ResponseHeader_fieldAccessorTable = new
+          internal_static_hbase_pb_ResponseHeader_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ResponseHeader_descriptor,
+              internal_static_hbase_pb_ResponseHeader_descriptor,
               new java.lang.String[] { "CallId", "Exception", "CellBlockMeta", });
           return null;
         }

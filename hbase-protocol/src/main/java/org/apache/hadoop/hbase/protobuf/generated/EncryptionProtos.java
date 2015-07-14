@@ -67,7 +67,7 @@ public final class EncryptionProtos {
     com.google.protobuf.ByteString getHash();
   }
   /**
-   * Protobuf type {@code WrappedKey}
+   * Protobuf type {@code hbase.pb.WrappedKey}
    */
   public static final class WrappedKey extends
       com.google.protobuf.GeneratedMessage
@@ -156,12 +156,12 @@ public final class EncryptionProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_WrappedKey_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_hbase_pb_WrappedKey_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_WrappedKey_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_hbase_pb_WrappedKey_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKey.class, org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKey.Builder.class);
     }
@@ -517,19 +517,19 @@ public final class EncryptionProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code WrappedKey}
+     * Protobuf type {@code hbase.pb.WrappedKey}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKeyOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_WrappedKey_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_hbase_pb_WrappedKey_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_WrappedKey_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_hbase_pb_WrappedKey_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKey.class, org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKey.Builder.class);
       }
@@ -573,7 +573,7 @@ public final class EncryptionProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_WrappedKey_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.internal_static_hbase_pb_WrappedKey_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.EncryptionProtos.WrappedKey getDefaultInstanceForType() {
@@ -899,7 +899,7 @@ public final class EncryptionProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:WrappedKey)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.WrappedKey)
     }
 
     static {
@@ -907,14 +907,14 @@ public final class EncryptionProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:WrappedKey)
+    // @@protoc_insertion_point(class_scope:hbase.pb.WrappedKey)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_WrappedKey_descriptor;
+    internal_static_hbase_pb_WrappedKey_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_WrappedKey_fieldAccessorTable;
+      internal_static_hbase_pb_WrappedKey_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -924,22 +924,22 @@ public final class EncryptionProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\020Encryption.proto\"W\n\nWrappedKey\022\021\n\talgo" +
-      "rithm\030\001 \002(\t\022\016\n\006length\030\002 \002(\r\022\014\n\004data\030\003 \002(" +
-      "\014\022\n\n\002iv\030\004 \001(\014\022\014\n\004hash\030\005 \001(\014BC\n*org.apach" +
-      "e.hadoop.hbase.protobuf.generatedB\020Encry" +
-      "ptionProtosH\001\240\001\001"
+      "\n\020Encryption.proto\022\010hbase.pb\"W\n\nWrappedK" +
+      "ey\022\021\n\talgorithm\030\001 \002(\t\022\016\n\006length\030\002 \002(\r\022\014\n" +
+      "\004data\030\003 \002(\014\022\n\n\002iv\030\004 \001(\014\022\014\n\004hash\030\005 \001(\014BC\n" +
+      "*org.apache.hadoop.hbase.protobuf.genera" +
+      "tedB\020EncryptionProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_WrappedKey_descriptor =
+          internal_static_hbase_pb_WrappedKey_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_WrappedKey_fieldAccessorTable = new
+          internal_static_hbase_pb_WrappedKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_WrappedKey_descriptor,
+              internal_static_hbase_pb_WrappedKey_descriptor,
               new java.lang.String[] { "Algorithm", "Length", "Data", "Iv", "Hash", });
           return null;
         }

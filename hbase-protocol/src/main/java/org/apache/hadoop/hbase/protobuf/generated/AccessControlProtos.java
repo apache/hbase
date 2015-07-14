@@ -11,60 +11,60 @@ public final class AccessControlProtos {
   public interface PermissionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .Permission.Type type = 1;
+    // required .hbase.pb.Permission.Type type = 1;
     /**
-     * <code>required .Permission.Type type = 1;</code>
+     * <code>required .hbase.pb.Permission.Type type = 1;</code>
      */
     boolean hasType();
     /**
-     * <code>required .Permission.Type type = 1;</code>
+     * <code>required .hbase.pb.Permission.Type type = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType();
 
-    // optional .GlobalPermission global_permission = 2;
+    // optional .hbase.pb.GlobalPermission global_permission = 2;
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     boolean hasGlobalPermission();
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission();
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder();
 
-    // optional .NamespacePermission namespace_permission = 3;
+    // optional .hbase.pb.NamespacePermission namespace_permission = 3;
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     boolean hasNamespacePermission();
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission();
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder();
 
-    // optional .TablePermission table_permission = 4;
+    // optional .hbase.pb.TablePermission table_permission = 4;
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     boolean hasTablePermission();
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission();
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder();
   }
   /**
-   * Protobuf type {@code Permission}
+   * Protobuf type {@code hbase.pb.Permission}
    */
   public static final class Permission extends
       com.google.protobuf.GeneratedMessage
@@ -178,12 +178,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_Permission_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_Permission_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_Permission_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_Permission_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder.class);
     }
@@ -204,7 +204,7 @@ public final class AccessControlProtos {
     }
 
     /**
-     * Protobuf enum {@code Permission.Action}
+     * Protobuf enum {@code hbase.pb.Permission.Action}
      */
     public enum Action
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -309,11 +309,11 @@ public final class AccessControlProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:Permission.Action)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.Permission.Action)
     }
 
     /**
-     * Protobuf enum {@code Permission.Type}
+     * Protobuf enum {@code hbase.pb.Permission.Type}
      */
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -400,87 +400,87 @@ public final class AccessControlProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:Permission.Type)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.Permission.Type)
     }
 
     private int bitField0_;
-    // required .Permission.Type type = 1;
+    // required .hbase.pb.Permission.Type type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_;
     /**
-     * <code>required .Permission.Type type = 1;</code>
+     * <code>required .hbase.pb.Permission.Type type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .Permission.Type type = 1;</code>
+     * <code>required .hbase.pb.Permission.Type type = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
       return type_;
     }
 
-    // optional .GlobalPermission global_permission = 2;
+    // optional .hbase.pb.GlobalPermission global_permission = 2;
     public static final int GLOBAL_PERMISSION_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission globalPermission_;
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     public boolean hasGlobalPermission() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission() {
       return globalPermission_;
     }
     /**
-     * <code>optional .GlobalPermission global_permission = 2;</code>
+     * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder() {
       return globalPermission_;
     }
 
-    // optional .NamespacePermission namespace_permission = 3;
+    // optional .hbase.pb.NamespacePermission namespace_permission = 3;
     public static final int NAMESPACE_PERMISSION_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission namespacePermission_;
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     public boolean hasNamespacePermission() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission() {
       return namespacePermission_;
     }
     /**
-     * <code>optional .NamespacePermission namespace_permission = 3;</code>
+     * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder() {
       return namespacePermission_;
     }
 
-    // optional .TablePermission table_permission = 4;
+    // optional .hbase.pb.TablePermission table_permission = 4;
     public static final int TABLE_PERMISSION_FIELD_NUMBER = 4;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission tablePermission_;
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     public boolean hasTablePermission() {
       return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission() {
       return tablePermission_;
     }
     /**
-     * <code>optional .TablePermission table_permission = 4;</code>
+     * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder() {
       return tablePermission_;
@@ -695,19 +695,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Permission}
+     * Protobuf type {@code hbase.pb.Permission}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_Permission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_Permission_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_Permission_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_Permission_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder.class);
       }
@@ -764,7 +764,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_Permission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_Permission_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getDefaultInstanceForType() {
@@ -876,22 +876,22 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // required .Permission.Type type = 1;
+      // required .hbase.pb.Permission.Type type = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
       /**
-       * <code>required .Permission.Type type = 1;</code>
+       * <code>required .hbase.pb.Permission.Type type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .Permission.Type type = 1;</code>
+       * <code>required .hbase.pb.Permission.Type type = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
         return type_;
       }
       /**
-       * <code>required .Permission.Type type = 1;</code>
+       * <code>required .hbase.pb.Permission.Type type = 1;</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value) {
         if (value == null) {
@@ -903,7 +903,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .Permission.Type type = 1;</code>
+       * <code>required .hbase.pb.Permission.Type type = 1;</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -912,18 +912,18 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // optional .GlobalPermission global_permission = 2;
+      // optional .hbase.pb.GlobalPermission global_permission = 2;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission globalPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder> globalPermissionBuilder_;
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public boolean hasGlobalPermission() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getGlobalPermission() {
         if (globalPermissionBuilder_ == null) {
@@ -933,7 +933,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public Builder setGlobalPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission value) {
         if (globalPermissionBuilder_ == null) {
@@ -949,7 +949,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public Builder setGlobalPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder builderForValue) {
@@ -963,7 +963,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public Builder mergeGlobalPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission value) {
         if (globalPermissionBuilder_ == null) {
@@ -982,7 +982,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public Builder clearGlobalPermission() {
         if (globalPermissionBuilder_ == null) {
@@ -995,7 +995,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder getGlobalPermissionBuilder() {
         bitField0_ |= 0x00000002;
@@ -1003,7 +1003,7 @@ public final class AccessControlProtos {
         return getGlobalPermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder getGlobalPermissionOrBuilder() {
         if (globalPermissionBuilder_ != null) {
@@ -1013,7 +1013,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .GlobalPermission global_permission = 2;</code>
+       * <code>optional .hbase.pb.GlobalPermission global_permission = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder> 
@@ -1029,18 +1029,18 @@ public final class AccessControlProtos {
         return globalPermissionBuilder_;
       }
 
-      // optional .NamespacePermission namespace_permission = 3;
+      // optional .hbase.pb.NamespacePermission namespace_permission = 3;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission namespacePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder> namespacePermissionBuilder_;
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public boolean hasNamespacePermission() {
         return ((bitField0_ & 0x00000004) == 0x00000004);
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getNamespacePermission() {
         if (namespacePermissionBuilder_ == null) {
@@ -1050,7 +1050,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public Builder setNamespacePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission value) {
         if (namespacePermissionBuilder_ == null) {
@@ -1066,7 +1066,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public Builder setNamespacePermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder builderForValue) {
@@ -1080,7 +1080,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public Builder mergeNamespacePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission value) {
         if (namespacePermissionBuilder_ == null) {
@@ -1099,7 +1099,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public Builder clearNamespacePermission() {
         if (namespacePermissionBuilder_ == null) {
@@ -1112,7 +1112,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder getNamespacePermissionBuilder() {
         bitField0_ |= 0x00000004;
@@ -1120,7 +1120,7 @@ public final class AccessControlProtos {
         return getNamespacePermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder getNamespacePermissionOrBuilder() {
         if (namespacePermissionBuilder_ != null) {
@@ -1130,7 +1130,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .NamespacePermission namespace_permission = 3;</code>
+       * <code>optional .hbase.pb.NamespacePermission namespace_permission = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder> 
@@ -1146,18 +1146,18 @@ public final class AccessControlProtos {
         return namespacePermissionBuilder_;
       }
 
-      // optional .TablePermission table_permission = 4;
+      // optional .hbase.pb.TablePermission table_permission = 4;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission tablePermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder> tablePermissionBuilder_;
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public boolean hasTablePermission() {
         return ((bitField0_ & 0x00000008) == 0x00000008);
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getTablePermission() {
         if (tablePermissionBuilder_ == null) {
@@ -1167,7 +1167,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public Builder setTablePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission value) {
         if (tablePermissionBuilder_ == null) {
@@ -1183,7 +1183,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public Builder setTablePermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder builderForValue) {
@@ -1197,7 +1197,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public Builder mergeTablePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission value) {
         if (tablePermissionBuilder_ == null) {
@@ -1216,7 +1216,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public Builder clearTablePermission() {
         if (tablePermissionBuilder_ == null) {
@@ -1229,7 +1229,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder getTablePermissionBuilder() {
         bitField0_ |= 0x00000008;
@@ -1237,7 +1237,7 @@ public final class AccessControlProtos {
         return getTablePermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder getTablePermissionOrBuilder() {
         if (tablePermissionBuilder_ != null) {
@@ -1247,7 +1247,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TablePermission table_permission = 4;</code>
+       * <code>optional .hbase.pb.TablePermission table_permission = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder> 
@@ -1263,7 +1263,7 @@ public final class AccessControlProtos {
         return tablePermissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:Permission)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Permission)
     }
 
     static {
@@ -1271,23 +1271,23 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Permission)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Permission)
   }
 
   public interface TablePermissionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     boolean hasTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
 
@@ -1311,22 +1311,22 @@ public final class AccessControlProtos {
      */
     com.google.protobuf.ByteString getQualifier();
 
-    // repeated .Permission.Action action = 4;
+    // repeated .hbase.pb.Permission.Action action = 4;
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     int getActionCount();
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
   }
   /**
-   * Protobuf type {@code TablePermission}
+   * Protobuf type {@code hbase.pb.TablePermission}
    */
   public static final class TablePermission extends
       com.google.protobuf.GeneratedMessage
@@ -1449,12 +1449,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_TablePermission_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_TablePermission_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder.class);
     }
@@ -1475,23 +1475,23 @@ public final class AccessControlProtos {
     }
 
     private int bitField0_;
-    // optional .TableName table_name = 1;
+    // optional .hbase.pb.TableName table_name = 1;
     public static final int TABLE_NAME_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
     /**
-     * <code>optional .TableName table_name = 1;</code>
+     * <code>optional .hbase.pb.TableName table_name = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
@@ -1529,23 +1529,23 @@ public final class AccessControlProtos {
       return qualifier_;
     }
 
-    // repeated .Permission.Action action = 4;
+    // repeated .hbase.pb.Permission.Action action = 4;
     public static final int ACTION_FIELD_NUMBER = 4;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
       return action_;
     }
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     public int getActionCount() {
       return action_.size();
     }
     /**
-     * <code>repeated .Permission.Action action = 4;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
       return action_.get(index);
@@ -1758,19 +1758,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TablePermission}
+     * Protobuf type {@code hbase.pb.TablePermission}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermissionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_TablePermission_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_TablePermission_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission.Builder.class);
       }
@@ -1817,7 +1817,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_TablePermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_TablePermission_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.TablePermission getDefaultInstanceForType() {
@@ -1925,18 +1925,18 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // optional .TableName table_name = 1;
+      // optional .hbase.pb.TableName table_name = 1;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -1946,7 +1946,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -1962,7 +1962,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
@@ -1976,7 +1976,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -1995,7 +1995,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
@@ -2008,7 +2008,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000001;
@@ -2016,7 +2016,7 @@ public final class AccessControlProtos {
         return getTableNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
@@ -2026,7 +2026,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 1;</code>
+       * <code>optional .hbase.pb.TableName table_name = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
@@ -2114,7 +2114,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // repeated .Permission.Action action = 4;
+      // repeated .hbase.pb.Permission.Action action = 4;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_ =
         java.util.Collections.emptyList();
       private void ensureActionIsMutable() {
@@ -2124,25 +2124,25 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
         return java.util.Collections.unmodifiableList(action_);
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public int getActionCount() {
         return action_.size();
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
         return action_.get(index);
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public Builder setAction(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
@@ -2155,7 +2155,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public Builder addAction(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
         if (value == null) {
@@ -2167,7 +2167,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public Builder addAllAction(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> values) {
@@ -2177,7 +2177,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 4;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 4;</code>
        */
       public Builder clearAction() {
         action_ = java.util.Collections.emptyList();
@@ -2186,7 +2186,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TablePermission)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TablePermission)
     }
 
     static {
@@ -2194,7 +2194,7 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TablePermission)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TablePermission)
   }
 
   public interface NamespacePermissionOrBuilder
@@ -2210,22 +2210,22 @@ public final class AccessControlProtos {
      */
     com.google.protobuf.ByteString getNamespaceName();
 
-    // repeated .Permission.Action action = 2;
+    // repeated .hbase.pb.Permission.Action action = 2;
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     int getActionCount();
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
   }
   /**
-   * Protobuf type {@code NamespacePermission}
+   * Protobuf type {@code hbase.pb.NamespacePermission}
    */
   public static final class NamespacePermission extends
       com.google.protobuf.GeneratedMessage
@@ -2330,12 +2330,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_NamespacePermission_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_NamespacePermission_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder.class);
     }
@@ -2372,23 +2372,23 @@ public final class AccessControlProtos {
       return namespaceName_;
     }
 
-    // repeated .Permission.Action action = 2;
+    // repeated .hbase.pb.Permission.Action action = 2;
     public static final int ACTION_FIELD_NUMBER = 2;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
       return action_;
     }
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     public int getActionCount() {
       return action_.size();
     }
     /**
-     * <code>repeated .Permission.Action action = 2;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
       return action_.get(index);
@@ -2561,19 +2561,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code NamespacePermission}
+     * Protobuf type {@code hbase.pb.NamespacePermission}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermissionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_NamespacePermission_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_NamespacePermission_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission.Builder.class);
       }
@@ -2611,7 +2611,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_NamespacePermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_NamespacePermission_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.NamespacePermission getDefaultInstanceForType() {
@@ -2731,7 +2731,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // repeated .Permission.Action action = 2;
+      // repeated .hbase.pb.Permission.Action action = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_ =
         java.util.Collections.emptyList();
       private void ensureActionIsMutable() {
@@ -2741,25 +2741,25 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
         return java.util.Collections.unmodifiableList(action_);
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public int getActionCount() {
         return action_.size();
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
         return action_.get(index);
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public Builder setAction(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
@@ -2772,7 +2772,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public Builder addAction(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
         if (value == null) {
@@ -2784,7 +2784,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public Builder addAllAction(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> values) {
@@ -2794,7 +2794,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 2;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 2;</code>
        */
       public Builder clearAction() {
         action_ = java.util.Collections.emptyList();
@@ -2803,7 +2803,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:NamespacePermission)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.NamespacePermission)
     }
 
     static {
@@ -2811,28 +2811,28 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:NamespacePermission)
+    // @@protoc_insertion_point(class_scope:hbase.pb.NamespacePermission)
   }
 
   public interface GlobalPermissionOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .Permission.Action action = 1;
+    // repeated .hbase.pb.Permission.Action action = 1;
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList();
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     int getActionCount();
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index);
   }
   /**
-   * Protobuf type {@code GlobalPermission}
+   * Protobuf type {@code hbase.pb.GlobalPermission}
    */
   public static final class GlobalPermission extends
       com.google.protobuf.GeneratedMessage
@@ -2932,12 +2932,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GlobalPermission_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GlobalPermission_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder.class);
     }
@@ -2957,23 +2957,23 @@ public final class AccessControlProtos {
       return PARSER;
     }
 
-    // repeated .Permission.Action action = 1;
+    // repeated .hbase.pb.Permission.Action action = 1;
     public static final int ACTION_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_;
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
       return action_;
     }
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     public int getActionCount() {
       return action_.size();
     }
     /**
-     * <code>repeated .Permission.Action action = 1;</code>
+     * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
       return action_.get(index);
@@ -3129,19 +3129,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GlobalPermission}
+     * Protobuf type {@code hbase.pb.GlobalPermission}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermissionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GlobalPermission_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GlobalPermission_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission.Builder.class);
       }
@@ -3177,7 +3177,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GlobalPermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GlobalPermission_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GlobalPermission getDefaultInstanceForType() {
@@ -3252,7 +3252,7 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // repeated .Permission.Action action = 1;
+      // repeated .hbase.pb.Permission.Action action = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> action_ =
         java.util.Collections.emptyList();
       private void ensureActionIsMutable() {
@@ -3262,25 +3262,25 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> getActionList() {
         return java.util.Collections.unmodifiableList(action_);
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public int getActionCount() {
         return action_.size();
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action getAction(int index) {
         return action_.get(index);
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public Builder setAction(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
@@ -3293,7 +3293,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public Builder addAction(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action value) {
         if (value == null) {
@@ -3305,7 +3305,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public Builder addAllAction(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Action> values) {
@@ -3315,7 +3315,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission.Action action = 1;</code>
+       * <code>repeated .hbase.pb.Permission.Action action = 1;</code>
        */
       public Builder clearAction() {
         action_ = java.util.Collections.emptyList();
@@ -3324,7 +3324,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GlobalPermission)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GlobalPermission)
     }
 
     static {
@@ -3332,7 +3332,7 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GlobalPermission)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GlobalPermission)
   }
 
   public interface UserPermissionOrBuilder
@@ -3348,22 +3348,22 @@ public final class AccessControlProtos {
      */
     com.google.protobuf.ByteString getUser();
 
-    // required .Permission permission = 3;
+    // required .hbase.pb.Permission permission = 3;
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     boolean hasPermission();
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission();
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder();
   }
   /**
-   * Protobuf type {@code UserPermission}
+   * Protobuf type {@code hbase.pb.UserPermission}
    */
   public static final class UserPermission extends
       com.google.protobuf.GeneratedMessage
@@ -3445,12 +3445,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermission_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UserPermission_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermission_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UserPermission_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder.class);
     }
@@ -3487,23 +3487,23 @@ public final class AccessControlProtos {
       return user_;
     }
 
-    // required .Permission permission = 3;
+    // required .hbase.pb.Permission permission = 3;
     public static final int PERMISSION_FIELD_NUMBER = 3;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission permission_;
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     public boolean hasPermission() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission() {
       return permission_;
     }
     /**
-     * <code>required .Permission permission = 3;</code>
+     * <code>required .hbase.pb.Permission permission = 3;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder() {
       return permission_;
@@ -3686,19 +3686,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code UserPermission}
+     * Protobuf type {@code hbase.pb.UserPermission}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UserPermission_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermission_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UserPermission_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder.class);
       }
@@ -3741,7 +3741,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UserPermission_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UserPermission_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getDefaultInstanceForType() {
@@ -3869,18 +3869,18 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // required .Permission permission = 3;
+      // required .hbase.pb.Permission permission = 3;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission permission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> permissionBuilder_;
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public boolean hasPermission() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission() {
         if (permissionBuilder_ == null) {
@@ -3890,7 +3890,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public Builder setPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
         if (permissionBuilder_ == null) {
@@ -3906,7 +3906,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public Builder setPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -3920,7 +3920,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public Builder mergePermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
         if (permissionBuilder_ == null) {
@@ -3939,7 +3939,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public Builder clearPermission() {
         if (permissionBuilder_ == null) {
@@ -3952,7 +3952,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder getPermissionBuilder() {
         bitField0_ |= 0x00000002;
@@ -3960,7 +3960,7 @@ public final class AccessControlProtos {
         return getPermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder() {
         if (permissionBuilder_ != null) {
@@ -3970,7 +3970,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .Permission permission = 3;</code>
+       * <code>required .hbase.pb.Permission permission = 3;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
@@ -3986,7 +3986,7 @@ public final class AccessControlProtos {
         return permissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:UserPermission)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.UserPermission)
     }
 
     static {
@@ -3994,39 +3994,39 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:UserPermission)
+    // @@protoc_insertion_point(class_scope:hbase.pb.UserPermission)
   }
 
   public interface UsersAndPermissionsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+    // repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> 
         getUserPermissionsList();
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index);
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     int getUserPermissionsCount();
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
         getUserPermissionsOrBuilderList();
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code UsersAndPermissions}
+   * Protobuf type {@code hbase.pb.UsersAndPermissions}
    *
    * <pre>
    **
@@ -4106,12 +4106,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder.class);
     }
@@ -4144,33 +4144,33 @@ public final class AccessControlProtos {
        */
       com.google.protobuf.ByteString getUser();
 
-      // repeated .Permission permissions = 2;
+      // repeated .hbase.pb.Permission permissions = 2;
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> 
           getPermissionsList();
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermissions(int index);
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       int getPermissionsCount();
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionsOrBuilderList();
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionsOrBuilder(
           int index);
     }
     /**
-     * Protobuf type {@code UsersAndPermissions.UserPermissions}
+     * Protobuf type {@code hbase.pb.UsersAndPermissions.UserPermissions}
      */
     public static final class UserPermissions extends
         com.google.protobuf.GeneratedMessage
@@ -4250,12 +4250,12 @@ public final class AccessControlProtos {
       }
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_UserPermissions_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder.class);
       }
@@ -4292,36 +4292,36 @@ public final class AccessControlProtos {
         return user_;
       }
 
-      // repeated .Permission permissions = 2;
+      // repeated .hbase.pb.Permission permissions = 2;
       public static final int PERMISSIONS_FIELD_NUMBER = 2;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> permissions_;
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> getPermissionsList() {
         return permissions_;
       }
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
           getPermissionsOrBuilderList() {
         return permissions_;
       }
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       public int getPermissionsCount() {
         return permissions_.size();
       }
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermissions(int index) {
         return permissions_.get(index);
       }
       /**
-       * <code>repeated .Permission permissions = 2;</code>
+       * <code>repeated .hbase.pb.Permission permissions = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionsOrBuilder(
           int index) {
@@ -4500,19 +4500,19 @@ public final class AccessControlProtos {
         return builder;
       }
       /**
-       * Protobuf type {@code UsersAndPermissions.UserPermissions}
+       * Protobuf type {@code hbase.pb.UsersAndPermissions.UserPermissions}
        */
       public static final class Builder extends
           com.google.protobuf.GeneratedMessage.Builder<Builder>
          implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder {
         public static final com.google.protobuf.Descriptors.Descriptor
             getDescriptor() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor;
         }
 
         protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
             internalGetFieldAccessorTable() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_UserPermissions_fieldAccessorTable
               .ensureFieldAccessorsInitialized(
                   org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder.class);
         }
@@ -4555,7 +4555,7 @@ public final class AccessControlProtos {
 
         public com.google.protobuf.Descriptors.Descriptor
             getDescriptorForType() {
-          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_UserPermissions_descriptor;
+          return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor;
         }
 
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getDefaultInstanceForType() {
@@ -4705,7 +4705,7 @@ public final class AccessControlProtos {
           return this;
         }
 
-        // repeated .Permission permissions = 2;
+        // repeated .hbase.pb.Permission permissions = 2;
         private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> permissions_ =
           java.util.Collections.emptyList();
         private void ensurePermissionsIsMutable() {
@@ -4719,7 +4719,7 @@ public final class AccessControlProtos {
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> permissionsBuilder_;
 
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> getPermissionsList() {
           if (permissionsBuilder_ == null) {
@@ -4729,7 +4729,7 @@ public final class AccessControlProtos {
           }
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public int getPermissionsCount() {
           if (permissionsBuilder_ == null) {
@@ -4739,7 +4739,7 @@ public final class AccessControlProtos {
           }
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermissions(int index) {
           if (permissionsBuilder_ == null) {
@@ -4749,7 +4749,7 @@ public final class AccessControlProtos {
           }
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder setPermissions(
             int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
@@ -4766,7 +4766,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder setPermissions(
             int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -4780,7 +4780,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder addPermissions(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
           if (permissionsBuilder_ == null) {
@@ -4796,7 +4796,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder addPermissions(
             int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
@@ -4813,7 +4813,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder addPermissions(
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -4827,7 +4827,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder addPermissions(
             int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -4841,7 +4841,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder addAllPermissions(
             java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> values) {
@@ -4855,7 +4855,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder clearPermissions() {
           if (permissionsBuilder_ == null) {
@@ -4868,7 +4868,7 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public Builder removePermissions(int index) {
           if (permissionsBuilder_ == null) {
@@ -4881,14 +4881,14 @@ public final class AccessControlProtos {
           return this;
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder getPermissionsBuilder(
             int index) {
           return getPermissionsFieldBuilder().getBuilder(index);
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionsOrBuilder(
             int index) {
@@ -4898,7 +4898,7 @@ public final class AccessControlProtos {
           }
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
              getPermissionsOrBuilderList() {
@@ -4909,14 +4909,14 @@ public final class AccessControlProtos {
           }
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder addPermissionsBuilder() {
           return getPermissionsFieldBuilder().addBuilder(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance());
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder addPermissionsBuilder(
             int index) {
@@ -4924,7 +4924,7 @@ public final class AccessControlProtos {
               index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance());
         }
         /**
-         * <code>repeated .Permission permissions = 2;</code>
+         * <code>repeated .hbase.pb.Permission permissions = 2;</code>
          */
         public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder> 
              getPermissionsBuilderList() {
@@ -4945,7 +4945,7 @@ public final class AccessControlProtos {
           return permissionsBuilder_;
         }
 
-        // @@protoc_insertion_point(builder_scope:UsersAndPermissions.UserPermissions)
+        // @@protoc_insertion_point(builder_scope:hbase.pb.UsersAndPermissions.UserPermissions)
       }
 
       static {
@@ -4953,39 +4953,39 @@ public final class AccessControlProtos {
         defaultInstance.initFields();
       }
 
-      // @@protoc_insertion_point(class_scope:UsersAndPermissions.UserPermissions)
+      // @@protoc_insertion_point(class_scope:hbase.pb.UsersAndPermissions.UserPermissions)
     }
 
-    // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+    // repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;
     public static final int USER_PERMISSIONS_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> userPermissions_;
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> getUserPermissionsList() {
       return userPermissions_;
     }
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
         getUserPermissionsOrBuilderList() {
       return userPermissions_;
     }
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     public int getUserPermissionsCount() {
       return userPermissions_.size();
     }
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index) {
       return userPermissions_.get(index);
     }
     /**
-     * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+     * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
         int index) {
@@ -5143,7 +5143,7 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code UsersAndPermissions}
+     * Protobuf type {@code hbase.pb.UsersAndPermissions}
      *
      * <pre>
      **
@@ -5155,12 +5155,12 @@ public final class AccessControlProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissionsOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.Builder.class);
       }
@@ -5201,7 +5201,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_UsersAndPermissions_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_UsersAndPermissions_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions getDefaultInstanceForType() {
@@ -5302,7 +5302,7 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // repeated .UsersAndPermissions.UserPermissions user_permissions = 1;
+      // repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> userPermissions_ =
         java.util.Collections.emptyList();
       private void ensureUserPermissionsIsMutable() {
@@ -5316,7 +5316,7 @@ public final class AccessControlProtos {
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> userPermissionsBuilder_;
 
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> getUserPermissionsList() {
         if (userPermissionsBuilder_ == null) {
@@ -5326,7 +5326,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public int getUserPermissionsCount() {
         if (userPermissionsBuilder_ == null) {
@@ -5336,7 +5336,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions getUserPermissions(int index) {
         if (userPermissionsBuilder_ == null) {
@@ -5346,7 +5346,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder setUserPermissions(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
@@ -5363,7 +5363,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder setUserPermissions(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
@@ -5377,7 +5377,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder addUserPermissions(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
         if (userPermissionsBuilder_ == null) {
@@ -5393,7 +5393,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder addUserPermissions(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions value) {
@@ -5410,7 +5410,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder addUserPermissions(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
@@ -5424,7 +5424,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder addUserPermissions(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder builderForValue) {
@@ -5438,7 +5438,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder addAllUserPermissions(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions> values) {
@@ -5452,7 +5452,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder clearUserPermissions() {
         if (userPermissionsBuilder_ == null) {
@@ -5465,7 +5465,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public Builder removeUserPermissions(int index) {
         if (userPermissionsBuilder_ == null) {
@@ -5478,14 +5478,14 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder getUserPermissionsBuilder(
           int index) {
         return getUserPermissionsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder getUserPermissionsOrBuilder(
           int index) {
@@ -5495,7 +5495,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissionsOrBuilder> 
            getUserPermissionsOrBuilderList() {
@@ -5506,14 +5506,14 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder addUserPermissionsBuilder() {
         return getUserPermissionsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance());
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder addUserPermissionsBuilder(
           int index) {
@@ -5521,7 +5521,7 @@ public final class AccessControlProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.getDefaultInstance());
       }
       /**
-       * <code>repeated .UsersAndPermissions.UserPermissions user_permissions = 1;</code>
+       * <code>repeated .hbase.pb.UsersAndPermissions.UserPermissions user_permissions = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UsersAndPermissions.UserPermissions.Builder> 
            getUserPermissionsBuilderList() {
@@ -5542,7 +5542,7 @@ public final class AccessControlProtos {
         return userPermissionsBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:UsersAndPermissions)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.UsersAndPermissions)
     }
 
     static {
@@ -5550,28 +5550,28 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:UsersAndPermissions)
+    // @@protoc_insertion_point(class_scope:hbase.pb.UsersAndPermissions)
   }
 
   public interface GrantRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .UserPermission user_permission = 1;
+    // required .hbase.pb.UserPermission user_permission = 1;
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     boolean hasUserPermission();
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission();
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder();
   }
   /**
-   * Protobuf type {@code GrantRequest}
+   * Protobuf type {@code hbase.pb.GrantRequest}
    */
   public static final class GrantRequest extends
       com.google.protobuf.GeneratedMessage
@@ -5648,12 +5648,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.Builder.class);
     }
@@ -5674,23 +5674,23 @@ public final class AccessControlProtos {
     }
 
     private int bitField0_;
-    // required .UserPermission user_permission = 1;
+    // required .hbase.pb.UserPermission user_permission = 1;
     public static final int USER_PERMISSION_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_;
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public boolean hasUserPermission() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
       return userPermission_;
     }
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
       return userPermission_;
@@ -5852,19 +5852,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GrantRequest}
+     * Protobuf type {@code hbase.pb.GrantRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest.Builder.class);
       }
@@ -5905,7 +5905,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantRequest getDefaultInstanceForType() {
@@ -5986,18 +5986,18 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // required .UserPermission user_permission = 1;
+      // required .hbase.pb.UserPermission user_permission = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public boolean hasUserPermission() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
         if (userPermissionBuilder_ == null) {
@@ -6007,7 +6007,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
         if (userPermissionBuilder_ == null) {
@@ -6023,7 +6023,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
@@ -6037,7 +6037,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder mergeUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
         if (userPermissionBuilder_ == null) {
@@ -6056,7 +6056,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder clearUserPermission() {
         if (userPermissionBuilder_ == null) {
@@ -6069,7 +6069,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder() {
         bitField0_ |= 0x00000001;
@@ -6077,7 +6077,7 @@ public final class AccessControlProtos {
         return getUserPermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
         if (userPermissionBuilder_ != null) {
@@ -6087,7 +6087,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
@@ -6103,7 +6103,7 @@ public final class AccessControlProtos {
         return userPermissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:GrantRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GrantRequest)
     }
 
     static {
@@ -6111,14 +6111,14 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GrantRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GrantRequest)
   }
 
   public interface GrantResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code GrantResponse}
+   * Protobuf type {@code hbase.pb.GrantResponse}
    */
   public static final class GrantResponse extends
       com.google.protobuf.GeneratedMessage
@@ -6181,12 +6181,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.Builder.class);
     }
@@ -6337,19 +6337,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GrantResponse}
+     * Protobuf type {@code hbase.pb.GrantResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse.Builder.class);
       }
@@ -6383,7 +6383,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GrantResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GrantResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse getDefaultInstanceForType() {
@@ -6441,7 +6441,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GrantResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GrantResponse)
     }
 
     static {
@@ -6449,28 +6449,28 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GrantResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GrantResponse)
   }
 
   public interface RevokeRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .UserPermission user_permission = 1;
+    // required .hbase.pb.UserPermission user_permission = 1;
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     boolean hasUserPermission();
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission();
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder();
   }
   /**
-   * Protobuf type {@code RevokeRequest}
+   * Protobuf type {@code hbase.pb.RevokeRequest}
    */
   public static final class RevokeRequest extends
       com.google.protobuf.GeneratedMessage
@@ -6547,12 +6547,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.Builder.class);
     }
@@ -6573,23 +6573,23 @@ public final class AccessControlProtos {
     }
 
     private int bitField0_;
-    // required .UserPermission user_permission = 1;
+    // required .hbase.pb.UserPermission user_permission = 1;
     public static final int USER_PERMISSION_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_;
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public boolean hasUserPermission() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
       return userPermission_;
     }
     /**
-     * <code>required .UserPermission user_permission = 1;</code>
+     * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
       return userPermission_;
@@ -6751,19 +6751,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RevokeRequest}
+     * Protobuf type {@code hbase.pb.RevokeRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest.Builder.class);
       }
@@ -6804,7 +6804,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeRequest getDefaultInstanceForType() {
@@ -6885,18 +6885,18 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // required .UserPermission user_permission = 1;
+      // required .hbase.pb.UserPermission user_permission = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission userPermission_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public boolean hasUserPermission() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission() {
         if (userPermissionBuilder_ == null) {
@@ -6906,7 +6906,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
         if (userPermissionBuilder_ == null) {
@@ -6922,7 +6922,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
@@ -6936,7 +6936,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder mergeUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
         if (userPermissionBuilder_ == null) {
@@ -6955,7 +6955,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder clearUserPermission() {
         if (userPermissionBuilder_ == null) {
@@ -6968,7 +6968,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder() {
         bitField0_ |= 0x00000001;
@@ -6976,7 +6976,7 @@ public final class AccessControlProtos {
         return getUserPermissionFieldBuilder().getBuilder();
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder() {
         if (userPermissionBuilder_ != null) {
@@ -6986,7 +6986,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>required .UserPermission user_permission = 1;</code>
+       * <code>required .hbase.pb.UserPermission user_permission = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
@@ -7002,7 +7002,7 @@ public final class AccessControlProtos {
         return userPermissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:RevokeRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RevokeRequest)
     }
 
     static {
@@ -7010,14 +7010,14 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RevokeRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RevokeRequest)
   }
 
   public interface RevokeResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code RevokeResponse}
+   * Protobuf type {@code hbase.pb.RevokeResponse}
    */
   public static final class RevokeResponse extends
       com.google.protobuf.GeneratedMessage
@@ -7080,12 +7080,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.Builder.class);
     }
@@ -7236,19 +7236,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RevokeResponse}
+     * Protobuf type {@code hbase.pb.RevokeResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse.Builder.class);
       }
@@ -7282,7 +7282,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_RevokeResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_RevokeResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse getDefaultInstanceForType() {
@@ -7340,7 +7340,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RevokeResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RevokeResponse)
     }
 
     static {
@@ -7348,33 +7348,33 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RevokeResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RevokeResponse)
   }
 
   public interface GetUserPermissionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .Permission.Type type = 1;
+    // optional .hbase.pb.Permission.Type type = 1;
     /**
-     * <code>optional .Permission.Type type = 1;</code>
+     * <code>optional .hbase.pb.Permission.Type type = 1;</code>
      */
     boolean hasType();
     /**
-     * <code>optional .Permission.Type type = 1;</code>
+     * <code>optional .hbase.pb.Permission.Type type = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType();
 
-    // optional .TableName table_name = 2;
+    // optional .hbase.pb.TableName table_name = 2;
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     boolean hasTableName();
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName();
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder();
 
@@ -7389,7 +7389,7 @@ public final class AccessControlProtos {
     com.google.protobuf.ByteString getNamespaceName();
   }
   /**
-   * Protobuf type {@code GetUserPermissionsRequest}
+   * Protobuf type {@code hbase.pb.GetUserPermissionsRequest}
    */
   public static final class GetUserPermissionsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -7482,12 +7482,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest.Builder.class);
     }
@@ -7508,39 +7508,39 @@ public final class AccessControlProtos {
     }
 
     private int bitField0_;
-    // optional .Permission.Type type = 1;
+    // optional .hbase.pb.Permission.Type type = 1;
     public static final int TYPE_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_;
     /**
-     * <code>optional .Permission.Type type = 1;</code>
+     * <code>optional .hbase.pb.Permission.Type type = 1;</code>
      */
     public boolean hasType() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .Permission.Type type = 1;</code>
+     * <code>optional .hbase.pb.Permission.Type type = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
       return type_;
     }
 
-    // optional .TableName table_name = 2;
+    // optional .hbase.pb.TableName table_name = 2;
     public static final int TABLE_NAME_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_;
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     public boolean hasTableName() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
       return tableName_;
     }
     /**
-     * <code>optional .TableName table_name = 2;</code>
+     * <code>optional .hbase.pb.TableName table_name = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
       return tableName_;
@@ -7750,19 +7750,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetUserPermissionsRequest}
+     * Protobuf type {@code hbase.pb.GetUserPermissionsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest.Builder.class);
       }
@@ -7807,7 +7807,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsRequest getDefaultInstanceForType() {
@@ -7900,22 +7900,22 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // optional .Permission.Type type = 1;
+      // optional .hbase.pb.Permission.Type type = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type type_ = org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type.Global;
       /**
-       * <code>optional .Permission.Type type = 1;</code>
+       * <code>optional .hbase.pb.Permission.Type type = 1;</code>
        */
       public boolean hasType() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .Permission.Type type = 1;</code>
+       * <code>optional .hbase.pb.Permission.Type type = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type getType() {
         return type_;
       }
       /**
-       * <code>optional .Permission.Type type = 1;</code>
+       * <code>optional .hbase.pb.Permission.Type type = 1;</code>
        */
       public Builder setType(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Type value) {
         if (value == null) {
@@ -7927,7 +7927,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .Permission.Type type = 1;</code>
+       * <code>optional .hbase.pb.Permission.Type type = 1;</code>
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -7936,18 +7936,18 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // optional .TableName table_name = 2;
+      // optional .hbase.pb.TableName table_name = 2;
       private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName tableName_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> tableNameBuilder_;
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public boolean hasTableName() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName getTableName() {
         if (tableNameBuilder_ == null) {
@@ -7957,7 +7957,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -7973,7 +7973,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder setTableName(
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder builderForValue) {
@@ -7987,7 +7987,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder mergeTableName(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName value) {
         if (tableNameBuilder_ == null) {
@@ -8006,7 +8006,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public Builder clearTableName() {
         if (tableNameBuilder_ == null) {
@@ -8019,7 +8019,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder getTableNameBuilder() {
         bitField0_ |= 0x00000002;
@@ -8027,7 +8027,7 @@ public final class AccessControlProtos {
         return getTableNameFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder getTableNameOrBuilder() {
         if (tableNameBuilder_ != null) {
@@ -8037,7 +8037,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>optional .TableName table_name = 2;</code>
+       * <code>optional .hbase.pb.TableName table_name = 2;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableName.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableNameOrBuilder> 
@@ -8089,7 +8089,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetUserPermissionsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetUserPermissionsRequest)
     }
 
     static {
@@ -8097,39 +8097,39 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetUserPermissionsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetUserPermissionsRequest)
   }
 
   public interface GetUserPermissionsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .UserPermission user_permission = 1;
+    // repeated .hbase.pb.UserPermission user_permission = 1;
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> 
         getUserPermissionList();
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index);
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     int getUserPermissionCount();
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
         getUserPermissionOrBuilderList();
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code GetUserPermissionsResponse}
+   * Protobuf type {@code hbase.pb.GetUserPermissionsResponse}
    */
   public static final class GetUserPermissionsResponse extends
       com.google.protobuf.GeneratedMessage
@@ -8204,12 +8204,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse.Builder.class);
     }
@@ -8229,36 +8229,36 @@ public final class AccessControlProtos {
       return PARSER;
     }
 
-    // repeated .UserPermission user_permission = 1;
+    // repeated .hbase.pb.UserPermission user_permission = 1;
     public static final int USER_PERMISSION_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> userPermission_;
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getUserPermissionList() {
       return userPermission_;
     }
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
         getUserPermissionOrBuilderList() {
       return userPermission_;
     }
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public int getUserPermissionCount() {
       return userPermission_.size();
     }
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index) {
       return userPermission_.get(index);
     }
     /**
-     * <code>repeated .UserPermission user_permission = 1;</code>
+     * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
         int index) {
@@ -8416,19 +8416,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetUserPermissionsResponse}
+     * Protobuf type {@code hbase.pb.GetUserPermissionsResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse.Builder.class);
       }
@@ -8469,7 +8469,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_GetUserPermissionsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_GetUserPermissionsResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse getDefaultInstanceForType() {
@@ -8570,7 +8570,7 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // repeated .UserPermission user_permission = 1;
+      // repeated .hbase.pb.UserPermission user_permission = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> userPermission_ =
         java.util.Collections.emptyList();
       private void ensureUserPermissionIsMutable() {
@@ -8584,7 +8584,7 @@ public final class AccessControlProtos {
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> userPermissionBuilder_;
 
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> getUserPermissionList() {
         if (userPermissionBuilder_ == null) {
@@ -8594,7 +8594,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public int getUserPermissionCount() {
         if (userPermissionBuilder_ == null) {
@@ -8604,7 +8604,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission getUserPermission(int index) {
         if (userPermissionBuilder_ == null) {
@@ -8614,7 +8614,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
@@ -8631,7 +8631,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder setUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
@@ -8645,7 +8645,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder addUserPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
         if (userPermissionBuilder_ == null) {
@@ -8661,7 +8661,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder addUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission value) {
@@ -8678,7 +8678,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder addUserPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
@@ -8692,7 +8692,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder addUserPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder builderForValue) {
@@ -8706,7 +8706,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder addAllUserPermission(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission> values) {
@@ -8720,7 +8720,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder clearUserPermission() {
         if (userPermissionBuilder_ == null) {
@@ -8733,7 +8733,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public Builder removeUserPermission(int index) {
         if (userPermissionBuilder_ == null) {
@@ -8746,14 +8746,14 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder getUserPermissionBuilder(
           int index) {
         return getUserPermissionFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder getUserPermissionOrBuilder(
           int index) {
@@ -8763,7 +8763,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermissionOrBuilder> 
            getUserPermissionOrBuilderList() {
@@ -8774,14 +8774,14 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addUserPermissionBuilder() {
         return getUserPermissionFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance());
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder addUserPermissionBuilder(
           int index) {
@@ -8789,7 +8789,7 @@ public final class AccessControlProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.getDefaultInstance());
       }
       /**
-       * <code>repeated .UserPermission user_permission = 1;</code>
+       * <code>repeated .hbase.pb.UserPermission user_permission = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.UserPermission.Builder> 
            getUserPermissionBuilderList() {
@@ -8810,7 +8810,7 @@ public final class AccessControlProtos {
         return userPermissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetUserPermissionsResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetUserPermissionsResponse)
     }
 
     static {
@@ -8818,39 +8818,39 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetUserPermissionsResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetUserPermissionsResponse)
   }
 
   public interface CheckPermissionsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .Permission permission = 1;
+    // repeated .hbase.pb.Permission permission = 1;
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> 
         getPermissionList();
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission(int index);
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     int getPermissionCount();
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
         getPermissionOrBuilderList();
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code CheckPermissionsRequest}
+   * Protobuf type {@code hbase.pb.CheckPermissionsRequest}
    */
   public static final class CheckPermissionsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -8925,12 +8925,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.Builder.class);
     }
@@ -8950,36 +8950,36 @@ public final class AccessControlProtos {
       return PARSER;
     }
 
-    // repeated .Permission permission = 1;
+    // repeated .hbase.pb.Permission permission = 1;
     public static final int PERMISSION_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> permission_;
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> getPermissionList() {
       return permission_;
     }
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
         getPermissionOrBuilderList() {
       return permission_;
     }
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     public int getPermissionCount() {
       return permission_.size();
     }
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission(int index) {
       return permission_.get(index);
     }
     /**
-     * <code>repeated .Permission permission = 1;</code>
+     * <code>repeated .hbase.pb.Permission permission = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder(
         int index) {
@@ -9137,19 +9137,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code CheckPermissionsRequest}
+     * Protobuf type {@code hbase.pb.CheckPermissionsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest.Builder.class);
       }
@@ -9190,7 +9190,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest getDefaultInstanceForType() {
@@ -9291,7 +9291,7 @@ public final class AccessControlProtos {
       }
       private int bitField0_;
 
-      // repeated .Permission permission = 1;
+      // repeated .hbase.pb.Permission permission = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> permission_ =
         java.util.Collections.emptyList();
       private void ensurePermissionIsMutable() {
@@ -9305,7 +9305,7 @@ public final class AccessControlProtos {
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> permissionBuilder_;
 
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> getPermissionList() {
         if (permissionBuilder_ == null) {
@@ -9315,7 +9315,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public int getPermissionCount() {
         if (permissionBuilder_ == null) {
@@ -9325,7 +9325,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission getPermission(int index) {
         if (permissionBuilder_ == null) {
@@ -9335,7 +9335,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder setPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
@@ -9352,7 +9352,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder setPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -9366,7 +9366,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder addPermission(org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
         if (permissionBuilder_ == null) {
@@ -9382,7 +9382,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder addPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission value) {
@@ -9399,7 +9399,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder addPermission(
           org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -9413,7 +9413,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder addPermission(
           int index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder builderForValue) {
@@ -9427,7 +9427,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder addAllPermission(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission> values) {
@@ -9441,7 +9441,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder clearPermission() {
         if (permissionBuilder_ == null) {
@@ -9454,7 +9454,7 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public Builder removePermission(int index) {
         if (permissionBuilder_ == null) {
@@ -9467,14 +9467,14 @@ public final class AccessControlProtos {
         return this;
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder getPermissionBuilder(
           int index) {
         return getPermissionFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder getPermissionOrBuilder(
           int index) {
@@ -9484,7 +9484,7 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.PermissionOrBuilder> 
            getPermissionOrBuilderList() {
@@ -9495,14 +9495,14 @@ public final class AccessControlProtos {
         }
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder addPermissionBuilder() {
         return getPermissionFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance());
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder addPermissionBuilder(
           int index) {
@@ -9510,7 +9510,7 @@ public final class AccessControlProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.getDefaultInstance());
       }
       /**
-       * <code>repeated .Permission permission = 1;</code>
+       * <code>repeated .hbase.pb.Permission permission = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.Permission.Builder> 
            getPermissionBuilderList() {
@@ -9531,7 +9531,7 @@ public final class AccessControlProtos {
         return permissionBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:CheckPermissionsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CheckPermissionsRequest)
     }
 
     static {
@@ -9539,14 +9539,14 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:CheckPermissionsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.CheckPermissionsRequest)
   }
 
   public interface CheckPermissionsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code CheckPermissionsResponse}
+   * Protobuf type {@code hbase.pb.CheckPermissionsResponse}
    */
   public static final class CheckPermissionsResponse extends
       com.google.protobuf.GeneratedMessage
@@ -9609,12 +9609,12 @@ public final class AccessControlProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponse.Builder.class);
     }
@@ -9765,19 +9765,19 @@ public final class AccessControlProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code CheckPermissionsResponse}
+     * Protobuf type {@code hbase.pb.CheckPermissionsResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponse.class, org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponse.Builder.class);
       }
@@ -9811,7 +9811,7 @@ public final class AccessControlProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_CheckPermissionsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.internal_static_hbase_pb_CheckPermissionsResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsResponse getDefaultInstanceForType() {
@@ -9869,7 +9869,7 @@ public final class AccessControlProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:CheckPermissionsResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CheckPermissionsResponse)
     }
 
     static {
@@ -9877,11 +9877,11 @@ public final class AccessControlProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:CheckPermissionsResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.CheckPermissionsResponse)
   }
 
   /**
-   * Protobuf service {@code AccessControlService}
+   * Protobuf service {@code hbase.pb.AccessControlService}
    */
   public static abstract class AccessControlService
       implements com.google.protobuf.Service {
@@ -9889,7 +9889,7 @@ public final class AccessControlProtos {
 
     public interface Interface {
       /**
-       * <code>rpc Grant(.GrantRequest) returns (.GrantResponse);</code>
+       * <code>rpc Grant(.hbase.pb.GrantRequest) returns (.hbase.pb.GrantResponse);</code>
        */
       public abstract void grant(
           com.google.protobuf.RpcController controller,
@@ -9897,7 +9897,7 @@ public final class AccessControlProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse> done);
 
       /**
-       * <code>rpc Revoke(.RevokeRequest) returns (.RevokeResponse);</code>
+       * <code>rpc Revoke(.hbase.pb.RevokeRequest) returns (.hbase.pb.RevokeResponse);</code>
        */
       public abstract void revoke(
           com.google.protobuf.RpcController controller,
@@ -9905,7 +9905,7 @@ public final class AccessControlProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse> done);
 
       /**
-       * <code>rpc GetUserPermissions(.GetUserPermissionsRequest) returns (.GetUserPermissionsResponse);</code>
+       * <code>rpc GetUserPermissions(.hbase.pb.GetUserPermissionsRequest) returns (.hbase.pb.GetUserPermissionsResponse);</code>
        */
       public abstract void getUserPermissions(
           com.google.protobuf.RpcController controller,
@@ -9913,7 +9913,7 @@ public final class AccessControlProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse> done);
 
       /**
-       * <code>rpc CheckPermissions(.CheckPermissionsRequest) returns (.CheckPermissionsResponse);</code>
+       * <code>rpc CheckPermissions(.hbase.pb.CheckPermissionsRequest) returns (.hbase.pb.CheckPermissionsResponse);</code>
        */
       public abstract void checkPermissions(
           com.google.protobuf.RpcController controller,
@@ -10040,7 +10040,7 @@ public final class AccessControlProtos {
     }
 
     /**
-     * <code>rpc Grant(.GrantRequest) returns (.GrantResponse);</code>
+     * <code>rpc Grant(.hbase.pb.GrantRequest) returns (.hbase.pb.GrantResponse);</code>
      */
     public abstract void grant(
         com.google.protobuf.RpcController controller,
@@ -10048,7 +10048,7 @@ public final class AccessControlProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GrantResponse> done);
 
     /**
-     * <code>rpc Revoke(.RevokeRequest) returns (.RevokeResponse);</code>
+     * <code>rpc Revoke(.hbase.pb.RevokeRequest) returns (.hbase.pb.RevokeResponse);</code>
      */
     public abstract void revoke(
         com.google.protobuf.RpcController controller,
@@ -10056,7 +10056,7 @@ public final class AccessControlProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.RevokeResponse> done);
 
     /**
-     * <code>rpc GetUserPermissions(.GetUserPermissionsRequest) returns (.GetUserPermissionsResponse);</code>
+     * <code>rpc GetUserPermissions(.hbase.pb.GetUserPermissionsRequest) returns (.hbase.pb.GetUserPermissionsResponse);</code>
      */
     public abstract void getUserPermissions(
         com.google.protobuf.RpcController controller,
@@ -10064,7 +10064,7 @@ public final class AccessControlProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.GetUserPermissionsResponse> done);
 
     /**
-     * <code>rpc CheckPermissions(.CheckPermissionsRequest) returns (.CheckPermissionsResponse);</code>
+     * <code>rpc CheckPermissions(.hbase.pb.CheckPermissionsRequest) returns (.hbase.pb.CheckPermissionsResponse);</code>
      */
     public abstract void checkPermissions(
         com.google.protobuf.RpcController controller,
@@ -10322,84 +10322,84 @@ public final class AccessControlProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:AccessControlService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AccessControlService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Permission_descriptor;
+    internal_static_hbase_pb_Permission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Permission_fieldAccessorTable;
+      internal_static_hbase_pb_Permission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TablePermission_descriptor;
+    internal_static_hbase_pb_TablePermission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TablePermission_fieldAccessorTable;
+      internal_static_hbase_pb_TablePermission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_NamespacePermission_descriptor;
+    internal_static_hbase_pb_NamespacePermission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_NamespacePermission_fieldAccessorTable;
+      internal_static_hbase_pb_NamespacePermission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GlobalPermission_descriptor;
+    internal_static_hbase_pb_GlobalPermission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GlobalPermission_fieldAccessorTable;
+      internal_static_hbase_pb_GlobalPermission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UserPermission_descriptor;
+    internal_static_hbase_pb_UserPermission_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UserPermission_fieldAccessorTable;
+      internal_static_hbase_pb_UserPermission_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UsersAndPermissions_descriptor;
+    internal_static_hbase_pb_UsersAndPermissions_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UsersAndPermissions_fieldAccessorTable;
+      internal_static_hbase_pb_UsersAndPermissions_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UsersAndPermissions_UserPermissions_descriptor;
+    internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable;
+      internal_static_hbase_pb_UsersAndPermissions_UserPermissions_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GrantRequest_descriptor;
+    internal_static_hbase_pb_GrantRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GrantRequest_fieldAccessorTable;
+      internal_static_hbase_pb_GrantRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GrantResponse_descriptor;
+    internal_static_hbase_pb_GrantResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GrantResponse_fieldAccessorTable;
+      internal_static_hbase_pb_GrantResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RevokeRequest_descriptor;
+    internal_static_hbase_pb_RevokeRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RevokeRequest_fieldAccessorTable;
+      internal_static_hbase_pb_RevokeRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RevokeResponse_descriptor;
+    internal_static_hbase_pb_RevokeResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RevokeResponse_fieldAccessorTable;
+      internal_static_hbase_pb_RevokeResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetUserPermissionsRequest_descriptor;
+    internal_static_hbase_pb_GetUserPermissionsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetUserPermissionsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_GetUserPermissionsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetUserPermissionsResponse_descriptor;
+    internal_static_hbase_pb_GetUserPermissionsResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetUserPermissionsResponse_fieldAccessorTable;
+      internal_static_hbase_pb_GetUserPermissionsResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_CheckPermissionsRequest_descriptor;
+    internal_static_hbase_pb_CheckPermissionsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_CheckPermissionsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_CheckPermissionsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_CheckPermissionsResponse_descriptor;
+    internal_static_hbase_pb_CheckPermissionsResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_CheckPermissionsResponse_fieldAccessorTable;
+      internal_static_hbase_pb_CheckPermissionsResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -10409,141 +10409,147 @@ public final class AccessControlProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\023AccessControl.proto\032\013HBase.proto\"\250\002\n\nP" +
-      "ermission\022\036\n\004type\030\001 \002(\0162\020.Permission.Typ" +
-      "e\022,\n\021global_permission\030\002 \001(\0132\021.GlobalPer" +
-      "mission\0222\n\024namespace_permission\030\003 \001(\0132\024." +
-      "NamespacePermission\022*\n\020table_permission\030" +
-      "\004 \001(\0132\020.TablePermission\">\n\006Action\022\010\n\004REA" +
-      "D\020\000\022\t\n\005WRITE\020\001\022\010\n\004EXEC\020\002\022\n\n\006CREATE\020\003\022\t\n\005" +
-      "ADMIN\020\004\",\n\004Type\022\n\n\006Global\020\001\022\r\n\tNamespace" +
-      "\020\002\022\t\n\005Table\020\003\"x\n\017TablePermission\022\036\n\ntabl" +
-      "e_name\030\001 \001(\0132\n.TableName\022\016\n\006family\030\002 \001(\014",
-      "\022\021\n\tqualifier\030\003 \001(\014\022\"\n\006action\030\004 \003(\0162\022.Pe" +
-      "rmission.Action\"Q\n\023NamespacePermission\022\026" +
-      "\n\016namespace_name\030\001 \001(\014\022\"\n\006action\030\002 \003(\0162\022" +
-      ".Permission.Action\"6\n\020GlobalPermission\022\"" +
-      "\n\006action\030\001 \003(\0162\022.Permission.Action\"?\n\016Us" +
-      "erPermission\022\014\n\004user\030\001 \002(\014\022\037\n\npermission" +
-      "\030\003 \002(\0132\013.Permission\"\230\001\n\023UsersAndPermissi" +
-      "ons\022>\n\020user_permissions\030\001 \003(\0132$.UsersAnd" +
-      "Permissions.UserPermissions\032A\n\017UserPermi" +
-      "ssions\022\014\n\004user\030\001 \002(\014\022 \n\013permissions\030\002 \003(",
-      "\0132\013.Permission\"8\n\014GrantRequest\022(\n\017user_p" +
-      "ermission\030\001 \002(\0132\017.UserPermission\"\017\n\rGran" +
-      "tResponse\"9\n\rRevokeRequest\022(\n\017user_permi" +
-      "ssion\030\001 \002(\0132\017.UserPermission\"\020\n\016RevokeRe" +
-      "sponse\"s\n\031GetUserPermissionsRequest\022\036\n\004t" +
-      "ype\030\001 \001(\0162\020.Permission.Type\022\036\n\ntable_nam" +
-      "e\030\002 \001(\0132\n.TableName\022\026\n\016namespace_name\030\003 " +
-      "\001(\014\"F\n\032GetUserPermissionsResponse\022(\n\017use" +
-      "r_permission\030\001 \003(\0132\017.UserPermission\":\n\027C" +
-      "heckPermissionsRequest\022\037\n\npermission\030\001 \003",
-      "(\0132\013.Permission\"\032\n\030CheckPermissionsRespo" +
-      "nse2\201\002\n\024AccessControlService\022&\n\005Grant\022\r." +
-      "GrantRequest\032\016.GrantResponse\022)\n\006Revoke\022\016" +
-      ".RevokeRequest\032\017.RevokeResponse\022M\n\022GetUs" +
-      "erPermissions\022\032.GetUserPermissionsReques" +
-      "t\032\033.GetUserPermissionsResponse\022G\n\020CheckP" +
-      "ermissions\022\030.CheckPermissionsRequest\032\031.C" +
-      "heckPermissionsResponseBI\n*org.apache.ha" +
-      "doop.hbase.protobuf.generatedB\023AccessCon" +
-      "trolProtosH\001\210\001\001\240\001\001"
+      "\n\023AccessControl.proto\022\010hbase.pb\032\013HBase.p" +
+      "roto\"\314\002\n\nPermission\022\'\n\004type\030\001 \002(\0162\031.hbas" +
+      "e.pb.Permission.Type\0225\n\021global_permissio" +
+      "n\030\002 \001(\0132\032.hbase.pb.GlobalPermission\022;\n\024n" +
+      "amespace_permission\030\003 \001(\0132\035.hbase.pb.Nam" +
+      "espacePermission\0223\n\020table_permission\030\004 \001" +
+      "(\0132\031.hbase.pb.TablePermission\">\n\006Action\022" +
+      "\010\n\004READ\020\000\022\t\n\005WRITE\020\001\022\010\n\004EXEC\020\002\022\n\n\006CREATE" +
+      "\020\003\022\t\n\005ADMIN\020\004\",\n\004Type\022\n\n\006Global\020\001\022\r\n\tNam" +
+      "espace\020\002\022\t\n\005Table\020\003\"\212\001\n\017TablePermission\022",
+      "\'\n\ntable_name\030\001 \001(\0132\023.hbase.pb.TableName" +
+      "\022\016\n\006family\030\002 \001(\014\022\021\n\tqualifier\030\003 \001(\014\022+\n\006a" +
+      "ction\030\004 \003(\0162\033.hbase.pb.Permission.Action" +
+      "\"Z\n\023NamespacePermission\022\026\n\016namespace_nam" +
+      "e\030\001 \001(\014\022+\n\006action\030\002 \003(\0162\033.hbase.pb.Permi" +
+      "ssion.Action\"?\n\020GlobalPermission\022+\n\006acti" +
+      "on\030\001 \003(\0162\033.hbase.pb.Permission.Action\"H\n" +
+      "\016UserPermission\022\014\n\004user\030\001 \002(\014\022(\n\npermiss" +
+      "ion\030\003 \002(\0132\024.hbase.pb.Permission\"\252\001\n\023User" +
+      "sAndPermissions\022G\n\020user_permissions\030\001 \003(",
+      "\0132-.hbase.pb.UsersAndPermissions.UserPer" +
+      "missions\032J\n\017UserPermissions\022\014\n\004user\030\001 \002(" +
+      "\014\022)\n\013permissions\030\002 \003(\0132\024.hbase.pb.Permis" +
+      "sion\"A\n\014GrantRequest\0221\n\017user_permission\030" +
+      "\001 \002(\0132\030.hbase.pb.UserPermission\"\017\n\rGrant" +
+      "Response\"B\n\rRevokeRequest\0221\n\017user_permis" +
+      "sion\030\001 \002(\0132\030.hbase.pb.UserPermission\"\020\n\016" +
+      "RevokeResponse\"\205\001\n\031GetUserPermissionsReq" +
+      "uest\022\'\n\004type\030\001 \001(\0162\031.hbase.pb.Permission" +
+      ".Type\022\'\n\ntable_name\030\002 \001(\0132\023.hbase.pb.Tab",
+      "leName\022\026\n\016namespace_name\030\003 \001(\014\"O\n\032GetUse" +
+      "rPermissionsResponse\0221\n\017user_permission\030" +
+      "\001 \003(\0132\030.hbase.pb.UserPermission\"C\n\027Check" +
+      "PermissionsRequest\022(\n\npermission\030\001 \003(\0132\024" +
+      ".hbase.pb.Permission\"\032\n\030CheckPermissions" +
+      "Response2\311\002\n\024AccessControlService\0228\n\005Gra" +
+      "nt\022\026.hbase.pb.GrantRequest\032\027.hbase.pb.Gr" +
+      "antResponse\022;\n\006Revoke\022\027.hbase.pb.RevokeR" +
+      "equest\032\030.hbase.pb.RevokeResponse\022_\n\022GetU" +
+      "serPermissions\022#.hbase.pb.GetUserPermiss",
+      "ionsRequest\032$.hbase.pb.GetUserPermission" +
+      "sResponse\022Y\n\020CheckPermissions\022!.hbase.pb" +
+      ".CheckPermissionsRequest\032\".hbase.pb.Chec" +
+      "kPermissionsResponseBI\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\023AccessContro" +
+      "lProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_Permission_descriptor =
+          internal_static_hbase_pb_Permission_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_Permission_fieldAccessorTable = new
+          internal_static_hbase_pb_Permission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Permission_descriptor,
+              internal_static_hbase_pb_Permission_descriptor,
               new java.lang.String[] { "Type", "GlobalPermission", "NamespacePermission", "TablePermission", });
-          internal_static_TablePermission_descriptor =
+          internal_static_hbase_pb_TablePermission_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_TablePermission_fieldAccessorTable = new
+          internal_static_hbase_pb_TablePermission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TablePermission_descriptor,
+              internal_static_hbase_pb_TablePermission_descriptor,
               new java.lang.String[] { "TableName", "Family", "Qualifier", "Action", });
-          internal_static_NamespacePermission_descriptor =
+          internal_static_hbase_pb_NamespacePermission_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_NamespacePermission_fieldAccessorTable = new
+          internal_static_hbase_pb_NamespacePermission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_NamespacePermission_descriptor,
+              internal_static_hbase_pb_NamespacePermission_descriptor,
               new java.lang.String[] { "NamespaceName", "Action", });
-          internal_static_GlobalPermission_descriptor =
+          internal_static_hbase_pb_GlobalPermission_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_GlobalPermission_fieldAccessorTable = new
+          internal_static_hbase_pb_GlobalPermission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GlobalPermission_descriptor,
+              internal_static_hbase_pb_GlobalPermission_descriptor,
               new java.lang.String[] { "Action", });
-          internal_static_UserPermission_descriptor =
+          internal_static_hbase_pb_UserPermission_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_UserPermission_fieldAccessorTable = new
+          internal_static_hbase_pb_UserPermission_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UserPermission_descriptor,
+              internal_static_hbase_pb_UserPermission_descriptor,
               new java.lang.String[] { "User", "Permission", });
-          internal_static_UsersAndPermissions_descriptor =
+          internal_static_hbase_pb_UsersAndPermissions_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_UsersAndPermissions_fieldAccessorTable = new
+          internal_static_hbase_pb_UsersAndPermissions_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UsersAndPermissions_descriptor,
+              internal_static_hbase_pb_UsersAndPermissions_descriptor,
               new java.lang.String[] { "UserPermissions", });
-          internal_static_UsersAndPermissions_UserPermissions_descriptor =
-            internal_static_UsersAndPermissions_descriptor.getNestedTypes().get(0);
-          internal_static_UsersAndPermissions_UserPermissions_fieldAccessorTable = new
+          internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor =
+            internal_static_hbase_pb_UsersAndPermissions_descriptor.getNestedTypes().get(0);
+          internal_static_hbase_pb_UsersAndPermissions_UserPermissions_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UsersAndPermissions_UserPermissions_descriptor,
+              internal_static_hbase_pb_UsersAndPermissions_UserPermissions_descriptor,
               new java.lang.String[] { "User", "Permissions", });
-          internal_static_GrantRequest_descriptor =
+          internal_static_hbase_pb_GrantRequest_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_GrantRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_GrantRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GrantRequest_descriptor,
+              internal_static_hbase_pb_GrantRequest_descriptor,
               new java.lang.String[] { "UserPermission", });
-          internal_static_GrantResponse_descriptor =
+          internal_static_hbase_pb_GrantResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
-          internal_static_GrantResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_GrantResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GrantResponse_descriptor,
+              internal_static_hbase_pb_GrantResponse_descriptor,
               new java.lang.String[] { });
-          internal_static_RevokeRequest_descriptor =
+          internal_static_hbase_pb_RevokeRequest_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_RevokeRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_RevokeRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RevokeRequest_descriptor,
+              internal_static_hbase_pb_RevokeRequest_descriptor,
               new java.lang.String[] { "UserPermission", });
-          internal_static_RevokeResponse_descriptor =
+          internal_static_hbase_pb_RevokeResponse_descriptor =
             getDescriptor().getMessageTypes().get(9);
-          internal_static_RevokeResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_RevokeResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RevokeResponse_descriptor,
+              internal_static_hbase_pb_RevokeResponse_descriptor,
               new java.lang.String[] { });
-          internal_static_GetUserPermissionsRequest_descriptor =
+          internal_static_hbase_pb_GetUserPermissionsRequest_descriptor =
             getDescriptor().getMessageTypes().get(10);
-          internal_static_GetUserPermissionsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_GetUserPermissionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetUserPermissionsRequest_descriptor,
+              internal_static_hbase_pb_GetUserPermissionsRequest_descriptor,
               new java.lang.String[] { "Type", "TableName", "NamespaceName", });
-          internal_static_GetUserPermissionsResponse_descriptor =
+          internal_static_hbase_pb_GetUserPermissionsResponse_descriptor =
             getDescriptor().getMessageTypes().get(11);
-          internal_static_GetUserPermissionsResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_GetUserPermissionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetUserPermissionsResponse_descriptor,
+              internal_static_hbase_pb_GetUserPermissionsResponse_descriptor,
               new java.lang.String[] { "UserPermission", });
-          internal_static_CheckPermissionsRequest_descriptor =
+          internal_static_hbase_pb_CheckPermissionsRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
-          internal_static_CheckPermissionsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_CheckPermissionsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_CheckPermissionsRequest_descriptor,
+              internal_static_hbase_pb_CheckPermissionsRequest_descriptor,
               new java.lang.String[] { "Permission", });
-          internal_static_CheckPermissionsResponse_descriptor =
+          internal_static_hbase_pb_CheckPermissionsResponse_descriptor =
             getDescriptor().getMessageTypes().get(13);
-          internal_static_CheckPermissionsResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_CheckPermissionsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_CheckPermissionsResponse_descriptor,
+              internal_static_hbase_pb_CheckPermissionsResponse_descriptor,
               new java.lang.String[] { });
           return null;
         }

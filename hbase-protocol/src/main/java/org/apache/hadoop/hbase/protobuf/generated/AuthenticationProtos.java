@@ -42,7 +42,7 @@ public final class AuthenticationProtos {
     com.google.protobuf.ByteString getKey();
   }
   /**
-   * Protobuf type {@code AuthenticationKey}
+   * Protobuf type {@code hbase.pb.AuthenticationKey}
    */
   public static final class AuthenticationKey extends
       com.google.protobuf.GeneratedMessage
@@ -121,12 +121,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_AuthenticationKey_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_AuthenticationKey_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_AuthenticationKey_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_AuthenticationKey_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKey.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKey.Builder.class);
     }
@@ -389,19 +389,19 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code AuthenticationKey}
+     * Protobuf type {@code hbase.pb.AuthenticationKey}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKeyOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_AuthenticationKey_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_AuthenticationKey_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_AuthenticationKey_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_AuthenticationKey_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKey.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKey.Builder.class);
       }
@@ -441,7 +441,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_AuthenticationKey_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_AuthenticationKey_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.AuthenticationKey getDefaultInstanceForType() {
@@ -638,7 +638,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:AuthenticationKey)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.AuthenticationKey)
     }
 
     static {
@@ -646,19 +646,19 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:AuthenticationKey)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AuthenticationKey)
   }
 
   public interface TokenIdentifierOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // required .TokenIdentifier.Kind kind = 1;
+    // required .hbase.pb.TokenIdentifier.Kind kind = 1;
     /**
-     * <code>required .TokenIdentifier.Kind kind = 1;</code>
+     * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
      */
     boolean hasKind();
     /**
-     * <code>required .TokenIdentifier.Kind kind = 1;</code>
+     * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind getKind();
 
@@ -713,7 +713,7 @@ public final class AuthenticationProtos {
     long getSequenceNumber();
   }
   /**
-   * Protobuf type {@code TokenIdentifier}
+   * Protobuf type {@code hbase.pb.TokenIdentifier}
    */
   public static final class TokenIdentifier extends
       com.google.protobuf.GeneratedMessage
@@ -813,12 +813,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenIdentifier_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_TokenIdentifier_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenIdentifier_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_TokenIdentifier_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Builder.class);
     }
@@ -839,7 +839,7 @@ public final class AuthenticationProtos {
     }
 
     /**
-     * Protobuf enum {@code TokenIdentifier.Kind}
+     * Protobuf enum {@code hbase.pb.TokenIdentifier.Kind}
      */
     public enum Kind
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -908,21 +908,21 @@ public final class AuthenticationProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:TokenIdentifier.Kind)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.TokenIdentifier.Kind)
     }
 
     private int bitField0_;
-    // required .TokenIdentifier.Kind kind = 1;
+    // required .hbase.pb.TokenIdentifier.Kind kind = 1;
     public static final int KIND_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind kind_;
     /**
-     * <code>required .TokenIdentifier.Kind kind = 1;</code>
+     * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
      */
     public boolean hasKind() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required .TokenIdentifier.Kind kind = 1;</code>
+     * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind getKind() {
       return kind_;
@@ -1253,19 +1253,19 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code TokenIdentifier}
+     * Protobuf type {@code hbase.pb.TokenIdentifier}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifierOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenIdentifier_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_TokenIdentifier_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenIdentifier_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_TokenIdentifier_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Builder.class);
       }
@@ -1311,7 +1311,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_TokenIdentifier_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_TokenIdentifier_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier getDefaultInstanceForType() {
@@ -1427,22 +1427,22 @@ public final class AuthenticationProtos {
       }
       private int bitField0_;
 
-      // required .TokenIdentifier.Kind kind = 1;
+      // required .hbase.pb.TokenIdentifier.Kind kind = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind kind_ = org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN;
       /**
-       * <code>required .TokenIdentifier.Kind kind = 1;</code>
+       * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
        */
       public boolean hasKind() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required .TokenIdentifier.Kind kind = 1;</code>
+       * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind getKind() {
         return kind_;
       }
       /**
-       * <code>required .TokenIdentifier.Kind kind = 1;</code>
+       * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
        */
       public Builder setKind(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenIdentifier.Kind value) {
         if (value == null) {
@@ -1454,7 +1454,7 @@ public final class AuthenticationProtos {
         return this;
       }
       /**
-       * <code>required .TokenIdentifier.Kind kind = 1;</code>
+       * <code>required .hbase.pb.TokenIdentifier.Kind kind = 1;</code>
        */
       public Builder clearKind() {
         bitField0_ = (bitField0_ & ~0x00000001);
@@ -1631,7 +1631,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:TokenIdentifier)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TokenIdentifier)
     }
 
     static {
@@ -1639,7 +1639,7 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:TokenIdentifier)
+    // @@protoc_insertion_point(class_scope:hbase.pb.TokenIdentifier)
   }
 
   public interface TokenOrBuilder
@@ -1688,7 +1688,7 @@ public final class AuthenticationProtos {
     com.google.protobuf.ByteString getService();
   }
   /**
-   * Protobuf type {@code Token}
+   * Protobuf type {@code hbase.pb.Token}
    *
    * <pre>
    * Serialization of the org.apache.hadoop.security.token.Token class
@@ -1772,12 +1772,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_Token_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_Token_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_Token_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_Token_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder.class);
     }
@@ -2040,7 +2040,7 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Token}
+     * Protobuf type {@code hbase.pb.Token}
      *
      * <pre>
      * Serialization of the org.apache.hadoop.security.token.Token class
@@ -2052,12 +2052,12 @@ public final class AuthenticationProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_Token_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_Token_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_Token_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_Token_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder.class);
       }
@@ -2097,7 +2097,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_Token_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_Token_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token getDefaultInstanceForType() {
@@ -2312,7 +2312,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Token)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Token)
     }
 
     static {
@@ -2320,14 +2320,14 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Token)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Token)
   }
 
   public interface GetAuthenticationTokenRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code GetAuthenticationTokenRequest}
+   * Protobuf type {@code hbase.pb.GetAuthenticationTokenRequest}
    *
    * <pre>
    * RPC request &amp; response messages
@@ -2394,12 +2394,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.Builder.class);
     }
@@ -2550,7 +2550,7 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetAuthenticationTokenRequest}
+     * Protobuf type {@code hbase.pb.GetAuthenticationTokenRequest}
      *
      * <pre>
      * RPC request &amp; response messages
@@ -2561,12 +2561,12 @@ public final class AuthenticationProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest.Builder.class);
       }
@@ -2600,7 +2600,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenRequest getDefaultInstanceForType() {
@@ -2658,7 +2658,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetAuthenticationTokenRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetAuthenticationTokenRequest)
     }
 
     static {
@@ -2666,28 +2666,28 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetAuthenticationTokenRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetAuthenticationTokenRequest)
   }
 
   public interface GetAuthenticationTokenResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // optional .Token token = 1;
+    // optional .hbase.pb.Token token = 1;
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     boolean hasToken();
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token getToken();
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder getTokenOrBuilder();
   }
   /**
-   * Protobuf type {@code GetAuthenticationTokenResponse}
+   * Protobuf type {@code hbase.pb.GetAuthenticationTokenResponse}
    */
   public static final class GetAuthenticationTokenResponse extends
       com.google.protobuf.GeneratedMessage
@@ -2764,12 +2764,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.Builder.class);
     }
@@ -2790,23 +2790,23 @@ public final class AuthenticationProtos {
     }
 
     private int bitField0_;
-    // optional .Token token = 1;
+    // optional .hbase.pb.Token token = 1;
     public static final int TOKEN_FIELD_NUMBER = 1;
     private org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token token_;
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     public boolean hasToken() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token getToken() {
       return token_;
     }
     /**
-     * <code>optional .Token token = 1;</code>
+     * <code>optional .hbase.pb.Token token = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder getTokenOrBuilder() {
       return token_;
@@ -2960,19 +2960,19 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetAuthenticationTokenResponse}
+     * Protobuf type {@code hbase.pb.GetAuthenticationTokenResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse.Builder.class);
       }
@@ -3013,7 +3013,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_GetAuthenticationTokenResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse getDefaultInstanceForType() {
@@ -3086,18 +3086,18 @@ public final class AuthenticationProtos {
       }
       private int bitField0_;
 
-      // optional .Token token = 1;
+      // optional .hbase.pb.Token token = 1;
       private org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token token_ = org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.getDefaultInstance();
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder> tokenBuilder_;
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public boolean hasToken() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token getToken() {
         if (tokenBuilder_ == null) {
@@ -3107,7 +3107,7 @@ public final class AuthenticationProtos {
         }
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public Builder setToken(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token value) {
         if (tokenBuilder_ == null) {
@@ -3123,7 +3123,7 @@ public final class AuthenticationProtos {
         return this;
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public Builder setToken(
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder builderForValue) {
@@ -3137,7 +3137,7 @@ public final class AuthenticationProtos {
         return this;
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public Builder mergeToken(org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token value) {
         if (tokenBuilder_ == null) {
@@ -3156,7 +3156,7 @@ public final class AuthenticationProtos {
         return this;
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public Builder clearToken() {
         if (tokenBuilder_ == null) {
@@ -3169,7 +3169,7 @@ public final class AuthenticationProtos {
         return this;
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder getTokenBuilder() {
         bitField0_ |= 0x00000001;
@@ -3177,7 +3177,7 @@ public final class AuthenticationProtos {
         return getTokenFieldBuilder().getBuilder();
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder getTokenOrBuilder() {
         if (tokenBuilder_ != null) {
@@ -3187,7 +3187,7 @@ public final class AuthenticationProtos {
         }
       }
       /**
-       * <code>optional .Token token = 1;</code>
+       * <code>optional .hbase.pb.Token token = 1;</code>
        */
       private com.google.protobuf.SingleFieldBuilder<
           org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.Token.Builder, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.TokenOrBuilder> 
@@ -3203,7 +3203,7 @@ public final class AuthenticationProtos {
         return tokenBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetAuthenticationTokenResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetAuthenticationTokenResponse)
     }
 
     static {
@@ -3211,14 +3211,14 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetAuthenticationTokenResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetAuthenticationTokenResponse)
   }
 
   public interface WhoAmIRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code WhoAmIRequest}
+   * Protobuf type {@code hbase.pb.WhoAmIRequest}
    */
   public static final class WhoAmIRequest extends
       com.google.protobuf.GeneratedMessage
@@ -3281,12 +3281,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.Builder.class);
     }
@@ -3437,19 +3437,19 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code WhoAmIRequest}
+     * Protobuf type {@code hbase.pb.WhoAmIRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest.Builder.class);
       }
@@ -3483,7 +3483,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIRequest getDefaultInstanceForType() {
@@ -3541,7 +3541,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:WhoAmIRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.WhoAmIRequest)
     }
 
     static {
@@ -3549,7 +3549,7 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:WhoAmIRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.WhoAmIRequest)
   }
 
   public interface WhoAmIResponseOrBuilder
@@ -3586,7 +3586,7 @@ public final class AuthenticationProtos {
         getAuthMethodBytes();
   }
   /**
-   * Protobuf type {@code WhoAmIResponse}
+   * Protobuf type {@code hbase.pb.WhoAmIResponse}
    */
   public static final class WhoAmIResponse extends
       com.google.protobuf.GeneratedMessage
@@ -3660,12 +3660,12 @@ public final class AuthenticationProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.Builder.class);
     }
@@ -3937,19 +3937,19 @@ public final class AuthenticationProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code WhoAmIResponse}
+     * Protobuf type {@code hbase.pb.WhoAmIResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.class, org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse.Builder.class);
       }
@@ -3987,7 +3987,7 @@ public final class AuthenticationProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_WhoAmIResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.internal_static_hbase_pb_WhoAmIResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.WhoAmIResponse getDefaultInstanceForType() {
@@ -4215,7 +4215,7 @@ public final class AuthenticationProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:WhoAmIResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.WhoAmIResponse)
     }
 
     static {
@@ -4223,11 +4223,11 @@ public final class AuthenticationProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:WhoAmIResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.WhoAmIResponse)
   }
 
   /**
-   * Protobuf service {@code AuthenticationService}
+   * Protobuf service {@code hbase.pb.AuthenticationService}
    *
    * <pre>
    * RPC service
@@ -4239,7 +4239,7 @@ public final class AuthenticationProtos {
 
     public interface Interface {
       /**
-       * <code>rpc GetAuthenticationToken(.GetAuthenticationTokenRequest) returns (.GetAuthenticationTokenResponse);</code>
+       * <code>rpc GetAuthenticationToken(.hbase.pb.GetAuthenticationTokenRequest) returns (.hbase.pb.GetAuthenticationTokenResponse);</code>
        */
       public abstract void getAuthenticationToken(
           com.google.protobuf.RpcController controller,
@@ -4247,7 +4247,7 @@ public final class AuthenticationProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done);
 
       /**
-       * <code>rpc WhoAmI(.WhoAmIRequest) returns (.WhoAmIResponse);</code>
+       * <code>rpc WhoAmI(.hbase.pb.WhoAmIRequest) returns (.hbase.pb.WhoAmIResponse);</code>
        */
       public abstract void whoAmI(
           com.google.protobuf.RpcController controller,
@@ -4346,7 +4346,7 @@ public final class AuthenticationProtos {
     }
 
     /**
-     * <code>rpc GetAuthenticationToken(.GetAuthenticationTokenRequest) returns (.GetAuthenticationTokenResponse);</code>
+     * <code>rpc GetAuthenticationToken(.hbase.pb.GetAuthenticationTokenRequest) returns (.hbase.pb.GetAuthenticationTokenResponse);</code>
      */
     public abstract void getAuthenticationToken(
         com.google.protobuf.RpcController controller,
@@ -4354,7 +4354,7 @@ public final class AuthenticationProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos.GetAuthenticationTokenResponse> done);
 
     /**
-     * <code>rpc WhoAmI(.WhoAmIRequest) returns (.WhoAmIResponse);</code>
+     * <code>rpc WhoAmI(.hbase.pb.WhoAmIRequest) returns (.hbase.pb.WhoAmIResponse);</code>
      */
     public abstract void whoAmI(
         com.google.protobuf.RpcController controller,
@@ -4530,44 +4530,44 @@ public final class AuthenticationProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:AuthenticationService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.AuthenticationService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_AuthenticationKey_descriptor;
+    internal_static_hbase_pb_AuthenticationKey_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_AuthenticationKey_fieldAccessorTable;
+      internal_static_hbase_pb_AuthenticationKey_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_TokenIdentifier_descriptor;
+    internal_static_hbase_pb_TokenIdentifier_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_TokenIdentifier_fieldAccessorTable;
+      internal_static_hbase_pb_TokenIdentifier_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Token_descriptor;
+    internal_static_hbase_pb_Token_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Token_fieldAccessorTable;
+      internal_static_hbase_pb_Token_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetAuthenticationTokenRequest_descriptor;
+    internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetAuthenticationTokenRequest_fieldAccessorTable;
+      internal_static_hbase_pb_GetAuthenticationTokenRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetAuthenticationTokenResponse_descriptor;
+    internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetAuthenticationTokenResponse_fieldAccessorTable;
+      internal_static_hbase_pb_GetAuthenticationTokenResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_WhoAmIRequest_descriptor;
+    internal_static_hbase_pb_WhoAmIRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_WhoAmIRequest_fieldAccessorTable;
+      internal_static_hbase_pb_WhoAmIRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_WhoAmIResponse_descriptor;
+    internal_static_hbase_pb_WhoAmIResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_WhoAmIResponse_fieldAccessorTable;
+      internal_static_hbase_pb_WhoAmIResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -4577,72 +4577,74 @@ public final class AuthenticationProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\024Authentication.proto\"E\n\021Authentication" +
-      "Key\022\n\n\002id\030\001 \002(\005\022\027\n\017expiration_date\030\002 \002(\003" +
-      "\022\013\n\003key\030\003 \002(\014\"\274\001\n\017TokenIdentifier\022#\n\004kin" +
-      "d\030\001 \002(\0162\025.TokenIdentifier.Kind\022\020\n\010userna" +
-      "me\030\002 \002(\014\022\016\n\006key_id\030\003 \002(\005\022\022\n\nissue_date\030\004" +
-      " \001(\003\022\027\n\017expiration_date\030\005 \001(\003\022\027\n\017sequenc" +
-      "e_number\030\006 \001(\003\"\034\n\004Kind\022\024\n\020HBASE_AUTH_TOK" +
-      "EN\020\000\">\n\005Token\022\022\n\nidentifier\030\001 \001(\014\022\020\n\010pas" +
-      "sword\030\002 \001(\014\022\017\n\007service\030\003 \001(\014\"\037\n\035GetAuthe" +
-      "nticationTokenRequest\"7\n\036GetAuthenticati",
-      "onTokenResponse\022\025\n\005token\030\001 \001(\0132\006.Token\"\017" +
-      "\n\rWhoAmIRequest\"7\n\016WhoAmIResponse\022\020\n\010use" +
-      "rname\030\001 \001(\t\022\023\n\013auth_method\030\002 \001(\t2\235\001\n\025Aut" +
-      "henticationService\022Y\n\026GetAuthenticationT" +
-      "oken\022\036.GetAuthenticationTokenRequest\032\037.G" +
-      "etAuthenticationTokenResponse\022)\n\006WhoAmI\022" +
-      "\016.WhoAmIRequest\032\017.WhoAmIResponseBJ\n*org." +
-      "apache.hadoop.hbase.protobuf.generatedB\024" +
-      "AuthenticationProtosH\001\210\001\001\240\001\001"
+      "\n\024Authentication.proto\022\010hbase.pb\"E\n\021Auth" +
+      "enticationKey\022\n\n\002id\030\001 \002(\005\022\027\n\017expiration_" +
+      "date\030\002 \002(\003\022\013\n\003key\030\003 \002(\014\"\305\001\n\017TokenIdentif" +
+      "ier\022,\n\004kind\030\001 \002(\0162\036.hbase.pb.TokenIdenti" +
+      "fier.Kind\022\020\n\010username\030\002 \002(\014\022\016\n\006key_id\030\003 " +
+      "\002(\005\022\022\n\nissue_date\030\004 \001(\003\022\027\n\017expiration_da" +
+      "te\030\005 \001(\003\022\027\n\017sequence_number\030\006 \001(\003\"\034\n\004Kin" +
+      "d\022\024\n\020HBASE_AUTH_TOKEN\020\000\">\n\005Token\022\022\n\niden" +
+      "tifier\030\001 \001(\014\022\020\n\010password\030\002 \001(\014\022\017\n\007servic" +
+      "e\030\003 \001(\014\"\037\n\035GetAuthenticationTokenRequest",
+      "\"@\n\036GetAuthenticationTokenResponse\022\036\n\005to" +
+      "ken\030\001 \001(\0132\017.hbase.pb.Token\"\017\n\rWhoAmIRequ" +
+      "est\"7\n\016WhoAmIResponse\022\020\n\010username\030\001 \001(\t\022" +
+      "\023\n\013auth_method\030\002 \001(\t2\301\001\n\025AuthenticationS" +
+      "ervice\022k\n\026GetAuthenticationToken\022\'.hbase" +
+      ".pb.GetAuthenticationTokenRequest\032(.hbas" +
+      "e.pb.GetAuthenticationTokenResponse\022;\n\006W" +
+      "hoAmI\022\027.hbase.pb.WhoAmIRequest\032\030.hbase.p" +
+      "b.WhoAmIResponseBJ\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\024AuthenticationPr",
+      "otosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_AuthenticationKey_descriptor =
+          internal_static_hbase_pb_AuthenticationKey_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_AuthenticationKey_fieldAccessorTable = new
+          internal_static_hbase_pb_AuthenticationKey_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_AuthenticationKey_descriptor,
+              internal_static_hbase_pb_AuthenticationKey_descriptor,
               new java.lang.String[] { "Id", "ExpirationDate", "Key", });
-          internal_static_TokenIdentifier_descriptor =
+          internal_static_hbase_pb_TokenIdentifier_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_TokenIdentifier_fieldAccessorTable = new
+          internal_static_hbase_pb_TokenIdentifier_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_TokenIdentifier_descriptor,
+              internal_static_hbase_pb_TokenIdentifier_descriptor,
               new java.lang.String[] { "Kind", "Username", "KeyId", "IssueDate", "ExpirationDate", "SequenceNumber", });
-          internal_static_Token_descriptor =
+          internal_static_hbase_pb_Token_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_Token_fieldAccessorTable = new
+          internal_static_hbase_pb_Token_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Token_descriptor,
+              internal_static_hbase_pb_Token_descriptor,
               new java.lang.String[] { "Identifier", "Password", "Service", });
-          internal_static_GetAuthenticationTokenRequest_descriptor =
+          internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_GetAuthenticationTokenRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_GetAuthenticationTokenRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetAuthenticationTokenRequest_descriptor,
+              internal_static_hbase_pb_GetAuthenticationTokenRequest_descriptor,
               new java.lang.String[] { });
-          internal_static_GetAuthenticationTokenResponse_descriptor =
+          internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_GetAuthenticationTokenResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_GetAuthenticationTokenResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetAuthenticationTokenResponse_descriptor,
+              internal_static_hbase_pb_GetAuthenticationTokenResponse_descriptor,
               new java.lang.String[] { "Token", });
-          internal_static_WhoAmIRequest_descriptor =
+          internal_static_hbase_pb_WhoAmIRequest_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_WhoAmIRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_WhoAmIRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_WhoAmIRequest_descriptor,
+              internal_static_hbase_pb_WhoAmIRequest_descriptor,
               new java.lang.String[] { });
-          internal_static_WhoAmIResponse_descriptor =
+          internal_static_hbase_pb_WhoAmIResponse_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_WhoAmIResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_WhoAmIResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_WhoAmIResponse_descriptor,
+              internal_static_hbase_pb_WhoAmIResponse_descriptor,
               new java.lang.String[] { "Username", "AuthMethod", });
           return null;
         }

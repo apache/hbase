@@ -17,6 +17,7 @@
  */
 
 // This file contains protocol buffers that are used for ClustStatus
+package hbase.pb;
 
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "ClusterStatusProtos";

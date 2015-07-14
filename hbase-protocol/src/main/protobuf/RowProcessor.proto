@@ -20,6 +20,8 @@
  * See BaseRowProcessorEndpoint for the implementation.
  * See HRegion#processRowsWithLocks() for details.
  */
+package hbase.pb;
+
 option java_package = "org.apache.hadoop.hbase.protobuf.generated";
 option java_outer_classname = "RowProcessorProtos";
 option java_generic_services = true;

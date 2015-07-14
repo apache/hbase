@@ -11,33 +11,33 @@ public final class VisibilityLabelsProtos {
   public interface VisibilityLabelsRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .VisibilityLabel visLabel = 1;
+    // repeated .hbase.pb.VisibilityLabel visLabel = 1;
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> 
         getVisLabelList();
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel getVisLabel(int index);
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     int getVisLabelCount();
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder> 
         getVisLabelOrBuilderList();
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder getVisLabelOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code VisibilityLabelsRequest}
+   * Protobuf type {@code hbase.pb.VisibilityLabelsRequest}
    */
   public static final class VisibilityLabelsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -112,12 +112,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest.Builder.class);
     }
@@ -137,36 +137,36 @@ public final class VisibilityLabelsProtos {
       return PARSER;
     }
 
-    // repeated .VisibilityLabel visLabel = 1;
+    // repeated .hbase.pb.VisibilityLabel visLabel = 1;
     public static final int VISLABEL_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> visLabel_;
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> getVisLabelList() {
       return visLabel_;
     }
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder> 
         getVisLabelOrBuilderList() {
       return visLabel_;
     }
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     public int getVisLabelCount() {
       return visLabel_.size();
     }
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel getVisLabel(int index) {
       return visLabel_.get(index);
     }
     /**
-     * <code>repeated .VisibilityLabel visLabel = 1;</code>
+     * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder getVisLabelOrBuilder(
         int index) {
@@ -324,19 +324,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code VisibilityLabelsRequest}
+     * Protobuf type {@code hbase.pb.VisibilityLabelsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest.Builder.class);
       }
@@ -377,7 +377,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsRequest getDefaultInstanceForType() {
@@ -478,7 +478,7 @@ public final class VisibilityLabelsProtos {
       }
       private int bitField0_;
 
-      // repeated .VisibilityLabel visLabel = 1;
+      // repeated .hbase.pb.VisibilityLabel visLabel = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> visLabel_ =
         java.util.Collections.emptyList();
       private void ensureVisLabelIsMutable() {
@@ -492,7 +492,7 @@ public final class VisibilityLabelsProtos {
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder> visLabelBuilder_;
 
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> getVisLabelList() {
         if (visLabelBuilder_ == null) {
@@ -502,7 +502,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public int getVisLabelCount() {
         if (visLabelBuilder_ == null) {
@@ -512,7 +512,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel getVisLabel(int index) {
         if (visLabelBuilder_ == null) {
@@ -522,7 +522,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder setVisLabel(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel value) {
@@ -539,7 +539,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder setVisLabel(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder builderForValue) {
@@ -553,7 +553,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder addVisLabel(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel value) {
         if (visLabelBuilder_ == null) {
@@ -569,7 +569,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder addVisLabel(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel value) {
@@ -586,7 +586,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder addVisLabel(
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder builderForValue) {
@@ -600,7 +600,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder addVisLabel(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder builderForValue) {
@@ -614,7 +614,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder addAllVisLabel(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel> values) {
@@ -628,7 +628,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder clearVisLabel() {
         if (visLabelBuilder_ == null) {
@@ -641,7 +641,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public Builder removeVisLabel(int index) {
         if (visLabelBuilder_ == null) {
@@ -654,14 +654,14 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder getVisLabelBuilder(
           int index) {
         return getVisLabelFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder getVisLabelOrBuilder(
           int index) {
@@ -671,7 +671,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder> 
            getVisLabelOrBuilderList() {
@@ -682,14 +682,14 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder addVisLabelBuilder() {
         return getVisLabelFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.getDefaultInstance());
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder addVisLabelBuilder(
           int index) {
@@ -697,7 +697,7 @@ public final class VisibilityLabelsProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.getDefaultInstance());
       }
       /**
-       * <code>repeated .VisibilityLabel visLabel = 1;</code>
+       * <code>repeated .hbase.pb.VisibilityLabel visLabel = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder> 
            getVisLabelBuilderList() {
@@ -718,7 +718,7 @@ public final class VisibilityLabelsProtos {
         return visLabelBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:VisibilityLabelsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.VisibilityLabelsRequest)
     }
 
     static {
@@ -726,7 +726,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:VisibilityLabelsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.VisibilityLabelsRequest)
   }
 
   public interface VisibilityLabelOrBuilder
@@ -753,7 +753,7 @@ public final class VisibilityLabelsProtos {
     int getOrdinal();
   }
   /**
-   * Protobuf type {@code VisibilityLabel}
+   * Protobuf type {@code hbase.pb.VisibilityLabel}
    */
   public static final class VisibilityLabel extends
       com.google.protobuf.GeneratedMessage
@@ -827,12 +827,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabel_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabel_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabel_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabel_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder.class);
     }
@@ -1054,19 +1054,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code VisibilityLabel}
+     * Protobuf type {@code hbase.pb.VisibilityLabel}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabel_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabel_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabel_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabel_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel.Builder.class);
       }
@@ -1104,7 +1104,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabel_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabel_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabel getDefaultInstanceForType() {
@@ -1253,7 +1253,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:VisibilityLabel)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.VisibilityLabel)
     }
 
     static {
@@ -1261,39 +1261,39 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:VisibilityLabel)
+    // @@protoc_insertion_point(class_scope:hbase.pb.VisibilityLabel)
   }
 
   public interface VisibilityLabelsResponseOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .RegionActionResult result = 1;
+    // repeated .hbase.pb.RegionActionResult result = 1;
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> 
         getResultList();
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getResult(int index);
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     int getResultCount();
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
         getResultOrBuilderList();
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getResultOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code VisibilityLabelsResponse}
+   * Protobuf type {@code hbase.pb.VisibilityLabelsResponse}
    */
   public static final class VisibilityLabelsResponse extends
       com.google.protobuf.GeneratedMessage
@@ -1368,12 +1368,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.Builder.class);
     }
@@ -1393,36 +1393,36 @@ public final class VisibilityLabelsProtos {
       return PARSER;
     }
 
-    // repeated .RegionActionResult result = 1;
+    // repeated .hbase.pb.RegionActionResult result = 1;
     public static final int RESULT_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> result_;
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> getResultList() {
       return result_;
     }
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
         getResultOrBuilderList() {
       return result_;
     }
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     public int getResultCount() {
       return result_.size();
     }
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getResult(int index) {
       return result_.get(index);
     }
     /**
-     * <code>repeated .RegionActionResult result = 1;</code>
+     * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getResultOrBuilder(
         int index) {
@@ -1580,19 +1580,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code VisibilityLabelsResponse}
+     * Protobuf type {@code hbase.pb.VisibilityLabelsResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse.Builder.class);
       }
@@ -1633,7 +1633,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_VisibilityLabelsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_VisibilityLabelsResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse getDefaultInstanceForType() {
@@ -1734,7 +1734,7 @@ public final class VisibilityLabelsProtos {
       }
       private int bitField0_;
 
-      // repeated .RegionActionResult result = 1;
+      // repeated .hbase.pb.RegionActionResult result = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> result_ =
         java.util.Collections.emptyList();
       private void ensureResultIsMutable() {
@@ -1748,7 +1748,7 @@ public final class VisibilityLabelsProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> resultBuilder_;
 
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> getResultList() {
         if (resultBuilder_ == null) {
@@ -1758,7 +1758,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public int getResultCount() {
         if (resultBuilder_ == null) {
@@ -1768,7 +1768,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult getResult(int index) {
         if (resultBuilder_ == null) {
@@ -1778,7 +1778,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder setResult(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
@@ -1795,7 +1795,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder setResult(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
@@ -1809,7 +1809,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder addResult(org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
         if (resultBuilder_ == null) {
@@ -1825,7 +1825,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder addResult(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult value) {
@@ -1842,7 +1842,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder addResult(
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
@@ -1856,7 +1856,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder addResult(
           int index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder builderForValue) {
@@ -1870,7 +1870,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder addAllResult(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult> values) {
@@ -1884,7 +1884,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder clearResult() {
         if (resultBuilder_ == null) {
@@ -1897,7 +1897,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public Builder removeResult(int index) {
         if (resultBuilder_ == null) {
@@ -1910,14 +1910,14 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder getResultBuilder(
           int index) {
         return getResultFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder getResultOrBuilder(
           int index) {
@@ -1927,7 +1927,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResultOrBuilder> 
            getResultOrBuilderList() {
@@ -1938,14 +1938,14 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder addResultBuilder() {
         return getResultFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder addResultBuilder(
           int index) {
@@ -1953,7 +1953,7 @@ public final class VisibilityLabelsProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.getDefaultInstance());
       }
       /**
-       * <code>repeated .RegionActionResult result = 1;</code>
+       * <code>repeated .hbase.pb.RegionActionResult result = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult.Builder> 
            getResultBuilderList() {
@@ -1974,7 +1974,7 @@ public final class VisibilityLabelsProtos {
         return resultBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:VisibilityLabelsResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.VisibilityLabelsResponse)
     }
 
     static {
@@ -1982,7 +1982,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:VisibilityLabelsResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.VisibilityLabelsResponse)
   }
 
   public interface SetAuthsRequestOrBuilder
@@ -2013,7 +2013,7 @@ public final class VisibilityLabelsProtos {
     com.google.protobuf.ByteString getAuth(int index);
   }
   /**
-   * Protobuf type {@code SetAuthsRequest}
+   * Protobuf type {@code hbase.pb.SetAuthsRequest}
    */
   public static final class SetAuthsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -2093,12 +2093,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_SetAuthsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_SetAuthsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_SetAuthsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_SetAuthsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.Builder.class);
     }
@@ -2329,19 +2329,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code SetAuthsRequest}
+     * Protobuf type {@code hbase.pb.SetAuthsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_SetAuthsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_SetAuthsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_SetAuthsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_SetAuthsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest.Builder.class);
       }
@@ -2379,7 +2379,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_SetAuthsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_SetAuthsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.SetAuthsRequest getDefaultInstanceForType() {
@@ -2575,7 +2575,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:SetAuthsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SetAuthsRequest)
     }
 
     static {
@@ -2583,7 +2583,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:SetAuthsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.SetAuthsRequest)
   }
 
   public interface UserAuthorizationsOrBuilder
@@ -2614,7 +2614,7 @@ public final class VisibilityLabelsProtos {
     int getAuth(int index);
   }
   /**
-   * Protobuf type {@code UserAuthorizations}
+   * Protobuf type {@code hbase.pb.UserAuthorizations}
    */
   public static final class UserAuthorizations extends
       com.google.protobuf.GeneratedMessage
@@ -2707,12 +2707,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_UserAuthorizations_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_UserAuthorizations_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_UserAuthorizations_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_UserAuthorizations_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder.class);
     }
@@ -2943,19 +2943,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code UserAuthorizations}
+     * Protobuf type {@code hbase.pb.UserAuthorizations}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_UserAuthorizations_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_UserAuthorizations_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_UserAuthorizations_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_UserAuthorizations_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder.class);
       }
@@ -2993,7 +2993,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_UserAuthorizations_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_UserAuthorizations_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations getDefaultInstanceForType() {
@@ -3183,7 +3183,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:UserAuthorizations)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.UserAuthorizations)
     }
 
     static {
@@ -3191,39 +3191,39 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:UserAuthorizations)
+    // @@protoc_insertion_point(class_scope:hbase.pb.UserAuthorizations)
   }
 
   public interface MultiUserAuthorizationsOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
-    // repeated .UserAuthorizations userAuths = 1;
+    // repeated .hbase.pb.UserAuthorizations userAuths = 1;
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> 
         getUserAuthsList();
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations getUserAuths(int index);
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     int getUserAuthsCount();
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder> 
         getUserAuthsOrBuilderList();
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder getUserAuthsOrBuilder(
         int index);
   }
   /**
-   * Protobuf type {@code MultiUserAuthorizations}
+   * Protobuf type {@code hbase.pb.MultiUserAuthorizations}
    */
   public static final class MultiUserAuthorizations extends
       com.google.protobuf.GeneratedMessage
@@ -3298,12 +3298,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_MultiUserAuthorizations_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_MultiUserAuthorizations_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_MultiUserAuthorizations_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_MultiUserAuthorizations_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations.Builder.class);
     }
@@ -3323,36 +3323,36 @@ public final class VisibilityLabelsProtos {
       return PARSER;
     }
 
-    // repeated .UserAuthorizations userAuths = 1;
+    // repeated .hbase.pb.UserAuthorizations userAuths = 1;
     public static final int USERAUTHS_FIELD_NUMBER = 1;
     private java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> userAuths_;
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> getUserAuthsList() {
       return userAuths_;
     }
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder> 
         getUserAuthsOrBuilderList() {
       return userAuths_;
     }
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     public int getUserAuthsCount() {
       return userAuths_.size();
     }
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations getUserAuths(int index) {
       return userAuths_.get(index);
     }
     /**
-     * <code>repeated .UserAuthorizations userAuths = 1;</code>
+     * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder getUserAuthsOrBuilder(
         int index) {
@@ -3510,19 +3510,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code MultiUserAuthorizations}
+     * Protobuf type {@code hbase.pb.MultiUserAuthorizations}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizationsOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_MultiUserAuthorizations_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_MultiUserAuthorizations_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_MultiUserAuthorizations_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_MultiUserAuthorizations_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations.Builder.class);
       }
@@ -3563,7 +3563,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_MultiUserAuthorizations_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_MultiUserAuthorizations_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.MultiUserAuthorizations getDefaultInstanceForType() {
@@ -3664,7 +3664,7 @@ public final class VisibilityLabelsProtos {
       }
       private int bitField0_;
 
-      // repeated .UserAuthorizations userAuths = 1;
+      // repeated .hbase.pb.UserAuthorizations userAuths = 1;
       private java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> userAuths_ =
         java.util.Collections.emptyList();
       private void ensureUserAuthsIsMutable() {
@@ -3678,7 +3678,7 @@ public final class VisibilityLabelsProtos {
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder> userAuthsBuilder_;
 
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> getUserAuthsList() {
         if (userAuthsBuilder_ == null) {
@@ -3688,7 +3688,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public int getUserAuthsCount() {
         if (userAuthsBuilder_ == null) {
@@ -3698,7 +3698,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations getUserAuths(int index) {
         if (userAuthsBuilder_ == null) {
@@ -3708,7 +3708,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder setUserAuths(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations value) {
@@ -3725,7 +3725,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder setUserAuths(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder builderForValue) {
@@ -3739,7 +3739,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder addUserAuths(org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations value) {
         if (userAuthsBuilder_ == null) {
@@ -3755,7 +3755,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder addUserAuths(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations value) {
@@ -3772,7 +3772,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder addUserAuths(
           org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder builderForValue) {
@@ -3786,7 +3786,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder addUserAuths(
           int index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder builderForValue) {
@@ -3800,7 +3800,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder addAllUserAuths(
           java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations> values) {
@@ -3814,7 +3814,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder clearUserAuths() {
         if (userAuthsBuilder_ == null) {
@@ -3827,7 +3827,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public Builder removeUserAuths(int index) {
         if (userAuthsBuilder_ == null) {
@@ -3840,14 +3840,14 @@ public final class VisibilityLabelsProtos {
         return this;
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder getUserAuthsBuilder(
           int index) {
         return getUserAuthsFieldBuilder().getBuilder(index);
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder getUserAuthsOrBuilder(
           int index) {
@@ -3857,7 +3857,7 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizationsOrBuilder> 
            getUserAuthsOrBuilderList() {
@@ -3868,14 +3868,14 @@ public final class VisibilityLabelsProtos {
         }
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder addUserAuthsBuilder() {
         return getUserAuthsFieldBuilder().addBuilder(
             org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.getDefaultInstance());
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder addUserAuthsBuilder(
           int index) {
@@ -3883,7 +3883,7 @@ public final class VisibilityLabelsProtos {
             index, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.getDefaultInstance());
       }
       /**
-       * <code>repeated .UserAuthorizations userAuths = 1;</code>
+       * <code>repeated .hbase.pb.UserAuthorizations userAuths = 1;</code>
        */
       public java.util.List<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.UserAuthorizations.Builder> 
            getUserAuthsBuilderList() {
@@ -3904,7 +3904,7 @@ public final class VisibilityLabelsProtos {
         return userAuthsBuilder_;
       }
 
-      // @@protoc_insertion_point(builder_scope:MultiUserAuthorizations)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.MultiUserAuthorizations)
     }
 
     static {
@@ -3912,7 +3912,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:MultiUserAuthorizations)
+    // @@protoc_insertion_point(class_scope:hbase.pb.MultiUserAuthorizations)
   }
 
   public interface GetAuthsRequestOrBuilder
@@ -3929,7 +3929,7 @@ public final class VisibilityLabelsProtos {
     com.google.protobuf.ByteString getUser();
   }
   /**
-   * Protobuf type {@code GetAuthsRequest}
+   * Protobuf type {@code hbase.pb.GetAuthsRequest}
    */
   public static final class GetAuthsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -3998,12 +3998,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.Builder.class);
     }
@@ -4192,19 +4192,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetAuthsRequest}
+     * Protobuf type {@code hbase.pb.GetAuthsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest.Builder.class);
       }
@@ -4240,7 +4240,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest getDefaultInstanceForType() {
@@ -4349,7 +4349,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetAuthsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetAuthsRequest)
     }
 
     static {
@@ -4357,7 +4357,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetAuthsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetAuthsRequest)
   }
 
   public interface GetAuthsResponseOrBuilder
@@ -4388,7 +4388,7 @@ public final class VisibilityLabelsProtos {
     com.google.protobuf.ByteString getAuth(int index);
   }
   /**
-   * Protobuf type {@code GetAuthsResponse}
+   * Protobuf type {@code hbase.pb.GetAuthsResponse}
    */
   public static final class GetAuthsResponse extends
       com.google.protobuf.GeneratedMessage
@@ -4468,12 +4468,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.Builder.class);
     }
@@ -4704,19 +4704,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code GetAuthsResponse}
+     * Protobuf type {@code hbase.pb.GetAuthsResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse.Builder.class);
       }
@@ -4754,7 +4754,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_GetAuthsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_GetAuthsResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse getDefaultInstanceForType() {
@@ -4950,7 +4950,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:GetAuthsResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.GetAuthsResponse)
     }
 
     static {
@@ -4958,7 +4958,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:GetAuthsResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.GetAuthsResponse)
   }
 
   public interface ListLabelsRequestOrBuilder
@@ -4980,7 +4980,7 @@ public final class VisibilityLabelsProtos {
         getRegexBytes();
   }
   /**
-   * Protobuf type {@code ListLabelsRequest}
+   * Protobuf type {@code hbase.pb.ListLabelsRequest}
    */
   public static final class ListLabelsRequest extends
       com.google.protobuf.GeneratedMessage
@@ -5049,12 +5049,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.Builder.class);
     }
@@ -5266,19 +5266,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ListLabelsRequest}
+     * Protobuf type {@code hbase.pb.ListLabelsRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest.Builder.class);
       }
@@ -5314,7 +5314,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsRequest_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsRequest getDefaultInstanceForType() {
@@ -5459,7 +5459,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ListLabelsRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListLabelsRequest)
     }
 
     static {
@@ -5467,7 +5467,7 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ListLabelsRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListLabelsRequest)
   }
 
   public interface ListLabelsResponseOrBuilder
@@ -5488,7 +5488,7 @@ public final class VisibilityLabelsProtos {
     com.google.protobuf.ByteString getLabel(int index);
   }
   /**
-   * Protobuf type {@code ListLabelsResponse}
+   * Protobuf type {@code hbase.pb.ListLabelsResponse}
    */
   public static final class ListLabelsResponse extends
       com.google.protobuf.GeneratedMessage
@@ -5563,12 +5563,12 @@ public final class VisibilityLabelsProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.Builder.class);
     }
@@ -5761,19 +5761,19 @@ public final class VisibilityLabelsProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ListLabelsResponse}
+     * Protobuf type {@code hbase.pb.ListLabelsResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.class, org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse.Builder.class);
       }
@@ -5809,7 +5809,7 @@ public final class VisibilityLabelsProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_ListLabelsResponse_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.internal_static_hbase_pb_ListLabelsResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse getDefaultInstanceForType() {
@@ -5956,7 +5956,7 @@ public final class VisibilityLabelsProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ListLabelsResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListLabelsResponse)
     }
 
     static {
@@ -5964,11 +5964,11 @@ public final class VisibilityLabelsProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ListLabelsResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListLabelsResponse)
   }
 
   /**
-   * Protobuf service {@code VisibilityLabelsService}
+   * Protobuf service {@code hbase.pb.VisibilityLabelsService}
    */
   public static abstract class VisibilityLabelsService
       implements com.google.protobuf.Service {
@@ -5976,7 +5976,7 @@ public final class VisibilityLabelsProtos {
 
     public interface Interface {
       /**
-       * <code>rpc addLabels(.VisibilityLabelsRequest) returns (.VisibilityLabelsResponse);</code>
+       * <code>rpc addLabels(.hbase.pb.VisibilityLabelsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
        */
       public abstract void addLabels(
           com.google.protobuf.RpcController controller,
@@ -5984,7 +5984,7 @@ public final class VisibilityLabelsProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
       /**
-       * <code>rpc setAuths(.SetAuthsRequest) returns (.VisibilityLabelsResponse);</code>
+       * <code>rpc setAuths(.hbase.pb.SetAuthsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
        */
       public abstract void setAuths(
           com.google.protobuf.RpcController controller,
@@ -5992,7 +5992,7 @@ public final class VisibilityLabelsProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
       /**
-       * <code>rpc clearAuths(.SetAuthsRequest) returns (.VisibilityLabelsResponse);</code>
+       * <code>rpc clearAuths(.hbase.pb.SetAuthsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
        */
       public abstract void clearAuths(
           com.google.protobuf.RpcController controller,
@@ -6000,7 +6000,7 @@ public final class VisibilityLabelsProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
       /**
-       * <code>rpc getAuths(.GetAuthsRequest) returns (.GetAuthsResponse);</code>
+       * <code>rpc getAuths(.hbase.pb.GetAuthsRequest) returns (.hbase.pb.GetAuthsResponse);</code>
        */
       public abstract void getAuths(
           com.google.protobuf.RpcController controller,
@@ -6008,7 +6008,7 @@ public final class VisibilityLabelsProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse> done);
 
       /**
-       * <code>rpc listLabels(.ListLabelsRequest) returns (.ListLabelsResponse);</code>
+       * <code>rpc listLabels(.hbase.pb.ListLabelsRequest) returns (.hbase.pb.ListLabelsResponse);</code>
        */
       public abstract void listLabels(
           com.google.protobuf.RpcController controller,
@@ -6149,7 +6149,7 @@ public final class VisibilityLabelsProtos {
     }
 
     /**
-     * <code>rpc addLabels(.VisibilityLabelsRequest) returns (.VisibilityLabelsResponse);</code>
+     * <code>rpc addLabels(.hbase.pb.VisibilityLabelsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
      */
     public abstract void addLabels(
         com.google.protobuf.RpcController controller,
@@ -6157,7 +6157,7 @@ public final class VisibilityLabelsProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
     /**
-     * <code>rpc setAuths(.SetAuthsRequest) returns (.VisibilityLabelsResponse);</code>
+     * <code>rpc setAuths(.hbase.pb.SetAuthsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
      */
     public abstract void setAuths(
         com.google.protobuf.RpcController controller,
@@ -6165,7 +6165,7 @@ public final class VisibilityLabelsProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
     /**
-     * <code>rpc clearAuths(.SetAuthsRequest) returns (.VisibilityLabelsResponse);</code>
+     * <code>rpc clearAuths(.hbase.pb.SetAuthsRequest) returns (.hbase.pb.VisibilityLabelsResponse);</code>
      */
     public abstract void clearAuths(
         com.google.protobuf.RpcController controller,
@@ -6173,7 +6173,7 @@ public final class VisibilityLabelsProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse> done);
 
     /**
-     * <code>rpc getAuths(.GetAuthsRequest) returns (.GetAuthsResponse);</code>
+     * <code>rpc getAuths(.hbase.pb.GetAuthsRequest) returns (.hbase.pb.GetAuthsResponse);</code>
      */
     public abstract void getAuths(
         com.google.protobuf.RpcController controller,
@@ -6181,7 +6181,7 @@ public final class VisibilityLabelsProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse> done);
 
     /**
-     * <code>rpc listLabels(.ListLabelsRequest) returns (.ListLabelsResponse);</code>
+     * <code>rpc listLabels(.hbase.pb.ListLabelsRequest) returns (.hbase.pb.ListLabelsResponse);</code>
      */
     public abstract void listLabels(
         com.google.protobuf.RpcController controller,
@@ -6480,59 +6480,59 @@ public final class VisibilityLabelsProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:VisibilityLabelsService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.VisibilityLabelsService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VisibilityLabelsRequest_descriptor;
+    internal_static_hbase_pb_VisibilityLabelsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VisibilityLabelsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_VisibilityLabelsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VisibilityLabel_descriptor;
+    internal_static_hbase_pb_VisibilityLabel_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VisibilityLabel_fieldAccessorTable;
+      internal_static_hbase_pb_VisibilityLabel_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_VisibilityLabelsResponse_descriptor;
+    internal_static_hbase_pb_VisibilityLabelsResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_VisibilityLabelsResponse_fieldAccessorTable;
+      internal_static_hbase_pb_VisibilityLabelsResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_SetAuthsRequest_descriptor;
+    internal_static_hbase_pb_SetAuthsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_SetAuthsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_SetAuthsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_UserAuthorizations_descriptor;
+    internal_static_hbase_pb_UserAuthorizations_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_UserAuthorizations_fieldAccessorTable;
+      internal_static_hbase_pb_UserAuthorizations_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_MultiUserAuthorizations_descriptor;
+    internal_static_hbase_pb_MultiUserAuthorizations_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_MultiUserAuthorizations_fieldAccessorTable;
+      internal_static_hbase_pb_MultiUserAuthorizations_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetAuthsRequest_descriptor;
+    internal_static_hbase_pb_GetAuthsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetAuthsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_GetAuthsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_GetAuthsResponse_descriptor;
+    internal_static_hbase_pb_GetAuthsResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_GetAuthsResponse_fieldAccessorTable;
+      internal_static_hbase_pb_GetAuthsResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ListLabelsRequest_descriptor;
+    internal_static_hbase_pb_ListLabelsRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ListLabelsRequest_fieldAccessorTable;
+      internal_static_hbase_pb_ListLabelsRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ListLabelsResponse_descriptor;
+    internal_static_hbase_pb_ListLabelsResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ListLabelsResponse_fieldAccessorTable;
+      internal_static_hbase_pb_ListLabelsResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -6542,95 +6542,98 @@ public final class VisibilityLabelsProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\026VisibilityLabels.proto\032\014Client.proto\"=" +
-      "\n\027VisibilityLabelsRequest\022\"\n\010visLabel\030\001 " +
-      "\003(\0132\020.VisibilityLabel\"1\n\017VisibilityLabel" +
-      "\022\r\n\005label\030\001 \002(\014\022\017\n\007ordinal\030\002 \001(\r\"?\n\030Visi" +
-      "bilityLabelsResponse\022#\n\006result\030\001 \003(\0132\023.R" +
-      "egionActionResult\"-\n\017SetAuthsRequest\022\014\n\004" +
-      "user\030\001 \002(\014\022\014\n\004auth\030\002 \003(\014\"0\n\022UserAuthoriz" +
-      "ations\022\014\n\004user\030\001 \002(\014\022\014\n\004auth\030\002 \003(\r\"A\n\027Mu" +
-      "ltiUserAuthorizations\022&\n\tuserAuths\030\001 \003(\013" +
-      "2\023.UserAuthorizations\"\037\n\017GetAuthsRequest",
-      "\022\014\n\004user\030\001 \002(\014\".\n\020GetAuthsResponse\022\014\n\004us" +
-      "er\030\001 \002(\014\022\014\n\004auth\030\002 \003(\014\"\"\n\021ListLabelsRequ" +
-      "est\022\r\n\005regex\030\001 \001(\t\"#\n\022ListLabelsResponse" +
-      "\022\r\n\005label\030\001 \003(\0142\267\002\n\027VisibilityLabelsServ" +
-      "ice\022@\n\taddLabels\022\030.VisibilityLabelsReque" +
-      "st\032\031.VisibilityLabelsResponse\0227\n\010setAuth" +
-      "s\022\020.SetAuthsRequest\032\031.VisibilityLabelsRe" +
-      "sponse\0229\n\nclearAuths\022\020.SetAuthsRequest\032\031" +
-      ".VisibilityLabelsResponse\022/\n\010getAuths\022\020." +
-      "GetAuthsRequest\032\021.GetAuthsResponse\0225\n\nli",
-      "stLabels\022\022.ListLabelsRequest\032\023.ListLabel" +
-      "sResponseBL\n*org.apache.hadoop.hbase.pro" +
-      "tobuf.generatedB\026VisibilityLabelsProtosH" +
-      "\001\210\001\001\240\001\001"
+      "\n\026VisibilityLabels.proto\022\010hbase.pb\032\014Clie" +
+      "nt.proto\"F\n\027VisibilityLabelsRequest\022+\n\010v" +
+      "isLabel\030\001 \003(\0132\031.hbase.pb.VisibilityLabel" +
+      "\"1\n\017VisibilityLabel\022\r\n\005label\030\001 \002(\014\022\017\n\007or" +
+      "dinal\030\002 \001(\r\"H\n\030VisibilityLabelsResponse\022" +
+      ",\n\006result\030\001 \003(\0132\034.hbase.pb.RegionActionR" +
+      "esult\"-\n\017SetAuthsRequest\022\014\n\004user\030\001 \002(\014\022\014" +
+      "\n\004auth\030\002 \003(\014\"0\n\022UserAuthorizations\022\014\n\004us" +
+      "er\030\001 \002(\014\022\014\n\004auth\030\002 \003(\r\"J\n\027MultiUserAutho" +
+      "rizations\022/\n\tuserAuths\030\001 \003(\0132\034.hbase.pb.",
+      "UserAuthorizations\"\037\n\017GetAuthsRequest\022\014\n" +
+      "\004user\030\001 \002(\014\".\n\020GetAuthsResponse\022\014\n\004user\030" +
+      "\001 \002(\014\022\014\n\004auth\030\002 \003(\014\"\"\n\021ListLabelsRequest" +
+      "\022\r\n\005regex\030\001 \001(\t\"#\n\022ListLabelsResponse\022\r\n" +
+      "\005label\030\001 \003(\0142\221\003\n\027VisibilityLabelsService" +
+      "\022R\n\taddLabels\022!.hbase.pb.VisibilityLabel" +
+      "sRequest\032\".hbase.pb.VisibilityLabelsResp" +
+      "onse\022I\n\010setAuths\022\031.hbase.pb.SetAuthsRequ" +
+      "est\032\".hbase.pb.VisibilityLabelsResponse\022" +
+      "K\n\nclearAuths\022\031.hbase.pb.SetAuthsRequest",
+      "\032\".hbase.pb.VisibilityLabelsResponse\022A\n\010" +
+      "getAuths\022\031.hbase.pb.GetAuthsRequest\032\032.hb" +
+      "ase.pb.GetAuthsResponse\022G\n\nlistLabels\022\033." +
+      "hbase.pb.ListLabelsRequest\032\034.hbase.pb.Li" +
+      "stLabelsResponseBL\n*org.apache.hadoop.hb" +
+      "ase.protobuf.generatedB\026VisibilityLabels" +
+      "ProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_VisibilityLabelsRequest_descriptor =
+          internal_static_hbase_pb_VisibilityLabelsRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_VisibilityLabelsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_VisibilityLabelsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VisibilityLabelsRequest_descriptor,
+              internal_static_hbase_pb_VisibilityLabelsRequest_descriptor,
               new java.lang.String[] { "VisLabel", });
-          internal_static_VisibilityLabel_descriptor =
+          internal_static_hbase_pb_VisibilityLabel_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_VisibilityLabel_fieldAccessorTable = new
+          internal_static_hbase_pb_VisibilityLabel_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VisibilityLabel_descriptor,
+              internal_static_hbase_pb_VisibilityLabel_descriptor,
               new java.lang.String[] { "Label", "Ordinal", });
-          internal_static_VisibilityLabelsResponse_descriptor =
+          internal_static_hbase_pb_VisibilityLabelsResponse_descriptor =
             getDescriptor().getMessageTypes().get(2);
-          internal_static_VisibilityLabelsResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_VisibilityLabelsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_VisibilityLabelsResponse_descriptor,
+              internal_static_hbase_pb_VisibilityLabelsResponse_descriptor,
               new java.lang.String[] { "Result", });
-          internal_static_SetAuthsRequest_descriptor =
+          internal_static_hbase_pb_SetAuthsRequest_descriptor =
             getDescriptor().getMessageTypes().get(3);
-          internal_static_SetAuthsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_SetAuthsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_SetAuthsRequest_descriptor,
+              internal_static_hbase_pb_SetAuthsRequest_descriptor,
               new java.lang.String[] { "User", "Auth", });
-          internal_static_UserAuthorizations_descriptor =
+          internal_static_hbase_pb_UserAuthorizations_descriptor =
             getDescriptor().getMessageTypes().get(4);
-          internal_static_UserAuthorizations_fieldAccessorTable = new
+          internal_static_hbase_pb_UserAuthorizations_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_UserAuthorizations_descriptor,
+              internal_static_hbase_pb_UserAuthorizations_descriptor,
               new java.lang.String[] { "User", "Auth", });
-          internal_static_MultiUserAuthorizations_descriptor =
+          internal_static_hbase_pb_MultiUserAuthorizations_descriptor =
             getDescriptor().getMessageTypes().get(5);
-          internal_static_MultiUserAuthorizations_fieldAccessorTable = new
+          internal_static_hbase_pb_MultiUserAuthorizations_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_MultiUserAuthorizations_descriptor,
+              internal_static_hbase_pb_MultiUserAuthorizations_descriptor,
               new java.lang.String[] { "UserAuths", });
-          internal_static_GetAuthsRequest_descriptor =
+          internal_static_hbase_pb_GetAuthsRequest_descriptor =
             getDescriptor().getMessageTypes().get(6);
-          internal_static_GetAuthsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_GetAuthsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetAuthsRequest_descriptor,
+              internal_static_hbase_pb_GetAuthsRequest_descriptor,
               new java.lang.String[] { "User", });
-          internal_static_GetAuthsResponse_descriptor =
+          internal_static_hbase_pb_GetAuthsResponse_descriptor =
             getDescriptor().getMessageTypes().get(7);
-          internal_static_GetAuthsResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_GetAuthsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_GetAuthsResponse_descriptor,
+              internal_static_hbase_pb_GetAuthsResponse_descriptor,
               new java.lang.String[] { "User", "Auth", });
-          internal_static_ListLabelsRequest_descriptor =
+          internal_static_hbase_pb_ListLabelsRequest_descriptor =
             getDescriptor().getMessageTypes().get(8);
-          internal_static_ListLabelsRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_ListLabelsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ListLabelsRequest_descriptor,
+              internal_static_hbase_pb_ListLabelsRequest_descriptor,
               new java.lang.String[] { "Regex", });
-          internal_static_ListLabelsResponse_descriptor =
+          internal_static_hbase_pb_ListLabelsResponse_descriptor =
             getDescriptor().getMessageTypes().get(9);
-          internal_static_ListLabelsResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_ListLabelsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ListLabelsResponse_descriptor,
+              internal_static_hbase_pb_ListLabelsResponse_descriptor,
               new java.lang.String[] { "Label", });
           return null;
         }

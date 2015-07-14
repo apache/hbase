@@ -27,7 +27,7 @@ public final class FSProtos {
         getVersionBytes();
   }
   /**
-   * Protobuf type {@code HBaseVersionFileContent}
+   * Protobuf type {@code hbase.pb.HBaseVersionFileContent}
    *
    * <pre>
    **
@@ -101,12 +101,12 @@ public final class FSProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_HBaseVersionFileContent_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_HBaseVersionFileContent_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_HBaseVersionFileContent_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_HBaseVersionFileContent_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.class, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder.class);
     }
@@ -322,7 +322,7 @@ public final class FSProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code HBaseVersionFileContent}
+     * Protobuf type {@code hbase.pb.HBaseVersionFileContent}
      *
      * <pre>
      **
@@ -334,12 +334,12 @@ public final class FSProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContentOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_HBaseVersionFileContent_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_HBaseVersionFileContent_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_HBaseVersionFileContent_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_HBaseVersionFileContent_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.class, org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent.Builder.class);
       }
@@ -375,7 +375,7 @@ public final class FSProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_HBaseVersionFileContent_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_HBaseVersionFileContent_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.HBaseVersionFileContent getDefaultInstanceForType() {
@@ -524,7 +524,7 @@ public final class FSProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:HBaseVersionFileContent)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.HBaseVersionFileContent)
     }
 
     static {
@@ -532,7 +532,7 @@ public final class FSProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:HBaseVersionFileContent)
+    // @@protoc_insertion_point(class_scope:hbase.pb.HBaseVersionFileContent)
   }
 
   public interface ReferenceOrBuilder
@@ -548,18 +548,18 @@ public final class FSProtos {
      */
     com.google.protobuf.ByteString getSplitkey();
 
-    // required .Reference.Range range = 2;
+    // required .hbase.pb.Reference.Range range = 2;
     /**
-     * <code>required .Reference.Range range = 2;</code>
+     * <code>required .hbase.pb.Reference.Range range = 2;</code>
      */
     boolean hasRange();
     /**
-     * <code>required .Reference.Range range = 2;</code>
+     * <code>required .hbase.pb.Reference.Range range = 2;</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range getRange();
   }
   /**
-   * Protobuf type {@code Reference}
+   * Protobuf type {@code hbase.pb.Reference}
    *
    * <pre>
    **
@@ -644,12 +644,12 @@ public final class FSProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_Reference_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_Reference_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_Reference_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_Reference_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.class, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder.class);
     }
@@ -670,7 +670,7 @@ public final class FSProtos {
     }
 
     /**
-     * Protobuf enum {@code Reference.Range}
+     * Protobuf enum {@code hbase.pb.Reference.Range}
      */
     public enum Range
         implements com.google.protobuf.ProtocolMessageEnum {
@@ -748,7 +748,7 @@ public final class FSProtos {
         this.value = value;
       }
 
-      // @@protoc_insertion_point(enum_scope:Reference.Range)
+      // @@protoc_insertion_point(enum_scope:hbase.pb.Reference.Range)
     }
 
     private int bitField0_;
@@ -768,17 +768,17 @@ public final class FSProtos {
       return splitkey_;
     }
 
-    // required .Reference.Range range = 2;
+    // required .hbase.pb.Reference.Range range = 2;
     public static final int RANGE_FIELD_NUMBER = 2;
     private org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range range_;
     /**
-     * <code>required .Reference.Range range = 2;</code>
+     * <code>required .hbase.pb.Reference.Range range = 2;</code>
      */
     public boolean hasRange() {
       return ((bitField0_ & 0x00000002) == 0x00000002);
     }
     /**
-     * <code>required .Reference.Range range = 2;</code>
+     * <code>required .hbase.pb.Reference.Range range = 2;</code>
      */
     public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range getRange() {
       return range_;
@@ -957,7 +957,7 @@ public final class FSProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code Reference}
+     * Protobuf type {@code hbase.pb.Reference}
      *
      * <pre>
      **
@@ -969,12 +969,12 @@ public final class FSProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.FSProtos.ReferenceOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_Reference_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_Reference_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_Reference_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_Reference_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.class, org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Builder.class);
       }
@@ -1012,7 +1012,7 @@ public final class FSProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_Reference_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.FSProtos.internal_static_hbase_pb_Reference_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference getDefaultInstanceForType() {
@@ -1132,22 +1132,22 @@ public final class FSProtos {
         return this;
       }
 
-      // required .Reference.Range range = 2;
+      // required .hbase.pb.Reference.Range range = 2;
       private org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range range_ = org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range.TOP;
       /**
-       * <code>required .Reference.Range range = 2;</code>
+       * <code>required .hbase.pb.Reference.Range range = 2;</code>
        */
       public boolean hasRange() {
         return ((bitField0_ & 0x00000002) == 0x00000002);
       }
       /**
-       * <code>required .Reference.Range range = 2;</code>
+       * <code>required .hbase.pb.Reference.Range range = 2;</code>
        */
       public org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range getRange() {
         return range_;
       }
       /**
-       * <code>required .Reference.Range range = 2;</code>
+       * <code>required .hbase.pb.Reference.Range range = 2;</code>
        */
       public Builder setRange(org.apache.hadoop.hbase.protobuf.generated.FSProtos.Reference.Range value) {
         if (value == null) {
@@ -1159,7 +1159,7 @@ public final class FSProtos {
         return this;
       }
       /**
-       * <code>required .Reference.Range range = 2;</code>
+       * <code>required .hbase.pb.Reference.Range range = 2;</code>
        */
       public Builder clearRange() {
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -1168,7 +1168,7 @@ public final class FSProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:Reference)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.Reference)
     }
 
     static {
@@ -1176,19 +1176,19 @@ public final class FSProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:Reference)
+    // @@protoc_insertion_point(class_scope:hbase.pb.Reference)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_HBaseVersionFileContent_descriptor;
+    internal_static_hbase_pb_HBaseVersionFileContent_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_HBaseVersionFileContent_fieldAccessorTable;
+      internal_static_hbase_pb_HBaseVersionFileContent_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_Reference_descriptor;
+    internal_static_hbase_pb_Reference_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_Reference_fieldAccessorTable;
+      internal_static_hbase_pb_Reference_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1198,29 +1198,29 @@ public final class FSProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\010FS.proto\"*\n\027HBaseVersionFileContent\022\017\n" +
-      "\007version\030\001 \002(\t\"\\\n\tReference\022\020\n\010splitkey\030" +
-      "\001 \002(\014\022\037\n\005range\030\002 \002(\0162\020.Reference.Range\"\034" +
-      "\n\005Range\022\007\n\003TOP\020\000\022\n\n\006BOTTOM\020\001B;\n*org.apac" +
-      "he.hadoop.hbase.protobuf.generatedB\010FSPr" +
-      "otosH\001\240\001\001"
+      "\n\010FS.proto\022\010hbase.pb\"*\n\027HBaseVersionFile" +
+      "Content\022\017\n\007version\030\001 \002(\t\"e\n\tReference\022\020\n" +
+      "\010splitkey\030\001 \002(\014\022(\n\005range\030\002 \002(\0162\031.hbase.p" +
+      "b.Reference.Range\"\034\n\005Range\022\007\n\003TOP\020\000\022\n\n\006B" +
+      "OTTOM\020\001B;\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\010FSProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_HBaseVersionFileContent_descriptor =
+          internal_static_hbase_pb_HBaseVersionFileContent_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_HBaseVersionFileContent_fieldAccessorTable = new
+          internal_static_hbase_pb_HBaseVersionFileContent_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_HBaseVersionFileContent_descriptor,
+              internal_static_hbase_pb_HBaseVersionFileContent_descriptor,
               new java.lang.String[] { "Version", });
-          internal_static_Reference_descriptor =
+          internal_static_hbase_pb_Reference_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_Reference_fieldAccessorTable = new
+          internal_static_hbase_pb_Reference_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_Reference_descriptor,
+              internal_static_hbase_pb_Reference_descriptor,
               new java.lang.String[] { "Splitkey", "Range", });
           return null;
         }

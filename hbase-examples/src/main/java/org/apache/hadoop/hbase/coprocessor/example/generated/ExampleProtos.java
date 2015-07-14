@@ -12,7 +12,7 @@ public final class ExampleProtos {
       extends com.google.protobuf.MessageOrBuilder {
   }
   /**
-   * Protobuf type {@code CountRequest}
+   * Protobuf type {@code hbase.pb.CountRequest}
    */
   public static final class CountRequest extends
       com.google.protobuf.GeneratedMessage
@@ -75,12 +75,12 @@ public final class ExampleProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountRequest_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountRequest_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.Builder.class);
     }
@@ -231,19 +231,19 @@ public final class ExampleProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code CountRequest}
+     * Protobuf type {@code hbase.pb.CountRequest}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequestOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountRequest_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_fieldAccessorTable
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountRequest_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest.Builder.class);
       }
@@ -277,7 +277,7 @@ public final class ExampleProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountRequest_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountRequest_descriptor;
       }
 
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountRequest getDefaultInstanceForType() {
@@ -335,7 +335,7 @@ public final class ExampleProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:CountRequest)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CountRequest)
     }
 
     static {
@@ -343,7 +343,7 @@ public final class ExampleProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:CountRequest)
+    // @@protoc_insertion_point(class_scope:hbase.pb.CountRequest)
   }
 
   public interface CountResponseOrBuilder
@@ -360,7 +360,7 @@ public final class ExampleProtos {
     long getCount();
   }
   /**
-   * Protobuf type {@code CountResponse}
+   * Protobuf type {@code hbase.pb.CountResponse}
    */
   public static final class CountResponse extends
       com.google.protobuf.GeneratedMessage
@@ -429,12 +429,12 @@ public final class ExampleProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountResponse_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable
+      return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountResponse_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.Builder.class);
     }
@@ -623,19 +623,19 @@ public final class ExampleProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code CountResponse}
+     * Protobuf type {@code hbase.pb.CountResponse}
      */
     public static final class Builder extends
         com.google.protobuf.GeneratedMessage.Builder<Builder>
        implements org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponseOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountResponse_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_fieldAccessorTable
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountResponse_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.class, org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse.Builder.class);
       }
@@ -671,7 +671,7 @@ public final class ExampleProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_CountResponse_descriptor;
+        return org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.internal_static_hbase_pb_CountResponse_descriptor;
       }
 
       public org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse getDefaultInstanceForType() {
@@ -777,7 +777,7 @@ public final class ExampleProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:CountResponse)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CountResponse)
     }
 
     static {
@@ -785,11 +785,11 @@ public final class ExampleProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:CountResponse)
+    // @@protoc_insertion_point(class_scope:hbase.pb.CountResponse)
   }
 
   /**
-   * Protobuf service {@code RowCountService}
+   * Protobuf service {@code hbase.pb.RowCountService}
    */
   public static abstract class RowCountService
       implements com.google.protobuf.Service {
@@ -797,7 +797,7 @@ public final class ExampleProtos {
 
     public interface Interface {
       /**
-       * <code>rpc getRowCount(.CountRequest) returns (.CountResponse);</code>
+       * <code>rpc getRowCount(.hbase.pb.CountRequest) returns (.hbase.pb.CountResponse);</code>
        */
       public abstract void getRowCount(
           com.google.protobuf.RpcController controller,
@@ -805,7 +805,7 @@ public final class ExampleProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
 
       /**
-       * <code>rpc getKeyValueCount(.CountRequest) returns (.CountResponse);</code>
+       * <code>rpc getKeyValueCount(.hbase.pb.CountRequest) returns (.hbase.pb.CountResponse);</code>
        */
       public abstract void getKeyValueCount(
           com.google.protobuf.RpcController controller,
@@ -904,7 +904,7 @@ public final class ExampleProtos {
     }
 
     /**
-     * <code>rpc getRowCount(.CountRequest) returns (.CountResponse);</code>
+     * <code>rpc getRowCount(.hbase.pb.CountRequest) returns (.hbase.pb.CountResponse);</code>
      */
     public abstract void getRowCount(
         com.google.protobuf.RpcController controller,
@@ -912,7 +912,7 @@ public final class ExampleProtos {
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.coprocessor.example.generated.ExampleProtos.CountResponse> done);
 
     /**
-     * <code>rpc getKeyValueCount(.CountRequest) returns (.CountResponse);</code>
+     * <code>rpc getKeyValueCount(.hbase.pb.CountRequest) returns (.hbase.pb.CountResponse);</code>
      */
     public abstract void getKeyValueCount(
         com.google.protobuf.RpcController controller,
@@ -1088,19 +1088,19 @@ public final class ExampleProtos {
 
     }
 
-    // @@protoc_insertion_point(class_scope:RowCountService)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RowCountService)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_CountRequest_descriptor;
+    internal_static_hbase_pb_CountRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_CountRequest_fieldAccessorTable;
+      internal_static_hbase_pb_CountRequest_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_CountResponse_descriptor;
+    internal_static_hbase_pb_CountResponse_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_CountResponse_fieldAccessorTable;
+      internal_static_hbase_pb_CountResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1110,30 +1110,31 @@ public final class ExampleProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016Examples.proto\"\016\n\014CountRequest\"!\n\rCoun" +
-      "tResponse\022\020\n\005count\030\001 \002(\003:\00102r\n\017RowCountS" +
-      "ervice\022,\n\013getRowCount\022\r.CountRequest\032\016.C" +
-      "ountResponse\0221\n\020getKeyValueCount\022\r.Count" +
-      "Request\032\016.CountResponseBN\n5org.apache.ha" +
-      "doop.hbase.coprocessor.example.generated" +
-      "B\rExampleProtosH\001\210\001\001\240\001\001"
+      "\n\016Examples.proto\022\010hbase.pb\"\016\n\014CountReque" +
+      "st\"!\n\rCountResponse\022\020\n\005count\030\001 \002(\003:\00102\226\001" +
+      "\n\017RowCountService\022>\n\013getRowCount\022\026.hbase" +
+      ".pb.CountRequest\032\027.hbase.pb.CountRespons" +
+      "e\022C\n\020getKeyValueCount\022\026.hbase.pb.CountRe" +
+      "quest\032\027.hbase.pb.CountResponseBN\n5org.ap" +
+      "ache.hadoop.hbase.coprocessor.example.ge" +
+      "neratedB\rExampleProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_CountRequest_descriptor =
+          internal_static_hbase_pb_CountRequest_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_CountRequest_fieldAccessorTable = new
+          internal_static_hbase_pb_CountRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_CountRequest_descriptor,
+              internal_static_hbase_pb_CountRequest_descriptor,
               new java.lang.String[] { });
-          internal_static_CountResponse_descriptor =
+          internal_static_hbase_pb_CountResponse_descriptor =
             getDescriptor().getMessageTypes().get(1);
-          internal_static_CountResponse_fieldAccessorTable = new
+          internal_static_hbase_pb_CountResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_CountResponse_descriptor,
+              internal_static_hbase_pb_CountResponse_descriptor,
               new java.lang.String[] { "Count", });
           return null;
         }

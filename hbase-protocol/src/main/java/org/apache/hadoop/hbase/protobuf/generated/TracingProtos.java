@@ -32,7 +32,7 @@ public final class TracingProtos {
     long getParentId();
   }
   /**
-   * Protobuf type {@code RPCTInfo}
+   * Protobuf type {@code hbase.pb.RPCTInfo}
    *
    * <pre>
    *Used to pass through the information necessary to continue
@@ -114,12 +114,12 @@ public final class TracingProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_RPCTInfo_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_hbase_pb_RPCTInfo_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_RPCTInfo_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_hbase_pb_RPCTInfo_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.class, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder.class);
     }
@@ -337,7 +337,7 @@ public final class TracingProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code RPCTInfo}
+     * Protobuf type {@code hbase.pb.RPCTInfo}
      *
      * <pre>
      *Used to pass through the information necessary to continue
@@ -352,12 +352,12 @@ public final class TracingProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfoOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_RPCTInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_hbase_pb_RPCTInfo_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_RPCTInfo_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_hbase_pb_RPCTInfo_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.class, org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo.Builder.class);
       }
@@ -395,7 +395,7 @@ public final class TracingProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_RPCTInfo_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.TracingProtos.internal_static_hbase_pb_RPCTInfo_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.TracingProtos.RPCTInfo getDefaultInstanceForType() {
@@ -537,7 +537,7 @@ public final class TracingProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:RPCTInfo)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.RPCTInfo)
     }
 
     static {
@@ -545,14 +545,14 @@ public final class TracingProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:RPCTInfo)
+    // @@protoc_insertion_point(class_scope:hbase.pb.RPCTInfo)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_RPCTInfo_descriptor;
+    internal_static_hbase_pb_RPCTInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_RPCTInfo_fieldAccessorTable;
+      internal_static_hbase_pb_RPCTInfo_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -562,21 +562,21 @@ public final class TracingProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\rTracing.proto\"/\n\010RPCTInfo\022\020\n\010trace_id\030" +
-      "\001 \001(\003\022\021\n\tparent_id\030\002 \001(\003B@\n*org.apache.h" +
-      "adoop.hbase.protobuf.generatedB\rTracingP" +
-      "rotosH\001\240\001\001"
+      "\n\rTracing.proto\022\010hbase.pb\"/\n\010RPCTInfo\022\020\n" +
+      "\010trace_id\030\001 \001(\003\022\021\n\tparent_id\030\002 \001(\003B@\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\rTracingProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_RPCTInfo_descriptor =
+          internal_static_hbase_pb_RPCTInfo_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_RPCTInfo_fieldAccessorTable = new
+          internal_static_hbase_pb_RPCTInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_RPCTInfo_descriptor,
+              internal_static_hbase_pb_RPCTInfo_descriptor,
               new java.lang.String[] { "TraceId", "ParentId", });
           return null;
         }

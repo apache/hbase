@@ -39,7 +39,7 @@ public final class ClusterIdProtos {
         getClusterIdBytes();
   }
   /**
-   * Protobuf type {@code ClusterId}
+   * Protobuf type {@code hbase.pb.ClusterId}
    *
    * <pre>
    **
@@ -114,12 +114,12 @@ public final class ClusterIdProtos {
     }
     public static final com.google.protobuf.Descriptors.Descriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_ClusterId_descriptor;
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_hbase_pb_ClusterId_descriptor;
     }
 
     protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
         internalGetFieldAccessorTable() {
-      return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_ClusterId_fieldAccessorTable
+      return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_hbase_pb_ClusterId_fieldAccessorTable
           .ensureFieldAccessorsInitialized(
               org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.class, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder.class);
     }
@@ -347,7 +347,7 @@ public final class ClusterIdProtos {
       return builder;
     }
     /**
-     * Protobuf type {@code ClusterId}
+     * Protobuf type {@code hbase.pb.ClusterId}
      *
      * <pre>
      **
@@ -360,12 +360,12 @@ public final class ClusterIdProtos {
        implements org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterIdOrBuilder {
       public static final com.google.protobuf.Descriptors.Descriptor
           getDescriptor() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_ClusterId_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_hbase_pb_ClusterId_descriptor;
       }
 
       protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
           internalGetFieldAccessorTable() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_ClusterId_fieldAccessorTable
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_hbase_pb_ClusterId_fieldAccessorTable
             .ensureFieldAccessorsInitialized(
                 org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.class, org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId.Builder.class);
       }
@@ -401,7 +401,7 @@ public final class ClusterIdProtos {
 
       public com.google.protobuf.Descriptors.Descriptor
           getDescriptorForType() {
-        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_ClusterId_descriptor;
+        return org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.internal_static_hbase_pb_ClusterId_descriptor;
       }
 
       public org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos.ClusterId getDefaultInstanceForType() {
@@ -574,7 +574,7 @@ public final class ClusterIdProtos {
         return this;
       }
 
-      // @@protoc_insertion_point(builder_scope:ClusterId)
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ClusterId)
     }
 
     static {
@@ -582,14 +582,14 @@ public final class ClusterIdProtos {
       defaultInstance.initFields();
     }
 
-    // @@protoc_insertion_point(class_scope:ClusterId)
+    // @@protoc_insertion_point(class_scope:hbase.pb.ClusterId)
   }
 
   private static com.google.protobuf.Descriptors.Descriptor
-    internal_static_ClusterId_descriptor;
+    internal_static_hbase_pb_ClusterId_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
-      internal_static_ClusterId_fieldAccessorTable;
+      internal_static_hbase_pb_ClusterId_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -599,20 +599,21 @@ public final class ClusterIdProtos {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017ClusterId.proto\"\037\n\tClusterId\022\022\n\ncluste" +
-      "r_id\030\001 \002(\tBB\n*org.apache.hadoop.hbase.pr" +
-      "otobuf.generatedB\017ClusterIdProtosH\001\240\001\001"
+      "\n\017ClusterId.proto\022\010hbase.pb\"\037\n\tClusterId" +
+      "\022\022\n\ncluster_id\030\001 \002(\tBB\n*org.apache.hadoo" +
+      "p.hbase.protobuf.generatedB\017ClusterIdPro" +
+      "tosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
         public com.google.protobuf.ExtensionRegistry assignDescriptors(
             com.google.protobuf.Descriptors.FileDescriptor root) {
           descriptor = root;
-          internal_static_ClusterId_descriptor =
+          internal_static_hbase_pb_ClusterId_descriptor =
             getDescriptor().getMessageTypes().get(0);
-          internal_static_ClusterId_fieldAccessorTable = new
+          internal_static_hbase_pb_ClusterId_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
-              internal_static_ClusterId_descriptor,
+              internal_static_hbase_pb_ClusterId_descriptor,
               new java.lang.String[] { "ClusterId", });
           return null;
         }
