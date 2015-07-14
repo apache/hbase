@@ -125,7 +125,9 @@ public class ResultSerialization extends Configured implements Serialization<Res
 
     @Override
     public Result deserialize(Result mutation) throws IOException {
-      ClientProtos.Result proto = ClientProtos.Result.parseDelimitedFrom(in);
+      ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
+      ProtobufUtil.mergeDelimitedFrom(builder, in);
+      ClientProtos.Result proto = builder.build();
       return ProtobufUtil.toResult(proto);
     }
 
