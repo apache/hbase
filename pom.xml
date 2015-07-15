@@ -40,7 +40,7 @@
   <artifactId>hbase</artifactId>
   <packaging>pom</packaging>
   <version>1.0.2</version>
-  <name>HBase</name>
+  <name>Apache HBase</name>
   <description>
     Apache HBase is the Hadoop database. Use it when you need
     random, realtime read/write access to your Big Data.
@@ -48,7 +48,9 @@
     of commodity hardware.
   </description>
   <url>http://hbase.apache.org</url>
+  <inceptionYear>2007</inceptionYear>
   <modules>
+    <module>hbase-resource-bundle</module>
     <module>hbase-server</module>
     <module>hbase-thrift</module>
     <module>hbase-rest</module>
@@ -450,6 +452,16 @@
       <plugins>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-remote-resources-plugin</artifactId>
+          <version>1.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>2.3</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-release-plugin</artifactId>
           <configuration>
             <!--You need this profile. It'll sign your artifacts.
@@ -548,6 +560,11 @@
               </fileset>
             </filesets>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>buildnumber-maven-plugin</artifactId>
+          <version>1.3</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -667,7 +684,7 @@
                   <pluginExecutionFilter>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-remote-resources-plugin</artifactId>
-                    <versionRange>[1.4,)</versionRange>
+                    <versionRange>[1.5,)</versionRange>
                     <goals>
                       <goal>process</goal>
                     </goals>
@@ -676,6 +693,22 @@
                     <ignore />
                   </action>
                 </pluginExecution>
+                  <pluginExecution>
+                    <pluginExecutionFilter>
+                      <groupId>org.codehaus.mojo</groupId>
+                      <artifactId>buildnumber-maven-plugin</artifactId>
+                      <versionRange>[1.3,)</versionRange>
+                      <goals>
+                        <goal>create-timestamp</goal>
+                      </goals>
+                    </pluginExecutionFilter>
+                    <action>
+                      <execute>
+                        <runOnConfiguration>true</runOnConfiguration>
+                        <runOnIncremental>true</runOnIncremental>
+                      </execute>
+                    </action>
+                  </pluginExecution>
               </pluginExecutions>
             </lifecycleMappingMetadata>
           </configuration>
@@ -695,10 +728,8 @@
               <exclude>**/8e8ab58dcf39412da19833fcd8f687ac</exclude>
               <exclude>**/a6a6562b777440fd9c34885428f5cb61.21e75333ada3d5bafb34bb918f29576c</exclude>
               <exclude>**/0000000000000016310</exclude>
-              <exclude>**/.git/**</exclude>
               <exclude>**/.idea/**</exclude>
               <exclude>**/*.iml</exclude>
-              <exclude>**/target/**</exclude>
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
               <exclude>**/gen-*/**</exclude>
@@ -706,10 +737,10 @@
               <exclude>conf/regionservers</exclude>
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude>
-              <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
+              <!-- non-standard notice file from jruby included by reference -->
+              <exclude>**/src/main/resources/META-INF/LEGAL</exclude>
+              <!-- MIT: https://github.com/asciidoctor/asciidoctor/blob/master/LICENSE.adoc -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
-              <exclude>**/bootstrap-theme.css</exclude>
-              <exclude>**/bootstrap-theme.min.css</exclude>
               <!-- MIT http://jquery.org/license -->
               <exclude>**/jquery.min.js</exclude>
               <!-- vector graphics -->
@@ -717,9 +748,9 @@
               <!-- apache doxia generated -->
               <exclude>**/control</exclude>
               <exclude>**/conffile</exclude>
+              <!-- auto-gen docs -->
               <exclude>docs/*</exclude>
               <exclude>logs/*</exclude>
-              <!-- auto-gen docs -->
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
@@ -1076,9 +1107,43 @@
           </excludes>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>buildnumber-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>create-timestamp</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <timestampFormat>yyyy</timestampFormat>
+          <timestampPropertyName>build.year</timestampPropertyName>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <version>2.5.3</version>
+        <inherited>true</inherited>
+        <extensions>true</extensions>
+      </plugin>
     </plugins>
   </build>
   <properties>
+    <!-- override on command line to have generated LICENSE files include
+         diagnostic info for verifying notice requirements -->
+    <license.debug.print.included>false</license.debug.print.included>
+    <!-- When a particular module bundles its depenendencies, should be true -->
+    <license.bundles.dependencies>false</license.bundles.dependencies>
+    <!-- modules that include a the logo in their source tree should set true -->
+    <license.bundles.logo>false</license.bundles.logo>
+    <!-- modules that include bootstrap in their source tree should set true -->
+    <license.bundles.bootstrap>false</license.bundles.bootstrap>
+    <!-- modules that include jquery in their source tree should set true -->
+    <license.bundles.jquery>false</license.bundles.jquery>
     <tar.name>${project.build.finalName}.tar.gz</tar.name>
     <maven.build.timestamp.format>
       yyyy-MM-dd'T'HH:mm

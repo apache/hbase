@@ -29,7 +29,7 @@
   </parent>
 
   <artifactId>hbase-client</artifactId>
-  <name>HBase - Client</name>
+  <name>Apache HBase - Client</name>
   <description>Client of HBase</description>
 
   <build>

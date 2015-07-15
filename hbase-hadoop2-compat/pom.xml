@@ -26,7 +26,7 @@ limitations under the License.
   </parent>
 
   <artifactId>hbase-hadoop2-compat</artifactId>
-  <name>HBase - Hadoop Two Compatibility</name>
+  <name>Apache HBase - Hadoop Two Compatibility</name>
   <description>
         Interfaces to be implemented in order to smooth
         over hadoop version differences

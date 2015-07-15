@@ -28,7 +28,7 @@
     </parent>
 
     <artifactId>hbase-hadoop-compat</artifactId>
-    <name>HBase - Hadoop Compatibility</name>
+    <name>Apache HBase - Hadoop Compatibility</name>
     <description>
         Interfaces to be implemented in order to smooth
         over hadoop version differences
