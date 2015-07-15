@@ -120,7 +120,7 @@ public final class ProcedureWALFormat {
 
     // Write EOF Entry
     ProcedureWALEntry.newBuilder()
-      .setType(ProcedureWALEntry.Type.EOF)
+      .setType(ProcedureWALEntry.Type.PROCEDURE_WAL_EOF)
       .build().writeDelimitedTo(stream);
 
     // Write Tracker
@@ -181,7 +181,7 @@ public final class ProcedureWALFormat {
     stream.seek(trailerOffset);
 
     ProcedureWALEntry entry = readEntry(stream);
-    if (entry.getType() != ProcedureWALEntry.Type.EOF) {
+    if (entry.getType() != ProcedureWALEntry.Type.PROCEDURE_WAL_EOF) {
       throw new InvalidWALDataException("Invalid Trailer begin");
     }
 
@@ -211,23 +211,23 @@ public final class ProcedureWALFormat {
 
   public static void writeInsert(ByteSlot slot, Procedure proc)
       throws IOException {
-    writeEntry(slot, ProcedureWALEntry.Type.INIT, proc, null);
+    writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INIT, proc, null);
   }
 
   public static void writeInsert(ByteSlot slot, Procedure proc, Procedure[] subprocs)
       throws IOException {
-    writeEntry(slot, ProcedureWALEntry.Type.INSERT, proc, subprocs);
+    writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_INSERT, proc, subprocs);
   }
 
   public static void writeUpdate(ByteSlot slot, Procedure proc)
       throws IOException {
-    writeEntry(slot, ProcedureWALEntry.Type.UPDATE, proc, null);
+    writeEntry(slot, ProcedureWALEntry.Type.PROCEDURE_WAL_UPDATE, proc, null);
   }
 
   public static void writeDelete(ByteSlot slot, long procId)
       throws IOException {
     ProcedureWALEntry.Builder builder = ProcedureWALEntry.newBuilder();
-    builder.setType(ProcedureWALEntry.Type.DELETE);
+    builder.setType(ProcedureWALEntry.Type.PROCEDURE_WAL_DELETE);
     builder.setProcId(procId);
     builder.build().writeDelimitedTo(slot);
   }

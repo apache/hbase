@@ -6419,67 +6419,67 @@ public final class ProcedureProtos {
     public enum Type
         implements com.google.protobuf.ProtocolMessageEnum {
       /**
-       * <code>EOF = 1;</code>
+       * <code>PROCEDURE_WAL_EOF = 1;</code>
        */
-      EOF(0, 1),
+      PROCEDURE_WAL_EOF(0, 1),
       /**
-       * <code>INIT = 2;</code>
+       * <code>PROCEDURE_WAL_INIT = 2;</code>
        */
-      INIT(1, 2),
+      PROCEDURE_WAL_INIT(1, 2),
       /**
-       * <code>INSERT = 3;</code>
+       * <code>PROCEDURE_WAL_INSERT = 3;</code>
        */
-      INSERT(2, 3),
+      PROCEDURE_WAL_INSERT(2, 3),
       /**
-       * <code>UPDATE = 4;</code>
+       * <code>PROCEDURE_WAL_UPDATE = 4;</code>
        */
-      UPDATE(3, 4),
+      PROCEDURE_WAL_UPDATE(3, 4),
       /**
-       * <code>DELETE = 5;</code>
+       * <code>PROCEDURE_WAL_DELETE = 5;</code>
        */
-      DELETE(4, 5),
+      PROCEDURE_WAL_DELETE(4, 5),
       /**
-       * <code>COMPACT = 6;</code>
+       * <code>PROCEDURE_WAL_COMPACT = 6;</code>
        */
-      COMPACT(5, 6),
+      PROCEDURE_WAL_COMPACT(5, 6),
       ;
 
       /**
-       * <code>EOF = 1;</code>
+       * <code>PROCEDURE_WAL_EOF = 1;</code>
        */
-      public static final int EOF_VALUE = 1;
+      public static final int PROCEDURE_WAL_EOF_VALUE = 1;
       /**
-       * <code>INIT = 2;</code>
+       * <code>PROCEDURE_WAL_INIT = 2;</code>
        */
-      public static final int INIT_VALUE = 2;
+      public static final int PROCEDURE_WAL_INIT_VALUE = 2;
       /**
-       * <code>INSERT = 3;</code>
+       * <code>PROCEDURE_WAL_INSERT = 3;</code>
        */
-      public static final int INSERT_VALUE = 3;
+      public static final int PROCEDURE_WAL_INSERT_VALUE = 3;
       /**
-       * <code>UPDATE = 4;</code>
+       * <code>PROCEDURE_WAL_UPDATE = 4;</code>
        */
-      public static final int UPDATE_VALUE = 4;
+      public static final int PROCEDURE_WAL_UPDATE_VALUE = 4;
       /**
-       * <code>DELETE = 5;</code>
+       * <code>PROCEDURE_WAL_DELETE = 5;</code>
        */
-      public static final int DELETE_VALUE = 5;
+      public static final int PROCEDURE_WAL_DELETE_VALUE = 5;
       /**
-       * <code>COMPACT = 6;</code>
+       * <code>PROCEDURE_WAL_COMPACT = 6;</code>
        */
-      public static final int COMPACT_VALUE = 6;
+      public static final int PROCEDURE_WAL_COMPACT_VALUE = 6;
 
 
       public final int getNumber() { return value; }
 
       public static Type valueOf(int value) {
         switch (value) {
-          case 1: return EOF;
-          case 2: return INIT;
-          case 3: return INSERT;
-          case 4: return UPDATE;
-          case 5: return DELETE;
-          case 6: return COMPACT;
+          case 1: return PROCEDURE_WAL_EOF;
+          case 2: return PROCEDURE_WAL_INIT;
+          case 3: return PROCEDURE_WAL_INSERT;
+          case 4: return PROCEDURE_WAL_UPDATE;
+          case 5: return PROCEDURE_WAL_DELETE;
+          case 6: return PROCEDURE_WAL_COMPACT;
           default: return null;
         }
       }
@@ -6601,7 +6601,7 @@ public final class ProcedureProtos {
     }
 
     private void initFields() {
-      type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.EOF;
+      type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.PROCEDURE_WAL_EOF;
       procedure_ = java.util.Collections.emptyList();
       procId_ = 0L;
     }
@@ -6827,7 +6827,7 @@ public final class ProcedureProtos {
 
       public Builder clear() {
         super.clear();
-        type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.EOF;
+        type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.PROCEDURE_WAL_EOF;
         bitField0_ = (bitField0_ & ~0x00000001);
         if (procedureBuilder_ == null) {
           procedure_ = java.util.Collections.emptyList();
@@ -6968,7 +6968,7 @@ public final class ProcedureProtos {
       private int bitField0_;
 
       // required .hbase.pb.ProcedureWALEntry.Type type = 1;
-      private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.EOF;
+      private org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.PROCEDURE_WAL_EOF;
       /**
        * <code>required .hbase.pb.ProcedureWALEntry.Type type = 1;</code>
        */
@@ -6998,7 +6998,7 @@ public final class ProcedureProtos {
        */
       public Builder clearType() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.EOF;
+        type_ = org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureWALEntry.Type.PROCEDURE_WAL_EOF;
         onChanged();
         return this;
       }
@@ -7355,17 +7355,19 @@ public final class ProcedureProtos {
       "eTracker\0229\n\004node\030\001 \003(\0132+.hbase.pb.Proced" +
       "ureStoreTracker.TrackerNode\032A\n\013TrackerNo" +
       "de\022\020\n\010start_id\030\001 \002(\004\022\017\n\007updated\030\002 \003(\004\022\017\n" +
-      "\007deleted\030\003 \003(\004\"\310\001\n\021ProcedureWALEntry\022.\n\004",
+      "\007deleted\030\003 \003(\004\"\235\002\n\021ProcedureWALEntry\022.\n\004",
       "type\030\001 \002(\0162 .hbase.pb.ProcedureWALEntry." +
       "Type\022&\n\tprocedure\030\002 \003(\0132\023.hbase.pb.Proce" +
-      "dure\022\017\n\007proc_id\030\003 \001(\004\"J\n\004Type\022\007\n\003EOF\020\001\022\010" +
-      "\n\004INIT\020\002\022\n\n\006INSERT\020\003\022\n\n\006UPDATE\020\004\022\n\n\006DELE" +
-      "TE\020\005\022\013\n\007COMPACT\020\006*p\n\016ProcedureState\022\020\n\014I" +
-      "NITIALIZING\020\001\022\014\n\010RUNNABLE\020\002\022\013\n\007WAITING\020\003" +
-      "\022\023\n\017WAITING_TIMEOUT\020\004\022\016\n\nROLLEDBACK\020\005\022\014\n" +
-      "\010FINISHED\020\006BE\n*org.apache.hadoop.hbase.p" +
-      "rotobuf.generatedB\017ProcedureProtosH\001\210\001\001\240" +
-      "\001\001"
+      "dure\022\017\n\007proc_id\030\003 \001(\004\"\236\001\n\004Type\022\025\n\021PROCED" +
+      "URE_WAL_EOF\020\001\022\026\n\022PROCEDURE_WAL_INIT\020\002\022\030\n" +
+      "\024PROCEDURE_WAL_INSERT\020\003\022\030\n\024PROCEDURE_WAL" +
+      "_UPDATE\020\004\022\030\n\024PROCEDURE_WAL_DELETE\020\005\022\031\n\025P" +
+      "ROCEDURE_WAL_COMPACT\020\006*p\n\016ProcedureState" +
+      "\022\020\n\014INITIALIZING\020\001\022\014\n\010RUNNABLE\020\002\022\013\n\007WAIT" +
+      "ING\020\003\022\023\n\017WAITING_TIMEOUT\020\004\022\016\n\nROLLEDBACK" +
+      "\020\005\022\014\n\010FINISHED\020\006BE\n*org.apache.hadoop.hb",
+      "ase.protobuf.generatedB\017ProcedureProtosH" +
+      "\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {

@@ -121,20 +121,20 @@ public class ProcedureWALFormatReader {
           break;
         }
         switch (entry.getType()) {
-          case INIT:
+          case PROCEDURE_WAL_INIT:
             readInitEntry(entry);
             break;
-          case INSERT:
+          case PROCEDURE_WAL_INSERT:
             readInsertEntry(entry);
             break;
-          case UPDATE:
-          case COMPACT:
+          case PROCEDURE_WAL_UPDATE:
+          case PROCEDURE_WAL_COMPACT:
             readUpdateEntry(entry);
             break;
-          case DELETE:
+          case PROCEDURE_WAL_DELETE:
             readDeleteEntry(entry);
             break;
-          case EOF:
+          case PROCEDURE_WAL_EOF:
             hasMore = false;
             break;
           default:
