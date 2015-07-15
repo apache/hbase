@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>hbase-common</artifactId>
-  <name>HBase - Common</name>
+  <name>Apache HBase - Common</name>
   <description>Common functionality for HBase</description>
 
   <build>
@@ -40,6 +40,16 @@
           </includes>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources/META-INF/</directory>
+        <targetPath>META-INF/</targetPath>
+        <includes>
+          <include>NOTICE</include>
+        </includes>
+        <filtering>true</filtering>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -142,6 +152,13 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-source-plugin</artifactId>
+          <configuration>
+            <excludeResources>true</excludeResources>
+            <includes>
+              <include>src/main/java</include>
+              <include>${project.build.outputDirectory}/META-INF</include>
+            </includes>
+          </configuration>
         </plugin>
     </plugins>
     <pluginManagement>

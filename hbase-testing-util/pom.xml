@@ -27,7 +27,7 @@
         <relativePath>..</relativePath>
     </parent>
     <artifactId>hbase-testing-util</artifactId>
-    <name>HBase - Testing Util</name>
+    <name>Apache HBase - Testing Util</name>
     <description>HBase Testing Utilities.</description>
     <build>
       <plugins>
