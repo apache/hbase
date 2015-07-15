@@ -767,6 +767,8 @@ public final class RequestConverter {
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
+   // send the master's wall clock time as well, so that the RS can refer to it
+   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTimeMillis());
    return builder.build();
  }
 
@@ -789,6 +791,7 @@ public final class RequestConverter {
    if (server != null) {
      builder.setServerStartCode(server.getStartcode());
    }
+   builder.setMasterSystemTime(EnvironmentEdgeManager.currentTimeMillis());
    return builder.build();
  }
 

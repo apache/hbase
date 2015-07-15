@@ -319,7 +319,7 @@ public class MetaEditor {
     Put put = new Put(regionInfo.getRegionName());
     addRegionInfo(put, regionInfo);
     if (sn != null) {
-      addLocation(put, sn, openSeqNum);
+      addLocation(put, sn, openSeqNum, -1);
     }
     putToMetaTable(catalogTracker, put);
     LOG.info("Added daughter " + regionInfo.getEncodedName() +
@@ -335,7 +335,7 @@ public class MetaEditor {
    * @param regionA
    * @param regionB
    * @param sn the location of the region
-   * @param masterSystemTime
+   * @param masterSystemTime wall clock time from master if passed in the open region RPC or -1
    * @throws IOException
    */
   public static void mergeRegions(final CatalogTracker catalogTracker,
@@ -360,7 +360,7 @@ public class MetaEditor {
       Delete deleteB = makeDeleteFromRegionInfo(regionB, time);
 
       // The merged is a new region, openSeqNum = 1 is fine.
-      addLocation(putOfMerged, sn, 1);
+      addLocation(putOfMerged, sn, 1, time);
 
       byte[] tableRow = Bytes.toBytes(mergedRegion.getRegionNameAsString()
           + HConstants.DELIMITER);
@@ -398,8 +398,8 @@ public class MetaEditor {
       Put putA = makePutFromRegionInfo(splitA);
       Put putB = makePutFromRegionInfo(splitB);
 
-      addLocation(putA, sn, 1); //these are new regions, openSeqNum = 1 is fine.
-      addLocation(putB, sn, 1);
+      addLocation(putA, sn, 1, -1); //these are new regions, openSeqNum = 1 is fine.
+      addLocation(putB, sn, 1, -1);
 
       byte[] tableRow = Bytes.toBytes(parent.getRegionNameAsString() + HConstants.DELIMITER);
       multiMutate(meta, tableRow, putParent, putA, putB);
@@ -454,7 +454,7 @@ public class MetaEditor {
   public static void updateMetaLocation(CatalogTracker catalogTracker,
       HRegionInfo regionInfo, ServerName sn, long openSeqNum)
   throws IOException, ConnectException {
-    updateLocation(catalogTracker, regionInfo, sn, openSeqNum, HConstants.LATEST_TIMESTAMP);
+    updateLocation(catalogTracker, regionInfo, sn, openSeqNum, -1);
   }
 
   /**
@@ -467,12 +467,13 @@ public class MetaEditor {
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
    * @param sn Server name
+   * @param openSeqNum the latest sequence number obtained when the region was open
    * @throws IOException
    */
   public static void updateRegionLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn, long updateSeqNum)
+      HRegionInfo regionInfo, ServerName sn, long openSeqNum)
       throws IOException {
-    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum, HConstants.LATEST_TIMESTAMP);
+    updateLocation(catalogTracker, regionInfo, sn, openSeqNum, -1);
   }
 
   /**
@@ -485,13 +486,14 @@ public class MetaEditor {
    * @param catalogTracker catalog tracker
    * @param regionInfo region to update location of
    * @param sn Server name
-   * @param masterSystemTime
+   * @param openSeqNum the latest sequence number obtained when the region was open
+   * @param masterSystemTime wall clock time from master if passed in the open region RPC or -1
    * @throws IOException
    */
   public static void updateRegionLocation(CatalogTracker catalogTracker,
-      HRegionInfo regionInfo, ServerName sn, long updateSeqNum, long masterSystemTime)
+      HRegionInfo regionInfo, ServerName sn, long openSeqNum, long masterSystemTime)
   throws IOException {
-    updateLocation(catalogTracker, regionInfo, sn, updateSeqNum, masterSystemTime);
+    updateLocation(catalogTracker, regionInfo, sn, openSeqNum, masterSystemTime);
   }
 
   /**
@@ -504,7 +506,7 @@ public class MetaEditor {
    * @param regionInfo region to update location of
    * @param sn Server name
    * @param openSeqNum the latest sequence number obtained when the region was open
-   * @param masterSystemTime
+   * @param masterSystemTime wall clock time from master if passed in the open region RPC or -1
    * @throws IOException In particular could throw {@link java.net.ConnectException}
    * if the server is down on other end.
    */
@@ -516,7 +518,7 @@ public class MetaEditor {
     long time = Math.max(EnvironmentEdgeManager.currentTimeMillis(), masterSystemTime);
 
     Put put = new Put(regionInfo.getRegionName(), time);
-    addLocation(put, sn, openSeqNum);
+    addLocation(put, sn, openSeqNum, time);
     putToCatalogTable(catalogTracker, put);
     LOG.info("Updated row " + regionInfo.getRegionNameAsString() +
       " with server=" + sn);
@@ -640,12 +642,15 @@ public class MetaEditor {
     return p;
   }
 
-  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+  private static Put addLocation(final Put p, final ServerName sn, long openSeqNum, long time) {
+    if (time <= 0) {
+      time = EnvironmentEdgeManager.currentTimeMillis();
+    }
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, time,
       Bytes.toBytes(sn.getHostAndPort()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, time,
       Bytes.toBytes(sn.getStartcode()));
-    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER,
+    p.addImmutable(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, time,
       Bytes.toBytes(openSeqNum));
     return p;
   }

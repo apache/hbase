@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionServerAccounting;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.ConfigUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
@@ -52,6 +53,7 @@ public class OpenRegionHandler extends EventHandler {
 
   private final HRegionInfo regionInfo;
   private final HTableDescriptor htd;
+  private final long masterSystemTime;
 
   private boolean tomActivated;
   private int assignmentTimeout;
@@ -68,23 +70,25 @@ public class OpenRegionHandler extends EventHandler {
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
       HTableDescriptor htd) {
-    this(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION, -1);
+    this(server, rsServices, regionInfo, htd, -1, EventType.M_RS_OPEN_REGION, -1);
   }
+
   public OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      HTableDescriptor htd, int versionOfOfflineNode) {
-    this(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_REGION,
+      HTableDescriptor htd, int versionOfOfflineNode, long masterSystemTime) {
+    this(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_REGION,
         versionOfOfflineNode);
   }
 
   protected OpenRegionHandler(final Server server,
       final RegionServerServices rsServices, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, EventType eventType,
+      final HTableDescriptor htd, long masterSystemTime, EventType eventType,
       final int versionOfOfflineNode) {
     super(server, eventType);
     this.rsServices = rsServices;
     this.regionInfo = regionInfo;
     this.htd = htd;
+    this.masterSystemTime = masterSystemTime;
     this.versionOfOfflineNode = versionOfOfflineNode;
     tomActivated = this.server.getConfiguration().
       getBoolean(AssignmentManager.ASSIGNMENT_TIMEOUT_MANAGEMENT,
@@ -149,7 +153,7 @@ public class OpenRegionHandler extends EventHandler {
 
       boolean failed = true;
       if (isRegionStillOpening() && (!useZKForAssignment || tickleOpening("post_region_open"))) {
-        if (updateMeta(region)) {
+        if (updateMeta(region, masterSystemTime)) {
           failed = false;
         }
       }
@@ -248,7 +252,7 @@ public class OpenRegionHandler extends EventHandler {
    * state meantime so master doesn't timeout our region-in-transition.
    * Caller must cleanup region if this fails.
    */
-  boolean updateMeta(final HRegion r) {
+  boolean updateMeta(final HRegion r, final long masterSystemTime) {
     if (this.server.isStopped() || this.rsServices.isStopping()) {
       return false;
     }
@@ -256,7 +260,7 @@ public class OpenRegionHandler extends EventHandler {
     // Else, wait.
     final AtomicBoolean signaller = new AtomicBoolean(false);
     PostOpenDeployTasksThread t = new PostOpenDeployTasksThread(r,
-      this.server, this.rsServices, signaller);
+      this.server, this.rsServices, signaller, masterSystemTime);
     t.start();
     // Total timeout for meta edit.  If we fail adding the edit then close out
     // the region and let it be assigned elsewhere.
@@ -323,20 +327,23 @@ public class OpenRegionHandler extends EventHandler {
     private final RegionServerServices services;
     private final HRegion region;
     private final AtomicBoolean signaller;
+    private final long masterSystemTime;
 
     PostOpenDeployTasksThread(final HRegion region, final Server server,
-        final RegionServerServices services, final AtomicBoolean signaller) {
+        final RegionServerServices services, final AtomicBoolean signaller,
+        final long masterSystemTime) {
       super("PostOpenDeployTasks:" + region.getRegionInfo().getEncodedName());
       this.setDaemon(true);
       this.server = server;
       this.services = services;
       this.region = region;
-      this.signaller = signaller;
+      this.signaller = signaller;      
+      this.masterSystemTime = masterSystemTime;
     }
 
     public void run() {
       try {
-        this.services.postOpenDeployTasks(this.region,
+        this.services.postOpenDeployTasks(new PostOpenDeployContext(region, masterSystemTime),
           this.server.getCatalogTracker());
       } catch (Throwable e) {
         String msg =

@@ -319,7 +319,7 @@ public class TestRegionServerNoMaster {
 
     // Let's start the open handler
     HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
-    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
+    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0, -1));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed();
@@ -373,7 +373,7 @@ public class TestRegionServerNoMaster {
     //  2) The region in RIT was changed.
     // The order is more or less implementation dependant.
     HTableDescriptor htd = getRS().tableDescriptors.get(hri.getTable());
-    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0));
+    getRS().service.submit(new OpenRegionHandler(getRS(), getRS(), hri, htd, 0, -1));
 
     // The open handler should have removed the region from RIT but kept the region closed
     checkRegionIsClosed();

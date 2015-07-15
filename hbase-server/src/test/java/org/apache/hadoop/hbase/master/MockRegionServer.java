@@ -286,6 +286,12 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   }
 
   @Override
+  public void postOpenDeployTasks(PostOpenDeployContext context, CatalogTracker ct)
+      throws KeeperException, IOException {
+    addToOnlineRegions(context.getRegion());
+  }
+
+  @Override
   public boolean isStopping() {
     return false;
   }
@@ -574,6 +580,11 @@ ClientProtos.ClientService.BlockingInterface, RegionServerServices {
   @Override
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(RegionStateTransitionContext context) {
     return false;
   }
 

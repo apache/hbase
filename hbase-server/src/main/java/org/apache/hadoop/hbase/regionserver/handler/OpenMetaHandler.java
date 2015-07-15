@@ -34,13 +34,13 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 public class OpenMetaHandler extends OpenRegionHandler {
   public OpenMetaHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd) {
-    this(server, rsServices, regionInfo, htd, -1);
+      final HTableDescriptor htd, long masterSystemTime) {
+    this(server, rsServices, regionInfo, htd, -1, masterSystemTime);
   }
   public OpenMetaHandler(final Server server,
       final RegionServerServices rsServices, HRegionInfo regionInfo,
-      final HTableDescriptor htd, int versionOfOfflineNode) {
-    super(server, rsServices, regionInfo, htd, EventType.M_RS_OPEN_META,
+      final HTableDescriptor htd, int versionOfOfflineNode, long masterSystemTime) {
+    super(server, rsServices, regionInfo, htd, masterSystemTime, EventType.M_RS_OPEN_META,
         versionOfOfflineNode);
   }
 }

@@ -108,6 +108,11 @@ class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
+  public void postOpenDeployTasks(PostOpenDeployContext context, CatalogTracker ct)
+      throws KeeperException, IOException {
+  }
+
+  @Override
   public RpcServerInterface getRpcServer() {
     return rpcServer;
   }
@@ -241,6 +246,11 @@ class MockRegionServerServices implements RegionServerServices {
   @Override
   public boolean reportRegionStateTransition(TransitionCode code,
       HRegionInfo... hris) {
+    return false;
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(RegionStateTransitionContext context) {
     return false;
   }
 

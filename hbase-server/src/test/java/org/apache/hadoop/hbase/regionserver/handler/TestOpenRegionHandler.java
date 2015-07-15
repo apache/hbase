@@ -226,7 +226,7 @@ public class TestOpenRegionHandler {
     OpenRegionHandler handler =
       new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
         @Override
-        boolean updateMeta(final HRegion r) {
+        boolean updateMeta(final HRegion r, long masterSystemTime) {
           // Fake failure of updating META
           return false;
         }
@@ -250,7 +250,7 @@ public class TestOpenRegionHandler {
     // Create the handler
     OpenRegionHandler handler = new OpenRegionHandler(server, rsServices, TEST_HRI, TEST_HTD) {
       @Override
-      boolean updateMeta(HRegion r) {
+      boolean updateMeta(HRegion r, long masterSystemTime) {
         return false;
       };
 

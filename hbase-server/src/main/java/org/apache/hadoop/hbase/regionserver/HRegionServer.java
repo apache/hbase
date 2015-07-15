@@ -1871,7 +1871,15 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   @Override
   public void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
-  throws KeeperException, IOException {
+      throws KeeperException, IOException {
+    postOpenDeployTasks(new PostOpenDeployContext(r, -1), ct);
+  }
+
+  @Override
+  public void postOpenDeployTasks(final PostOpenDeployContext context, final CatalogTracker ct)
+      throws KeeperException, IOException {
+    HRegion r = context.getRegion();
+    long masterSystemTime = context.getMasterSystemTime();
     checkOpen();
     LOG.info("Post open deploy tasks for region=" + r.getRegionNameAsString());
     // Do checks to see if we need to compact (references or too many files)
@@ -1898,11 +1906,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         MetaRegionTracker.setMetaLocation(getZooKeeper(), this.serverNameFromMasterPOV, State.OPEN);
       } else {
         MetaEditor.updateRegionLocation(ct, r.getRegionInfo(), this.serverNameFromMasterPOV,
-          openSeqNum);
+          openSeqNum, masterSystemTime);
       }
     }
      if (!useZKForAssignment
-        && !reportRegionStateTransition(TransitionCode.OPENED, openSeqNum, r.getRegionInfo())) {
+        && !reportRegionStateTransition(new RegionStateTransitionContext(
+              TransitionCode.OPENED, openSeqNum, masterSystemTime, r.getRegionInfo()))) {
       throw new IOException("Failed to report opened region to master: "
           + r.getRegionNameAsString());
     }
@@ -2036,6 +2045,16 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
 
   @Override
   public boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris) {
+    return reportRegionStateTransition(
+      new RegionStateTransitionContext(code, HConstants.NO_SEQNUM, -1, hris));
+  }
+
+  @Override
+  public boolean reportRegionStateTransition(RegionStateTransitionContext context) {
+    TransitionCode code = context.getCode();
+    long openSeqNum = context.getOpenSeqNum();
+    long masterSystemTime = context.getMasterSystemTime();
+    HRegionInfo[] hris = context.getHris();
     ReportRegionStateTransitionRequest.Builder builder = ReportRegionStateTransitionRequest.newBuilder();
     builder.setServer(ProtobufUtil.toServerName(serverName));
     RegionStateTransition.Builder transition = builder.addTransitionBuilder();
@@ -3868,6 +3887,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     final Map<TableName, HTableDescriptor> htds =
         new HashMap<TableName, HTableDescriptor>(regionCount);
     final boolean isBulkAssign = regionCount > 1;
+
+    long masterSystemTime = request.hasMasterSystemTime() ? request.getMasterSystemTime() : -1;
+
     for (RegionOpenInfo regionOpenInfo : request.getOpenInfoList()) {
       final HRegionInfo region = HRegionInfo.convert(regionOpenInfo.getRegion());
 
@@ -3958,12 +3980,12 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
           // Need to pass the expected version in the constructor.
           if (region.isMetaRegion()) {
             this.service.submit(new OpenMetaHandler(this, this, region, htd,
-                versionOfOfflineNode));
+                versionOfOfflineNode, masterSystemTime));
           } else {
             updateRegionFavoredNodesMapping(region.getEncodedName(),
                 regionOpenInfo.getFavoredNodesList());
             this.service.submit(new OpenRegionHandler(this, this, region, htd,
-                versionOfOfflineNode));
+                versionOfOfflineNode, masterSystemTime));
           }
         }
 

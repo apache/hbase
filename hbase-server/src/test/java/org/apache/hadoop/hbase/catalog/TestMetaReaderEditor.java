@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.common.collect.Lists;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -343,6 +344,44 @@ public class TestMetaReaderEditor {
       assertNull(serverCell);
       assertNull(startCodeCell);
       assertNull(seqNumCell);
+    } finally {
+      meta.close();
+    }
+  }
+  
+  @Test
+  public void testMastersSystemTimeIsUsedInUpdateLocations() throws IOException {
+    long regionId = System.currentTimeMillis();
+    HRegionInfo regionInfo = new HRegionInfo(TableName.valueOf("table_foo"),
+      HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false, regionId);
+
+    ServerName sn = ServerName.valueOf("bar", 0, 0);
+    HTable meta = MetaReader.getMetaHTable(CT);
+    try {
+      List<HRegionInfo> regionInfos = Lists.newArrayList(regionInfo);
+      MetaEditor.addRegionsToMeta(CT, regionInfos, 1);
+
+      long masterSystemTime = EnvironmentEdgeManager.currentTimeMillis() + 123456789;
+      MetaEditor.updateRegionLocation(CT, regionInfo, sn, 1, masterSystemTime);
+
+      Get get = new Get(regionInfo.getRegionName());
+      Result result = meta.get(get);
+      Cell serverCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        HConstants.SERVER_QUALIFIER);
+      Cell startCodeCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        HConstants.STARTCODE_QUALIFIER);
+      Cell seqNumCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        HConstants.SEQNUM_QUALIFIER);
+
+      assertNotNull(serverCell);
+      assertNotNull(startCodeCell);
+      assertNotNull(seqNumCell);
+      assertTrue(serverCell.getValueLength() > 0);
+      assertTrue(startCodeCell.getValueLength() > 0);
+      assertTrue(seqNumCell.getValueLength() > 0);
+      assertEquals(masterSystemTime, serverCell.getTimestamp());
+      assertEquals(masterSystemTime, startCodeCell.getTimestamp());
+      assertEquals(masterSystemTime, seqNumCell.getTimestamp());
     } finally {
       meta.close();
     }

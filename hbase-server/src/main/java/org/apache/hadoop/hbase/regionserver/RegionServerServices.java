@@ -71,27 +71,96 @@ public interface RegionServerServices
    */
   TableLockManager getTableLockManager();
 
+ /**
+   * Context for postOpenDeployTasks().
+   */
+  class PostOpenDeployContext {
+    private final HRegion region;
+    private final long masterSystemTime;
+
+    @InterfaceAudience.Private
+    public PostOpenDeployContext(HRegion region, long masterSystemTime) {
+      this.region = region;
+      this.masterSystemTime = masterSystemTime;
+    }
+    public HRegion getRegion() {
+      return region;
+    }
+    public long getMasterSystemTime() {
+      return masterSystemTime;
+    }
+  }
+
+  /**
+   * Tasks to perform after region open to complete deploy of region on
+   * regionserver
+   *
+   * @param context the context
+   * @param ct catalog tracker
+   * @throws KeeperException
+   * @throws IOException
+   */
+  void postOpenDeployTasks(final PostOpenDeployContext context, final CatalogTracker ct)
+      throws KeeperException, IOException;
+
   /**
    * Tasks to perform after region open to complete deploy of region on
    * regionserver
    *
    * @param r Region to open.
-   * @param ct Instance of {@link CatalogTracker}
+   * @param ct catalog tracker
    * @throws KeeperException
    * @throws IOException
+   * @deprecated use {@link #postOpenDeployTasks(PostOpenDeployContext)}
    */
+  @Deprecated
   void postOpenDeployTasks(final HRegion r, final CatalogTracker ct)
-  throws KeeperException, IOException;
+      throws KeeperException, IOException;
+
+  class RegionStateTransitionContext {
+    private final TransitionCode code;
+    private final long openSeqNum;
+    private final long masterSystemTime;
+    private final HRegionInfo[] hris;
+
+    @InterfaceAudience.Private
+    public RegionStateTransitionContext(TransitionCode code, long openSeqNum, long masterSystemTime,
+        HRegionInfo... hris) {
+      this.code = code;
+      this.openSeqNum = openSeqNum;
+      this.masterSystemTime = masterSystemTime;
+      this.hris = hris;
+    }
+    public TransitionCode getCode() {
+      return code;
+    }
+    public long getOpenSeqNum() {
+      return openSeqNum;
+    }
+    public long getMasterSystemTime() {
+      return masterSystemTime;
+    }
+    public HRegionInfo[] getHris() {
+      return hris;
+    }
+  }
 
   /**
    * Notify master that a handler requests to change a region state
    */
-  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
+  boolean reportRegionStateTransition(final RegionStateTransitionContext context);
 
   /**
    * Notify master that a handler requests to change a region state
    */
+  @Deprecated
   boolean reportRegionStateTransition(TransitionCode code, HRegionInfo... hris);
+
+  /**
+   * Notify master that a handler requests to change a region state
+   */
+  @Deprecated
+  boolean reportRegionStateTransition(TransitionCode code, long openSeqNum, HRegionInfo... hris);
 
   /**
    * Returns a reference to the region server's RPC server
