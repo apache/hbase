@@ -231,6 +231,8 @@ public class HBaseFsck extends Configured implements Closeable {
    * Options
    ***********/
   private static boolean details = false; // do we display the full report
+  private static boolean useLock = true; // do we use the hbck exclusivity lock
+  private static boolean switchBalancer = true; // do we turn the balancer off while running
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
   private boolean fixAssignments = false; // fix assignment errors?
   private boolean fixMeta = false; // fix meta errors?
@@ -476,18 +478,21 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public void connect() throws IOException {
 
-    // Check if another instance of balancer is running
-    hbckOutFd = checkAndMarkRunningHbck();
-    if (hbckOutFd == null) {
-      setRetCode(-1);
-      LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
-          " no other instance is running, delete the lock file " +
-          HBCK_LOCK_PATH + " and rerun the tool]");
-      throw new IOException("Duplicate hbck - Abort");
+    if (useLock) {
+      // Check if another instance of balancer is running
+      hbckOutFd = checkAndMarkRunningHbck();
+      if (hbckOutFd == null) {
+        setRetCode(-1);
+        LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
+            " no other instance is running, delete the lock file " +
+            HBCK_LOCK_PATH + " and rerun the tool]");
+        throw new IOException("Duplicate hbck - Abort");
+      }
+
+      // Make sure to cleanup the lock
+      hbckLockCleanup.set(true);
     }
 
-    // Make sure to cleanup the lock
-    hbckLockCleanup.set(true);
 
     // Add a shutdown hook to this thread, in case user tries to
     // kill the hbck with a ctrl-c, we want to cleanup the lock so that
@@ -666,7 +671,6 @@ public class HBaseFsck extends Configured implements Closeable {
     fixOrphanTables();
 
     LOG.info("Checking and fixing region consistency");
-
     // Check and fix consistency
     checkAndFixConsistency();
 
@@ -684,13 +688,19 @@ public class HBaseFsck extends Configured implements Closeable {
     errors.print("Version: " + status.getHBaseVersion());
     offlineHdfsIntegrityRepair();
 
+    boolean oldBalancer = true;
     // turn the balancer off
-    boolean oldBalancer = admin.setBalancerRunning(false, true);
+    if (switchBalancer) {
+      oldBalancer = admin.setBalancerRunning(false, true);
+    }
+
     try {
       onlineConsistencyRepair();
     }
     finally {
-      admin.setBalancerRunning(oldBalancer, false);
+      if (switchBalancer) {
+        admin.setBalancerRunning(oldBalancer, false);
+      }
     }
 
     if (checkRegionBoundaries) {
@@ -4140,6 +4150,14 @@ public class HBaseFsck extends Configured implements Closeable {
     details = true;
   }
 
+  public static void setNoLock() {
+    useLock = false;
+  }
+
+  public static void setNoBalacerSwitch() {
+    switchBalancer = false;
+  }
+
   /**
    * Set summary mode.
    * Print only summary of the tables and status (OK or INCONSISTENT)
@@ -4392,6 +4410,8 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -metaonly Only check the state of the hbase:meta table.");
     out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta.");
     out.println("   -boundaries Verify that regions boundaries are the same between META and store files.");
+    out.println("   -noLock Turn off using the hdfs lock file.");
+    out.println("   -noBalancerSwitch Don't switch the balancer off.");
 
     out.println("");
     out.println("  Metadata Repair options: (expert features, use with caution!)");
@@ -4481,6 +4501,10 @@ public class HBaseFsck extends Configured implements Closeable {
         return printUsageAndExit();
       } else if (cmd.equals("-details")) {
         setDisplayFullReport();
+      } else if (cmd.equals("-noLock")) {
+        setNoLock();
+      } else if (cmd.equals("-noBalancerSwitch")) {
+        setNoBalacerSwitch();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
           errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -timelag needs a value.");
