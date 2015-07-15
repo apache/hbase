@@ -43,4 +43,25 @@
       </binaries>
     </moduleSet>
   </moduleSets>
+  <!-- Include the generated LICENSE and NOTICE files -->
+  <files>
+    <file>
+      <source>${project.build.directory}/maven-shared-archive-resources/META-INF/LICENSE</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LICENSE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${project.build.directory}/NOTICE.aggregate</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>NOTICE.txt</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+    <file>
+      <source>${basedir}/src/main/resources/META-INF/LEGAL</source>
+      <outputDirectory>.</outputDirectory>
+      <destName>LEGAL</destName>
+      <lineEnding>unix</lineEnding>
+    </file>
+  </files>
 </assembly>

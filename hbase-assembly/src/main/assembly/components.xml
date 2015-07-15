@@ -33,8 +33,6 @@
       <directory>${project.basedir}/..</directory>
       <outputDirectory>.</outputDirectory>
       <includes>
-        <include>LICENSE.txt</include>
-        <include>NOTICE.txt</include>
         <include>CHANGES.txt</include>
         <include>README.txt</include>
       </includes>

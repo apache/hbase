@@ -27,13 +27,46 @@
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-assembly</artifactId>
-  <name>HBase - Assembly</name>
+  <name>Apache HBase - Assembly</name>
   <description>
         Module that does project assembly and that is all that it does.
     </description>
   <packaging>pom</packaging>
+  <properties>
+    <license.bundles.dependencies>true</license.bundles.dependencies>
+  </properties>
   <build>
     <plugins>
+      <!-- licensing info from our dependencies -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-remote-resources-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>default</id>
+            <configuration>
+              <properties>
+                <copyright-end-year>${build.year}</copyright-end-year>
+                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
+                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                <bundled-logo>${license.bundles.logo}</bundled-logo>
+                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+              </properties>
+              <resourceBundles>
+                <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
+              </resourceBundles>
+              <supplementalModelArtifacts>
+                <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
+              </supplementalModelArtifacts>
+              <supplementalModels>
+                <supplementalModel>supplemental-models.xml</supplementalModel>
+              </supplementalModels>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <artifactId>maven-assembly-plugin</artifactId>
         <version>${maven.assembly.version}</version>
@@ -72,8 +105,52 @@
               <outputFile>${project.parent.basedir}/target/cached_classpath.txt</outputFile>
             </configuration>
           </execution>
+        <!--
+           Build an aggregation of our templated NOTICE file and the NOTICE files in our dependencies.
+           If MASSEMBLY-382 is fixed we could do this in the assembly
+           Currently relies on env, bash, find, and cat.
+        -->
+          <execution>
+            <!-- put all of the NOTICE files out of our dependencies -->
+            <id>unpack-dependency-notices</id>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>unpack-dependencies</goal>
+            </goals>
+            <configuration>
+              <useSubDirectoryPerArtifact>true</useSubDirectoryPerArtifact>
+              <includes>**\/NOTICE,**\/NOTICE.txt</includes>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.4.0</version>
+        <executions>
+          <execution>
+            <id>concat-NOTICE-files</id>
+            <phase>package</phase>
+            <goals>
+              <goal>exec</goal>
+            </goals>
+            <configuration>
+              <executable>env</executable>
+              <arguments>
+                <argument>bash</argument>
+                <argument>-c</argument>
+                <argument>cat maven-shared-archive-resources/META-INF/NOTICE \
+                  `find ${project.build.directory}/dependency -iname NOTICE -or -iname NOTICE.txt` \
+                </argument>
+              </arguments>
+              <outputFile>${project.build.directory}/NOTICE.aggregate</outputFile>
+              <workingDirectory>${project.build.directory}</workingDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <!-- /end building aggregation of NOTICE files -->
     </plugins>
   </build>
   <dependencies>
@@ -105,6 +182,12 @@
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-testing-util</artifactId>
        <version>${project.version}</version>
+    </dependency>
+    <dependency>
+       <groupId>org.apache.hbase</groupId>
+       <artifactId>hbase-resource-bundle</artifactId>
+       <version>${project.version}</version>
+       <optional>true</optional>
     </dependency>
   </dependencies>
 </project>
