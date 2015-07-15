@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>hbase-procedure</artifactId>
-  <name>HBase - Procedure</name>
+  <name>Apache HBase - Procedure</name>
   <description>Procedure Framework</description>
 
   <build>

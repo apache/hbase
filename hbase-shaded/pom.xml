@@ -27,13 +27,26 @@
         <relativePath>..</relativePath>
     </parent>
     <artifactId>hbase-shaded</artifactId>
-    <name>HBase - Shaded</name>
+    <name>Apache HBase - Shaded</name>
     <description>Module of HBase with most deps shaded.</description>
     <packaging>pom</packaging>
+    <properties>
+      <!-- Don't make a test-jar -->
+      <maven.test.skip>true</maven.test.skip>
+      <license.bundles.dependencies>true</license.bundles.dependencies>
+    </properties>
     <modules>
         <module>hbase-shaded-client</module>
         <module>hbase-shaded-server</module>
     </modules>
+    <dependencies>
+      <dependency>
+         <groupId>org.apache.hbase</groupId>
+         <artifactId>hbase-resource-bundle</artifactId>
+         <version>${project.version}</version>
+         <optional>true</optional>
+      </dependency>
+    </dependencies>
     <build>
         <plugins>
             <plugin>
@@ -50,6 +63,36 @@
                     <skipAssembly>true</skipAssembly>
                 </configuration>
             </plugin>
+            <!-- licensing info from our dependencies -->
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-remote-resources-plugin</artifactId>
+              <version>1.5</version>
+              <executions>
+                <execution>
+                  <id>default</id>
+                  <configuration>
+                    <properties>
+                      <copyright-end-year>${build.year}</copyright-end-year>
+                      <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
+                      <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
+                      <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
+                      <bundled-logo>${license.bundles.logo}</bundled-logo>
+                      <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+                    </properties>
+                    <resourceBundles>
+                      <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
+                    </resourceBundles>
+                    <supplementalModelArtifacts>
+                      <supplementalModelArtifact>${project.groupId}:hbase-resource-bundle:${project.version}</supplementalModelArtifact>
+                    </supplementalModelArtifacts>
+                    <supplementalModels>
+                      <supplementalModel>supplemental-models.xml</supplementalModel>
+                    </supplementalModels>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
@@ -63,7 +106,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>2.3</version>
                     <executions>
                         <execution>
                             <phase>package</phase>
@@ -79,6 +121,7 @@
                                         <include>*:*</include>
                                     </includes>
                                     <excludes>
+                                        <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                                         <exclude>org.slf4j:*</exclude>
                                         <exclude>com.google.code.findbugs:*</exclude>
                                         <exclude>com.github.stephenc.findbugs:*</exclude>
@@ -113,6 +156,22 @@
                                         </excludes>
                                     </relocation>
                                 </relocations>
+                                <transformers>
+                                  <!-- Need to filter out some extraneous license files.
+                                       Don't use the ApacheLicenseRT because it just removes all
+                                       META-INF/LICENSE(.txt)? files, including ours. -->
+                                  <transformer implementation="org.apache.maven.plugins.shade.resource.DontIncludeResourceTransformer">
+                                    <resources>
+                                      <resource>LICENSE.txt</resource>
+                                      <resource>ASL2.0</resource>
+                                    </resources>
+                                  </transformer>
+                                  <!-- Where notices exist, just concat them -->
+                                  <transformer implementation="org.apache.maven.plugins.shade.resource.ApacheNoticeResourceTransformer">
+                                    <addHeader>false</addHeader>
+                                    <projectName>${project.name}</projectName>
+                                  </transformer>
+                                </transformers>
                             </configuration>
                         </execution>
                     </executions>

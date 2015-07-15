@@ -27,7 +27,7 @@
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-examples</artifactId>
-  <name>HBase - Examples</name>
+  <name>Apache HBase - Examples</name>
   <description>Examples of HBase usage</description>
   <build>
     <plugins>
