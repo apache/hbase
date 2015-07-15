@@ -1339,6 +1339,28 @@ public interface Admin extends Abortable, Closeable {
   List<HBaseProtos.SnapshotDescription> listSnapshots(Pattern pattern) throws IOException;
 
   /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   * @return - returns a List of completed SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<HBaseProtos.SnapshotDescription> listTableSnapshots(String tableNameRegex,
+      String snapshotNameRegex) throws IOException;
+
+  /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   * @return - returns a List of completed SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  List<HBaseProtos.SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
+      Pattern snapshotNamePattern) throws IOException;
+
+  /**
    * Delete an existing snapshot.
    *
    * @param snapshotName name of the snapshot
@@ -1369,6 +1391,25 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException if a remote or network exception occurs
    */
   void deleteSnapshots(final Pattern pattern) throws IOException;
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   * @throws IOException if a remote or network exception occurs
+   */
+  void deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex) throws IOException;
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   * @throws IOException if a remote or network exception occurs
+   */
+  void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern)
+      throws IOException;
 
   /**
    * Apply the new quota settings.
