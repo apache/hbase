@@ -28,7 +28,7 @@
         <relativePath>..</relativePath>
     </parent>
     <artifactId>hbase-shaded-server</artifactId>
-    <name>HBase - Shaded - Server</name>
+    <name>Apache HBase - Shaded - Server</name>
     <build>
         <plugins>
             <plugin>

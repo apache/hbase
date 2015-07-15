@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>hbase-prefix-tree</artifactId>
-  <name>HBase - Prefix Tree</name>
+  <name>Apache HBase - Prefix Tree</name>
   <description>Prefix Tree Data Block Encoder</description>
 
   <build>
