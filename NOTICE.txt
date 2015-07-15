@@ -1,26 +1,16 @@
-This product includes software developed by The Apache Software
-Foundation (http://www.apache.org/).
+Apache HBase
+Copyright 2007-2015 The Apache Software Foundation
 
-In addition, this product includes software developed by:
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
 
-Jamon (http://www.jamon.org/) is a text template engine for Java used by our
-UI.  It uses the Mozilla Public License (http://www.mozilla.org/MPL/)
-See the tail of http://www.jamon.org/About.html
+--
+This product incorporates portions of the 'Hadoop' project
 
-JUnit (http://www.junit.org/) included under the Common Public License v1.0.  See
-the full text here: http://junit.sourceforge.net/cpl-v10.html
+Copyright 2007-2009 The Apache Software Foundation
 
-JRuby (http://jruby.org) is tri-licensed.  We include it under terms of the
-Common Public License v1.0.
-
-JRuby itself includes libraries variously licensed.  See its COPYING document
-for details: https://github.com/jruby/jruby/blob/master/COPYING
-    
-The JRuby community went out of their way to make JRuby compatible with Apache
-projects: See https://issues.apache.org/jira/browse/HBASE-3374)
-<<<<<<< HEAD
-=======
-
+Licensed under the Apache License v2.0
+--
 Our Orca logo we got here: http://www.vectorfree.com/jumping-orca
 It is licensed Creative Commons Attribution 3.0.
 See https://creativecommons.org/licenses/by/3.0/us/
@@ -32,4 +22,25 @@ The original is owned by vectorportal.com. The original was
 relicensed so we could use it as Creative Commons Attribution 3.0.
 The license is bundled with the download available here:
 http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
->>>>>>> be5631f... HBASE-14104 Add vectorportal.com to NOTICES.txt as src of our logo
+--
+This product includes portions of the Bootstrap project v3.0.0
+
+Copyright 2013 Twitter, Inc.
+
+Licensed under the Apache License v2.0
+
+This product uses the Glyphicons Halflings icon set.
+
+http://glyphicons.com/
+
+Copyright Jan Kovařík
+
+Licensed under the Apache License v2.0 as a part of the Bootstrap project.
+
+--
+This product includes portions of the Guava project v14, specifically
+'hbase-common/src/main/java/org/apache/hadoop/hbase/io/LimitInputStream.java'
+
+Copyright (C) 2007 The Guava Authors
+
+Licensed under the Apache License, Version 2.0

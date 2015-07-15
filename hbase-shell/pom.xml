@@ -27,7 +27,7 @@
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-shell</artifactId>
-  <name>HBase - Shell</name>
+  <name>Apache HBase - Shell</name>
   <description>Shell for HBase</description>
   <build>
     <!-- Makes sure the resources get added before they are processed

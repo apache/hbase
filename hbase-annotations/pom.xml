@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>hbase-annotations</artifactId>
-  <name>HBase - Annotations</name>
+  <name>Apache HBase - Annotations</name>
   <description>Copy of Hadoop's annotations for HBase</description>
 
   <profiles>

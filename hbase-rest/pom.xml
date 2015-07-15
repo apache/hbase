@@ -29,7 +29,7 @@
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-rest</artifactId>
-  <name>HBase - Rest</name>
+  <name>Apache HBase - Rest</name>
   <description>HBase Rest Server</description>
 
   <build>

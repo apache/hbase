@@ -28,7 +28,7 @@
   </parent>
 
   <artifactId>hbase-it</artifactId>
-  <name>HBase - Integration Tests</name>
+  <name>Apache HBase - Integration Tests</name>
   <description>Integration and System tests for HBase</description>
 
   <properties>

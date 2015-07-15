@@ -28,7 +28,7 @@
     </parent>
 
     <artifactId>hbase-protocol</artifactId>
-    <name>HBase - Protocol</name>
+    <name>Apache HBase - Protocol</name>
     <description>Protobuf protocol classes used by HBase to communicate.</description>
 
     <build>
