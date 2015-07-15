@@ -846,9 +846,21 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Deletes the table snapshots matching the given regex
+    def delete_table_snapshots(tableNameRegex, snapshotNameRegex = ".*")
+      @admin.deleteTableSnapshots(tableNameRegex, snapshotNameRegex).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Returns a list of snapshots
     def list_snapshot(regex = ".*")
       @admin.listSnapshots(regex).to_a
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Returns a list of table snapshots
+    def list_table_snapshots(tableNameRegex, snapshotNameRegex = ".*")
+      @admin.listTableSnapshots(tableNameRegex, snapshotNameRegex).to_a
     end
 
     # Apply config specific to a table/column to its descriptor

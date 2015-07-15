@@ -355,7 +355,9 @@ Shell.load_command_group(
     restore_snapshot
     delete_snapshot
     delete_all_snapshot
+    delete_table_snapshots
     list_snapshots
+    list_table_snapshots
   ]
 )
 
