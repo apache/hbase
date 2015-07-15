@@ -3826,6 +3826,45 @@ public class HBaseAdmin implements Admin {
   }
 
   /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   * @return returns a List of completed SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public List<SnapshotDescription> listTableSnapshots(String tableNameRegex,
+      String snapshotNameRegex) throws IOException {
+    return listTableSnapshots(Pattern.compile(tableNameRegex), Pattern.compile(snapshotNameRegex));
+  }
+
+  /**
+   * List all the completed snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   * @return returns a List of completed SnapshotDescription
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public List<SnapshotDescription> listTableSnapshots(Pattern tableNamePattern,
+      Pattern snapshotNamePattern) throws IOException {
+    TableName[] tableNames = listTableNames(tableNamePattern);
+
+    List<SnapshotDescription> tableSnapshots = new LinkedList<SnapshotDescription>();
+    List<SnapshotDescription> snapshots = listSnapshots(snapshotNamePattern);
+
+    List<TableName> listOfTableNames = Arrays.asList(tableNames);
+    for (SnapshotDescription snapshot : snapshots) {
+      if (listOfTableNames.contains(TableName.valueOf(snapshot.getTable()))) {
+        tableSnapshots.add(snapshot);
+      }
+    }
+    return tableSnapshots;
+  }
+
+  /**
    * Delete an existing snapshot.
    * @param snapshotName name of the snapshot
    * @throws IOException if a remote or network exception occurs
@@ -3895,6 +3934,40 @@ public class HBaseAdmin implements Admin {
         return null;
       }
     });
+  }
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNameRegex The table name regular expression to match against
+   * @param snapshotNameRegex The snapshot name regular expression to match against
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public void deleteTableSnapshots(String tableNameRegex, String snapshotNameRegex)
+      throws IOException {
+    deleteTableSnapshots(Pattern.compile(tableNameRegex), Pattern.compile(snapshotNameRegex));
+  }
+
+  /**
+   * Delete all existing snapshots matching the given table name regular expression and snapshot
+   * name regular expression.
+   * @param tableNamePattern The compiled table name regular expression to match against
+   * @param snapshotNamePattern The compiled snapshot name regular expression to match against
+   * @throws IOException if a remote or network exception occurs
+   */
+  @Override
+  public void deleteTableSnapshots(Pattern tableNamePattern, Pattern snapshotNamePattern)
+      throws IOException {
+    List<SnapshotDescription> snapshots = listTableSnapshots(tableNamePattern, snapshotNamePattern);
+    for (SnapshotDescription snapshot : snapshots) {
+      try {
+        internalDeleteSnapshot(snapshot);
+        LOG.debug("Successfully deleted snapshot: " + snapshot.getName());
+      } catch (IOException e) {
+        LOG.error("Failed to delete snapshot: " + snapshot.getName(), e);
+      }
+    }
   }
 
   /**
