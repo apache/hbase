@@ -240,6 +240,7 @@ public final class ProtobufUtil {
    * @return True if passed <code>bytes</code> has {@link #PB_MAGIC} for a prefix.
    */
   public static boolean isPBMagicPrefix(final byte [] bytes) {
+    if (bytes == null) return false;
     return isPBMagicPrefix(bytes, 0, bytes.length);
   }
 
