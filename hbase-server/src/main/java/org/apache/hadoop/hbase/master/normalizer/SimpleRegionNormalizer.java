@@ -150,7 +150,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
     // is more high priority normalization action than merge.
     if (largestRegion.getSecond() > 2 * avgRegionSize) {
       LOG.debug("Table " + table + ", largest region "
-        + largestRegion.getFirst().getRegionName() + " has size "
+        + largestRegion.getFirst().getRegionNameAsString() + " has size "
         + largestRegion.getSecond() + ", more than 2 times than avg size, splitting");
       return new SplitNormalizationPlan(largestRegion.getFirst(), null);
     } else {

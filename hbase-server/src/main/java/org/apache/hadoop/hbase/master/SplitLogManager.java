@@ -27,6 +27,7 @@ import static org.apache.hadoop.hbase.master.SplitLogManager.TerminationStatus.S
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -299,7 +300,8 @@ public class SplitLogManager {
         FileStatus[] files = fs.listStatus(logDir);
         if (files != null && files.length > 0) {
           LOG.warn("Returning success without actually splitting and "
-              + "deleting all the log files in path " + logDir + ": " + files, ioe);
+              + "deleting all the log files in path " + logDir + ": "
+              + Arrays.toString(files), ioe);
         } else {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
         }
