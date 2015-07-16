@@ -24,3 +24,9 @@ It is licensed Creative Commons Attribution 3.0.
 See https://creativecommons.org/licenses/by/3.0/us/
 We changed the logo by stripping the colored background, inverting
 it and then rotating it some.
+
+Later we found that vectorfree.com image is not properly licensed.
+The original is owned by vectorportal.com. The original was
+relicensed so we could use it as Creative Commons Attribution 3.0.
+The license is bundled with the download available here:
+http://www.vectorportal.com/subcategory/205/KILLER-WHALE-FREE-VECTOR.eps/ifile/9136/detailtest.asp
