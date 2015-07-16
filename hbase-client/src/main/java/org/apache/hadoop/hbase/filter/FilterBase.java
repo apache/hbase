@@ -63,8 +63,6 @@ public abstract class FilterBase extends Filter {
 
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
-    // TODO when cell is backed by DirectByteBuffer, we would need to copy row bytes to temp byte[]
-    // and call old method for BC.
     return filterRowKey(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
 

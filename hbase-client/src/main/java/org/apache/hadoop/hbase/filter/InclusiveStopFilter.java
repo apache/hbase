@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.filter;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -60,10 +61,8 @@ public class InclusiveStopFilter extends FilterBase {
 
   public boolean filterRowKey(Cell firstRowCell) {
     // if stopRowKey is <= buffer, then true, filter row.
-    int cmp = Bytes.compareTo(stopRowKey, 0, stopRowKey.length,
-        firstRowCell.getRowArray(), firstRowCell.getRowOffset(), firstRowCell.getRowLength());
-
-    if(cmp < 0) {
+    int cmp = CellComparator.COMPARATOR.compareRows(firstRowCell, stopRowKey, 0, stopRowKey.length);
+    if (cmp > 0) {
       done = true;
     }
     return done;

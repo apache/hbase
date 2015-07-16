@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -126,6 +128,29 @@ public class BitComparator extends ByteArrayComparable {
           break;
         case XOR:
           b = (this.value[i] ^ value[i+offset]) & 0xff;
+          break;
+      }
+    }
+    return b == 0 ? 1 : 0;
+  }
+
+  @Override
+  public int compareTo(ByteBuffer value, int offset, int length) {
+    if (length != this.value.length) {
+      return 1;
+    }
+    int b = 0;
+    //Iterating backwards is faster because we can quit after one non-zero byte.
+    for (int i = length - 1; i >= 0 && b == 0; i--) {
+      switch (bitOperator) {
+        case AND:
+          b = (this.value[i] & value.get(i + offset)) & 0xff;
+          break;
+        case OR:
+          b = (this.value[i] | value.get(i + offset)) & 0xff;
+          break;
+        case XOR:
+          b = (this.value[i] ^ value.get(i + offset)) & 0xff;
           break;
       }
     }

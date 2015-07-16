@@ -18,10 +18,13 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -29,6 +32,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 /** Base class for byte array comparators */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
+// TODO Now we are deviating a lot from the actual Comparable<byte[]> what this implements, by
+// adding special compareTo methods. We have to clean it. Deprecate this class and replace it
+// with a more generic one which says it compares bytes (not necessary a byte array only)
+// BytesComparable implements Comparable<Byte> will work?
 public abstract class ByteArrayComparable implements Comparable<byte[]> {
 
   byte[] value;
@@ -95,4 +102,21 @@ public abstract class ByteArrayComparable implements Comparable<byte[]> {
    *         is less than, equal to, or greater than the specified object.
    */
   public abstract int compareTo(byte [] value, int offset, int length);
+
+  /**
+   * Special compareTo method for subclasses, to avoid copying bytes unnecessarily.
+   * @param value bytes to compare within a ByteBuffer
+   * @param offset offset into value
+   * @param length number of bytes to compare
+   * @return a negative integer, zero, or a positive integer as this object
+   *         is less than, equal to, or greater than the specified object.
+   */
+  public int compareTo(ByteBuffer value, int offset, int length) {
+    // For BC, providing a default implementation here which is doing a bytes copy to a temp byte[]
+    // and calling compareTo(byte[]). Make sure to override this method in subclasses to avoid
+    // copying bytes unnecessarily.
+    byte[] temp = new byte[length];
+    ByteBufferUtils.copyFromBufferToArray(temp, value, offset, 0, length);
+    return compareTo(temp);
+  }
 }

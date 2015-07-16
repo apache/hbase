@@ -64,8 +64,7 @@ public class FamilyFilter extends CompareFilter {
   public ReturnCode filterKeyValue(Cell v) {
     int familyLength = v.getFamilyLength();
     if (familyLength > 0) {
-      if (doCompare(this.compareOp, this.comparator, v.getFamilyArray(),
-          v.getFamilyOffset(), familyLength)) {
+      if (compareFamily(this.compareOp, this.comparator, v)) {
         return ReturnCode.NEXT_ROW;
       }
     }

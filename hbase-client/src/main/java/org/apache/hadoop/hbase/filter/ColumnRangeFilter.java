@@ -25,7 +25,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -124,15 +125,10 @@ public class ColumnRangeFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell kv) {
-    // TODO have a column compare method in Cell
-    byte[] buffer = kv.getQualifierArray();
-    int qualifierOffset = kv.getQualifierOffset();
-    int qualifierLength = kv.getQualifierLength();
     int cmpMin = 1;
 
     if (this.minColumn != null) {
-      cmpMin = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
-          this.minColumn, 0, this.minColumn.length);
+      cmpMin = CellComparator.compareQualifiers(kv, this.minColumn, 0, this.minColumn.length);
     }
 
     if (cmpMin < 0) {
@@ -147,8 +143,7 @@ public class ColumnRangeFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
 
-    int cmpMax = Bytes.compareTo(buffer, qualifierOffset, qualifierLength,
-        this.maxColumn, 0, this.maxColumn.length);
+    int cmpMax = CellComparator.compareQualifiers(kv, this.maxColumn, 0, this.maxColumn.length);
 
     if (this.maxColumnInclusive && cmpMax <= 0 ||
         !this.maxColumnInclusive && cmpMax < 0) {
@@ -224,10 +219,7 @@ public class ColumnRangeFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return KeyValueUtil.createFirstOnRow(cell.getRowArray(), cell.getRowOffset(), cell
-        .getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell
-        .getFamilyLength(), this.minColumn, 0, len(this.minColumn));
-
+    return CellUtil.createFirstOnRowCol(cell, this.minColumn, 0, len(this.minColumn));
   }
 
   @Override

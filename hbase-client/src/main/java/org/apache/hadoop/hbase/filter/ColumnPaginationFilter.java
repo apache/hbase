@@ -22,7 +22,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.CellComparator;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -118,19 +119,10 @@ public class ColumnPaginationFilter extends FilterBase {
       if (count >= limit) {
         return ReturnCode.NEXT_ROW;
       }
-      byte[] buffer = v.getQualifierArray();
-      if (buffer == null) {
-        return ReturnCode.SEEK_NEXT_USING_HINT;
-      }
       int cmp = 0;
       // Only compare if no KV's have been seen so far.
       if (count == 0) {
-        cmp = Bytes.compareTo(buffer,
-                              v.getQualifierOffset(),
-                              v.getQualifierLength(),
-                              this.columnOffset,
-                              0,
-                              this.columnOffset.length);
+        cmp = CellComparator.compareQualifiers(v, this.columnOffset, 0, this.columnOffset.length);
       }
       if (cmp < 0) {
         return ReturnCode.SEEK_NEXT_USING_HINT;
@@ -152,9 +144,7 @@ public class ColumnPaginationFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return KeyValueUtil.createFirstOnRow(
-        cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), cell.getFamilyArray(),
-        cell.getFamilyOffset(), cell.getFamilyLength(), columnOffset, 0, columnOffset.length);
+    return CellUtil.createFirstOnRowCol(cell, columnOffset, 0, columnOffset.length);
   }
 
   @Override

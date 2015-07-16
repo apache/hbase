@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -494,6 +495,64 @@ public class CellComparator implements Comparator<Cell>, Serializable {
       return -1;
     }
     return 0;
+  }
+
+  /**
+   * Compare cell's row against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's row
+   */
+  public static int compareRow(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferedCell) {
+      return comparator.compareTo(((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength());
+    }
+    return comparator.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+  }
+
+  /**
+   * Compare cell's column family against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's column family
+   */
+  public static int compareFamily(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferedCell) {
+      return comparator.compareTo(((ByteBufferedCell) cell).getFamilyByteBuffer(),
+          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), cell.getFamilyLength());
+    }
+    return comparator.compareTo(cell.getFamilyArray(), cell.getFamilyOffset(),
+        cell.getFamilyLength());
+  }
+
+  /**
+   * Compare cell's qualifier against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's qualifier
+   */
+  public static int compareQualifier(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferedCell) {
+      return comparator.compareTo(((ByteBufferedCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength());
+    }
+    return comparator.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(),
+        cell.getQualifierLength());
+  }
+
+  /**
+   * Compare cell's value against given comparator
+   * @param cell
+   * @param comparator
+   * @return result comparing cell's value
+   */
+  public static int compareValue(Cell cell, ByteArrayComparable comparator) {
+    if (cell instanceof ByteBufferedCell) {
+      return comparator.compareTo(((ByteBufferedCell) cell).getValueByteBuffer(),
+          ((ByteBufferedCell) cell).getValuePositionInByteBuffer(), cell.getValueLength());
+    }
+    return comparator.compareTo(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }
 
   /**

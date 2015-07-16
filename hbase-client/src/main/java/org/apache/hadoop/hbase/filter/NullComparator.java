@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -57,6 +59,11 @@ public class NullComparator extends ByteArrayComparable {
   @Override
   public int compareTo(byte[] value, int offset, int length) {
     return compareTo(value);
+  }
+
+  @Override
+  public int compareTo(ByteBuffer value, int offset, int length) {
+    return value != null ? 1 : 0;
   }
 
   /**

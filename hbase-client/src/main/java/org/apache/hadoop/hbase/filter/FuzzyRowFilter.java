@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -169,10 +170,9 @@ public class FuzzyRowFilter extends FilterBase {
     }
     byte[] nextRowKey = tracker.nextRow();
     // We need to compare nextRowKey with currentCell
-    int compareResult =
-        Bytes.compareTo(nextRowKey, 0, nextRowKey.length, currentCell.getRowArray(),
-          currentCell.getRowOffset(), currentCell.getRowLength());
-    if ((reversed && compareResult > 0) || (!reversed && compareResult < 0)) {
+    int compareResult = CellComparator.COMPARATOR.compareRows(currentCell, nextRowKey, 0,
+        nextRowKey.length);
+    if ((reversed && compareResult < 0) || (!reversed && compareResult > 0)) {
       // This can happen when we have multilpe filters and some other filter
       // returns next row with hint which is larger (smaller for reverse)
       // than the current (really?)

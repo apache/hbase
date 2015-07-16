@@ -142,8 +142,7 @@ public class DependentColumnFilter extends CompareFilter {
     }
     // If it doesn't pass the op, skip it
     if (comparator != null
-        && doCompare(compareOp, comparator, c.getValueArray(), c.getValueOffset(),
-            c.getValueLength()))
+        && compareValue(compareOp, comparator, c))
       return ReturnCode.SKIP;
   
     stampSet.add(c.getTimestamp());

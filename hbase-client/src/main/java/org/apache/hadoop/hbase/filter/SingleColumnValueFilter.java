@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -185,17 +186,15 @@ public class SingleColumnValueFilter extends FilterBase {
       return ReturnCode.INCLUDE;
     }
     foundColumn = true;
-    if (filterColumnValue(c.getValueArray(),
-        c.getValueOffset(), c.getValueLength())) {
+    if (filterColumnValue(c)) {
       return this.latestVersionOnly? ReturnCode.NEXT_ROW: ReturnCode.INCLUDE;
     }
     this.matchedColumn = true;
     return ReturnCode.INCLUDE;
   }
 
-  private boolean filterColumnValue(final byte [] data, final int offset,
-      final int length) {
-    int compareResult = this.comparator.compareTo(data, offset, length);
+  private boolean filterColumnValue(final Cell cell) {
+    int compareResult = CellComparator.compareValue(cell, this.comparator);
     switch (this.compareOp) {
     case LESS:
       return compareResult <= 0;

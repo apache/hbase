@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -105,29 +106,58 @@ public abstract class CompareFilter extends FilterBase {
     return false;
   }
 
-  protected boolean doCompare(final CompareOp compareOp,
-      final ByteArrayComparable comparator, final byte [] data,
-      final int offset, final int length) {
+  protected boolean compareRow(final CompareOp compareOp, final ByteArrayComparable comparator,
+      final Cell cell) {
     if (compareOp == CompareOp.NO_OP) {
       return true;
     }
-    int compareResult = comparator.compareTo(data, offset, length);
+    int compareResult = CellComparator.compareRow(cell, comparator);
+    return compare(compareOp, compareResult);
+  }
+
+  protected boolean compareFamily(final CompareOp compareOp, final ByteArrayComparable comparator,
+      final Cell cell) {
+    if (compareOp == CompareOp.NO_OP) {
+      return true;
+    }
+    int compareResult = CellComparator.compareFamily(cell, comparator);
+    return compare(compareOp, compareResult);
+  }
+
+  protected boolean compareQualifier(final CompareOp compareOp,
+      final ByteArrayComparable comparator, final Cell cell) {
+    if (compareOp == CompareOp.NO_OP) {
+      return true;
+    }
+    int compareResult = CellComparator.compareQualifier(cell, comparator);
+    return compare(compareOp, compareResult);
+  }
+
+  protected boolean compareValue(final CompareOp compareOp, final ByteArrayComparable comparator,
+      final Cell cell) {
+    if (compareOp == CompareOp.NO_OP) {
+      return true;
+    }
+    int compareResult = CellComparator.compareValue(cell, comparator);
+    return compare(compareOp, compareResult);
+  }
+
+  private boolean compare(final CompareOp compareOp, int compareResult) {
     switch (compareOp) {
-      case LESS:
-        return compareResult <= 0;
-      case LESS_OR_EQUAL:
-        return compareResult < 0;
-      case EQUAL:
-        return compareResult != 0;
-      case NOT_EQUAL:
-        return compareResult == 0;
-      case GREATER_OR_EQUAL:
-        return compareResult > 0;
-      case GREATER:
-        return compareResult >= 0;
-      default:
-        throw new RuntimeException("Unknown Compare op " +
-          compareOp.name());
+    case LESS:
+      return compareResult <= 0;
+    case LESS_OR_EQUAL:
+      return compareResult < 0;
+    case EQUAL:
+      return compareResult != 0;
+    case NOT_EQUAL:
+      return compareResult == 0;
+    case GREATER_OR_EQUAL:
+      return compareResult > 0;
+    case GREATER:
+      return compareResult >= 0;
+    default:
+      throw new RuntimeException("Unknown Compare op " + compareOp.name());
     }
   }
 

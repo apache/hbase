@@ -18,12 +18,15 @@
 
 package org.apache.hadoop.hbase.filter;
 
+import java.nio.ByteBuffer;
+
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.generated.ComparatorProtos;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -42,6 +45,12 @@ public class LongComparator extends ByteArrayComparable {
     @Override
     public int compareTo(byte[] value, int offset, int length) {
       Long that = Bytes.toLong(value, offset, length);
+      return this.longValue.compareTo(that);
+    }
+
+    @Override
+    public int compareTo(ByteBuffer value, int offset, int length) {
+      Long that = ByteBufferUtils.toLong(value, offset);
       return this.longValue.compareTo(that);
     }
 

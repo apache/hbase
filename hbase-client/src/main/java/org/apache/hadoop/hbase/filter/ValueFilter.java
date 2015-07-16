@@ -60,8 +60,7 @@ public class ValueFilter extends CompareFilter {
 
   @Override
   public ReturnCode filterKeyValue(Cell v) {
-    if (doCompare(this.compareOp, this.comparator, v.getValueArray(),
-        v.getValueOffset(), v.getValueLength())) {
+    if (compareValue(this.compareOp, this.comparator, v)) {
       return ReturnCode.SKIP;
     }
     return ReturnCode.INCLUDE;

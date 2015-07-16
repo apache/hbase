@@ -3310,8 +3310,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           matches = true;
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
-          int compareResult = comparator.compareTo(kv.getValueArray(),
-              kv.getValueOffset(), kv.getValueLength());
+          int compareResult = CellComparator.compareValue(kv, comparator);
           switch (compareOp) {
           case LESS:
             matches = compareResult < 0;
@@ -3390,8 +3389,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           matches = true;
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
-          int compareResult = comparator.compareTo(kv.getValueArray(),
-              kv.getValueOffset(), kv.getValueLength());
+          int compareResult = CellComparator.compareValue(kv, comparator);
           switch (compareOp) {
           case LESS:
             matches = compareResult < 0;
@@ -6840,10 +6838,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                   newCell.getQualifierArray(), newCell.getQualifierOffset(),
                   cell.getQualifierLength());
                 // copy in the value
-                // TODO handle when oldCell is BBBacked
-                System.arraycopy(oldCell.getValueArray(), oldCell.getValueOffset(),
-                  newCell.getValueArray(), newCell.getValueOffset(),
-                  oldCell.getValueLength());
+                CellUtil.copyValueTo(oldCell, newCell.getValueArray(), newCell.getValueOffset());
                 System.arraycopy(cell.getValueArray(), cell.getValueOffset(),
                   newCell.getValueArray(),
                   newCell.getValueOffset() + oldCell.getValueLength(),

@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -88,12 +89,12 @@ public class MultiRowRangeFilter extends FilterBase {
     // the row key. If index is out of bound which happens when the start row
     // user sets is after the largest stop row of the ranges, stop the scan.
     // If row key is after the current range, find the next range and update index.
+    byte[] rowArr = firstRowCell.getRowArray();
     int length = firstRowCell.getRowLength();
     int offset = firstRowCell.getRowOffset();
     if (!initialized
-        || !range.contains(firstRowCell.getRowArray(), offset, length)) {
-      byte[] rowkey = new byte[length];
-      System.arraycopy(firstRowCell.getRowArray(), firstRowCell.getRowOffset(), rowkey, 0, length);
+        || !range.contains(rowArr, offset, length)) {
+      byte[] rowkey = CellUtil.cloneRow(firstRowCell);
       index = getNextRangeIndex(rowkey);
       if (index >= rangeList.size()) {
         done = true;
@@ -118,7 +119,7 @@ public class MultiRowRangeFilter extends FilterBase {
         }
         initialized = true;
       } else {
-        if (range.contains(firstRowCell.getRowArray(), offset, length)) {
+        if (range.contains(rowArr, offset, length)) {
           currentReturnCode = ReturnCode.INCLUDE;
         } else currentReturnCode = ReturnCode.SEEK_NEXT_USING_HINT;
       }

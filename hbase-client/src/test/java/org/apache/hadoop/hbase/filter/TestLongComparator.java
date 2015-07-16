@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import java.nio.ByteBuffer;
+
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -35,6 +37,8 @@ public class TestLongComparator {
       for (int j = 0; j < i; j++) {
         LongComparator cp = new LongComparator(values[i]);
         assertEquals(1, cp.compareTo(Bytes.toBytes(values[j])));
+        ByteBuffer data_bb = ByteBuffer.wrap(Bytes.toBytes(values[j]));
+        assertEquals(1, cp.compareTo(data_bb, 0, data_bb.capacity()));
       }
     }
   }

@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.TreeSet;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -72,16 +71,15 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   @Override
   public ReturnCode filterKeyValue(Cell kv) {
-    if (sortedPrefixes.size() == 0 || kv.getQualifierArray() == null) {
+    if (sortedPrefixes.size() == 0) {
       return ReturnCode.INCLUDE;
     } else {
-      return filterColumn(kv.getQualifierArray(), kv.getQualifierOffset(), kv.getQualifierLength());
+      return filterColumn(kv);
     }
   }
 
-  public ReturnCode filterColumn(byte[] buffer, int qualifierOffset, int qualifierLength) {
-    byte [] qualifier = Arrays.copyOfRange(buffer, qualifierOffset,
-                                           qualifierLength + qualifierOffset);
+  public ReturnCode filterColumn(Cell cell) {
+    byte [] qualifier = CellUtil.cloneQualifier(cell);
     TreeSet<byte []> lesserOrEqualPrefixes =
       (TreeSet<byte []>) sortedPrefixes.headSet(qualifier, true);
 
@@ -163,9 +161,7 @@ public class MultipleColumnPrefixFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell cell) {
-    return KeyValueUtil.createFirstOnRow(
-      cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(), cell.getFamilyArray(),
-      cell.getFamilyOffset(), cell.getFamilyLength(), hint, 0, hint.length);
+    return CellUtil.createFirstOnRowCol(cell, hint, 0, hint.length);
   }
 
   public TreeSet<byte []> createTreeSet() {
