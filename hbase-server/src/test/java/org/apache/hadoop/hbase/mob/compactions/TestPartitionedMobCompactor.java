@@ -386,7 +386,7 @@ public class TestPartitionedMobCompactor {
       sfs.add(sf);
     }
     List scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, null, HConstants.LATEST_TIMESTAMP);
+        false, false, HConstants.LATEST_TIMESTAMP);
     Scan scan = new Scan();
     scan.setMaxVersions(hcd.getMaxVersions());
     long timeToPurgeDeletes = Math.max(conf.getLong("hbase.hstore.time.to.purge.deletes", 0), 0);

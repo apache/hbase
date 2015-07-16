@@ -547,7 +547,7 @@ public class PartitionedMobCompactor extends MobCompactor {
   private StoreScanner createScanner(List<StoreFile> filesToCompact, ScanType scanType)
     throws IOException {
     List scanners = StoreFileScanner.getScannersForStoreFiles(filesToCompact, false, true, false,
-      null, HConstants.LATEST_TIMESTAMP);
+      false, HConstants.LATEST_TIMESTAMP);
     Scan scan = new Scan();
     scan.setMaxVersions(column.getMaxVersions());
     long ttl = HStore.determineTTLFromFamily(column);

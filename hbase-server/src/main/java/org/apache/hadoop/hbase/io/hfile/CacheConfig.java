@@ -131,6 +131,8 @@ public class CacheConfig {
   private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
 
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY="hbase.blockcache.external.class";
+  private static final String DROP_BEHIND_CACHE_COMPACTION_KEY="hbase.hfile.drop.behind.compaction";
+  private static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
 
   /**
    * Enum of all built in external block caches.
@@ -194,6 +196,8 @@ public class CacheConfig {
    */
   private boolean cacheDataInL1;
 
+  private final boolean dropBehindCompaction;
+
   /**
    * Create a cache configuration using the specified configuration object and
    * family descriptor.
@@ -218,7 +222,8 @@ public class CacheConfig {
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY,
             DEFAULT_PREFETCH_ON_OPEN) || family.isPrefetchBlocksOnOpen(),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1()
+            HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1) || family.isCacheDataInL1(),
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
   }
 
@@ -239,7 +244,8 @@ public class CacheConfig {
         conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED),
         conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN),
         conf.getBoolean(HColumnDescriptor.CACHE_DATA_IN_L1,
-          HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1)
+          HColumnDescriptor.DEFAULT_CACHE_DATA_IN_L1),
+        conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY,DROP_BEHIND_CACHE_COMPACTION_DEFAULT)
      );
   }
 
@@ -264,7 +270,7 @@ public class CacheConfig {
       final boolean cacheDataOnWrite, final boolean cacheIndexesOnWrite,
       final boolean cacheBloomsOnWrite, final boolean evictOnClose,
       final boolean cacheDataCompressed, final boolean prefetchOnOpen,
-      final boolean cacheDataInL1) {
+      final boolean cacheDataInL1, final boolean dropBehindCompaction) {
     this.blockCache = blockCache;
     this.cacheDataOnRead = cacheDataOnRead;
     this.inMemory = inMemory;
@@ -275,6 +281,7 @@ public class CacheConfig {
     this.cacheDataCompressed = cacheDataCompressed;
     this.prefetchOnOpen = prefetchOnOpen;
     this.cacheDataInL1 = cacheDataInL1;
+    this.dropBehindCompaction = dropBehindCompaction;
     LOG.info(this);
   }
 
@@ -287,7 +294,7 @@ public class CacheConfig {
         cacheConf.cacheDataOnWrite, cacheConf.cacheIndexesOnWrite,
         cacheConf.cacheBloomsOnWrite, cacheConf.evictOnClose,
         cacheConf.cacheDataCompressed, cacheConf.prefetchOnOpen,
-        cacheConf.cacheDataInL1);
+        cacheConf.cacheDataInL1, cacheConf.dropBehindCompaction);
   }
 
   /**
@@ -312,6 +319,10 @@ public class CacheConfig {
    */
   public boolean shouldCacheDataOnRead() {
     return isBlockCacheEnabled() && cacheDataOnRead;
+  }
+
+  public boolean shouldDropBehindCompaction() {
+    return dropBehindCompaction;
   }
 
   /**

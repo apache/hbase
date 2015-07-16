@@ -58,7 +58,7 @@ public class MobFile {
     List<StoreFile> sfs = new ArrayList<StoreFile>();
     sfs.add(sf);
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true,
-        false, null, sf.getMaxMemstoreTS());
+        false, false, sf.getMaxMemstoreTS());
 
     return sfScanners.get(0);
   }
@@ -89,7 +89,7 @@ public class MobFile {
     sfs.add(sf);
     try {
       List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(sfs,
-        cacheMobBlocks, true, false, null, readPt);
+        cacheMobBlocks, true, false, false, readPt);
       if (!sfScanners.isEmpty()) {
         scanner = sfScanners.get(0);
         if (scanner.seek(search)) {

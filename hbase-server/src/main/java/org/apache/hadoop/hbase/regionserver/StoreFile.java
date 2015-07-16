@@ -257,8 +257,8 @@ public class StoreFile {
   }
 
   /**
-   * @return True if this is a StoreFile Reference; call after {@link #open()}
-   * else may get wrong answer.
+   * @return True if this is a StoreFile Reference; call
+   * after {@link #open(boolean canUseDropBehind)} else may get wrong answer.
    */
   public boolean isReference() {
     return this.fileInfo.isReference();
@@ -376,13 +376,13 @@ public class StoreFile {
    * @throws IOException
    * @see #closeReader(boolean)
    */
-  private Reader open() throws IOException {
+  private Reader open(boolean canUseDropBehind) throws IOException {
     if (this.reader != null) {
       throw new IllegalAccessError("Already open");
     }
 
     // Open the StoreFile.Reader
-    this.reader = fileInfo.open(this.fs, this.cacheConf);
+    this.reader = fileInfo.open(this.fs, this.cacheConf, canUseDropBehind);
 
     // Load up indices and fileinfo. This also loads Bloom filter type.
     metadataMap = Collections.unmodifiableMap(this.reader.loadFileInfo());
@@ -478,14 +478,18 @@ public class StoreFile {
     return this.reader;
   }
 
+  public Reader createReader() throws IOException {
+    return createReader(false);
+  }
+
   /**
    * @return Reader for StoreFile. creates if necessary
    * @throws IOException
    */
-  public Reader createReader() throws IOException {
+  public Reader createReader(boolean canUseDropBehind) throws IOException {
     if (this.reader == null) {
       try {
-        this.reader = open();
+        this.reader = open(canUseDropBehind);
       } catch (IOException e) {
         try {
           this.closeReader(true);
@@ -574,6 +578,8 @@ public class StoreFile {
     private Path filePath;
     private InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
+    private boolean shouldDropCacheBehind = false;
+
     public WriterBuilder(Configuration conf, CacheConfig cacheConf,
         FileSystem fs) {
       this.conf = conf;
@@ -637,6 +643,11 @@ public class StoreFile {
 
     public WriterBuilder withFileContext(HFileContext fileContext) {
       this.fileContext = fileContext;
+      return this;
+    }
+
+    public WriterBuilder withShouldDropCacheBehind(boolean shouldDropCacheBehind) {
+      this.shouldDropCacheBehind = shouldDropCacheBehind;
       return this;
     }
     /**
@@ -1316,7 +1327,7 @@ public class StoreFile {
           break;
 
         case ROWCOL:
-          kvKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen, 
+          kvKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen,
               HConstants.EMPTY_BYTE_ARRAY, 0, 0, col, colOffset,
               colLen);
           break;

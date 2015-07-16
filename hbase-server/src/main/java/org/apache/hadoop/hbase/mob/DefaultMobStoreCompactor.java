@@ -73,15 +73,15 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   /**
    * Creates a writer for a new file in a temporary directory.
    * @param fd The file details.
-   * @param smallestReadPoint The smallest mvcc readPoint across all the scanners in this region.
+   * @param shouldDropBehind Should the writer drop behind.
    * @return Writer for a new StoreFile in the tmp dir.
    * @throws IOException
    */
   @Override
-  protected Writer createTmpWriter(FileDetails fd, long smallestReadPoint) throws IOException {
+  protected Writer createTmpWriter(FileDetails fd, boolean shouldDropBehind) throws IOException {
     // make this writer with tags always because of possible new cells with tags.
     StoreFile.Writer writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
-      true, true, true);
+      true, true, true, shouldDropBehind);
     return writer;
   }
 

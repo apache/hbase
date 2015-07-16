@@ -436,7 +436,7 @@ public class TestMobStoreCompaction {
           numDelfiles++;
         }
       }
-      List scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true, false, null,
+      List scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true, false, false,
           HConstants.LATEST_TIMESTAMP);
       Scan scan = new Scan();
       scan.setMaxVersions(hcd.getMaxVersions());
