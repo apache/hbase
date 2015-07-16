@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.zookeeper;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -127,7 +126,7 @@ public class RecoverableZooKeeper {
     this.sessionTimeout = sessionTimeout;
     this.quorumServers = quorumServers;
     try {checkZk();} catch (Exception x) {/* ignore */}
-    salter = new SecureRandom();
+    salter = new Random();
   }
 
   /**
