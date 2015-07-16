@@ -53,11 +53,13 @@ public class AverageIntervalRateLimiter extends RateLimiter {
 
   // This method is for strictly testing purpose only
   @VisibleForTesting
+  @Override
   public void setNextRefillTime(long nextRefillTime) {
     this.nextRefillTime = nextRefillTime;
   }
 
   @VisibleForTesting
+  @Override
   public long getNextRefillTime() {
     return this.nextRefillTime;
   }

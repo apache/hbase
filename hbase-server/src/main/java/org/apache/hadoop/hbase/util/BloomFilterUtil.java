@@ -192,11 +192,6 @@ public final class BloomFilterUtil {
     return bbf;
   }
 
-  /** Should only be used in tests */
-  public static boolean contains(byte[] buf, int offset, int length, ByteBuffer bloom) {
-    return contains(buf, offset, length, bloom);
-  }
-
   public static boolean contains(byte[] buf, int offset, int length,
       ByteBuffer bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount) {

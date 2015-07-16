@@ -1227,8 +1227,7 @@ public class WALSplitter {
         }
       }
       controller.checkForErrors();
-      LOG.info((this.writerThreads == null? 0: this.writerThreads.size()) +
-        " split writers finished; closing...");
+      LOG.info(this.writerThreads.size() + " split writers finished; closing...");
       return (!progress_failed);
     }
 

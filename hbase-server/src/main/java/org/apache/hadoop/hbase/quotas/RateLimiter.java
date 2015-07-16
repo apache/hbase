@@ -198,13 +198,10 @@ public abstract class RateLimiter {
     return (amount <= avail) ? 0 : getWaitInterval(limit, avail, amount);
   }
 
-  // This method is for strictly testing purpose only
+  // These two method are for strictly testing purpose only
   @VisibleForTesting
-  public void setNextRefillTime(long nextRefillTime) {
-    this.setNextRefillTime(nextRefillTime);
-  }
+  public abstract void setNextRefillTime(long nextRefillTime);
 
-  public long getNextRefillTime() {
-    return this.getNextRefillTime();
-  }
+  @VisibleForTesting
+  public abstract long getNextRefillTime();
 }
