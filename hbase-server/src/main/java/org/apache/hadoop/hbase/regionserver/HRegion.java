@@ -200,6 +200,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   public static final String LOAD_CFS_ON_DEMAND_CONFIG_KEY =
       "hbase.hregion.scan.loadColumnFamiliesOnDemand";
+  
+  // in milliseconds
+  private static final String MAX_WAIT_FOR_SEQ_ID_KEY =
+      "hbase.hregion.max.wait.for.seq.id";
+
+  private static final int DEFAULT_MAX_WAIT_FOR_SEQ_ID = 60000;
 
   /**
    * This is the global default value for durability. All tables/mutations not
@@ -331,6 +337,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   private boolean isLoadingCfsOnDemandDefault = false;
 
+  private int maxWaitForSeqId;
   private final AtomicInteger majorInProgress = new AtomicInteger(0);
   private final AtomicInteger minorInProgress = new AtomicInteger(0);
 
@@ -663,6 +670,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     this.rowLockWaitDuration = conf.getInt("hbase.rowlock.wait.duration",
                     DEFAULT_ROWLOCK_WAIT_DURATION);
 
+    maxWaitForSeqId = conf.getInt(MAX_WAIT_FOR_SEQ_ID_KEY, DEFAULT_MAX_WAIT_FOR_SEQ_ID);
     this.isLoadingCfsOnDemandDefault = conf.getBoolean(LOAD_CFS_ON_DEMAND_CONFIG_KEY, true);
     this.htableDescriptor = htd;
     this.rsServices = rsServices;
@@ -2415,7 +2423,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   @VisibleForTesting
   protected long getNextSequenceId(final WAL wal) throws IOException {
     WALKey key = this.appendEmptyEdit(wal, null);
-    return key.getSequenceId();
+    return key.getSequenceId(maxWaitForSeqId);
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -7215,7 +7223,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static final long FIXED_OVERHEAD = ClassSize.align(
       ClassSize.OBJECT +
       ClassSize.ARRAY +
-      44 * ClassSize.REFERENCE + 2 * Bytes.SIZEOF_INT +
+      44 * ClassSize.REFERENCE + 3 * Bytes.SIZEOF_INT +
       (14 * Bytes.SIZEOF_LONG) +
       5 * Bytes.SIZEOF_BOOLEAN);
 

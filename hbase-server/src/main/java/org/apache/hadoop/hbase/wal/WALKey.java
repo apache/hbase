@@ -30,6 +30,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 
 import org.apache.hadoop.hbase.util.ByteStringer;
@@ -301,8 +302,24 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   @Override
   public long getSequenceId() throws IOException {
+    return getSequenceId(-1);
+  }
+
+  /**
+   * Wait for sequence number is assigned &amp; return the assigned value
+   * @param maxWaitForSeqId maximum duration, in milliseconds, to wait for seq number to be assigned
+   * @return long the new assigned sequence number
+   * @throws IOException
+   */
+  public long getSequenceId(int maxWaitForSeqId) throws IOException {
     try {
-      this.seqNumAssignedLatch.await();
+      if (maxWaitForSeqId < 0) {
+        this.seqNumAssignedLatch.await();
+      } else {
+        if (!this.seqNumAssignedLatch.await(maxWaitForSeqId, TimeUnit.MILLISECONDS)) {
+          throw new IOException("Timed out waiting for seq number to be assigned");
+        }
+      }
     } catch (InterruptedException ie) {
       LOG.warn("Thread interrupted waiting for next log sequence number");
       InterruptedIOException iie = new InterruptedIOException();
