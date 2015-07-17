@@ -2282,8 +2282,8 @@ public class HRegionServer extends HasThread implements
         LOG.debug("Master is not running yet");
       } else {
         LOG.warn("error telling master we are up", se);
-        rssStub = null;
       }
+      rssStub = null;
     }
     return result;
   }
