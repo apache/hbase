@@ -167,6 +167,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
     costFunctions = new CostFunction[]{
       new RegionCountSkewCostFunction(conf),
+      new PrimaryRegionCountSkewCostFunction(conf),
       new MoveCostFunction(conf),
       localityCost,
       new TableSkewCostFunction(conf),
@@ -940,6 +941,46 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       for (int i =0; i < cluster.numServers; i++) {
         stats[i] = cluster.regionsPerServer[i].length;
+      }
+
+      return costFromArray(stats);
+    }
+  }
+
+  /**
+   * Compute the cost of a potential cluster state from skew in number of
+   * primary regions on a cluster.
+   */
+  static class PrimaryRegionCountSkewCostFunction extends CostFunction {
+    private static final String PRIMARY_REGION_COUNT_SKEW_COST_KEY =
+        "hbase.master.balancer.stochastic.primaryRegionCountCost";
+    private static final float DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST = 500;
+
+    private double[] stats = null;
+
+    PrimaryRegionCountSkewCostFunction(Configuration conf) {
+      super(conf);
+      // Load multiplier should be the greatest as primary regions serve majority of reads/writes.
+      this.setMultiplier(conf.getFloat(PRIMARY_REGION_COUNT_SKEW_COST_KEY,
+        DEFAULT_PRIMARY_REGION_COUNT_SKEW_COST));
+    }
+
+    @Override
+    double cost() {
+      if (!cluster.hasRegionReplicas) {
+        return 0;
+      }
+      if (stats == null || stats.length != cluster.numServers) {
+        stats = new double[cluster.numServers];
+      }
+
+      for (int i =0; i < cluster.numServers; i++) {
+        stats[i] = 0;
+        for (int regionIdx : cluster.regionsPerServer[i]) {
+          if (regionIdx == cluster.regionIndexToPrimaryIndex[regionIdx]) {
+            stats[i] ++;
+          }
+        }
       }
 
       return costFromArray(stats);
