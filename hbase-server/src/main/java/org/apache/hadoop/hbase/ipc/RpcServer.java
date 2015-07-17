@@ -1882,7 +1882,6 @@ public class RpcServer implements RpcServerInterface {
     protected synchronized void close() {
       disposeSasl();
       data = null;
-      this.dataLengthBuffer = null;
       if (!channel.isOpen())
         return;
       try {socket.shutdownOutput();} catch(Exception ignored) {} // FindBugs DE_MIGHT_IGNORE
