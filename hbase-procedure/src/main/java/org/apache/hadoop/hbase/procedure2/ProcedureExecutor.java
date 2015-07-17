@@ -479,7 +479,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // Initialize procedures timeout handler (this is the +1 thread)
-    threads[numThreads] = new Thread("ProcedureExecutorTimeoutThread") {
+    threads[numThreads] = new Thread("ProcedureExecutorTimeout") {
       @Override
       public void run() {
         timeoutLoop();
