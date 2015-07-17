@@ -908,7 +908,9 @@ public class HRegionServer extends HasThread implements
       }
       
       // Start the Quota Manager
-      rsQuotaManager.start(getRpcServer().getScheduler());
+      if (this.rsQuotaManager != null) {
+        rsQuotaManager.start(getRpcServer().getScheduler());
+      }
 
       // We registered with the Master.  Go into run mode.
       long lastMsg = System.currentTimeMillis();
