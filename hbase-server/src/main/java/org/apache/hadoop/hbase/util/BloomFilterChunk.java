@@ -26,8 +26,6 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
-import com.google.common.annotations.VisibleForTesting;
-
 /**
  * The basic building block for the {@link org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter}
  */
@@ -181,35 +179,6 @@ public class BloomFilterChunk implements BloomFilterBase {
     }
 
     ++this.keyCount;
-  }
-
-  @VisibleForTesting
-  boolean contains(byte [] buf) {
-    return contains(buf, 0, buf.length, this.bloom);
-  }
-
-  @VisibleForTesting
-  boolean contains(byte [] buf, int offset, int length) {
-    return contains(buf, offset, length, bloom);
-  }
-
-  @VisibleForTesting
-  boolean contains(byte[] buf, ByteBuffer bloom) {
-    return contains(buf, 0, buf.length, bloom);
-  }
-
-  public boolean contains(byte[] buf, int offset, int length, ByteBuffer theBloom) {
-    if (theBloom == null) {
-      theBloom = bloom;
-    }
-
-    if (theBloom.limit() != byteSize) {
-      throw new IllegalArgumentException("Bloom does not match expected size:"
-          + " theBloom.limit()=" + theBloom.limit() + ", byteSize=" + byteSize);
-    }
-
-    return BloomFilterUtil.contains(buf, offset, length, theBloom, 0, (int) byteSize, hash,
-        hashCount);
   }
 
   //---------------------------------------------------------------------------

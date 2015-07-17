@@ -22,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -68,6 +70,49 @@ public class TestByteBufferIOEngine {
       byte[] byteArray2 = dstBuffer.array();
       for (int j = 0; j < byteArray.length; ++j) {
         assertTrue(byteArray[j] == byteArray2[j]);
+      }
+    }
+    assert testOffsetAtStartNum == 0;
+    assert testOffsetAtEndNum == 0;
+  }
+
+  @Test
+  public void testByteBufferIOEngineWithMBB() throws Exception {
+    int capacity = 32 * 1024 * 1024; // 32 MB
+    int testNum = 100;
+    int maxBlockSize = 64 * 1024;
+    ByteBufferIOEngine ioEngine = new ByteBufferIOEngine(capacity, false);
+    int testOffsetAtStartNum = testNum / 10;
+    int testOffsetAtEndNum = testNum / 10;
+    for (int i = 0; i < testNum; i++) {
+      byte val = (byte) (Math.random() * 255);
+      int blockSize = (int) (Math.random() * maxBlockSize);
+      if (blockSize == 0) {
+        blockSize = 1;
+      }
+      byte[] byteArray = new byte[blockSize];
+      for (int j = 0; j < byteArray.length; ++j) {
+        byteArray[j] = val;
+      }
+      ByteBuffer srcBuffer = ByteBuffer.wrap(byteArray);
+      int offset = 0;
+      if (testOffsetAtStartNum > 0) {
+        testOffsetAtStartNum--;
+        offset = 0;
+      } else if (testOffsetAtEndNum > 0) {
+        testOffsetAtEndNum--;
+        offset = capacity - blockSize;
+      } else {
+        offset = (int) (Math.random() * (capacity - maxBlockSize));
+      }
+      ioEngine.write(srcBuffer, offset);
+      //ByteBuffer dstBuffer = ByteBuffer.allocate(blockSize);
+      //ioEngine.read(dstBuffer, offset);
+      //MultiByteBuffer read = new MultiByteBuffer(dstBuffer);
+      // TODO : this will get changed after HBASE-12295 goes in
+      ByteBuff read = ioEngine.read(offset, blockSize);
+      for (int j = 0; j < byteArray.length; ++j) {
+        assertTrue(srcBuffer.get(j) == read.get(j));
       }
     }
     assert testOffsetAtStartNum == 0;

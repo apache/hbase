@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -54,7 +55,8 @@ import org.apache.hadoop.io.WritableUtils;
  * PrefixTreeDataBlockEncoder implementation of DataBlockEncoder. This is the primary entry point
  * for PrefixTree encoding and decoding. Encoding is delegated to instances of
  * {@link PrefixTreeEncoder}, and decoding is delegated to instances of
- * {@link org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher}. Encoder and decoder instances are
+ * {@link org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher}.
+ * Encoder and decoder instances are
  * created and recycled by static PtEncoderFactory and PtDecoderFactory.
  */
 @InterfaceAudience.Private
@@ -114,12 +116,14 @@ public class PrefixTreeCodec implements DataBlockEncoder {
 
 
   @Override
-  public Cell getFirstKeyCellInBlock(ByteBuffer block) {
+  public Cell getFirstKeyCellInBlock(ByteBuff block) {
     block.rewind();
     PrefixTreeArraySearcher searcher = null;
     try {
       // should i includeMemstoreTS (second argument)?  i think PrefixKeyDeltaEncoder is, so i will
-      searcher = DecoderFactory.checkOut(block, true);
+      // TODO : Change to work with BBs
+      searcher = DecoderFactory.checkOut(block.asSubByteBuffer(block.limit() - block.position()),
+          true);
       if (!searcher.positionAtFirstCell()) {
         return null;
       }

@@ -24,6 +24,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -31,7 +32,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ IOTests.class, SmallTests.class })
-public class TestByteBufferInputStream {
+public class TestMultiByteBuffInputStream {
 
   @Test
   public void testReads() throws Exception {
@@ -49,7 +50,7 @@ public class TestByteBufferInputStream {
 
     // bbis contains 19 bytes
     // 1 byte, 4 bytes int, 4 bytes string, 8 bytes long and 2 bytes short
-    ByteBufferInputStream bbis = new ByteBufferInputStream(bb);
+    ByteBuffInputStream bbis = new ByteBuffInputStream(new MultiByteBuff(bb));
     assertEquals(15 + s.length(), bbis.available());
     assertEquals(1, bbis.read());
     byte[] ib = new byte[4];
@@ -73,7 +74,7 @@ public class TestByteBufferInputStream {
     bbis.close();
 
     bb = ByteBuffer.wrap(bos.toByteArray());
-    bbis = new ByteBufferInputStream(bb);
+    bbis = new ByteBuffInputStream(new MultiByteBuff(bb));
     DataInputStream dis = new DataInputStream(bbis);
     dis.read();
     assertEquals(i, dis.readInt());

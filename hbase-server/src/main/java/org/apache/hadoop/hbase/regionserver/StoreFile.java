@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.DataInput;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.compactions.Compactor;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -1285,7 +1285,7 @@ public class StoreFile {
 
       try {
         boolean shouldCheckBloom;
-        ByteBuffer bloom;
+        ByteBuff bloom;
         if (bloomFilter.supportsAutoLoading()) {
           bloom = null;
           shouldCheckBloom = true;

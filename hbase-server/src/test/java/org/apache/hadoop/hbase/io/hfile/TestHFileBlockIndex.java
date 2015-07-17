@@ -52,6 +52,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexChunk;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -407,7 +409,7 @@ public class TestHFileBlockIndex {
       KeyValue.KeyOnlyKeyValue cell = new KeyValue.KeyOnlyKeyValue(
           arrayHoldingKey, searchKey.length / 2, searchKey.length);
       int searchResult = BlockIndexReader.binarySearchNonRootIndex(cell,
-          nonRootIndex, CellComparator.COMPARATOR);
+          new MultiByteBuff(nonRootIndex), CellComparator.COMPARATOR);
       String lookupFailureMsg = "Failed to look up key #" + i + " ("
           + Bytes.toStringBinary(searchKey) + ")";
 
@@ -432,7 +434,7 @@ public class TestHFileBlockIndex {
       // Now test we can get the offset and the on-disk-size using a
       // higher-level API function.s
       boolean locateBlockResult =
-          (BlockIndexReader.locateNonRootIndexEntry(nonRootIndex, cell,
+          (BlockIndexReader.locateNonRootIndexEntry(new MultiByteBuff(nonRootIndex), cell,
           CellComparator.COMPARATOR) != -1);
 
       if (i == 0) {
@@ -605,15 +607,15 @@ public class TestHFileBlockIndex {
       while ((block = iter.nextBlock()) != null) {
         if (block.getBlockType() != BlockType.LEAF_INDEX)
           return;
-        ByteBuffer b = block.getBufferReadOnly();
+        ByteBuff b = block.getBufferReadOnly();
         int n = b.getInt();
         // One int for the number of items, and n + 1 for the secondary index.
         int entriesOffset = Bytes.SIZEOF_INT * (n + 2);
 
         // Get all the keys from the leaf index block. S
         for (int i = 0; i < n; ++i) {
-          int keyRelOffset = b.getInt(Bytes.SIZEOF_INT * (i + 1));
-          int nextKeyRelOffset = b.getInt(Bytes.SIZEOF_INT * (i + 2));
+          int keyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (i + 1));
+          int nextKeyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (i + 2));
           int keyLen = nextKeyRelOffset - keyRelOffset;
           int keyOffset = b.arrayOffset() + entriesOffset + keyRelOffset +
               HFileBlockIndex.SECONDARY_INDEX_ENTRY_OVERHEAD;

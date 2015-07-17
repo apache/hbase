@@ -18,21 +18,21 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  * Not thread safe!
  * <p>
- * Please note that the reads will cause position movement on wrapped ByteBuffer.
+ * Please note that the reads will cause position movement on wrapped ByteBuff.
  */
 @InterfaceAudience.Private
-public class ByteBufferInputStream extends InputStream {
+public class ByteBuffInputStream extends InputStream {
 
-  private ByteBuffer buf;
+  private ByteBuff buf;
 
-  public ByteBufferInputStream(ByteBuffer buf) {
+  public ByteBuffInputStream(ByteBuff buf) {
       this.buf = buf;
   }
 
@@ -58,19 +58,18 @@ public class ByteBufferInputStream extends InputStream {
    * @return the total number of bytes actually read into the buffer, or <code>-1</code> if not even
    *         1 byte can be read because the end of the stream has been reached.
    */
-  public int read(byte b[], int off, int len) {
+  public int read (byte b[], int off, int len) {
     int avail = available();
     if (avail <= 0) {
       return -1;
-    }
-
-    if (len > avail) {
-      len = avail;
     }
     if (len <= 0) {
       return 0;
     }
 
+    if (len > avail) {
+      len = avail;
+    }
     this.buf.get(b, off, len);
     return len;
   }
@@ -84,10 +83,10 @@ public class ByteBufferInputStream extends InputStream {
    */
   public long skip(long n) {
     long k = Math.min(n, available());
-    if (k < 0) {
-      k = 0;
+    if (k <= 0) {
+      return 0;
     }
-    this.buf.position((int) (this.buf.position() + k));
+    this.buf.skip((int) k);
     return k;
   }
 

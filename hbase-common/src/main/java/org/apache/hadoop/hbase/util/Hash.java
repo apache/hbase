@@ -140,4 +140,6 @@ public abstract class Hash {
    * @return hash value
    */
   public abstract int hash(byte[] bytes, int offset, int length, int initval);
+
+  // TODO : a buffer based hash function would be needed.. Not adding it for now
 }

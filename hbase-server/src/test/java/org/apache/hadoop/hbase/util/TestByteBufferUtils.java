@@ -194,7 +194,7 @@ public class TestByteBufferUtils {
     ByteBuffer dstBuffer = ByteBuffer.allocate(array.length);
     srcBuffer.put(array);
 
-    ByteBufferUtils.copyFromBufferToBuffer(dstBuffer, srcBuffer,
+    ByteBufferUtils.copyFromBufferToBuffer(srcBuffer, dstBuffer,
         array.length / 2, array.length / 4);
     for (int i = 0; i < array.length / 4; ++i) {
       assertEquals(srcBuffer.get(i + array.length / 2),

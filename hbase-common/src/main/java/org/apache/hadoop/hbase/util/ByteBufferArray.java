@@ -25,6 +25,9 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -199,5 +202,66 @@ public final class ByteBufferArray {
       }
     }
     assert srcIndex == len;
+  }
+
+  /**
+   * Creates a ByteBuff from a given array of ByteBuffers from the given offset to the
+   * length specified. For eg, if there are 4 buffers forming an array each with length 10 and
+   * if we call asSubBuffer(5, 10) then we will create an MBB consisting of two BBs
+   * and the first one be a BB from 'position' 5 to a 'length' 5 and the 2nd BB will be from
+   * 'position' 0 to 'length' 5.
+   * @param offset
+   * @param len
+   * @return a ByteBuff formed from the underlying ByteBuffers
+   */
+  public ByteBuff asSubByteBuff(long offset, int len) {
+    assert len >= 0;
+    long end = offset + len;
+    int startBuffer = (int) (offset / bufferSize), startBufferOffset = (int) (offset % bufferSize);
+    int endBuffer = (int) (end / bufferSize), endBufferOffset = (int) (end % bufferSize);
+    assert startBuffer >= 0 && startBuffer < bufferCount;
+    assert endBuffer >= 0 && endBuffer < bufferCount
+        || (endBuffer == bufferCount && endBufferOffset == 0);
+    if (startBuffer >= locks.length || startBuffer < 0) {
+      String msg = "Failed subArray, start=" + offset + ",startBuffer=" + startBuffer
+          + ",bufferSize=" + bufferSize;
+      LOG.error(msg);
+      throw new RuntimeException(msg);
+    }
+    int srcIndex = 0, cnt = -1;
+    ByteBuffer[] mbb = new ByteBuffer[endBuffer - startBuffer + 1];
+    for (int i = startBuffer,j=0; i <= endBuffer; ++i,j++) {
+      Lock lock = locks[i];
+      lock.lock();
+      try {
+        ByteBuffer bb = buffers[i];
+        if (i == startBuffer) {
+          cnt = bufferSize - startBufferOffset;
+          if (cnt > len) cnt = len;
+          ByteBuffer dup = bb.duplicate();
+          dup.limit(startBufferOffset + cnt).position(startBufferOffset);
+          mbb[j] = dup.slice();
+        } else if (i == endBuffer) {
+          cnt = endBufferOffset;
+          ByteBuffer dup = bb.duplicate();
+          dup.position(0).limit(cnt);
+          mbb[j] = dup.slice();
+        } else {
+          cnt = bufferSize ;
+          ByteBuffer dup = bb.duplicate();
+          dup.position(0).limit(cnt);
+          mbb[j] = dup.slice();
+        }
+        srcIndex += cnt;
+      } finally {
+        lock.unlock();
+      }
+    }
+    assert srcIndex == len;
+    if (mbb.length > 1) {
+      return new MultiByteBuff(mbb);
+    } else {
+      return new SingleByteBuff(mbb[0]);
+    }
   }
 }

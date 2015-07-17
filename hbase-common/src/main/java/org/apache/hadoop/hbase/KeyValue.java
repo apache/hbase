@@ -2613,6 +2613,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
    * Hence create a Keyvalue(aka Cell) that would help in comparing as two cells
    */
   public static class KeyOnlyKeyValue extends KeyValue {
+    private short rowLen = -1;
     public KeyOnlyKeyValue() {
 
     }
@@ -2624,6 +2625,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
       this.bytes = b;
       this.length = length;
       this.offset = offset;
+      this.rowLen = Bytes.toShort(this.bytes, this.offset);
     }
 
     @Override
@@ -2642,6 +2644,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
       this.bytes = key;
       this.offset = offset;
       this.length = length;
+      this.rowLen = Bytes.toShort(this.bytes, this.offset);
     }
 
     @Override
@@ -2699,7 +2702,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
 
     @Override
     public short getRowLength() {
-      return Bytes.toShort(this.bytes, getKeyOffset());
+      return rowLen;
     }
 
     @Override
@@ -2768,6 +2771,11 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     @Override
     public boolean equals(Object other) {
       return super.equals(other);
+    }
+
+    @Override
+    public long heapSize() {
+      return super.heapSize() + Bytes.SIZEOF_SHORT;
     }
   }
 }

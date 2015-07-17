@@ -26,6 +26,8 @@ import java.nio.channels.FileChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -124,5 +126,21 @@ public class FileIOEngine implements IOEngine {
     } catch (IOException ex) {
       LOG.error("Can't shutdown cleanly", ex);
     }
+  }
+
+  @Override
+  public ByteBuff read(long offset, int len) throws IOException {
+    ByteBuffer dstBuffer = ByteBuffer.allocate(len);
+    int read = read(dstBuffer, offset);
+    dstBuffer.limit(read);
+    return new SingleByteBuff(dstBuffer);
+  }
+
+  @Override
+  public void write(ByteBuff srcBuffer, long offset) throws IOException {
+    // When caching block into BucketCache there will be single buffer backing for this HFileBlock.
+    assert srcBuffer.hasArray();
+    fileChannel.write(
+        ByteBuffer.wrap(srcBuffer.array(), srcBuffer.arrayOffset(), srcBuffer.remaining()), offset);
   }
 }

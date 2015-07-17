@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
 
 /**
@@ -78,6 +79,11 @@ public class ByteBufferIOEngine implements IOEngine {
         dstBuffer.arrayOffset());
   }
 
+  @Override
+  public ByteBuff read(long offset, int len) throws IOException {
+    return bufferArray.asSubByteBuff(offset, len);
+  }
+
   /**
    * Transfers data from the given byte buffer to the buffer array
    * @param srcBuffer the given byte buffer from which bytes are to be read
@@ -92,6 +98,14 @@ public class ByteBufferIOEngine implements IOEngine {
         srcBuffer.arrayOffset());
   }
 
+  @Override
+  public void write(ByteBuff srcBuffer, long offset) throws IOException {
+    // When caching block into BucketCache there will be single buffer backing for this HFileBlock.
+    // This will work for now. But from the DFS itself if we get DBB then this may not hold true.
+    assert srcBuffer.hasArray();
+    bufferArray.putMultiple(offset, srcBuffer.remaining(), srcBuffer.array(),
+        srcBuffer.arrayOffset());
+  }
   /**
    * No operation for the sync in the memory IO engine
    */

@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
@@ -71,13 +73,13 @@ public class TestCacheConfig {
     }
 
     @Override
-    public Cacheable deserialize(ByteBuffer b, boolean reuse) throws IOException {
+    public Cacheable deserialize(ByteBuff b, boolean reuse) throws IOException {
       LOG.info("Deserialized " + b + ", reuse=" + reuse);
       return cacheable;
     }
 
     @Override
-    public Cacheable deserialize(ByteBuffer b) throws IOException {
+    public Cacheable deserialize(ByteBuff b) throws IOException {
       LOG.info("Deserialized " + b);
       return cacheable;
     }

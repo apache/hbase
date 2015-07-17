@@ -57,6 +57,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   @Override
   public void setCurrentBuffer(ByteBuffer fullBlockBuffer) {
     block = fullBlockBuffer;
+    // TODO : change to Bytebuff
     ptSearcher = DecoderFactory.checkOut(block, includeMvccVersion);
     rewind();
   }

@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,6 +56,9 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -437,7 +439,7 @@ public class TestHFileBlock {
               assertTrue("Packed heapSize should be < unpacked heapSize",
                 packedHeapsize < blockUnpacked.heapSize());
             }
-            ByteBuffer actualBuffer = blockUnpacked.getBufferWithoutHeader();
+            ByteBuff actualBuffer = blockUnpacked.getBufferWithoutHeader();
             if (encoding != DataBlockEncoding.NONE) {
               // We expect a two-byte big-endian encoding id.
               assertEquals(
@@ -454,14 +456,15 @@ public class TestHFileBlock {
             expectedBuffer.rewind();
 
             // test if content matches, produce nice message
-            assertBuffersEqual(expectedBuffer, actualBuffer, algo, encoding, pread);
+            assertBuffersEqual(new SingleByteBuff(expectedBuffer), actualBuffer, algo, encoding,
+                pread);
 
             // test serialized blocks
             for (boolean reuseBuffer : new boolean[] { false, true }) {
               ByteBuffer serialized = ByteBuffer.allocate(blockFromHFile.getSerializedLength());
               blockFromHFile.serialize(serialized);
-              HFileBlock deserialized =
-                (HFileBlock) blockFromHFile.getDeserializer().deserialize(serialized, reuseBuffer);
+              HFileBlock deserialized = (HFileBlock) blockFromHFile.getDeserializer().deserialize(
+                  new SingleByteBuff(serialized), reuseBuffer);
               assertEquals(
                 "Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
                 blockFromHFile, deserialized);
@@ -483,8 +486,8 @@ public class TestHFileBlock {
     return String.format("compression %s, encoding %s, pread %s", compression, encoding, pread);
   }
 
-  static void assertBuffersEqual(ByteBuffer expectedBuffer,
-      ByteBuffer actualBuffer, Compression.Algorithm compression,
+  static void assertBuffersEqual(ByteBuff expectedBuffer,
+      ByteBuff actualBuffer, Compression.Algorithm compression,
       DataBlockEncoding encoding, boolean pread) {
     if (!actualBuffer.equals(expectedBuffer)) {
       int prefix = 0;
@@ -506,7 +509,7 @@ public class TestHFileBlock {
    * Convert a few next bytes in the given buffer at the given position to
    * string. Used for error messages.
    */
-  private static String nextBytesToStr(ByteBuffer buf, int pos) {
+  private static String nextBytesToStr(ByteBuff buf, int pos) {
     int maxBytes = buf.limit() - pos;
     int numBytes = Math.min(16, maxBytes);
     return Bytes.toStringBinary(buf.array(), buf.arrayOffset() + pos,
@@ -595,7 +598,7 @@ public class TestHFileBlock {
               b = b.unpack(meta, hbr);
               // b's buffer has header + data + checksum while
               // expectedContents have header + data only
-              ByteBuffer bufRead = b.getBufferWithHeader();
+              ByteBuff bufRead = b.getBufferWithHeader();
               ByteBuffer bufExpected = expectedContents.get(i);
               boolean bytesAreCorrect = Bytes.compareTo(bufRead.array(),
                   bufRead.arrayOffset(),
@@ -617,7 +620,7 @@ public class TestHFileBlock {
                   bufRead.arrayOffset(), Math.min(32 + 10, bufRead.limit()));
                 if (detailedLogging) {
                   LOG.warn("expected header" +
-                           HFileBlock.toStringHeader(bufExpected) +
+                           HFileBlock.toStringHeader(new SingleByteBuff(bufExpected)) +
                            "\nfound    header" +
                            HFileBlock.toStringHeader(bufRead));
                   LOG.warn("bufread offset " + bufRead.arrayOffset() +
@@ -821,9 +824,9 @@ public class TestHFileBlock {
 
   protected void testBlockHeapSizeInternals() {
     if (ClassSize.is32BitJVM()) {
-      assertTrue(HFileBlock.BYTE_BUFFER_HEAP_SIZE == 64);
+      assertTrue(HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE == 64);
     } else {
-      assertTrue(HFileBlock.BYTE_BUFFER_HEAP_SIZE == 80);
+      assertTrue(HFileBlock.MULTI_BYTE_BUFFER_HEAP_SIZE == 104);
     }
 
     for (int size : new int[] { 100, 256, 12345 }) {
@@ -839,9 +842,9 @@ public class TestHFileBlock {
       HFileBlock block = new HFileBlock(BlockType.DATA, size, size, -1, buf,
           HFileBlock.FILL_HEADER, -1,
           0, meta);
-      long byteBufferExpectedSize =
-          ClassSize.align(ClassSize.estimateBase(buf.getClass(), true)
-              + HConstants.HFILEBLOCK_HEADER_SIZE + size);
+      long byteBufferExpectedSize = ClassSize.align(ClassSize.estimateBase(
+          new MultiByteBuff(buf).getClass(), true)
+          + HConstants.HFILEBLOCK_HEADER_SIZE + size);
       long hfileMetaSize =  ClassSize.align(ClassSize.estimateBase(HFileContext.class, true));
       long hfileBlockExpectedSize =
           ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));

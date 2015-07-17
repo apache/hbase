@@ -45,6 +45,8 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -326,11 +328,14 @@ public class TestHFile extends HBaseTestCase {
 
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
-      ByteBuffer actual = reader.getMetaBlock("HFileMeta" + i, false);
+      ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false);
       ByteBuffer expected =
         ByteBuffer.wrap(("something to test" + i).getBytes());
-      assertEquals("failed to match metadata",
-        Bytes.toStringBinary(expected), Bytes.toStringBinary(actual));
+      assertEquals(
+          "failed to match metadata",
+          Bytes.toStringBinary(expected),
+          Bytes.toStringBinary(actual.array(), actual.arrayOffset() + actual.position(),
+              actual.capacity()));
     }
   }
 

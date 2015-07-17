@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -303,7 +304,8 @@ public class TestDataBlockEncoders {
       DataBlockEncoder encoder = encoding.getEncoder();
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
           getEncodingContext(Compression.Algorithm.NONE, encoding));
-      Cell key = encoder.getFirstKeyCellInBlock(encodedBuffer);
+      Cell key = encoder.getFirstKeyCellInBlock(new MultiByteBuff(
+          encodedBuffer));
       KeyValue keyBuffer = null;
       if(encoding == DataBlockEncoding.PREFIX_TREE) {
         // This is not an actual case. So the Prefix tree block is not loaded in case of Prefix_tree

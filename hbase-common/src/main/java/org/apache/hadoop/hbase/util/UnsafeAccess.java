@@ -343,4 +343,72 @@ public final class UnsafeAccess {
     }
     theUnsafe.copyMemory(srcBase, srcAddress, destBase, destAddress, length);
   }
+  // APIs to add primitives to BBs
+  /**
+   * Put a short value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param val short to write out
+   * @return incremented offset
+   */
+  public static int putShort(ByteBuffer buf, int offset, short val) {
+    if (littleEndian) {
+      val = Short.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putShort(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putShort(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+    }
+    return offset + Bytes.SIZEOF_SHORT;
+  }
+
+  /**
+   * Put a long value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param val long to write out
+   * @return incremented offset
+   */
+  public static int putLong(ByteBuffer buf, int offset, long val) {
+    if (littleEndian) {
+      val = Long.reverseBytes(val);
+    }
+    if (buf.isDirect()) {
+      theUnsafe.putLong(((DirectBuffer) buf).address() + offset, val);
+    } else {
+      theUnsafe.putLong(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, val);
+    }
+    return offset + Bytes.SIZEOF_LONG;
+  }
+  /**
+   * Put a byte value out to the specified BB position in big-endian format.
+   * @param buf the byte buffer
+   * @param offset position in the buffer
+   * @param b byte to write out
+   * @return incremented offset
+   */
+  public static int putByte(ByteBuffer buf, int offset, byte b) {
+    if (buf.isDirect()) {
+      theUnsafe.putByte(((DirectBuffer) buf).address() + offset, b);
+    } else {
+      theUnsafe.putByte(buf.array(),
+          BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset, b);
+    }
+    return offset + 1;
+  }
+
+  /**
+   * Returns the byte at the given offset
+   * @param buf the buffer to read
+   * @param offset the offset at which the byte has to be read
+   * @return the byte at the given offset
+   */
+  public static byte toByte(ByteBuffer buf, int offset) {
+    if (buf.isDirect()) {
+      return theUnsafe.getByte(((DirectBuffer) buf).address() + offset);
+    } else {
+      return theUnsafe.getByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
+    }
+  }
 }

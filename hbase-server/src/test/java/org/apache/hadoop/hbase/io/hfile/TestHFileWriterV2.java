@@ -27,7 +27,6 @@ import static org.junit.Assert.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -194,7 +194,7 @@ public class TestHFileWriterV2 {
         assertFalse(block.isUnpacked());
         block = block.unpack(meta, blockReader);
       }
-      ByteBuffer buf = block.getBufferWithoutHeader();
+      ByteBuff buf = block.getBufferWithoutHeader();
       while (buf.hasRemaining()) {
         int keyLen = buf.getInt();
         int valueLen = buf.getInt();
@@ -241,7 +241,7 @@ public class TestHFileWriterV2 {
         .unpack(meta, blockReader);
       assertEquals(BlockType.META, block.getBlockType());
       Text t = new Text();
-      ByteBuffer buf = block.getBufferWithoutHeader();
+      ByteBuff buf = block.getBufferWithoutHeader();
       if (Writables.getWritable(buf.array(), buf.arrayOffset(), buf.limit(), t) == null) {
         throw new IOException("Failed to deserialize block " + this + " into a " + t.getClass().getSimpleName());
       }

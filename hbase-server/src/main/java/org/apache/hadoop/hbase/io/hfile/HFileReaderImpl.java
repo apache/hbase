@@ -1,5 +1,4 @@
 /*
- *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -48,11 +47,12 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDecodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -436,7 +436,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   }
 
   protected static class HFileScannerImpl implements HFileScanner {
-    private ByteBuffer blockBuffer;
+    private ByteBuff blockBuffer;
     protected final boolean cacheBlocks;
     protected final boolean pread;
     protected final boolean isCompaction;
@@ -450,6 +450,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     private int currTagsLen;
     private KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
     protected HFileBlock block;
+    // A pair for reusing in blockSeek() so that we don't garbage lot of objects
+    final Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
 
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
@@ -510,19 +512,21 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // inlined and is not too big to compile. We also manage position in ByteBuffer ourselves
       // because it is faster than going via range-checked ByteBuffer methods or going through a
       // byte buffer array a byte at a time.
-      int p = blockBuffer.position() + blockBuffer.arrayOffset();
       // Get a long at a time rather than read two individual ints. In micro-benchmarking, even
       // with the extra bit-fiddling, this is order-of-magnitude faster than getting two ints.
-      long ll = Bytes.toLong(blockBuffer.array(), p);
+      // Trying to imitate what was done - need to profile if this is better or
+      // earlier way is better by doing mark and reset?
+      // But ensure that you read long instead of two ints
+      long ll = blockBuffer.getLongStrictlyForward(blockBuffer.position());
       // Read top half as an int of key length and bottom int as value length
       this.currKeyLen = (int)(ll >> Integer.SIZE);
       this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
       checkKeyValueLen();
       // Move position past the key and value lengths and then beyond the key and value
-      p += (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
+      int p = blockBuffer.position() +  (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.getFileContext().isIncludesTags()) {
         // Tags length is a short.
-        this.currTagsLen = Bytes.toShort(blockBuffer.array(), p);
+        this.currTagsLen = blockBuffer.getShortStrictlyForward(p);
         checkTagsLen();
         p += (Bytes.SIZEOF_SHORT + currTagsLen);
       }
@@ -560,14 +564,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // This is Bytes#bytesToVint inlined so can save a few instructions in this hot method; i.e.
       // previous if one-byte vint, we'd redo the vint call to find int size.
       // Also the method is kept small so can be inlined.
-      byte firstByte = blockBuffer.array()[position];
+      byte firstByte = blockBuffer.getByteStrictlyForward(position);
       int len = WritableUtils.decodeVIntSize(firstByte);
       if (len == 1) {
         this.currMemstoreTS = firstByte;
       } else {
         long i = 0;
         for (int idx = 0; idx < len - 1; idx++) {
-          byte b = blockBuffer.array()[position + 1 + idx];
+          byte b = blockBuffer.get(position + 1 + idx);
           i = i << 8;
           i = i | (b & 0xFF);
         }
@@ -598,13 +602,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
      */
     protected int blockSeek(Cell key, boolean seekBefore) {
       int klen, vlen, tlen = 0;
-      long memstoreTS = 0;
-      int memstoreTSLen = 0;
       int lastKeyValueSize = -1;
+      int pos = -1;
       do {
-        blockBuffer.mark();
-        klen = blockBuffer.getInt();
-        vlen = blockBuffer.getInt();
+        pos = blockBuffer.position();
+        // Better to ensure that we use the BB Utils here
+        long ll = blockBuffer.getLongStrictlyForward(pos);
+        klen = (int)(ll >> Integer.SIZE);
+        vlen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
         if (klen < 0 || vlen < 0 || klen > blockBuffer.limit()
             || vlen > blockBuffer.limit()) {
           throw new IllegalStateException("Invalid klen " + klen + " or vlen "
@@ -612,77 +617,68 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
               + blockBuffer.position() + " (without header).");
         }
-        ByteBufferUtils.skip(blockBuffer, klen + vlen);
+        pos += Bytes.SIZEOF_LONG;
+        blockBuffer.asSubByteBuffer(pos, klen, pair);
+        // TODO :change here after Bufferbackedcells come
+        keyOnlyKv.setKey(pair.getFirst().array(), pair.getFirst().arrayOffset() + pair.getSecond(),
+            klen);
+        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, keyOnlyKv);
+        pos += klen + vlen;
         if (this.reader.getFileContext().isIncludesTags()) {
           // Read short as unsigned, high byte first
-          tlen = ((blockBuffer.get() & 0xff) << 8) ^ (blockBuffer.get() & 0xff);
+          tlen = ((blockBuffer.getByteStrictlyForward(pos) & 0xff) << 8)
+              ^ (blockBuffer.getByteStrictlyForward(pos + 1) & 0xff);
           if (tlen < 0 || tlen > blockBuffer.limit()) {
             throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
                 + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
                 + blockBuffer.position() + " (without header).");
           }
-          ByteBufferUtils.skip(blockBuffer, tlen);
+          // add the two bytes read for the tags.
+          pos += tlen + (Bytes.SIZEOF_SHORT);
         }
         if (this.reader.shouldIncludeMemstoreTS()) {
-          if (this.reader.isDecodeMemstoreTS()) {
-            memstoreTS = Bytes.readAsVLong(blockBuffer.array(), blockBuffer.arrayOffset()
-                + blockBuffer.position());
-            memstoreTSLen = WritableUtils.getVIntSize(memstoreTS);
-          } else {
-            memstoreTS = 0;
-            memstoreTSLen = 1;
-          }
+          // Directly read the mvcc based on current position
+          readMvccVersion(pos);
         }
-        blockBuffer.reset();
-        int keyOffset =
-          blockBuffer.arrayOffset() + blockBuffer.position() + (Bytes.SIZEOF_INT * 2);
-        keyOnlyKv.setKey(blockBuffer.array(), keyOffset, klen);
-        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, keyOnlyKv);
-
         if (comp == 0) {
           if (seekBefore) {
             if (lastKeyValueSize < 0) {
               throw new IllegalStateException("blockSeek with seekBefore "
-                  + "at the first key of the block: key="
-                  + CellUtil.getCellKeyAsString(key)
+                  + "at the first key of the block: key=" + CellUtil.getCellKeyAsString(key)
                   + ", blockOffset=" + block.getOffset() + ", onDiskSize="
                   + block.getOnDiskSizeWithHeader());
             }
-            blockBuffer.position(blockBuffer.position() - lastKeyValueSize);
+            blockBuffer.moveBack(lastKeyValueSize);
             readKeyValueLen();
             return 1; // non exact match.
           }
           currKeyLen = klen;
           currValueLen = vlen;
           currTagsLen = tlen;
-          if (this.reader.shouldIncludeMemstoreTS()) {
-            currMemstoreTS = memstoreTS;
-            currMemstoreTSLen = memstoreTSLen;
-          }
           return 0; // indicate exact match
         } else if (comp < 0) {
-          if (lastKeyValueSize > 0)
-            blockBuffer.position(blockBuffer.position() - lastKeyValueSize);
+          if (lastKeyValueSize > 0) {
+            blockBuffer.moveBack(lastKeyValueSize);
+          }
           readKeyValueLen();
           if (lastKeyValueSize == -1 && blockBuffer.position() == 0) {
             return HConstants.INDEX_KEY_MAGIC;
           }
           return 1;
         }
-
         // The size of this key/value tuple, including key/value length fields.
-        lastKeyValueSize = klen + vlen + memstoreTSLen + KEY_VALUE_LEN_SIZE;
+        lastKeyValueSize = klen + vlen + currMemstoreTSLen + KEY_VALUE_LEN_SIZE;
         // include tag length also if tags included with KV
-        if (this.reader.getFileContext().isIncludesTags()) {
+        if (reader.getFileContext().isIncludesTags()) {
           lastKeyValueSize += tlen + Bytes.SIZEOF_SHORT;
         }
-        blockBuffer.position(blockBuffer.position() + lastKeyValueSize);
-      } while (blockBuffer.remaining() > 0);
+        blockBuffer.skip(lastKeyValueSize);
+      } while (blockBuffer.hasRemaining());
 
       // Seek to the last key we successfully read. This will happen if this is
       // the last key/value pair in the file, in which case the following call
       // to next() has to return false.
-      blockBuffer.position(blockBuffer.position() - lastKeyValueSize);
+      blockBuffer.moveBack(lastKeyValueSize);
       readKeyValueLen();
       return 1; // didn't exactly find it.
     }
@@ -849,6 +845,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     public ByteBuffer getValue() {
       assertSeeked();
+      // TODO : change here after BufferBacked cells come
       return ByteBuffer.wrap(
           blockBuffer.array(),
           blockBuffer.arrayOffset() + blockBuffer.position()
@@ -1030,15 +1027,14 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     protected Cell getFirstKeyCellInBlock(HFileBlock curBlock) {
-      ByteBuffer buffer = curBlock.getBufferWithoutHeader();
+      ByteBuff buffer = curBlock.getBufferWithoutHeader();
       // It is safe to manipulate this buffer because we own the buffer object.
       buffer.rewind();
       int klen = buffer.getInt();
-      buffer.getInt();
-      ByteBuffer keyBuff = buffer.slice();
-      keyBuff.limit(klen);
-      keyBuff.rewind();
-      // Create a KeyOnlyKv now. 
+      buffer.skip(Bytes.SIZEOF_INT);// Skip value len part
+      ByteBuffer keyBuff = buffer.asSubByteBuffer(klen);
+      keyBuff.limit(keyBuff.position() + klen);
+      // Create a KeyOnlyKv now.
       // TODO : Will change when Buffer backed cells come
       return new KeyValue.KeyOnlyKeyValue(keyBuff.array(), keyBuff.arrayOffset()
           + keyBuff.position(), klen);
@@ -1188,7 +1184,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
    * @throws IOException
    */
   @Override
-  public ByteBuffer getMetaBlock(String metaBlockName, boolean cacheBlock)
+  public ByteBuff getMetaBlock(String metaBlockName, boolean cacheBlock)
       throws IOException {
     if (trailer.getMetaIndexCount() == 0) {
       return null; // there are no meta blocks
@@ -1457,22 +1453,22 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           + " doesn't support data block encoding "
           + DataBlockEncoding.getNameFromId(dataBlockEncoderId));
       }
-
-      seeker.setCurrentBuffer(getEncodedBuffer(newBlock));
+      ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
+      // TODO : Change the DBEs to work with ByteBuffs
+      seeker.setCurrentBuffer(encodedBuffer.asSubByteBuffer(encodedBuffer.limit()));
       blockFetches++;
 
       // Reset the next indexed key
       this.nextIndexedKey = null;
     }
 
-    private ByteBuffer getEncodedBuffer(HFileBlock newBlock) {
-      ByteBuffer origBlock = newBlock.getBufferReadOnly();
-      ByteBuffer encodedBlock = ByteBuffer.wrap(origBlock.array(),
-          origBlock.arrayOffset() + newBlock.headerSize() +
-          DataBlockEncoding.ID_SIZE,
-          newBlock.getUncompressedSizeWithoutHeader() -
-          DataBlockEncoding.ID_SIZE).slice();
-      return encodedBlock;
+    private ByteBuff getEncodedBuffer(HFileBlock newBlock) {
+      ByteBuff origBlock = newBlock.getBufferReadOnly();
+      int pos = newBlock.headerSize() + DataBlockEncoding.ID_SIZE;
+      origBlock.position(pos);
+      origBlock
+          .limit(pos + newBlock.getUncompressedSizeWithoutHeader() - DataBlockEncoding.ID_SIZE);
+      return origBlock.slice();
     }
 
     @Override

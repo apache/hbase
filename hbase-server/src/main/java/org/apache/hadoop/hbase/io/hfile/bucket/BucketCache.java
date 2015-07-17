@@ -62,6 +62,8 @@ import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.CacheableDeserializerIdManager;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
@@ -416,9 +418,12 @@ public class BucketCache implements BlockCache, HeapSize {
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
         if (bucketEntry.equals(backingMap.get(key))) {
+          // TODO : change this area - should be removed after server cells and
+          // 12295 are available
           int len = bucketEntry.getLength();
-          ByteBuffer bb = ByteBuffer.allocate(len);
-          int lenRead = ioEngine.read(bb, bucketEntry.offset());
+          ByteBuffer buf = ByteBuffer.allocate(len);
+          int lenRead = ioEngine.read(buf, bucketEntry.offset());
+          ByteBuff bb = new SingleByteBuff(buf);
           if (lenRead != len) {
             throw new RuntimeException("Only " + lenRead + " bytes read, " + len + " expected");
           }
@@ -1269,7 +1274,7 @@ public class BucketCache implements BlockCache, HeapSize {
       try {
         if (data instanceof HFileBlock) {
           HFileBlock block = (HFileBlock) data;
-          ByteBuffer sliceBuf = block.getBufferReadOnlyWithHeader();
+          ByteBuff sliceBuf = block.getBufferReadOnlyWithHeader();
           sliceBuf.rewind();
           assert len == sliceBuf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE ||
             len == sliceBuf.limit() + block.headerSize() + HFileBlock.EXTRA_SERIALIZATION_SPACE;

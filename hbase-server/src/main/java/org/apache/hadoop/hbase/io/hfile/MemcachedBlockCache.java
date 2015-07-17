@@ -29,9 +29,12 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
+
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -255,7 +258,7 @@ public class MemcachedBlockCache implements BlockCache {
     @Override
     public HFileBlock decode(CachedData d) {
       try {
-        ByteBuffer buf = ByteBuffer.wrap(d.getData());
+        ByteBuff buf = new SingleByteBuff(ByteBuffer.wrap(d.getData()));
         return (HFileBlock) HFileBlock.blockDeserializer.deserialize(buf, true);
       } catch (IOException e) {
         LOG.warn("Error deserializing data from memcached",e);

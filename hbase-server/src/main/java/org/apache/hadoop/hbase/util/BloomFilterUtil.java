@@ -22,9 +22,10 @@ import java.text.NumberFormat;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
- * Utility methods related to BloomFilters 
+ * Utility methods related to BloomFilters
  */
 @InterfaceAudience.Private
 public final class BloomFilterUtil {
@@ -193,7 +194,7 @@ public final class BloomFilterUtil {
   }
 
   public static boolean contains(byte[] buf, int offset, int length,
-      ByteBuffer bloomBuf, int bloomOffset, int bloomSize, Hash hash,
+      ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
       int hashCount) {
 
     int hash1 = hash.hash(buf, offset, length, 0);
@@ -206,7 +207,7 @@ public final class BloomFilterUtil {
       for (int i = 0; i < hashCount; i++) {
         int hashLoc = Math.abs(compositeHash % bloomBitSize);
         compositeHash += hash2;
-        if (!get(hashLoc, bloomBuf, bloomOffset)) {
+        if (!checkBit(hashLoc, bloomBuf, bloomOffset)) {
           return false;
         }
       }
@@ -214,29 +215,28 @@ public final class BloomFilterUtil {
       // Test mode with "fake lookups" to estimate "ideal false positive rate".
       for (int i = 0; i < hashCount; i++) {
         int hashLoc = randomGeneratorForTest.nextInt(bloomBitSize);
-        if (!get(hashLoc, bloomBuf, bloomOffset)){
+        if (!checkBit(hashLoc, bloomBuf, bloomOffset)){
           return false;
         }
       }
     }
     return true;
   }
-  
+
   /**
    * Check if bit at specified index is 1.
    *
    * @param pos index of bit
    * @return true if bit at specified index is 1, false if 0.
    */
-  public static boolean get(int pos, ByteBuffer bloomBuf, int bloomOffset) {
+   static boolean checkBit(int pos, ByteBuff bloomBuf, int bloomOffset) {
     int bytePos = pos >> 3; //pos / 8
     int bitPos = pos & 0x7; //pos % 8
-    // TODO access this via Util API which can do Unsafe access if possible(?)
     byte curByte = bloomBuf.get(bloomOffset + bytePos);
     curByte &= bitvals[bitPos];
     return (curByte != 0);
   }
-  
+
   /**
    * A human-readable string with statistics for the given Bloom filter.
    *

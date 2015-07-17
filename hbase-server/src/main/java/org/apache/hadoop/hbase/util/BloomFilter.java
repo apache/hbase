@@ -18,10 +18,10 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  *
@@ -83,7 +83,7 @@ public interface BloomFilter extends BloomFilterBase {
    *        is supported.
    * @return true if matched by bloom, false if not
    */
-  boolean contains(Cell keyCell, ByteBuffer bloom);
+  boolean contains(Cell keyCell, ByteBuff bloom);
 
   /**
    * Check if the specified key is contained in the bloom filter.
@@ -95,7 +95,7 @@ public interface BloomFilter extends BloomFilterBase {
    *        is supported.
    * @return true if matched by bloom, false if not
    */
-  boolean contains(byte[] buf, int offset, int length, ByteBuffer bloom);
+  boolean contains(byte[] buf, int offset, int length, ByteBuff bloom);
 
   /**
    * @return true if this Bloom filter can automatically load its data

@@ -48,6 +48,9 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -310,7 +313,7 @@ public class TestHFileBlockCompatibility {
 
             assertEquals((int) encodedSizes.get(blockId),
                 b.getUncompressedSizeWithoutHeader());
-            ByteBuffer actualBuffer = b.getBufferWithoutHeader();
+            ByteBuff actualBuffer = b.getBufferWithoutHeader();
             if (encoding != DataBlockEncoding.NONE) {
               // We expect a two-byte big-endian encoding id.
               assertEquals(0, actualBuffer.get(0));
@@ -323,7 +326,7 @@ public class TestHFileBlockCompatibility {
             expectedBuffer.rewind();
 
             // test if content matches, produce nice message
-            TestHFileBlock.assertBuffersEqual(expectedBuffer, actualBuffer,
+            TestHFileBlock.assertBuffersEqual(new SingleByteBuff(expectedBuffer), actualBuffer,
               algo, encoding, pread);
           }
           is.close();

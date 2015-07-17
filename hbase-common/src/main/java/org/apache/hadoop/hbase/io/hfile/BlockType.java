@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -131,7 +132,7 @@ public enum BlockType {
     out.write(magic);
   }
 
-  public void write(ByteBuffer buf) {
+  public void write(ByteBuff buf) {
     buf.put(magic);
   }
 
@@ -161,7 +162,7 @@ public enum BlockType {
     return parse(buf, 0, buf.length);
   }
 
-  public static BlockType read(ByteBuffer buf) throws IOException {
+  public static BlockType read(ByteBuff buf) throws IOException {
     byte[] magicBuf = new byte[Math.min(buf.limit() - buf.position(), MAGIC_LENGTH)];
     buf.get(magicBuf);
     BlockType blockType = parse(magicBuf, 0, magicBuf.length);

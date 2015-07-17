@@ -39,6 +39,9 @@ import org.apache.hadoop.hbase.MultithreadedTestUtil.TestThread;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ChecksumType;
 
 public class CacheTestUtils {
@@ -123,7 +126,7 @@ public class CacheTestUtils {
   public static void testCacheSimple(BlockCache toBeTested, int blockSize,
       int numBlocks) throws Exception {
 
-    HFileBlockPair[] blocks = generateHFileBlocks(numBlocks, blockSize);
+    HFileBlockPair[] blocks = generateHFileBlocks(blockSize, numBlocks);
     // Confirm empty
     for (HFileBlockPair block : blocks) {
       assertNull(toBeTested.getBlock(block.blockName, true, false, true));
@@ -253,7 +256,7 @@ public class CacheTestUtils {
       new CacheableDeserializer<Cacheable>() {
 
       @Override
-      public Cacheable deserialize(ByteBuffer b) throws IOException {
+      public Cacheable deserialize(ByteBuff b) throws IOException {
         int len = b.getInt();
         Thread.yield();
         byte buf[] = new byte[len];
@@ -267,7 +270,7 @@ public class CacheTestUtils {
       }
 
       @Override
-      public Cacheable deserialize(ByteBuffer b, boolean reuse)
+      public Cacheable deserialize(ByteBuff b, boolean reuse)
           throws IOException {
         return deserialize(b);
       }
@@ -326,8 +329,8 @@ public class CacheTestUtils {
       // declare our data size to be smaller than it by the serialization space
       // required.
 
-      ByteBuffer cachedBuffer = ByteBuffer.allocate(blockSize
-          - HFileBlock.EXTRA_SERIALIZATION_SPACE);
+      SingleByteBuff cachedBuffer = new SingleByteBuff(ByteBuffer.allocate(blockSize
+          - HFileBlock.EXTRA_SERIALIZATION_SPACE));
       rand.nextBytes(cachedBuffer.array());
       cachedBuffer.rewind();
       int onDiskSizeWithoutHeader = blockSize

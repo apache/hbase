@@ -41,9 +41,9 @@ import sun.nio.ch.DirectBuffer;
 public final class ByteBufferUtils {
 
   // "Compressed integer" serialization helper constants.
-  private final static int VALUE_MASK = 0x7f;
-  private final static int NEXT_BIT_SHIFT = 7;
-  private final static int NEXT_BIT_MASK = 1 << 7;
+  public final static int VALUE_MASK = 0x7f;
+  public final static int NEXT_BIT_SHIFT = 7;
+  public final static int NEXT_BIT_MASK = 1 << 7;
 
   private ByteBufferUtils() {
   }
@@ -139,6 +139,14 @@ public final class ByteBufferUtils {
      }
    }
 
+  public static byte toByte(ByteBuffer buffer, int offset) {
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.toByte(buffer, offset);
+    } else {
+      return buffer.get(offset);
+    }
+  }
+
   /**
    * Copy the data to the output stream and update position in buffer.
    * @param out the stream to write bytes to
@@ -180,6 +188,15 @@ public final class ByteBufferUtils {
       tmpValue >>>= 8;
     }
     return fitInBytes;
+  }
+
+  public static int putByte(ByteBuffer buffer, int offset, byte b) {
+    if (UnsafeAccess.isAvailable()) {
+      return UnsafeAccess.putByte(buffer, offset, b);
+    } else {
+      buffer.put(offset, b);
+      return offset + 1;
+    }
   }
 
   /**
@@ -334,30 +351,6 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Copy from one buffer to another from given offset.
-   * <p>
-   * Note : This will advance the position marker of {@code out} but not change the position maker
-   * for {@code in}
-   * @param out destination buffer
-   * @param in source buffer
-   * @param sourceOffset offset in the source buffer
-   * @param length how many bytes to copy
-   */
-  public static void copyFromBufferToBuffer(ByteBuffer out,
-      ByteBuffer in, int sourceOffset, int length) {
-    if (in.hasArray() && out.hasArray()) {
-      System.arraycopy(in.array(), sourceOffset + in.arrayOffset(),
-          out.array(), out.position() +
-          out.arrayOffset(), length);
-      skip(out, length);
-    } else {
-      for (int i = 0; i < length; ++i) {
-        out.put(in.get(sourceOffset + i));
-      }
-    }
-  }
-
-  /**
    * Copy one buffer's whole data to another. Write starts at the current position of 'out' buffer.
    * Note : This will advance the position marker of {@code out} but not change the position maker
    * for {@code in}. The position and limit of the {@code in} buffer to be set properly by caller.
@@ -377,22 +370,51 @@ public final class ByteBufferUtils {
   /**
    * Copy from one buffer to another from given offset. This will be absolute positional copying and
    * won't affect the position of any of the buffers.
-   * @param out
    * @param in
+   * @param out
    * @param sourceOffset
    * @param destinationOffset
    * @param length
    */
-  public static void copyFromBufferToBuffer(ByteBuffer out, ByteBuffer in, int sourceOffset,
+  public static int copyFromBufferToBuffer(ByteBuffer in, ByteBuffer out, int sourceOffset,
       int destinationOffset, int length) {
     if (in.hasArray() && out.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.arrayOffset()
           + destinationOffset, length);
+    } else if (UnsafeAccess.isAvailable()) {
+      UnsafeAccess.copy(in, sourceOffset, out, destinationOffset, length);
     } else {
       for (int i = 0; i < length; ++i) {
-        out.put((destinationOffset + i), in.get(sourceOffset + i));
+        putByte(out, destinationOffset + i, toByte(in, sourceOffset + i));
       }
     }
+    return destinationOffset + length;
+  }
+
+  /**
+   * Copy from one buffer to another from given offset.
+   * <p>
+   * Note : This will advance the position marker of {@code out} but not change the position maker
+   * for {@code in}
+   * @param in source buffer
+   * @param out destination buffer
+   * @param sourceOffset offset in the source buffer
+   * @param length how many bytes to copy
+   */
+  public static void copyFromBufferToBuffer(ByteBuffer in,
+      ByteBuffer out, int sourceOffset, int length) {
+    if (in.hasArray() && out.hasArray()) {
+      System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out.array(), out.position()
+          + out.arrayOffset(), length);
+    } else if (UnsafeAccess.isAvailable()) {
+      UnsafeAccess.copy(in, sourceOffset, out, out.position(), length);
+    } else {
+      int destOffset = out.position();
+      for (int i = 0; i < length; ++i) {
+        putByte(out, destOffset + i, toByte(in, sourceOffset + i));
+      }
+    }
+    skip(out, length);
   }
 
   /**
@@ -736,6 +758,35 @@ public final class ByteBufferUtils {
   }
 
   /**
+   * Put a short value out to the given ByteBuffer's current position in big-endian format.
+   * This also advances the position in buffer by short size.
+   * @param buffer the ByteBuffer to write to
+   * @param val short to write out
+   */
+  public static void putShort(ByteBuffer buffer, short val) {
+    if (UnsafeAccess.isAvailable()) {
+      int newPos = UnsafeAccess.putShort(buffer, buffer.position(), val);
+      buffer.position(newPos);
+    } else {
+      buffer.putShort(val);
+    }
+  }
+
+  /**
+   * Put a long value out to the given ByteBuffer's current position in big-endian format.
+   * This also advances the position in buffer by long size.
+   * @param buffer the ByteBuffer to write to
+   * @param val long to write out
+   */
+  public static void putLong(ByteBuffer buffer, long val) {
+    if (UnsafeAccess.isAvailable()) {
+      int newPos = UnsafeAccess.putLong(buffer, buffer.position(), val);
+      buffer.position(newPos);
+    } else {
+      buffer.putLong(val);
+    }
+  }
+  /**
    * Copies the bytes from given array's offset to length part into the given buffer. Puts the bytes
    * to buffer's current position. This also advances the position in the 'out' buffer by 'length'
    * @param out
@@ -758,15 +809,16 @@ public final class ByteBufferUtils {
   }
 
   /**
-   * Copies specified number of bytes from given offset of 'in' ByteBuffer to the array.
+   * Copies specified number of bytes from given offset of 'in' ByteBuffer to
+   * the array.
    * @param out
    * @param in
    * @param sourceOffset
    * @param destinationOffset
    * @param length
    */
-  public static void copyFromBufferToArray(byte[] out, ByteBuffer in,
-      int sourceOffset, int destinationOffset, int length) {
+  public static void copyFromBufferToArray(byte[] out, ByteBuffer in, int sourceOffset,
+      int destinationOffset, int length) {
     if (in.hasArray()) {
       System.arraycopy(in.array(), sourceOffset + in.arrayOffset(), out, destinationOffset, length);
     } else if (UnsafeAccess.isAvailable()) {

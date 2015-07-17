@@ -21,11 +21,11 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataInput;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,7 +93,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   }
 
   @Override
-  public boolean contains(byte[] key, int keyOffset, int keyLength, ByteBuffer bloom) {
+  public boolean contains(byte[] key, int keyOffset, int keyLength, ByteBuff bloom) {
     // We try to store the result in this variable so we can update stats for
     // testing, but when an error happens, we log a message and return.
 
@@ -120,7 +120,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
                 + Bytes.toStringBinary(key, keyOffset, keyLength), ex);
       }
 
-      ByteBuffer bloomBuf = bloomBlock.getBufferReadOnly();
+      ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
       result = BloomFilterUtil.contains(key, keyOffset, keyLength,
           bloomBuf, bloomBlock.headerSize(),
           bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
@@ -137,7 +137,7 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
   }
 
   @Override
-  public boolean contains(Cell keyCell, ByteBuffer bloom) {
+  public boolean contains(Cell keyCell, ByteBuff bloom) {
     // We try to store the result in this variable so we can update stats for
     // testing, but when an error happens, we log a message and return.
     int block = index.rootBlockContainingKey(keyCell);

@@ -24,9 +24,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
@@ -36,12 +33,11 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.WritableUtils;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({ MiscTests.class, SmallTests.class })
-public class TestMultiByteBuffer {
+public class TestMultiByteBuff {
 
   @Test
   public void testWritesAndReads() {
@@ -58,7 +54,7 @@ public class TestMultiByteBuffer {
     bb1.put(b, 0, 1);
     bb2.put(b, 1, 7);
     bb2.putLong(l3);
-    MultiByteBuffer mbb = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff mbb = new MultiByteBuff(bb1, bb2);
     assertEquals(l1, mbb.getLong(4));
     assertEquals(l2, mbb.getLong(14));
     assertEquals(l3, mbb.getLong(22));
@@ -73,7 +69,7 @@ public class TestMultiByteBuffer {
     // Absolute writes
     bb1 = ByteBuffer.allocate(15);
     bb2 = ByteBuffer.allocate(15);
-    mbb = new MultiByteBuffer(bb1, bb2);
+    mbb = new MultiByteBuff(bb1, bb2);
     byte b1 = 5, b2 = 31;
     mbb.put(b1);
     mbb.putLong(l1);
@@ -100,17 +96,24 @@ public class TestMultiByteBuffer {
     assertEquals(b1, mbb.get());
     mbb.put(b);
     assertEquals(l2, mbb.getLong(22));
+    try {
+      // This should fail because we have already move to a position
+      // greater than 22
+      mbb.getLongStrictlyForward(22);
+      fail();
+    } catch (IndexOutOfBoundsException e) {
+    }
   }
 
   @Test
-  public void testGetVlong() throws IOException {
-    long vlong = 453478;
-    ByteArrayOutputStream baos = new ByteArrayOutputStream(10);
-    DataOutput out = new DataOutputStream(baos);
-    WritableUtils.writeVLong(out, vlong);
-    ByteBuffer bb = ByteBuffer.wrap(baos.toByteArray());
-    MultiByteBuffer mbb = new MultiByteBuffer(bb);
-    assertEquals(vlong, mbb.getVLong());
+  public void testPutPrimitives() {
+    ByteBuffer bb = ByteBuffer.allocate(10);
+    SingleByteBuff s = new SingleByteBuff(bb);
+    s.putLong(-4465109508325701663l);
+    bb.rewind();
+    long long1 = bb.getLong();
+    assertEquals(long1, -4465109508325701663l);
+    s.position(8);
   }
 
   @Test
@@ -118,7 +121,7 @@ public class TestMultiByteBuffer {
     byte[] b = new byte[15];
     ByteBuffer bb1 = ByteBuffer.wrap(b, 1, 10).slice();
     ByteBuffer bb2 = ByteBuffer.allocate(15);
-    MultiByteBuffer mbb1 = new MultiByteBuffer(bb1, bb2);
+    ByteBuff mbb1 = new MultiByteBuff(bb1, bb2);
     assertFalse(mbb1.hasArray());
     try {
       mbb1.array();
@@ -130,11 +133,11 @@ public class TestMultiByteBuffer {
       fail();
     } catch (UnsupportedOperationException e) {
     }
-    mbb1 = new MultiByteBuffer(bb1);
+    mbb1 = new SingleByteBuff(bb1);
     assertTrue(mbb1.hasArray());
     assertEquals(1, mbb1.arrayOffset());
     assertEquals(b, mbb1.array());
-    mbb1 = new MultiByteBuffer(ByteBuffer.allocateDirect(10));
+    mbb1 = new SingleByteBuff(ByteBuffer.allocateDirect(10));
     assertFalse(mbb1.hasArray());
     try {
       mbb1.array();
@@ -149,7 +152,7 @@ public class TestMultiByteBuffer {
   }
 
   @Test
-  public void testMarkAndReset() {
+  public void testMarkAndResetWithMBB() {
     ByteBuffer bb1 = ByteBuffer.allocateDirect(15);
     ByteBuffer bb2 = ByteBuffer.allocateDirect(15);
     bb1.putInt(4);
@@ -160,7 +163,7 @@ public class TestMultiByteBuffer {
     bb1.put(b, 0, 1);
     bb2.put(b, 1, 7);
     bb2.putLong(l3);
-    MultiByteBuffer multi = new MultiByteBuffer(bb1, bb2);
+    ByteBuff multi = new MultiByteBuff(bb1, bb2);
     assertEquals(4, multi.getInt());
     assertEquals(l1, multi.getLong());
     multi.mark();
@@ -200,7 +203,7 @@ public class TestMultiByteBuffer {
     bb1.put(b, 0, 1);
     bb2.put(b, 1, 7);
     bb2.putLong(l3);
-    MultiByteBuffer multi = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff multi = new MultiByteBuff(bb1, bb2);
     assertEquals(4, multi.getInt());
     assertEquals(l1, multi.getLong());
     multi.skip(10);
@@ -219,7 +222,7 @@ public class TestMultiByteBuffer {
     bb1.put(b, 0, 1);
     bb2.put(b, 1, 7);
     bb2.putLong(l3);
-    MultiByteBuffer multi = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff multi = new MultiByteBuff(bb1, bb2);
     assertEquals(4, multi.getInt());
     assertEquals(l1, multi.getLong());
     multi.skip(10);
@@ -233,21 +236,22 @@ public class TestMultiByteBuffer {
   public void testSubBuffer() {
     ByteBuffer bb1 = ByteBuffer.allocateDirect(10);
     ByteBuffer bb2 = ByteBuffer.allocateDirect(10);
-    MultiByteBuffer multi = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff multi = new MultiByteBuff(bb1, bb2);
     long l1 = 1234L, l2 = 100L;
     multi.putLong(l1);
     multi.putLong(l2);
     multi.rewind();
-    ByteBuffer sub = multi.asSubBuffer(Bytes.SIZEOF_LONG);
+    ByteBuffer sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
     assertTrue(bb1 == sub);
     assertEquals(l1, ByteBufferUtils.toLong(sub, sub.position()));
     multi.skip(Bytes.SIZEOF_LONG);
-    sub = multi.asSubBuffer(Bytes.SIZEOF_LONG);
+    sub = multi.asSubByteBuffer(Bytes.SIZEOF_LONG);
     assertFalse(bb1 == sub);
     assertFalse(bb2 == sub);
     assertEquals(l2, ByteBufferUtils.toLong(sub, sub.position()));
     multi.rewind();
-    Pair<ByteBuffer, Integer> p = multi.asSubBuffer(8, Bytes.SIZEOF_LONG);
+    Pair<ByteBuffer, Integer> p = new Pair<ByteBuffer, Integer>();
+    multi.asSubByteBuffer(8, Bytes.SIZEOF_LONG, p);
     assertFalse(bb1 == p.getFirst());
     assertFalse(bb2 == p.getFirst());
     assertEquals(0, p.getSecond().intValue());
@@ -258,7 +262,7 @@ public class TestMultiByteBuffer {
   public void testSliceDuplicateMethods() throws Exception {
     ByteBuffer bb1 = ByteBuffer.allocateDirect(10);
     ByteBuffer bb2 = ByteBuffer.allocateDirect(15);
-    MultiByteBuffer multi = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff multi = new MultiByteBuff(bb1, bb2);
     long l1 = 1234L, l2 = 100L;
     multi.put((byte) 2);
     multi.putLong(l1);
@@ -266,12 +270,12 @@ public class TestMultiByteBuffer {
     multi.putInt(45);
     multi.position(1);
     multi.limit(multi.position() + (2 * Bytes.SIZEOF_LONG));
-    MultiByteBuffer sliced = multi.slice();
+    MultiByteBuff sliced = multi.slice();
     assertEquals(0, sliced.position());
     assertEquals((2 * Bytes.SIZEOF_LONG), sliced.limit());
     assertEquals(l1, sliced.getLong());
     assertEquals(l2, sliced.getLong());
-    MultiByteBuffer dup = multi.duplicate();
+    MultiByteBuff dup = multi.duplicate();
     assertEquals(1, dup.position());
     assertEquals(dup.position() + (2 * Bytes.SIZEOF_LONG), dup.limit());
     assertEquals(l1, dup.getLong());
@@ -284,7 +288,7 @@ public class TestMultiByteBuffer {
     byte[] b1 = new byte[4];
     ByteBuffer bb1 = ByteBuffer.wrap(b);
     ByteBuffer bb2 = ByteBuffer.wrap(b1);
-    MultiByteBuffer mbb1 = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff mbb1 = new MultiByteBuff(bb1, bb2);
     mbb1.position(2);
     mbb1.putInt(4);
     int res = mbb1.getInt(2);
@@ -300,17 +304,21 @@ public class TestMultiByteBuffer {
   @Test
   public void testGetIntStrictlyForwardWithPosOnMultiBuffers() throws IOException {
     byte[] b = new byte[4];
-    byte[] b1 = new byte[4];
+    byte[] b1 = new byte[8];
     ByteBuffer bb1 = ByteBuffer.wrap(b);
     ByteBuffer bb2 = ByteBuffer.wrap(b1);
-    MultiByteBuffer mbb1 = new MultiByteBuffer(bb1, bb2);
+    MultiByteBuff mbb1 = new MultiByteBuff(bb1, bb2);
     mbb1.position(2);
     mbb1.putInt(4);
     mbb1.position(7);
     mbb1.put((byte) 2);
+    mbb1.putInt(3);
     mbb1.position(0);
     mbb1.getIntStrictlyForward(4);
     byte res = mbb1.get(7);
     assertEquals((byte) 2, res);
+    mbb1.position(7);
+    int intRes = mbb1.getIntStrictlyForward(8);
+    assertEquals(3, intRes);
   }
 }

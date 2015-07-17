@@ -45,9 +45,10 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
-import org.apache.hadoop.hbase.util.ByteBufferUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -342,7 +343,7 @@ public class HFileBlockIndex {
 
         // Locate the entry corresponding to the given key in the non-root
         // (leaf or intermediate-level) index block.
-        ByteBuffer buffer = block.getBufferWithoutHeader();
+        ByteBuff buffer = block.getBufferWithoutHeader();
         index = locateNonRootIndexEntry(buffer, key, comparator);
         if (index == -1) {
           // This has to be changed
@@ -396,14 +397,14 @@ public class HFileBlockIndex {
             midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false, true,
             BlockType.LEAF_INDEX, null);
 
-        ByteBuffer b = midLeafBlock.getBufferWithoutHeader();
+        ByteBuff b = midLeafBlock.getBufferWithoutHeader();
         int numDataBlocks = b.getInt();
-        int keyRelOffset = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-        int keyLen = b.getInt(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
+        int keyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (midKeyEntry + 1));
+        int keyLen = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
             keyRelOffset;
         int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
             + SECONDARY_INDEX_ENTRY_OVERHEAD;
-        byte[] bytes = ByteBufferUtils.toBytes(b, keyOffset, keyLen);
+        byte[] bytes = b.toBytes(keyOffset, keyLen);
         targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
       } else {
         // The middle of the root-level index.
@@ -653,7 +654,7 @@ public class HFileBlockIndex {
      * @param i the ith position
      * @return The indexed key at the ith position in the nonRootIndex.
      */
-    protected byte[] getNonRootIndexedKey(ByteBuffer nonRootIndex, int i) {
+    protected byte[] getNonRootIndexedKey(ByteBuff nonRootIndex, int i) {
       int numEntries = nonRootIndex.getInt(0);
       if (i < 0 || i >= numEntries) {
         return null;
@@ -678,7 +679,7 @@ public class HFileBlockIndex {
         targetKeyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
 
       // TODO check whether we can make BB backed Cell here? So can avoid bytes copy.
-      return ByteBufferUtils.toBytes(nonRootIndex, targetKeyOffset, targetKeyLength);
+      return nonRootIndex.toBytes(targetKeyOffset, targetKeyLength);
     }
 
     /**
@@ -697,10 +698,10 @@ public class HFileBlockIndex {
      *         -1 otherwise
      * @throws IOException
      */
-    static int binarySearchNonRootIndex(Cell key, ByteBuffer nonRootIndex,
+    static int binarySearchNonRootIndex(Cell key, ByteBuff nonRootIndex,
         CellComparator comparator) {
 
-      int numEntries = nonRootIndex.getInt(0);
+      int numEntries = nonRootIndex.getIntStrictlyForward(0);
       int low = 0;
       int high = numEntries - 1;
       int mid = 0;
@@ -713,12 +714,12 @@ public class HFileBlockIndex {
       // keys[numEntries] = Infinity, then we are maintaining an invariant that
       // keys[low - 1] < key < keys[high + 1] while narrowing down the range.
       KeyValue.KeyOnlyKeyValue nonRootIndexKV = new KeyValue.KeyOnlyKeyValue();
+      Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
       while (low <= high) {
         mid = (low + high) >>> 1;
 
         // Midkey's offset relative to the end of secondary index
-        int midKeyRelOffset = nonRootIndex.getInt(
-            Bytes.SIZEOF_INT * (mid + 1));
+      int midKeyRelOffset = nonRootIndex.getIntStrictlyForward(Bytes.SIZEOF_INT * (mid + 1));
 
         // The offset of the middle key in the blockIndex buffer
         int midKeyOffset = entriesOffset       // Skip secondary index
@@ -728,16 +729,17 @@ public class HFileBlockIndex {
         // We subtract the two consecutive secondary index elements, which
         // gives us the size of the whole (offset, onDiskSize, key) tuple. We
         // then need to subtract the overhead of offset and onDiskSize.
-        int midLength = nonRootIndex.getInt(Bytes.SIZEOF_INT * (mid + 2)) -
+        int midLength = nonRootIndex.getIntStrictlyForward(Bytes.SIZEOF_INT * (mid + 2)) -
             midKeyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
 
         // we have to compare in this order, because the comparator order
         // has special logic when the 'left side' is a special key.
         // TODO make KeyOnlyKeyValue to be Buffer backed and avoid array() call. This has to be
         // done after HBASE-12224 & HBASE-12282
-        // TODO avaoid array call.
-        nonRootIndexKV.setKey(nonRootIndex.array(),
-            nonRootIndex.arrayOffset() + midKeyOffset, midLength);
+        // TODO avoid array call.
+        nonRootIndex.asSubByteBuffer(midKeyOffset, midLength, pair);
+        nonRootIndexKV.setKey(pair.getFirst().array(),
+            pair.getFirst().arrayOffset() + pair.getSecond(), midLength);
         int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexKV);
 
         // key lives above the midpoint
@@ -787,19 +789,20 @@ public class HFileBlockIndex {
      *         return -1 in the case the given key is before the first key.
      *
      */
-    static int locateNonRootIndexEntry(ByteBuffer nonRootBlock, Cell key,
+    static int locateNonRootIndexEntry(ByteBuff nonRootBlock, Cell key,
         CellComparator comparator) {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {
-        int numEntries = nonRootBlock.getInt(0);
+        int numEntries = nonRootBlock.getIntStrictlyForward(0);
 
         // The end of secondary index and the beginning of entries themselves.
         int entriesOffset = Bytes.SIZEOF_INT * (numEntries + 2);
 
         // The offset of the entry we are interested in relative to the end of
         // the secondary index.
-        int entryRelOffset = nonRootBlock.getInt(Bytes.SIZEOF_INT * (1 + entryIndex));
+        int entryRelOffset = nonRootBlock
+            .getIntStrictlyForward(Bytes.SIZEOF_INT * (1 + entryIndex));
 
         nonRootBlock.position(entriesOffset + entryRelOffset);
       }

@@ -48,6 +48,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.junit.Before;
 import org.junit.Test;
@@ -126,7 +128,7 @@ public class TestChecksum {
       HFileBlock.FSReader hbr = new HFileBlock.FSReaderImpl(
           is, totalSize, (HFileSystem) fs, path, meta);
       HFileBlock b = hbr.readBlockData(0, -1, -1, false);
-      ByteBuffer data = b.getBufferWithoutHeader();
+      ByteBuff data = b.getBufferWithoutHeader();
       for (int i = 0; i < 1000; i++) {
         assertEquals(i, data.getInt());
       }
@@ -194,7 +196,7 @@ public class TestChecksum {
         assertEquals(algo == GZ ? 2173 : 4936, 
                      b.getOnDiskSizeWithoutHeader() - b.totalChecksumBytes());
         // read data back from the hfile, exclude header and checksum
-        ByteBuffer bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
+        ByteBuff bb = b.unpack(meta, hbr).getBufferWithoutHeader(); // read back data
         DataInputStream in = new DataInputStream(
                                new ByteArrayInputStream(
                                  bb.array(), bb.arrayOffset(), bb.limit()));

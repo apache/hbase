@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  * A class implementing IOEngine interface supports data services for
@@ -40,8 +41,20 @@ public interface IOEngine {
    * @param offset The offset in the IO engine where the first byte to be read
    * @return number of bytes read
    * @throws IOException
+   * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
    */
   int read(ByteBuffer dstBuffer, long offset) throws IOException;
+
+  /**
+   * Transfers data from IOEngine at the given offset to an MultiByteBuffer
+   * @param offset the offset from which the underlying buckets should be read
+   * @param len the length upto which the buckets should be read
+   * @return the MultiByteBuffer formed from the underlying ByteBuffers forming the
+   * buckets
+   * @throws IOException
+   * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
+   */
+  ByteBuff read(long offset, int len) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to IOEngine
@@ -51,6 +64,14 @@ public interface IOEngine {
    * @throws IOException
    */
   void write(ByteBuffer srcBuffer, long offset) throws IOException;
+
+  /**
+   * Transfers the data from the given MultiByteBuffer to IOEngine
+   * @param srcBuffer the given MultiBytebufffers from which bytes are to be read
+   * @param offset the offset in the IO engine where the first byte to be written
+   * @throws IOException
+   */
+  void write(ByteBuff srcBuffer, long offset) throws IOException;
 
   /**
    * Sync the data to IOEngine after writing
