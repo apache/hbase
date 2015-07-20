@@ -21,24 +21,42 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 
 @Category({IOTests.class, SmallTests.class})
+@RunWith(Parameterized.class)
 public class TestSeekToBlockWithEncoders {
+
+  private final boolean useOffheapData;
+
+  @Parameters
+  public static Collection<Object[]> parameters() {
+    return HBaseTestingUtility.BOOLEAN_PARAMETERIZED;
+  }
+
+  public TestSeekToBlockWithEncoders(boolean useOffheapData) {
+    this.useOffheapData = useOffheapData;
+  }
 
   /**
    * Test seeking while file is encoded.
@@ -265,10 +283,10 @@ public class TestSeekToBlockWithEncoders {
       HFileBlockEncodingContext encodingContext = encoder.newDataBlockEncodingContext(encoding,
           HConstants.HFILEBLOCK_DUMMY_HEADER, meta);
       ByteBuffer encodedBuffer = TestDataBlockEncoders.encodeKeyValues(encoding, kvs,
-          encodingContext);
+          encodingContext, this.useOffheapData);
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
-      seeker.setCurrentBuffer(encodedBuffer);
+      seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }
     // test it!
@@ -280,7 +298,7 @@ public class TestSeekToBlockWithEncoders {
       Cell keyValue, KeyValue expected) {
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
       seeker.seekToKeyInBlock(keyValue, false);
-      Cell keyValue2 = seeker.getKeyValue();
+      Cell keyValue2 = seeker.getCell();
       assertEquals(expected, keyValue2);
       seeker.rewind();
     }

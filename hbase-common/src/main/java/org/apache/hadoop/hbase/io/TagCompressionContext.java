@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.util.Dictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.IOUtils;
@@ -133,7 +134,7 @@ public class TagCompressionContext {
    * @return bytes count read from source to uncompress all tags.
    * @throws IOException
    */
-  public int uncompressTags(ByteBuffer src, byte[] dest, int offset, int length)
+  public int uncompressTags(ByteBuff src, byte[] dest, int offset, int length)
       throws IOException {
     int srcBeginPos = src.position();
     int endOffset = offset + length;

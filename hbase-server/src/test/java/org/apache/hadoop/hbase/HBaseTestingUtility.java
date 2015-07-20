@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HRegionLocator;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -246,6 +245,19 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     configurations.add(new Object[] { false, true });
     configurations.add(new Object[] { true, false });
     configurations.add(new Object[] { true, true });
+    return Collections.unmodifiableList(configurations);
+  }
+
+  public static List<Object[]> memStoreTSTagsAndOffheapCombination() {
+    List<Object[]> configurations = new ArrayList<Object[]>();
+    configurations.add(new Object[] { false, false, true });
+    configurations.add(new Object[] { false, false, false });
+    configurations.add(new Object[] { false, true, true });
+    configurations.add(new Object[] { false, true, false });
+    configurations.add(new Object[] { true, false, true });
+    configurations.add(new Object[] { true, false, false });
+    configurations.add(new Object[] { true, true, true });
+    configurations.add(new Object[] { true, true, false });
     return Collections.unmodifiableList(configurations);
   }
 

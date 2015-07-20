@@ -131,14 +131,14 @@ public interface DataBlockEncoder {
    * An interface which enable to seek while underlying data is encoded.
    *
    * It works on one HFileBlock, but it is reusable. See
-   * {@link #setCurrentBuffer(ByteBuffer)}.
+   * {@link #setCurrentBuffer(ByteBuff)}.
    */
   interface EncodedSeeker {
     /**
      * Set on which buffer there will be done seeking.
      * @param buffer Used for seeking.
      */
-    void setCurrentBuffer(ByteBuffer buffer);
+    void setCurrentBuffer(ByteBuff buffer);
 
     /**
      * From the current position creates a cell using the key part
@@ -160,10 +160,9 @@ public interface DataBlockEncoder {
     ByteBuffer getKeyValueBuffer();
 
     /**
-     * @return the KeyValue object at the current position. Includes memstore
-     *         timestamp.
+     * @return the Cell at the current position. Includes memstore timestamp.
      */
-    Cell getKeyValue();
+    Cell getCell();
 
     /** Set position to beginning of given block */
     void rewind();

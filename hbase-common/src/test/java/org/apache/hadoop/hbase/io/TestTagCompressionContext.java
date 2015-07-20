@@ -29,6 +29,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -60,11 +61,11 @@ public class TestTagCompressionContext {
 
     byte[] dest = new byte[tagsLength1];
     ByteBuffer ob = ByteBuffer.wrap(baos.toByteArray());
-    context.uncompressTags(ob, dest, 0, tagsLength1);
+    context.uncompressTags(new SingleByteBuff(ob), dest, 0, tagsLength1);
     assertTrue(Bytes.equals(kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1, dest, 0,
         tagsLength1));
     dest = new byte[tagsLength2];
-    context.uncompressTags(ob, dest, 0, tagsLength2);
+    context.uncompressTags(new SingleByteBuff(ob), dest, 0, tagsLength2);
     assertTrue(Bytes.equals(kv2.getTagsArray(), kv2.getTagsOffset(), tagsLength2, dest, 0,
         tagsLength2));
   }

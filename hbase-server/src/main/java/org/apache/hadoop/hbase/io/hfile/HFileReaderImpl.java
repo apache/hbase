@@ -1454,8 +1454,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           + DataBlockEncoding.getNameFromId(dataBlockEncoderId));
       }
       ByteBuff encodedBuffer = getEncodedBuffer(newBlock);
-      // TODO : Change the DBEs to work with ByteBuffs
-      seeker.setCurrentBuffer(encodedBuffer.asSubByteBuffer(encodedBuffer.limit()));
+      seeker.setCurrentBuffer(encodedBuffer);
       blockFetches++;
 
       // Reset the next indexed key
@@ -1528,7 +1527,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (block == null) {
         return null;
       }
-      return seeker.getKeyValue();
+      return seeker.getCell();
     }
 
     @Override

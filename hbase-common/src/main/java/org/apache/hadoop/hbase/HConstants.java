@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.io.hfile.BlockType.MAGIC_LENGTH;
 
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collections;
@@ -494,6 +495,8 @@ public final class HConstants {
    * An empty instance.
    */
   public static final byte [] EMPTY_BYTE_ARRAY = new byte [0];
+
+  public static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.wrap(EMPTY_BYTE_ARRAY);
 
   /**
    * Used by scanners, etc when they want to start at the beginning of a region

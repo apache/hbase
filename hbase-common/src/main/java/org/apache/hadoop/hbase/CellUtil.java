@@ -100,6 +100,12 @@ public final class CellUtil {
     return output;
   }
 
+  public static byte[] cloneTags(Cell cell) {
+    byte[] output = new byte[cell.getTagsLength()];
+    copyTagTo(cell, output, 0);
+    return output;
+  }
+
   /**
    * Returns tag value in a new byte array. If server-side, use
    * {@link Tag#getBuffer()} with appropriate {@link Tag#getTagOffset()} and

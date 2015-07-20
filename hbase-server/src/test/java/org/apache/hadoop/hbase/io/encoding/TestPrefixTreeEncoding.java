@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,27 +118,27 @@ public class TestPrefixTreeEncoding {
     byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
-    seeker.setCurrentBuffer(readBuffer);
+    seeker.setCurrentBuffer(new SingleByteBuff(readBuffer));
 
     // Seek before the first keyvalue;
     Cell seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, 0), CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
-    assertEquals(null, seeker.getKeyValue());
+    assertEquals(null, seeker.getCell());
 
     // Seek before the middle keyvalue;
     seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
         CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
-    assertNotNull(seeker.getKeyValue());
+    assertNotNull(seeker.getCell());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1),
-      CellUtil.cloneRow(seeker.getKeyValue()));
+      CellUtil.cloneRow(seeker.getCell()));
 
     // Seek before the last keyvalue;
     seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
     seeker.seekToKeyInBlock(seekKey, true);
-    assertNotNull(seeker.getKeyValue());
+    assertNotNull(seeker.getCell());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH - 1),
-      CellUtil.cloneRow(seeker.getKeyValue()));
+      CellUtil.cloneRow(seeker.getCell()));
   }
 
   @Test
@@ -160,10 +161,10 @@ public class TestPrefixTreeEncoding {
     byte[] onDiskBytes = baosInMemory.toByteArray();
     ByteBuffer readBuffer = ByteBuffer.wrap(onDiskBytes, DataBlockEncoding.ID_SIZE,
         onDiskBytes.length - DataBlockEncoding.ID_SIZE);
-    seeker.setCurrentBuffer(readBuffer);
+    seeker.setCurrentBuffer(new SingleByteBuff(readBuffer));
     Cell previousKV = null;
     do {
-      Cell currentKV = seeker.getKeyValue();
+      Cell currentKV = seeker.getCell();
       System.out.println(currentKV);
       if (previousKV != null && CellComparator.COMPARATOR.compare(currentKV, previousKV) < 0) {
         dumpInputKVSet();
@@ -229,7 +230,7 @@ public class TestPrefixTreeEncoding {
     List<KeyValue> kvList = new ArrayList<KeyValue>();
     for (int i = 0; i < NUM_ROWS_PER_BATCH; ++i) {
       kvList.clear();
-      encodeSeeker.setCurrentBuffer(encodedData);
+      encodeSeeker.setCurrentBuffer(new SingleByteBuff(encodedData));
       KeyValue firstOnRow = KeyValueUtil.createFirstOnRow(getRowKey(batchId, i));
       encodeSeeker.seekToKeyInBlock(
           new KeyValue.KeyOnlyKeyValue(firstOnRow.getBuffer(), firstOnRow.getKeyOffset(),
@@ -243,11 +244,11 @@ public class TestPrefixTreeEncoding {
         fail("Get error result after seeking " + firstOnRow);
       }
       if (hasMoreOfEncodeScanner) {
-        if (CellComparator.COMPARATOR.compare(encodeSeeker.getKeyValue(),
+        if (CellComparator.COMPARATOR.compare(encodeSeeker.getCell(),
             collectionScanner.peek()) != 0) {
           dumpInputKVSet();
           fail("Expected " + collectionScanner.peek() + " actual "
-              + encodeSeeker.getKeyValue() + ", after seeking " + firstOnRow);
+              + encodeSeeker.getCell() + ", after seeking " + firstOnRow);
         }
       }
     }

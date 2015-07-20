@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.Writer.BufferGrabbingByteArrayOutputStream;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,14 +74,18 @@ public class TestDataBlockEncoders {
 
   private final boolean includesMemstoreTS;
   private final boolean includesTags;
+  private final boolean useOffheapData;
 
   @Parameters
   public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.MEMSTORETS_TAGS_PARAMETRIZED;
+    return HBaseTestingUtility.memStoreTSTagsAndOffheapCombination();
   }
-  public TestDataBlockEncoders(boolean includesMemstoreTS, boolean includesTag) {
+
+  public TestDataBlockEncoders(boolean includesMemstoreTS, boolean includesTag,
+      boolean useOffheapData) {
     this.includesMemstoreTS = includesMemstoreTS;
     this.includesTags = includesTag;
+    this.useOffheapData = useOffheapData;
   }
   
   private HFileBlockEncodingContext getEncodingContext(Compression.Algorithm algo,
@@ -178,12 +182,15 @@ public class TestDataBlockEncoders {
     List<DataBlockEncoder.EncodedSeeker> encodedSeekers = 
         new ArrayList<DataBlockEncoder.EncodedSeeker>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      // Off heap block data support not added for PREFIX_TREE DBE yet.
+      // TODO remove this once support is added. HBASE-12298
+      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       DataBlockEncoder encoder = encoding.getEncoder();
       if (encoder == null) {
         continue;
       }
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
-          getEncodingContext(Compression.Algorithm.NONE, encoding));
+          getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
       HFileContext meta = new HFileContextBuilder()
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
@@ -192,7 +199,7 @@ public class TestDataBlockEncoders {
                           .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
-      seeker.setCurrentBuffer(encodedBuffer);
+      seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       encodedSeekers.add(seeker);
     }
     // test it!
@@ -222,7 +229,7 @@ public class TestDataBlockEncoders {
   }
 
   static ByteBuffer encodeKeyValues(DataBlockEncoding encoding, List<KeyValue> kvs,
-      HFileBlockEncodingContext encodingContext) throws IOException {
+      HFileBlockEncodingContext encodingContext, boolean useOffheapData) throws IOException {
     DataBlockEncoder encoder = encoding.getEncoder();
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     baos.write(HConstants.HFILEBLOCK_DUMMY_HEADER);
@@ -236,6 +243,12 @@ public class TestDataBlockEncoders {
     encoder.endBlockEncoding(encodingContext, dos, stream.getBuffer());
     byte[] encodedData = new byte[baos.size() - ENCODED_DATA_OFFSET];
     System.arraycopy(baos.toByteArray(), ENCODED_DATA_OFFSET, encodedData, 0, encodedData.length);
+    if (useOffheapData) {
+      ByteBuffer bb = ByteBuffer.allocateDirect(encodedData.length);
+      bb.put(encodedData);
+      bb.rewind();
+      return bb;
+    }
     return ByteBuffer.wrap(encodedData);
   }
 
@@ -244,12 +257,15 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      // Off heap block data support not added for PREFIX_TREE DBE yet.
+      // TODO remove this once support is added. HBASE-12298
+      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       if (encoding.getEncoder() == null) {
         continue;
       }
       DataBlockEncoder encoder = encoding.getEncoder();
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
-          getEncodingContext(Compression.Algorithm.NONE, encoding));
+          getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
       HFileContext meta = new HFileContextBuilder()
                           .withHBaseCheckSum(false)
                           .withIncludesMvcc(includesMemstoreTS)
@@ -258,31 +274,19 @@ public class TestDataBlockEncoders {
                           .build();
       DataBlockEncoder.EncodedSeeker seeker = encoder.createSeeker(CellComparator.COMPARATOR,
           encoder.newDataBlockDecodingContext(meta));
-      seeker.setCurrentBuffer(encodedBuffer);
+      seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
       int i = 0;
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
-        ByteBuffer keyValue = seeker.getKeyValueBuffer();
-        if (0 != Bytes.compareTo(keyValue.array(), keyValue.arrayOffset(), keyValue.limit(),
-            expectedKeyValue.getBuffer(), expectedKeyValue.getOffset(),
-            expectedKeyValue.getLength())) {
-
-          int commonPrefix = 0;
-          byte[] left = keyValue.array();
-          byte[] right = expectedKeyValue.getBuffer();
-          int leftOff = keyValue.arrayOffset();
-          int rightOff = expectedKeyValue.getOffset();
-          int length = Math.min(keyValue.limit(), expectedKeyValue.getLength());
-          while (commonPrefix < length
-              && left[commonPrefix + leftOff] == right[commonPrefix + rightOff]) {
-            commonPrefix++;
-          }
-
+        Cell cell = seeker.getCell();
+        if (CellComparator.COMPARATOR.compareKeyIgnoresMvcc(expectedKeyValue, cell) != 0) {
+          int commonPrefix = CellUtil
+              .findCommonPrefixInFlatKey(expectedKeyValue, cell, false, true);
           fail(String.format("next() produces wrong results "
               + "encoder: %s i: %d commonPrefix: %d" + "\n expected %s\n actual      %s", encoder
               .toString(), i, commonPrefix, Bytes.toStringBinary(expectedKeyValue.getBuffer(),
-              expectedKeyValue.getOffset(), expectedKeyValue.getLength()), Bytes
-              .toStringBinary(keyValue)));
+              expectedKeyValue.getKeyOffset(), expectedKeyValue.getKeyLength()), CellUtil.toString(
+              cell, false)));
         }
         i++;
       } while (seeker.next());
@@ -298,33 +302,19 @@ public class TestDataBlockEncoders {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
+      // Off heap block data support not added for PREFIX_TREE DBE yet.
+      // TODO remove this once support is added. HBASE-12298
+      if (this.useOffheapData && encoding == DataBlockEncoding.PREFIX_TREE) continue;
       if (encoding.getEncoder() == null) {
         continue;
       }
       DataBlockEncoder encoder = encoding.getEncoder();
       ByteBuffer encodedBuffer = encodeKeyValues(encoding, sampleKv,
-          getEncodingContext(Compression.Algorithm.NONE, encoding));
-      Cell key = encoder.getFirstKeyCellInBlock(new MultiByteBuff(
-          encodedBuffer));
-      KeyValue keyBuffer = null;
-      if(encoding == DataBlockEncoding.PREFIX_TREE) {
-        // This is not an actual case. So the Prefix tree block is not loaded in case of Prefix_tree
-        // Just copy only the key part to form a keyBuffer
-        byte[] serializedKey = CellUtil.getCellKeySerializedAsKeyValueKey(key);
-        keyBuffer = KeyValueUtil.createKeyValueFromKey(serializedKey);
-      } else {
-        keyBuffer = KeyValueUtil.ensureKeyValue(key);
-      }
+          getEncodingContext(Compression.Algorithm.NONE, encoding), this.useOffheapData);
+      Cell key = encoder.getFirstKeyCellInBlock(new SingleByteBuff(encodedBuffer));
       KeyValue firstKv = sampleKv.get(0);
-      if (0 != CellComparator.COMPARATOR.compareKeyIgnoresMvcc(keyBuffer, firstKv)) {
-
-        int commonPrefix = 0;
-        int length = Math.min(keyBuffer.getKeyLength(), firstKv.getKeyLength());
-        while (commonPrefix < length
-            && keyBuffer.getBuffer()[keyBuffer.getKeyOffset() + commonPrefix] == firstKv
-                .getBuffer()[firstKv.getKeyOffset() + commonPrefix]) {
-          commonPrefix++;
-        }
+      if (0 != CellComparator.COMPARATOR.compareKeyIgnoresMvcc(key, firstKv)) {
+        int commonPrefix = CellUtil.findCommonPrefixInFlatKey(key, firstKv, false, true);
         fail(String.format("Bug in '%s' commonPrefix %d", encoder.toString(), commonPrefix));
       }
     }

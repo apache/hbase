@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -55,8 +56,8 @@ public class PrefixTreeSeeker implements EncodedSeeker {
   }
 
   @Override
-  public void setCurrentBuffer(ByteBuffer fullBlockBuffer) {
-    block = fullBlockBuffer;
+  public void setCurrentBuffer(ByteBuff fullBlockBuffer) {
+    block = fullBlockBuffer.asSubByteBuffer(fullBlockBuffer.limit());
     // TODO : change to Bytebuff
     ptSearcher = DecoderFactory.checkOut(block, includeMvccVersion);
     rewind();
@@ -97,7 +98,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * currently must do deep copy into new array
    */
   @Override
-  public Cell getKeyValue() {
+  public Cell getCell() {
     Cell cell = ptSearcher.current();
     if (cell == null) {
       return null;

@@ -71,8 +71,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
     int keyLength = block.getIntStrictlyForward(Bytes.SIZEOF_INT);
     int pos = 3 * Bytes.SIZEOF_INT;
     ByteBuffer key = block.asSubByteBuffer(pos + keyLength).duplicate();
-    // TODO : to be changed here for BBCell
-    return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset() + pos, keyLength);
+    return createFirstKeyCell(key, keyLength);
   }
 
   @Override
@@ -91,14 +90,14 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
         current.ensureSpaceForKey();
         currentBuffer.get(current.keyBuffer, 0, current.keyLength);
         current.valueOffset = currentBuffer.position();
-        ByteBufferUtils.skip(currentBuffer, current.valueLength);
+        currentBuffer.skip(current.valueLength);
         if (includesTags()) {
           // Read short as unsigned, high byte first
           current.tagsLength = ((currentBuffer.get() & 0xff) << 8) ^ (currentBuffer.get() & 0xff);
-          ByteBufferUtils.skip(currentBuffer, current.tagsLength);
+          currentBuffer.skip(current.tagsLength);
         }
         if (includesMvcc()) {
-          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+          current.memstoreTS = ByteBuff.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;
         }
@@ -107,7 +106,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected void decodeFirst() {
-        ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
+        currentBuffer.skip(Bytes.SIZEOF_INT);
         current.lastCommonPrefix = 0;
         decodeNext();
       }

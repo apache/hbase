@@ -127,6 +127,11 @@ public class ByteBufferOutputStream extends OutputStream {
     ByteBufferUtils.copyFromArrayToBuffer(buf, b, off, len);
   }
 
+  public void write(ByteBuffer b, int off, int len) throws IOException {
+    checkSizeAndGrow(len);
+    ByteBufferUtils.copyFromBufferToBuffer(b, buf, off, len);
+  }
+
   /**
    * Writes an <code>int</code> to the underlying output stream as four
    * bytes, high byte first.

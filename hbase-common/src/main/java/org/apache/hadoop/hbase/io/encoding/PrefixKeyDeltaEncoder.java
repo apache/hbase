@@ -186,8 +186,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     }
     ByteBuffer key = block.asSubByteBuffer(keyLength).duplicate();
     block.reset();
-    // TODO : Change to BBCell
-    return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset() + key.position(), keyLength);
+    return createFirstKeyCell(key, keyLength);
   }
 
   @Override
@@ -201,21 +200,20 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     return new BufferedEncodedSeeker<SeekerState>(comparator, decodingCtx) {
       @Override
       protected void decodeNext() {
-        current.keyLength = ByteBufferUtils.readCompressedInt(currentBuffer);
-        current.valueLength = ByteBufferUtils.readCompressedInt(currentBuffer);
-        current.lastCommonPrefix =
-            ByteBufferUtils.readCompressedInt(currentBuffer);
+        current.keyLength = ByteBuff.readCompressedInt(currentBuffer);
+        current.valueLength = ByteBuff.readCompressedInt(currentBuffer);
+        current.lastCommonPrefix = ByteBuff.readCompressedInt(currentBuffer);
         current.keyLength += current.lastCommonPrefix;
         current.ensureSpaceForKey();
         currentBuffer.get(current.keyBuffer, current.lastCommonPrefix,
             current.keyLength - current.lastCommonPrefix);
         current.valueOffset = currentBuffer.position();
-        ByteBufferUtils.skip(currentBuffer, current.valueLength);
+        currentBuffer.skip(current.valueLength);
         if (includesTags()) {
           decodeTags();
         }
         if (includesMvcc()) {
-          current.memstoreTS = ByteBufferUtils.readVLong(currentBuffer);
+          current.memstoreTS = ByteBuff.readVLong(currentBuffer);
         } else {
           current.memstoreTS = 0;
         }
@@ -224,7 +222,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
 
       @Override
       protected void decodeFirst() {
-        ByteBufferUtils.skip(currentBuffer, Bytes.SIZEOF_INT);
+        currentBuffer.skip(Bytes.SIZEOF_INT);
         decodeNext();
       }
     };
