@@ -539,17 +539,17 @@ public final class ByteBufferUtils {
     if (UnsafeAccess.isAvailable()) {
       long offset1Adj, offset2Adj;
       Object refObj1 = null, refObj2 = null;
-      if (buf1.hasArray()) {
+      if (buf1.isDirect()) {
+        offset1Adj = o1 + ((DirectBuffer) buf1).address();
+      } else {
         offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
         refObj1 = buf1.array();
-      } else {
-        offset1Adj = o1 + ((DirectBuffer) buf1).address();
       }
-      if (buf2.hasArray()) {
+      if (buf2.isDirect()) {
+        offset2Adj = o2 + ((DirectBuffer) buf2).address();
+      } else {
         offset2Adj = o2 + buf2.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
         refObj2 = buf2.array();
-      } else {
-        offset2Adj = o2 + ((DirectBuffer) buf2).address();
       }
       return compareToUnsafe(refObj1, offset1Adj, l1, refObj2, offset2Adj, l2);
     }
@@ -569,11 +569,11 @@ public final class ByteBufferUtils {
     if (UnsafeAccess.isAvailable()) {
       long offset1Adj;
       Object refObj1 = null;
-      if (buf1.hasArray()) {
+      if (buf1.isDirect()) {
+        offset1Adj = o1 + ((DirectBuffer) buf1).address();
+      } else {
         offset1Adj = o1 + buf1.arrayOffset() + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
         refObj1 = buf1.array();
-      } else {
-        offset1Adj = o1 + ((DirectBuffer) buf1).address();
       }
       return compareToUnsafe(refObj1, offset1Adj, l1, buf2, o2
           + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET, l2);
