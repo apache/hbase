@@ -120,27 +120,21 @@ public class TestPrefixTreeEncoding {
     seeker.setCurrentBuffer(readBuffer);
 
     // Seek before the first keyvalue;
-    KeyValue seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(getRowKey(batchId, 0), CF_BYTES);
-    seeker.seekToKeyInBlock(
-        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
-            .getKeyLength()), true);
+    Cell seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, 0), CF_BYTES);
+    seeker.seekToKeyInBlock(seekKey, true);
     assertEquals(null, seeker.getKeyValue());
 
     // Seek before the middle keyvalue;
-    seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
+    seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3),
         CF_BYTES);
-    seeker.seekToKeyInBlock(
-        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
-            .getKeyLength()), true);
+    seeker.seekToKeyInBlock(seekKey, true);
     assertNotNull(seeker.getKeyValue());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH / 3 - 1),
       CellUtil.cloneRow(seeker.getKeyValue()));
 
     // Seek before the last keyvalue;
-    seekKey = KeyValueUtil.createFirstDeleteFamilyOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
-    seeker.seekToKeyInBlock(
-        new KeyValue.KeyOnlyKeyValue(seekKey.getBuffer(), seekKey.getKeyOffset(), seekKey
-            .getKeyLength()), true);
+    seekKey = CellUtil.createFirstDeleteFamilyCellOnRow(Bytes.toBytes("zzzz"), CF_BYTES);
+    seeker.seekToKeyInBlock(seekKey, true);
     assertNotNull(seeker.getKeyValue());
     assertArrayEquals(getRowKey(batchId, NUM_ROWS_PER_BATCH - 1),
       CellUtil.cloneRow(seeker.getKeyValue()));

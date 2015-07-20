@@ -1287,6 +1287,19 @@ public final class CellUtil {
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
   }
 
+  /**
+   * Create a Delete Family Cell for the specified row and family that would
+   * be smaller than all other possible Delete Family KeyValues that have the
+   * same row and family.
+   * Used for seeking.
+   * @param row - row key (arbitrary byte array)
+   * @param fam - family name
+   * @return First Delete Family possible key on passed <code>row</code>.
+   */
+  public static Cell createFirstDeleteFamilyCellOnRow(final byte[] row, final byte[] fam) {
+    return new FirstOnRowDeleteFamilyCell(row, fam);
+  }
+
   @InterfaceAudience.Private
   private static abstract class FakeCell implements Cell {
 
@@ -1563,6 +1576,47 @@ public final class CellUtil {
     @Override
     public int getQualifierLength() {
       return this.qlength;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowDeleteFamilyCell extends FakeCell {
+    private final byte[] row;
+    private final byte[] fam;
+
+    public FirstOnRowDeleteFamilyCell(byte[] row, byte[] fam) {
+      this.row = row;
+      this.fam = fam;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.row;
+    }
+
+    @Override
+    public short getRowLength() {
+      return (short) this.row.length;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.fam;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return (byte) this.fam.length;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.LATEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.DeleteFamily.getCode();
     }
   }
 }

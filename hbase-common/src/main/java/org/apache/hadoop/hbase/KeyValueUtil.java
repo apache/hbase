@@ -328,21 +328,6 @@ public class KeyValueUtil {
   }
 
   /**
-   * Create a Delete Family KeyValue for the specified row and family that would
-   * be smaller than all other possible Delete Family KeyValues that have the
-   * same row and family.
-   * Used for seeking.
-   * @param row - row key (arbitrary byte array)
-   * @param family - family name
-   * @return First Delete Family possible key on passed <code>row</code>.
-   */
-  public static KeyValue createFirstDeleteFamilyOnRow(final byte [] row,
-      final byte [] family) {
-    return new KeyValue(row, family, null, HConstants.LATEST_TIMESTAMP,
-        Type.DeleteFamily);
-  }
-
-  /**
    * @param row - row key (arbitrary byte array)
    * @param f - family name
    * @param q - column qualifier

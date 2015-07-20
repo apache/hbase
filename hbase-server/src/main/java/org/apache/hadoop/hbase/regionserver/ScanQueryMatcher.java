@@ -165,7 +165,7 @@ public class ScanQueryMatcher {
     this.regionCoprocessorHost = regionCoprocessorHost;
     this.deletes =  instantiateDeleteTracker();
     this.stopRow = scan.getStopRow();
-    this.startKey = KeyValueUtil.createFirstDeleteFamilyOnRow(scan.getStartRow(),
+    this.startKey = CellUtil.createFirstDeleteFamilyCellOnRow(scan.getStartRow(),
         scanInfo.getFamily());
     this.filter = scan.getFilter();
     this.earliestPutTs = earliestPutTs;

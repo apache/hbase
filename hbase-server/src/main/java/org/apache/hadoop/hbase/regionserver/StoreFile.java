@@ -1362,19 +1362,16 @@ public class StoreFile {
           && Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW)) {
         return true;
       }
-      KeyValue smallestScanKeyValue = scan.isReversed() ? KeyValueUtil
-          .createFirstOnRow(scan.getStopRow()) : KeyValueUtil.createFirstOnRow(scan
-          .getStartRow());
-      KeyValue largestScanKeyValue = scan.isReversed() ? KeyValueUtil
-          .createLastOnRow(scan.getStartRow()) : KeyValueUtil.createLastOnRow(scan
-          .getStopRow());
+      byte[] smallestScanRow = scan.isReversed() ? scan.getStopRow() : scan.getStartRow();
+      byte[] largestScanRow = scan.isReversed() ? scan.getStartRow() : scan.getStopRow();
       Cell firstKeyKV = this.getFirstKey();
       Cell lastKeyKV = this.getLastKey();
-      boolean nonOverLapping = ((getComparator().compare(firstKeyKV, largestScanKeyValue)) > 0
+      boolean nonOverLapping = (getComparator().compareRows(firstKeyKV,
+          largestScanRow, 0, largestScanRow.length) > 0 
           && !Bytes
           .equals(scan.isReversed() ? scan.getStartRow() : scan.getStopRow(),
               HConstants.EMPTY_END_ROW))
-          || (getComparator().compare(lastKeyKV, smallestScanKeyValue)) < 0;
+          || getComparator().compareRows(lastKeyKV, smallestScanRow, 0, smallestScanRow.length) < 0;
       return !nonOverLapping;
     }
 
