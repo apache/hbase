@@ -1197,7 +1197,7 @@ public class HTable implements HTableInterface, RegionLocator {
       final byte [] qualifier, final long amount, final boolean writeToWAL)
   throws IOException {
     return incrementColumnValue(row, family, qualifier, amount,
-      writeToWAL? Durability.SKIP_WAL: Durability.USE_DEFAULT);
+      writeToWAL? Durability.SYNC_WAL: Durability.SKIP_WAL);
   }
 
   /**
