@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.hadoop.hbase.io.util.HeapMemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HeapMemoryManager.TunerContext;
@@ -578,9 +579,13 @@ public class TestHeapMemoryManager {
       return null;
     }
 
-	public void setTestBlockSize(long testBlockSize) {
-		this.testBlockSize = testBlockSize;
-	}
+    @Override
+    public void returnBlock(BlockCacheKey cacheKey, Cacheable buf) {
+    }
+
+    public void setTestBlockSize(long testBlockSize) {
+      this.testBlockSize = testBlockSize;
+    }
   }
 
   private static class MemstoreFlusherStub implements FlushRequester {

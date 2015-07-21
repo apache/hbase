@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.util.Iterator;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 
 /**
  * Block cache interface. Anything that implements the {@link Cacheable}
@@ -116,4 +117,16 @@ public interface BlockCache extends Iterable<CachedBlock> {
    * @return The list of sub blockcaches that make up this one; returns null if no sub caches.
    */
   BlockCache [] getBlockCaches();
+
+  /**
+   * Called when the scanner using the block decides to return the block once its usage
+   * is over.
+   * This API should be called after the block is used, failing to do so may have adverse effects
+   * by preventing the blocks from being evicted because of which it will prevent new hot blocks
+   * from getting added to the block cache.  The implementation of the BlockCache will decide
+   * on what to be done with the block based on the memory type of the block's {@link MemoryType}.
+   * @param cacheKey the cache key of the block
+   * @param block the hfileblock to be returned
+   */
+  void returnBlock(BlockCacheKey cacheKey, Cacheable block);
 }

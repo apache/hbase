@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
@@ -73,7 +74,7 @@ public class TestCacheConfig {
     }
 
     @Override
-    public Cacheable deserialize(ByteBuff b, boolean reuse) throws IOException {
+    public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType) throws IOException {
       LOG.info("Deserialized " + b + ", reuse=" + reuse);
       return cacheable;
     }
@@ -139,6 +140,11 @@ public class TestCacheConfig {
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;
+    }
+
+    @Override
+    public MemoryType getMemoryType() {
+      return MemoryType.EXCLUSIVE;
     }
   };
 

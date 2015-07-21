@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.util.BloomFilterWriter;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
@@ -1282,7 +1283,7 @@ public class StoreFile {
       // Empty file
       if (reader.getTrailer().getEntryCount() == 0)
         return false;
-
+      HFileBlock bloomBlock = null;
       try {
         boolean shouldCheckBloom;
         ByteBuff bloom;
@@ -1290,8 +1291,8 @@ public class StoreFile {
           bloom = null;
           shouldCheckBloom = true;
         } else {
-          bloom = reader.getMetaBlock(HFile.BLOOM_FILTER_DATA_KEY,
-              true);
+          bloomBlock = reader.getMetaBlock(HFile.BLOOM_FILTER_DATA_KEY, true);
+          bloom = bloomBlock.getBufferWithoutHeader();
           shouldCheckBloom = bloom != null;
         }
 
@@ -1343,8 +1344,10 @@ public class StoreFile {
       } catch (IllegalArgumentException e) {
         LOG.error("Bad bloom filter data -- proceeding without", e);
         setGeneralBloomFilterFaulty();
+      } finally {
+        // Return the bloom block so that its ref count can be decremented.
+        reader.returnBlock(bloomBlock);
       }
-
       return true;
     }
 

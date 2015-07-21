@@ -169,6 +169,10 @@ public class TestHFileBlockIndex {
     }
 
     @Override
+    public void returnBlock(HFileBlock block) {
+    }
+
+    @Override
     public HFileBlock readBlock(long offset, long onDiskSize,
         boolean cacheBlock, boolean pread, boolean isCompaction,
         boolean updateCacheMetrics, BlockType expectedBlockType,

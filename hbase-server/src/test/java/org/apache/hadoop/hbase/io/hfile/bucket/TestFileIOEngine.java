@@ -24,8 +24,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -47,9 +50,9 @@ public class TestFileIOEngine {
         for (int j = 0; j < data1.length; ++j) {
           data1[j] = (byte) (Math.random() * 255);
         }
-        byte[] data2 = new byte[len];
         fileIOEngine.write(ByteBuffer.wrap(data1), offset);
-        fileIOEngine.read(ByteBuffer.wrap(data2), offset);
+        Pair<ByteBuff, MemoryType> pair = fileIOEngine.read(offset, len);
+        byte[] data2 = pair.getFirst().array();
         for (int j = 0; j < data1.length; ++j) {
           assertTrue(data1[j] == data2[j]);
         }

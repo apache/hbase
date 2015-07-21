@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * IO engine that stores data in memory using an array of ByteBuffers
@@ -64,24 +67,24 @@ public class ByteBufferIOEngine implements IOEngine {
     return false;
   }
 
-  /**
-   * Transfers data from the buffer array to the given byte buffer
-   * @param dstBuffer the given byte buffer into which bytes are to be written
-   * @param offset The offset in the ByteBufferArray of the first byte to be
-   *          read
-   * @return number of bytes read
-   * @throws IOException
-   */
   @Override
-  public int read(ByteBuffer dstBuffer, long offset) throws IOException {
-    assert dstBuffer.hasArray();
-    return bufferArray.getMultiple(offset, dstBuffer.remaining(), dstBuffer.array(),
-        dstBuffer.arrayOffset());
-  }
-
-  @Override
-  public ByteBuff read(long offset, int len) throws IOException {
-    return bufferArray.asSubByteBuff(offset, len);
+  public Pair<ByteBuff, MemoryType> read(long offset, int length) throws IOException {
+    // TODO : this allocate and copy will go away once we create BB backed cells
+    ByteBuffer dstBuffer = ByteBuffer.allocate(length);
+    bufferArray.getMultiple(offset, dstBuffer.remaining(), dstBuffer.array(),
+      dstBuffer.arrayOffset());
+    // Here the buffer that is created directly refers to the buffer in the actual buckets.
+    // When any cell is referring to the blocks created out of these buckets then it means that
+    // those cells are referring to a shared memory area which if evicted by the BucketCache would
+    // lead to corruption of results. Hence we set the type of the buffer as SHARED_MEMORY
+    // so that the readers using this block are aware of this fact and do the necessary action
+    // to prevent eviction till the results are either consumed or copied
+    if (dstBuffer.limit() != length) {
+      throw new RuntimeException("Only " + dstBuffer.limit() + " bytes read, " + length
+          + " expected");
+    }
+    // TODO : to be removed - make it conditional
+    return new Pair<ByteBuff, MemoryType>(new SingleByteBuff(dstBuffer), MemoryType.SHARED);
   }
 
   /**

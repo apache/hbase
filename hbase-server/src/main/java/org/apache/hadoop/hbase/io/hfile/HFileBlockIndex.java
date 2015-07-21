@@ -32,7 +32,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.hbase.Cell;
@@ -42,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
@@ -295,78 +295,90 @@ public class HFileBlockIndex {
       int lookupLevel = 1; // How many levels deep we are in our lookup.
       int index = -1;
 
-      HFileBlock block;
+      HFileBlock block = null;
+      boolean dataBlock = false;
       KeyOnlyKeyValue tmpNextIndexKV = new KeyValue.KeyOnlyKeyValue();
       while (true) {
-
-        if (currentBlock != null && currentBlock.getOffset() == currentOffset)
-        {
-          // Avoid reading the same block again, even with caching turned off.
-          // This is crucial for compaction-type workload which might have
-          // caching turned off. This is like a one-block cache inside the
-          // scanner.
-          block = currentBlock;
-        } else {
-          // Call HFile's caching block reader API. We always cache index
-          // blocks, otherwise we might get terrible performance.
-          boolean shouldCache = cacheBlocks || (lookupLevel < searchTreeLevel);
-          BlockType expectedBlockType;
-          if (lookupLevel < searchTreeLevel - 1) {
-            expectedBlockType = BlockType.INTERMEDIATE_INDEX;
-          } else if (lookupLevel == searchTreeLevel - 1) {
-            expectedBlockType = BlockType.LEAF_INDEX;
+        try {
+          if (currentBlock != null && currentBlock.getOffset() == currentOffset) {
+            // Avoid reading the same block again, even with caching turned off.
+            // This is crucial for compaction-type workload which might have
+            // caching turned off. This is like a one-block cache inside the
+            // scanner.
+            block = currentBlock;
           } else {
-            // this also accounts for ENCODED_DATA
-            expectedBlockType = BlockType.DATA;
+            // Call HFile's caching block reader API. We always cache index
+            // blocks, otherwise we might get terrible performance.
+            boolean shouldCache = cacheBlocks || (lookupLevel < searchTreeLevel);
+            BlockType expectedBlockType;
+            if (lookupLevel < searchTreeLevel - 1) {
+              expectedBlockType = BlockType.INTERMEDIATE_INDEX;
+            } else if (lookupLevel == searchTreeLevel - 1) {
+              expectedBlockType = BlockType.LEAF_INDEX;
+            } else {
+              // this also accounts for ENCODED_DATA
+              expectedBlockType = BlockType.DATA;
+            }
+            block =
+                cachingBlockReader.readBlock(currentOffset, currentOnDiskSize, shouldCache, pread,
+                  isCompaction, true, expectedBlockType, expectedDataBlockEncoding);
           }
-          block = cachingBlockReader.readBlock(currentOffset,
-          currentOnDiskSize, shouldCache, pread, isCompaction, true,
-              expectedBlockType, expectedDataBlockEncoding);
-        }
 
-        if (block == null) {
-          throw new IOException("Failed to read block at offset " +
-              currentOffset + ", onDiskSize=" + currentOnDiskSize);
-        }
+          if (block == null) {
+            throw new IOException("Failed to read block at offset " + currentOffset
+                + ", onDiskSize=" + currentOnDiskSize);
+          }
 
-        // Found a data block, break the loop and check our level in the tree.
-        if (block.getBlockType().isData()) {
-          break;
-        }
+          // Found a data block, break the loop and check our level in the tree.
+          if (block.getBlockType().isData()) {
+            dataBlock = true;
+            break;
+          }
 
-        // Not a data block. This must be a leaf-level or intermediate-level
-        // index block. We don't allow going deeper than searchTreeLevel.
-        if (++lookupLevel > searchTreeLevel) {
-          throw new IOException("Search Tree Level overflow: lookupLevel="+
-              lookupLevel + ", searchTreeLevel=" + searchTreeLevel);
-        }
+          // Not a data block. This must be a leaf-level or intermediate-level
+          // index block. We don't allow going deeper than searchTreeLevel.
+          if (++lookupLevel > searchTreeLevel) {
+            throw new IOException("Search Tree Level overflow: lookupLevel=" + lookupLevel
+                + ", searchTreeLevel=" + searchTreeLevel);
+          }
 
-        // Locate the entry corresponding to the given key in the non-root
-        // (leaf or intermediate-level) index block.
-        ByteBuff buffer = block.getBufferWithoutHeader();
-        index = locateNonRootIndexEntry(buffer, key, comparator);
-        if (index == -1) {
-          // This has to be changed
-          // For now change this to key value
-          KeyValue kv = KeyValueUtil.ensureKeyValue(key);
-          throw new IOException("The key "
-              + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
-              + " is before the" + " first key of the non-root index block "
-              + block);
-        }
+          // Locate the entry corresponding to the given key in the non-root
+          // (leaf or intermediate-level) index block.
+          ByteBuff buffer = block.getBufferWithoutHeader();
+          index = locateNonRootIndexEntry(buffer, key, comparator);
+          if (index == -1) {
+            // This has to be changed
+            // For now change this to key value
+            KeyValue kv = KeyValueUtil.ensureKeyValue(key);
+            throw new IOException("The key "
+                + Bytes.toStringBinary(kv.getKey(), kv.getKeyOffset(), kv.getKeyLength())
+                + " is before the" + " first key of the non-root index block " + block);
+          }
 
-        currentOffset = buffer.getLong();
-        currentOnDiskSize = buffer.getInt();
+          currentOffset = buffer.getLong();
+          currentOnDiskSize = buffer.getInt();
 
-        // Only update next indexed key if there is a next indexed key in the current level
-        byte[] nonRootIndexedKey = getNonRootIndexedKey(buffer, index + 1);
-        if (nonRootIndexedKey != null) {
-          tmpNextIndexKV.setKey(nonRootIndexedKey, 0, nonRootIndexedKey.length);
-          nextIndexedKey = tmpNextIndexKV;
+          // Only update next indexed key if there is a next indexed key in the current level
+          byte[] nonRootIndexedKey = getNonRootIndexedKey(buffer, index + 1);
+          if (nonRootIndexedKey != null) {
+            tmpNextIndexKV.setKey(nonRootIndexedKey, 0, nonRootIndexedKey.length);
+            nextIndexedKey = tmpNextIndexKV;
+          }
+        } finally {
+          if (!dataBlock) {
+            // Return the block immediately if it is not the
+            // data block
+            cachingBlockReader.returnBlock(block);
+          }
         }
       }
 
       if (lookupLevel != searchTreeLevel) {
+        assert dataBlock == true;
+        // Though we have retrieved a data block we have found an issue
+        // in the retrieved data block. Hence returned the block so that
+        // the ref count can be decremented
+        cachingBlockReader.returnBlock(block);
         throw new IOException("Reached a data block at level " + lookupLevel +
             " but the number of levels is " + searchTreeLevel);
       }
@@ -396,16 +408,19 @@ public class HFileBlockIndex {
         HFileBlock midLeafBlock = cachingBlockReader.readBlock(
             midLeafBlockOffset, midLeafBlockOnDiskSize, true, true, false, true,
             BlockType.LEAF_INDEX, null);
-
-        ByteBuff b = midLeafBlock.getBufferWithoutHeader();
-        int numDataBlocks = b.getIntAfterPosition(0);
-        int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-        int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
-            keyRelOffset;
-        int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
-            + SECONDARY_INDEX_ENTRY_OVERHEAD;
-        byte[] bytes = b.toBytes(keyOffset, keyLen);
-        targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
+        try {
+          ByteBuff b = midLeafBlock.getBufferWithoutHeader();
+          int numDataBlocks = b.getIntAfterPosition(0);
+          int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
+          int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) - keyRelOffset;
+          int keyOffset =
+              Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
+                  + SECONDARY_INDEX_ENTRY_OVERHEAD;
+          byte[] bytes = b.toBytes(keyOffset, keyLen);
+          targetMidKey = new KeyValue.KeyOnlyKeyValue(bytes, 0, bytes.length);
+        } finally {
+          cachingBlockReader.returnBlock(midLeafBlock);
+        }
       } else {
         // The middle of the root-level index.
         targetMidKey = blockKeys[rootCount / 2];

@@ -28,7 +28,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -290,6 +293,8 @@ public class TestCacheOnWrite {
 
     DataBlockEncoding encodingInCache =
         encoderType.getEncoder().getDataBlockEncoding();
+    List<Long> cachedBlocksOffset = new ArrayList<Long>();
+    Map<Long, HFileBlock> cachedBlocks = new HashMap<Long, HFileBlock>();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       long onDiskSize = -1;
       if (prevBlock != null) {
@@ -303,6 +308,8 @@ public class TestCacheOnWrite {
           offset);
       HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
       boolean isCached = fromCache != null;
+      cachedBlocksOffset.add(offset);
+      cachedBlocks.put(offset, fromCache);
       boolean shouldBeCached = cowType.shouldBeCached(block.getBlockType());
       assertTrue("shouldBeCached: " + shouldBeCached+ "\n" +
           "isCached: " + isCached + "\n" +
@@ -355,6 +362,28 @@ public class TestCacheOnWrite {
     while (scanner.next()) {
       scanner.getCell();
     }
+    Iterator<Long> iterator = cachedBlocksOffset.iterator();
+    while(iterator.hasNext()) {
+      Long entry = iterator.next();
+      BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(),
+          entry);
+      HFileBlock hFileBlock = cachedBlocks.get(entry);
+      if (hFileBlock != null) {
+        // call return twice because for the isCache cased the counter would have got incremented
+        // twice
+        blockCache.returnBlock(blockCacheKey, hFileBlock);
+        if(cacheCompressedData) {
+          if (this.compress == Compression.Algorithm.NONE
+              || cowType == CacheOnWriteType.INDEX_BLOCKS
+              || cowType == CacheOnWriteType.BLOOM_BLOCKS) {
+            blockCache.returnBlock(blockCacheKey, hFileBlock);
+          }
+        } else {
+          blockCache.returnBlock(blockCacheKey, hFileBlock);
+        }
+      }
+    }
+    scanner.shipped();
     reader.close();
   }
 

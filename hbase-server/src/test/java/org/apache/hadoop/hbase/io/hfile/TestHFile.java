@@ -328,7 +328,7 @@ public class TestHFile extends HBaseTestCase {
 
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
-      ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false);
+      ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false).getBufferWithoutHeader();
       ByteBuffer expected =
         ByteBuffer.wrap(("something to test" + i).getBytes());
       assertEquals(

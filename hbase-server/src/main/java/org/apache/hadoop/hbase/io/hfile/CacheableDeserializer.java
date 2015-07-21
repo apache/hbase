@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
@@ -36,14 +37,14 @@ public interface CacheableDeserializer<T extends Cacheable> {
   T deserialize(ByteBuff b) throws IOException;
 
   /**
-   * 
    * @param b
    * @param reuse true if Cacheable object can use the given buffer as its
    *          content
+   * @param memType the {@link MemoryType} of the buffer
    * @return T the deserialized object.
    * @throws IOException
    */
-  T deserialize(ByteBuff b, boolean reuse) throws IOException;
+  T deserialize(ByteBuff b, boolean reuse, MemoryType memType) throws IOException;
 
   /**
    * Get the identifier of this deserialiser. Identifier is unique for each

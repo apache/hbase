@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -463,8 +464,9 @@ public class TestHFileBlock {
             for (boolean reuseBuffer : new boolean[] { false, true }) {
               ByteBuffer serialized = ByteBuffer.allocate(blockFromHFile.getSerializedLength());
               blockFromHFile.serialize(serialized);
-              HFileBlock deserialized = (HFileBlock) blockFromHFile.getDeserializer().deserialize(
-                  new SingleByteBuff(serialized), reuseBuffer);
+              HFileBlock deserialized =
+                  (HFileBlock) blockFromHFile.getDeserializer().deserialize(
+                    new SingleByteBuff(serialized), reuseBuffer, MemoryType.EXCLUSIVE);
               assertEquals(
                 "Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
                 blockFromHFile, deserialized);

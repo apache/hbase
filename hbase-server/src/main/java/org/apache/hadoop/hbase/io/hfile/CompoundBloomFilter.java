@@ -119,11 +119,15 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
             "Failed to load Bloom block for key "
                 + Bytes.toStringBinary(key, keyOffset, keyLength), ex);
       }
-
-      ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
-      result = BloomFilterUtil.contains(key, keyOffset, keyLength,
-          bloomBuf, bloomBlock.headerSize(),
-          bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
+      try {
+        ByteBuff bloomBuf = bloomBlock.getBufferReadOnly();
+        result =
+            BloomFilterUtil.contains(key, keyOffset, keyLength, bloomBuf, bloomBlock.headerSize(),
+              bloomBlock.getUncompressedSizeWithoutHeader(), hash, hashCount);
+      } finally {
+        // After the use return back the block if it was served from a cache.
+        reader.returnBlock(bloomBlock);
+      }
     }
 
     if (numQueriesPerChunk != null && block >= 0) {

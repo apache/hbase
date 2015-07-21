@@ -22,10 +22,12 @@ import static org.junit.Assert.assertTrue;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -65,11 +67,10 @@ public class TestByteBufferIOEngine {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
       ioEngine.write(srcBuffer, offset);
-      ByteBuffer dstBuffer = ByteBuffer.allocate(blockSize);
-      ioEngine.read(dstBuffer, offset);
-      byte[] byteArray2 = dstBuffer.array();
+      Pair<ByteBuff, MemoryType> pair = ioEngine.read(offset, blockSize);
+      ByteBuff dstBuffer = pair.getFirst();
       for (int j = 0; j < byteArray.length; ++j) {
-        assertTrue(byteArray[j] == byteArray2[j]);
+        assertTrue(byteArray[j] == dstBuffer.get(j));
       }
     }
     assert testOffsetAtStartNum == 0;
@@ -110,9 +111,9 @@ public class TestByteBufferIOEngine {
       //ioEngine.read(dstBuffer, offset);
       //MultiByteBuffer read = new MultiByteBuffer(dstBuffer);
       // TODO : this will get changed after HBASE-12295 goes in
-      ByteBuff read = ioEngine.read(offset, blockSize);
+      Pair<ByteBuff, MemoryType> read = ioEngine.read(offset, blockSize);
       for (int j = 0; j < byteArray.length; ++j) {
-        assertTrue(srcBuffer.get(j) == read.get(j));
+        assertTrue(srcBuffer.get(j) == read.getFirst().get(j));
       }
     }
     assert testOffsetAtStartNum == 0;

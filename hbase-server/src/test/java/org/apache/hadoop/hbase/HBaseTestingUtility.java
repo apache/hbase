@@ -1406,7 +1406,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       desc.addFamily(hcd);
     }
     getHBaseAdmin().createTable(desc, startKey, endKey, numRegions);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta we
+    // should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return (HTable) getConnection().getTable(tableName);
   }
@@ -1444,8 +1445,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       htd.addFamily(hcd);
     }
     getHBaseAdmin().createTable(htd, splitKeys);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are
-    // assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta
+    // we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
     return (HTable) getConnection().getTable(htd.getTableName());
   }
@@ -1460,7 +1461,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(HTableDescriptor htd, byte[][] splitRows)
       throws IOException {
     getHBaseAdmin().createTable(htd, splitRows);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+    // HBaseAdmin only waits for regions to appear in hbase:meta
+    // we should wait until they are assigned
     waitUntilAllRegionsAssigned(htd.getTableName());
     return (HTable) getConnection().getTable(htd.getTableName());
   }
@@ -1699,6 +1701,24 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     waitUntilAllRegionsAssigned(tableName);
     return (HTable) getConnection().getTable(tableName);
   }
+
+  public HTable createTable(TableName tableName, byte[][] families,
+      int numVersions, int blockSize, String cpName) throws IOException {
+      HTableDescriptor desc = new HTableDescriptor(tableName);
+      for (byte[] family : families) {
+        HColumnDescriptor hcd = new HColumnDescriptor(family)
+            .setMaxVersions(numVersions)
+            .setBlocksize(blockSize);
+        desc.addFamily(hcd);
+      }
+      if(cpName != null) {
+        desc.addCoprocessor(cpName);
+      }
+      getHBaseAdmin().createTable(desc);
+      // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
+      waitUntilAllRegionsAssigned(tableName);
+      return (HTable) getConnection().getTable(tableName);
+    }
 
   /**
    * Create a table.

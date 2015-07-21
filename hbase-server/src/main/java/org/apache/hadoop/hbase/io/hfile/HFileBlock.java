@@ -121,7 +121,8 @@ public class HFileBlock implements Cacheable {
 
   static final CacheableDeserializer<Cacheable> blockDeserializer =
       new CacheableDeserializer<Cacheable>() {
-        public HFileBlock deserialize(ByteBuff buf, boolean reuse) throws IOException{
+        public HFileBlock deserialize(ByteBuff buf, boolean reuse, MemoryType memType)
+            throws IOException {
           buf.limit(buf.limit() - HFileBlock.EXTRA_SERIALIZATION_SPACE).rewind();
           ByteBuff newByteBuffer;
           if (reuse) {
@@ -135,7 +136,7 @@ public class HFileBlock implements Cacheable {
           buf.position(buf.limit());
           buf.limit(buf.limit() + HFileBlock.EXTRA_SERIALIZATION_SPACE);
           boolean usesChecksum = buf.get() == (byte)1;
-          HFileBlock hFileBlock = new HFileBlock(newByteBuffer, usesChecksum);
+          HFileBlock hFileBlock = new HFileBlock(newByteBuffer, usesChecksum, memType);
           hFileBlock.offset = buf.getLong();
           hFileBlock.nextBlockOnDiskSizeWithHeader = buf.getInt();
           if (hFileBlock.hasNextBlockHeader()) {
@@ -152,7 +153,7 @@ public class HFileBlock implements Cacheable {
         @Override
         public HFileBlock deserialize(ByteBuff b) throws IOException {
           // Used only in tests
-          return deserialize(b, false);
+          return deserialize(b, false, MemoryType.EXCLUSIVE);
         }
       };
   private static final int deserializerIdentifier;
@@ -197,6 +198,8 @@ public class HFileBlock implements Cacheable {
    * header, or -1 if unknown.
    */
   private int nextBlockOnDiskSizeWithHeader = -1;
+
+  private MemoryType memType = MemoryType.EXCLUSIVE;
 
   /**
    * Creates a new {@link HFile} block from the given fields. This constructor
@@ -255,15 +258,24 @@ public class HFileBlock implements Cacheable {
   HFileBlock(ByteBuffer b, boolean usesHBaseChecksum) throws IOException {
     this(new SingleByteBuff(b), usesHBaseChecksum);
   }
+
   /**
    * Creates a block from an existing buffer starting with a header. Rewinds
    * and takes ownership of the buffer. By definition of rewind, ignores the
    * buffer position, but if you slice the buffer beforehand, it will rewind
-   * to that point. The reason this has a minorNumber and not a majorNumber is
-   * because majorNumbers indicate the format of a HFile whereas minorNumbers
-   * indicate the format inside a HFileBlock.
+   * to that point.
    */
   HFileBlock(ByteBuff b, boolean usesHBaseChecksum) throws IOException {
+    this(b, usesHBaseChecksum, MemoryType.EXCLUSIVE);
+  }
+
+  /**
+   * Creates a block from an existing buffer starting with a header. Rewinds
+   * and takes ownership of the buffer. By definition of rewind, ignores the
+   * buffer position, but if you slice the buffer beforehand, it will rewind
+   * to that point.
+   */
+  HFileBlock(ByteBuff b, boolean usesHBaseChecksum, MemoryType memType) throws IOException {
     b.rewind();
     blockType = BlockType.read(b);
     onDiskSizeWithoutHeader = b.getInt();
@@ -282,6 +294,7 @@ public class HFileBlock implements Cacheable {
                                        HConstants.HFILEBLOCK_HEADER_SIZE_NO_CHECKSUM;
     }
     this.fileContext = contextBuilder.build();
+    this.memType = memType;
     buf = b;
     buf.rewind();
   }
@@ -650,8 +663,8 @@ public class HFileBlock implements Cacheable {
   public long heapSize() {
     long size = ClassSize.align(
         ClassSize.OBJECT +
-        // Block type, multi byte buffer and meta references
-        3 * ClassSize.REFERENCE +
+        // Block type, multi byte buffer, MemoryType and meta references
+        4 * ClassSize.REFERENCE +
         // On-disk size, uncompressed size, and next block's on-disk size
         // bytePerChecksum and onDiskDataSize
         4 * Bytes.SIZEOF_INT +
@@ -1883,6 +1896,11 @@ public class HFileBlock implements Cacheable {
    */
   public HFileContext getHFileContext() {
     return this.fileContext;
+  }
+
+  @Override
+  public MemoryType getMemoryType() {
+    return this.memType;
   }
 
   /**

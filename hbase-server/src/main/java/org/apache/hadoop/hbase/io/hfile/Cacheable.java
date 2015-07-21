@@ -60,4 +60,19 @@ public interface Cacheable extends HeapSize {
    * @return the block type of this cached HFile block
    */
   BlockType getBlockType();
+
+  /**
+   * @return the {@code MemoryType} of this Cacheable
+   */
+  MemoryType getMemoryType();
+
+  /**
+   * SHARED means when this Cacheable is read back from cache it refers to the same memory area as
+   * used by the cache for caching it.
+   * EXCLUSIVE means when this Cacheable is read back from cache, the data was copied to an
+   * exclusive memory area of this Cacheable.
+   */
+  public static enum MemoryType {
+    SHARED, EXCLUSIVE;
+  }
 }

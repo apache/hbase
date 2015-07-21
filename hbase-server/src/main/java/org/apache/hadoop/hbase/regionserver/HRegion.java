@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
@@ -87,6 +88,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.RegionTooBusyException;
+import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagRewriteCell;
@@ -2432,39 +2434,44 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public RegionScanner getScanner(Scan scan) throws IOException {
-   return getScanner(scan, null);
+   return getScanner(scan, true);
   }
 
-  protected RegionScanner getScanner(Scan scan,
-      List<KeyValueScanner> additionalScanners) throws IOException {
+  public RegionScanner getScanner(Scan scan, boolean copyCellsFromSharedMem) throws IOException {
+    RegionScanner scanner = getScanner(scan, null, copyCellsFromSharedMem);
+    return scanner;
+  }
+
+  protected RegionScanner getScanner(Scan scan, List<KeyValueScanner> additionalScanners,
+      boolean copyCellsFromSharedMem) throws IOException {
     startRegionOperation(Operation.SCAN);
     try {
       // Verify families are all valid
       if (!scan.hasFamilies()) {
         // Adding all families to scanner
-        for (byte[] family: this.htableDescriptor.getFamiliesKeys()) {
+        for (byte[] family : this.htableDescriptor.getFamiliesKeys()) {
           scan.addFamily(family);
         }
       } else {
-        for (byte [] family : scan.getFamilyMap().keySet()) {
+        for (byte[] family : scan.getFamilyMap().keySet()) {
           checkFamily(family);
         }
       }
-      return instantiateRegionScanner(scan, additionalScanners);
+      return instantiateRegionScanner(scan, additionalScanners, copyCellsFromSharedMem);
     } finally {
       closeRegionOperation(Operation.SCAN);
     }
   }
 
   protected RegionScanner instantiateRegionScanner(Scan scan,
-      List<KeyValueScanner> additionalScanners) throws IOException {
+      List<KeyValueScanner> additionalScanners, boolean copyCellsFromSharedMem) throws IOException {
     if (scan.isReversed()) {
       if (scan.getFilter() != null) {
         scan.getFilter().setReversed(true);
       }
-      return new ReversedRegionScannerImpl(scan, additionalScanners, this);
+      return new ReversedRegionScannerImpl(scan, additionalScanners, this, copyCellsFromSharedMem);
     }
-    return new RegionScannerImpl(scan, additionalScanners, this);
+    return new RegionScannerImpl(scan, additionalScanners, this, copyCellsFromSharedMem);
   }
 
   @Override
@@ -5210,6 +5217,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     protected final byte[] stopRow;
     protected final HRegion region;
     protected final CellComparator comparator;
+    protected boolean copyCellsFromSharedMem = false;
 
     private final long readPt;
     private final long maxResultSize;
@@ -5221,7 +5229,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return region.getRegionInfo();
     }
 
-    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region)
+    public void setCopyCellsFromSharedMem(boolean copyCells) {
+      this.copyCellsFromSharedMem = copyCells;
+    }
+
+    RegionScannerImpl(Scan scan, List<KeyValueScanner> additionalScanners, HRegion region,
+        boolean copyCellsFromSharedMem)
         throws IOException {
       this.region = region;
       this.maxResultSize = scan.getMaxResultSize();
@@ -5231,13 +5244,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         this.filter = null;
       }
       this.comparator = region.getCellCompartor();
-
       /**
        * By default, calls to next/nextRaw must enforce the batch limit. Thus, construct a default
        * scanner context that can be used to enforce the batch limit in the event that a
        * ScannerContext is not specified during an invocation of next/nextRaw
        */
-      defaultScannerContext = ScannerContext.newBuilder().setBatchLimit(scan.getBatch()).build();
+      defaultScannerContext = ScannerContext.newBuilder()
+          .setBatchLimit(scan.getBatch()).build();
 
       if (Bytes.equals(scan.getStopRow(), HConstants.EMPTY_END_ROW) && !scan.isGetScan()) {
         this.stopRow = null;
@@ -5279,6 +5292,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           joinedScanners.add(scanner);
         }
       }
+      this.copyCellsFromSharedMem = copyCellsFromSharedMem;
       initializeKVHeap(scanners, joinedScanners, region);
     }
 
@@ -5353,24 +5367,48 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         // scanner is closed
         throw new UnknownScannerException("Scanner was closed");
       }
-      boolean moreValues;
-      if (outResults.isEmpty()) {
-        // Usually outResults is empty. This is true when next is called
-        // to handle scan or get operation.
-        moreValues = nextInternal(outResults, scannerContext);
-      } else {
-        List<Cell> tmpList = new ArrayList<Cell>();
-        moreValues = nextInternal(tmpList, scannerContext);
-        outResults.addAll(tmpList);
-      }
+      boolean moreValues = false;
+      try {
+        if (outResults.isEmpty()) {
+          // Usually outResults is empty. This is true when next is called
+          // to handle scan or get operation.
+          moreValues = nextInternal(outResults, scannerContext);
+        } else {
+          List<Cell> tmpList = new ArrayList<Cell>();
+          moreValues = nextInternal(tmpList, scannerContext);
+          outResults.addAll(tmpList);
+        }
 
-      // If the size limit was reached it means a partial Result is being returned. Returning a
-      // partial Result means that we should not reset the filters; filters should only be reset in
-      // between rows
-      if (!scannerContext.partialResultFormed()) resetFilters();
+        // If the size limit was reached it means a partial Result is being
+        // returned. Returning a
+        // partial Result means that we should not reset the filters; filters
+        // should only be reset in
+        // between rows
+        if (!scannerContext.partialResultFormed()) resetFilters();
 
-      if (isFilterDoneInternal()) {
-        moreValues = false;
+        if (isFilterDoneInternal()) {
+          moreValues = false;
+        }
+
+        // If copyCellsFromSharedMem = true, then we need to copy the cells. Otherwise
+        // it is a call coming from the RsRpcServices.scan().
+        if (copyCellsFromSharedMem && !outResults.isEmpty()) {
+          // Do the copy of the results here.
+          ListIterator<Cell> listItr = outResults.listIterator();
+          Cell cell = null;
+          while (listItr.hasNext()) {
+            cell = listItr.next();
+            if (cell instanceof ShareableMemory) {
+              listItr.set(((ShareableMemory) cell).cloneToCell());
+            }
+          }
+        }
+      } finally {
+        if (copyCellsFromSharedMem) {
+          // In case of copyCellsFromSharedMem==true (where the CPs wrap a scanner) we return
+          // the blocks then and there (for wrapped CPs)
+          this.shipped();
+        }
       }
       return moreValues;
     }
@@ -6365,6 +6403,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   @Override
   public Result get(final Get get) throws IOException {
+    prepareGet(get);
+    List<Cell> results = get(get, true);
+    boolean stale = this.getRegionInfo().getReplicaId() != 0;
+    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+  }
+
+   void prepareGet(final Get get) throws IOException, NoSuchColumnFamilyException {
     checkRow(get.getRow(), "Get");
     // Verify families are all valid
     if (get.hasFamilies()) {
@@ -6376,9 +6421,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         get.addFamily(family);
       }
     }
-    List<Cell> results = get(get, true);
-    boolean stale = this.getRegionInfo().getReplicaId() != 0;
-    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
   @Override
@@ -6388,9 +6430,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // pre-get CP hook
     if (withCoprocessor && (coprocessorHost != null)) {
-       if (coprocessorHost.preGet(get, results)) {
-         return results;
-       }
+      if (coprocessorHost.preGet(get, results)) {
+        return results;
+      }
     }
 
     Scan scan = new Scan(get);
@@ -6409,16 +6451,21 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       coprocessorHost.postGet(get, results);
     }
 
-    // do after lock
+    metricsUpdateForGet(results);
+
+    return results;
+  }
+
+  void metricsUpdateForGet(List<Cell> results) {
     if (this.metricsRegion != null) {
       long totalSize = 0L;
       for (Cell cell : results) {
+        // This should give an estimate of the cell in the result. Why do we need
+        // to know the serialization of how the codec works with it??
         totalSize += CellUtil.estimatedSerializedSizeOf(cell);
       }
       this.metricsRegion.updateGet(totalSize);
     }
-
-    return results;
   }
 
   @Override
@@ -7179,7 +7226,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // New HBASE-880 Helpers
   //
 
-  private void checkFamily(final byte [] family)
+  void checkFamily(final byte [] family)
   throws NoSuchColumnFamilyException {
     if (!this.htableDescriptor.hasFamily(family)) {
       throw new NoSuchColumnFamilyException("Column family " +

@@ -155,6 +155,7 @@ import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.quotas.OperationQuota;
 import org.apache.hadoop.hbase.quotas.RegionServerQuotaManager;
+import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
 import org.apache.hadoop.hbase.regionserver.Leases.Lease;
 import org.apache.hadoop.hbase.regionserver.Leases.LeaseStillHeldException;
 import org.apache.hadoop.hbase.regionserver.Region.FlushResult;
@@ -243,7 +244,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
   /**
    * An Rpc callback for closing a RegionScanner.
    */
-  private static class RegionScannerCloseCallBack implements RpcCallback {
+   static class RegionScannerCloseCallBack implements RpcCallback {
 
     private final RegionScanner scanner;
 
@@ -279,6 +280,29 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       // Rpc call and we are at end of the call now. Time to add it back.
       if (scanners.containsKey(scannerName)) {
         if (lease != null) regionServer.leases.addLease(lease);
+      }
+    }
+  }
+
+  /**
+   * An RpcCallBack that creates a list of scanners that needs to perform callBack operation on
+   * completion of multiGets.
+   */
+   static class RegionScannersCloseCallBack implements RpcCallback {
+    private final List<RegionScanner> scanners = new ArrayList<RegionScanner>();
+
+    public void addScanner(RegionScanner scanner) {
+      this.scanners.add(scanner);
+    }
+
+    @Override
+    public void run() {
+      for (RegionScanner scanner : scanners) {
+        try {
+          scanner.close();
+        } catch (IOException e) {
+          LOG.error("Exception while closing the scanner " + scanner, e);
+        }
       }
     }
   }
@@ -337,7 +361,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           if (region != null && region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().preScannerClose(s);
           }
-
           s.close();
           if (region != null && region.getCoprocessorHost() != null) {
             region.getCoprocessorHost().postScannerClose(s);
@@ -418,8 +441,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     return context != null && context.isClientCellBlockSupport();
   }
 
-  private void addResult(final MutateResponse.Builder builder,
-      final Result result, final PayloadCarryingRpcController rpcc) {
+  private void addResult(final MutateResponse.Builder builder, final Result result,
+      final PayloadCarryingRpcController rpcc) {
     if (result == null) return;
     if (isClientCellBlockSupport()) {
       builder.setResult(ProtobufUtil.toResultNoData(result));
@@ -626,13 +649,23 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     // ResultOrException instance that matches each Put or Delete is then added down in the
     // doBatchOp call.  We should be staying aligned though the Put and Delete are deferred/batched
     List<ClientProtos.Action> mutations = null;
-    for (ClientProtos.Action action: actions.getActionList()) {
+    RpcCallContext context = RpcServer.getCurrentCall();
+    // An RpcCallBack that creates a list of scanners that needs to perform callBack
+    // operation on completion of multiGets.
+    RegionScannersCloseCallBack closeCallBack = null;
+    for (ClientProtos.Action action : actions.getActionList()) {
       ClientProtos.ResultOrException.Builder resultOrExceptionBuilder = null;
       try {
         Result r = null;
         if (action.hasGet()) {
+          if (closeCallBack == null) {
+            // Initialize only once
+            closeCallBack = new RegionScannersCloseCallBack();
+            // Set the call back here itself.
+            context.setCallBack(closeCallBack);
+          }
           Get get = ProtobufUtil.toGet(action.getGet());
-          r = region.get(get);
+          r = get(get, ((HRegion) region), closeCallBack, context);
         } else if (action.hasServiceCall()) {
           resultOrExceptionBuilder = ResultOrException.newBuilder();
           try {
@@ -661,7 +694,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             r = append(region, quota, action.getMutation(), cellScanner, nonceGroup);
             break;
           case INCREMENT:
-            r = increment(region, quota, action.getMutation(), cellScanner,  nonceGroup);
+            r = increment(region, quota, action.getMutation(), cellScanner, nonceGroup);
             break;
           case PUT:
           case DELETE:
@@ -679,7 +712,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
         if (r != null) {
           ClientProtos.Result pbResult = null;
-          if (isClientCellBlockSupport()) {
+          if (isClientCellBlockSupport(context)) {
             pbResult = ProtobufUtil.toResultNoData(r);
             //  Hard to guess the size here.  Just make a rough guess.
             if (cellsToReturn == null) cellsToReturn = new ArrayList<CellScannable>();
@@ -1930,7 +1963,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       ClientProtos.Get get = request.getGet();
       Boolean existence = null;
       Result r = null;
-
+      RpcCallContext context = RpcServer.getCurrentCall();
       quota = getQuotaManager().checkQuota(region, OperationQuota.OperationType.GET);
 
       Get clientGet = ProtobufUtil.toGet(get);
@@ -1938,7 +1971,12 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         existence = region.getCoprocessorHost().preExists(clientGet);
       }
       if (existence == null) {
-        r = region.get(clientGet);
+        if (context != null) {
+          r = get(clientGet, ((HRegion) region), null, context);
+        } else {
+          // for test purpose
+          r = region.get(clientGet);
+        }
         if (get.getExistenceOnly()) {
           boolean exists = r.getExists();
           if (region.getCoprocessorHost() != null) {
@@ -1969,6 +2007,52 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         quota.close();
       }
     }
+  }
+
+  private Result get(Get get, HRegion region, RegionScannersCloseCallBack closeCallBack,
+      RpcCallContext context) throws IOException {
+    region.prepareGet(get);
+    List<Cell> results = new ArrayList<Cell>();
+    boolean stale = region.getRegionInfo().getReplicaId() != 0;
+    // pre-get CP hook
+    if (region.getCoprocessorHost() != null) {
+      if (region.getCoprocessorHost().preGet(get, results)) {
+        return Result
+            .create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
+      }
+    }
+
+    Scan scan = new Scan(get);
+
+    RegionScanner scanner = null;
+    try {
+      scanner = region.getScanner(scan, false);
+      scanner.next(results);
+    } finally {
+      if (scanner != null) {
+        if (closeCallBack == null) {
+          // If there is a context then the scanner can be added to the current
+          // RpcCallContext. The rpc callback will take care of closing the
+          // scanner, for eg in case
+          // of get()
+          assert scanner instanceof org.apache.hadoop.hbase.ipc.RpcCallback;
+          context.setCallBack((RegionScannerImpl) scanner);
+        } else {
+          // The call is from multi() where the results from the get() are
+          // aggregated and then send out to the
+          // rpc. The rpccall back will close all such scanners created as part
+          // of multi().
+          closeCallBack.addScanner(scanner);
+        }
+      }
+    }
+
+    // post-get CP hook
+    if (region.getCoprocessorHost() != null) {
+      region.getCoprocessorHost().postGet(get, results);
+    }
+    region.metricsUpdateForGet(results);
+    return Result.create(results, get.isCheckExistenceOnly() ? !results.isEmpty() : null, stale);
   }
 
   /**
@@ -2230,6 +2314,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       boolean moreResults = true;
       boolean closeScanner = false;
       boolean isSmallScan = false;
+      RegionScanner actualRegionScanner = null;
       ScanResponse.Builder builder = ScanResponse.newBuilder();
       if (request.hasCloseScanner()) {
         closeScanner = request.getCloseScanner();
@@ -2274,17 +2359,27 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           scanner = region.getCoprocessorHost().preScannerOpen(scan);
         }
         if (scanner == null) {
-          scanner = region.getScanner(scan);
+          scanner = ((HRegion)region).getScanner(scan, false);
         }
+        actualRegionScanner =  scanner;
         if (region.getCoprocessorHost() != null) {
           scanner = region.getCoprocessorHost().postScannerOpen(scan, scanner);
+        }
+        if (actualRegionScanner != scanner) {
+          // It means the RegionScanner has been wrapped
+          if (actualRegionScanner instanceof RegionScannerImpl) {
+            // Copy the results when nextRaw is called from the CP so that
+            // CP can have a cloned version of the results without bothering
+            // about the eviction. Ugly, yes!!!
+            ((RegionScannerImpl) actualRegionScanner).setCopyCellsFromSharedMem(true);
+          }
         }
         scannerId = this.scannerIdGen.incrementAndGet();
         scannerName = String.valueOf(scannerId);
         rsh = addScanner(scannerName, scanner, region);
         ttl = this.scannerLeaseTimeoutPeriod;
       }
-
+      assert scanner != null;
       RpcCallContext context = RpcServer.getCurrentCall();
 
       quota = getQuotaManager().checkQuota(region, OperationQuota.OperationType.SCAN);
@@ -2295,9 +2390,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // performed even before checking of Lease.
         // See HBASE-5974
         if (request.hasNextCallSeq()) {
-          if (rsh == null) {
-            rsh = scanners.get(scannerName);
-          }
           if (rsh != null) {
             if (request.getNextCallSeq() != rsh.getNextCallSeq()) {
               throw new OutOfOrderScannerNextException(
@@ -2411,7 +2503,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                 contextBuilder.setTimeLimit(timeScope, timeLimit);
                 contextBuilder.setTrackMetrics(trackMetrics);
                 ScannerContext scannerContext = contextBuilder.build();
-
                 boolean limitReached = false;
                 while (i < rows) {
                   // Reset the batch progress to 0 before every call to RegionScanner#nextRaw. The
@@ -2488,7 +2579,6 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             } finally {
               region.closeRegionOperation();
             }
-
             // coprocessor postNext hook
             if (region != null && region.getCoprocessorHost() != null) {
               region.getCoprocessorHost().postScannerNext(scanner, results, rows, true);

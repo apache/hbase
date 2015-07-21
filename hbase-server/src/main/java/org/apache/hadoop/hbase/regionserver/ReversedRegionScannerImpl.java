@@ -42,9 +42,9 @@ class ReversedRegionScannerImpl extends RegionScannerImpl {
    * @throws IOException
    */
   ReversedRegionScannerImpl(Scan scan,
-      List<KeyValueScanner> additionalScanners, HRegion region)
+      List<KeyValueScanner> additionalScanners, HRegion region, boolean copyCellsFromSharedMem)
       throws IOException {
-    region.super(scan, additionalScanners, region);
+    region.super(scan, additionalScanners, region, copyCellsFromSharedMem);
   }
 
   @Override

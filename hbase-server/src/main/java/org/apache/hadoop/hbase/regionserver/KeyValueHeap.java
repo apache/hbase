@@ -47,6 +47,10 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner {
   protected PriorityQueue<KeyValueScanner> heap = null;
+  // Holds the scanners when a ever a eager close() happens.  All such eagerly closed
+  // scans are collected and when the final scanner.close() happens will perform the
+  // actual close.
+  protected Set<KeyValueScanner> scannersForDelayedClose = new HashSet<KeyValueScanner>();
 
   /**
    * The current sub-scanner, i.e. the one that contains the next key/value
@@ -61,8 +65,6 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   protected KeyValueScanner current = null;
 
   protected KVScannerComparator comparator;
-
-  protected Set<KeyValueScanner> scannersForDelayedClose = new HashSet<KeyValueScanner>();
 
   /**
    * Constructor.  This KeyValueHeap will handle closing of passed in
@@ -160,6 +162,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
      */
 
     if (pee == null || !moreCells) {
+      // add the scanner that is to be closed
       this.scannersForDelayedClose.add(this.current);
     } else {
       this.heap.add(this.current);

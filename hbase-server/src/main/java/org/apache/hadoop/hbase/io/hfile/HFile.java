@@ -54,7 +54,6 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -374,6 +373,12 @@ public class HFile {
         final boolean updateCacheMetrics, BlockType expectedBlockType,
         DataBlockEncoding expectedDataBlockEncoding)
         throws IOException;
+
+    /**
+     * Return the given block back to the cache, if it was obtained from cache.
+     * @param block Block to be returned.
+     */
+    void returnBlock(HFileBlock block);
   }
 
   /** An interface used by clients to open and iterate an {@link HFile}. */
@@ -389,7 +394,7 @@ public class HFile {
 
     HFileScanner getScanner(boolean cacheBlocks, final boolean pread, final boolean isCompaction);
 
-    ByteBuff getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
+    HFileBlock getMetaBlock(String metaBlockName, boolean cacheBlock) throws IOException;
 
     Map<byte[], byte[]> loadFileInfo() throws IOException;
 

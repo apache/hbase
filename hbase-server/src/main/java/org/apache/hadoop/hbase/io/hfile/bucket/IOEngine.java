@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A class implementing IOEngine interface supports data services for
@@ -36,25 +38,14 @@ public interface IOEngine {
   boolean isPersistent();
 
   /**
-   * Transfers data from IOEngine to the given byte buffer
-   * @param dstBuffer the given byte buffer into which bytes are to be written
+   * Transfers data from IOEngine to a byte buffer
+   * @param length How many bytes to be read from the offset
    * @param offset The offset in the IO engine where the first byte to be read
-   * @return number of bytes read
+   * @return Pair of ByteBuffer where data is read and its MemoryType ({@link MemoryType})
    * @throws IOException
    * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
    */
-  int read(ByteBuffer dstBuffer, long offset) throws IOException;
-
-  /**
-   * Transfers data from IOEngine at the given offset to an MultiByteBuffer
-   * @param offset the offset from which the underlying buckets should be read
-   * @param len the length upto which the buckets should be read
-   * @return the MultiByteBuffer formed from the underlying ByteBuffers forming the
-   * buckets
-   * @throws IOException
-   * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
-   */
-  ByteBuff read(long offset, int len) throws IOException;
+  Pair<ByteBuff, MemoryType> read(long offset, int length) throws IOException;
 
   /**
    * Transfers data from the given byte buffer to IOEngine

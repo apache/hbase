@@ -270,7 +270,7 @@ public class CacheTestUtils {
       }
 
       @Override
-      public Cacheable deserialize(ByteBuff b, boolean reuse)
+      public Cacheable deserialize(ByteBuff b, boolean reuse, MemoryType memType)
           throws IOException {
         return deserialize(b);
       }
@@ -314,6 +314,11 @@ public class CacheTestUtils {
     @Override
     public BlockType getBlockType() {
       return BlockType.DATA;
+    }
+
+    @Override
+    public MemoryType getMemoryType() {
+      return MemoryType.EXCLUSIVE;
     }
   }
 
