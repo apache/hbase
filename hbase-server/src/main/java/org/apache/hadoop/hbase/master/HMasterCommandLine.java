@@ -255,7 +255,7 @@ public class HMasterCommandLine extends ServerCommandLine {
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Admin admin = connection.getAdmin()) {
-        connection.getAdmin().shutdown();
+        admin.shutdown();
       } catch (Throwable t) {
         LOG.error("Failed to stop master", t);
         return 1;
