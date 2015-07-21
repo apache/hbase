@@ -138,12 +138,8 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
-  public byte getByteStrictlyForward(int index) {
-    if (index < this.buf.position()) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
-    return ByteBufferUtils.toByte(this.buf, index);
+  public byte getByteAfterPosition(int offset) {
+    return ByteBufferUtils.toByte(this.buf, this.buf.position() + offset);
   }
 
   @Override
@@ -222,12 +218,8 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
-  public short getShortStrictlyForward(int index) {
-    if (index < this.buf.position()) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
-    return ByteBufferUtils.toShort(this.buf, index);
+  public short getShortAfterPosition(int offset) {
+    return ByteBufferUtils.toShort(this.buf, this.buf.position() + offset);
   }
 
   @Override
@@ -247,12 +239,8 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
-  public int getIntStrictlyForward(int index) {
-    if (index < this.buf.position()) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
-    return ByteBufferUtils.toInt(this.buf, index);
+  public int getIntAfterPosition(int offset) {
+    return ByteBufferUtils.toInt(this.buf, this.buf.position() + offset);
   }
 
   @Override
@@ -272,12 +260,8 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
-  public long getLongStrictlyForward(int index) {
-    if (index < this.buf.position()) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
-    return ByteBufferUtils.toLong(this.buf, index);
+  public long getLongAfterPosition(int offset) {
+    return ByteBufferUtils.toLong(this.buf, this.buf.position() + offset);
   }
 
   @Override

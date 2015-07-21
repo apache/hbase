@@ -68,7 +68,7 @@ public class CopyKeyDataBlockEncoder extends BufferedDataBlockEncoder {
 
   @Override
   public Cell getFirstKeyCellInBlock(ByteBuff block) {
-    int keyLength = block.getIntStrictlyForward(Bytes.SIZEOF_INT);
+    int keyLength = block.getIntAfterPosition(Bytes.SIZEOF_INT);
     int pos = 3 * Bytes.SIZEOF_INT;
     ByteBuffer key = block.asSubByteBuffer(pos + keyLength).duplicate();
     return createFirstKeyCell(key, keyLength);

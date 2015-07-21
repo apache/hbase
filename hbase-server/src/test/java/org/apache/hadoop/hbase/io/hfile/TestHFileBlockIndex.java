@@ -608,14 +608,14 @@ public class TestHFileBlockIndex {
         if (block.getBlockType() != BlockType.LEAF_INDEX)
           return;
         ByteBuff b = block.getBufferReadOnly();
-        int n = b.getInt();
+        int n = b.getIntAfterPosition(0);
         // One int for the number of items, and n + 1 for the secondary index.
         int entriesOffset = Bytes.SIZEOF_INT * (n + 2);
 
         // Get all the keys from the leaf index block. S
         for (int i = 0; i < n; ++i) {
-          int keyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (i + 1));
-          int nextKeyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (i + 2));
+          int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 1));
+          int nextKeyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (i + 2));
           int keyLen = nextKeyRelOffset - keyRelOffset;
           int keyOffset = b.arrayOffset() + entriesOffset + keyRelOffset +
               HFileBlockIndex.SECONDARY_INDEX_ENTRY_OVERHEAD;

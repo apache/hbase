@@ -398,9 +398,9 @@ public class HFileBlockIndex {
             BlockType.LEAF_INDEX, null);
 
         ByteBuff b = midLeafBlock.getBufferWithoutHeader();
-        int numDataBlocks = b.getInt();
-        int keyRelOffset = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (midKeyEntry + 1));
-        int keyLen = b.getIntStrictlyForward(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
+        int numDataBlocks = b.getIntAfterPosition(0);
+        int keyRelOffset = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 1));
+        int keyLen = b.getIntAfterPosition(Bytes.SIZEOF_INT * (midKeyEntry + 2)) -
             keyRelOffset;
         int keyOffset = Bytes.SIZEOF_INT * (numDataBlocks + 2) + keyRelOffset
             + SECONDARY_INDEX_ENTRY_OVERHEAD;
@@ -701,7 +701,7 @@ public class HFileBlockIndex {
     static int binarySearchNonRootIndex(Cell key, ByteBuff nonRootIndex,
         CellComparator comparator) {
 
-      int numEntries = nonRootIndex.getIntStrictlyForward(0);
+      int numEntries = nonRootIndex.getIntAfterPosition(0);
       int low = 0;
       int high = numEntries - 1;
       int mid = 0;
@@ -719,7 +719,7 @@ public class HFileBlockIndex {
         mid = (low + high) >>> 1;
 
         // Midkey's offset relative to the end of secondary index
-      int midKeyRelOffset = nonRootIndex.getIntStrictlyForward(Bytes.SIZEOF_INT * (mid + 1));
+        int midKeyRelOffset = nonRootIndex.getIntAfterPosition(Bytes.SIZEOF_INT * (mid + 1));
 
         // The offset of the middle key in the blockIndex buffer
         int midKeyOffset = entriesOffset       // Skip secondary index
@@ -729,7 +729,7 @@ public class HFileBlockIndex {
         // We subtract the two consecutive secondary index elements, which
         // gives us the size of the whole (offset, onDiskSize, key) tuple. We
         // then need to subtract the overhead of offset and onDiskSize.
-        int midLength = nonRootIndex.getIntStrictlyForward(Bytes.SIZEOF_INT * (mid + 2)) -
+        int midLength = nonRootIndex.getIntAfterPosition(Bytes.SIZEOF_INT * (mid + 2)) -
             midKeyRelOffset - SECONDARY_INDEX_ENTRY_OVERHEAD;
 
         // we have to compare in this order, because the comparator order
@@ -794,7 +794,7 @@ public class HFileBlockIndex {
       int entryIndex = binarySearchNonRootIndex(key, nonRootBlock, comparator);
 
       if (entryIndex != -1) {
-        int numEntries = nonRootBlock.getIntStrictlyForward(0);
+        int numEntries = nonRootBlock.getIntAfterPosition(0);
 
         // The end of secondary index and the beginning of entries themselves.
         int entriesOffset = Bytes.SIZEOF_INT * (numEntries + 2);
@@ -802,7 +802,7 @@ public class HFileBlockIndex {
         // The offset of the entry we are interested in relative to the end of
         // the secondary index.
         int entryRelOffset = nonRootBlock
-            .getIntStrictlyForward(Bytes.SIZEOF_INT * (1 + entryIndex));
+            .getIntAfterPosition(Bytes.SIZEOF_INT * (1 + entryIndex));
 
         nonRootBlock.position(entriesOffset + entryRelOffset);
       }

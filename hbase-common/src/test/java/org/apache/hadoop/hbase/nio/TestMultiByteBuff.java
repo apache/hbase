@@ -96,13 +96,6 @@ public class TestMultiByteBuff {
     assertEquals(b1, mbb.get());
     mbb.put(b);
     assertEquals(l2, mbb.getLong(22));
-    try {
-      // This should fail because we have already move to a position
-      // greater than 22
-      mbb.getLongStrictlyForward(22);
-      fail();
-    } catch (IndexOutOfBoundsException e) {
-    }
   }
 
   @Test
@@ -313,12 +306,12 @@ public class TestMultiByteBuff {
     mbb1.position(7);
     mbb1.put((byte) 2);
     mbb1.putInt(3);
-    mbb1.position(0);
-    mbb1.getIntStrictlyForward(4);
+    mbb1.rewind();
+    mbb1.getIntAfterPosition(4);
     byte res = mbb1.get(7);
     assertEquals((byte) 2, res);
     mbb1.position(7);
-    int intRes = mbb1.getIntStrictlyForward(8);
+    int intRes = mbb1.getIntAfterPosition(1);
     assertEquals(3, intRes);
   }
 }

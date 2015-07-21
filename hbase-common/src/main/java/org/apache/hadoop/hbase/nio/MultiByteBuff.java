@@ -132,12 +132,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
-  public byte getByteStrictlyForward(int index) {
+  public byte getByteAfterPosition(int offset) {
     // Mostly the index specified will land within this current item. Short circuit for that
-    if(index < (this.itemBeginPos[this.curItemIndex] + this.curItem.position())) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
+    int index = offset + this.position();
     int itemIndex = getItemIndexFromCurItemIndex(index);
     return ByteBufferUtils.toByte(this.items[itemIndex], index - this.itemBeginPos[itemIndex]);
   }
@@ -189,12 +186,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
-  public int getIntStrictlyForward(int index) {
+  public int getIntAfterPosition(int offset) {
     // Mostly the index specified will land within this current item. Short circuit for that
-    if(index < (this.itemBeginPos[this.curItemIndex] + this.curItem.position())) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
+    int index = offset + this.position();
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex + 1] > index) {
       itemIndex = this.curItemIndex;
@@ -237,12 +231,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
-  public short getShortStrictlyForward(int index) {
+  public short getShortAfterPosition(int offset) {
     // Mostly the index specified will land within this current item. Short circuit for that
-    if(index < (this.itemBeginPos[this.curItemIndex] + this.curItem.position())) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
+    int index = offset + this.position();
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex + 1] > index) {
       itemIndex = this.curItemIndex;
@@ -366,12 +357,9 @@ public class MultiByteBuff extends ByteBuff {
   }
 
   @Override
-  public long getLongStrictlyForward(int index) {
+  public long getLongAfterPosition(int offset) {
     // Mostly the index specified will land within this current item. Short circuit for that
-    if(index < (this.itemBeginPos[this.curItemIndex] + this.curItem.position())) {
-      throw new IndexOutOfBoundsException("The index " + index
-          + " should not be less than current position " + this.position());
-    }
+    int index = offset + this.position();
     int itemIndex;
     if (this.itemBeginPos[this.curItemIndex + 1] > index) {
       itemIndex = this.curItemIndex;

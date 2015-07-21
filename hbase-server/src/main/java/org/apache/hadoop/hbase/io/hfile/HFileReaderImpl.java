@@ -517,16 +517,16 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       // Trying to imitate what was done - need to profile if this is better or
       // earlier way is better by doing mark and reset?
       // But ensure that you read long instead of two ints
-      long ll = blockBuffer.getLongStrictlyForward(blockBuffer.position());
+      long ll = blockBuffer.getLongAfterPosition(0);
       // Read top half as an int of key length and bottom int as value length
       this.currKeyLen = (int)(ll >> Integer.SIZE);
       this.currValueLen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
       checkKeyValueLen();
       // Move position past the key and value lengths and then beyond the key and value
-      int p = blockBuffer.position() +  (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
+      int p = (Bytes.SIZEOF_LONG + currKeyLen + currValueLen);
       if (reader.getFileContext().isIncludesTags()) {
         // Tags length is a short.
-        this.currTagsLen = blockBuffer.getShortStrictlyForward(p);
+        this.currTagsLen = blockBuffer.getShortAfterPosition(p);
         checkTagsLen();
         p += (Bytes.SIZEOF_SHORT + currTagsLen);
       }
@@ -543,9 +543,9 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
     /**
      * Read mvcc. Does checks to see if we even need to read the mvcc at all.
-     * @param position
+     * @param offsetFromPos
      */
-    protected void readMvccVersion(final int position) {
+    protected void readMvccVersion(final int offsetFromPos) {
       // See if we even need to decode mvcc.
       if (!this.reader.shouldIncludeMemstoreTS()) return;
       if (!this.reader.isDecodeMemstoreTS()) {
@@ -553,36 +553,32 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         currMemstoreTSLen = 1;
         return;
       }
-      _readMvccVersion(position);
+      _readMvccVersion(offsetFromPos);
     }
 
     /**
      * Actually do the mvcc read. Does no checks.
-     * @param position
+     * @param offsetFromPos
      */
-    private void _readMvccVersion(final int position) {
+    private void _readMvccVersion(int offsetFromPos) {
       // This is Bytes#bytesToVint inlined so can save a few instructions in this hot method; i.e.
       // previous if one-byte vint, we'd redo the vint call to find int size.
       // Also the method is kept small so can be inlined.
-      byte firstByte = blockBuffer.getByteStrictlyForward(position);
+      byte firstByte = blockBuffer.getByteAfterPosition(offsetFromPos);
       int len = WritableUtils.decodeVIntSize(firstByte);
       if (len == 1) {
         this.currMemstoreTS = firstByte;
       } else {
         long i = 0;
+        offsetFromPos++;
         for (int idx = 0; idx < len - 1; idx++) {
-          byte b = blockBuffer.get(position + 1 + idx);
+          byte b = blockBuffer.getByteAfterPosition(offsetFromPos + idx);
           i = i << 8;
           i = i | (b & 0xFF);
         }
         currMemstoreTS = (WritableUtils.isNegativeVInt(firstByte) ? ~i : i);
       }
       this.currMemstoreTSLen = len;
-    }
-
-    protected void readMvccVersion() {
-      // TODO CLEANUP!!!
-      readMvccVersion(blockBuffer.arrayOffset() + blockBuffer.position());
     }
 
     /**
@@ -603,11 +599,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected int blockSeek(Cell key, boolean seekBefore) {
       int klen, vlen, tlen = 0;
       int lastKeyValueSize = -1;
-      int pos = -1;
+      int offsetFromPos;
       do {
-        pos = blockBuffer.position();
+        offsetFromPos = 0;
         // Better to ensure that we use the BB Utils here
-        long ll = blockBuffer.getLongStrictlyForward(pos);
+        long ll = blockBuffer.getLongAfterPosition(offsetFromPos);
         klen = (int)(ll >> Integer.SIZE);
         vlen = (int)(Bytes.MASK_FOR_LOWER_INT_IN_LONG ^ ll);
         if (klen < 0 || vlen < 0 || klen > blockBuffer.limit()
@@ -617,28 +613,28 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
               + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
               + blockBuffer.position() + " (without header).");
         }
-        pos += Bytes.SIZEOF_LONG;
-        blockBuffer.asSubByteBuffer(pos, klen, pair);
+        offsetFromPos += Bytes.SIZEOF_LONG;
+        blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
         // TODO :change here after Bufferbackedcells come
         keyOnlyKv.setKey(pair.getFirst().array(), pair.getFirst().arrayOffset() + pair.getSecond(),
             klen);
         int comp = reader.getComparator().compareKeyIgnoresMvcc(key, keyOnlyKv);
-        pos += klen + vlen;
+        offsetFromPos += klen + vlen;
         if (this.reader.getFileContext().isIncludesTags()) {
           // Read short as unsigned, high byte first
-          tlen = ((blockBuffer.getByteStrictlyForward(pos) & 0xff) << 8)
-              ^ (blockBuffer.getByteStrictlyForward(pos + 1) & 0xff);
+          tlen = ((blockBuffer.getByteAfterPosition(offsetFromPos) & 0xff) << 8)
+              ^ (blockBuffer.getByteAfterPosition(offsetFromPos + 1) & 0xff);
           if (tlen < 0 || tlen > blockBuffer.limit()) {
             throw new IllegalStateException("Invalid tlen " + tlen + ". Block offset: "
                 + block.getOffset() + ", block length: " + blockBuffer.limit() + ", position: "
                 + blockBuffer.position() + " (without header).");
           }
           // add the two bytes read for the tags.
-          pos += tlen + (Bytes.SIZEOF_SHORT);
+          offsetFromPos += tlen + (Bytes.SIZEOF_SHORT);
         }
         if (this.reader.shouldIncludeMemstoreTS()) {
           // Directly read the mvcc based on current position
-          readMvccVersion(pos);
+          readMvccVersion(offsetFromPos);
         }
         if (comp == 0) {
           if (seekBefore) {
