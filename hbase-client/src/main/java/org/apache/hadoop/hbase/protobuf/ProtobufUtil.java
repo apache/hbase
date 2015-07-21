@@ -97,7 +97,6 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServic
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutationProto.ColumnValue.QualifierValue;
@@ -122,12 +121,12 @@ import org.apache.hadoop.hbase.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.FlushDescriptor.FlushAction;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.RegionEventDescriptor.EventType;
-import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.quotas.QuotaScope;
 import org.apache.hadoop.hbase.quotas.QuotaType;
@@ -488,9 +487,6 @@ public final class ProtobufUtil {
     }
     if (proto.hasExistenceOnly() && proto.getExistenceOnly()){
       get.setCheckExistenceOnly(true);
-    }
-    if (proto.hasClosestRowBefore() && proto.getClosestRowBefore()){
-      get.setClosestRowBefore(true);
     }
     if (proto.hasConsistency()) {
       get.setConsistency(toConsistency(proto.getConsistency()));
@@ -1077,9 +1073,6 @@ public final class ProtobufUtil {
     if (get.isCheckExistenceOnly()){
       builder.setExistenceOnly(true);
     }
-    if (get.isClosestRowBefore()){
-      builder.setClosestRowBefore(true);
-    }
     if (get.getConsistency() != null && get.getConsistency() != Consistency.STRONG) {
       builder.setConsistency(toConsistency(get.getConsistency()));
     }
@@ -1548,33 +1541,6 @@ public final class ProtobufUtil {
   }
 
 // Start helpers for Client
-
-  /**
-   * A helper to get a row of the closet one before using client protocol.
-   *
-   * @param client
-   * @param regionName
-   * @param row
-   * @param family
-   * @return the row or the closestRowBefore if it doesn't exist
-   * @throws IOException
-   * @deprecated since 0.99 - use reversed scanner instead.
-   */
-  @Deprecated
-  public static Result getRowOrBefore(final ClientService.BlockingInterface client,
-      final byte[] regionName, final byte[] row,
-      final byte[] family) throws IOException {
-    GetRequest request =
-      RequestConverter.buildGetRowOrBeforeRequest(
-        regionName, row, family);
-    try {
-      GetResponse response = client.get(null, request);
-      if (!response.hasResult()) return null;
-      return toResult(response.getResult());
-    } catch (ServiceException se) {
-      throw getRemoteException(se);
-    }
-  }
 
   /**
    * A helper to bulk load a list of HFiles using client protocol.

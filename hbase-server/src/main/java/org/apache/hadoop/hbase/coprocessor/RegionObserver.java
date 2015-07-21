@@ -382,7 +382,7 @@ public interface RegionObserver extends Coprocessor {
   void preSplitBeforePONR(final ObserverContext<RegionCoprocessorEnvironment> ctx,
       byte[] splitKey, List<Mutation> metaEntries) throws IOException;
 
-  
+
   /**
    * This will be called after PONR step as part of split transaction
    * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
@@ -391,9 +391,9 @@ public interface RegionObserver extends Coprocessor {
    * @throws IOException
    */
   void preSplitAfterPONR(final ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException;
-  
+
   /**
-   * This will be called before the roll back of the split region is completed 
+   * This will be called before the roll back of the split region is completed
    * @param ctx
    * @throws IOException
    */
@@ -419,7 +419,7 @@ public interface RegionObserver extends Coprocessor {
    * Called before the region is reported as closed to the master.
    * @param c the environment provided by the region server
    * @param abortRequested true if the region server is aborting
-   * @throws IOException 
+   * @throws IOException
    */
   void preClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested) throws IOException;
@@ -431,40 +431,6 @@ public interface RegionObserver extends Coprocessor {
    */
   void postClose(final ObserverContext<RegionCoprocessorEnvironment> c,
       boolean abortRequested);
-
-  /**
-   * Called before a client makes a GetClosestRowBefore request.
-   * <p>
-   * Call CoprocessorEnvironment#bypass to skip default actions
-   * <p>
-   * Call CoprocessorEnvironment#complete to skip any subsequent chained
-   * coprocessors
-   * @param c the environment provided by the region server
-   * @param row the row
-   * @param family the family
-   * @param result The result to return to the client if default processing
-   * is bypassed. Can be modified. Will not be used if default processing
-   * is not bypassed.
-   * @throws IOException if an error occurred on the coprocessor
-   */
-  void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final Result result)
-    throws IOException;
-
-  /**
-   * Called after a client makes a GetClosestRowBefore request.
-   * <p>
-   * Call CoprocessorEnvironment#complete to skip any subsequent chained
-   * coprocessors
-   * @param c the environment provided by the region server
-   * @param row the row
-   * @param family the desired family
-   * @param result the result to return to the client, modify as necessary
-   * @throws IOException if an error occurred on the coprocessor
-   */
-  void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final Result result)
-    throws IOException;
 
   /**
    * Called before the client performs a Get
@@ -543,7 +509,7 @@ public interface RegionObserver extends Coprocessor {
    * @param durability Persistence guarantee for this Put
    * @throws IOException if an error occurred on the coprocessor
    */
-  void prePut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  void prePut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit, final Durability durability)
     throws IOException;
 
@@ -558,7 +524,7 @@ public interface RegionObserver extends Coprocessor {
    * @param durability Persistence guarantee for this Put
    * @throws IOException if an error occurred on the coprocessor
    */
-  void postPut(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  void postPut(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Put put, final WALEdit edit, final Durability durability)
     throws IOException;
 
@@ -575,7 +541,7 @@ public interface RegionObserver extends Coprocessor {
    * @param durability Persistence guarantee for this Delete
    * @throws IOException if an error occurred on the coprocessor
    */
-  void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c, 
+  void preDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit, final Durability durability)
     throws IOException;
 /**
@@ -611,7 +577,7 @@ public interface RegionObserver extends Coprocessor {
   void postDelete(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Delete delete, final WALEdit edit, final Durability durability)
     throws IOException;
-  
+
   /**
    * This will be called for every batch mutation operation happening at the server. This will be
    * called after acquiring the locks on the mutating rows and after applying the proper timestamp
@@ -658,7 +624,7 @@ public interface RegionObserver extends Coprocessor {
    * Called after the completion of batch put/delete and will be called even if the batch operation
    * fails
    * @param ctx
-   * @param miniBatchOp 
+   * @param miniBatchOp
    * @param success true if batch operation is successful otherwise false.
    * @throws IOException
    */
@@ -679,7 +645,7 @@ public interface RegionObserver extends Coprocessor {
    * @param compareOp the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
-   * @param result 
+   * @param result
    * @return the return value to return to client if bypassing default
    * processing
    * @throws IOException if an error occurred on the coprocessor
@@ -693,8 +659,8 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before checkAndPut but after acquiring rowlock.
    * <p>
-   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
-   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
    * can lead to potential deadlock.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
@@ -708,14 +674,14 @@ public interface RegionObserver extends Coprocessor {
    * @param compareOp the comparison operation
    * @param comparator the comparator
    * @param put data to put if check succeeds
-   * @param result 
+   * @param result
    * @return the return value to return to client if bypassing default
    * processing
    * @throws IOException if an error occurred on the coprocessor
    */
   boolean preCheckAndPutAfterRowLock(final ObserverContext<RegionCoprocessorEnvironment> c,
       final byte[] row, final byte[] family, final byte[] qualifier, final CompareOp compareOp,
-      final ByteArrayComparable comparator, final Put put, 
+      final ByteArrayComparable comparator, final Put put,
       final boolean result) throws IOException;
 
   /**
@@ -754,7 +720,7 @@ public interface RegionObserver extends Coprocessor {
    * @param compareOp the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
-   * @param result 
+   * @param result
    * @return the value to return to client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
@@ -767,8 +733,8 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before checkAndDelete but after acquiring rowock.
    * <p>
-   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
-   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
    * can lead to potential deadlock.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
@@ -782,7 +748,7 @@ public interface RegionObserver extends Coprocessor {
    * @param compareOp the comparison operation
    * @param comparator the comparator
    * @param delete delete to commit if check succeeds
-   * @param result 
+   * @param result
    * @return the value to return to client if bypassing default processing
    * @throws IOException if an error occurred on the coprocessor
    */
@@ -877,8 +843,8 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before Append but after acquiring rowlock.
    * <p>
-   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
-   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
    * can lead to potential deadlock.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
@@ -927,14 +893,14 @@ public interface RegionObserver extends Coprocessor {
   /**
    * Called before Increment but after acquiring rowlock.
    * <p>
-   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook. 
-   * Row will be locked for longer time. Trying to acquire lock on another row, within this, 
+   * <b>Note:</b> Caution to be taken for not doing any long time operation in this hook.
+   * Row will be locked for longer time. Trying to acquire lock on another row, within this,
    * can lead to potential deadlock.
    * <p>
    * Call CoprocessorEnvironment#bypass to skip default actions
    * <p>
    * Call CoprocessorEnvironment#complete to skip any subsequent chained coprocessors
-   * 
+   *
    * @param c
    *          the environment provided by the region server
    * @param increment
@@ -1227,7 +1193,7 @@ public interface RegionObserver extends Coprocessor {
    * Called before creation of Reader for a store file.
    * Calling {@link org.apache.hadoop.hbase.coprocessor.ObserverContext#bypass()} has no
    * effect in this hook.
-   * 
+   *
    * @param ctx the environment provided by the region server
    * @param fs fileystem to read from
    * @param p path to the file
@@ -1246,7 +1212,7 @@ public interface RegionObserver extends Coprocessor {
 
   /**
    * Called after the creation of Reader for a store file.
-   * 
+   *
    * @param ctx the environment provided by the region server
    * @param fs fileystem to read from
    * @param p path to the file

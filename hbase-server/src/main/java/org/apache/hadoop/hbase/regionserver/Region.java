@@ -381,17 +381,6 @@ public interface Region extends ConfigurationObserver {
   List<Cell> get(Get get, boolean withCoprocessor) throws IOException;
 
   /**
-   * Return all the data for the row that matches <i>row</i> exactly,
-   * or the one that immediately preceeds it, at or immediately before
-   * <i>ts</i>.
-   * @param row
-   * @param family
-   * @return result of the operation
-   * @throws IOException
-   */
-  Result getClosestRowBefore(byte[] row, byte[] family) throws IOException;
-
-  /**
    * Return an iterator that scans over the HRegion, returning the indicated
    * columns and rows specified by the {@link Scan}.
    * <p>

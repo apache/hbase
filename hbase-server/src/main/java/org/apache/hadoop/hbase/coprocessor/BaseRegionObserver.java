@@ -19,14 +19,14 @@ import java.io.IOException;
 import java.util.List;
 import java.util.NavigableSet;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -54,9 +54,9 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
-import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALKey;
 
 import com.google.common.collect.ImmutableList;
 
@@ -120,7 +120,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> e) throws IOException {
   }
-  
+
   @Override
   public void preSplit(ObserverContext<RegionCoprocessorEnvironment> c,
       byte[] splitRow) throws IOException {
@@ -130,22 +130,22 @@ public abstract class BaseRegionObserver implements RegionObserver {
   public void preSplitBeforePONR(ObserverContext<RegionCoprocessorEnvironment> ctx,
       byte[] splitKey, List<Mutation> metaEntries) throws IOException {
   }
-  
+
   @Override
   public void preSplitAfterPONR(
       ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
   }
-  
+
   @Override
   public void preRollBackSplit(ObserverContext<RegionCoprocessorEnvironment> ctx)
       throws IOException {
   }
-  
+
   @Override
   public void postRollBackSplit(
       ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
   }
-  
+
   @Override
   public void postCompleteSplit(
       ObserverContext<RegionCoprocessorEnvironment> ctx) throws IOException {
@@ -219,18 +219,6 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final byte [] row, final byte [] family, final Result result)
-    throws IOException {
-  }
-
-  @Override
-  public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> e,
-      final byte [] row, final byte [] family, final Result result)
-      throws IOException {
-  }
-
-  @Override
   public void preGetOp(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Get get, final List<Cell> results) throws IOException {
   }
@@ -253,12 +241,12 @@ public abstract class BaseRegionObserver implements RegionObserver {
   }
 
   @Override
-  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e, 
+  public void prePut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Put put, final WALEdit edit, final Durability durability) throws IOException {
   }
 
   @Override
-  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e, 
+  public void postPut(final ObserverContext<RegionCoprocessorEnvironment> e,
       final Put put, final WALEdit edit, final Durability durability) throws IOException {
   }
 
@@ -278,7 +266,7 @@ public abstract class BaseRegionObserver implements RegionObserver {
       final Delete delete, final WALEdit edit, final Durability durability)
       throws IOException {
   }
-  
+
   @Override
   public void preBatchMutate(final ObserverContext<RegionCoprocessorEnvironment> c,
       final MiniBatchOperationInProgress<Mutation> miniBatchOp) throws IOException {

@@ -2431,38 +2431,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   //////////////////////////////////////////////////////////////////////////////
 
   @Override
-  public Result getClosestRowBefore(final byte [] row, final byte [] family) throws IOException {
-    if (coprocessorHost != null) {
-      Result result = new Result();
-      if (coprocessorHost.preGetClosestRowBefore(row, family, result)) {
-        return result;
-      }
-    }
-    // look across all the HStores for this region and determine what the
-    // closest key is across all column families, since the data may be sparse
-    checkRow(row, "getClosestRowBefore");
-    startRegionOperation(Operation.GET);
-    this.readRequestsCount.increment();
-    try {
-      Store store = getStore(family);
-      // get the closest key. (HStore.getRowKeyAtOrBefore can return null)
-      Cell key = store.getRowKeyAtOrBefore(row);
-      Result result = null;
-      if (key != null) {
-        Get get = new Get(CellUtil.cloneRow(key));
-        get.addFamily(family);
-        result = get(get);
-      }
-      if (coprocessorHost != null) {
-        coprocessorHost.postGetClosestRowBefore(row, family, result);
-      }
-      return result;
-    } finally {
-      closeRegionOperation(Operation.GET);
-    }
-  }
-
-  @Override
   public RegionScanner getScanner(Scan scan) throws IOException {
    return getScanner(scan, null);
   }

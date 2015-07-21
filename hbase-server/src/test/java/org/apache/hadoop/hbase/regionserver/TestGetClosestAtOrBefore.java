@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -65,6 +64,8 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final byte[] T31 = Bytes.toBytes("031");
   private static final byte[] T35 = Bytes.toBytes("035");
   private static final byte[] T40 = Bytes.toBytes("040");
+
+  private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
 
 
@@ -160,7 +161,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
         tableb, tofindBytes,
       HConstants.NINES, false);
     LOG.info("find=" + new String(metaKey));
-    Result r = mr.getClosestRowBefore(metaKey, HConstants.CATALOG_FAMILY);
+    Result r = UTIL.getClosestRowBefore(mr, metaKey, HConstants.CATALOG_FAMILY);
     if (answer == -1) {
       assertNull(r);
       return null;
@@ -206,38 +207,38 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       p.add(c0, c0, T20);
       region.put(p);
 
-      Result r = region.getClosestRowBefore(T20, c0);
+      Result r = UTIL.getClosestRowBefore(region, T20, c0);
       assertTrue(Bytes.equals(T20, r.getRow()));
 
       Delete d = new Delete(T20);
       d.deleteColumn(c0, c0);
       region.delete(d);
 
-      r = region.getClosestRowBefore(T20, c0);
+      r = UTIL.getClosestRowBefore(region, T20, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       p = new Put(T30);
       p.add(c0, c0, T30);
       region.put(p);
 
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       d = new Delete(T30);
       d.deleteColumn(c0, c0);
       region.delete(d);
 
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       region.flush(true);
 
       // try finding "010" after flush
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       // Put into a different column family.  Should make it so I still get t10
@@ -245,16 +246,16 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       p.add(c1, c1, T20);
       region.put(p);
 
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       region.flush(true);
 
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       // Now try combo of memcache and mapfiles.  Delete the t20 COLUMS[1]
@@ -262,14 +263,14 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       d = new Delete(T20);
       d.deleteColumn(c1, c1);
       region.delete(d);
-      r = region.getClosestRowBefore(T30, c0);
+      r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       // Ask for a value off the end of the file.  Should return t10.
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
       region.flush(true);
-      r = region.getClosestRowBefore(T31, c0);
+      r = UTIL.getClosestRowBefore(region, T31, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       // Ok.  Let the candidate come out of hfile but have delete of
@@ -279,7 +280,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       region.put(p);
       d = new Delete(T10);
       d.deleteColumn(c1, c1);
-      r = region.getClosestRowBefore(T12, c0);
+      r = UTIL.getClosestRowBefore(region, T12, c0);
       assertTrue(Bytes.equals(T11, r.getRow()));
     } finally {
       if (region != null) {
@@ -316,13 +317,13 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       region.put(p);
 
       // try finding "035"
-      Result r = region.getClosestRowBefore(T35, c0);
+      Result r = UTIL.getClosestRowBefore(region, T35, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       region.flush(true);
 
       // try finding "035"
-      r = region.getClosestRowBefore(T35, c0);
+      r = UTIL.getClosestRowBefore(region, T35, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       p = new Put(T20);
@@ -330,13 +331,13 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       region.put(p);
 
       // try finding "035"
-      r = region.getClosestRowBefore(T35, c0);
+      r = UTIL.getClosestRowBefore(region, T35, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       region.flush(true);
 
       // try finding "035"
-      r = region.getClosestRowBefore(T35, c0);
+      r = UTIL.getClosestRowBefore(region, T35, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
     } finally {
       if (region != null) {

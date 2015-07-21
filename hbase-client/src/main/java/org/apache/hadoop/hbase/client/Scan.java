@@ -938,24 +938,6 @@ public class Scan extends Query {
   }
 
   /**
-   * Utility that creates a Scan that will do a  small scan in reverse from passed row
-   * looking for next closest row.
-   * @param row
-   * @param family
-   * @return An instance of Scan primed with passed <code>row</code> and <code>family</code> to
-   * scan in reverse for one row only.
-   */
-  static Scan createGetClosestRowOrBeforeReverseScan(byte[] row) {
-    // Below does not work if you add in family; need to add the family qualifier that is highest
-    // possible family qualifier.  Do we have such a notion?  Would have to be magic.
-    Scan scan = new Scan(row);
-    scan.setSmall(true);
-    scan.setReversed(true);
-    scan.setCaching(1);
-    return scan;
-  }
-
-  /**
    * Enable collection of {@link ScanMetrics}. For advanced users.
    * @param enabled Set to true to enable accumulating scan metrics
    */

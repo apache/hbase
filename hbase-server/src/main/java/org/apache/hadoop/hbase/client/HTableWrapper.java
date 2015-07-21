@@ -115,20 +115,6 @@ public final class HTableWrapper implements Table {
     }
   }
 
-  /**
-   * @deprecated in 0.99 since setting clearBufferOnFail is deprecated.
-   */
-  @Deprecated
-  public Result getRowOrBefore(byte[] row, byte[] family)
-      throws IOException {
-    Scan scan = Scan.createGetClosestRowOrBeforeReverseScan(row);
-    Result startRowResult = null;
-    try (ResultScanner resultScanner = this.table.getScanner(scan)) {
-      startRowResult = resultScanner.next();
-    }
-    return startRowResult;
-  }
-
   public Result get(Get get) throws IOException {
     return table.get(get);
   }

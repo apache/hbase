@@ -143,20 +143,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
    */
   void rollback(final Cell cell);
 
-  /**
-   * Find the key that matches <i>row</i> exactly, or the one that immediately precedes it. WARNING:
-   * Only use this method on a table where writes occur with strictly increasing timestamps. This
-   * method assumes this pattern of writes in order to make it reasonably performant. Also our
-   * search is dependent on the axiom that deletes are for cells that are in the container that
-   * follows whether a memstore snapshot or a storefile, not for the current container: i.e. we'll
-   * see deletes before we come across cells we are to delete. Presumption is that the
-   * memstore#kvset is processed before memstore#snapshot and so on.
-   * @param row The row key of the targeted row.
-   * @return Found Cell or null if none found.
-   * @throws IOException
-   */
-  Cell getRowKeyAtOrBefore(final byte[] row) throws IOException;
-
   FileSystem getFileSystem();
 
   /*

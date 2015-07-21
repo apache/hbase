@@ -661,7 +661,6 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   private enum OpType {
-    GET_CLOSEST_ROW_BEFORE("getClosestRowBefore"),
     GET("get"),
     EXISTS("exists"),
     SCAN("scan"),
@@ -1422,28 +1421,6 @@ public class AccessController extends BaseMasterAndRegionObserver
     requirePermission("compact", getTableName(e.getEnvironment()), null, null, Action.ADMIN,
         Action.CREATE);
     return scanner;
-  }
-
-  @Override
-  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte [] row, final byte [] family, final Result result)
-      throws IOException {
-    assert family != null;
-    RegionCoprocessorEnvironment env = c.getEnvironment();
-    Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, null);
-    User user = getActiveUser();
-    AuthResult authResult = permissionGranted(OpType.GET_CLOSEST_ROW_BEFORE, user, env, families,
-      Action.READ);
-    if (!authResult.isAllowed() && cellFeaturesEnabled && !compatibleEarlyTermination) {
-      authResult.setAllowed(checkCoveringPermission(OpType.GET_CLOSEST_ROW_BEFORE, env, row,
-        families, HConstants.LATEST_TIMESTAMP, Action.READ));
-      authResult.setReason("Covering cell set");
-    }
-    logResult(authResult);
-    if (authorizationEnabled && !authResult.isAllowed()) {
-      throw new AccessDeniedException("Insufficient permissions " +
-        authResult.toContextString());
-    }
   }
 
   private void internalPreRead(final ObserverContext<RegionCoprocessorEnvironment> c,

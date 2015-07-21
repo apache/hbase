@@ -4209,87 +4209,71 @@ public class TestFromClientSide {
         region.flush(true);
 
         Result result;
-        Get get = null;
 
         // Test before first that null is returned
-        get = new Get(beforeFirstRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
-        assertTrue(result.isEmpty());
+        result = getReverseScanResult(table, beforeFirstRow,
+          HConstants.CATALOG_FAMILY);
+        assertNull(result);
 
         // Test at first that first is returned
-        get = new Get(firstRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, firstRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), firstRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
         // Test in between first and second that first is returned
-        get = new Get(beforeSecondRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, beforeSecondRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), firstRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), one));
 
         // Test at second make sure second is returned
-        get = new Get(secondRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, secondRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), secondRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
 
         // Test in second and third, make sure second is returned
-        get = new Get(beforeThirdRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, beforeThirdRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), secondRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), two));
 
         // Test at third make sure third is returned
-        get = new Get(thirdRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, thirdRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), thirdRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
 
         // Test in third and forth, make sure third is returned
-        get = new Get(beforeForthRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, beforeForthRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), thirdRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), three));
 
         // Test at forth make sure forth is returned
-        get = new Get(forthRow);
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, forthRow, HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), forthRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
 
         // Test after forth make sure forth is returned
-        get = new Get(Bytes.add(forthRow, one));
-        get.setClosestRowBefore(true);
-        get.addFamily(HConstants.CATALOG_FAMILY);
-        result = table.get(get);
+        result = getReverseScanResult(table, Bytes.add(forthRow, one), HConstants.CATALOG_FAMILY);
         assertTrue(result.containsColumn(HConstants.CATALOG_FAMILY, null));
         assertTrue(Bytes.equals(result.getRow(), forthRow));
         assertTrue(Bytes.equals(result.getValue(HConstants.CATALOG_FAMILY, null), four));
       }
+    }
+  }
+
+  private Result getReverseScanResult(Table table, byte[] row, byte[] fam) throws IOException {
+    Scan scan = new Scan(row);
+    scan.setSmall(true);
+    scan.setReversed(true);
+    scan.setCaching(1);
+    scan.addFamily(fam);
+    try (ResultScanner scanner = table.getScanner(scan)) {
+      return scanner.next();
     }
   }
 

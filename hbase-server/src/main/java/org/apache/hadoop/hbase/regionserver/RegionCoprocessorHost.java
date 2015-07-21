@@ -783,41 +783,6 @@ public class RegionCoprocessorHost
   // RegionObserver support
 
   /**
-   * @param row the row key
-   * @param family the family
-   * @param result the result set from the region
-   * @return true if default processing should be bypassed
-   * @exception IOException Exception
-   */
-  public boolean preGetClosestRowBefore(final byte[] row, final byte[] family,
-      final Result result) throws IOException {
-    return execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.preGetClosestRowBefore(ctx, row, family, result);
-      }
-    });
-  }
-
-  /**
-   * @param row the row key
-   * @param family the family
-   * @param result the result set from the region
-   * @exception IOException Exception
-   */
-  public void postGetClosestRowBefore(final byte[] row, final byte[] family,
-      final Result result) throws IOException {
-    execOperation(coprocessors.isEmpty() ? null : new RegionOperation() {
-      @Override
-      public void call(RegionObserver oserver, ObserverContext<RegionCoprocessorEnvironment> ctx)
-          throws IOException {
-        oserver.postGetClosestRowBefore(ctx, row, family, result);
-      }
-    });
-  }
-
-  /**
    * @param get the Get request
    * @return true if default processing should be bypassed
    * @exception IOException Exception

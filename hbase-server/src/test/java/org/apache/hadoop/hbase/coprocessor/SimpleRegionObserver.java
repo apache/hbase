@@ -102,8 +102,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPreDeleted = new AtomicInteger(0);
   final AtomicInteger ctPrePrepareDeleteTS = new AtomicInteger(0);
   final AtomicInteger ctPostDeleted = new AtomicInteger(0);
-  final AtomicInteger ctPreGetClosestRowBefore = new AtomicInteger(0);
-  final AtomicInteger ctPostGetClosestRowBefore = new AtomicInteger(0);
   final AtomicInteger ctPreIncrement = new AtomicInteger(0);
   final AtomicInteger ctPreIncrementAfterRowLock = new AtomicInteger(0);
   final AtomicInteger ctPreAppend = new AtomicInteger(0);
@@ -518,32 +516,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   }
 
   @Override
-  public void preGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final Result result)
-      throws IOException {
-    RegionCoprocessorEnvironment e = c.getEnvironment();
-    assertNotNull(e);
-    assertNotNull(e.getRegion());
-    assertNotNull(row);
-    assertNotNull(result);
-    if (ctBeforeDelete.get() > 0) {
-      ctPreGetClosestRowBefore.incrementAndGet();
-    }
-  }
-
-  @Override
-  public void postGetClosestRowBefore(final ObserverContext<RegionCoprocessorEnvironment> c,
-      final byte[] row, final byte[] family, final Result result)
-      throws IOException {
-    RegionCoprocessorEnvironment e = c.getEnvironment();
-    assertNotNull(e);
-    assertNotNull(e.getRegion());
-    assertNotNull(row);
-    assertNotNull(result);
-    ctPostGetClosestRowBefore.incrementAndGet();
-  }
-
-  @Override
   public Result preIncrement(final ObserverContext<RegionCoprocessorEnvironment> c,
       final Increment increment) throws IOException {
     ctPreIncrement.incrementAndGet();
@@ -938,14 +910,6 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   public int getCtPostDeleted() {
     return ctPostDeleted.get();
-  }
-
-  public int getCtPreGetClosestRowBefore() {
-    return ctPreGetClosestRowBefore.get();
-  }
-
-  public int getCtPostGetClosestRowBefore() {
-    return ctPostGetClosestRowBefore.get();
   }
 
   public int getCtPreIncrement() {

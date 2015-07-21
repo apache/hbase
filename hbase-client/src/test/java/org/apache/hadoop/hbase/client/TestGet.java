@@ -168,7 +168,6 @@ public class TestGet {
     get.setReplicaId(2);
     get.setIsolationLevel(IsolationLevel.READ_UNCOMMITTED);
     get.setCheckExistenceOnly(true);
-    get.setClosestRowBefore(true);
     get.setTimeRange(3, 4);
     get.setMaxVersions(11);
     get.setMaxResultsPerColumnFamily(10);
@@ -191,9 +190,7 @@ public class TestGet {
 
     // from Get class
     assertEquals(get.isCheckExistenceOnly(), copyGet.isCheckExistenceOnly());
-    assertEquals(get.isClosestRowBefore(), copyGet.isClosestRowBefore());
     assertTrue(get.getTimeRange().equals(copyGet.getTimeRange()));
-    assertEquals(get.isClosestRowBefore(), copyGet.isClosestRowBefore());
     assertEquals(get.getMaxVersions(), copyGet.getMaxVersions());
     assertEquals(get.getMaxResultsPerColumnFamily(), copyGet.getMaxResultsPerColumnFamily());
     assertEquals(get.getRowOffsetPerColumnFamily(), copyGet.getRowOffsetPerColumnFamily());

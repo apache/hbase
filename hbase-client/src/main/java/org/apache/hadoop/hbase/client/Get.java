@@ -110,7 +110,6 @@ public class Get extends Query
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
     this.checkExistenceOnly = get.isCheckExistenceOnly();
-    this.closestRowBefore = get.isClosestRowBefore();
     Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
     for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
       byte [] fam = entry.getKey();
@@ -137,12 +136,23 @@ public class Get extends Query
     return this;
   }
 
+  /**
+   * This will always return the default value which is false as client cannot set the value to this
+   * property any more.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0
+   */
+  @Deprecated
   public boolean isClosestRowBefore() {
     return closestRowBefore;
   }
 
+  /**
+   * This is not used any more and does nothing. Use reverse scan instead.
+   * @deprecated since 2.0.0 and will be removed in 3.0.0
+   */
+  @Deprecated
   public Get setClosestRowBefore(boolean closestRowBefore) {
-    this.closestRowBefore = closestRowBefore;
+    // do Nothing
     return this;
   }
 

@@ -879,16 +879,6 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       }
     }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
 
-    // preGetClosestRowBefore
-    verifyAllowed(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        ACCESS_CONTROLLER.preGetClosestRowBefore(ObserverContext.createAndPrepare(RCP_ENV, null),
-          TEST_ROW, TEST_FAMILY, new Result());
-        return null;
-      }
-    }, SUPERUSER, USER_ADMIN, USER_RW, USER_RO, USER_OWNER, USER_CREATE, USER_QUAL, USER_NONE);
-
     // preGetOp
     verifyAllowed(new AccessTestAction() {
       @Override

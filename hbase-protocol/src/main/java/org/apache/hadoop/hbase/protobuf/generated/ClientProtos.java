@@ -1926,26 +1926,6 @@ public final class ClientProtos {
      */
     boolean getExistenceOnly();
 
-    // optional bool closest_row_before = 11 [default = false];
-    /**
-     * <code>optional bool closest_row_before = 11 [default = false];</code>
-     *
-     * <pre>
-     * If the row to get doesn't exist, return the
-     * closest row before.
-     * </pre>
-     */
-    boolean hasClosestRowBefore();
-    /**
-     * <code>optional bool closest_row_before = 11 [default = false];</code>
-     *
-     * <pre>
-     * If the row to get doesn't exist, return the
-     * closest row before.
-     * </pre>
-     */
-    boolean getClosestRowBefore();
-
     // optional .hbase.pb.Consistency consistency = 12 [default = STRONG];
     /**
      * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
@@ -1963,8 +1943,7 @@ public final class ClientProtos {
    **
    * The protocol buffer version of Get.
    * Unless existence_only is specified, return all the requested data
-   * for the row that matches exactly, or the one that immediately
-   * precedes it if closest_row_before is specified.
+   * for the row that matches exactly.
    * </pre>
    */
   public static final class Get extends
@@ -2087,18 +2066,13 @@ public final class ClientProtos {
               existenceOnly_ = input.readBool();
               break;
             }
-            case 88: {
-              bitField0_ |= 0x00000100;
-              closestRowBefore_ = input.readBool();
-              break;
-            }
             case 96: {
               int rawValue = input.readEnum();
               org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency value = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.valueOf(rawValue);
               if (value == null) {
                 unknownFields.mergeVarintField(12, rawValue);
               } else {
-                bitField0_ |= 0x00000200;
+                bitField0_ |= 0x00000100;
                 consistency_ = value;
               }
               break;
@@ -2371,32 +2345,6 @@ public final class ClientProtos {
       return existenceOnly_;
     }
 
-    // optional bool closest_row_before = 11 [default = false];
-    public static final int CLOSEST_ROW_BEFORE_FIELD_NUMBER = 11;
-    private boolean closestRowBefore_;
-    /**
-     * <code>optional bool closest_row_before = 11 [default = false];</code>
-     *
-     * <pre>
-     * If the row to get doesn't exist, return the
-     * closest row before.
-     * </pre>
-     */
-    public boolean hasClosestRowBefore() {
-      return ((bitField0_ & 0x00000100) == 0x00000100);
-    }
-    /**
-     * <code>optional bool closest_row_before = 11 [default = false];</code>
-     *
-     * <pre>
-     * If the row to get doesn't exist, return the
-     * closest row before.
-     * </pre>
-     */
-    public boolean getClosestRowBefore() {
-      return closestRowBefore_;
-    }
-
     // optional .hbase.pb.Consistency consistency = 12 [default = STRONG];
     public static final int CONSISTENCY_FIELD_NUMBER = 12;
     private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_;
@@ -2404,7 +2352,7 @@ public final class ClientProtos {
      * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
      */
     public boolean hasConsistency() {
-      return ((bitField0_ & 0x00000200) == 0x00000200);
+      return ((bitField0_ & 0x00000100) == 0x00000100);
     }
     /**
      * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
@@ -2424,7 +2372,6 @@ public final class ClientProtos {
       storeLimit_ = 0;
       storeOffset_ = 0;
       existenceOnly_ = false;
-      closestRowBefore_ = false;
       consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
     }
     private byte memoizedIsInitialized = -1;
@@ -2492,9 +2439,6 @@ public final class ClientProtos {
         output.writeBool(10, existenceOnly_);
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        output.writeBool(11, closestRowBefore_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
         output.writeEnum(12, consistency_.getNumber());
       }
       getUnknownFields().writeTo(output);
@@ -2547,10 +2491,6 @@ public final class ClientProtos {
           .computeBoolSize(10, existenceOnly_);
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeBoolSize(11, closestRowBefore_);
-      }
-      if (((bitField0_ & 0x00000200) == 0x00000200)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(12, consistency_.getNumber());
       }
@@ -2621,11 +2561,6 @@ public final class ClientProtos {
         result = result && (getExistenceOnly()
             == other.getExistenceOnly());
       }
-      result = result && (hasClosestRowBefore() == other.hasClosestRowBefore());
-      if (hasClosestRowBefore()) {
-        result = result && (getClosestRowBefore()
-            == other.getClosestRowBefore());
-      }
       result = result && (hasConsistency() == other.hasConsistency());
       if (hasConsistency()) {
         result = result &&
@@ -2683,10 +2618,6 @@ public final class ClientProtos {
       if (hasExistenceOnly()) {
         hash = (37 * hash) + EXISTENCE_ONLY_FIELD_NUMBER;
         hash = (53 * hash) + hashBoolean(getExistenceOnly());
-      }
-      if (hasClosestRowBefore()) {
-        hash = (37 * hash) + CLOSEST_ROW_BEFORE_FIELD_NUMBER;
-        hash = (53 * hash) + hashBoolean(getClosestRowBefore());
       }
       if (hasConsistency()) {
         hash = (37 * hash) + CONSISTENCY_FIELD_NUMBER;
@@ -2770,8 +2701,7 @@ public final class ClientProtos {
      **
      * The protocol buffer version of Get.
      * Unless existence_only is specified, return all the requested data
-     * for the row that matches exactly, or the one that immediately
-     * precedes it if closest_row_before is specified.
+     * for the row that matches exactly.
      * </pre>
      */
     public static final class Builder extends
@@ -2849,10 +2779,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000100);
         existenceOnly_ = false;
         bitField0_ = (bitField0_ & ~0x00000200);
-        closestRowBefore_ = false;
-        bitField0_ = (bitField0_ & ~0x00000400);
         consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
-        bitField0_ = (bitField0_ & ~0x00000800);
+        bitField0_ = (bitField0_ & ~0x00000400);
         return this;
       }
 
@@ -2941,10 +2869,6 @@ public final class ClientProtos {
         result.existenceOnly_ = existenceOnly_;
         if (((from_bitField0_ & 0x00000400) == 0x00000400)) {
           to_bitField0_ |= 0x00000100;
-        }
-        result.closestRowBefore_ = closestRowBefore_;
-        if (((from_bitField0_ & 0x00000800) == 0x00000800)) {
-          to_bitField0_ |= 0x00000200;
         }
         result.consistency_ = consistency_;
         result.bitField0_ = to_bitField0_;
@@ -3038,9 +2962,6 @@ public final class ClientProtos {
         }
         if (other.hasExistenceOnly()) {
           setExistenceOnly(other.getExistenceOnly());
-        }
-        if (other.hasClosestRowBefore()) {
-          setClosestRowBefore(other.getClosestRowBefore());
         }
         if (other.hasConsistency()) {
           setConsistency(other.getConsistency());
@@ -4029,66 +3950,13 @@ public final class ClientProtos {
         return this;
       }
 
-      // optional bool closest_row_before = 11 [default = false];
-      private boolean closestRowBefore_ ;
-      /**
-       * <code>optional bool closest_row_before = 11 [default = false];</code>
-       *
-       * <pre>
-       * If the row to get doesn't exist, return the
-       * closest row before.
-       * </pre>
-       */
-      public boolean hasClosestRowBefore() {
-        return ((bitField0_ & 0x00000400) == 0x00000400);
-      }
-      /**
-       * <code>optional bool closest_row_before = 11 [default = false];</code>
-       *
-       * <pre>
-       * If the row to get doesn't exist, return the
-       * closest row before.
-       * </pre>
-       */
-      public boolean getClosestRowBefore() {
-        return closestRowBefore_;
-      }
-      /**
-       * <code>optional bool closest_row_before = 11 [default = false];</code>
-       *
-       * <pre>
-       * If the row to get doesn't exist, return the
-       * closest row before.
-       * </pre>
-       */
-      public Builder setClosestRowBefore(boolean value) {
-        bitField0_ |= 0x00000400;
-        closestRowBefore_ = value;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional bool closest_row_before = 11 [default = false];</code>
-       *
-       * <pre>
-       * If the row to get doesn't exist, return the
-       * closest row before.
-       * </pre>
-       */
-      public Builder clearClosestRowBefore() {
-        bitField0_ = (bitField0_ & ~0x00000400);
-        closestRowBefore_ = false;
-        onChanged();
-        return this;
-      }
-
       // optional .hbase.pb.Consistency consistency = 12 [default = STRONG];
       private org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
       /**
        * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
        */
       public boolean hasConsistency() {
-        return ((bitField0_ & 0x00000800) == 0x00000800);
+        return ((bitField0_ & 0x00000400) == 0x00000400);
       }
       /**
        * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
@@ -4103,7 +3971,7 @@ public final class ClientProtos {
         if (value == null) {
           throw new NullPointerException();
         }
-        bitField0_ |= 0x00000800;
+        bitField0_ |= 0x00000400;
         consistency_ = value;
         onChanged();
         return this;
@@ -4112,7 +3980,7 @@ public final class ClientProtos {
        * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
        */
       public Builder clearConsistency() {
-        bitField0_ = (bitField0_ & ~0x00000800);
+        bitField0_ = (bitField0_ & ~0x00000400);
         consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
         onChanged();
         return this;
@@ -33253,135 +33121,134 @@ public final class ClientProtos {
       "o\032\017MapReduce.proto\"\037\n\016Authorizations\022\r\n\005" +
       "label\030\001 \003(\t\"$\n\016CellVisibility\022\022\n\nexpress" +
       "ion\030\001 \002(\t\"+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tq" +
-      "ualifier\030\002 \003(\014\"\201\003\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
+      "ualifier\030\002 \003(\014\"\336\002\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
       "olumn\030\002 \003(\0132\020.hbase.pb.Column\022*\n\tattribu" +
       "te\030\003 \003(\0132\027.hbase.pb.NameBytesPair\022 \n\006fil" +
       "ter\030\004 \001(\0132\020.hbase.pb.Filter\022\'\n\ntime_rang" +
       "e\030\005 \001(\0132\023.hbase.pb.TimeRange\022\027\n\014max_vers",
       "ions\030\006 \001(\r:\0011\022\032\n\014cache_blocks\030\007 \001(\010:\004tru" +
       "e\022\023\n\013store_limit\030\010 \001(\r\022\024\n\014store_offset\030\t" +
-      " \001(\r\022\035\n\016existence_only\030\n \001(\010:\005false\022!\n\022c" +
-      "losest_row_before\030\013 \001(\010:\005false\0222\n\013consis" +
-      "tency\030\014 \001(\0162\025.hbase.pb.Consistency:\006STRO" +
-      "NG\"\203\001\n\006Result\022\034\n\004cell\030\001 \003(\0132\016.hbase.pb.C" +
-      "ell\022\035\n\025associated_cell_count\030\002 \001(\005\022\016\n\006ex" +
-      "ists\030\003 \001(\010\022\024\n\005stale\030\004 \001(\010:\005false\022\026\n\007part" +
-      "ial\030\005 \001(\010:\005false\"S\n\nGetRequest\022)\n\006region" +
-      "\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\032\n\003get",
-      "\030\002 \002(\0132\r.hbase.pb.Get\"/\n\013GetResponse\022 \n\006" +
-      "result\030\001 \001(\0132\020.hbase.pb.Result\"\222\001\n\tCondi" +
-      "tion\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021\n\tqua" +
-      "lifier\030\003 \002(\014\022+\n\014compare_type\030\004 \002(\0162\025.hba" +
-      "se.pb.CompareType\022(\n\ncomparator\030\005 \002(\0132\024." +
-      "hbase.pb.Comparator\"\364\006\n\rMutationProto\022\013\n" +
-      "\003row\030\001 \001(\014\0229\n\013mutate_type\030\002 \001(\0162$.hbase." +
-      "pb.MutationProto.MutationType\0229\n\014column_" +
-      "value\030\003 \003(\0132#.hbase.pb.MutationProto.Col" +
-      "umnValue\022\021\n\ttimestamp\030\004 \001(\004\022*\n\tattribute",
-      "\030\005 \003(\0132\027.hbase.pb.NameBytesPair\022C\n\ndurab" +
-      "ility\030\006 \001(\0162\".hbase.pb.MutationProto.Dur" +
-      "ability:\013USE_DEFAULT\022\'\n\ntime_range\030\007 \001(\013" +
-      "2\023.hbase.pb.TimeRange\022\035\n\025associated_cell" +
-      "_count\030\010 \001(\005\022\r\n\005nonce\030\t \001(\004\032\371\001\n\013ColumnVa" +
-      "lue\022\016\n\006family\030\001 \002(\014\022K\n\017qualifier_value\030\002" +
-      " \003(\01322.hbase.pb.MutationProto.ColumnValu" +
-      "e.QualifierValue\032\214\001\n\016QualifierValue\022\021\n\tq" +
-      "ualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\ttimesta" +
-      "mp\030\003 \001(\004\0227\n\013delete_type\030\004 \001(\0162\".hbase.pb",
-      ".MutationProto.DeleteType\022\014\n\004tags\030\005 \001(\014\"" +
-      "W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010SKIP_W" +
-      "AL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSY" +
-      "NC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND\020\000\022\r\n\t" +
-      "INCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n\nDele" +
-      "teType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030DELETE" +
-      "_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAMILY\020\002\022" +
-      "\031\n\025DELETE_FAMILY_VERSION\020\003\"\242\001\n\rMutateReq" +
-      "uest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSp" +
-      "ecifier\022)\n\010mutation\030\002 \002(\0132\027.hbase.pb.Mut",
-      "ationProto\022&\n\tcondition\030\003 \001(\0132\023.hbase.pb" +
-      ".Condition\022\023\n\013nonce_group\030\004 \001(\004\"E\n\016Mutat" +
-      "eResponse\022 \n\006result\030\001 \001(\0132\020.hbase.pb.Res" +
-      "ult\022\021\n\tprocessed\030\002 \001(\010\"\346\003\n\004Scan\022 \n\006colum" +
-      "n\030\001 \003(\0132\020.hbase.pb.Column\022*\n\tattribute\030\002" +
-      " \003(\0132\027.hbase.pb.NameBytesPair\022\021\n\tstart_r" +
-      "ow\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022 \n\006filter\030\005 \001" +
-      "(\0132\020.hbase.pb.Filter\022\'\n\ntime_range\030\006 \001(\013" +
-      "2\023.hbase.pb.TimeRange\022\027\n\014max_versions\030\007 " +
-      "\001(\r:\0011\022\032\n\014cache_blocks\030\010 \001(\010:\004true\022\022\n\nba",
-      "tch_size\030\t \001(\r\022\027\n\017max_result_size\030\n \001(\004\022" +
-      "\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_offset\030\014 \001" +
-      "(\r\022&\n\036load_column_families_on_demand\030\r \001" +
-      "(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010:\005fal" +
-      "se\0222\n\013consistency\030\020 \001(\0162\025.hbase.pb.Consi" +
-      "stency:\006STRONG\022\017\n\007caching\030\021 \001(\r\"\220\002\n\013Scan" +
-      "Request\022)\n\006region\030\001 \001(\0132\031.hbase.pb.Regio" +
-      "nSpecifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb.Scan" +
-      "\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004" +
-      " \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_call",
-      "_seq\030\006 \001(\004\022\037\n\027client_handles_partials\030\007 " +
-      "\001(\010\022!\n\031client_handles_heartbeats\030\010 \001(\010\022\032" +
-      "\n\022track_scan_metrics\030\t \001(\010\"\232\002\n\014ScanRespo" +
-      "nse\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner" +
-      "_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004" +
-      " \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Result\022" +
-      "\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag_per_resul" +
-      "t\030\007 \003(\010\022\036\n\026more_results_in_region\030\010 \001(\010\022" +
-      "\031\n\021heartbeat_message\030\t \001(\010\022+\n\014scan_metri" +
-      "cs\030\n \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n\024Bulk",
-      "LoadHFileRequest\022)\n\006region\030\001 \002(\0132\031.hbase" +
-      ".pb.RegionSpecifier\022>\n\013family_path\030\002 \003(\013" +
-      "2).hbase.pb.BulkLoadHFileRequest.FamilyP" +
-      "ath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPat" +
-      "h\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkL" +
-      "oadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026Copr" +
-      "ocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014servi" +
-      "ce_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007re" +
-      "quest\030\004 \002(\014\"B\n\030CoprocessorServiceResult\022" +
-      "&\n\005value\030\001 \001(\0132\027.hbase.pb.NameBytesPair\"",
-      "v\n\031CoprocessorServiceRequest\022)\n\006region\030\001" +
-      " \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\004call\030" +
-      "\002 \002(\0132 .hbase.pb.CoprocessorServiceCall\"" +
-      "o\n\032CoprocessorServiceResponse\022)\n\006region\030" +
-      "\001 \002(\0132\031.hbase.pb.RegionSpecifier\022&\n\005valu" +
-      "e\030\002 \002(\0132\027.hbase.pb.NameBytesPair\"\226\001\n\006Act" +
-      "ion\022\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(\0132\027.h" +
-      "base.pb.MutationProto\022\032\n\003get\030\003 \001(\0132\r.hba" +
-      "se.pb.Get\0226\n\014service_call\030\004 \001(\0132 .hbase." +
-      "pb.CoprocessorServiceCall\"k\n\014RegionActio",
-      "n\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpeci" +
-      "fier\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(\0132\020.h" +
-      "base.pb.Action\"D\n\017RegionLoadStats\022\027\n\014mem" +
-      "storeLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(" +
-      "\005:\0010\"\332\001\n\021ResultOrException\022\r\n\005index\030\001 \001(" +
-      "\r\022 \n\006result\030\002 \001(\0132\020.hbase.pb.Result\022*\n\te" +
-      "xception\030\003 \001(\0132\027.hbase.pb.NameBytesPair\022" +
-      ":\n\016service_result\030\004 \001(\0132\".hbase.pb.Copro" +
-      "cessorServiceResult\022,\n\tloadStats\030\005 \001(\0132\031" +
-      ".hbase.pb.RegionLoadStats\"x\n\022RegionActio",
-      "nResult\0226\n\021resultOrException\030\001 \003(\0132\033.hba" +
-      "se.pb.ResultOrException\022*\n\texception\030\002 \001" +
-      "(\0132\027.hbase.pb.NameBytesPair\"x\n\014MultiRequ" +
-      "est\022,\n\014regionAction\030\001 \003(\0132\026.hbase.pb.Reg" +
-      "ionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tconditi" +
-      "on\030\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMultiRe" +
-      "sponse\0228\n\022regionActionResult\030\001 \003(\0132\034.hba" +
-      "se.pb.RegionActionResult\022\021\n\tprocessed\030\002 " +
-      "\001(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELI" +
-      "NE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.hbase.pb",
-      ".GetRequest\032\025.hbase.pb.GetResponse\022;\n\006Mu" +
-      "tate\022\027.hbase.pb.MutateRequest\032\030.hbase.pb" +
-      ".MutateResponse\0225\n\004Scan\022\025.hbase.pb.ScanR" +
-      "equest\032\026.hbase.pb.ScanResponse\022P\n\rBulkLo" +
-      "adHFile\022\036.hbase.pb.BulkLoadHFileRequest\032" +
-      "\037.hbase.pb.BulkLoadHFileResponse\022X\n\013Exec" +
-      "Service\022#.hbase.pb.CoprocessorServiceReq" +
-      "uest\032$.hbase.pb.CoprocessorServiceRespon" +
-      "se\022d\n\027ExecRegionServerService\022#.hbase.pb" +
-      ".CoprocessorServiceRequest\032$.hbase.pb.Co",
-      "processorServiceResponse\0228\n\005Multi\022\026.hbas" +
-      "e.pb.MultiRequest\032\027.hbase.pb.MultiRespon" +
-      "seBB\n*org.apache.hadoop.hbase.protobuf.g" +
-      "eneratedB\014ClientProtosH\001\210\001\001\240\001\001"
+      " \001(\r\022\035\n\016existence_only\030\n \001(\010:\005false\0222\n\013c" +
+      "onsistency\030\014 \001(\0162\025.hbase.pb.Consistency:" +
+      "\006STRONG\"\203\001\n\006Result\022\034\n\004cell\030\001 \003(\0132\016.hbase" +
+      ".pb.Cell\022\035\n\025associated_cell_count\030\002 \001(\005\022" +
+      "\016\n\006exists\030\003 \001(\010\022\024\n\005stale\030\004 \001(\010:\005false\022\026\n" +
+      "\007partial\030\005 \001(\010:\005false\"S\n\nGetRequest\022)\n\006r" +
+      "egion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\032" +
+      "\n\003get\030\002 \002(\0132\r.hbase.pb.Get\"/\n\013GetRespons",
+      "e\022 \n\006result\030\001 \001(\0132\020.hbase.pb.Result\"\222\001\n\t" +
+      "Condition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021" +
+      "\n\tqualifier\030\003 \002(\014\022+\n\014compare_type\030\004 \002(\0162" +
+      "\025.hbase.pb.CompareType\022(\n\ncomparator\030\005 \002" +
+      "(\0132\024.hbase.pb.Comparator\"\364\006\n\rMutationPro" +
+      "to\022\013\n\003row\030\001 \001(\014\0229\n\013mutate_type\030\002 \001(\0162$.h" +
+      "base.pb.MutationProto.MutationType\0229\n\014co" +
+      "lumn_value\030\003 \003(\0132#.hbase.pb.MutationProt" +
+      "o.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022*\n\tattr" +
+      "ibute\030\005 \003(\0132\027.hbase.pb.NameBytesPair\022C\n\n",
+      "durability\030\006 \001(\0162\".hbase.pb.MutationProt" +
+      "o.Durability:\013USE_DEFAULT\022\'\n\ntime_range\030" +
+      "\007 \001(\0132\023.hbase.pb.TimeRange\022\035\n\025associated" +
+      "_cell_count\030\010 \001(\005\022\r\n\005nonce\030\t \001(\004\032\371\001\n\013Col" +
+      "umnValue\022\016\n\006family\030\001 \002(\014\022K\n\017qualifier_va" +
+      "lue\030\002 \003(\01322.hbase.pb.MutationProto.Colum" +
+      "nValue.QualifierValue\032\214\001\n\016QualifierValue" +
+      "\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\tti" +
+      "mestamp\030\003 \001(\004\0227\n\013delete_type\030\004 \001(\0162\".hba" +
+      "se.pb.MutationProto.DeleteType\022\014\n\004tags\030\005",
+      " \001(\014\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010S" +
+      "KIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r" +
+      "\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND\020" +
+      "\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n" +
+      "\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030D" +
+      "ELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAMI" +
+      "LY\020\002\022\031\n\025DELETE_FAMILY_VERSION\020\003\"\242\001\n\rMuta" +
+      "teRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Reg" +
+      "ionSpecifier\022)\n\010mutation\030\002 \002(\0132\027.hbase.p" +
+      "b.MutationProto\022&\n\tcondition\030\003 \001(\0132\023.hba",
+      "se.pb.Condition\022\023\n\013nonce_group\030\004 \001(\004\"E\n\016" +
+      "MutateResponse\022 \n\006result\030\001 \001(\0132\020.hbase.p" +
+      "b.Result\022\021\n\tprocessed\030\002 \001(\010\"\346\003\n\004Scan\022 \n\006" +
+      "column\030\001 \003(\0132\020.hbase.pb.Column\022*\n\tattrib" +
+      "ute\030\002 \003(\0132\027.hbase.pb.NameBytesPair\022\021\n\tst" +
+      "art_row\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022 \n\006filte" +
+      "r\030\005 \001(\0132\020.hbase.pb.Filter\022\'\n\ntime_range\030" +
+      "\006 \001(\0132\023.hbase.pb.TimeRange\022\027\n\014max_versio" +
+      "ns\030\007 \001(\r:\0011\022\032\n\014cache_blocks\030\010 \001(\010:\004true\022" +
+      "\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_result_size\030\n",
+      " \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_offse" +
+      "t\030\014 \001(\r\022&\n\036load_column_families_on_deman" +
+      "d\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010" +
+      ":\005false\0222\n\013consistency\030\020 \001(\0162\025.hbase.pb." +
+      "Consistency:\006STRONG\022\017\n\007caching\030\021 \001(\r\"\220\002\n" +
+      "\013ScanRequest\022)\n\006region\030\001 \001(\0132\031.hbase.pb." +
+      "RegionSpecifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb" +
+      ".Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_r" +
+      "ows\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext" +
+      "_call_seq\030\006 \001(\004\022\037\n\027client_handles_partia",
+      "ls\030\007 \001(\010\022!\n\031client_handles_heartbeats\030\010 " +
+      "\001(\010\022\032\n\022track_scan_metrics\030\t \001(\010\"\232\002\n\014Scan" +
+      "Response\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nsc" +
+      "anner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003" +
+      "ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Re" +
+      "sult\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag_per_" +
+      "result\030\007 \003(\010\022\036\n\026more_results_in_region\030\010" +
+      " \001(\010\022\031\n\021heartbeat_message\030\t \001(\010\022+\n\014scan_" +
+      "metrics\030\n \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n" +
+      "\024BulkLoadHFileRequest\022)\n\006region\030\001 \002(\0132\031.",
+      "hbase.pb.RegionSpecifier\022>\n\013family_path\030" +
+      "\002 \003(\0132).hbase.pb.BulkLoadHFileRequest.Fa" +
+      "milyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFami" +
+      "lyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025" +
+      "BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n" +
+      "\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014" +
+      "service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022" +
+      "\017\n\007request\030\004 \002(\014\"B\n\030CoprocessorServiceRe" +
+      "sult\022&\n\005value\030\001 \001(\0132\027.hbase.pb.NameBytes" +
+      "Pair\"v\n\031CoprocessorServiceRequest\022)\n\006reg",
+      "ion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\004" +
+      "call\030\002 \002(\0132 .hbase.pb.CoprocessorService" +
+      "Call\"o\n\032CoprocessorServiceResponse\022)\n\006re" +
+      "gion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022&\n" +
+      "\005value\030\002 \002(\0132\027.hbase.pb.NameBytesPair\"\226\001" +
+      "\n\006Action\022\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(" +
+      "\0132\027.hbase.pb.MutationProto\022\032\n\003get\030\003 \001(\0132" +
+      "\r.hbase.pb.Get\0226\n\014service_call\030\004 \001(\0132 .h" +
+      "base.pb.CoprocessorServiceCall\"k\n\014Region" +
+      "Action\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Region",
+      "Specifier\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(" +
+      "\0132\020.hbase.pb.Action\"D\n\017RegionLoadStats\022\027" +
+      "\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy" +
+      "\030\002 \001(\005:\0010\"\332\001\n\021ResultOrException\022\r\n\005index" +
+      "\030\001 \001(\r\022 \n\006result\030\002 \001(\0132\020.hbase.pb.Result" +
+      "\022*\n\texception\030\003 \001(\0132\027.hbase.pb.NameBytes" +
+      "Pair\022:\n\016service_result\030\004 \001(\0132\".hbase.pb." +
+      "CoprocessorServiceResult\022,\n\tloadStats\030\005 " +
+      "\001(\0132\031.hbase.pb.RegionLoadStats\"x\n\022Region" +
+      "ActionResult\0226\n\021resultOrException\030\001 \003(\0132",
+      "\033.hbase.pb.ResultOrException\022*\n\texceptio" +
+      "n\030\002 \001(\0132\027.hbase.pb.NameBytesPair\"x\n\014Mult" +
+      "iRequest\022,\n\014regionAction\030\001 \003(\0132\026.hbase.p" +
+      "b.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tco" +
+      "ndition\030\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMu" +
+      "ltiResponse\0228\n\022regionActionResult\030\001 \003(\0132" +
+      "\034.hbase.pb.RegionActionResult\022\021\n\tprocess" +
+      "ed\030\002 \001(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010T" +
+      "IMELINE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.hba" +
+      "se.pb.GetRequest\032\025.hbase.pb.GetResponse\022",
+      ";\n\006Mutate\022\027.hbase.pb.MutateRequest\032\030.hba" +
+      "se.pb.MutateResponse\0225\n\004Scan\022\025.hbase.pb." +
+      "ScanRequest\032\026.hbase.pb.ScanResponse\022P\n\rB" +
+      "ulkLoadHFile\022\036.hbase.pb.BulkLoadHFileReq" +
+      "uest\032\037.hbase.pb.BulkLoadHFileResponse\022X\n" +
+      "\013ExecService\022#.hbase.pb.CoprocessorServi" +
+      "ceRequest\032$.hbase.pb.CoprocessorServiceR" +
+      "esponse\022d\n\027ExecRegionServerService\022#.hba" +
+      "se.pb.CoprocessorServiceRequest\032$.hbase." +
+      "pb.CoprocessorServiceResponse\0228\n\005Multi\022\026",
+      ".hbase.pb.MultiRequest\032\027.hbase.pb.MultiR" +
+      "esponseBB\n*org.apache.hadoop.hbase.proto" +
+      "buf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -33411,7 +33278,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Get_descriptor,
-              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "ClosestRowBefore", "Consistency", });
+              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "Consistency", });
           internal_static_hbase_pb_Result_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_hbase_pb_Result_fieldAccessorTable = new

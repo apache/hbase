@@ -31,15 +31,14 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.ByteRange;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -385,85 +384,6 @@ public class DefaultMemStore implements MemStore {
   }
 
   /**
-   * @param state column/delete tracking state
-   */
-  @Override
-  public void getRowKeyAtOrBefore(final GetClosestRowBeforeTracker state) {
-    getRowKeyAtOrBefore(cellSet, state);
-    getRowKeyAtOrBefore(snapshot, state);
-  }
-
-  /*
-   * @param set
-   * @param state Accumulates deletes and candidates.
-   */
-  private void getRowKeyAtOrBefore(final NavigableSet<Cell> set,
-      final GetClosestRowBeforeTracker state) {
-    if (set.isEmpty()) {
-      return;
-    }
-    if (!walkForwardInSingleRow(set, state.getTargetKey(), state)) {
-      // Found nothing in row.  Try backing up.
-      getRowKeyBefore(set, state);
-    }
-  }
-
-  /*
-   * Walk forward in a row from <code>firstOnRow</code>.  Presumption is that
-   * we have been passed the first possible key on a row.  As we walk forward
-   * we accumulate deletes until we hit a candidate on the row at which point
-   * we return.
-   * @param set
-   * @param firstOnRow First possible key on this row.
-   * @param state
-   * @return True if we found a candidate walking this row.
-   */
-  private boolean walkForwardInSingleRow(final SortedSet<Cell> set,
-      final Cell firstOnRow, final GetClosestRowBeforeTracker state) {
-    boolean foundCandidate = false;
-    SortedSet<Cell> tail = set.tailSet(firstOnRow);
-    if (tail.isEmpty()) return foundCandidate;
-    for (Iterator<Cell> i = tail.iterator(); i.hasNext();) {
-      Cell kv = i.next();
-      // Did we go beyond the target row? If so break.
-      if (state.isTooFar(kv, firstOnRow)) break;
-      if (state.isExpired(kv)) {
-        i.remove();
-        continue;
-      }
-      // If we added something, this row is a contender. break.
-      if (state.handle(kv)) {
-        foundCandidate = true;
-        break;
-      }
-    }
-    return foundCandidate;
-  }
-
-  /*
-   * Walk backwards through the passed set a row at a time until we run out of
-   * set or until we get a candidate.
-   * @param set
-   * @param state
-   */
-  private void getRowKeyBefore(NavigableSet<Cell> set,
-      final GetClosestRowBeforeTracker state) {
-    Cell firstOnRow = state.getTargetKey();
-    for (Member p = memberOfPreviousRow(set, state, firstOnRow);
-        p != null; p = memberOfPreviousRow(p.set, state, firstOnRow)) {
-      // Make sure we don't fall out of our table.
-      if (!state.isTargetTable(p.cell)) break;
-      // Stop looking if we've exited the better candidate range.
-      if (!state.isBetterCandidate(p.cell)) break;
-      // Make into firstOnRow
-      firstOnRow = new KeyValue(p.cell.getRowArray(), p.cell.getRowOffset(), p.cell.getRowLength(),
-          HConstants.LATEST_TIMESTAMP);
-      // If we find something, break;
-      if (walkForwardInSingleRow(p.set, firstOnRow, state)) break;
-    }
-  }
-
-  /**
    * Only used by tests. TODO: Remove
    *
    * Given the specs of a column, update it, first by inserting a new record,
@@ -620,42 +540,6 @@ public class DefaultMemStore implements MemStore {
       }
     }
     return addedSize;
-  }
-
-  /*
-   * Immutable data structure to hold member found in set and the set it was
-   * found in. Include set because it is carrying context.
-   */
-  private static class Member {
-    final Cell cell;
-    final NavigableSet<Cell> set;
-    Member(final NavigableSet<Cell> s, final Cell kv) {
-      this.cell = kv;
-      this.set = s;
-    }
-  }
-
-  /*
-   * @param set Set to walk back in.  Pass a first in row or we'll return
-   * same row (loop).
-   * @param state Utility and context.
-   * @param firstOnRow First item on the row after the one we want to find a
-   * member in.
-   * @return Null or member of row previous to <code>firstOnRow</code>
-   */
-  private Member memberOfPreviousRow(NavigableSet<Cell> set,
-      final GetClosestRowBeforeTracker state, final Cell firstOnRow) {
-    NavigableSet<Cell> head = set.headSet(firstOnRow, false);
-    if (head.isEmpty()) return null;
-    for (Iterator<Cell> i = head.descendingIterator(); i.hasNext();) {
-      Cell found = i.next();
-      if (state.isExpired(found)) {
-        i.remove();
-        continue;
-      }
-      return new Member(head, found);
-    }
-    return null;
   }
 
   /**

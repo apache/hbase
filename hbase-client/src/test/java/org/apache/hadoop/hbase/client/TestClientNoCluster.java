@@ -514,14 +514,6 @@ public class TestClientNoCluster extends Configured implements Tool {
     ClientProtos.Result.Builder resultBuilder = ClientProtos.Result.newBuilder();
     ByteString row = request.getGet().getRow();
     Pair<HRegionInfo, ServerName> p = meta.get(row.toByteArray());
-    if (p == null) {
-      if (request.getGet().getClosestRowBefore()) {
-        byte [] bytes = row.toByteArray();
-        SortedMap<byte [], Pair<HRegionInfo, ServerName>> head =
-          bytes != null? meta.headMap(bytes): meta;
-        p = head == null? null: head.get(head.lastKey());
-      }
-    }
     if (p != null) {
       resultBuilder.addCell(getRegionInfo(row, p.getFirst()));
       resultBuilder.addCell(getServer(row, p.getSecond()));

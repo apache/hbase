@@ -907,22 +907,6 @@ service Hbase {
   ) throws (1:IOError io, 2:IllegalArgument ia)
 
   /**
-   * Get the row just before the specified one.
-   *
-   * @return value for specified row/column
-   */
-  list<TCell> getRowOrBefore(
-    /** name of table */
-    1:Text tableName,
-
-    /** row key */
-    2:Text row,
-
-    /** column name */
-    3:Text family
-  ) throws (1:IOError io)
-
-  /**
    * Get the regininfo for the specified row. It scans
    * the metatable to find region's start and end keys.
    *

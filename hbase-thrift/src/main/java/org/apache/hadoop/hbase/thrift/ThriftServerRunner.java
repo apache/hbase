@@ -1610,25 +1610,12 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    @Deprecated
-    @Override
-    public List<TCell> getRowOrBefore(ByteBuffer tableName, ByteBuffer row,
-        ByteBuffer family) throws IOError {
-      try {
-        Result result = getRowOrBefore(getBytes(tableName), getBytes(row), getBytes(family));
-        return ThriftUtilities.cellFromHBase(result.rawCells());
-      } catch (IOException e) {
-        LOG.warn(e.getMessage(), e);
-        throw new IOError(Throwables.getStackTraceAsString(e));
-      }
-    }
-
     @Override
     public TRegionInfo getRegionInfo(ByteBuffer searchRow) throws IOError {
       try {
         byte[] row = getBytes(searchRow);
-        Result startRowResult =
-            getRowOrBefore(TableName.META_TABLE_NAME.getName(), row, HConstants.CATALOG_FAMILY);
+        Result startRowResult = getReverseScanResult(TableName.META_TABLE_NAME.getName(), row,
+          HConstants.CATALOG_FAMILY);
 
         if (startRowResult == null) {
           throw new IOException("Cannot find row in "+ TableName.META_TABLE_NAME+", row="
@@ -1662,7 +1649,8 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    private Result getRowOrBefore(byte[] tableName, byte[] row, byte[] family) throws IOException {
+    private Result getReverseScanResult(byte[] tableName, byte[] row, byte[] family)
+        throws IOException {
       Scan scan = new Scan(row);
       scan.setReversed(true);
       scan.addFamily(family);

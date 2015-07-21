@@ -89,20 +89,20 @@ public class TestMinVersions {
       // now make sure that getClosestBefore(...) get can
       // rows that would be expired without minVersion.
       // also make sure it gets the latest version
-      Result r = region.getClosestRowBefore(T1, c0);
+      Result r = hbu.getClosestRowBefore(region, T1, c0);
       checkResult(r, c0, T4);
 
-      r = region.getClosestRowBefore(T2, c0);
+      r = hbu.getClosestRowBefore(region, T2, c0);
       checkResult(r, c0, T4);
 
       // now flush/compact
       region.flush(true);
       region.compact(true);
 
-      r = region.getClosestRowBefore(T1, c0);
+      r = hbu.getClosestRowBefore(region, T1, c0);
       checkResult(r, c0, T4);
 
-      r = region.getClosestRowBefore(T2, c0);
+      r = hbu.getClosestRowBefore(region, T2, c0);
       checkResult(r, c0, T4);
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);

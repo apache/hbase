@@ -64,7 +64,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.WarmupRegionReques
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.BulkLoadHFileRequest.FamilyPath;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Column;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Condition;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.GetRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
@@ -122,35 +121,6 @@ public final class RequestConverter {
   }
 
 // Start utilities for Client
-
-/**
-   * Create a new protocol buffer GetRequest to get a row, all columns in a family.
-   * If there is no such row, return the closest row before it.
-   *
-   * @param regionName the name of the region to get
-   * @param row the row to get
-   * @param family the column family to get
-   * should return the immediate row before
-   * @return a protocol buffer GetReuqest
-   */
-  public static GetRequest buildGetRowOrBeforeRequest(
-      final byte[] regionName, final byte[] row, final byte[] family) {
-    GetRequest.Builder builder = GetRequest.newBuilder();
-    RegionSpecifier region = buildRegionSpecifier(
-      RegionSpecifierType.REGION_NAME, regionName);
-    builder.setRegion(region);
-
-    Column.Builder columnBuilder = Column.newBuilder();
-    columnBuilder.setFamily(ByteStringer.wrap(family));
-    ClientProtos.Get.Builder getBuilder =
-      ClientProtos.Get.newBuilder();
-    getBuilder.setRow(ByteStringer.wrap(row));
-    getBuilder.addColumn(columnBuilder.build());
-    getBuilder.setClosestRowBefore(true);
-    builder.setGet(getBuilder.build());
-    return builder.build();
-  }
-
 
   /**
    * Create a protocol buffer GetRequest for a client Get

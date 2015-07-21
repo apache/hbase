@@ -675,10 +675,6 @@ public class RemoteHTable implements Table {
     return true;
   }
 
-  public Result getRowOrBefore(byte[] row, byte[] family) throws IOException {
-    throw new IOException("getRowOrBefore not supported");
-  }
-
   @Override
   public boolean checkAndPut(byte[] row, byte[] family, byte[] qualifier,
       byte[] value, Put put) throws IOException {

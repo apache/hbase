@@ -1933,32 +1933,21 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
 
       quota = getQuotaManager().checkQuota(region, OperationQuota.OperationType.GET);
 
-      if (get.hasClosestRowBefore() && get.getClosestRowBefore()) {
-        if (get.getColumnCount() != 1) {
-          throw new DoNotRetryIOException(
-            "get ClosestRowBefore supports one and only one family now, not "
-              + get.getColumnCount() + " families");
-        }
-        byte[] row = get.getRow().toByteArray();
-        byte[] family = get.getColumn(0).getFamily().toByteArray();
-        r = region.getClosestRowBefore(row, family);
-      } else {
-        Get clientGet = ProtobufUtil.toGet(get);
-        if (get.getExistenceOnly() && region.getCoprocessorHost() != null) {
-          existence = region.getCoprocessorHost().preExists(clientGet);
-        }
-        if (existence == null) {
-          r = region.get(clientGet);
-          if (get.getExistenceOnly()) {
-            boolean exists = r.getExists();
-            if (region.getCoprocessorHost() != null) {
-              exists = region.getCoprocessorHost().postExists(clientGet, exists);
-            }
-            existence = exists;
+      Get clientGet = ProtobufUtil.toGet(get);
+      if (get.getExistenceOnly() && region.getCoprocessorHost() != null) {
+        existence = region.getCoprocessorHost().preExists(clientGet);
+      }
+      if (existence == null) {
+        r = region.get(clientGet);
+        if (get.getExistenceOnly()) {
+          boolean exists = r.getExists();
+          if (region.getCoprocessorHost() != null) {
+            exists = region.getCoprocessorHost().postExists(clientGet, exists);
           }
+          existence = exists;
         }
       }
-      if (existence != null){
+      if (existence != null) {
         ClientProtos.Result pbr =
             ProtobufUtil.toResult(existence, region.getRegionInfo().getReplicaId() != 0);
         builder.setResult(pbr);
@@ -1974,8 +1963,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new ServiceException(ie);
     } finally {
       if (regionServer.metricsRegionServer != null) {
-        regionServer.metricsRegionServer.updateGet(
-          EnvironmentEdgeManager.currentTime() - before);
+        regionServer.metricsRegionServer.updateGet(EnvironmentEdgeManager.currentTime() - before);
       }
       if (quota != null) {
         quota.close();

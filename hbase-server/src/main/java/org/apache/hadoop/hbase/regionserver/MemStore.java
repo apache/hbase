@@ -93,13 +93,6 @@ public interface MemStore extends HeapSize {
   long delete(final Cell deleteCell);
 
   /**
-   * Find the key that matches <i>row</i> exactly, or the one that immediately precedes it. The
-   * target row key is set in state.
-   * @param state column/delete tracking state
-   */
-  void getRowKeyAtOrBefore(final GetClosestRowBeforeTracker state);
-
-  /**
    * Given the specs of a column, update it, first by inserting a new record,
    * then removing the old one.  Since there is only 1 KeyValue involved, the memstoreTS
    * will be set to 0, thus ensuring that they instantly appear to anyone. The underlying

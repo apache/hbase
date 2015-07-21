@@ -64,8 +64,7 @@ enum Consistency {
 /**
  * The protocol buffer version of Get.
  * Unless existence_only is specified, return all the requested data
- * for the row that matches exactly, or the one that immediately
- * precedes it if closest_row_before is specified.
+ * for the row that matches exactly.
  */
 message Get {
   required bytes row = 1;
@@ -81,10 +80,6 @@ message Get {
   // The result isn't asked for, just check for
   // the existence.
   optional bool existence_only = 10 [default = false];
-
-  // If the row to get doesn't exist, return the
-  // closest row before.
-  optional bool closest_row_before = 11 [default = false];
 
   optional Consistency consistency = 12 [default = STRONG];
 }
