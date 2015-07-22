@@ -659,7 +659,7 @@ public class ReplicationSource extends Thread
    * written to when this method was called
    */
   protected void shipEdits(boolean currentWALisBeingWrittenTo, List<WAL.Entry> entries) {
-    int sleepMultiplier = 1;
+    int sleepMultiplier = 0;
     if (entries.isEmpty()) {
       LOG.warn("Was given 0 edits to ship");
       return;
@@ -696,6 +696,8 @@ public class ReplicationSource extends Thread
 
         if (!replicated) {
           continue;
+        } else {
+          sleepMultiplier = Math.max(sleepMultiplier-1, 0);
         }
 
         if (this.lastLoggedPosition != this.repLogReader.getPosition()) {
