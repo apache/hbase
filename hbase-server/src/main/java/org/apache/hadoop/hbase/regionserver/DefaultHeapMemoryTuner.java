@@ -48,20 +48,24 @@ import org.apache.hadoop.hbase.util.RollingStatCalculator;
  * same amount. If none of them is sufficient we do statistical analysis on number of cache misses
  * and flushes to determine tuner direction. Based on these statistics we decide the tuner
  * direction. If we are not confident about which step direction to take we do nothing and wait for
- * next iteration. On expectation we will be tuning for at least 22% tuner calls. The number of
+ * next iteration. On expectation we will be tuning for at least 10% tuner calls. The number of
  * past periods to consider for statistics calculation can be specified in config by
  * <i>hbase.regionserver.heapmemory.autotuner.lookup.periods</i>. Also these many initial calls to
  * tuner will be ignored (cache is warming up and we leave the system to reach steady state).
  * After the tuner takes a step, in next call we insure that last call was indeed helpful and did
  * not do us any harm. If not then we revert the previous step. The step size is dynamic and it
- * changes based on current and previous tuning direction. When last tuner step was NEUTRAL
- * and current tuning step is not NEUTRAL then we assume we are restarting the tuning process and
- * step size is changed to maximum allowed size which can be specified  in config by
- * <i>hbase.regionserver.heapmemory.autotuner.step.max</i>. If we are reverting the previous step
- * then we decrease step size to half. This decrease is similar to binary search where we try to
- * reach the most desired value. The minimum step size can be specified  in config by
- * <i>hbase.regionserver.heapmemory.autotuner.step.min</i>. In other cases we leave step size
- * unchanged.
+ * changes based on current and past few tuning directions and their step sizes. We maintain a
+ * parameter <i>decayingAvgTunerStepSize</i> which is sum of past tuner steps with
+ * sign(positive for increase in memstore and negative for increase in block cache). But rather
+ * than simple sum it is calculated by giving more priority to the recent tuning steps.
+ * When last few tuner steps were NETURAL then we assume we are restarting the tuning process and
+ * step size is updated to maximum allowed size which can be specified  in config by
+ * <i>hbase.regionserver.heapmemory.autotuner.step.max</i>. If in a particular tuning operation
+ * the step direction is opposite to what indicated by <i>decayingTunerStepSizeSum</i>
+ * we decrease the step size by half. Step size does not change in other tuning operations.
+ * When step size gets below a certain threshold then the following tuner operations are
+ * considered to be neutral. The minimum step size can be specified  in config by
+ * <i>hbase.regionserver.heapmemory.autotuner.step.min</i>.
  */
 @InterfaceAudience.Private
 class DefaultHeapMemoryTuner implements HeapMemoryTuner {
@@ -74,9 +78,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   public static final String NUM_PERIODS_TO_IGNORE =
       "hbase.regionserver.heapmemory.autotuner.ignored.periods";
   // Maximum step size that the tuner can take
-  public static final float DEFAULT_MAX_STEP_VALUE = 0.08f; // 8%
+  public static final float DEFAULT_MAX_STEP_VALUE = 0.04f; // 4%
   // Minimum step size that the tuner can take
-  public static final float DEFAULT_MIN_STEP_VALUE = 0.005f; // 0.5%
+  public static final float DEFAULT_MIN_STEP_VALUE = 0.00125f; // 0.125%
   // If current block cache size or memstore size in use is below this level relative to memory
   // provided to it then corresponding component will be considered to have sufficient memory
   public static final float DEFAULT_SUFFICIENT_MEMORY_LEVEL_VALUE = 0.5f; // 50%
@@ -85,6 +89,9 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   public static final int DEFAULT_LOOKUP_PERIODS = 60;
   public static final int DEFAULT_NUM_PERIODS_IGNORED = 60;
   private static final TunerResult NO_OP_TUNER_RESULT = new TunerResult(false);
+  // If deviation of tuner step size gets below this value then it means past few periods were
+  // NEUTRAL(given that last tuner period was also NEUTRAL).
+  private static final double TUNER_STEP_EPS = 1e-6;
 
   private Log LOG = LogFactory.getLog(DefaultHeapMemoryTuner.class);
   private TunerResult TUNER_RESULT = new TunerResult(true);
@@ -106,9 +113,14 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
   private RollingStatCalculator rollingStatsForCacheMisses;
   private RollingStatCalculator rollingStatsForFlushes;
   private RollingStatCalculator rollingStatsForEvictions;
+  private RollingStatCalculator rollingStatsForTunerSteps;
   // Set step size to max value for tuning, this step size will adjust dynamically while tuning
   private float step = DEFAULT_MAX_STEP_VALUE;
   private StepDirection prevTuneDirection = StepDirection.NEUTRAL;
+  //positive means memstore's size was increased
+  //It is not just arithmetic sum of past tuner periods. More priority is given to recent
+  //tuning steps.
+  private double decayingTunerStepSizeSum = 0;
 
   @Override
   public TunerResult tune(TunerContext context) {
@@ -124,6 +136,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     if (ignoreInitialPeriods < numPeriodsToIgnore) {
       // Ignoring the first few tuner periods
       ignoreInitialPeriods++;
+      rollingStatsForTunerSteps.insertDataValue(0);
       return NO_OP_TUNER_RESULT;
     }
     String tunerLog = "";
@@ -190,30 +203,33 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
       }
       // If we are not reverting. We try to tune memory sizes by looking at cache misses / flushes.
       if (!isReverting){
-        // mean +- deviation/2 is considered to be normal
+        // mean +- deviation*0.8 is considered to be normal
         // below it its consider low and above it is considered high.
         // We can safely assume that the number cache misses, flushes are normally distributed over
         // past periods and hence on all the above mentioned classes (normal, high and low)
-        // are equally likely with 33% probability each. Hence there is very good probability that
-        // we will not always fall in default step.
+        // are likely to occur with probability 56%, 22%, 22% respectively. Hence there is at
+        // least ~10% probability that we will not fall in NEUTRAL step.
+        // This optimization solution is feedback based and we revert when we
+        // dont find our steps helpful. Hence we want to do tuning only when we have clear
+        // indications because too many unnecessary tuning may affect the performance of cluster.
         if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
-            rollingStatsForCacheMisses.getDeviation()/2.00 &&
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
             (double)totalFlushCount < rollingStatsForFlushes.getMean() -
-            rollingStatsForFlushes.getDeviation()/2.00) {
+            rollingStatsForFlushes.getDeviation()*0.80) {
           // Everything is fine no tuning required
           newTuneDirection = StepDirection.NEUTRAL;
         } else if ((double)cacheMissCount > rollingStatsForCacheMisses.getMean() +
-            rollingStatsForCacheMisses.getDeviation()/2.00 &&
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
             (double)totalFlushCount < rollingStatsForFlushes.getMean() -
-            rollingStatsForFlushes.getDeviation()/2.00) {
+            rollingStatsForFlushes.getDeviation()*0.80) {
           // more misses , increasing cache size
           newTuneDirection = StepDirection.INCREASE_BLOCK_CACHE_SIZE;
           tunerLog +=
               "Increasing block cache size as observed increase in number of cache misses.";
         } else if ((double)cacheMissCount < rollingStatsForCacheMisses.getMean() -
-            rollingStatsForCacheMisses.getDeviation()/2.00 &&
+            rollingStatsForCacheMisses.getDeviation()*0.80 &&
             (double)totalFlushCount > rollingStatsForFlushes.getMean() +
-            rollingStatsForFlushes.getDeviation()/2.00) {
+            rollingStatsForFlushes.getDeviation()*0.80) {
           // more flushes , increasing memstore size
           newTuneDirection = StepDirection.INCREASE_MEMSTORE_SIZE;
           tunerLog += "Increasing memstore size as observed increase in number of flushes.";
@@ -228,32 +244,48 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
         }
       }
     }
-    // Adjusting step size for tuning to get to steady state.
+    // Adjusting step size for tuning to get to steady state or restart from steady state.
     // Even if the step size was 4% and 32 GB memory size, we will be shifting 1 GB back and forth
-    // per tuner operation and it can affect the performance of cluster
-    if (prevTuneDirection == StepDirection.NEUTRAL && newTuneDirection != StepDirection.NEUTRAL) {
-      // Restarting the tuning from steady state.
+    // per tuner operation and it can affect the performance of cluster so we keep on decreasing
+    // step size until everything settles.
+    if (prevTuneDirection == StepDirection.NEUTRAL
+        && newTuneDirection != StepDirection.NEUTRAL
+        && rollingStatsForTunerSteps.getDeviation() < TUNER_STEP_EPS) {
+      // Restarting the tuning from steady state and setting step size to maximum.
+      // The deviation cannot be that low if last period was neutral and some recent periods were
+      // not neutral.
       step = maximumStepSize;
-    } else if (prevTuneDirection != newTuneDirection) {
-      // Decrease the step size to reach the steady state. Similar procedure as binary search.
+    } else if ((newTuneDirection == StepDirection.INCREASE_MEMSTORE_SIZE
+        && decayingTunerStepSizeSum < 0) ||
+        (newTuneDirection == StepDirection.INCREASE_BLOCK_CACHE_SIZE
+        && decayingTunerStepSizeSum > 0)) {
+      // Current step is opposite of past tuner actions so decrease the step size to reach steady
+      // state.
       step = step/2.00f;
-      if (step < minimumStepSize) {
-        // Ensure step size does not gets too small.
-        step = minimumStepSize;
-      }
+    }
+    if (step < minimumStepSize) {
+      // If step size is too small then we do nothing.
+      step = 0.0f;
+      newTuneDirection = StepDirection.NEUTRAL;
     }
     // Increase / decrease the memstore / block cahce sizes depending on new tuner step.
     switch (newTuneDirection) {
     case INCREASE_BLOCK_CACHE_SIZE:
         newBlockCacheSize = context.getCurBlockCacheSize() + step;
         newMemstoreSize = context.getCurMemStoreSize() - step;
+        rollingStatsForTunerSteps.insertDataValue(-(int)(step*100000));
+        decayingTunerStepSizeSum = (decayingTunerStepSizeSum - step)/2.00f;
         break;
     case INCREASE_MEMSTORE_SIZE:
         newBlockCacheSize = context.getCurBlockCacheSize() - step;
         newMemstoreSize = context.getCurMemStoreSize() + step;
+        rollingStatsForTunerSteps.insertDataValue((int)(step*100000));
+        decayingTunerStepSizeSum = (decayingTunerStepSizeSum + step)/2.00f;
         break;
     default:
         prevTuneDirection = StepDirection.NEUTRAL;
+        rollingStatsForTunerSteps.insertDataValue(0);
+        decayingTunerStepSizeSum = (decayingTunerStepSizeSum)/2.00f;
         return NO_OP_TUNER_RESULT;
     }
     // Check we are within max/min bounds.
@@ -303,6 +335,7 @@ class DefaultHeapMemoryTuner implements HeapMemoryTuner {
     this.rollingStatsForCacheMisses = new RollingStatCalculator(this.tunerLookupPeriods);
     this.rollingStatsForFlushes = new RollingStatCalculator(this.tunerLookupPeriods);
     this.rollingStatsForEvictions = new RollingStatCalculator(this.tunerLookupPeriods);
+    this.rollingStatsForTunerSteps = new RollingStatCalculator(this.tunerLookupPeriods);
   }
 
   private enum StepDirection{
