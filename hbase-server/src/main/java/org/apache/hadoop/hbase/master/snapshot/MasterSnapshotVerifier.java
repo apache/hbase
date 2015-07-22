@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
@@ -168,10 +169,17 @@ public final class MasterSnapshotVerifier {
     }
 
     String errorMsg = "";
-    if (regionManifests.size() != regions.size()) {
+    boolean hasMobStore = false;
+    // the mob region is a dummy region, it's not a real region in HBase.
+    // the mob region has a special name, it could be found by the region name.
+    if (regionManifests.get(MobUtils.getMobRegionInfo(tableName).getEncodedName()) != null) {
+      hasMobStore = true;
+    }
+    int realRegionCount = hasMobStore ? regionManifests.size() - 1 : regionManifests.size();
+    if (realRegionCount != regions.size()) {
       errorMsg = "Regions moved during the snapshot '" +
                    ClientSnapshotDescriptionUtils.toString(snapshot) + "'. expected=" +
-                   regions.size() + " snapshotted=" + regionManifests.size() + ".";
+                   regions.size() + " snapshotted=" + realRegionCount + ".";
       LOG.error(errorMsg);
     }
 

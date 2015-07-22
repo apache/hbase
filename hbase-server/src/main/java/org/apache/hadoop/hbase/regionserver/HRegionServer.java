@@ -103,6 +103,7 @@ import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager;
+import org.apache.hadoop.hbase.mob.MobCacheConfig;
 import org.apache.hadoop.hbase.procedure.RegionServerProcedureManagerHost;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
@@ -387,6 +388,8 @@ public class HRegionServer extends HasThread implements
 
   // Cache configuration and block cache reference
   protected CacheConfig cacheConfig;
+  // Cache configuration for mob
+  final MobCacheConfig mobCacheConfig;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -553,6 +556,8 @@ public class HRegionServer extends HasThread implements
     login(userProvider, hostName);
 
     regionServerAccounting = new RegionServerAccounting();
+    cacheConfig = new CacheConfig(conf);
+    mobCacheConfig = new MobCacheConfig(conf);
     uncaughtExceptionHandler = new UncaughtExceptionHandler() {
       @Override
       public void uncaughtException(Thread t, Throwable e) {
@@ -984,6 +989,7 @@ public class HRegionServer extends HasThread implements
     if (cacheConfig != null && cacheConfig.isBlockCacheEnabled()) {
       cacheConfig.getBlockCache().shutdown();
     }
+    mobCacheConfig.getMobFileCache().shutdown();
 
     if (movedRegionsCleaner != null) {
       movedRegionsCleaner.stop("Region Server stopping");

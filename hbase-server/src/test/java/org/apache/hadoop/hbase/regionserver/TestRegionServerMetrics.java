@@ -422,4 +422,68 @@ public class TestRegionServerMetrics {
       admin.deleteTable(tableName);
     }
   }
+
+  @Test
+  public void testMobMetrics() throws IOException, InterruptedException {
+    String tableNameString = "testMobMetrics";
+    TableName tableName = TableName.valueOf(tableNameString);
+    byte[] cf = Bytes.toBytes("d");
+    byte[] qualifier = Bytes.toBytes("qual");
+    byte[] val = Bytes.toBytes("mobdata");
+    int numHfiles = conf.getInt("hbase.hstore.compactionThreshold", 3) - 1;
+    HTableDescriptor htd = new HTableDescriptor(tableName);
+    HColumnDescriptor hcd = new HColumnDescriptor(cf);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(0);
+    htd.addFamily(hcd);
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    HTable t = TEST_UTIL.createTable(htd, new byte[0][0], conf);
+    Region region = rs.getOnlineRegions(tableName).get(0);
+    t.setAutoFlush(true, true);
+    for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
+      Put p = new Put(Bytes.toBytes(insertCount));
+      p.add(cf, qualifier, val);
+      t.put(p);
+      admin.flush(tableName);
+    }
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("mobFlushCount", numHfiles, serverSource);
+    Scan scan = new Scan(Bytes.toBytes(0), Bytes.toBytes(2));
+    ResultScanner scanner = t.getScanner(scan);
+    scanner.next(100);
+    numScanNext++;  // this is an ugly construct
+    scanner.close();
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("mobScanCellsCount", 2, serverSource);
+    region.getTableDesc().getFamily(cf).setMobThreshold(100);
+    ((HRegion)region).initialize();
+    region.compact(true);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    metricsHelper.assertCounter("cellsCountCompactedFromMob", numHfiles,
+        serverSource);
+    metricsHelper.assertCounter("cellsCountCompactedToMob", 0, serverSource);
+    scanner = t.getScanner(scan);
+    scanner.next(100);
+    numScanNext++;  // this is an ugly construct
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    // metrics are reset by the region initialization
+    metricsHelper.assertCounter("mobScanCellsCount", 0, serverSource);
+    for (int insertCount = numHfiles;
+        insertCount < 2 * numHfiles - 1; insertCount++) {
+      Put p = new Put(Bytes.toBytes(insertCount));
+      p.add(cf, qualifier, val);
+      t.put(p);
+      admin.flush(tableName);
+    }
+    region.getTableDesc().getFamily(cf).setMobThreshold(0);
+    ((HRegion)region).initialize();
+    region.compact(true);
+    metricsRegionServer.getRegionServerWrapper().forceRecompute();
+    // metrics are reset by the region initialization
+    metricsHelper.assertCounter("cellsCountCompactedFromMob", 0, serverSource);
+    metricsHelper.assertCounter("cellsCountCompactedToMob", 2 * numHfiles - 1,
+        serverSource);
+    t.close();
+    admin.close();
+  }
 }

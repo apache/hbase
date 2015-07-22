@@ -39,11 +39,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSVisitor;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
  * Utility methods for interacting with the snapshot referenced files.
@@ -296,7 +298,15 @@ public final class SnapshotReferenceUtil {
     }
 
     // check if the linked file exists (in the archive, or in the table dir)
-    HFileLink link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
+    HFileLink link = null;
+    if (MobUtils.isMobRegionInfo(regionInfo)) {
+      // for mob region
+      link = HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(conf),
+          HFileArchiveUtil.getArchivePath(conf), linkPath);
+    } else {
+      // not mob region
+      link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
+    }
     try {
       FileStatus fstat = link.getFileStatus(fs);
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {

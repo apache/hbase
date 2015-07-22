@@ -1553,4 +1553,121 @@ possible configurations would overwhelm and obscure the important.
     0.x Abort only when this percent of handlers have died;
     1 Abort only all of the handers have died.</description>
   </property>
+  <!-- Mob properties. -->
+  <property>
+    <name>hbase.mob.file.cache.size</name>
+    <value>1000</value>
+    <description>
+      Number of opened file handlers to cache.
+      A larger value will benefit reads by providing more file handlers per mob
+      file cache and would reduce frequent file opening and closing.
+      However, if this is set too high, this could lead to a "too many opened file handlers"
+      The default value is 1000.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.cache.evict.period</name>
+    <value>3600</value>
+    <description>
+      The amount of time in seconds before the mob cache evicts cached mob files.
+      The default value is 3600 seconds.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.cache.evict.remain.ratio</name>
+    <value>0.5f</value>
+    <description>
+      The ratio (between 0.0 and 1.0) of files that remains cached after an eviction
+      is triggered when the number of cached mob files exceeds the hbase.mob.file.cache.size.
+      The default value is 0.5f.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.sweep.tool.compaction.ratio</name>
+    <value>0.5f</value>
+    <description>
+      If there're too many cells deleted in a mob file, it's regarded
+      as an invalid file and needs to be merged.
+      If existingCellsSize/mobFileSize is less than ratio, it's regarded
+      as an invalid file. The default value is 0.5f.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.sweep.tool.compaction.mergeable.size</name>
+    <value>134217728</value>
+    <description>
+      If the size of a mob file is less than this value, it's regarded as a small
+      file and needs to be merged. The default value is 128MB.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.sweep.tool.compaction.memstore.flush.size</name>
+    <value>134217728</value>
+    <description>
+      The flush size for the memstore used by sweep job. Each sweep reducer owns such a memstore.
+      The default value is 128MB.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.mob.ttl.cleaner.period</name>
+    <value>86400</value>
+    <description>
+      The period that ExpiredMobFileCleanerChore runs. The unit is second.
+      The default value is one day.
+      The MOB file name uses only the date part of the file creation time in it. We use this
+      time for deciding TTL expiry of the files. So the removal of TTL expired files might be
+      delayed. The max delay might be 24 hrs.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.compaction.mergeable.threshold</name>
+    <value>201326592</value>
+    <description>
+      If the size of a mob file is less than this value, it's regarded as a small
+      file and needs to be merged in mob compaction. The default value is 192MB.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.delfile.max.count</name>
+    <value>3</value>
+    <description>
+      The max number of del files that is allowed in the mob compaction.
+      In the mob compaction, when the number of existing del files is larger than
+      this value, they are merged until number of del files is not larger this value.
+      The default value is 3.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.compaction.batch.size</name>
+    <value>100</value>
+    <description>
+      The max number of the mob files that is allowed in a batch of the mob compaction.
+      The mob compaction merges the small mob files to bigger ones. If the number of the
+      small files is very large, it could lead to a "too many opened file handlers" in the merge.
+      And the merge has to be split into batches. This value limits the number of mob files
+      that are selected in a batch of the mob compaction. The default value is 100.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.compaction.chore.period</name>
+    <value>604800</value>
+    <description>
+      The period that MobCompactionChore runs. The unit is second.
+      The default value is one week.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.compactor.class</name>
+    <value>org.apache.hadoop.hbase.mob.compactions.PartitionedMobCompactor</value>
+    <description>
+      Implementation of mob compactor, the default one is PartitionedMobCompactor.
+    </description>
+  </property>
+  <property>
+    <name>hbase.mob.compaction.threads.max</name>
+    <value>1</value>
+    <description>
+      The max number of threads used in MobCompactor.
+    </description>
+  </property>
 </configuration>

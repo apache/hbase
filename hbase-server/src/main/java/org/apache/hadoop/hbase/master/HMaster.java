@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -105,6 +106,7 @@ import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerChore;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizerFactory;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -112,6 +114,7 @@ import org.apache.hadoop.hbase.procedure.MasterProcedureManagerHost;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionServerInfo;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
@@ -129,6 +132,7 @@ import org.apache.hadoop.hbase.util.EncryptionTest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
+import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
@@ -281,6 +285,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
   private HFileCleaner hfileCleaner;
+  private ExpiredMobFileCleanerChore expiredMobFileCleanerChore;
+  private MobCompactionChore mobCompactChore;
+  private MasterMobCompactionThread mobCompactThread;
+  // used to synchronize the mobCompactionStates
+  private final IdLock mobCompactionLock = new IdLock();
+  // save the information of mob compactions in tables.
+  // the key is table name, the value is the number of compactions in that table.
+  private Map<TableName, AtomicInteger> mobCompactionStates = Maps.newConcurrentMap();
 
   MasterCoprocessorHost cpHost;
 
@@ -794,6 +806,21 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     zooKeeper.checkAndSetZNodeAcls();
 
     status.setStatus("Calling postStartMaster coprocessors");
+
+    this.expiredMobFileCleanerChore = new ExpiredMobFileCleanerChore(this);
+    getChoreService().scheduleChore(expiredMobFileCleanerChore);
+
+    int mobCompactionPeriod = conf.getInt(MobConstants.MOB_COMPACTION_CHORE_PERIOD,
+      MobConstants.DEFAULT_MOB_COMPACTION_CHORE_PERIOD);
+    if (mobCompactionPeriod > 0) {
+      this.mobCompactChore = new MobCompactionChore(this, mobCompactionPeriod);
+      getChoreService().scheduleChore(mobCompactChore);
+    } else {
+      LOG
+        .info("The period is " + mobCompactionPeriod + " seconds, MobCompactionChore is disabled");
+    }
+    this.mobCompactThread = new MasterMobCompactionThread(this);
+
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
       try {
@@ -1127,6 +1154,12 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   private void stopChores() {
+    if (this.expiredMobFileCleanerChore != null) {
+      this.expiredMobFileCleanerChore.cancel(true);
+    }
+    if (this.mobCompactChore != null) {
+      this.mobCompactChore.cancel(true);
+    }
     if (this.balancerChore != null) {
       this.balancerChore.cancel(true);
     }
@@ -1141,6 +1174,9 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     }
     if (this.clusterStatusPublisherChore != null){
       clusterStatusPublisherChore.cancel(true);
+    }
+    if (this.mobCompactThread != null) {
+      this.mobCompactThread.close();
     }
   }
 
@@ -2536,6 +2572,71 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public long getLastMajorCompactionTimestampForRegion(byte[] regionName) throws IOException {
     return getClusterStatus().getLastMajorCompactionTsForRegion(regionName);
+  }
+
+  /**
+   * Gets the mob file compaction state for a specific table.
+   * Whether all the mob files are selected is known during the compaction execution, but
+   * the statistic is done just before compaction starts, it is hard to know the compaction
+   * type at that time, so the rough statistics are chosen for the mob file compaction. Only two
+   * compaction states are available, CompactionState.MAJOR_AND_MINOR and CompactionState.NONE.
+   * @param tableName The current table name.
+   * @return If a given table is in mob file compaction now.
+   */
+  public CompactionState getMobCompactionState(TableName tableName) {
+    AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
+    if (compactionsCount != null && compactionsCount.get() != 0) {
+      return CompactionState.MAJOR_AND_MINOR;
+    }
+    return CompactionState.NONE;
+  }
+
+  public void reportMobCompactionStart(TableName tableName) throws IOException {
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = mobCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
+      if (compactionsCount == null) {
+        compactionsCount = new AtomicInteger(0);
+        mobCompactionStates.put(tableName, compactionsCount);
+      }
+      compactionsCount.incrementAndGet();
+    } finally {
+      if (lockEntry != null) {
+        mobCompactionLock.releaseLockEntry(lockEntry);
+      }
+    }
+  }
+
+  public void reportMobCompactionEnd(TableName tableName) throws IOException {
+    IdLock.Entry lockEntry = null;
+    try {
+      lockEntry = mobCompactionLock.getLockEntry(tableName.hashCode());
+      AtomicInteger compactionsCount = mobCompactionStates.get(tableName);
+      if (compactionsCount != null) {
+        int count = compactionsCount.decrementAndGet();
+        // remove the entry if the count is 0.
+        if (count == 0) {
+          mobCompactionStates.remove(tableName);
+        }
+      }
+    } finally {
+      if (lockEntry != null) {
+        mobCompactionLock.releaseLockEntry(lockEntry);
+      }
+    }
+  }
+
+  /**
+   * Requests mob compaction.
+   * @param tableName The table the compact.
+   * @param columns The compacted columns.
+   * @param allFiles Whether add all mob files into the compaction.
+   */
+  public void requestMobCompaction(TableName tableName,
+    List<HColumnDescriptor> columns, boolean allFiles) throws IOException {
+    mobCompactThread.requestMobCompaction(conf, fs, tableName, columns,
+      tableLockManager, allFiles);
   }
 
   /**

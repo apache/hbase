@@ -64,6 +64,14 @@ public class DefaultStoreEngine extends StoreEngine<
   @Override
   protected void createComponents(
       Configuration conf, Store store, CellComparator kvComparator) throws IOException {
+    createCompactor(conf, store);
+    createCompactionPolicy(conf, store);
+    createStoreFlusher(conf, store);
+    storeFileManager = new DefaultStoreFileManager(kvComparator, conf, compactionPolicy.getConf());
+
+  }
+
+  protected void createCompactor(Configuration conf, Store store) throws IOException {
     String className = conf.get(DEFAULT_COMPACTOR_CLASS_KEY, DEFAULT_COMPACTOR_CLASS.getName());
     try {
       compactor = ReflectionUtils.instantiateWithCustomCtor(className,
@@ -71,7 +79,10 @@ public class DefaultStoreEngine extends StoreEngine<
     } catch (Exception e) {
       throw new IOException("Unable to load configured compactor '" + className + "'", e);
     }
-    className = conf.get(
+  }
+
+  protected void createCompactionPolicy(Configuration conf, Store store) throws IOException {
+    String className = conf.get(
         DEFAULT_COMPACTION_POLICY_CLASS_KEY, DEFAULT_COMPACTION_POLICY_CLASS.getName());
     try {
       compactionPolicy = ReflectionUtils.instantiateWithCustomCtor(className,
@@ -80,8 +91,10 @@ public class DefaultStoreEngine extends StoreEngine<
     } catch (Exception e) {
       throw new IOException("Unable to load configured compaction policy '" + className + "'", e);
     }
-    storeFileManager = new DefaultStoreFileManager(kvComparator, conf, compactionPolicy.getConf());
-    className = conf.get(
+  }
+
+  protected void createStoreFlusher(Configuration conf, Store store) throws IOException {
+    String className = conf.get(
         DEFAULT_STORE_FLUSHER_CLASS_KEY, DEFAULT_STORE_FLUSHER_CLASS.getName());
     try {
       storeFlusher = ReflectionUtils.instantiateWithCustomCtor(className,
@@ -90,7 +103,6 @@ public class DefaultStoreEngine extends StoreEngine<
       throw new IOException("Unable to load configured store flusher '" + className + "'", e);
     }
   }
-
 
   @Override
   public CompactionContext createCompaction() {

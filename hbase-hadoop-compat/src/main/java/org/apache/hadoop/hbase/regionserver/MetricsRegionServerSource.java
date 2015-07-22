@@ -267,6 +267,38 @@ public interface MetricsRegionServerSource extends BaseSource {
   String MAJOR_COMPACTED_CELLS_SIZE = "majorCompactedCellsSize";
   String MAJOR_COMPACTED_CELLS_SIZE_DESC =
       "The total amount of data processed during major compactions, in bytes";
+  String CELLS_COUNT_COMPACTED_TO_MOB = "cellsCountCompactedToMob";
+  String CELLS_COUNT_COMPACTED_TO_MOB_DESC =
+      "The number of cells moved to mob during compaction";
+  String CELLS_COUNT_COMPACTED_FROM_MOB = "cellsCountCompactedFromMob";
+  String CELLS_COUNT_COMPACTED_FROM_MOB_DESC =
+      "The number of cells moved from mob during compaction";
+  String CELLS_SIZE_COMPACTED_TO_MOB = "cellsSizeCompactedToMob";
+  String CELLS_SIZE_COMPACTED_TO_MOB_DESC =
+      "The total amount of cells move to mob during compaction, in bytes";
+  String CELLS_SIZE_COMPACTED_FROM_MOB = "cellsSizeCompactedFromMob";
+  String CELLS_SIZE_COMPACTED_FROM_MOB_DESC =
+      "The total amount of cells move from mob during compaction, in bytes";
+  String MOB_FLUSH_COUNT = "mobFlushCount";
+  String MOB_FLUSH_COUNT_DESC = "The number of the flushes in mob-enabled stores";
+  String MOB_FLUSHED_CELLS_COUNT = "mobFlushedCellsCount";
+  String MOB_FLUSHED_CELLS_COUNT_DESC = "The number of mob cells flushed to disk";
+  String MOB_FLUSHED_CELLS_SIZE = "mobFlushedCellsSize";
+  String MOB_FLUSHED_CELLS_SIZE_DESC = "The total amount of mob cells flushed to disk, in bytes";
+  String MOB_SCAN_CELLS_COUNT = "mobScanCellsCount";
+  String MOB_SCAN_CELLS_COUNT_DESC = "The number of scanned mob cells";
+  String MOB_SCAN_CELLS_SIZE = "mobScanCellsSize";
+  String MOB_SCAN_CELLS_SIZE_DESC = "The total amount of scanned mob cells, in bytes";
+  String MOB_FILE_CACHE_ACCESS_COUNT = "mobFileCacheAccessCount";
+  String MOB_FILE_CACHE_ACCESS_COUNT_DESC = "The count of accesses to the mob file cache";
+  String MOB_FILE_CACHE_MISS_COUNT = "mobFileCacheMissCount";
+  String MOB_FILE_CACHE_MISS_COUNT_DESC = "The count of misses to the mob file cache";
+  String MOB_FILE_CACHE_HIT_PERCENT = "mobFileCacheHitPercent";
+  String MOB_FILE_CACHE_HIT_PERCENT_DESC = "The hit percent to the mob file cache";
+  String MOB_FILE_CACHE_EVICTED_COUNT = "mobFileCacheEvictedCount";
+  String MOB_FILE_CACHE_EVICTED_COUNT_DESC = "The number of items evicted from the mob file cache";
+  String MOB_FILE_CACHE_COUNT = "mobFileCacheCount";
+  String MOB_FILE_CACHE_COUNT_DESC = "The count of cached mob files";
 
   String HEDGED_READS = "hedgedReads";
   String HEDGED_READS_DESC = "The number of times we started a hedged read";

@@ -55,7 +55,8 @@ public class IntegrationTestAcidGuarantees extends IntegrationTestBase {
     int numGetters = c.getInt("numGetters", 2);
     int numScanners = c.getInt("numScanners", 2);
     int numUniqueRows = c.getInt("numUniqueRows", 3);
-    tag.runTestAtomicity(millis, numWriters, numGetters, numScanners, numUniqueRows, true);
+    boolean useMob = c.getBoolean("useMob",false);
+    tag.runTestAtomicity(millis, numWriters, numGetters, numScanners, numUniqueRows, true, useMob);
     return 0;
   }
 

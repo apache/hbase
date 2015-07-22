@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -231,7 +232,13 @@ public class SnapshotTestingUtils {
     List<HRegionInfo> regions = admin.getTableRegions(tableName);
     // remove the non-default regions
     RegionReplicaUtil.removeNonDefaultRegions(regions);
-    assertEquals(regions.size(), regionManifests.size());
+    boolean hasMob = regionManifests.containsKey(MobUtils.getMobRegionInfo(tableName)
+        .getEncodedName());
+    if (hasMob) {
+      assertEquals(regions.size(), regionManifests.size() - 1);
+    } else {
+      assertEquals(regions.size(), regionManifests.size());
+    }
 
     // Verify Regions (redundant check, see MasterSnapshotVerifier)
     for (HRegionInfo info : regions) {

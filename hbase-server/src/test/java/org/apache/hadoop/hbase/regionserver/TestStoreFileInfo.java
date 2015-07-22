@@ -68,12 +68,12 @@ public class TestStoreFileInfo {
   public void testEqualsWithLink() throws IOException {
     Path origin = new Path("/origin");
     Path tmp = new Path("/tmp");
+    Path mob = new Path("/mob");
     Path archive = new Path("/archive");
     HFileLink link1 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
-      new Path(archive, "f1"));
+      new Path(mob, "f1"), new Path(archive, "f1"));
     HFileLink link2 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
-      new Path(archive, "f1"));
-
+      new Path(mob, "f1"), new Path(archive, "f1"));
 
     StoreFileInfo info1 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
       TEST_UTIL.getTestFileSystem(), null, link1);

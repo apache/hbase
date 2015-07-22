@@ -259,6 +259,38 @@ public class MetricsRegionServerSourceImpl
           .addCounter(Interns.info(MAJOR_COMPACTED_CELLS_SIZE, MAJOR_COMPACTED_CELLS_SIZE_DESC),
               rsWrap.getMajorCompactedCellsSize())
 
+          .addCounter(
+              Interns.info(CELLS_COUNT_COMPACTED_FROM_MOB, CELLS_COUNT_COMPACTED_FROM_MOB_DESC),
+              rsWrap.getCellsCountCompactedFromMob())
+          .addCounter(Interns.info(CELLS_COUNT_COMPACTED_TO_MOB, CELLS_COUNT_COMPACTED_TO_MOB_DESC),
+              rsWrap.getCellsCountCompactedToMob())
+          .addCounter(
+              Interns.info(CELLS_SIZE_COMPACTED_FROM_MOB, CELLS_SIZE_COMPACTED_FROM_MOB_DESC),
+              rsWrap.getCellsSizeCompactedFromMob())
+          .addCounter(Interns.info(CELLS_SIZE_COMPACTED_TO_MOB, CELLS_SIZE_COMPACTED_TO_MOB_DESC),
+              rsWrap.getCellsSizeCompactedToMob())
+          .addCounter(Interns.info(MOB_FLUSH_COUNT, MOB_FLUSH_COUNT_DESC),
+              rsWrap.getMobFlushCount())
+          .addCounter(Interns.info(MOB_FLUSHED_CELLS_COUNT, MOB_FLUSHED_CELLS_COUNT_DESC),
+              rsWrap.getMobFlushedCellsCount())
+          .addCounter(Interns.info(MOB_FLUSHED_CELLS_SIZE, MOB_FLUSHED_CELLS_SIZE_DESC),
+              rsWrap.getMobFlushedCellsSize())
+          .addCounter(Interns.info(MOB_SCAN_CELLS_COUNT, MOB_SCAN_CELLS_COUNT_DESC),
+              rsWrap.getMobScanCellsCount())
+          .addCounter(Interns.info(MOB_SCAN_CELLS_SIZE, MOB_SCAN_CELLS_SIZE_DESC),
+              rsWrap.getMobScanCellsSize())
+          .addGauge(Interns.info(MOB_FILE_CACHE_COUNT, MOB_FILE_CACHE_COUNT_DESC),
+              rsWrap.getMobFileCacheCount())
+          .addCounter(Interns.info(MOB_FILE_CACHE_ACCESS_COUNT, MOB_FILE_CACHE_ACCESS_COUNT_DESC),
+              rsWrap.getMobFileCacheAccessCount())
+          .addCounter(Interns.info(MOB_FILE_CACHE_MISS_COUNT, MOB_FILE_CACHE_MISS_COUNT_DESC),
+              rsWrap.getMobFileCacheMissCount())
+          .addCounter(
+              Interns.info(MOB_FILE_CACHE_EVICTED_COUNT, MOB_FILE_CACHE_EVICTED_COUNT_DESC),
+              rsWrap.getMobFileCacheEvictedCount())
+          .addGauge(Interns.info(MOB_FILE_CACHE_HIT_PERCENT, MOB_FILE_CACHE_HIT_PERCENT_DESC),
+              rsWrap.getMobFileCacheHitPercent())
+
           .addCounter(Interns.info(HEDGED_READS, HEDGED_READS_DESC), rsWrap.getHedgedReadOps())
           .addCounter(Interns.info(HEDGED_READ_WINS, HEDGED_READ_WINS_DESC),
               rsWrap.getHedgedReadWins())

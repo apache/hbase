@@ -45,7 +45,9 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 
@@ -60,7 +62,7 @@ public abstract class Compactor {
   protected Configuration conf;
   protected Store store;
 
-  private int compactionKVMax;
+  protected int compactionKVMax;
   protected Compression.Algorithm compactionCompression;
   
   /** specify how many days to keep MVCC values during major compaction **/ 
@@ -92,6 +94,8 @@ public abstract class Compactor {
     public long maxKeyCount = 0;
     /** Earliest put timestamp if major compaction */
     public long earliestPutTs = HConstants.LATEST_TIMESTAMP;
+    /** Latest put timestamp */
+    public long latestPutTs = HConstants.LATEST_TIMESTAMP;
     /** The last key in the files we're compacting. */
     public long maxSeqId = 0;
     /** Latest memstore read point found in any of the involved files */
@@ -165,6 +169,14 @@ public abstract class Compactor {
           earliestPutTs = Bytes.toLong(tmp);
           fd.earliestPutTs = Math.min(fd.earliestPutTs, earliestPutTs);
         }
+      }
+      tmp = fileInfo.get(StoreFile.TIMERANGE_KEY);
+      TimeRangeTracker trt = new TimeRangeTracker();
+      if (tmp == null) {
+        fd.latestPutTs = HConstants.LATEST_TIMESTAMP;
+      } else {
+        Writables.copyWritable(tmp, trt);
+        fd.latestPutTs = trt.getMaximumTimestamp();
       }
       if (LOG.isDebugEnabled()) {
         LOG.debug("Compacting " + file +
@@ -240,17 +252,20 @@ public abstract class Compactor {
     return store.getRegionInfo().getRegionNameAsString() + "#"
         + store.getFamily().getNameAsString() + "#" + counter;
   }
+
   /**
    * Performs the compaction.
+   * @param fd FileDetails of cell sink writer
    * @param scanner Where to read from.
    * @param writer Where to write to.
    * @param smallestReadPoint Smallest read point.
    * @param cleanSeqId When true, remove seqId(used to be mvcc) value which is &lt;= smallestReadPoint
+   * @param major Is a major compaction.
    * @return Whether compaction ended; false if it was interrupted for some reason.
    */
-  protected boolean performCompaction(InternalScanner scanner, CellSink writer,
+  protected boolean performCompaction(FileDetails fd, InternalScanner scanner, CellSink writer,
       long smallestReadPoint, boolean cleanSeqId,
-      CompactionThroughputController throughputController) throws IOException {
+      CompactionThroughputController throughputController, boolean major) throws IOException {
     long bytesWritten = 0;
     long bytesWrittenProgress = 0;
     // Since scanner.next() can return 'false' but still be delivering data,
@@ -359,5 +374,18 @@ public abstract class Compactor {
     scan.setMaxVersions(store.getFamily().getMaxVersions());
     return new StoreScanner(store, store.getScanInfo(), scan, scanners, smallestReadPoint,
         earliestPutTs, dropDeletesFromRow, dropDeletesToRow);
+  }
+
+  /**
+   * Appends the metadata and closes the writer.
+   * @param writer The current store writer.
+   * @param fd The file details.
+   * @param isMajor Is a major compaction.
+   * @throws IOException
+   */
+  protected void appendMetadataAndCloseWriter(StoreFile.Writer writer, FileDetails fd,
+      boolean isMajor) throws IOException {
+    writer.appendMetadata(fd.maxSeqId, isMajor);
+    writer.close();
   }
 }

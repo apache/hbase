@@ -127,6 +127,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.CallerDisconnectedException;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -3443,8 +3444,26 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
 
     SnapshotManifest manifest = SnapshotManifest.create(conf, getFilesystem(),
-                                                        snapshotDir, desc, exnSnare);
+            snapshotDir, desc, exnSnare);
     manifest.addRegion(this);
+
+    // The regionserver holding the first region of the table is responsible for taking the
+    // manifest of the mob dir.
+    if (!Bytes.equals(getRegionInfo().getStartKey(), HConstants.EMPTY_START_ROW))
+      return;
+
+    // if any cf's have is mob enabled, add the "mob region" to the manifest.
+    List<Store> stores = getStores();
+    for (Store store : stores) {
+      boolean hasMobStore = store.getFamily().isMobEnabled();
+      if (hasMobStore) {
+        // use the .mob as the start key and 0 as the regionid
+        HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(this.getTableDesc().getTableName());
+        mobRegionInfo.setOffline(true);
+        manifest.addMobRegion(mobRegionInfo, this.getTableDesc().getColumnFamilies());
+        return;
+      }
+    }
   }
 
   @Override
@@ -4875,6 +4894,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
+    if (family.isMobEnabled()) {
+      if (HFile.getFormatVersion(this.conf) < HFile.MIN_FORMAT_VERSION_WITH_TAGS) {
+        throw new IOException("A minimum HFile version of "
+            + HFile.MIN_FORMAT_VERSION_WITH_TAGS
+            + " is required for MOB feature. Consider setting " + HFile.FORMAT_VERSION_KEY
+            + " accordingly.");
+      }
+      return new HMobStore(this, family, this.conf);
+    }
     return new HStore(this, family, this.conf);
   }
 

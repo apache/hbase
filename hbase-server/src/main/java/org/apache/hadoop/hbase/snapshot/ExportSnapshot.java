@@ -53,10 +53,12 @@ import org.apache.hadoop.hbase.io.FileLink;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.WALLink;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IOUtils;
@@ -107,8 +109,6 @@ public class ExportSnapshot extends Configured implements Tool {
 
   static final String CONF_TEST_FAILURE = "test.snapshot.export.failure";
   static final String CONF_TEST_RETRY = "test.snapshot.export.failure.retry";
-
-  private static final String INPUT_FOLDER_PREFIX = "export-files.";
 
   // Export Map-Reduce Counters, to keep track of the progress
   public enum Counter {
@@ -409,7 +409,7 @@ public class ExportSnapshot extends Configured implements Tool {
         switch (fileInfo.getType()) {
           case HFILE:
             Path inputPath = new Path(fileInfo.getHfile());
-            link = HFileLink.buildFromHFileLinkPattern(conf, inputPath);
+            link = getFileLink(inputPath, conf);
             break;
           case WAL:
             String serverName = fileInfo.getWalServer();
@@ -435,7 +435,7 @@ public class ExportSnapshot extends Configured implements Tool {
         switch (fileInfo.getType()) {
           case HFILE:
             Path inputPath = new Path(fileInfo.getHfile());
-            link = HFileLink.buildFromHFileLinkPattern(conf, inputPath);
+            link = getFileLink(inputPath, conf);
             break;
           case WAL:
             link = new WALLink(inputRoot, fileInfo.getWalServer(), fileInfo.getWalName());
@@ -452,6 +452,16 @@ public class ExportSnapshot extends Configured implements Tool {
         LOG.error("Unable to get the status for source file=" + fileInfo.toString(), e);
         throw e;
       }
+    }
+
+    private FileLink getFileLink(Path path, Configuration conf) throws IOException{
+      String regionName = HFileLink.getReferencedRegionName(path.getName());
+      TableName tableName = HFileLink.getReferencedTableName(path.getName());
+      if(MobUtils.getMobRegionInfo(tableName).getEncodedName().equals(regionName)) {
+        return HFileLink.buildFromHFileLinkPattern(MobUtils.getQualifiedMobRootDir(conf),
+                HFileArchiveUtil.getArchivePath(conf), path);
+      }
+      return HFileLink.buildFromHFileLinkPattern(inputRoot, inputArchive, path);
     }
 
     private FileChecksum getFileChecksum(final FileSystem fs, final Path path) {
@@ -507,9 +517,8 @@ public class ExportSnapshot extends Configured implements Tool {
         @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
-          if (storeFile.hasReference()) {
-            // copied as part of the manifest
-          } else {
+          // for storeFile.hasReference() case, copied as part of the manifest
+          if (!storeFile.hasReference()) {
             String region = regionInfo.getEncodedName();
             String hfile = storeFile.getName();
             Path path = HFileLink.createPath(table, region, family, hfile);

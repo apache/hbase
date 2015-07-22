@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpeci
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -67,6 +68,7 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
+import org.apache.hadoop.hbase.io.LimitInputStream;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
@@ -154,6 +156,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
@@ -165,8 +168,8 @@ import com.google.protobuf.TextFormat;
 /**
  * Protobufs utility.
  */
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED",
-  justification="None. Address sometime.")
+@edu.umd.cs.findbugs.annotations.SuppressWarnings(
+  value="DP_CREATE_CLASSLOADER_INSIDE_DO_PRIVILEGED", justification="None. Address sometime.")
 @InterfaceAudience.Private // TODO: some clients (Hive, etc) use this class
 public final class ProtobufUtil {
 
@@ -1585,7 +1588,7 @@ public final class ProtobufUtil {
   throws IOException {
     CoprocessorServiceRequest request = CoprocessorServiceRequest.newBuilder()
         .setCall(call).setRegion(
-            RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY)).build();
+           RequestConverter.buildRegionSpecifier(REGION_NAME, HConstants.EMPTY_BYTE_ARRAY)).build();
     try {
       CoprocessorServiceResponse response =
           client.execMasterService(null, request);
@@ -1887,7 +1890,8 @@ public final class ProtobufUtil {
     if (proto.getType() != AccessControlProtos.Permission.Type.Global) {
       return toTablePermission(proto);
     } else {
-      List<Permission.Action> actions = toPermissionActions(proto.getGlobalPermission().getActionList());
+      List<Permission.Action> actions = toPermissionActions(
+        proto.getGlobalPermission().getActionList());
       return new Permission(actions.toArray(new Permission.Action[actions.size()]));
     }
   }
@@ -1954,7 +1958,7 @@ public final class ProtobufUtil {
         AccessControlProtos.NamespacePermission.Builder builder =
             AccessControlProtos.NamespacePermission.newBuilder();
         builder.setNamespaceName(ByteString.copyFromUtf8(tablePerm.getNamespace()));
-        Permission.Action actions[] = perm.getActions();
+        Permission.Action[] actions = perm.getActions();
         if (actions != null) {
           for (Permission.Action a : actions) {
             builder.addAction(toPermissionAction(a));
@@ -2995,6 +2999,30 @@ public final class ProtobufUtil {
     }
 
     return desc.build();
+  }
+
+  /**
+   * This version of protobuf's mergeDelimitedFrom avoid the hard-coded 64MB limit for decoding
+   * buffers
+   * @param builder current message builder
+   * @param in Inputsream with delimited protobuf data
+   * @throws IOException
+   */
+  public static void mergeDelimitedFrom(Message.Builder builder, InputStream in)
+    throws IOException {
+    // This used to be builder.mergeDelimitedFrom(in);
+    // but is replaced to allow us to bump the protobuf size limit.
+    final int firstByte = in.read();
+    if (firstByte == -1) {
+      // bail out. (was return false;)
+    } else {
+      final int size = CodedInputStream.readRawVarint32(firstByte, in);
+      final InputStream limitedInput = new LimitInputStream(in, size);
+      final CodedInputStream codedInput = CodedInputStream.newInstance(limitedInput);
+      codedInput.setSizeLimit(size);
+      builder.mergeFrom(codedInput);
+      codedInput.checkLastTagWas(0);
+    }
   }
 
   public static ReplicationLoadSink toReplicationLoadSink(

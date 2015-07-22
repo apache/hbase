@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
@@ -58,6 +60,8 @@ public class TestHColumnDescriptor {
     hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
     hcd.setBloomFilterType(BloomType.ROW);
     hcd.setCompressionType(Algorithm.SNAPPY);
+    hcd.setMobEnabled(true);
+    hcd.setMobThreshold(1000L);
 
 
     byte [] bytes = hcd.toByteArray();
@@ -74,6 +78,8 @@ public class TestHColumnDescriptor {
     assertTrue(deserializedHcd.getCompressionType().equals(Compression.Algorithm.SNAPPY));
     assertTrue(deserializedHcd.getDataBlockEncoding().equals(DataBlockEncoding.FAST_DIFF));
     assertTrue(deserializedHcd.getBloomFilterType().equals(BloomType.ROW));
+    assertEquals(hcd.isMobEnabled(), deserializedHcd.isMobEnabled());
+    assertEquals(hcd.getMobThreshold(), deserializedHcd.getMobThreshold());
   }
 
   @Test
@@ -99,6 +105,18 @@ public class TestHColumnDescriptor {
     assertEquals(value, desc.getConfigurationValue(key));
     desc.removeConfiguration(key);
     assertEquals(null, desc.getConfigurationValue(key));
+  }
+
+  @Test
+  public void testMobValuesInHColumnDescriptorShouldReadable() {
+    boolean isMob = true;
+    long threshold = 1000;
+    String isMobString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(isMob)),
+            HColumnDescriptor.getUnit(HColumnDescriptor.IS_MOB));
+    String thresholdString = PrettyPrinter.format(Bytes.toStringBinary(Bytes.toBytes(threshold)),
+            HColumnDescriptor.getUnit(HColumnDescriptor.MOB_THRESHOLD));
+    assertEquals(String.valueOf(isMob), isMobString);
+    assertEquals(String.valueOf(threshold), thresholdString);
   }
 
   @Test

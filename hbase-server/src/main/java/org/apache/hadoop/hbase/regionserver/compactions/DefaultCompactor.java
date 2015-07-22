@@ -81,8 +81,8 @@ public class DefaultCompactor extends Compactor {
       InternalScanner scanner = null;
       try {
         /* Include deletes, unless we are doing a compaction of all files */
-        ScanType scanType =
-            request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
+        ScanType scanType = request.isRetainDeleteMarkers() ? ScanType.COMPACT_RETAIN_DELETES
+            : ScanType.COMPACT_DROP_DELETES;
         scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
         if (scanner == null) {
           scanner = createScanner(store, scanners, scanType, smallestReadPoint, fd.earliestPutTs);
@@ -99,12 +99,9 @@ public class DefaultCompactor extends Compactor {
           cleanSeqId = true;
         }
 
-        // When all MVCC readpoints are 0, don't write them.
-        // See HBASE-8166, HBASE-12600, and HBASE-13389.
-        writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-          fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0);
-        boolean finished =
-            performCompaction(scanner, writer, smallestReadPoint, cleanSeqId, throughputController);
+        writer = createTmpWriter(fd, smallestReadPoint);
+        boolean finished = performCompaction(fd, scanner, writer, smallestReadPoint, cleanSeqId,
+          throughputController, request.isAllFiles());
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
@@ -146,6 +143,24 @@ public class DefaultCompactor extends Compactor {
     }
     return newFiles;
   }
+
+  /**
+   * Creates a writer for a new file in a temporary directory.
+   * @param fd The file details.
+   * @param smallestReadPoint The smallest mvcc readPoint across all the scanners in this region.
+   * @return Writer for a new StoreFile in the tmp dir.
+   * @throws IOException
+   */
+  protected StoreFile.Writer createTmpWriter(FileDetails fd, long smallestReadPoint)
+    throws IOException {
+    // When all MVCC readpoints are 0, don't write them.
+    // See HBASE-8166, HBASE-12600, and HBASE-13389.
+
+    // make this writer with tags always because of possible new cells with tags.
+    return store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
+            true, fd.maxMVCCReadpoint >= 0, fd.maxTagsLength >0);
+  }
+
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to

@@ -125,7 +125,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private boolean scanUsePread = false;
   protected ReentrantLock lock = new ReentrantLock();
   
-  private final long readPt;
+  protected final long readPt;
 
   // used by the injection framework to test race between StoreScanner construction and compaction
   enum StoreScannerCompactionRace {
@@ -307,8 +307,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // 0 is passed as readpoint because the test bypasses Store
       0);
   }
-  
-  private StoreScanner(final Scan scan, ScanInfo scanInfo,
+
+  public StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs, long readPt)
           throws IOException {

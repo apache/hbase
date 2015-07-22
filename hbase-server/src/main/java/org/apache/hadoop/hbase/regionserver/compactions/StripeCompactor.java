@@ -133,7 +133,8 @@ public class StripeCompactor extends Compactor {
       StoreScanner storeScanner = (scanner instanceof StoreScanner) ? (StoreScanner)scanner : null;
       mw.init(storeScanner, factory, store.getComparator());
       finished =
-          performCompaction(scanner, mw, smallestReadPoint, cleanSeqId, throughputController);
+          performCompaction(fd, scanner, mw, smallestReadPoint, cleanSeqId, throughputController,
+                  request.isMajor());
       if (!finished) {
         throw new InterruptedIOException( "Aborting compaction of store " + store +
             " in region " + store.getRegionInfo().getRegionNameAsString() +

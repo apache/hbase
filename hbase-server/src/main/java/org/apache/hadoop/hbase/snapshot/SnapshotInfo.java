@@ -114,14 +114,16 @@ public final class SnapshotInfo extends Configured implements Tool {
       }
     }
 
-    private AtomicInteger hfileArchiveCount = new AtomicInteger();
+    private AtomicInteger hfilesArchiveCount = new AtomicInteger();
     private AtomicInteger hfilesCorrupted = new AtomicInteger();
     private AtomicInteger hfilesMissing = new AtomicInteger();
     private AtomicInteger hfilesCount = new AtomicInteger();
+    private AtomicInteger hfilesMobCount = new AtomicInteger();
     private AtomicInteger logsMissing = new AtomicInteger();
     private AtomicInteger logsCount = new AtomicInteger();
-    private AtomicLong hfileArchiveSize = new AtomicLong();
-    private AtomicLong hfileSize = new AtomicLong();
+    private AtomicLong hfilesArchiveSize = new AtomicLong();
+    private AtomicLong hfilesSize = new AtomicLong();
+    private AtomicLong hfilesMobSize = new AtomicLong();
     private AtomicLong logSize = new AtomicLong();
 
     private final SnapshotDescription snapshot;
@@ -151,13 +153,16 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return the number of available store files */
     public int getStoreFilesCount() {
-      return hfilesCount.get() + hfileArchiveCount.get();
+      return hfilesCount.get() + hfilesArchiveCount.get() + hfilesMobCount.get();
     }
 
     /** @return the number of available store files in the archive */
     public int getArchivedStoreFilesCount() {
-      return hfileArchiveCount.get();
+      return hfilesArchiveCount.get();
     }
+
+    /** @return the number of available store files in the mob dir */
+    public int getMobStoreFilesCount() { return hfilesMobCount.get(); }
 
     /** @return the number of available log files */
     public int getLogsCount() {
@@ -181,22 +186,30 @@ public final class SnapshotInfo extends Configured implements Tool {
 
     /** @return the total size of the store files referenced by the snapshot */
     public long getStoreFilesSize() {
-      return hfileSize.get() + hfileArchiveSize.get();
+      return hfilesSize.get() + hfilesArchiveSize.get() + hfilesMobSize.get();
     }
 
     /** @return the total size of the store files shared */
     public long getSharedStoreFilesSize() {
-      return hfileSize.get();
+      return hfilesSize.get();
     }
 
     /** @return the total size of the store files in the archive */
     public long getArchivedStoreFileSize() {
-      return hfileArchiveSize.get();
+      return hfilesArchiveSize.get();
     }
+
+    /** @return the total size of the store files in the mob store*/
+    public long getMobStoreFilesSize() { return hfilesMobSize.get(); }
 
     /** @return the percentage of the shared store files */
     public float getSharedStoreFilePercentage() {
-      return ((float)hfileSize.get() / (hfileSize.get() + hfileArchiveSize.get())) * 100;
+      return ((float) hfilesSize.get() / (getStoreFilesSize())) * 100;
+    }
+
+    /** @return the percentage of the mob store files */
+    public float getMobStoreFilePercentage() {
+      return ((float) hfilesMobSize.get() / (getStoreFilesSize())) * 100;
     }
 
     /** @return the total log size */
@@ -221,11 +234,15 @@ public final class SnapshotInfo extends Configured implements Tool {
       try {
         if ((inArchive = fs.exists(link.getArchivePath()))) {
           size = fs.getFileStatus(link.getArchivePath()).getLen();
-          hfileArchiveSize.addAndGet(size);
-          hfileArchiveCount.incrementAndGet();
+          hfilesArchiveSize.addAndGet(size);
+          hfilesArchiveCount.incrementAndGet();
+        } else if (inArchive = fs.exists(link.getMobPath())) {
+          size = fs.getFileStatus(link.getMobPath()).getLen();
+          hfilesMobSize.addAndGet(size);
+          hfilesMobCount.incrementAndGet();
         } else {
           size = link.getFileStatus(fs).getLen();
-          hfileSize.addAndGet(size);
+          hfilesSize.addAndGet(size);
           hfilesCount.incrementAndGet();
         }
         isCorrupted = (storeFile.hasFileSize() && storeFile.getFileSize() != size);
@@ -441,11 +458,15 @@ public final class SnapshotInfo extends Configured implements Tool {
     }
 
     if (showStats) {
-      System.out.printf("%d HFiles (%d in archive), total size %s (%.2f%% %s shared with the source table)%n",
+      System.out.printf("%d HFiles (%d in archive, %d in mob storage), total size %s " +
+              "(%.2f%% %s shared with the source table, %.2f%% %s in mob dir)%n",
         stats.getStoreFilesCount(), stats.getArchivedStoreFilesCount(),
+        stats.getMobStoreFilesCount(),
         fileSizeToString(stats.getStoreFilesSize()),
         stats.getSharedStoreFilePercentage(),
-        fileSizeToString(stats.getSharedStoreFilesSize())
+        fileSizeToString(stats.getSharedStoreFilesSize()),
+        stats.getMobStoreFilePercentage(),
+        fileSizeToString(stats.getMobStoreFilesSize())
       );
       System.out.printf("%d Logs, total size %s%n",
         stats.getLogsCount(), fileSizeToString(stats.getLogsSize()));

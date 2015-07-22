@@ -39,9 +39,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSUtils.FamilyDirFilter;
 import org.apache.hadoop.hbase.util.FSUtils.HFileFilter;
@@ -68,8 +70,13 @@ public class HFileCorruptionChecker {
   final Set<Path> failures = new ConcurrentSkipListSet<Path>();
   final Set<Path> quarantined = new ConcurrentSkipListSet<Path>();
   final Set<Path> missing = new ConcurrentSkipListSet<Path>();
+  final Set<Path> corruptedMobFiles = new ConcurrentSkipListSet<Path>();
+  final Set<Path> failureMobFiles = new ConcurrentSkipListSet<Path>();
+  final Set<Path> missedMobFiles = new ConcurrentSkipListSet<Path>();
+  final Set<Path> quarantinedMobFiles = new ConcurrentSkipListSet<Path>();
   final boolean inQuarantineMode;
   final AtomicInteger hfilesChecked = new AtomicInteger();
+  final AtomicInteger mobFilesChecked = new AtomicInteger();
 
   public HFileCorruptionChecker(Configuration conf, ExecutorService executor,
       boolean quarantine) throws IOException {
@@ -177,6 +184,109 @@ public class HFileCorruptionChecker {
   }
 
   /**
+   * Check all files in a mob column family dir.
+   *
+   * @param cfDir
+   *          mob column family directory
+   * @throws IOException
+   */
+  protected void checkMobColFamDir(Path cfDir) throws IOException {
+    FileStatus[] hfs = null;
+    try {
+      hfs = fs.listStatus(cfDir, new HFileFilter(fs)); // use same filter as scanner.
+    } catch (FileNotFoundException fnfe) {
+      // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
+      LOG.warn("Mob colfam Directory " + cfDir +
+          " does not exist.  Likely the table is deleted. Skipping.");
+      missedMobFiles.add(cfDir);
+      return;
+    }
+
+    // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
+    if (hfs.length == 0 && !fs.exists(cfDir)) {
+      LOG.warn("Mob colfam Directory " + cfDir +
+          " does not exist.  Likely the table is deleted. Skipping.");
+      missedMobFiles.add(cfDir);
+      return;
+    }
+    for (FileStatus hfFs : hfs) {
+      Path hf = hfFs.getPath();
+      checkMobFile(hf);
+    }
+  }
+
+  /**
+   * Checks a path to see if it is a valid mob file.
+   *
+   * @param p
+   *          full Path to a mob file.
+   * @throws IOException
+   *           This is a connectivity related exception
+   */
+  protected void checkMobFile(Path p) throws IOException {
+    HFile.Reader r = null;
+    try {
+      r = HFile.createReader(fs, p, cacheConf, conf);
+    } catch (CorruptHFileException che) {
+      LOG.warn("Found corrupt mob file " + p, che);
+      corruptedMobFiles.add(p);
+      if (inQuarantineMode) {
+        Path dest = createQuarantinePath(p);
+        LOG.warn("Quarantining corrupt mob file " + p + " into " + dest);
+        boolean success = fs.mkdirs(dest.getParent());
+        success = success ? fs.rename(p, dest): false;
+        if (!success) {
+          failureMobFiles.add(p);
+        } else {
+          quarantinedMobFiles.add(dest);
+        }
+      }
+      return;
+    } catch (FileNotFoundException fnfe) {
+      LOG.warn("Mob file " + p + " was missing.  Likely removed due to compaction?");
+      missedMobFiles.add(p);
+    } finally {
+      mobFilesChecked.addAndGet(1);
+      if (r != null) {
+        r.close(true);
+      }
+    }
+  }
+
+  /**
+   * Checks all the mob files of a table.
+   * @param regionDir The mob region directory
+   * @throws IOException
+   */
+  private void checkMobRegionDir(Path regionDir) throws IOException {
+    if (!fs.exists(regionDir)) {
+      return;
+    }
+    FileStatus[] hfs = null;
+    try {
+      hfs = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    } catch (FileNotFoundException fnfe) {
+      // Hadoop 0.23+ listStatus semantics throws an exception if the path does not exist.
+      LOG.warn("Mob directory " + regionDir
+        + " does not exist.  Likely the table is deleted. Skipping.");
+      missedMobFiles.add(regionDir);
+      return;
+    }
+
+    // Hadoop 1.0 listStatus does not throw an exception if the path does not exist.
+    if (hfs.length == 0 && !fs.exists(regionDir)) {
+      LOG.warn("Mob directory " + regionDir
+        + " does not exist.  Likely the table is deleted. Skipping.");
+      missedMobFiles.add(regionDir);
+      return;
+    }
+    for (FileStatus hfFs : hfs) {
+      Path hf = hfFs.getPath();
+      checkMobColFamDir(hf);
+    }
+  }
+
+  /**
    * Check all column families in a region dir.
    *
    * @param regionDir
@@ -236,6 +346,8 @@ public class HFileCorruptionChecker {
       rdcs.add(work);
     }
 
+    // add mob region
+    rdcs.add(createMobRegionDirChecker(tableDir));
     // Submit and wait for completion
     try {
       rdFutures = executor.invokeAll(rdcs);
@@ -293,6 +405,34 @@ public class HFileCorruptionChecker {
   }
 
   /**
+   * An individual work item for parallelized mob dir processing. This is
+   * intentionally an inner class so it can use the shared error sets and fs.
+   */
+  private class MobRegionDirChecker extends RegionDirChecker {
+
+    MobRegionDirChecker(Path regionDir) {
+      super(regionDir);
+    }
+
+    @Override
+    public Void call() throws IOException {
+      checkMobRegionDir(regionDir);
+      return null;
+    }
+  }
+
+  /**
+   * Creates an instance of MobRegionDirChecker.
+   * @param tableDir The current table directory.
+   * @return An instance of MobRegionDirChecker.
+   */
+  private MobRegionDirChecker createMobRegionDirChecker(Path tableDir) {
+    TableName tableName = FSUtils.getTableName(tableDir);
+    Path mobDir = MobUtils.getMobRegionPath(conf, tableName);
+    return new MobRegionDirChecker(mobDir);
+  }
+
+  /**
    * Check the specified table dirs for bad hfiles.
    */
   public void checkTables(Collection<Path> tables) throws IOException {
@@ -338,6 +478,42 @@ public class HFileCorruptionChecker {
   }
 
   /**
+   * @return the set of check failure mob file paths after checkTables is called.
+   */
+  public Collection<Path> getFailureMobFiles() {
+    return new HashSet<Path>(failureMobFiles);
+  }
+
+  /**
+   * @return the set of corrupted mob file paths after checkTables is called.
+   */
+  public Collection<Path> getCorruptedMobFiles() {
+    return new HashSet<Path>(corruptedMobFiles);
+  }
+
+  /**
+   * @return number of mob files checked in the last HfileCorruptionChecker run
+   */
+  public int getMobFilesChecked() {
+    return mobFilesChecked.get();
+  }
+
+  /**
+   * @return the set of successfully quarantined paths after checkTables is called.
+   */
+  public Collection<Path> getQuarantinedMobFiles() {
+    return new HashSet<Path>(quarantinedMobFiles);
+  }
+
+  /**
+   * @return the set of paths that were missing.  Likely due to table deletion or
+   *  deletion/moves from compaction.
+   */
+  public Collection<Path> getMissedMobFiles() {
+    return new HashSet<Path>(missedMobFiles);
+  }
+
+  /**
    * Print a human readable summary of hfile quarantining operations.
    * @param out
    */
@@ -363,10 +539,31 @@ public class HFileCorruptionChecker {
     String fixedState = (corrupted.size() == quarantined.size()) ? "OK"
         : "CORRUPTED";
 
+    // print mob-related report
+    if (inQuarantineMode) {
+      out.print("    Mob files successfully quarantined: " + quarantinedMobFiles.size());
+      for (Path sq : quarantinedMobFiles) {
+        out.print("      " + sq);
+      }
+      out.print("    Mob files failed quarantine:        " + failureMobFiles.size());
+      for (Path fq : failureMobFiles) {
+        out.print("      " + fq);
+      }
+    }
+    out.print("    Mob files moved while checking:     " + missedMobFiles.size());
+    for (Path mq : missedMobFiles) {
+      out.print("      " + mq);
+    }
+    String initialMobState = (corruptedMobFiles.size() == 0) ? "OK" : "CORRUPTED";
+    String fixedMobState = (corruptedMobFiles.size() == quarantinedMobFiles.size()) ? "OK"
+        : "CORRUPTED";
+
     if (inQuarantineMode) {
       out.print("Summary: " + initialState + " => " + fixedState);
+      out.print("Mob summary: " + initialMobState + " => " + fixedMobState);
     } else {
       out.print("Summary: " + initialState);
+      out.print("Mob summary: " + initialMobState);
     }
   }
 }

@@ -127,11 +127,11 @@ public class HStore implements Store {
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
-  private final HRegion region;
+  protected final HRegion region;
   private final HColumnDescriptor family;
   private final HRegionFileSystem fs;
-  private Configuration conf;
-  private final CacheConfig cacheConf;
+  protected Configuration conf;
+  protected CacheConfig cacheConf;
   private long lastCompactSize = 0;
   volatile boolean forceMajor = false;
   /* how many bytes to write between status checks */
@@ -160,12 +160,12 @@ public class HStore implements Store {
   private final Set<ChangedReadersObserver> changedReaderObservers =
     Collections.newSetFromMap(new ConcurrentHashMap<ChangedReadersObserver, Boolean>());
 
-  private final int blocksize;
+  protected final int blocksize;
   private HFileDataBlockEncoder dataBlockEncoder;
 
   /** Checksum configuration */
-  private ChecksumType checksumType;
-  private int bytesPerChecksum;
+  protected ChecksumType checksumType;
+  protected int bytesPerChecksum;
 
   // Comparing KeyValues
   private final CellComparator comparator;
@@ -182,7 +182,7 @@ public class HStore implements Store {
   private long blockingFileCount;
   private int compactionCheckMultiplier;
 
-  private Encryption.Context cryptoContext = Encryption.Context.NONE;
+  protected Encryption.Context cryptoContext = Encryption.Context.NONE;
 
   private volatile long flushedCellsCount = 0;
   private volatile long compactedCellsCount = 0;
@@ -202,7 +202,6 @@ public class HStore implements Store {
   protected HStore(final HRegion region, final HColumnDescriptor family,
       final Configuration confParam) throws IOException {
 
-    HRegionInfo info = region.getRegionInfo();
     this.fs = region.getRegionFileSystem();
 
     // Assemble the store's home directory and Ensure it exists.
@@ -239,7 +238,7 @@ public class HStore implements Store {
     this.offPeakHours = OffPeakHours.getInstance(conf);
 
     // Setting up cache configuration for this family
-    this.cacheConf = new CacheConfig(conf, family);
+    createCacheConf(family);
 
     this.verifyBulkLoads = conf.getBoolean("hbase.hstore.bulkload.verify", false);
 
@@ -258,7 +257,7 @@ public class HStore implements Store {
           "hbase.hstore.close.check.interval", 10*1000*1000 /* 10 MB */);
     }
 
-    this.storeEngine = StoreEngine.create(this, this.conf, this.comparator);
+    this.storeEngine = createStoreEngine(this, this.conf, this.comparator);
     this.storeEngine.getStoreFileManager().loadFiles(loadStoreFiles());
 
     // Initialize checksum type from name. The names are CRC32, CRC32C, etc.
@@ -333,10 +332,31 @@ public class HStore implements Store {
   }
 
   /**
+   * Creates the cache config.
+   * @param family The current column family.
+   */
+  protected void createCacheConf(final HColumnDescriptor family) {
+    this.cacheConf = new CacheConfig(conf, family);
+  }
+
+  /**
+   * Creates the store engine configured for the given Store.
+   * @param store The store. An unfortunate dependency needed due to it
+   *              being passed to coprocessors via the compactor.
+   * @param conf Store configuration.
+   * @param kvComparator KVComparator for storeFileManager.
+   * @return StoreEngine to use.
+   */
+  protected StoreEngine<?, ?, ?, ?> createStoreEngine(Store store, Configuration conf,
+      CellComparator kvComparator) throws IOException {
+    return StoreEngine.create(store, conf, comparator);
+  }
+
+  /**
    * @param family
    * @return TTL in seconds of the specified family
    */
-  private static long determineTTLFromFamily(final HColumnDescriptor family) {
+  public static long determineTTLFromFamily(final HColumnDescriptor family) {
     // HCD.getTimeToLive returns ttl in seconds.  Convert to milliseconds.
     long ttl = family.getTimeToLive();
     if (ttl == HConstants.FOREVER) {
@@ -1837,15 +1857,21 @@ public class HStore implements Store {
       if (this.getCoprocessorHost() != null) {
         scanner = this.getCoprocessorHost().preStoreScannerOpen(this, scan, targetCols);
       }
-      if (scanner == null) {
-        scanner = scan.isReversed() ? new ReversedStoreScanner(this,
-            getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
-            getScanInfo(), scan, targetCols, readPt);
-      }
+      scanner = createScanner(scan, targetCols, readPt, scanner);
       return scanner;
     } finally {
       lock.readLock().unlock();
     }
+  }
+
+  protected KeyValueScanner createScanner(Scan scan, final NavigableSet<byte[]> targetCols,
+      long readPt, KeyValueScanner scanner) throws IOException {
+    if (scanner == null) {
+      scanner = scan.isReversed() ? new ReversedStoreScanner(this,
+          getScanInfo(), scan, targetCols, readPt) : new StoreScanner(this,
+          getScanInfo(), scan, targetCols, readPt);
+    }
+    return scanner;
   }
 
   @Override

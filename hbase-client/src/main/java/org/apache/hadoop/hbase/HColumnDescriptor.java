@@ -123,6 +123,12 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   public static final String ENCRYPTION = "ENCRYPTION";
   public static final String ENCRYPTION_KEY = "ENCRYPTION_KEY";
 
+  public static final String IS_MOB = "IS_MOB";
+  public static final byte[] IS_MOB_BYTES = Bytes.toBytes(IS_MOB);
+  public static final String MOB_THRESHOLD = "MOB_THRESHOLD";
+  public static final byte[] MOB_THRESHOLD_BYTES = Bytes.toBytes(MOB_THRESHOLD);
+  public static final long DEFAULT_MOB_THRESHOLD = 100 * 1024; // 100k
+
   /**
    * Default compression type.
    */
@@ -259,8 +265,10 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
       for (String s : DEFAULT_VALUES.keySet()) {
         RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s)));
       }
-    RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
-    RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
+      RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
+      RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
+      RESERVED_KEYWORDS.add(new Bytes(IS_MOB_BYTES));
+      RESERVED_KEYWORDS.add(new Bytes(MOB_THRESHOLD_BYTES));
   }
 
   private static final int UNINITIALIZED = -1;
@@ -982,6 +990,10 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
       /* TTL for now, we can add more as we neeed */
     if (key.equals(HColumnDescriptor.TTL)) {
       unit = Unit.TIME_INTERVAL;
+    } else if (key.equals(HColumnDescriptor.MOB_THRESHOLD)) {
+      unit = Unit.LONG;
+    } else if (key.equals(HColumnDescriptor.IS_MOB)) {
+      unit = Unit.BOOLEAN;
     } else {
       unit = Unit.NONE;
     }
@@ -1170,6 +1182,48 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
   /** Set the raw crypto key attribute for the family */
   public HColumnDescriptor setEncryptionKey(byte[] keyBytes) {
     setValue(Bytes.toBytes(ENCRYPTION_KEY), keyBytes);
+    return this;
+  }
+
+  /**
+   * Gets the mob threshold of the family.
+   * If the size of a cell value is larger than this threshold, it's regarded as a mob.
+   * The default threshold is 1024*100(100K)B.
+   * @return The mob threshold.
+   */
+  public long getMobThreshold() {
+    byte[] threshold = getValue(MOB_THRESHOLD_BYTES);
+    return threshold != null && threshold.length == Bytes.SIZEOF_LONG ? Bytes.toLong(threshold)
+        : DEFAULT_MOB_THRESHOLD;
+  }
+
+  /**
+   * Sets the mob threshold of the family.
+   * @param threshold The mob threshold.
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setMobThreshold(long threshold) {
+    setValue(MOB_THRESHOLD_BYTES, Bytes.toBytes(threshold));
+    return this;
+  }
+
+  /**
+   * Gets whether the mob is enabled for the family.
+   * @return True if the mob is enabled for the family.
+   */
+  public boolean isMobEnabled() {
+    byte[] isMobEnabled = getValue(IS_MOB_BYTES);
+    return isMobEnabled != null && isMobEnabled.length == Bytes.SIZEOF_BOOLEAN
+        && Bytes.toBoolean(isMobEnabled);
+  }
+
+  /**
+   * Enables the mob for the family.
+   * @param isMobEnabled Whether to enable the mob for the family.
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setMobEnabled(boolean isMobEnabled) {
+    setValue(IS_MOB_BYTES, Bytes.toBytes(isMobEnabled));
     return this;
   }
 }

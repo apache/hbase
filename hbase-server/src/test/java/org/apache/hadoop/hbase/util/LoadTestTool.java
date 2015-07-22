@@ -180,6 +180,10 @@ public class LoadTestTool extends AbstractHBaseTool {
   protected static final String OPT_REGION_REPLICA_ID_USAGE =
       "Region replica id to do the reads from";
 
+  public static final String OPT_MOB_THRESHOLD = "mob_threshold";
+  protected static final String OPT_MOB_THRESHOLD_USAGE =
+      "Desired cell size to exceed in bytes that will use the MOB write path";
+
   protected static final long DEFAULT_START_KEY = 0;
 
   /** This will be removed as we factor out the dependency on command line */
@@ -231,6 +235,8 @@ public class LoadTestTool extends AbstractHBaseTool {
   private int numRegionsPerServer = DEFAULT_NUM_REGIONS_PER_SERVER;
   private int regionReplication = -1; // not set
   private int regionReplicaId = -1; // not set
+
+  private int mobThreshold = -1; // not set
 
   // TODO: refactor LoadTestToolImpl somewhere to make the usage from tests less bad,
   //       console tool itself should only be used from console.
@@ -299,6 +305,11 @@ public class LoadTestTool extends AbstractHBaseTool {
                   new SecretKeySpec(keyBytes,
                       cipher.getName())));
         }
+        if (mobThreshold >= 0) {
+          columnDesc.setMobEnabled(true);
+          columnDesc.setMobThreshold(mobThreshold);
+        }
+
         if (isNewCf) {
           admin.addColumnFamily(tableName, columnDesc);
         } else {
@@ -364,6 +375,7 @@ public class LoadTestTool extends AbstractHBaseTool {
     addOptWithArg(OPT_NUM_REGIONS_PER_SERVER, OPT_NUM_REGIONS_PER_SERVER_USAGE);
     addOptWithArg(OPT_REGION_REPLICATION, OPT_REGION_REPLICATION_USAGE);
     addOptWithArg(OPT_REGION_REPLICA_ID, OPT_REGION_REPLICA_ID_USAGE);
+    addOptWithArg(OPT_MOB_THRESHOLD, OPT_MOB_THRESHOLD_USAGE);
   }
 
   @Override
@@ -431,6 +443,11 @@ public class LoadTestTool extends AbstractHBaseTool {
       }
 
       isMultiPut = cmd.hasOption(OPT_MULTIPUT);
+
+      mobThreshold = -1;
+      if (cmd.hasOption(OPT_MOB_THRESHOLD)) {
+        mobThreshold = Integer.parseInt(cmd.getOptionValue(OPT_MOB_THRESHOLD));
+      }
 
       System.out.println("Multi-puts: " + isMultiPut);
       System.out.println("Columns per key: " + minColsPerKey + ".."

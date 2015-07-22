@@ -27,6 +27,8 @@ public class PrettyPrinter {
 
   public enum Unit {
     TIME_INTERVAL,
+    LONG,
+    BOOLEAN,
     NONE
   }
 
@@ -35,6 +37,14 @@ public class PrettyPrinter {
     switch (unit) {
       case TIME_INTERVAL:
         human.append(humanReadableTTL(Long.parseLong(value)));
+        break;
+      case LONG:
+        byte[] longBytes = Bytes.toBytesBinary(value);
+        human.append(String.valueOf(Bytes.toLong(longBytes)));
+        break;
+      case BOOLEAN:
+        byte[] booleanBytes = Bytes.toBytesBinary(value);
+        human.append(String.valueOf(Bytes.toBoolean(booleanBytes)));
         break;
       default:
         human.append(value);
