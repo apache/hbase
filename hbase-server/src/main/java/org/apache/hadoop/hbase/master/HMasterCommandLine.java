@@ -255,6 +255,7 @@ public class HMasterCommandLine extends ServerCommandLine {
       // Don't try more than once
       conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
       adm = new HBaseAdmin(getConf());
+      adm.shutdown();
     } catch (MasterNotRunningException e) {
       LOG.error("Master not running");
       return 1;
@@ -264,12 +265,18 @@ public class HMasterCommandLine extends ServerCommandLine {
     } catch (IOException e) {
       LOG.error("Got IOException: " +e.getMessage(), e);
       return 1;
-    }
-    try {
-      adm.shutdown();
     } catch (Throwable t) {
       LOG.error("Failed to stop master", t);
       return 1;
+    } finally {
+      if (adm != null) {
+        try {
+          adm.close();
+        } catch (Throwable t) {
+          LOG.error("Failed to close Admin", t);
+          return 1;
+        }
+      }
     }
     return 0;
   }
