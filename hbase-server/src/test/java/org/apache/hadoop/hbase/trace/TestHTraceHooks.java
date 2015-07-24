@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -49,9 +50,19 @@ public class TestHTraceHooks {
   private static final byte[] FAMILY_BYTES = "family".getBytes();
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static POJOSpanReceiver rcvr;
+  private static long ROOT_SPAN_ID = 0;
 
   @BeforeClass
   public static void before() throws Exception {
+
+    // Find out what the right value to use fo SPAN_ROOT_ID after HTRACE-111. We use HTRACE-32
+    // to find out to detect if we are using HTrace 3.2 or not.
+    try {
+        Method m = Span.class.getMethod("addKVAnnotation", String.class, String.class);
+    } catch (NoSuchMethodException e) {
+      ROOT_SPAN_ID = 0x74aceL; // Span.SPAN_ROOT_ID pre HTrace-3.2
+    }
+
     TEST_UTIL.startMiniCluster(2, 3);
     rcvr = new POJOSpanReceiver(new HBaseHTraceConfiguration(TEST_UTIL.getConfiguration()));
     Trace.addReceiver(rcvr);
@@ -87,7 +98,7 @@ public class TestHTraceHooks {
 
     Collection<Span> spans = rcvr.getSpans();
     TraceTree traceTree = new TraceTree(spans);
-    Collection<Span> roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+    Collection<Span> roots = traceTree.getSpansByParent().find(ROOT_SPAN_ID);
 
     assertEquals(1, roots.size());
     Span createTableRoot = roots.iterator().next();
@@ -118,7 +129,7 @@ public class TestHTraceHooks {
 
     spans = rcvr.getSpans();
     traceTree = new TraceTree(spans);
-    roots = traceTree.getSpansByParent().find(Span.ROOT_SPAN_ID);
+    roots = traceTree.getSpansByParent().find(ROOT_SPAN_ID);
 
     assertEquals(2, roots.size());
     Span putRoot = null;
