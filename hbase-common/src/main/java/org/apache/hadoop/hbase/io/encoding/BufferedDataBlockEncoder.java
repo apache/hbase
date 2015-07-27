@@ -28,13 +28,12 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.OffheapKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.SettableSequenceId;
 import org.apache.hadoop.hbase.Streamable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -445,9 +444,9 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     public int write(OutputStream out, boolean withTags) throws IOException {
       int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
           tagsLength, withTags);
-      writeInt(out, lenToWrite);
-      writeInt(out, keyOnlyBuffer.length);
-      writeInt(out, valueLength);
+      ByteBufferUtils.putInt(out, lenToWrite);
+      ByteBufferUtils.putInt(out, keyOnlyBuffer.length);
+      ByteBufferUtils.putInt(out, valueLength);
       // Write key
       out.write(keyOnlyBuffer);
       // Write value
@@ -668,44 +667,22 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     public int write(OutputStream out, boolean withTags) throws IOException {
       int lenToWrite = KeyValueUtil.length(rowLength, familyLength, qualifierLength, valueLength,
           tagsLength, withTags);
-      writeInt(out, lenToWrite);
-      writeInt(out, keyBuffer.capacity());
-      writeInt(out, valueLength);
+      ByteBufferUtils.putInt(out, lenToWrite);
+      ByteBufferUtils.putInt(out, keyBuffer.capacity());
+      ByteBufferUtils.putInt(out, valueLength);
       // Write key
       out.write(keyBuffer.array());
       // Write value
-      writeByteBuffer(out, this.valueBuffer, this.valueOffset, this.valueLength);
+      ByteBufferUtils.writeByteBuffer(out, this.valueBuffer, this.valueOffset, this.valueLength);
       if (withTags) {
         // 2 bytes tags length followed by tags bytes
         // tags length is serialized with 2 bytes only(short way) even if the type is int.
         // As this is non -ve numbers, we save the sign bit. See HBASE-11437
         out.write((byte) (0xff & (this.tagsLength >> 8)));
         out.write((byte) (0xff & this.tagsLength));
-        writeByteBuffer(out, this.tagsBuffer, this.tagsOffset, this.tagsLength);
+        ByteBufferUtils.writeByteBuffer(out, this.tagsBuffer, this.tagsOffset, this.tagsLength);
       }
       return lenToWrite + Bytes.SIZEOF_INT;
-    }
-  }
-
-  private static void writeInt(OutputStream out, int v) throws IOException {
-    // We have writeInt in ByteBufferOutputStream so that it can directly write int to underlying
-    // ByteBuffer in one step.
-    if (out instanceof ByteBufferOutputStream) {
-      ((ByteBufferOutputStream) out).writeInt(v);
-    } else {
-      StreamUtils.writeInt(out, v);
-    }
-  }
-
-  private static void writeByteBuffer(OutputStream out, ByteBuffer b, int offset, int length)
-      throws IOException {
-    // We have write which takes ByteBuffer in ByteBufferOutputStream so that it can directly write
-    // bytes from the src ByteBuffer to the destination ByteBuffer. This avoid need for temp array
-    // creation and copy
-    if (out instanceof ByteBufferOutputStream) {
-      ((ByteBufferOutputStream) out).write(b, offset, length);
-    } else {
-      ByteBufferUtils.copyBufferToStream(out, b, offset, length);
     }
   }
 
@@ -1166,7 +1143,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
         }
       }
     }
-    ByteBufferUtils.putInt(out, 0); // DUMMY length. This will be updated in endBlockEncoding()
+    StreamUtils.writeInt(out, 0); // DUMMY length. This will be updated in endBlockEncoding()
     blkEncodingCtx.setEncodingState(new BufferedDataBlockEncodingState());
   }
 
@@ -1208,7 +1185,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       return new KeyValue.KeyOnlyKeyValue(key.array(), key.arrayOffset() + key.position(),
           keyLength);
     } else {
-      return new OffheapKeyOnlyKeyValue(key, key.position(), keyLength);
+      return new ByteBufferedKeyOnlyKeyValue(key, key.position(), keyLength);
     }
   }
 }

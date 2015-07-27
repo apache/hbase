@@ -107,10 +107,6 @@ public class TestByteBufferIOEngine {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
       ioEngine.write(srcBuffer, offset);
-      //ByteBuffer dstBuffer = ByteBuffer.allocate(blockSize);
-      //ioEngine.read(dstBuffer, offset);
-      //MultiByteBuffer read = new MultiByteBuffer(dstBuffer);
-      // TODO : this will get changed after HBASE-12295 goes in
       Pair<ByteBuff, MemoryType> read = ioEngine.read(offset, blockSize);
       for (int j = 0; j < byteArray.length; ++j) {
         assertTrue(srcBuffer.get(j) == read.getFirst().get(j));

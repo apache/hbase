@@ -1,5 +1,4 @@
 /**
- * Copyright The Apache Software Foundation
  *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -27,19 +26,37 @@ import org.apache.hadoop.hbase.util.Bytes;
 
 /**
  * This is a key only Cell implementation which is identical to {@link KeyValue.KeyOnlyKeyValue}
- * with respect to key serialization but have its data in off heap memory.
+ * with respect to key serialization but have its data in the form of Byte buffer
+ * (onheap and offheap).
  */
 @InterfaceAudience.Private
-public class OffheapKeyOnlyKeyValue extends ByteBufferedCell {
+public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
 
   private ByteBuffer buf;
   private int offset = 0; // offset into buffer where key starts at
   private int length = 0; // length of this.
   private short rowLen;
 
-  public OffheapKeyOnlyKeyValue(ByteBuffer buf, int offset, int length) {
-    assert buf.isDirect();
-    this.buf = buf;
+  /**
+   * Used in cases where we want to avoid lot of garbage by allocating new objects with different
+   * keys. Use the emtpy construtor and set the keys using {@link #setKey(ByteBuffer, int, int)}
+   */
+  public ByteBufferedKeyOnlyKeyValue() {
+  }
+
+  public ByteBufferedKeyOnlyKeyValue(ByteBuffer buf, int offset, int length) {
+    setKey(buf, offset, length);
+  }
+
+  /**
+   * A setter that helps to avoid object creation every time and whenever
+   * there is a need to create new OffheapKeyOnlyKeyValue.
+   * @param key
+   * @param offset
+   * @param length
+   */
+  public void setKey(ByteBuffer key, int offset, int length) {
+    this.buf = key;
     this.offset = offset;
     this.length = length;
     this.rowLen = ByteBufferUtils.toShort(this.buf, this.offset);
@@ -47,11 +64,17 @@ public class OffheapKeyOnlyKeyValue extends ByteBufferedCell {
 
   @Override
   public byte[] getRowArray() {
+    if (this.buf.hasArray()) {
+      return this.buf.array();
+    }
     return CellUtil.cloneRow(this);
   }
 
   @Override
   public int getRowOffset() {
+    if (this.buf.hasArray()) {
+      return getRowPositionInByteBuffer() + this.buf.arrayOffset();
+    }
     return 0;
   }
 
@@ -62,11 +85,17 @@ public class OffheapKeyOnlyKeyValue extends ByteBufferedCell {
 
   @Override
   public byte[] getFamilyArray() {
+    if (this.buf.hasArray()) {
+      return this.buf.array();
+    }
     return CellUtil.cloneFamily(this);
   }
 
   @Override
   public int getFamilyOffset() {
+    if (this.buf.hasArray()) {
+      return getFamilyPositionInByteBuffer() + this.buf.arrayOffset();
+    }
     return 0;
   }
 
@@ -81,11 +110,17 @@ public class OffheapKeyOnlyKeyValue extends ByteBufferedCell {
 
   @Override
   public byte[] getQualifierArray() {
+    if (this.buf.hasArray()) {
+      return this.buf.array();
+    }
     return CellUtil.cloneQualifier(this);
   }
 
   @Override
   public int getQualifierOffset() {
+    if (this.buf.hasArray()) {
+      return getQualifierPositionInByteBuffer() + this.buf.arrayOffset();
+    }
     return 0;
   }
 

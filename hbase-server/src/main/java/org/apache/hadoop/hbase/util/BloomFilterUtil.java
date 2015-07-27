@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import java.nio.ByteBuffer;
 import java.text.NumberFormat;
 import java.util.Random;
 

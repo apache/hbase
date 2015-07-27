@@ -34,6 +34,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
+import org.apache.hadoop.hbase.OffheapKeyValue;
 import org.apache.hadoop.hbase.ShareableMemory;
 import org.apache.hadoop.hbase.SizeCachedKeyValue;
 import org.apache.hadoop.hbase.HConstants;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.Pair;
@@ -464,7 +467,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     protected volatile int blockFetches;
     protected final HFile.Reader reader;
     private int currTagsLen;
-    private KeyValue.KeyOnlyKeyValue keyOnlyKv = new KeyValue.KeyOnlyKeyValue();
+    // buffer backed keyonlyKV
+    private ByteBufferedKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferedKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
     final Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
 
@@ -675,10 +679,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         }
         offsetFromPos += Bytes.SIZEOF_LONG;
         blockBuffer.asSubByteBuffer(blockBuffer.position() + offsetFromPos, klen, pair);
-        // TODO :change here after Bufferbackedcells come
-        keyOnlyKv.setKey(pair.getFirst().array(), pair.getFirst().arrayOffset() + pair.getSecond(),
-            klen);
-        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, keyOnlyKv);
+        bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), klen);
+        int comp = reader.getComparator().compareKeyIgnoresMvcc(key, bufBackedKeyOnlyKv);
         offsetFromPos += klen + vlen;
         if (this.reader.getFileContext().isIncludesTags()) {
           // Read short as unsigned, high byte first
@@ -888,30 +890,43 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (!isSeeked())
         return null;
 
-      KeyValue ret;
-      // TODO : reduce the varieties of KV here. Check if based on a boolean
-      // we can handle the 'no tags' case
-      // TODO : Handle MBB here
-      if (currTagsLen > 0) {
-        if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
-          ret = new ShareableMemoryKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-                          + blockBuffer.position(), getCellBufSize());
+      Cell ret;
+      int cellBufSize = getCellBufSize();
+      if (blockBuffer.hasArray()) {
+        // TODO : reduce the varieties of KV here. Check if based on a boolean
+        // we can handle the 'no tags' case.
+        if (currTagsLen > 0) {
+          if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
+            ret = new ShareableMemoryKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+              + blockBuffer.position(), getCellBufSize());
+          } else {
+            ret = new SizeCachedKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+                    + blockBuffer.position(), cellBufSize);
+          }
         } else {
-          ret = new SizeCachedKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-                  + blockBuffer.position(), getCellBufSize());
+          if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
+            ret = new ShareableMemoryNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+                    + blockBuffer.position(), getCellBufSize());
+          } else {
+            ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
+                    + blockBuffer.position(), cellBufSize);
+          }
         }
       } else {
+        ByteBuffer buf = blockBuffer.asSubByteBuffer(cellBufSize);
         if (this.curBlock.getMemoryType() == MemoryType.SHARED) {
-          ret = new ShareableMemoryNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-            + blockBuffer.position(), getCellBufSize());
+          ret = new ShareableMemoryOffheapKeyValue(buf, buf.position(), cellBufSize,
+            currTagsLen > 0);
         } else {
-          ret = new SizeCachedNoTagsKeyValue(blockBuffer.array(), blockBuffer.arrayOffset()
-            + blockBuffer.position(), getCellBufSize());
+          ret = new OffheapKeyValue(buf, buf.position(), cellBufSize, currTagsLen > 0);
         }
       }
-
       if (this.reader.shouldIncludeMemstoreTS()) {
-        ret.setSequenceId(currMemstoreTS);
+        try {
+          CellUtil.setSequenceId(ret, currMemstoreTS);
+        } catch (IOException e) {
+          // will not happen
+        }
       }
       return ret;
     }
@@ -919,9 +934,16 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     public Cell getKey() {
       assertSeeked();
-      return new KeyValue.KeyOnlyKeyValue(blockBuffer.array(),
-          blockBuffer.arrayOffset() + blockBuffer.position()
-              + KEY_VALUE_LEN_SIZE, currKeyLen);
+      // Create a new object so that this getKey is cached as firstKey, lastKey
+      Pair<ByteBuffer, Integer> keyPair = new Pair<ByteBuffer, Integer>();
+      blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, keyPair);
+      ByteBuffer keyBuf = keyPair.getFirst();
+      if (keyBuf.hasArray()) {
+        return new KeyValue.KeyOnlyKeyValue(keyBuf.array(), keyBuf.arrayOffset()
+            + keyPair.getSecond(), currKeyLen);
+      } else {
+        return new ByteBufferedKeyOnlyKeyValue(keyBuf, keyPair.getSecond(), currKeyLen);
+      }
     }
 
     private static class ShareableMemoryKeyValue extends SizeCachedKeyValue implements
@@ -950,14 +972,32 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       }
     }
 
+    private static class ShareableMemoryOffheapKeyValue extends OffheapKeyValue implements
+        ShareableMemory {
+      public ShareableMemoryOffheapKeyValue(ByteBuffer buf, int offset, int length,
+          boolean hasTags) {
+        super(buf, offset, length, hasTags);
+      }
+
+      @Override
+      public Cell cloneToCell() {
+        byte[] copy = new byte[this.length];
+        ByteBufferUtils.copyFromBufferToArray(copy, this.buf, this.offset, 0, this.length);
+        return new SizeCachedKeyValue(copy, 0, copy.length);
+      }
+    }
+
     @Override
     public ByteBuffer getValue() {
       assertSeeked();
-      // TODO : change here after BufferBacked cells come
-      return ByteBuffer.wrap(
-          blockBuffer.array(),
-          blockBuffer.arrayOffset() + blockBuffer.position()
-              + KEY_VALUE_LEN_SIZE + currKeyLen, currValueLen).slice();
+      // Okie to create new Pair. Not used in hot path
+      Pair<ByteBuffer, Integer> valuePair = new Pair<ByteBuffer, Integer>();
+      this.blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
+        currValueLen, valuePair);
+      ByteBuffer valBuf = valuePair.getFirst().duplicate();
+      valBuf.position(valuePair.getSecond());
+      valBuf.limit(currValueLen + valuePair.getSecond());
+      return valBuf.slice();
     }
 
     protected void setNonSeekedState() {
@@ -1151,32 +1191,28 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       int klen = buffer.getInt();
       buffer.skip(Bytes.SIZEOF_INT);// Skip value len part
       ByteBuffer keyBuff = buffer.asSubByteBuffer(klen);
-      keyBuff.limit(keyBuff.position() + klen);
-      // Create a KeyOnlyKv now.
-      // TODO : Will change when Buffer backed cells come
-      return new KeyValue.KeyOnlyKeyValue(keyBuff.array(), keyBuff.arrayOffset()
-          + keyBuff.position(), klen);
+      if (keyBuff.hasArray()) {
+        return new KeyValue.KeyOnlyKeyValue(keyBuff.array(), keyBuff.arrayOffset()
+            + keyBuff.position(), klen);
+      } else {
+        return new ByteBufferedKeyOnlyKeyValue(keyBuff, keyBuff.position(), klen);
+      }
     }
 
     @Override
     public String getKeyString() {
-      return Bytes.toStringBinary(blockBuffer.array(),
-          blockBuffer.arrayOffset() + blockBuffer.position()
-              + KEY_VALUE_LEN_SIZE, currKeyLen);
+      return CellUtil.toString(getKey(), false);
     }
 
     @Override
     public String getValueString() {
-      return Bytes.toString(blockBuffer.array(), blockBuffer.arrayOffset()
-          + blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
-          currValueLen);
+      return ByteBufferUtils.toStringBinary(getValue());
     }
 
     public int compareKey(CellComparator comparator, Cell key) {
-      this.keyOnlyKv.setKey(blockBuffer.array(), blockBuffer.arrayOffset()
-              + blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen);
-      return comparator.compareKeyIgnoresMvcc(
-          key, this.keyOnlyKv);
+      blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, pair);
+      this.bufBackedKeyOnlyKv.setKey(pair.getFirst(), pair.getSecond(), currKeyLen);
+      return comparator.compareKeyIgnoresMvcc(key, this.bufBackedKeyOnlyKv);
     }
 
     @Override
@@ -1534,7 +1570,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     private final HFileBlockDecodingContext decodingCtx;
     private final DataBlockEncoder.EncodedSeeker seeker;
     private final DataBlockEncoder dataBlockEncoder;
-    private final HFileContext meta;
 
     public EncodedScanner(HFile.Reader reader, boolean cacheBlocks,
         boolean pread, boolean isCompaction, HFileContext meta) {
@@ -1544,7 +1579,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       decodingCtx = dataBlockEncoder.newDataBlockDecodingContext(meta);
       seeker = dataBlockEncoder.createSeeker(
         reader.getComparator(), decodingCtx);
-      this.meta = meta;
     }
 
     @Override
@@ -1644,8 +1678,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     @Override
     public String getValueString() {
       ByteBuffer valueBuffer = getValue();
-      return Bytes.toStringBinary(valueBuffer.array(),
-          valueBuffer.arrayOffset(), valueBuffer.limit());
+      return ByteBufferUtils.toStringBinary(valueBuffer);
     }
 
     private void assertValidSeek() {
@@ -1706,22 +1739,6 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
 
   public boolean isFileInfoLoaded() {
     return true; // We load file info in constructor in version 2.
-  }
-
-  /**
-   * Validates that the minor version is within acceptable limits.
-   * Otherwise throws an Runtime exception
-   */
-  private void validateMinorVersion(Path path, int minorVersion) {
-    if (minorVersion < MIN_MINOR_VERSION ||
-        minorVersion > MAX_MINOR_VERSION) {
-      String msg = "Minor version for path " + path +
-                   " is expected to be between " +
-                   MIN_MINOR_VERSION + " and " + MAX_MINOR_VERSION +
-                   " but is found to be " + minorVersion;
-      LOG.error(msg);
-      throw new RuntimeException(msg);
-    }
   }
 
   @Override

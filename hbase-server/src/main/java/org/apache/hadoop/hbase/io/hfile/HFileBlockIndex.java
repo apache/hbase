@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KeyOnlyKeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.ByteBufferedKeyOnlyKeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
@@ -728,7 +729,7 @@ public class HFileBlockIndex {
       // If we imagine that keys[-1] = -Infinity and
       // keys[numEntries] = Infinity, then we are maintaining an invariant that
       // keys[low - 1] < key < keys[high + 1] while narrowing down the range.
-      KeyValue.KeyOnlyKeyValue nonRootIndexKV = new KeyValue.KeyOnlyKeyValue();
+      ByteBufferedKeyOnlyKeyValue nonRootIndexkeyOnlyKV = new ByteBufferedKeyOnlyKeyValue();
       Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
       while (low <= high) {
         mid = (low + high) >>> 1;
@@ -753,9 +754,8 @@ public class HFileBlockIndex {
         // done after HBASE-12224 & HBASE-12282
         // TODO avoid array call.
         nonRootIndex.asSubByteBuffer(midKeyOffset, midLength, pair);
-        nonRootIndexKV.setKey(pair.getFirst().array(),
-            pair.getFirst().arrayOffset() + pair.getSecond(), midLength);
-        int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexKV);
+        nonRootIndexkeyOnlyKV.setKey(pair.getFirst(), pair.getSecond(), midLength);
+        int cmp = comparator.compareKeyIgnoresMvcc(key, nonRootIndexkeyOnlyKV);
 
         // key lives above the midpoint
         if (cmp > 0)

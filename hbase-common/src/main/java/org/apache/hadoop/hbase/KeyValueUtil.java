@@ -589,11 +589,11 @@ public class KeyValueUtil {
       int tlen = cell.getTagsLength();
 
       // write total length
-      KeyValue.writeInt(out, length(rlen, flen, qlen, vlen, tlen, withTags));
+      ByteBufferUtils.putInt(out, length(rlen, flen, qlen, vlen, tlen, withTags));
       // write key length
-      KeyValue.writeInt(out, keyLength(rlen, flen, qlen));
+      ByteBufferUtils.putInt(out, keyLength(rlen, flen, qlen));
       // write value length
-      KeyValue.writeInt(out, vlen);
+      ByteBufferUtils.putInt(out, vlen);
       // Write rowkey - 2 bytes rk length followed by rowkey bytes
       StreamUtils.writeShort(out, rlen);
       out.write(cell.getRowArray(), cell.getRowOffset(), rlen);

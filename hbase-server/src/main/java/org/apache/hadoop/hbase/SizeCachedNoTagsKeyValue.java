@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -44,7 +45,7 @@ public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
 
   @Override
   public int write(OutputStream out, boolean withTags) throws IOException {
-    writeInt(out, this.length);
+    ByteBufferUtils.putInt(out, this.length);
     out.write(this.bytes, this.offset, this.length);
     return this.length + Bytes.SIZEOF_INT;
   }

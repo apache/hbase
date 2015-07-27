@@ -37,9 +37,8 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.util.StreamUtils;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
@@ -2475,20 +2474,9 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId,
     if (!withTags) {
       length = this.getKeyLength() + this.getValueLength() + KEYVALUE_INFRASTRUCTURE_SIZE;
     }
-    writeInt(out, length);
+    ByteBufferUtils.putInt(out, length);
     out.write(this.bytes, this.offset, length);
     return length + Bytes.SIZEOF_INT;
-  }
-
-  // This does same as DataOuput#writeInt (big-endian, etc.)
-  public static void writeInt(OutputStream out, int v) throws IOException {
-    // We have writeInt in ByteBufferOutputStream so that it can directly write int to underlying
-    // ByteBuffer in one step.
-    if (out instanceof ByteBufferOutputStream) {
-      ((ByteBufferOutputStream) out).writeInt(v);
-    } else {
-      StreamUtils.writeInt(out, v);
-    }
   }
 
   /**
