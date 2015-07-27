@@ -658,7 +658,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         Result r = null;
         if (action.hasGet()) {
           Get get = ProtobufUtil.toGet(action.getGet());
-          r = get(get, ((HRegion) region), closeCallBack, context);
+          if (context != null) {
+            r = get(get, ((HRegion) region), closeCallBack, context);
+          } else {
+            r = region.get(get);
+          }
         } else if (action.hasServiceCall()) {
           resultOrExceptionBuilder = ResultOrException.newBuilder();
           try {
@@ -2078,7 +2082,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     RegionActionResult.Builder regionActionResultBuilder = RegionActionResult.newBuilder();
     Boolean processed = null;
     RegionScannersCloseCallBack closeCallBack = null;
-    RpcCallContext context = null;
+    RpcCallContext context = RpcServer.getCurrentCall();
     for (RegionAction regionAction : request.getRegionActionList()) {
       this.requestCount.add(regionAction.getActionCount());
       OperationQuota quota;
@@ -2125,12 +2129,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         }
       } else {
         // doNonAtomicRegionMutation manages the exception internally
-        if (closeCallBack == null) {
+        if (context != null && closeCallBack == null) {
           // An RpcCallBack that creates a list of scanners that needs to perform callBack
           // operation on completion of multiGets.
           // Set this only once
           closeCallBack = new RegionScannersCloseCallBack();
-          context = RpcServer.getCurrentCall();
           context.setCallBack(closeCallBack);
         }
         cellsToReturn = doNonAtomicRegionMutation(region, quota, regionAction, cellScanner,
