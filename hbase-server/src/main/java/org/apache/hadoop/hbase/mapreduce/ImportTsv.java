@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static java.lang.String.format;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
@@ -30,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -58,11 +61,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Set;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
 
 /**
  * Tool to import data from a TSV file.
@@ -769,7 +770,7 @@ public class ImportTsv extends Configured implements Tool {
   }
 
   public static void main(String[] args) throws Exception {
-    int status = ToolRunner.run(new Configuration(), new ImportTsv(), args);
+    int status = ToolRunner.run(HBaseConfiguration.create(), new ImportTsv(), args);
     System.exit(status);
   }
 }
