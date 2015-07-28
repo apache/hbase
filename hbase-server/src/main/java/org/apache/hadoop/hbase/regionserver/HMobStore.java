@@ -543,7 +543,6 @@ public class HMobStore extends HStore {
     return cellsSizeCompactedFromMob;
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT")
   public void updateMobFlushCount() {
     mobFlushCount++;
   }

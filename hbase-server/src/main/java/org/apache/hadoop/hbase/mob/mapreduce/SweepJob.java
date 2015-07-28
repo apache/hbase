@@ -96,7 +96,7 @@ public class SweepJob {
   public static final String WORKING_FILES_DIR_KEY = "mob.sweep.job.files.dir";
   //the MOB_SWEEP_JOB_DELAY is ONE_DAY by default. Its value is only changed when testing.
   public static final String MOB_SWEEP_JOB_DELAY = "hbase.mob.sweep.job.delay";
-  protected static final long ONE_DAY = 24 * 60 * 60 * 1000;
+  protected static long ONE_DAY = 24 * 60 * 60 * 1000;
   private long compactionStartTime = EnvironmentEdgeManager.currentTime();
   public final static String CREDENTIALS_LOCATION = "credentials_location";
   private CacheConfig cacheConfig;
@@ -461,7 +461,7 @@ public class SweepJob {
   /**
    * A result with index.
    */
-  private static class IndexedResult implements Comparable<IndexedResult> {
+  private class IndexedResult implements Comparable<IndexedResult> {
     private int index;
     private String value;
 
@@ -516,7 +516,7 @@ public class SweepJob {
    * It merges and sort the readers in different sequence files as one where
    * the results are read in order.
    */
-  private static class MergeSortReader {
+  private class MergeSortReader {
 
     private List<SequenceFile.Reader> readers = new ArrayList<SequenceFile.Reader>();
     private PriorityQueue<IndexedResult> results = new PriorityQueue<IndexedResult>();
