@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.List;
 
+import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -281,9 +282,11 @@ public class RegionServerCoprocessorHost extends
         final Configuration conf, final RegionServerServices services) {
       super(impl, priority, seq, conf);
       this.regionServerServices = services;
-      for (Class c : implClass.getInterfaces()) {
+      for (Object itf : ClassUtils.getAllInterfaces(implClass)) {
+        Class<?> c = (Class<?>) itf;
         if (SingletonCoprocessorService.class.isAssignableFrom(c)) {
-          this.regionServerServices.registerService(((SingletonCoprocessorService) impl).getService());
+          this.regionServerServices.registerService(
+            ((SingletonCoprocessorService) impl).getService());
           break;
         }
       }
