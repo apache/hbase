@@ -3013,9 +3013,7 @@ public final class ProtobufUtil {
     // This used to be builder.mergeDelimitedFrom(in);
     // but is replaced to allow us to bump the protobuf size limit.
     final int firstByte = in.read();
-    if (firstByte == -1) {
-      // bail out. (was return false;)
-    } else {
+    if (firstByte != -1) {
       final int size = CodedInputStream.readRawVarint32(firstByte, in);
       final InputStream limitedInput = new LimitInputStream(in, size);
       final CodedInputStream codedInput = CodedInputStream.newInstance(limitedInput);
