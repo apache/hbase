@@ -1106,7 +1106,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       @Override
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(Bytes.toBytes(owner),
-          htd.getTableName(), null, Action.values());
+            htd.getTableName(), null, Action.values());
         AccessControlLists.addUserPermission(conf, userperm);
         return null;
       }
@@ -1124,7 +1124,7 @@ public class AccessController extends BaseMasterAndRegionObserver
   public void preModifyColumn(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
       HColumnDescriptor descriptor) throws IOException {
     requirePermission("modifyColumn", tableName, descriptor.getName(), null, Action.ADMIN,
-      Action.CREATE);
+        Action.CREATE);
   }
 
   @Override
@@ -1299,7 +1299,7 @@ public class AccessController extends BaseMasterAndRegionObserver
       }
     });
     this.authManager.getZKPermissionWatcher().deleteNamespaceACLNode(namespace);
-    LOG.info(namespace + " entry deleted in "+AccessControlLists.ACL_TABLE_NAME+" table.");
+    LOG.info(namespace + " entry deleted in " + AccessControlLists.ACL_TABLE_NAME + " table.");
   }
 
   @Override
@@ -1755,7 +1755,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
     User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.CHECK_AND_DELETE, user, env, families,
-      Action.READ, Action.WRITE);
+        Action.READ, Action.WRITE);
     logResult(authResult);
     if (!authResult.isAllowed()) {
       if (cellFeaturesEnabled && !compatibleEarlyTermination) {
@@ -1807,7 +1807,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     Map<byte[],? extends Collection<byte[]>> families = makeFamilyMap(family, qualifier);
     User user = getActiveUser();
     AuthResult authResult = permissionGranted(OpType.INCREMENT_COLUMN_VALUE, user, env, families,
-      Action.WRITE);
+        Action.WRITE);
     if (!authResult.isAllowed() && cellFeaturesEnabled && !compatibleEarlyTermination) {
       authResult.setAllowed(checkCoveringPermission(OpType.INCREMENT_COLUMN_VALUE, env, row,
         families, HConstants.LATEST_TIMESTAMP, Action.WRITE));
@@ -1989,7 +1989,7 @@ public class AccessController extends BaseMasterAndRegionObserver
           LOG.trace("Carrying forward ACLs from " + oldCell + ": " + perms);
         }
         tags.add(new Tag(AccessControlLists.ACL_TAG_TYPE,
-          ProtobufUtil.toUsersAndPermissions(perms).toByteArray()));
+            ProtobufUtil.toUsersAndPermissions(perms).toByteArray()));
       }
     }
 
@@ -2267,6 +2267,13 @@ public class AccessController extends BaseMasterAndRegionObserver
               return AccessControlLists.getUserPermissions(regionEnv.getConfiguration(), null);
             }
           });
+          // Adding superusers explicitly to the result set as AccessControlLists do not store them.
+          // Also using acl as table name to be inline  with the results of global admin and will
+          // help in avoiding any leakage of information about being superusers.
+          for (String user: Superusers.getSuperUsers()) {
+            perms.add(new UserPermission(user.getBytes(), AccessControlLists.ACL_TABLE_NAME, null,
+                Action.values()));
+          }
         }
         response = ResponseConverter.buildGetUserPermissionsResponse(perms);
       } else {
