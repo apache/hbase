@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -94,6 +95,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -419,7 +421,7 @@ public class TestAccessController extends SecureTestUtil {
     };
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_ADMIN_CF,
-      USER_GROUP_CREATE, USER_GROUP_ADMIN);
+        USER_GROUP_CREATE, USER_GROUP_ADMIN);
     verifyDenied(action, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
@@ -663,7 +665,7 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
     verifyDenied(action, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
   }
 
   @Test
@@ -739,7 +741,7 @@ public class TestAccessController extends SecureTestUtil {
   private void verifyReadWrite(AccessTestAction action) throws Exception {
     verifyAllowed(action, SUPERUSER, USER_ADMIN, USER_OWNER, USER_CREATE, USER_RW);
     verifyDenied(action, USER_NONE, USER_RO, USER_GROUP_ADMIN, USER_GROUP_CREATE, USER_GROUP_READ,
-      USER_GROUP_WRITE);
+        USER_GROUP_WRITE);
   }
 
   @Test
@@ -1100,7 +1102,7 @@ public class TestAccessController extends SecureTestUtil {
 
     verifyAllowed(grantAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
     verifyDenied(grantAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
-      USER_GROUP_WRITE, USER_GROUP_CREATE);
+        USER_GROUP_WRITE, USER_GROUP_CREATE);
     try {
       verifyAllowed(revokeAction, SUPERUSER, USER_ADMIN, USER_OWNER, USER_GROUP_ADMIN);
       verifyDenied(revokeAction, USER_CREATE, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ,
@@ -1391,6 +1393,11 @@ public class TestAccessController extends SecureTestUtil {
     }
   }
 
+  private boolean hasFoundUserPermission(List<UserPermission> userPermissions,
+                                         List<UserPermission> perms) {
+    return perms.containsAll(userPermissions);
+  }
+
   private boolean hasFoundUserPermission(UserPermission userPermission, List<UserPermission> perms) {
     return perms.contains(userPermission);
   }
@@ -1661,10 +1668,17 @@ public class TestAccessController extends SecureTestUtil {
     } finally {
       acl.close();
     }
-    UserPermission adminPerm = new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
-      AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW"));
-    assertTrue("Only global users and user admin has permission on table _acl_ per setup",
-      perms.size() == 5 && hasFoundUserPermission(adminPerm, perms));
+    List<UserPermission> adminPerms = new ArrayList<UserPermission>();
+    adminPerms.add(new UserPermission(Bytes.toBytes(USER_ADMIN.getShortName()),
+      AccessControlLists.ACL_TABLE_NAME, null, null, Bytes.toBytes("ACRW")));
+    List<String> superUsers = Superusers.getSuperUsers();
+    for(String user: superUsers) {
+      adminPerms.add(new UserPermission(Bytes.toBytes(user), AccessControlLists.ACL_TABLE_NAME,
+          null, null, Action.values()));
+    }
+    assertTrue("Only super users, global users and user admin has permission on table hbase:acl " +
+        "per setup", perms.size() == 5 + superUsers.size() &&
+        hasFoundUserPermission(adminPerms, perms));
   }
 
   /** global operations */

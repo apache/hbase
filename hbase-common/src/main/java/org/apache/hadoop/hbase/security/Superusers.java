@@ -119,4 +119,8 @@ public final class Superusers {
     }
     return false;
   }
+
+  public static List<String> getSuperUsers() {
+    return superUsers;
+  }
 }
