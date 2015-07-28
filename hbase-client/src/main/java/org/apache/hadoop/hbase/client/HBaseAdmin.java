@@ -4217,8 +4217,8 @@ public class HBaseAdmin implements Admin {
     HTableDescriptor htd = getTableDescriptor(tableName);
     HColumnDescriptor family = htd.getFamily(columnFamily);
     if (family == null || !family.isMobEnabled()) {
-      throw new IllegalArgumentException("Column family " + columnFamily
-              + " is not a mob column family");
+      throw new IllegalArgumentException("Column family " + Bytes.toString(columnFamily)
+        + " is not a mob column family");
     }
   }
 
