@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -89,7 +90,8 @@ public class MasterCoprocessorHost
   public MasterEnvironment createEnvironment(final Class<?> implClass,
       final Coprocessor instance, final int priority, final int seq,
       final Configuration conf) {
-    for (Class<?> c : implClass.getInterfaces()) {
+    for (Object itf : ClassUtils.getAllInterfaces(implClass)) {
+      Class<?> c = (Class<?>) itf;
       if (CoprocessorService.class.isAssignableFrom(c)) {
         masterServices.registerService(((CoprocessorService)instance).getService());
       }

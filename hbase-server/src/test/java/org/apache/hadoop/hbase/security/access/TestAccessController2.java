@@ -26,6 +26,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
+import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -38,6 +39,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
+import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
+import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -478,6 +483,24 @@ public class TestAccessController2 extends SecureTestUtil {
     // data having this column family and qualifier.
     revokeFromTable(TEST_UTIL, '@' + TESTGROUP_1, name, TEST_FAMILY, Q1);
     verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
+  }
+
+  public static class MyAccessController extends AccessController {
+  }
+
+  @Test
+  public void testCoprocessorLoading() throws Exception {
+    MasterCoprocessorHost cpHost =
+        TEST_UTIL.getMiniHBaseCluster().getMaster().getCoprocessorHost();
+    cpHost.load(MyAccessController.class, Coprocessor.PRIORITY_HIGHEST, conf);
+    AccessController ACCESS_CONTROLLER = (AccessController) cpHost.findCoprocessor(
+      MyAccessController.class.getName());
+    MasterCoprocessorEnvironment CP_ENV = cpHost.createEnvironment(
+      MyAccessController.class, ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
+    RegionServerCoprocessorHost rsHost = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0)
+        .getCoprocessorHost();
+    RegionServerCoprocessorEnvironment RSCP_ENV = rsHost.createEnvironment(
+      MyAccessController.class, ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
   @Test
