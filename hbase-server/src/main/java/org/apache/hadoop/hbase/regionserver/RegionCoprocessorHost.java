@@ -38,6 +38,7 @@ import com.google.protobuf.Service;
 
 import org.apache.commons.collections.map.AbstractReferenceMap;
 import org.apache.commons.collections.map.ReferenceMap;
+import org.apache.commons.lang.ClassUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
@@ -370,7 +371,8 @@ public class RegionCoprocessorHost
     // uses a different way to be registered and executed.
     // It uses a visitor pattern to invoke registered Endpoint
     // method.
-    for (Class<?> c : implClass.getInterfaces()) {
+    for (Object itf : ClassUtils.getAllInterfaces(implClass)) {
+      Class<?> c = (Class<?>) itf;
       if (CoprocessorService.class.isAssignableFrom(c)) {
         region.registerService( ((CoprocessorService)instance).getService() );
       }
