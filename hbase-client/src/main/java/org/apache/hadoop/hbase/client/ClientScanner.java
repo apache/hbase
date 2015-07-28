@@ -424,6 +424,8 @@ public abstract class ClientScanner extends AbstractClientScanner {
           // a ScannerTimeoutException. Else, it's because the region moved and we used the old
           // id against the new region server; reset the scanner.
           if (timeout < System.currentTimeMillis()) {
+            LOG.info("For hints related to the following exception, please try taking a look at: " +
+                "https://hbase.apache.org/book.html#trouble.client.scantimeout");
             long elapsed = System.currentTimeMillis() - lastNext;
             ScannerTimeoutException ex =
                 new ScannerTimeoutException(elapsed + "ms passed since the last invocation, "
