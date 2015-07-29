@@ -38,7 +38,7 @@ public class MasterProcedureManagerHost extends
 
   @Override
   public void loadProcedures(Configuration conf) {
-    loadUserProcedures(conf, MASTER_PROCEUDRE_CONF_KEY);
+    loadUserProcedures(conf, MASTER_PROCEDURE_CONF_KEY);
     for (MasterProcedureManager mpm : getProcedureManagers()) {
       procedureMgrMap.put(mpm.getProcedureSignature(), mpm);
     }

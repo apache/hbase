@@ -45,7 +45,7 @@ public class TestProcedureManager {
     // set configure to indicate which pm should be loaded
     Configuration conf = util.getConfiguration();
 
-    conf.set(ProcedureManagerHost.MASTER_PROCEUDRE_CONF_KEY,
+    conf.set(ProcedureManagerHost.MASTER_PROCEDURE_CONF_KEY,
         SimpleMasterProcedureManager.class.getName());
     conf.set(ProcedureManagerHost.REGIONSERVER_PROCEDURE_CONF_KEY,
         SimpleRSProcedureManager.class.getName());
