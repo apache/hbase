@@ -282,6 +282,7 @@ if ( fqtn != null ) {
 </table>
 <%
   Map<ServerName, Integer> regDistribution = new TreeMap<ServerName, Integer>();
+  Map<ServerName, Integer> primaryRegDistribution = new TreeMap<ServerName, Integer>();
   List<HRegionLocation> regions = r.getAllRegionLocations();
   if(regions != null && regions.size() > 0) { %>
 <%=     tableHeader %>
@@ -304,6 +305,11 @@ if ( fqtn != null ) {
         Integer i = regDistribution.get(addr);
         if (null == i) i = Integer.valueOf(0);
         regDistribution.put(addr, i + 1);
+        if (withReplica && RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
+          i = primaryRegDistribution.get(addr);
+          if (null == i) i = Integer.valueOf(0);
+          primaryRegDistribution.put(addr, i+1);
+        }
       }
     }
 %>
@@ -341,7 +347,17 @@ if ( fqtn != null ) {
 <% } %>
 </table>
 <h2>Regions by Region Server</h2>
+<%
+if (withReplica) {
+%>
+<table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th><th>Primary Region Count</th></tr>
+<%
+} else {
+%>
 <table class="table table-striped"><tr><th>Region Server</th><th>Region Count</th></tr>
+<%
+}
+%>
 <%
   for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
      ServerName addr = rdEntry.getKey();
@@ -350,6 +366,13 @@ if ( fqtn != null ) {
 <tr>
   <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a></td>
   <td><%= rdEntry.getValue()%></td>
+<%
+if (withReplica) {
+%>
+  <td><%= primaryRegDistribution.get(addr)%></td>
+<%
+}
+%>
 </tr>
 <% } %>
 </table>
