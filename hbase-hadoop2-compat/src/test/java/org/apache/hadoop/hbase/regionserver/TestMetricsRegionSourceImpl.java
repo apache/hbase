@@ -125,6 +125,11 @@ public class TestMetricsRegionSourceImpl {
     }
 
     @Override
+    public int getRegionHashCode() {
+      return regionName.hashCode();
+    }
+
+    @Override
     public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
       return null;
     }

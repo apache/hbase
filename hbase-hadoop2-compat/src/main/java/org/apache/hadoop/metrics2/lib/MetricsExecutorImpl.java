@@ -27,7 +27,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 
 /**
- *  Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by MetricMutableQuantiles{@link MetricMutableQuantiles}
+ *  Class to handle the ScheduledExecutorService{@link ScheduledExecutorService} used by
+ *  MetricMutableQuantiles{@link MetricMutableQuantiles}, MetricsRegionAggregateSourceImpl, and
+ *  JmxCacheBuster
  */
 @InterfaceAudience.Private
 public class MetricsExecutorImpl implements MetricsExecutor {
@@ -46,11 +48,11 @@ public class MetricsExecutorImpl implements MetricsExecutor {
 
   private enum ExecutorSingleton {
     INSTANCE;
-
-    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1, new ThreadPoolExecutorThreadFactory("HBase-Metrics2-"));
+    private final ScheduledExecutorService scheduler = new ScheduledThreadPoolExecutor(1,
+        new ThreadPoolExecutorThreadFactory("HBase-Metrics2-"));
   }
 
-  private static class ThreadPoolExecutorThreadFactory implements ThreadFactory {
+  private final static class ThreadPoolExecutorThreadFactory implements ThreadFactory {
     private final String name;
     private final AtomicInteger threadNumber = new AtomicInteger(1);
 
