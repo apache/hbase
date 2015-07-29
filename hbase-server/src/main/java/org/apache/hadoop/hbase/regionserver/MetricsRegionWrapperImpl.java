@@ -135,6 +135,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
     return this.region.compactionsFinished.get();
   }
 
+  @Override
+  public int getRegionHashCode() {
+    return this.region.hashCode();
+  }
+
   public class HRegionMetricsWrapperRunnable implements Runnable {
 
     @Override
