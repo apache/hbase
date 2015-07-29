@@ -41,7 +41,7 @@ public abstract class ProcedureManagerHost<E extends ProcedureManager> {
 
   public static final String REGIONSERVER_PROCEDURE_CONF_KEY =
       "hbase.procedure.regionserver.classes";
-  public static final String MASTER_PROCEUDRE_CONF_KEY =
+  public static final String MASTER_PROCEDURE_CONF_KEY =
       "hbase.procedure.master.classes";
 
   private static final Log LOG = LogFactory.getLog(ProcedureManagerHost.class);
