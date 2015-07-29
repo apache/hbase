@@ -19,6 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -34,29 +37,38 @@ import org.apache.hadoop.metrics2.lib.MutableHistogram;
 @InterfaceAudience.Private
 public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
-  private final MetricsRegionWrapper regionWrapper;
-
-
-  private boolean closed = false;
-  private MetricsRegionAggregateSourceImpl agg;
-  private DynamicMetricsRegistry registry;
   private static final Log LOG = LogFactory.getLog(MetricsRegionSourceImpl.class);
 
-  private String regionNamePrefix;
-  private String regionPutKey;
-  private String regionDeleteKey;
-  private String regionGetKey;
-  private String regionIncrementKey;
-  private String regionAppendKey;
-  private String regionScanNextKey;
-  private MutableCounterLong regionPut;
-  private MutableCounterLong regionDelete;
+  private boolean closed = false;
 
-  private MutableCounterLong regionIncrement;
-  private MutableCounterLong regionAppend;
+  // lock to ensure that lock and pushing metrics can't race.
+  // When changing or acting on the closed boolean this lock must be held.
+  // The write lock must be held when changing closed.
+  private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock(false);
 
-  private MutableHistogram regionGet;
-  private MutableHistogram regionScanNext;
+  // Non-final so that we can null out the wrapper
+  // This is just paranoia. We really really don't want to
+  // leak a whole region by way of keeping the
+  // regionWrapper around too long.
+  private MetricsRegionWrapper regionWrapper;
+
+  private final MetricsRegionAggregateSourceImpl agg;
+  private final DynamicMetricsRegistry registry;
+
+  private final String regionNamePrefix;
+  private final String regionPutKey;
+  private final String regionDeleteKey;
+  private final String regionGetKey;
+  private final String regionIncrementKey;
+  private final String regionAppendKey;
+  private final String regionScanNextKey;
+
+  private final MutableCounterLong regionPut;
+  private final MutableCounterLong regionDelete;
+  private final MutableCounterLong regionIncrement;
+  private final MutableCounterLong regionAppend;
+  private final MutableHistogram regionGet;
+  private final MutableHistogram regionScanNext;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
                                  MetricsRegionAggregateSourceImpl aggregate) {
@@ -77,16 +89,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
     String suffix = "Count";
 
     regionPutKey = regionNamePrefix + MetricsRegionServerSource.MUTATE_KEY + suffix;
-    regionPut = registry.getLongCounter(regionPutKey, 0l);
+    regionPut = registry.getLongCounter(regionPutKey, 0L);
 
     regionDeleteKey = regionNamePrefix + MetricsRegionServerSource.DELETE_KEY + suffix;
-    regionDelete = registry.getLongCounter(regionDeleteKey, 0l);
+    regionDelete = registry.getLongCounter(regionDeleteKey, 0L);
 
     regionIncrementKey = regionNamePrefix + MetricsRegionServerSource.INCREMENT_KEY + suffix;
-    regionIncrement = registry.getLongCounter(regionIncrementKey, 0l);
+    regionIncrement = registry.getLongCounter(regionIncrementKey, 0L);
 
     regionAppendKey = regionNamePrefix + MetricsRegionServerSource.APPEND_KEY + suffix;
-    regionAppend = registry.getLongCounter(regionAppendKey, 0l);
+    regionAppend = registry.getLongCounter(regionAppendKey, 0L);
 
     regionGetKey = regionNamePrefix + MetricsRegionServerSource.GET_KEY;
     regionGet = registry.newHistogram(regionGetKey);
@@ -97,21 +109,35 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public void close() {
-    closed = true;
-    agg.deregister(this);
+    Lock lock = readWriteLock.writeLock();
+    lock.lock();
+    try {
+      if (closed) {
+        return;
+      }
 
-    LOG.trace("Removing region Metrics: " + regionWrapper.getRegionName());
-    registry.removeMetric(regionPutKey);
-    registry.removeMetric(regionDeleteKey);
+      closed = true;
+      agg.deregister(this);
 
-    registry.removeMetric(regionIncrementKey);
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Removing region Metrics: " + regionWrapper.getRegionName());
+      }
 
-    registry.removeMetric(regionAppendKey);
+      registry.removeMetric(regionPutKey);
+      registry.removeMetric(regionDeleteKey);
+      registry.removeMetric(regionIncrementKey);
+      registry.removeMetric(regionAppendKey);
+      registry.removeMetric(regionGetKey);
+      registry.removeMetric(regionScanNextKey);
+      registry.removeHistogramMetrics(regionGetKey);
+      registry.removeHistogramMetrics(regionScanNextKey);
 
-    registry.removeMetric(regionGetKey);
-    registry.removeMetric(regionScanNextKey);
+      regionWrapper = null;
 
-    JmxCacheBuster.clearJmxCache();
+      JmxCacheBuster.clearJmxCache();
+    } finally {
+      lock.unlock();
+    }
   }
 
   @Override
@@ -151,7 +177,6 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public int compareTo(MetricsRegionSource source) {
-
     if (!(source instanceof MetricsRegionSourceImpl))
       return -1;
 
@@ -160,69 +185,88 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         .compareTo(impl.regionWrapper.getRegionName());
   }
 
+  void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
+    Lock lock = readWriteLock.readLock();
+
+    // Grab the read lock.
+    // This ensures that
+    lock.lock();
+    try {
+      if (closed) {
+        return;
+      }
+
+      mrb.addGauge(
+          Interns.info(regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
+              MetricsRegionServerSource.STORE_COUNT_DESC),
+          this.regionWrapper.getNumStores());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
+              MetricsRegionServerSource.STOREFILE_COUNT_DESC),
+          this.regionWrapper.getNumStoreFiles());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
+              MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
+          this.regionWrapper.getMemstoreSize());
+      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
+              MetricsRegionServerSource.STOREFILE_SIZE_DESC),
+          this.regionWrapper.getStoreFileSize());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
+              MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
+          this.regionWrapper.getNumCompactionsCompleted());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
+              MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
+          this.regionWrapper.getNumBytesCompacted());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
+              MetricsRegionSource.NUM_FILES_COMPACTED_DESC),
+          this.regionWrapper.getNumFilesCompacted());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
+              MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
+          this.regionWrapper.getReadRequestCount());
+      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
+              MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
+          this.regionWrapper.getWriteRequestCount());
+
+      for (Map.Entry<String, DescriptiveStatistics> entry : this.regionWrapper
+          .getCoprocessorExecutionStatistics()
+          .entrySet()) {
+        DescriptiveStatistics ds = entry.getValue();
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Min: "),
+            ds.getMin() / 1000);
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Mean: "),
+            ds.getMean() / 1000);
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Max: "),
+            ds.getMax() / 1000);
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "90th percentile: "), ds
+            .getPercentile(90d) / 1000);
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "95th percentile: "), ds
+            .getPercentile(95d) / 1000);
+        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
+                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
+            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "99th percentile: "), ds
+            .getPercentile(99d) / 1000);
+      }
+    } finally {
+      lock.unlock();
+    }
+  }
+
   @Override
   public int hashCode() {
-    return this.regionWrapper.getRegionName().hashCode();
+    return regionWrapper.getRegionHashCode();
   }
 
   @Override
   public boolean equals(Object obj) {
     if (obj == this) return true;
-    if (!(obj instanceof MetricsRegionSourceImpl)) return false;
-    return compareTo((MetricsRegionSourceImpl)obj) == 0;
-  }
-
-  void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
-    if (closed) return;
-
-    mrb.addGauge(
-        Interns.info(regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
-            MetricsRegionServerSource.STORE_COUNT_DESC),
-        this.regionWrapper.getNumStores());
-    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
-        MetricsRegionServerSource.STOREFILE_COUNT_DESC),
-        this.regionWrapper.getNumStoreFiles());
-    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
-        MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
-        this.regionWrapper.getMemstoreSize());
-    mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
-        MetricsRegionServerSource.STOREFILE_SIZE_DESC),
-        this.regionWrapper.getStoreFileSize());
-    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
-        MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
-        this.regionWrapper.getNumCompactionsCompleted());
-    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
-        MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
-        this.regionWrapper.getNumBytesCompacted());
-    mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
-        MetricsRegionSource.NUM_FILES_COMPACTED_DESC),
-        this.regionWrapper.getNumFilesCompacted());
-    for (Map.Entry<String, DescriptiveStatistics> entry : this.regionWrapper
-        .getCoprocessorExecutionStatistics()
-        .entrySet()) {
-      DescriptiveStatistics ds = entry.getValue();
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Min: "), ds.getMin() / 1000);
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Mean: "), ds.getMean() / 1000);
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Max: "), ds.getMax() / 1000);
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "90th percentile: "), ds
-          .getPercentile(90d) / 1000);
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "95th percentile: "), ds
-          .getPercentile(95d) / 1000);
-      mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-          + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-        MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "99th percentile: "), ds
-          .getPercentile(99d) / 1000);
-    }
-
+    return obj instanceof MetricsRegionSourceImpl && compareTo((MetricsRegionSourceImpl) obj) == 0;
   }
 }

@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
  */
 @InterfaceAudience.Private
 public class MetricsRegion {
-
   private final MetricsRegionSource source;
   private MetricsRegionWrapper regionWrapper;
 

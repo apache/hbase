@@ -18,23 +18,28 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.TreeSet;
+import java.util.HashSet;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
+import org.apache.hadoop.metrics2.lib.Interns;
+import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 
 @InterfaceAudience.Private
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     implements MetricsRegionAggregateSource {
-
   // lock to guard against concurrent access to regionSources
   private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+  private final MetricsExecutorImpl executor = new MetricsExecutorImpl();
 
-  private final TreeSet<MetricsRegionSourceImpl> regionSources =
-      new TreeSet<MetricsRegionSourceImpl>();
+  private final HashSet<MetricsRegionSource> regionSources =
+      new HashSet<MetricsRegionSource>();
 
   public MetricsRegionAggregateSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -46,26 +51,47 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
                                           String metricsContext,
                                           String metricsJmxContext) {
     super(metricsName, metricsDescription, metricsContext, metricsJmxContext);
+
+    // Every few mins clean the JMX cache.
+    executor.getExecutor().scheduleWithFixedDelay(new Runnable() {
+      public void run() {
+        JmxCacheBuster.clearJmxCache(true);
+      }
+    }, 5, 5, TimeUnit.MINUTES);
   }
 
   @Override
   public void register(MetricsRegionSource source) {
-    lock.writeLock().lock();
+    Lock l = lock.writeLock();
+    l.lock();
     try {
-      regionSources.add((MetricsRegionSourceImpl) source);
+      regionSources.add(source);
+      clearCache();
     } finally {
-      lock.writeLock().unlock();
+      l.unlock();
     }
   }
 
   @Override
-  public void deregister(MetricsRegionSource source) {
-    lock.writeLock().lock();
+  public void deregister(MetricsRegionSource toRemove) {
+    Lock l = lock.writeLock();
+    l.lock();
     try {
-      regionSources.remove(source);
+      regionSources.remove(toRemove);
+      clearCache();
     } finally {
-      lock.writeLock().unlock();
+      l.unlock();
     }
+  }
+
+  private synchronized void clearCache() {
+    JmxCacheBuster.clearJmxCache(true);
+    executor.getExecutor().schedule(new Runnable() {
+      @Override
+      public void run() {
+        JmxCacheBuster.clearJmxCache();
+      }
+    }, 5, TimeUnit.MINUTES);
   }
 
   /**
@@ -78,21 +104,22 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
    */
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
-
-
     MetricsRecordBuilder mrb = collector.addRecord(metricsName);
 
     if (regionSources != null) {
-      lock.readLock().lock();
+      Lock l = lock.readLock();
+      l.lock();
       try {
-        for (MetricsRegionSourceImpl regionMetricSource : regionSources) {
-          regionMetricSource.snapshot(mrb, all);
+        for (MetricsRegionSource regionMetricSource : regionSources) {
+          if (regionMetricSource instanceof MetricsRegionSourceImpl) {
+            ((MetricsRegionSourceImpl) regionMetricSource).snapshot(mrb, all);
+          }
         }
+        mrb.addGauge(Interns.info(NUM_REGIONS, NUMBER_OF_REGIONS_DESC), regionSources.size());
       } finally {
-        lock.readLock().unlock();
+        l.unlock();
       }
+      metricsRegistry.snapshot(mrb, all);
     }
-
-    metricsRegistry.snapshot(mrb, all);
   }
 }

@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.hadoop.metrics2.impl;
 
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,44 +36,53 @@ import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
  * This class need to be in the o.a.h.metrics2.impl namespace as many of the variables/calls used
  * are package private.
  */
-@edu.umd.cs.findbugs.annotations.SuppressWarnings(
-    value="LI_LAZY_INIT_STATIC",
-    justification="Yeah, its weird but its what we want")
 @InterfaceAudience.Private
 public class JmxCacheBuster {
   private static final Log LOG = LogFactory.getLog(JmxCacheBuster.class);
-  private static Object lock = new Object();
-  private static ScheduledFuture fut = null;
+  private static AtomicReference<ScheduledFuture> fut = new AtomicReference<>(null);
   private static MetricsExecutor executor = new MetricsExecutorImpl();
+
+  private JmxCacheBuster() {
+    // Static only cache.
+  }
 
   /**
    * For JMX to forget about all previously exported metrics.
    */
-  public static void clearJmxCache() {
 
+  public static void clearJmxCache() {
+    clearJmxCache(false);
+  }
+
+  public static synchronized void clearJmxCache(boolean force) {
     //If there are more then 100 ms before the executor will run then everything should be merged.
-    synchronized (lock) {
-      if (fut == null || (!fut.isDone()  && fut.getDelay(TimeUnit.MILLISECONDS) > 100)) return;
-      fut = executor.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
+    ScheduledFuture future = fut.get();
+    if (!force &&
+        (future == null || (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
+      // BAIL OUT
+      return;
     }
+    future = executor.getExecutor().schedule(new JmxCacheBusterRunnable(), 5, TimeUnit.SECONDS);
+    fut.set(future);
   }
 
   static class JmxCacheBusterRunnable implements Runnable {
-
     @Override
     public void run() {
-      LOG.trace("Clearing JMX mbean cache.");
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("Clearing JMX mbean cache.");
+      }
 
       // This is pretty extreme but it's the best way that
       // I could find to get metrics to be removed.
       try {
-        if (DefaultMetricsSystem.instance() != null ) {
+        if (DefaultMetricsSystem.instance() != null) {
           DefaultMetricsSystem.instance().stop();
           DefaultMetricsSystem.instance().start();
         }
-
-      }  catch (Exception exception )  {
-        LOG.debug("error clearing the jmx it appears the metrics system hasn't been started", exception);
+      }  catch (Exception exception)  {
+        LOG.debug("error clearing the jmx it appears the metrics system hasn't been started",
+            exception);
       }
     }
   }

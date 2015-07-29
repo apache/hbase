@@ -84,6 +84,8 @@ public interface MetricsRegionWrapper {
 
   long getNumCompactionsCompleted();
 
+  int getRegionHashCode();
+
   /**
    * Get the time spent by coprocessors in this region.
    */

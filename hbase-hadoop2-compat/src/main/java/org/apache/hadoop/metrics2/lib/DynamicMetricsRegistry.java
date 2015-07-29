@@ -21,6 +21,8 @@ package org.apache.hadoop.metrics2.lib;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsException;
 import org.apache.hadoop.metrics2.MetricsInfo;
@@ -44,18 +46,29 @@ import com.google.common.collect.Maps;
  */
 @InterfaceAudience.Private
 public class DynamicMetricsRegistry {
+  private static final Log LOG = LogFactory.getLog(DynamicMetricsRegistry.class);
+
   private final ConcurrentMap<String, MutableMetric> metricsMap =
-          Maps.newConcurrentMap();
+      Maps.newConcurrentMap();
   private final ConcurrentMap<String, MetricsTag> tagsMap =
-          Maps.newConcurrentMap();
+      Maps.newConcurrentMap();
   private final MetricsInfo metricsInfo;
+  private final DefaultMetricsSystemHelper helper = new DefaultMetricsSystemHelper();
+  private final static String[] histogramSuffixes = new String[]{
+      "_num_ops",
+      "_min",
+      "_max",
+      "_median",
+      "_75th_percentile",
+      "_95th_percentile",
+      "_99th_percentile"};
 
   /**
    * Construct the registry with a record name
    * @param name  of the record of the metrics
    */
   public DynamicMetricsRegistry(String name) {
-    metricsInfo = Interns.info(name, name);
+    this(Interns.info(name,name));
   }
 
   /**
@@ -405,7 +418,14 @@ public class DynamicMetricsRegistry {
    * @param name name of the metric to remove
    */
   public void removeMetric(String name) {
+    helper.removeObjectName(name);
     metricsMap.remove(name);
+  }
+
+  public void removeHistogramMetrics(String baseName) {
+    for (String suffix:histogramSuffixes) {
+      removeMetric(baseName+suffix);
+    }
   }
 
   /**
@@ -540,6 +560,9 @@ public class DynamicMetricsRegistry {
   }
 
   public void clearMetrics() {
+    for (String name:metricsMap.keySet()) {
+      helper.removeObjectName(name);
+    }
     metricsMap.clear();
   }
 }

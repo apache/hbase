@@ -46,6 +46,9 @@ public interface MetricsRegionAggregateSource extends BaseSource {
    */
   String METRICS_JMX_CONTEXT = "RegionServer,sub=" + METRICS_NAME;
 
+  String NUM_REGIONS = "numRegions";
+  String NUMBER_OF_REGIONS_DESC = "Number of regions in the metrics system";
+
   /**
    * Register a MetricsRegionSource as being open.
    *

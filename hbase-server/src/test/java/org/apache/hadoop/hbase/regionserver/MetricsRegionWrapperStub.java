@@ -86,6 +86,11 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   }
 
   @Override
+  public int getRegionHashCode() {
+    return 42;
+  }
+
+  @Override
   public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
     return new HashMap<String, DescriptiveStatistics>();
   }
