@@ -829,6 +829,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       current.tagsBuffer = previous.tagsBuffer;
       current.tagsCompressedLength = previous.tagsCompressedLength;
       current.uncompressTags = false;
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
