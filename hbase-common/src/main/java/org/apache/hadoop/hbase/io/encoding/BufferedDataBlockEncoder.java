@@ -999,6 +999,8 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
       current.tagsBuffer = previous.tagsBuffer;
       current.tagsCompressedLength = previous.tagsCompressedLength;
       current.uncompressTags = false;
+      // The current key has to be reset with the previous Cell
+      current.setKey(current.keyBuffer, current.memstoreTS);
       previous.invalidate();
     }
 
