@@ -158,7 +158,7 @@ public class DefaultCompactor extends Compactor {
 
     // make this writer with tags always because of possible new cells with tags.
     return store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression,
-            true, fd.maxMVCCReadpoint >= 0, fd.maxTagsLength >0);
+            true, fd.maxMVCCReadpoint > 0, fd.maxTagsLength >0);
   }
 
 
