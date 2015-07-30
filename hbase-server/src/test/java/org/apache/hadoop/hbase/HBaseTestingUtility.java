@@ -44,6 +44,7 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Jdk14Logger;
@@ -89,7 +90,10 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
+import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
@@ -1628,6 +1632,51 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(desc.getTableName());
     return new HTable(getConfiguration(), desc.getTableName());
+  }
+
+  /**
+   * Create an unmanaged WAL. Be sure to close it when you're through.
+   */
+  public static WAL createWal(final Configuration conf, final Path rootDir, final HRegionInfo hri)
+      throws IOException {
+    // The WAL subsystem will use the default rootDir rather than the passed in rootDir
+    // unless I pass along via the conf.
+    Configuration confForWAL = new Configuration(conf);
+    confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
+    return (new WALFactory(confForWAL,
+        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
+        "hregion-" + RandomStringUtils.randomNumeric(8))).
+        getWAL(hri.getEncodedNameAsBytes());
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final HTableDescriptor htd) throws IOException {
+    return createRegionAndWAL(info, rootDir, conf, htd, true);
+  }
+
+  /**
+   * Create a region with it's own WAL. Be sure to call
+   * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
+   */
+  public static HRegion createRegionAndWAL(final HRegionInfo info, final Path rootDir,
+      final Configuration conf, final HTableDescriptor htd, boolean initialize)
+      throws IOException {
+    WAL wal = createWal(conf, rootDir, info);
+    return HRegion.createHRegion(info, rootDir, conf, htd, wal, initialize);
+  }
+
+  /**
+   * Close both the HRegion {@code r} and it's underlying WAL. For use in tests.
+   */
+  public static void closeRegionAndWAL(final HRegion r) throws IOException {
+    if (r == null) return;
+    r.close();
+    if (r.getWAL() == null) return;
+    r.getWAL().close();
   }
 
   /**
