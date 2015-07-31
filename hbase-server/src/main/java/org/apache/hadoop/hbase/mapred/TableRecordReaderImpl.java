@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -214,7 +215,11 @@ public class TableRecordReaderImpl {
           }
         }
       } catch (IOException e) {
-        // try to handle all IOExceptions by restarting
+        // do not retry if the exception tells us not to do so
+        if (e instanceof DoNotRetryIOException) {
+          throw e;
+        }
+        // try to handle all other IOExceptions by restarting
         // the scanner, if the second call fails, it will be rethrown
         LOG.debug("recovered from " + StringUtils.stringifyException(e));
         if (lastSuccessfulRow == null) {
