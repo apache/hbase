@@ -242,9 +242,9 @@ public class TestTableInputFormat {
           doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
           ResultScanner scanner = mock(ResultScanner.class);
 
-          invocation.callRealMethod(); // simulate UnknownScannerException
+          invocation.callRealMethod(); // simulate NotServingRegionException
           doThrow(
-              new UnknownScannerException("Injected simulated TimeoutException"))
+              new NotServingRegionException("Injected simulated TimeoutException"))
               .when(scanner).next();
           return scanner;
         }
@@ -293,8 +293,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using mapred api.
+   * Run test assuming NotServingRegionException using mapred api.
    * 
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
@@ -305,12 +304,11 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using mapred api.
+   * Run test assuming NotServingRegionException using mapred api.
    * 
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
    */
-  @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
+  @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
   public void testTableRecordReaderScannerTimeoutTwice() throws IOException {
     Table htable = createDNRIOEScannerTable("table5".getBytes(), 2);
     runTestMapred(htable);

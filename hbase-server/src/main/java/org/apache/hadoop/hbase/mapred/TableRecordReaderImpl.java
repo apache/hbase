@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -213,7 +214,11 @@ public class TableRecordReaderImpl {
           }
         }
       } catch (IOException e) {
-        // try to handle all IOExceptions by restarting
+        // do not retry if the exception tells us not to do so
+        if (e instanceof DoNotRetryIOException) {
+          throw e;
+        }
+        // try to handle all other IOExceptions by restarting
         // the scanner, if the second call fails, it will be rethrown
         LOG.debug("recovered from " + StringUtils.stringifyException(e));
         if (lastSuccessfulRow == null) {
