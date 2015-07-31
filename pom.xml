@@ -686,7 +686,8 @@
               <exclude>**/CHANGES.txt</exclude>
               <exclude>**/generated/**</exclude>
               <exclude>**/gen-*/**</exclude>
-              <exclude>**/conf/*</exclude>
+              <!-- No material contents -->
+              <exclude>conf/regionservers</exclude>
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude>
               <exclude>**/META-INF/services/**</exclude>
@@ -704,7 +705,6 @@
               <exclude>docs/*</exclude>
               <exclude>logs/*</exclude>
               <!-- auto-gen docs -->
-              <exclude>dev-support/hbase_docker/README.md</exclude>
               <!--  exclude source control files -->
               <exclude>.git/**</exclude>
               <exclude>.svn/**</exclude>
