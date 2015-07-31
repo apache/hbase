@@ -227,8 +227,8 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Create a table that throws a DoNoRetryIOException on first scanner next
-   * call
+   * Create a table that throws a NotServingRegionException on first scanner 
+   * next call
    *
    * @throws IOException
    */
@@ -247,9 +247,9 @@ public class TestTableInputFormat {
           doReturn("bogus".getBytes()).when(scan).getStartRow(); // avoid npe
           ResultScanner scanner = mock(ResultScanner.class);
 
-          invocation.callRealMethod(); // simulate UnknownScannerException
+          invocation.callRealMethod(); // simulate NotServingRegionException 
           doThrow(
-              new UnknownScannerException("Injected simulated TimeoutException"))
+              new NotServingRegionException("Injected simulated TimeoutException"))
               .when(scanner).next();
           return scanner;
         }
@@ -304,8 +304,7 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using newer mapreduce api
+   * Run test assuming NotServingRegionException using newer mapreduce api
    * 
    * @throws InterruptedException
    * @throws org.apache.hadoop.hbase.DoNotRetryIOException
@@ -318,13 +317,12 @@ public class TestTableInputFormat {
   }
 
   /**
-   * Run test assuming UnknownScannerException (which is a type of
-   * DoNotRetryIOException) using newer mapreduce api
+   * Run test assuming NotServingRegionException using newer mapreduce api
    * 
    * @throws InterruptedException
-   * @throws org.apache.hadoop.hbase.DoNotRetryIOException
+   * @throws org.apache.hadoop.hbase.NotServingRegionException
    */
-  @Test(expected = org.apache.hadoop.hbase.DoNotRetryIOException.class)
+  @Test(expected = org.apache.hadoop.hbase.NotServingRegionException.class)
   public void testTableRecordReaderScannerTimeoutMapreduceTwice()
       throws IOException, InterruptedException {
     Table htable = createDNRIOEScannerTable("table5-mr".getBytes(), 2);
