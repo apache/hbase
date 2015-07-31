@@ -690,7 +690,6 @@
               <exclude>conf/regionservers</exclude>
               <exclude>**/*.avpr</exclude>
               <exclude>**/*.svg</exclude>
-              <exclude>**/META-INF/services/**</exclude>
               <!-- MIT: https://github.com/twbs/bootstrap/blob/master/LICENSE -->
               <exclude>**/src/main/asciidoc/hbase.css</exclude>
               <exclude>**/bootstrap-theme.css</exclude>
