@@ -770,7 +770,7 @@ public class HRegionFileSystem {
     // First check to get the permissions
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
     // Write the RegionInfo file content
-    FSDataOutputStream out = FSUtils.create(fs, regionInfoFile, perms, null);
+    FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null);
     try {
       out.write(content);
     } finally {
