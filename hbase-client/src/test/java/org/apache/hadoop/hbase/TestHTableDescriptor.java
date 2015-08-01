@@ -231,12 +231,16 @@ public class TestHTableDescriptor {
     byte[] familyName = Bytes.toBytes("cf");
     HColumnDescriptor hcd = new HColumnDescriptor(familyName);
     hcd.setBlocksize(1000);
+    hcd.setDFSReplication((short) 3);
     htd.addFamily(hcd);
     assertEquals(1000, htd.getFamily(familyName).getBlocksize());
+    assertEquals(3, htd.getFamily(familyName).getDFSReplication());
     hcd = new HColumnDescriptor(familyName);
     hcd.setBlocksize(2000);
+    hcd.setDFSReplication((short) 1);
     htd.modifyFamily(hcd);
     assertEquals(2000, htd.getFamily(familyName).getBlocksize());
+    assertEquals(1, htd.getFamily(familyName).getDFSReplication());
   }
 
   @Test(expected=IllegalArgumentException.class)

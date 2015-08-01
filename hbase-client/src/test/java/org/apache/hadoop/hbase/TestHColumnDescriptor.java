@@ -53,7 +53,7 @@ public class TestHColumnDescriptor {
     hcd.setDataBlockEncoding(DataBlockEncoding.FAST_DIFF);
     hcd.setBloomFilterType(BloomType.ROW);
     hcd.setCompressionType(Algorithm.SNAPPY);
-
+    hcd.setDFSReplication((short) v);
 
     byte [] bytes = hcd.toByteArray();
     HColumnDescriptor deserializedHcd = HColumnDescriptor.parseFrom(bytes);
@@ -69,6 +69,7 @@ public class TestHColumnDescriptor {
     assertTrue(deserializedHcd.getCompressionType().equals(Compression.Algorithm.SNAPPY));
     assertTrue(deserializedHcd.getDataBlockEncoding().equals(DataBlockEncoding.FAST_DIFF));
     assertTrue(deserializedHcd.getBloomFilterType().equals(BloomType.ROW));
+    assertEquals(v, deserializedHcd.getDFSReplication());
   }
 
   @Test

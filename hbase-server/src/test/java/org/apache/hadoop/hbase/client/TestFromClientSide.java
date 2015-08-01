@@ -5581,6 +5581,22 @@ public class TestFromClientSide {
     hcd.setScope(0);
     checkTableIsLegal(htd);
 
+    try {
+      hcd.setDFSReplication((short) -1);
+      fail("Illegal value for setDFSReplication did not throw");
+    } catch (IllegalArgumentException e) {
+      // pass
+    }
+    // set an illegal DFS replication value by hand
+    hcd.setValue(HColumnDescriptor.DFS_REPLICATION, "-1");
+    checkTableIsIllegal(htd);
+    try {
+      hcd.setDFSReplication((short) -1);
+      fail("Should throw exception if an illegal value is explicitly being set");
+    } catch (IllegalArgumentException e) {
+      // pass
+    }
+
     // check the conf settings to disable sanity checks
     htd.setMemStoreFlushSize(0);
 
