@@ -19,11 +19,25 @@
 
 package org.apache.hadoop.hbase.util;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 
 @InterfaceAudience.Private
 public class PrettyPrinter {
+
+  private static final Log LOG = LogFactory.getLog(PrettyPrinter.class);
+
+  private static final String INTERVAL_REGEX = "((\\d+)\\s*SECONDS?\\s*\\()?\\s*" +
+          "((\\d+)\\s*DAYS?)?\\s*((\\d+)\\s*HOURS?)?\\s*" +
+          "((\\d+)\\s*MINUTES?)?\\s*((\\d+)\\s*SECONDS?)?\\s*\\)?";
+  private static final Pattern INTERVAL_PATTERN = Pattern.compile(INTERVAL_REGEX,
+          Pattern.CASE_INSENSITIVE);
 
   public enum Unit {
     TIME_INTERVAL,
@@ -50,6 +64,25 @@ public class PrettyPrinter {
         human.append(value);
     }
     return human.toString();
+  }
+
+  /**
+   * Convert a human readable string to its value.
+   * @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
+   * @param pretty
+   * @param unit
+   * @return the value corresponding to the human readable string
+   */
+  public static String valueOf(final String pretty, final Unit unit) throws HBaseException {
+    StringBuilder value = new StringBuilder();
+    switch (unit) {
+      case TIME_INTERVAL:
+        value.append(humanReadableIntervalToSec(pretty));
+        break;
+      default:
+        value.append(pretty);
+    }
+    return value.toString();
   }
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="ICAST_INTEGER_MULTIPLY_CAST_TO_LONG",
@@ -105,6 +138,54 @@ public class PrettyPrinter {
     sb.append(")");
 
     return sb.toString();
+  }
+
+  /**
+   * Convert a human readable time interval to seconds. Examples of the human readable
+   * time intervals are: 50 DAYS 1 HOUR 30 MINUTES , 25000 SECONDS etc.
+   * The units of time specified can be in uppercase as well as lowercase. Also, if a
+   * single number is specified without any time unit, it is assumed to be in seconds.
+   * @param humanReadableInterval
+   * @return value in seconds
+   */
+  private static long humanReadableIntervalToSec(final String humanReadableInterval)
+          throws HBaseException {
+    if (humanReadableInterval == null || humanReadableInterval.equalsIgnoreCase("FOREVER")) {
+      return HConstants.FOREVER;
+    }
+
+    try {
+      return Long.parseLong(humanReadableInterval);
+    } catch(NumberFormatException ex) {
+      LOG.debug("Given interval value is not a number, parsing for human readable format");
+    }
+
+    String days = null;
+    String hours = null;
+    String minutes = null;
+    String seconds = null;
+    String expectedTtl = null;
+    long ttl;
+
+    Matcher matcher = PrettyPrinter.INTERVAL_PATTERN.matcher(humanReadableInterval);
+    if (matcher.matches()) {
+      expectedTtl = matcher.group(2);
+      days = matcher.group(4);
+      hours = matcher.group(6);
+      minutes = matcher.group(8);
+      seconds = matcher.group(10);
+    }
+    ttl = 0;
+    ttl += days != null ? Long.parseLong(days)*HConstants.DAY_IN_SECONDS:0;
+    ttl += hours != null ? Long.parseLong(hours)*HConstants.HOUR_IN_SECONDS:0;
+    ttl += minutes != null ? Long.parseLong(minutes)*HConstants.MINUTE_IN_SECONDS:0;
+    ttl += seconds != null ? Long.parseLong(seconds):0;
+
+    if (expectedTtl != null && Long.parseLong(expectedTtl) != ttl) {
+      throw new HBaseException("Malformed TTL string: TTL values in seconds and human readable" +
+              "format do not match");
+    }
+    return ttl;
   }
 
 }

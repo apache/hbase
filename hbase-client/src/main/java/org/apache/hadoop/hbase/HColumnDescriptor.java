@@ -27,6 +27,7 @@ import java.util.Set;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.exceptions.HBaseException;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -714,6 +715,15 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
    */
   public HColumnDescriptor setTimeToLive(int timeToLive) {
     return setValue(TTL, Integer.toString(timeToLive));
+  }
+
+  /**
+   * @param timeToLive Time to live of cell contents, in human readable format
+   *                   @see org.apache.hadoop.hbase.util.PrettyPrinter#format(String, Unit)
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setTimeToLive(String timeToLive) throws HBaseException {
+    return setValue(TTL, PrettyPrinter.valueOf(timeToLive, Unit.TIME_INTERVAL));
   }
 
   /**
