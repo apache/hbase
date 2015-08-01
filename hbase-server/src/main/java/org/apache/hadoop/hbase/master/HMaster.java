@@ -1583,6 +1583,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
       }
 
+      // check data replication factor, it can be 0(default value) when user has not explicitly
+      // set the value, in this case we use default replication factor set in the file system.
+      if (hcd.getDFSReplication() < 0) {
+        String message = "HFile Replication for column family " + hcd.getNameAsString()
+            + "  must be greater than zero.";
+        warnOrThrowExceptionForFailure(logWarn, CONF_KEY, message, null);
+      }
+
       // TODO: should we check coprocessors and encryption ?
     }
   }

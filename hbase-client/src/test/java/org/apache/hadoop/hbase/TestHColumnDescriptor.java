@@ -62,7 +62,7 @@ public class TestHColumnDescriptor {
     hcd.setCompressionType(Algorithm.SNAPPY);
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(1000L);
-
+    hcd.setDFSReplication((short) v);
 
     byte [] bytes = hcd.toByteArray();
     HColumnDescriptor deserializedHcd = HColumnDescriptor.parseFrom(bytes);
@@ -80,6 +80,7 @@ public class TestHColumnDescriptor {
     assertTrue(deserializedHcd.getBloomFilterType().equals(BloomType.ROW));
     assertEquals(hcd.isMobEnabled(), deserializedHcd.isMobEnabled());
     assertEquals(hcd.getMobThreshold(), deserializedHcd.getMobThreshold());
+    assertEquals(v, deserializedHcd.getDFSReplication());
   }
 
   @Test

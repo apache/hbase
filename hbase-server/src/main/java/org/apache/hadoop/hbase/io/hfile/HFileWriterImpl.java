@@ -268,7 +268,7 @@ public class HFileWriterImpl implements HFile.Writer {
       FileSystem fs, Path path, InetSocketAddress[] favoredNodes) throws IOException {
     FsPermission perms = FSUtils.getFilePermissions(fs, conf,
         HConstants.DATA_FILE_UMASK_KEY);
-    return FSUtils.create(fs, path, perms, favoredNodes);
+    return FSUtils.create(conf, fs, path, perms, favoredNodes);
   }
 
   /** Additional initialization steps */
