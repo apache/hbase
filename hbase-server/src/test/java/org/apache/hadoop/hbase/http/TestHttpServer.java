@@ -589,6 +589,29 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   }
 
   @Test
+  public void testXFrameHeaderSameOrigin() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set("hbase.http.filter.xframeoptions.mode", "SAMEORIGIN");
+
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+            .addEndpoint(new URI("http://localhost:0"))
+            .setFindPort(true).setConf(conf).build();
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.addServlet("echo", "/echo", EchoServlet.class);
+    myServer.start();
+
+    String serverURL = "http://"
+            + NetUtils.getHostPortString(myServer.getConnectorAddress(0));
+    URL url = new URL(new URL(serverURL), "/echo?a=b&c=d");
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
+    assertEquals("SAMEORIGIN", conn.getHeaderField("X-Frame-Options"));
+    myServer.stop();
+  }
+
+
+
+  @Test
   public void testNoCacheHeader() throws Exception {
     URL url = new URL(baseUrl, "/echo?a=b&c=d");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -598,6 +621,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     assertNotNull(conn.getHeaderField("Expires"));
     assertNotNull(conn.getHeaderField("Date"));
     assertEquals(conn.getHeaderField("Expires"), conn.getHeaderField("Date"));
+    assertEquals("DENY", conn.getHeaderField("X-Frame-Options"));
   }
 
   /**
