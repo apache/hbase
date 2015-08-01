@@ -766,6 +766,9 @@ module Hbase
 
       set_user_metadata(family, arg.delete(METADATA)) if arg[METADATA]
       set_descriptor_config(family, arg.delete(CONFIGURATION)) if arg[CONFIGURATION]
+      family.setDFSReplication(JInteger.valueOf(arg.delete(org.apache.hadoop.hbase.
+        HColumnDescriptor::DFS_REPLICATION))) if arg.include?(org.apache.hadoop.hbase.
+        HColumnDescriptor::DFS_REPLICATION)
 
       arg.each_key do |unknown_key|
         puts("Unknown argument ignored for column family %s: %s" % [name, unknown_key])

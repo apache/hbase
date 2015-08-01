@@ -112,6 +112,9 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   @InterfaceStability.Unstable
   public static final String ENCRYPTION_KEY = "ENCRYPTION_KEY";
 
+  public static final String DFS_REPLICATION = "DFS_REPLICATION";
+  public static final short DEFAULT_DFS_REPLICATION = 0;
+
   /**
    * Default compression type.
    */
@@ -1390,6 +1393,34 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
   @InterfaceStability.Unstable
   public HColumnDescriptor setEncryptionKey(byte[] keyBytes) {
     setValue(Bytes.toBytes(ENCRYPTION_KEY), keyBytes);
+    return this;
+  }
+
+  /**
+   * @return replication factor set for this CF or {@link #DEFAULT_DFS_REPLICATION} if not set.
+   *         <p>
+   *         {@link #DEFAULT_DFS_REPLICATION} value indicates that user has explicitly not set any
+   *         block replication factor for this CF, hence use the default replication factor set in
+   *         the file system.
+   */
+  public short getDFSReplication() {
+    String rf = getValue(DFS_REPLICATION);
+    return rf == null ? DEFAULT_DFS_REPLICATION : Short.valueOf(rf);
+  }
+
+  /**
+   * Set the replication factor to hfile(s) belonging to this family
+   * @param replication number of replicas the blocks(s) belonging to this CF should have, or
+   *          {@link #DEFAULT_DFS_REPLICATION} for the default replication factor set in the
+   *          filesystem
+   * @return this (for chained invocation)
+   */
+  public HColumnDescriptor setDFSReplication(short replication) {
+    if (replication < 1 && replication != DEFAULT_DFS_REPLICATION) {
+      throw new IllegalArgumentException(
+          "DFS replication factor cannot be less than 1 if explictly set.");
+    }
+    setValue(DFS_REPLICATION, Short.toString(replication));
     return this;
   }
 }
