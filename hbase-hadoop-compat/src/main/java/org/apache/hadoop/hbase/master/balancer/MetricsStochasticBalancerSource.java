@@ -18,32 +18,22 @@
 
 package org.apache.hadoop.hbase.master.balancer;
 
-import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-
 /**
- * Faced for exposing metrics about the balancer.
+ * This interface extends the basic metrics balancer source to add a function 
+ * to report metrics that related to stochastic load balancer. The purpose is to 
+ * offer an insight to the internal cost calculations that can be useful to tune
+ * the balancer. For details, refer to HBASE-13965
  */
-public class MetricsBalancer {
+public interface MetricsStochasticBalancerSource extends MetricsBalancerSource {
 
-  private MetricsBalancerSource source = null;
-
-  public MetricsBalancer() {
-    initSource();
-  }
-  
   /**
-   * A function to instantiate the metrics source. This function can be overridden in its 
-   * subclasses to provide extended sources
+   * Updates the number of metrics reported to JMX
    */
-  protected void initSource() {
-    source = CompatibilitySingletonFactory.getInstance(MetricsBalancerSource.class);
-  }
+  public void updateMetricsSize(int size);
 
-  public void balanceCluster(long time) {
-    source.updateBalanceCluster(time);
-  }
-
-  public void incrMiscInvocations() {
-    source.incrMiscInvocations();
-  }
+  /**
+   * Reports stochastic load balancer costs to JMX
+   */
+  public void updateStochasticCost(String tableName, String costFunctionName,
+      String costFunctionDesc, Double value);
 }
