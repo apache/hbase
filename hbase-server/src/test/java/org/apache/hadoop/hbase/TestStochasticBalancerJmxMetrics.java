@@ -82,9 +82,17 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
-    conf.setInt("regionserver.rmi.registry.port", connectorPort);
+    for (int i = 0; i < 5; i++) {
+      try {
+        conf.setInt("regionserver.rmi.registry.port", connectorPort);
 
-    UTIL.startMiniCluster();
+        UTIL.startMiniCluster();
+        break;
+      } catch (Exception e) {
+        connectorPort++;
+        LOG.debug("Encountered exception when starting cluster. Trying port " + connectorPort, e);
+      }
+    }
   }
 
   @AfterClass
