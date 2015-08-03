@@ -28,13 +28,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.ServerManager;
@@ -345,11 +343,5 @@ public class FavoredNodeLoadBalancer extends BaseLoadBalancer {
       }
       globalFavoredNodesAssignmentPlan.updateFavoredNodesMap(region, favoredNodesForRegion);
     }
-  }
-
-  @Override
-  public List<RegionPlan> balanceCluster(TableName tableName,
-      Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
-    return balanceCluster(clusterState);
   }
 }
