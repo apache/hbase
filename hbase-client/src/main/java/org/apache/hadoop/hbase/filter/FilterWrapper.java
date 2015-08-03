@@ -134,7 +134,8 @@ final public class FilterWrapper extends Filter {
   public enum FilterRowRetCode {
     NOT_CALLED,
     INCLUDE,     // corresponds to filter.filterRow() returning false
-    EXCLUDE      // corresponds to filter.filterRow() returning true
+    EXCLUDE,     // corresponds to filter.filterRow() returning true
+    INCLUDE_THIS_FAMILY  // exclude other families
   }
   public FilterRowRetCode filterRowCellsWithRet(List<Cell> kvs) throws IOException {
     //To fix HBASE-6429,

@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1256,12 +1257,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
         this.assignmentManager.getRegionStates().getAssignmentsByTable();
 
       List<RegionPlan> plans = new ArrayList<RegionPlan>();
+
       //Give the balancer the current cluster state.
       this.balancer.setClusterStatus(getClusterStatus());
-      for (Map<ServerName, List<HRegionInfo>> assignments : assignmentsByTable.values()) {
-        List<RegionPlan> partialPlans = this.balancer.balanceCluster(assignments);
+      for (Entry<TableName, Map<ServerName, List<HRegionInfo>>> e : assignmentsByTable.entrySet()) {
+        List<RegionPlan> partialPlans = this.balancer.balanceCluster(e.getKey(), e.getValue());
         if (partialPlans != null) plans.addAll(partialPlans);
       }
+
       long cutoffTime = System.currentTimeMillis() + maximumBalanceTime;
       int rpCount = 0;  // number of RegionPlans balanced so far
       long totalRegPlanExecTime = 0;

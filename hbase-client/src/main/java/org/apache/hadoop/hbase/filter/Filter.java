@@ -181,6 +181,10 @@ public abstract class Filter {
      * Seek to next key which is given as hint by the filter.
      */
     SEEK_NEXT_USING_HINT,
+    /**
+     * Include KeyValue and done with row, seek to next.
+     */
+    INCLUDE_AND_SEEK_NEXT_ROW,
 }
 
   /**

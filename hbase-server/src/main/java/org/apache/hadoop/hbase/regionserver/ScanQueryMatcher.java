@@ -444,7 +444,17 @@ public class ScanQueryMatcher {
       colChecker = columns.checkVersions(cell, timestamp, typeByte,
           mvccVersion > maxReadPointToTrackVersions);
       //Optimize with stickyNextRow
-      stickyNextRow = colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW ? true : stickyNextRow;
+      boolean seekNextRowFromEssential = filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW &&
+          filter.isFamilyEssential(cell.getFamilyArray());
+      if (colChecker == MatchCode.INCLUDE_AND_SEEK_NEXT_ROW || seekNextRowFromEssential) {
+        stickyNextRow = true;
+      }
+      if (filterResponse == ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW) {
+        if (colChecker != MatchCode.SKIP) {
+          return MatchCode.INCLUDE_AND_SEEK_NEXT_ROW;
+        }
+        return MatchCode.SEEK_NEXT_ROW;
+      }
       return (filterResponse == ReturnCode.INCLUDE_AND_NEXT_COL &&
           colChecker == MatchCode.INCLUDE) ? MatchCode.INCLUDE_AND_SEEK_NEXT_COL
           : colChecker;

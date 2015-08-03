@@ -38,6 +38,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -105,6 +106,12 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
 
     @Override
     public List<RegionPlan> balanceCluster(Map<ServerName, List<HRegionInfo>> clusterState) {
+      return null;
+    }
+
+    @Override
+    public List<RegionPlan> balanceCluster(TableName tableName,
+        Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
       return null;
     }
 

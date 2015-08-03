@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.TableName;
 
 /**
  * Makes decisions about the placement and movement of Regions across
@@ -63,6 +64,15 @@ public interface LoadBalancer extends Configurable, Stoppable, ConfigurationObse
    * @param masterServices
    */
   void setMasterServices(MasterServices masterServices);
+
+  /**
+   * Perform the major balance operation
+   * @param tableName
+   * @param clusterState
+   * @return List of plans
+   */
+  List<RegionPlan> balanceCluster(TableName tableName, Map<ServerName,
+      List<HRegionInfo>> clusterState) throws HBaseIOException;
 
   /**
    * Perform the major balance operation
