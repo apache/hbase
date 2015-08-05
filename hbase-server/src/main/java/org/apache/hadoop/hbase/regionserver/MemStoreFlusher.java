@@ -197,12 +197,12 @@ class MemStoreFlusher implements FlushRequester {
            ServerRegionReplicaUtil.isRegionReplicaStoreFileRefreshEnabled(conf) &&
            (bestRegionReplica.getMemstoreSize()
                > secondaryMultiplier * regionToFlush.getMemstoreSize()))) {
-        LOG.info("Refreshing storefiles of region " + regionToFlush +
+        LOG.info("Refreshing storefiles of region " + bestRegionReplica +
           " due to global heap pressure. memstore size=" + StringUtils.humanReadableInt(
             server.getRegionServerAccounting().getGlobalMemstoreSize()));
         flushedOne = refreshStoreFilesAndReclaimMemory(bestRegionReplica);
         if (!flushedOne) {
-          LOG.info("Excluding secondary region " + regionToFlush +
+          LOG.info("Excluding secondary region " + bestRegionReplica +
               " - trying to find a different region to refresh files.");
           excludedRegions.add(bestRegionReplica);
         }
