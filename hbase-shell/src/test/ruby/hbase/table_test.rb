@@ -598,6 +598,11 @@ module Hbase
       end
     end
 
+    define_test "scan hbase meta table" do
+      res = table("hbase:meta")._scan_internal
+      assert_not_nil(res)
+    end
+
     define_test "mutation with TTL should expire" do
       @test_table.put('ttlTest', 'x:a', 'foo', { TTL => 1000 } )
       begin

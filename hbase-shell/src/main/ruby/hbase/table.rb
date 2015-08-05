@@ -651,7 +651,7 @@ EOF
           return "timestamp=%d, value=%s" % [kv.getTimestamp, hri.toString]
         end
         if column == 'info:serverstartcode'
-          if kv.getValue.length > 0
+          if kv.getValueLength > 0
             str_val = org.apache.hadoop.hbase.util.Bytes.toLong(kv.getValueArray, 
               kv.getValueOffset, kv.getValueLength)
           else
