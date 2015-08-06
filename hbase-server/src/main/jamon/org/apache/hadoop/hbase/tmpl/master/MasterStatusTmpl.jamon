@@ -53,6 +53,7 @@ org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 org.apache.hadoop.hbase.security.access.AccessControlLists;
+org.apache.hadoop.hbase.quotas.QuotaUtil;
 </%import>
 
 <%if format.equals("json") %>
@@ -369,8 +370,11 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
             description = "The hbase:acl table holds information about acl";
 	 } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
 	     description = "The hbase:labels table holds information about visibility labels";
-        } else {
-            description = "The .NAMESPACE. table holds information about namespaces.";
+        } else if (tableName.equals(TableName.NAMESPACE_TABLE_NAME)){
+            description = "The hbase:namespace table holds information about namespaces.";
+        } else if (tableName.equals(QuotaUtil.QUOTA_TABLE_NAME)){
+            description = "The hbase:quota table holds quota information about number" +
+            " or size of requests in a given time frame.";
         }
     </%java>
     <td><% description %></td>
@@ -382,7 +386,7 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
 
 <%def userTables>
 <%java>
-   HTableDescriptor[] tables = null; 
+   HTableDescriptor[] tables = null;
    try (Admin admin = master.getConnection().getAdmin()) {
      tables = master.isInitialized() ? admin.listTables() : null;
    }
