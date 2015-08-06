@@ -633,9 +633,22 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
       if (len == 1) {
         this.currMemstoreTS = firstByte;
       } else {
+        int remaining = len -1;
         long i = 0;
         offsetFromPos++;
-        for (int idx = 0; idx < len - 1; idx++) {
+        if (remaining >= Bytes.SIZEOF_INT) {
+          i = blockBuffer.getIntAfterPosition(offsetFromPos);
+          remaining -= Bytes.SIZEOF_INT;
+          offsetFromPos += Bytes.SIZEOF_INT;
+        }
+        if (remaining >= Bytes.SIZEOF_SHORT) {
+          short s = blockBuffer.getShortAfterPosition(offsetFromPos);
+          i = i << 16;
+          i = i | (s & 0xFFFF);
+          remaining -= Bytes.SIZEOF_SHORT;
+          offsetFromPos += Bytes.SIZEOF_SHORT;
+        }
+        for (int idx = 0; idx < remaining; idx++) {
           byte b = blockBuffer.getByteAfterPosition(offsetFromPos + idx);
           i = i << 8;
           i = i | (b & 0xFF);
