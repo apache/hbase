@@ -1431,12 +1431,11 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     TraceScope traceScope = Trace.startSpan("HFileReaderImpl.readBlock");
     try {
       while (true) {
-        if (useLock) {
-          lockEntry = offsetLock.getLockEntry(dataBlockOffset);
-        }
-
         // Check cache for block. If found return.
-        if (cacheConf.isBlockCacheEnabled()) {
+        if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
+          if (useLock) {
+            lockEntry = offsetLock.getLockEntry(dataBlockOffset);
+          }
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
           HFileBlock cachedBlock = getCachedBlock(cacheKey, cacheBlock, useLock, isCompaction,
@@ -1461,13 +1460,15 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
             // Cache-hit. Return!
             return cachedBlock;
           }
+
+          if (!useLock && cacheBlock && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
+            // check cache again with lock
+            useLock = true;
+            continue;
+          }
           // Carry on, please load.
         }
-        if (!useLock) {
-          // check cache again with lock
-          useLock = true;
-          continue;
-        }
+
         if (Trace.isTracing()) {
           traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
         }

@@ -431,6 +431,48 @@ public class CacheConfig {
     return isBlockCacheEnabled() && this.prefetchOnOpen;
   }
 
+  /**
+   * Return true if we may find this type of block in block cache.
+   * <p>
+   * TODO: today {@code family.isBlockCacheEnabled()} only means {@code cacheDataOnRead}, so here we
+   * consider lots of other configurations such as {@code cacheDataOnWrite}. We should fix this in
+   * the future, {@code cacheDataOnWrite} should honor the CF level {@code isBlockCacheEnabled}
+   * configuration.
+   */
+  public boolean shouldReadBlockFromCache(BlockType blockType) {
+    if (!isBlockCacheEnabled()) {
+      return false;
+    }
+    if (cacheDataOnRead) {
+      return true;
+    }
+    if (prefetchOnOpen) {
+      return true;
+    }
+    if (cacheDataOnWrite) {
+      return true;
+    }
+    if (blockType == null) {
+      return true;
+    }
+    if (blockType.getCategory() == BlockCategory.BLOOM ||
+            blockType.getCategory() == BlockCategory.INDEX) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * If we make sure the block could not be cached, we will not acquire the lock
+   * otherwise we will acquire lock
+   */
+  public boolean shouldLockOnCacheMiss(BlockType blockType) {
+    if (blockType == null) {
+      return true;
+    }
+    return shouldCacheBlockOnRead(blockType.getCategory());
+  }
+
   @Override
   public String toString() {
     if (!isBlockCacheEnabled()) {
