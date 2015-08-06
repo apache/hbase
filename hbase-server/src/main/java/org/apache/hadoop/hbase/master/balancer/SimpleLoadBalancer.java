@@ -30,9 +30,11 @@ import java.util.TreeMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionPlan;
 
 import com.google.common.collect.MinMaxPriorityQueue;
@@ -432,5 +434,11 @@ public class SimpleLoadBalancer extends BaseLoadBalancer {
     else rp = regionsToMove.removeLast();
     rp.setDestination(sn);
     regionsToReturn.add(rp);
+  }
+
+  @Override
+  public List<RegionPlan> balanceCluster(TableName tableName,
+      Map<ServerName, List<HRegionInfo>> clusterState) throws HBaseIOException {
+    return balanceCluster(clusterState);
   }
 }
