@@ -50,7 +50,6 @@ public class HbckTestingUtil {
       boolean fixTableZnodes,
       TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
-    fsck.connect();
     fsck.setDisplayFullReport(); // i.e. -details
     fsck.setTimeLag(0);
     fsck.setFixAssignments(fixAssignments);
@@ -64,6 +63,7 @@ public class HbckTestingUtil {
     fsck.setFixEmptyMetaCells(fixEmptyMetaRegionInfo);
     fsck.setFixTableLocks(fixTableLocks);
     fsck.setFixTableZNodes(fixTableZnodes);
+    fsck.connect();
     if (table != null) {
       fsck.includeTable(table);
     }
