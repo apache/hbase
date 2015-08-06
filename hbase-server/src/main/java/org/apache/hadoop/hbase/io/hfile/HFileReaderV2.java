@@ -350,12 +350,11 @@ public class HFileReaderV2 extends AbstractHFileReader {
     TraceScope traceScope = Trace.startSpan("HFileReaderV2.readBlock");
     try {
       while (true) {
-        if (useLock) {
-          lockEntry = offsetLock.getLockEntry(dataBlockOffset);
-        }
-
         // Check cache for block. If found return.
-        if (cacheConf.isBlockCacheEnabled()) {
+        if (cacheConf.shouldReadBlockFromCache(expectedBlockType)) {
+          if (useLock) {
+            lockEntry = offsetLock.getLockEntry(dataBlockOffset);
+          }
           // Try and get the block from the block cache. If the useLock variable is true then this
           // is the second time through the loop and it should not be counted as a block cache miss.
           HFileBlock cachedBlock = (HFileBlock) cacheConf.getBlockCache().getBlock(cacheKey, 
@@ -381,13 +380,14 @@ public class HFileReaderV2 extends AbstractHFileReader {
             }
             return cachedBlock;
           }
+          if (!useLock && cacheBlock && cacheConf.shouldLockOnCacheMiss(expectedBlockType)) {
+            // check cache again with lock
+            useLock = true;
+            continue;
+          }
           // Carry on, please load.
         }
-        if (!useLock) {
-          // check cache again with lock
-          useLock = true;
-          continue;
-        }
+
         if (Trace.isTracing()) {
           traceScope.getSpan().addTimelineAnnotation("blockCacheMiss");
         }
