@@ -235,9 +235,9 @@ public class HBaseFsck extends Configured implements Closeable {
    * Options
    ***********/
   private static boolean details = false; // do we display the full report
-  private static boolean useLock = true; // do we use the hbck exclusivity lock
-  private static boolean switchBalancer = true; // do we turn the balancer off while running
   private long timelag = DEFAULT_TIME_LAG; // tables whose modtime is older
+  private static boolean forceExclusive = false; // only this hbck can modify HBase
+  private static boolean disableBalancer = false; // disable load balancer to keep regions stable
   private boolean fixAssignments = false; // fix assignment errors?
   private boolean fixMeta = false; // fix meta errors?
   private boolean checkHdfs = true; // load and check fs consistency?
@@ -455,7 +455,7 @@ public class HBaseFsck extends Configured implements Closeable {
   }
 
   private void unlockHbck() {
-    if (hbckLockCleanup.compareAndSet(true, false)) {
+    if (isExclusive() && hbckLockCleanup.compareAndSet(true, false)) {
       RetryCounter retryCounter = lockFileRetryCounterFactory.create();
       do {
         try {
@@ -488,13 +488,13 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public void connect() throws IOException {
 
-    if (useLock) {
-      // Check if another instance of balancer is running
+    if (isExclusive()) {
+      // Grab the lock
       hbckOutFd = checkAndMarkRunningHbck();
       if (hbckOutFd == null) {
         setRetCode(-1);
-        LOG.error("Another instance of hbck is running, exiting this instance.[If you are sure" +
-            " no other instance is running, delete the lock file " +
+        LOG.error("Another instance of hbck is fixing HBase, exiting this instance. " +
+            "[If you are sure no other instance is running, delete the lock file " +
             HBCK_LOCK_PATH + " and rerun the tool]");
         throw new IOException("Duplicate hbck - Abort");
       }
@@ -698,9 +698,8 @@ public class HBaseFsck extends Configured implements Closeable {
     errors.print("Version: " + status.getHBaseVersion());
     offlineHdfsIntegrityRepair();
 
-    boolean oldBalancer = true;
-    // turn the balancer off
-    if (switchBalancer) {
+    boolean oldBalancer = false;
+    if (shouldDisableBalancer()) {
       oldBalancer = admin.setBalancerRunning(false, true);
     }
 
@@ -708,7 +707,10 @@ public class HBaseFsck extends Configured implements Closeable {
       onlineConsistencyRepair();
     }
     finally {
-      if (switchBalancer) {
+      // Only restore the balancer if it was true when we started repairing and
+      // we actually disabled it. Otherwise, we might clobber another run of
+      // hbck that has just restored it.
+      if (shouldDisableBalancer() && oldBalancer) {
         admin.setBalancerRunning(oldBalancer, false);
       }
     }
@@ -4166,12 +4168,34 @@ public class HBaseFsck extends Configured implements Closeable {
     details = true;
   }
 
-  public static void setNoLock() {
-    useLock = false;
+  /**
+   * Set exclusive mode.
+   */
+  public static void setForceExclusive() {
+    forceExclusive = true;
   }
 
-  public static void setNoBalacerSwitch() {
-    switchBalancer = false;
+  /**
+   * Only one instance of hbck can modify HBase at a time.
+   */
+  public boolean isExclusive() {
+    return fixAny || forceExclusive;
+  }
+
+  /**
+   * Disable the load balancer.
+   */
+  public static void setDisableBalancer() {
+    disableBalancer = true;
+  }
+
+  /**
+   * The balancer should be disabled if we are modifying HBase.
+   * It can be disabled if you want to prevent region movement from causing
+   * false positives.
+   */
+  public boolean shouldDisableBalancer() {
+    return fixAny || disableBalancer;
   }
 
   /**
@@ -4435,8 +4459,8 @@ public class HBaseFsck extends Configured implements Closeable {
     out.println("   -metaonly Only check the state of the hbase:meta table.");
     out.println("   -sidelineDir <hdfs://> HDFS path to backup existing meta.");
     out.println("   -boundaries Verify that regions boundaries are the same between META and store files.");
-    out.println("   -noLock Turn off using the hdfs lock file.");
-    out.println("   -noBalancerSwitch Don't switch the balancer off.");
+    out.println("   -exclusive Abort if another hbck is exclusive or fixing.");
+    out.println("   -disableBalancer Disable the load balancer.");
 
     out.println("");
     out.println("  Metadata Repair options: (expert features, use with caution!)");
@@ -4531,10 +4555,10 @@ public class HBaseFsck extends Configured implements Closeable {
         return printUsageAndExit();
       } else if (cmd.equals("-details")) {
         setDisplayFullReport();
-      } else if (cmd.equals("-noLock")) {
-        setNoLock();
-      } else if (cmd.equals("-noBalancerSwitch")) {
-        setNoBalacerSwitch();
+      } else if (cmd.equals("-exclusive")) {
+        setForceExclusive();
+      } else if (cmd.equals("-disableBalancer")) {
+        setDisableBalancer();
       } else if (cmd.equals("-timelag")) {
         if (i == args.length - 1) {
           errors.reportError(ERROR_CODE.WRONG_USAGE, "HBaseFsck: -timelag needs a value.");
