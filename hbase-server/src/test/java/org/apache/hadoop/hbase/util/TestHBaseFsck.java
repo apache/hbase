@@ -611,7 +611,7 @@ public class TestHBaseFsck {
         // To avoid flakiness of the test, set low max wait time.
         c.setInt("hbase.hbck.lockfile.maxwaittime", 3);
         try{
-          return doFsck(c, false);
+          return doFsck(c, true); // Exclusive hbck only when fixing
         } catch(Exception e){
           if (e.getMessage().contains("Duplicate hbck")) {
             fail = false;

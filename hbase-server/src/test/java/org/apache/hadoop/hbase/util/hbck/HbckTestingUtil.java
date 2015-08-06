@@ -50,7 +50,6 @@ public class HbckTestingUtil {
       TableName table) throws Exception {
     HBaseFsck fsck = new HBaseFsck(conf, exec);
     try {
-      fsck.connect();
       HBaseFsck.setDisplayFullReport(); // i.e. -details
       fsck.setTimeLag(0);
       fsck.setFixAssignments(fixAssignments);
@@ -66,6 +65,9 @@ public class HbckTestingUtil {
       if (table != null) {
         fsck.includeTable(table);
       }
+
+      // Parse command line flags before connecting, to grab the lock.
+      fsck.connect();
       fsck.onlineHbck();
     } finally {
       fsck.close();
