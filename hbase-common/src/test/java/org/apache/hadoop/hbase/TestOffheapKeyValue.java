@@ -56,7 +56,7 @@ public class TestOffheapKeyValue {
     KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    ByteBufferedCell offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false);
+    ByteBufferedCell offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false, 0l);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -99,7 +99,7 @@ public class TestOffheapKeyValue {
     kvCell = new KeyValue(row1, fam2, qual2, 0l, Type.Put, row1);
     buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false);
+    offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false, 0l);
     assertEquals(
       FAM2,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
@@ -112,7 +112,7 @@ public class TestOffheapKeyValue {
     kvCell = new KeyValue(row1, fam1, nullQualifier, 0L, Type.Put, row1);
     buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false);
+    offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), false, 0l);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
@@ -138,7 +138,7 @@ public class TestOffheapKeyValue {
     KeyValue kvCell = new KeyValue(row1, fam1, qual1, 0l, Type.Put, row1, tags);
     ByteBuffer buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
     ByteBufferUtils.copyFromArrayToBuffer(buf, kvCell.getBuffer(), 0, kvCell.getBuffer().length);
-    ByteBufferedCell offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), true);
+    ByteBufferedCell offheapKV = new OffheapKeyValue(buf, 0, buf.capacity(), true, 0l);
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),

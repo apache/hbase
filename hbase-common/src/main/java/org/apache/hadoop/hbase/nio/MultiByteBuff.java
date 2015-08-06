@@ -224,9 +224,9 @@ public class MultiByteBuff extends ByteBuff {
     ByteBuffer nextItem = items[itemIndex + 1];
     // Get available one byte from this item and remaining one from next
     short n = 0;
-    n ^= item.get(offsetInItem) & 0xFF;
+    n ^= ByteBufferUtils.toByte(item, offsetInItem) & 0xFF;
     n <<= 8;
-    n ^= nextItem.get(0) & 0xFF;
+    n ^= ByteBufferUtils.toByte(nextItem, 0) & 0xFF;
     return n;
   }
 
@@ -259,11 +259,11 @@ public class MultiByteBuff extends ByteBuff {
     int l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
       l <<= 8;
-      l ^= item.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
     }
     for (int i = 0; i < Bytes.SIZEOF_INT - remainingLen; i++) {
       l <<= 8;
-      l ^= nextItem.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
     }
     return l;
   }
@@ -284,11 +284,11 @@ public class MultiByteBuff extends ByteBuff {
     short l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
       l <<= 8;
-      l ^= item.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
     }
     for (int i = 0; i < Bytes.SIZEOF_SHORT - remainingLen; i++) {
       l <<= 8;
-      l ^= nextItem.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
     }
     return l;
   }
@@ -309,11 +309,11 @@ public class MultiByteBuff extends ByteBuff {
     long l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
       l <<= 8;
-      l ^= item.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
     }
     for (int i = 0; i < Bytes.SIZEOF_LONG - remainingLen; i++) {
       l <<= 8;
-      l ^= nextItem.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
     }
     return l;
   }
@@ -347,11 +347,11 @@ public class MultiByteBuff extends ByteBuff {
     long l = 0;
     for (int i = offsetInItem; i < item.capacity(); i++) {
       l <<= 8;
-      l ^= item.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(item, i) & 0xFF;
     }
     for (int i = 0; i < Bytes.SIZEOF_LONG - remainingLen; i++) {
       l <<= 8;
-      l ^= nextItem.get(i) & 0xFF;
+      l ^= ByteBufferUtils.toByte(nextItem, i) & 0xFF;
     }
     return l;
   }

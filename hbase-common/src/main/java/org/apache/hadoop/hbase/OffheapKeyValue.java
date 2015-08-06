@@ -48,7 +48,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements HeapSize, Clone
       + ClassSize.align(ClassSize.BYTE_BUFFER) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
       + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG;
 
-  public OffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags) {
+  public OffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags, long seqId) {
     assert buf.isDirect();
     this.buf = buf;
     this.offset = offset;
@@ -56,6 +56,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements HeapSize, Clone
     rowLen = ByteBufferUtils.toShort(this.buf, this.offset + KeyValue.ROW_OFFSET);
     keyLen = ByteBufferUtils.toInt(this.buf, this.offset);
     this.hasTags = hasTags;
+    this.seqId = seqId;
   }
 
   @Override

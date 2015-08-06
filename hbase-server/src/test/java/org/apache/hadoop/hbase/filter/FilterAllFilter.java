@@ -42,6 +42,11 @@ public class FilterAllFilter extends FilterBase {
     return true;
   }
 
+  @Override
+  public boolean filterRowKey(Cell cell) throws IOException {
+    return true;
+  }
+
   public static FilterAllFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
     // No options to parse, so why bother
     return new FilterAllFilter();

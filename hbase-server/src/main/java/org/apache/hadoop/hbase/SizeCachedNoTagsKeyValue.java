@@ -34,8 +34,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Private
 public class SizeCachedNoTagsKeyValue extends SizeCachedKeyValue {
 
-  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length) {
-    super(bytes, offset, length);
+  public SizeCachedNoTagsKeyValue(byte[] bytes, int offset, int length, long seqId) {
+    super(bytes, offset, length, seqId);
   }
 
   @Override
