@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.UUID;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -25,8 +26,6 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClusterIdProtos;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * The identifier for this cluster.
@@ -67,8 +66,9 @@ public class ClusterId {
       ClusterIdProtos.ClusterId.Builder builder = ClusterIdProtos.ClusterId.newBuilder();
       ClusterIdProtos.ClusterId cid = null;
       try {
-        cid = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
+        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+        cid = builder.build();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
       return convert(cid);

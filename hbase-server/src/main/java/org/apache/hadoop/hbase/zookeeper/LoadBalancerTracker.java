@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import java.io.IOException;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -26,8 +28,6 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.LoadBalancerProtos;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Tracks the load balancer state up in ZK
@@ -85,8 +85,8 @@ public class LoadBalancerTracker extends ZooKeeperNodeTracker {
       LoadBalancerProtos.LoadBalancerState.newBuilder();
     try {
       int magicLen = ProtobufUtil.lengthOfPBMagic();
-      builder.mergeFrom(pbBytes, magicLen, pbBytes.length - magicLen);
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, pbBytes, magicLen, pbBytes.length - magicLen);
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return builder.build();

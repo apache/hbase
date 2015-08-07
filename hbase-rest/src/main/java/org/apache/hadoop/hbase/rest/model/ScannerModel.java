@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.ScannerMessage.Scanner;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -827,7 +828,7 @@ public class ScannerModel implements ProtobufMessageHandler, Serializable {
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Scanner.Builder builder = Scanner.newBuilder();
-    builder.mergeFrom(message);
+    ProtobufUtil.mergeFrom(builder, message);
     if (builder.hasStartRow()) {
       startRow = builder.getStartRow().toByteArray();
     }

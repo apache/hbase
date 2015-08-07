@@ -18,6 +18,7 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -41,7 +42,6 @@ import org.apache.hadoop.hbase.util.PrettyPrinter;
 import org.apache.hadoop.hbase.util.PrettyPrinter.Unit;
 
 import com.google.common.base.Preconditions;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * An HColumnDescriptor contains information about a column family such as the
@@ -1088,8 +1088,9 @@ public class HColumnDescriptor implements Comparable<HColumnDescriptor> {
     ColumnFamilySchema.Builder builder = ColumnFamilySchema.newBuilder();
     ColumnFamilySchema cfs = null;
     try {
-      cfs = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+      cfs = builder.build();
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return convert(cfs);

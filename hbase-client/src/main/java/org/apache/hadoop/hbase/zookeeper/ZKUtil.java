@@ -1954,12 +1954,14 @@ public class ZKUtil {
       }
       // parse the data of the above peer znode.
       try {
-      String clusterKey = ZooKeeperProtos.ReplicationPeer.newBuilder().
-        mergeFrom(data, pblen, data.length - pblen).getClusterkey();
-      sb.append("\n").append(znodeToProcess).append(": ").append(clusterKey);
-      // add the peer-state.
-      appendPeerState(zkw, znodeToProcess, sb);
-      } catch (InvalidProtocolBufferException ipbe) {
+        ZooKeeperProtos.ReplicationPeer.Builder builder =
+          ZooKeeperProtos.ReplicationPeer.newBuilder();
+        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+        String clusterKey = builder.getClusterkey();
+        sb.append("\n").append(znodeToProcess).append(": ").append(clusterKey);
+        // add the peer-state.
+        appendPeerState(zkw, znodeToProcess, sb);
+      } catch (IOException ipbe) {
         LOG.warn("Got Exception while parsing peer: " + znodeToProcess, ipbe);
       }
     }
@@ -1977,8 +1979,12 @@ public class ZKUtil {
       byte[] peerStateData;
       try {
         peerStateData = ZKUtil.getData(zkw, peerStateZnode);
-        sb.append(ZooKeeperProtos.ReplicationState.newBuilder()
-            .mergeFrom(peerStateData, pblen, peerStateData.length - pblen).getState().name());
+        ZooKeeperProtos.ReplicationState.Builder builder =
+            ZooKeeperProtos.ReplicationState.newBuilder();
+        ProtobufUtil.mergeFrom(builder, peerStateData, pblen, peerStateData.length - pblen);
+        sb.append(builder.getState().name());
+      } catch (IOException ipbe) {
+        LOG.warn("Got Exception while parsing peer: " + znodeToProcess, ipbe);
       } catch (InterruptedException e) {
         zkw.interruptedException(e);
         return;
@@ -2162,8 +2168,9 @@ public class ZKUtil {
           ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
       ZooKeeperProtos.ReplicationHLogPosition position;
       try {
-        position = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
+        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+        position = builder.build();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
       return position.getPosition();
@@ -2218,8 +2225,9 @@ public class ZKUtil {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     RegionStoreSequenceIds storeIds = null;
     try {
-      storeIds = regionSequenceIdsBuilder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(regionSequenceIdsBuilder, bytes, pblen, bytes.length - pblen);
+      storeIds = regionSequenceIdsBuilder.build();
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return storeIds;

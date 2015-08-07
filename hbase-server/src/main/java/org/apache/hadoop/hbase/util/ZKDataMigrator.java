@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.TableName;
@@ -102,10 +102,9 @@ public class ZKDataMigrator {
       ZooKeeperProtos.DeprecatedTableState.Builder builder =
           ZooKeeperProtos.DeprecatedTableState.newBuilder();
       int magicLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.DeprecatedTableState t = builder.mergeFrom(data,
-          magicLen, data.length - magicLen).build();
-      return t.getState();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
+      return builder.getState();
+    } catch (IOException e) {
       KeeperException ke = new KeeperException.DataInconsistencyException();
       ke.initCause(e);
       throw ke;

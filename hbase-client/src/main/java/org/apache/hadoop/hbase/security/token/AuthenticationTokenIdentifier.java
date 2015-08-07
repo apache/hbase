@@ -23,6 +23,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -137,8 +138,10 @@ public class AuthenticationTokenIdentifier extends TokenIdentifier {
     int len = in.readInt();
     byte[] inBytes = new byte[len];
     in.readFully(inBytes);
-    AuthenticationProtos.TokenIdentifier identifier =
-        AuthenticationProtos.TokenIdentifier.newBuilder().mergeFrom(inBytes).build();
+    AuthenticationProtos.TokenIdentifier.Builder builder =
+      AuthenticationProtos.TokenIdentifier.newBuilder();
+    ProtobufUtil.mergeFrom(builder, inBytes);
+    AuthenticationProtos.TokenIdentifier identifier = builder.build();
     // sanity check on type
     if (!identifier.hasKind() ||
         identifier.getKind() != AuthenticationProtos.TokenIdentifier.Kind.HBASE_AUTH_TOKEN) {

@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -94,8 +93,9 @@ public class TableDescriptor {
     HBaseProtos.TableDescriptor.Builder builder = HBaseProtos.TableDescriptor.newBuilder();
     HBaseProtos.TableDescriptor ts;
     try {
-      ts = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+      ts = builder.build();
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return convert(ts);
