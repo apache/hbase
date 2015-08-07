@@ -331,7 +331,9 @@ public class ReplicationQueuesZKImpl extends ReplicationStateZKBase implements R
         // add delete op for peer
         listOfOps.add(ZKUtilOp.deleteNodeFailSilent(oldClusterZnode));
       }
-      // add delete op for dead rs
+      // add delete op for dead rs, this will update the cversion of the parent.
+      // The reader will make optimistic locking with this to get a consistent
+      // snapshot
       listOfOps.add(ZKUtilOp.deleteNodeFailSilent(deadRSZnodePath));
       LOG.debug(" The multi list size is: " + listOfOps.size());
       ZKUtil.multiOrSequential(this.zookeeper, listOfOps, false);

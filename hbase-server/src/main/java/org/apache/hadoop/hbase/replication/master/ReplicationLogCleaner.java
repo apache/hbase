@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -39,6 +40,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.zookeeper.KeeperException;
 
 /**
  * Implementation of a log cleaner that checks if a log is still scheduled for
@@ -61,12 +63,20 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
       return files;
     }
 
-    final Set<String> hlogs = loadHLogsFromQueues();
+    final Set<String> wals;
+    try {
+      // The concurrently created new WALs may not be included in the return list,
+      // but they won't be deleted because they're not in the checking set.
+      wals = loadWALsFromQueues();
+    } catch (KeeperException e) {
+      LOG.warn("Failed to read zookeeper, skipping checking deletable files");
+      return Collections.emptyList();
+    }
     return Iterables.filter(files, new Predicate<FileStatus>() {
       @Override
       public boolean apply(FileStatus file) {
         String hlog = file.getPath().getName();
-        boolean logInReplicationQueue = hlogs.contains(hlog);
+        boolean logInReplicationQueue = wals.contains(hlog);
         if (LOG.isDebugEnabled()) {
           if (logInReplicationQueue) {
             LOG.debug("Found log in ZK, keeping: " + hlog);
@@ -79,29 +89,40 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
   }
 
   /**
-   * Load all hlogs in all replication queues from ZK
+   * Load all wals in all replication queues from ZK. This method guarantees to return a
+   * snapshot which contains all WALs in the zookeeper at the start of this call even there
+   * is concurrent queue failover. However, some newly created WALs during the call may
+   * not be included.
    */
-  private Set<String> loadHLogsFromQueues() {
-    List<String> rss = replicationQueues.getListOfReplicators();
-    if (rss == null) {
-      LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
-      return ImmutableSet.of();
-    }
-    Set<String> hlogs = Sets.newHashSet();
-    for (String rs: rss) {
-      List<String> listOfPeers = replicationQueues.getAllQueues(rs);
-      // if rs just died, this will be null
-      if (listOfPeers == null) {
-        continue;
+  private Set<String> loadWALsFromQueues() throws KeeperException {
+    int v0 = replicationQueues.getQueuesZNodeCversion();
+    for (int retry = 0; ; retry++) {
+      List<String> rss = replicationQueues.getListOfReplicators();
+      if (rss == null) {
+        LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
+        return ImmutableSet.of();
       }
-      for (String id : listOfPeers) {
-        List<String> peersHlogs = replicationQueues.getLogsInQueue(rs, id);
-        if (peersHlogs != null) {
-          hlogs.addAll(peersHlogs);
+      Set<String> wals = Sets.newHashSet();
+      for (String rs : rss) {
+        List<String> listOfPeers = replicationQueues.getAllQueues(rs);
+        // if rs just died, this will be null
+        if (listOfPeers == null) {
+          continue;
+        }
+        for (String id : listOfPeers) {
+          List<String> peersWals = replicationQueues.getLogsInQueue(rs, id);
+          if (peersWals != null) {
+            wals.addAll(peersWals);
+          }
         }
       }
+      int v1 = replicationQueues.getQueuesZNodeCversion();
+      if (v0 == v1) {
+        return wals;
+      }
+      LOG.info(String.format("Replication queue node cversion changed from %d to %d, retry = %d",
+          v0, v1, retry));
     }
-    return hlogs;
   }
 
   @Override
