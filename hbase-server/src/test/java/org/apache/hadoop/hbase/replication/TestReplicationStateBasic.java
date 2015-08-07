@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
+import org.apache.zookeeper.KeeperException;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -66,7 +67,7 @@ public abstract class TestReplicationStateBasic {
   }
 
   @Test
-  public void testReplicationQueuesClient() throws ReplicationException {
+  public void testReplicationQueuesClient() throws ReplicationException, KeeperException {
     rqc.init();
     // Test methods with empty state
     assertEquals(0, rqc.getListOfReplicators().size());

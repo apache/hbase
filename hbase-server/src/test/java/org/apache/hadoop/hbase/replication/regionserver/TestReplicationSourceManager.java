@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeers;
 import org.apache.hadoop.hbase.replication.ReplicationQueueInfo;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStateZKBase;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceManager.NodeFailoverWorker;
@@ -366,6 +367,38 @@ public class TestReplicationSourceManager {
     server.abort("", null);
   }
 
+  @Test
+  public void testFailoverDeadServerCversionChange() throws Exception {
+    LOG.debug("testFailoverDeadServerCversionChange");
+
+    conf.setBoolean(HConstants.ZOOKEEPER_USEMULTI, true);
+    final Server s0 = new DummyServer("cversion-change0.example.org");
+    ReplicationQueues repQueues =
+        ReplicationFactory.getReplicationQueues(s0.getZooKeeper(), conf, s0);
+    repQueues.init(s0.getServerName().toString());
+    // populate some znodes in the peer znode
+    files.add("log1");
+    files.add("log2");
+    for (String file : files) {
+      repQueues.addLog("1", file);
+    }
+    // simulate queue transfer
+    Server s1 = new DummyServer("cversion-change1.example.org");
+    ReplicationQueues rq1 =
+        ReplicationFactory.getReplicationQueues(s1.getZooKeeper(), s1.getConfiguration(), s1);
+    rq1.init(s1.getServerName().toString());
+
+    ReplicationQueuesClient client =
+        ReplicationFactory.getReplicationQueuesClient(s1.getZooKeeper(), s1.getConfiguration(), s1);
+
+    int v0 = client.getQueuesZNodeCversion();
+    rq1.claimQueues(s0.getServerName().getServerName());
+    int v1 = client.getQueuesZNodeCversion();
+    // cversion should increased by 1 since a child node is deleted
+    assertEquals(v0 + 1, v1);
+
+    s0.abort("", null);
+  }
 
   static class DummyNodeFailoverWorker extends Thread {
     private SortedMap<String, SortedSet<String>> logZnodesMap;
