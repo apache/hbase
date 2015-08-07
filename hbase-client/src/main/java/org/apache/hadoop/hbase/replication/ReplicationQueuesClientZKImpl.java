@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.data.Stat;
 
 @InterfaceAudience.Private
 public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implements
@@ -46,7 +47,7 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
   }
 
   @Override
-  public List<String> getLogsInQueue(String serverName, String queueId) {
+  public List<String> getLogsInQueue(String serverName, String queueId) throws KeeperException {
     String znode = ZKUtil.joinZNode(this.queuesZNode, serverName);
     znode = ZKUtil.joinZNode(znode, queueId);
     List<String> result = null;
@@ -55,20 +56,32 @@ public class ReplicationQueuesClientZKImpl extends ReplicationStateZKBase implem
     } catch (KeeperException e) {
       this.abortable.abort("Failed to get list of wals for queueId=" + queueId
           + " and serverName=" + serverName, e);
+      throw e;
     }
     return result;
   }
 
   @Override
-  public List<String> getAllQueues(String serverName) {
+  public List<String> getAllQueues(String serverName) throws KeeperException {
     String znode = ZKUtil.joinZNode(this.queuesZNode, serverName);
     List<String> result = null;
     try {
       result = ZKUtil.listChildrenNoWatch(this.zookeeper, znode);
     } catch (KeeperException e) {
       this.abortable.abort("Failed to get list of queues for serverName=" + serverName, e);
+      throw e;
     }
     return result;
   }
 
+  @Override public int getQueuesZNodeCversion() throws KeeperException {
+    try {
+      Stat stat = new Stat();
+      ZKUtil.getDataNoWatch(this.zookeeper, this.queuesZNode, stat);
+      return stat.getCversion();
+    } catch (KeeperException e) {
+      this.abortable.abort("Failed to get stat of replication rs node", e);
+      throw e;
+    }
+  }
 }
