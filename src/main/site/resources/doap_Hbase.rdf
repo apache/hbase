@@ -36,16 +36,16 @@
     <category rdf:resource="http://projects.apache.org/category/database" />
     <release>
       <Version>
-        <name>Apache hbase 0.92.1</name>
-        <created>2012-03-19</created>
-        <revision>0.92.1</revision>
+        <name>Apache hbase </name>
+        <created>2015-07-23</created>
+        <revision>2.0.0-SNAPSHOT</revision>
       </Version>
     </release>
     <repository>
-      <SVNRepository>
-        <location rdf:resource="http://svn.apache.org/repos/asf/hbase"/>
-        <browse rdf:resource="http://svn.apache.org/viewvc/hbase"/>
-      </SVNRepository>
+      <GitRepository>
+        <location rdf:resource="git://git.apache.org/hbase.git"/>
+        <browse rdf:resource="https://git-wip-us.apache.org/repos/asf?p=hbase.git"/>
+      </GitRepository>
     </repository>
     <maintainer>
       <foaf:Person>

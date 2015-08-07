@@ -570,7 +570,7 @@ Checkin the _CHANGES.txt_ and any version changes.
 . Update the documentation.
 +
 Update the documentation under _src/main/asciidoc_.
-This usually involves copying the latest from trunk and making version-particular adjustments to suit this release candidate version. 
+This usually involves copying the latest from master and making version-particular adjustments to suit this release candidate version. 
 
 . Build the source tarball.
 +
@@ -1935,7 +1935,7 @@ If the contributor used +git format-patch+ to generate the patch, their commit m
 [[committer.amending.author]]
 ====== Add Amending-Author when a conflict cherrypick backporting
 
-We've established the practice of committing to trunk and then cherry picking back to branches whenever possible.
+We've established the practice of committing to master and then cherry picking back to branches whenever possible.
 When there is a minor conflict we can fix it up and just proceed with the commit.
 The resulting commit retains the original author.
 When the amending author is different from the original committer, add notice of this at the end of the commit message as: `Amending-Author: Author
@@ -1956,7 +1956,7 @@ A committer should.
 In the thread link:http://search-hadoop.com/m/DHED4EiwOz[HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
                                 Re: Git Migration)], it was agreed on the following patch flow 
 
-. Develop and commit the patch against trunk/master first.
+. Develop and commit the patch against master first.
 . Try to cherry-pick the patch when backporting if possible.
 . If this does not work, manually commit the patch to the branch.                        
 
