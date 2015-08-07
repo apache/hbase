@@ -37,6 +37,7 @@ public class PBCell extends PBType<CellProtos.Cell> {
   public int skip(PositionedByteRange src) {
     CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
     CodedInputStream is = inputStreamFromByteRange(src);
+    is.setSizeLimit(src.getLength());
     try {
       builder.mergeFrom(is);
       int consumed = is.getTotalBytesRead();
@@ -51,6 +52,7 @@ public class PBCell extends PBType<CellProtos.Cell> {
   public CellProtos.Cell decode(PositionedByteRange src) {
     CellProtos.Cell.Builder builder = CellProtos.Cell.newBuilder();
     CodedInputStream is = inputStreamFromByteRange(src);
+    is.setSizeLimit(src.getLength());
     try {
       CellProtos.Cell ret = builder.mergeFrom(is).build();
       src.setPosition(src.getPosition() + is.getTotalBytesRead());

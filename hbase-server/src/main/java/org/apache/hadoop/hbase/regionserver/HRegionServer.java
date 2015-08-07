@@ -3235,9 +3235,9 @@ public class HRegionServer extends HasThread implements
         throw new UnknownProtocolException(service.getClass(), "Unknown method " + methodName
             + " called on service " + serviceName);
       }
-      Message request =
-          service.getRequestPrototype(methodDesc).newBuilderForType().mergeFrom(call.getRequest())
-              .build();
+      Message.Builder builderForType = service.getRequestPrototype(methodDesc).newBuilderForType();
+      ProtobufUtil.mergeFrom(builderForType, call.getRequest());
+      Message request = builderForType.build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
       service.callMethod(methodDesc, serviceController, request, new RpcCallback<Message>() {

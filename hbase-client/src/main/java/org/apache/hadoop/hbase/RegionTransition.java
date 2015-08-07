@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.util.ByteStringer;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -121,10 +122,11 @@ public class RegionTransition {
     ProtobufUtil.expectPBMagicPrefix(data);
     try {
       int prefixLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.RegionTransition rt = ZooKeeperProtos.RegionTransition.newBuilder().
-        mergeFrom(data, prefixLen, data.length - prefixLen).build();
-      return new RegionTransition(rt);
-    } catch (InvalidProtocolBufferException e) {
+      ZooKeeperProtos.RegionTransition.Builder builder =
+          ZooKeeperProtos.RegionTransition.newBuilder();
+      ProtobufUtil.mergeFrom(builder, data, prefixLen, data.length - prefixLen);
+      return new RegionTransition(builder.build());
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
   }

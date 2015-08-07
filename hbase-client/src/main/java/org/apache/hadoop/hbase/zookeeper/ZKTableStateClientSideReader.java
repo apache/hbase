@@ -19,8 +19,6 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -28,6 +26,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -189,9 +188,9 @@ public class ZKTableStateClientSideReader {
       ProtobufUtil.expectPBMagicPrefix(data);
       ZooKeeperProtos.Table.Builder builder = ZooKeeperProtos.Table.newBuilder();
       int magicLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.Table t = builder.mergeFrom(data, magicLen, data.length - magicLen).build();
-      return t.getState();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, data, magicLen, data.length - magicLen);
+      return builder.getState();
+    } catch (IOException e) {
       KeeperException ke = new KeeperException.DataInconsistencyException();
       ke.initCause(e);
       throw ke;
