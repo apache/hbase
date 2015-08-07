@@ -102,6 +102,14 @@ module Hbase
     def replication_status(format,type)
       return admin.status(format,type)
     end
+
+    def drop_test_snapshot()
+      begin
+        admin.delete_all_snapshot(".*")
+      rescue => e
+        puts "IGNORING DELETE ALL SNAPSHOT ERROR: #{e}"
+      end
+    end
   end
 end
 
