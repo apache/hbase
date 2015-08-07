@@ -21,7 +21,7 @@ package org.apache.hadoop.hbase.replication;
 import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-
+import org.apache.zookeeper.KeeperException;
 
 /**
  * This provides an interface for clients of replication to view replication queues. These queues
@@ -39,21 +39,30 @@ public interface ReplicationQueuesClient {
    * Get a list of all region servers that have outstanding replication queues. These servers could
    * be alive, dead or from a previous run of the cluster.
    * @return a list of server names
+   * @throws KeeperException zookeeper exception
    */
-  List<String> getListOfReplicators();
+  List<String> getListOfReplicators() throws KeeperException;
 
   /**
    * Get a list of all WALs in the given queue on the given region server.
    * @param serverName the server name of the region server that owns the queue
    * @param queueId a String that identifies the queue
    * @return a list of WALs, null if this region server is dead and has no outstanding queues
+   * @throws KeeperException zookeeper exception
    */
-  List<String> getLogsInQueue(String serverName, String queueId);
+  List<String> getLogsInQueue(String serverName, String queueId) throws KeeperException;
 
   /**
    * Get a list of all queues for the specified region server.
    * @param serverName the server name of the region server that owns the set of queues
    * @return a list of queueIds, null if this region server is not a replicator.
    */
-  List<String> getAllQueues(String serverName);
+  List<String> getAllQueues(String serverName) throws KeeperException;
+
+  /**
+   * Get the cversion of replication rs node. This can be used as optimistic locking to get a
+   * consistent snapshot of the replication queues.
+   * @return cversion of replication rs node
+   */
+  int getQueuesZNodeCversion() throws KeeperException;
 }
