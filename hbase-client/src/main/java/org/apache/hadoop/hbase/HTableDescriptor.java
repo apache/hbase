@@ -55,8 +55,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  * HTableDescriptor contains the details about an HBase table  such as the descriptors of
  * all the column families, is the table a catalog table, <code> -ROOT- </code> or
@@ -1487,8 +1485,9 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
     TableSchema.Builder builder = TableSchema.newBuilder();
     TableSchema ts;
     try {
-      ts = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+      ts = builder.build();
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return convert(ts);

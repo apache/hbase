@@ -79,7 +79,6 @@ import org.apache.hadoop.hbase.util.Threads;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.Service;
 import com.google.protobuf.ServiceException;
@@ -1904,10 +1903,10 @@ public class HTable implements HTableInterface, RegionLocator {
                   ", value=" + serviceResult.getValue().getValue());
             }
             try {
-              callback.update(region, row,
-                  (R) responsePrototype.newBuilderForType().mergeFrom(
-                      serviceResult.getValue().getValue()).build());
-            } catch (InvalidProtocolBufferException e) {
+              Message.Builder builder = responsePrototype.newBuilderForType();
+              ProtobufUtil.mergeFrom(builder, serviceResult.getValue().getValue());
+              callback.update(region, row, (R) builder.build());
+            } catch (IOException e) {
               LOG.error("Unexpected response type from endpoint " + methodDescriptor.getFullName(),
                   e);
               callbackErrorExceptions.add(e);

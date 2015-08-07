@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlAttribute;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.RESTServlet;
 import org.apache.hadoop.hbase.rest.protobuf.generated.VersionMessage.Version;
@@ -188,7 +189,7 @@ public class VersionModel implements Serializable, ProtobufMessageHandler {
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Version.Builder builder = Version.newBuilder();
-    builder.mergeFrom(message);
+    ProtobufUtil.mergeFrom(builder, message);
     if (builder.hasRestVersion()) {
       restVersion = builder.getRestVersion();
     }

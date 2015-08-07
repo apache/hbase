@@ -1905,9 +1905,13 @@ public class AccessController extends BaseMasterAndRegionObserver
             tags.add(tag);
           } else {
             // Merge the perms from the older ACL into the current permission set
-            ListMultimap<String,Permission> kvPerms = ProtobufUtil.toUsersAndPermissions(
-              AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
-                tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()).build());
+            // TODO: The efficiency of this can be improved. Don't build just to unpack
+            // again, use the builder
+            AccessControlProtos.UsersAndPermissions.Builder builder =
+              AccessControlProtos.UsersAndPermissions.newBuilder();
+            ProtobufUtil.mergeFrom(builder, tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
+            ListMultimap<String,Permission> kvPerms =
+              ProtobufUtil.toUsersAndPermissions(builder.build());
             perms.putAll(kvPerms);
           }
         }

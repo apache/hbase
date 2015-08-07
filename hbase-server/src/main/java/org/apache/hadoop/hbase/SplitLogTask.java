@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -24,8 +26,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.util.Bytes;
-
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * State of a WAL log split during distributed splitting.  State is kept up in zookeeper.
@@ -160,10 +160,10 @@ public class SplitLogTask {
     ProtobufUtil.expectPBMagicPrefix(data);
     try {
       int prefixLen = ProtobufUtil.lengthOfPBMagic();
-      ZooKeeperProtos.SplitLogTask slt = ZooKeeperProtos.SplitLogTask.newBuilder().
-        mergeFrom(data, prefixLen, data.length - prefixLen).build();
-      return new SplitLogTask(slt);
-    } catch (InvalidProtocolBufferException e) {
+      ZooKeeperProtos.SplitLogTask.Builder builder = ZooKeeperProtos.SplitLogTask.newBuilder();
+      ProtobufUtil.mergeFrom(builder, data, prefixLen, data.length - prefixLen);
+      return new SplitLogTask(builder.build());
+    } catch (IOException e) {
       throw new DeserializationException(Bytes.toStringBinary(data, 0, 64), e);
     }
   }

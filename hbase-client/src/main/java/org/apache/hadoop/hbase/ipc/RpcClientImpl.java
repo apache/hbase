@@ -23,6 +23,7 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
 import com.google.protobuf.Message.Builder;
 import com.google.protobuf.RpcCallback;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -66,6 +68,7 @@ import org.apache.htrace.TraceScope;
 
 import javax.net.SocketFactory;
 import javax.security.sasl.SaslException;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -950,7 +953,7 @@ public class RpcClientImpl extends AbstractRpcClient {
           Message value = null;
           if (call.responseDefaultType != null) {
             Builder builder = call.responseDefaultType.newBuilderForType();
-            builder.mergeDelimitedFrom(in);
+            ProtobufUtil.mergeDelimitedFrom(builder, in);
             value = builder.build();
           }
           CellScanner cellBlockScanner = null;
