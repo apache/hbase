@@ -89,7 +89,7 @@ public class RegionServerTracker extends ZooKeeperListener {
             byte[] data = ZKUtil.getData(watcher, nodePath);
             if (data != null && data.length > 0 && ProtobufUtil.isPBMagicPrefix(data)) {
               int magicLen = ProtobufUtil.lengthOfPBMagic();
-              rsInfoBuilder.mergeFrom(data, magicLen, data.length - magicLen);
+              ProtobufUtil.mergeFrom(rsInfoBuilder, data, magicLen, data.length - magicLen);
             }
             if (LOG.isDebugEnabled()) {
               LOG.debug("Added tracking of RS " + nodePath);

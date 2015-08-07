@@ -65,8 +65,6 @@ import org.apache.hadoop.hbase.util.SimpleByteRange;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  * Utility method to support visibility
  */
@@ -165,10 +163,10 @@ public class VisibilityUtils {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
-        VisibilityLabelsRequest request = VisibilityLabelsRequest.newBuilder()
-            .mergeFrom(data, pblen, data.length - pblen).build();
-        return request.getVisLabelList();
-      } catch (InvalidProtocolBufferException e) {
+        VisibilityLabelsRequest.Builder builder = VisibilityLabelsRequest.newBuilder();
+        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+        return builder.getVisLabelList();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
     }
@@ -186,10 +184,10 @@ public class VisibilityUtils {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
-        MultiUserAuthorizations multiUserAuths = MultiUserAuthorizations.newBuilder()
-            .mergeFrom(data, pblen, data.length - pblen).build();
-        return multiUserAuths;
-      } catch (InvalidProtocolBufferException e) {
+        MultiUserAuthorizations.Builder builder = MultiUserAuthorizations.newBuilder();
+        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+        return builder.build();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
     }

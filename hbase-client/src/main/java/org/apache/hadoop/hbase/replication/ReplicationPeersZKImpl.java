@@ -47,7 +47,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.ByteString;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * This class provides an implementation of the ReplicationPeers interface using Zookeeper. The
@@ -479,8 +478,9 @@ public class ReplicationPeersZKImpl extends ReplicationStateZKBase implements Re
           ZooKeeperProtos.ReplicationPeer.newBuilder();
       ZooKeeperProtos.ReplicationPeer peer;
       try {
-        peer = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
+        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+        peer = builder.build();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
       return convert(peer);

@@ -82,7 +82,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.primitives.Ints;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Utility methods for interacting with the underlying file system.
@@ -542,11 +541,10 @@ public abstract class FSUtils {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     FSProtos.HBaseVersionFileContent.Builder builder =
       FSProtos.HBaseVersionFileContent.newBuilder();
-    FSProtos.HBaseVersionFileContent fileContent;
     try {
-      fileContent = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      return fileContent.getVersion();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+      return builder.getVersion();
+    } catch (IOException e) {
       // Convert
       throw new DeserializationException(e);
     }

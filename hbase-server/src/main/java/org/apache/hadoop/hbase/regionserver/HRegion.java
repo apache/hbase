@@ -121,6 +121,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
@@ -5944,8 +5945,9 @@ public class HRegion implements HeapSize { // , Writable{
               " in region "+Bytes.toStringBinary(getRegionName()));
     }
 
-    Message request = service.getRequestPrototype(methodDesc).newBuilderForType()
-        .mergeFrom(call.getRequest()).build();
+    Message.Builder builder = service.getRequestPrototype(methodDesc).newBuilderForType();
+    ProtobufUtil.mergeFrom(builder, call.getRequest());
+    Message request = builder.build();
 
     if (coprocessorHost != null) {
       request = coprocessorHost.preEndpointInvocation(service, methodName, request);

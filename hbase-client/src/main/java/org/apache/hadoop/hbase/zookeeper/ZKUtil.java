@@ -73,8 +73,6 @@ import org.apache.zookeeper.proto.DeleteRequest;
 import org.apache.zookeeper.proto.SetDataRequest;
 import org.apache.zookeeper.server.ZooKeeperSaslServer;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  * Internal HBase utility class for ZooKeeper.
  *
@@ -1880,19 +1878,21 @@ public class ZKUtil {
       byte[] data = ZKUtil.getData(zkw, znodeToProcess);
       // parse the data of the above peer znode.
       try {
-      String clusterKey = ZooKeeperProtos.ReplicationPeer.newBuilder().
-        mergeFrom(data, pblen, data.length - pblen).getClusterkey();
-      sb.append("\n").append(znodeToProcess).append(": ").append(clusterKey);
-      // add the peer-state.
-      appendPeerState(zkw, znodeToProcess, sb);
-      } catch (InvalidProtocolBufferException ipbe) {
+        ZooKeeperProtos.ReplicationPeer.Builder builder =
+          ZooKeeperProtos.ReplicationPeer.newBuilder();
+        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+        String clusterKey = builder.getClusterkey();
+        sb.append("\n").append(znodeToProcess).append(": ").append(clusterKey);
+        // add the peer-state.
+        appendPeerState(zkw, znodeToProcess, sb);
+      } catch (IOException ipbe) {
         LOG.warn("Got Exception while parsing peer: " + znodeToProcess, ipbe);
       }
     }
   }
 
   private static void appendPeerState(ZooKeeperWatcher zkw, String znodeToProcess,
-      StringBuilder sb) throws KeeperException, InvalidProtocolBufferException {
+      StringBuilder sb) throws KeeperException, IOException {
     String peerState = zkw.getConfiguration().get("zookeeper.znode.replication.peers.state",
       "peer-state");
     int pblen = ProtobufUtil.lengthOfPBMagic();
@@ -1901,8 +1901,10 @@ public class ZKUtil {
       String peerStateZnode = ZKUtil.joinZNode(znodeToProcess, child);
       sb.append("\n").append(peerStateZnode).append(": ");
       byte[] peerStateData = ZKUtil.getData(zkw, peerStateZnode);
-      sb.append(ZooKeeperProtos.ReplicationState.newBuilder()
-          .mergeFrom(peerStateData, pblen, peerStateData.length - pblen).getState().name());
+      ZooKeeperProtos.ReplicationState.Builder builder = 
+        ZooKeeperProtos.ReplicationState.newBuilder();
+      ProtobufUtil.mergeFrom(builder, peerStateData, pblen, peerStateData.length - pblen);
+      sb.append(builder.getState().name());
     }
   }
 
@@ -2119,8 +2121,9 @@ public class ZKUtil {
           ZooKeeperProtos.ReplicationHLogPosition.newBuilder();
       ZooKeeperProtos.ReplicationHLogPosition position;
       try {
-        position = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-      } catch (InvalidProtocolBufferException e) {
+        ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+        position = builder.build();
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
       return position.getPosition();
@@ -2175,8 +2178,9 @@ public class ZKUtil {
     int pblen = ProtobufUtil.lengthOfPBMagic();
     RegionStoreSequenceIds storeIds = null;
     try {
-      storeIds = regionSequenceIdsBuilder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
-    } catch (InvalidProtocolBufferException e) {
+      ProtobufUtil.mergeFrom(regionSequenceIdsBuilder, bytes, pblen, bytes.length - pblen);
+      storeIds = regionSequenceIdsBuilder.build();
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
     return storeIds;

@@ -40,8 +40,6 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 @InterfaceAudience.Private
 public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closeable {
   private static final Log LOG = LogFactory.getLog(ReplicationPeerZKImpl.class);
@@ -248,9 +246,10 @@ public class ReplicationPeerZKImpl implements ReplicationPeer, Abortable, Closea
         ZooKeeperProtos.ReplicationState.newBuilder();
     ZooKeeperProtos.ReplicationState state;
     try {
-      state = builder.mergeFrom(bytes, pblen, bytes.length - pblen).build();
+      ProtobufUtil.mergeFrom(builder, bytes, pblen, bytes.length - pblen);
+      state = builder.build();
       return state.getState();
-    } catch (InvalidProtocolBufferException e) {
+    } catch (IOException e) {
       throw new DeserializationException(e);
     }
   }

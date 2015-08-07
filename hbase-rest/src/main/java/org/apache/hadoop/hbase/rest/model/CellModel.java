@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.CellMessage.Cell;
 import org.codehaus.jackson.annotate.JsonProperty;
@@ -196,7 +197,7 @@ public class CellModel implements ProtobufMessageHandler, Serializable {
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     Cell.Builder builder = Cell.newBuilder();
-    builder.mergeFrom(message);
+    ProtobufUtil.mergeFrom(builder, message);
     setColumn(builder.getColumn().toByteArray());
     setValue(builder.getData().toByteArray());
     if (builder.hasTimestamp()) {

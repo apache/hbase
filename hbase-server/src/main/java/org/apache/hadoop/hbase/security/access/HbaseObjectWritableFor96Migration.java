@@ -668,7 +668,8 @@ class HbaseObjectWritableFor96Migration implements Writable, WritableWithSize, C
       byte [] scanBytes = new byte[length];
       in.readFully(scanBytes);
       ClientProtos.Scan.Builder scanProto = ClientProtos.Scan.newBuilder();
-      instance = ProtobufUtil.toScan(scanProto.mergeFrom(scanBytes).build());
+      ProtobufUtil.mergeFrom(scanProto, scanBytes);
+      instance = ProtobufUtil.toScan(scanProto.build());
     } else {                                      // Writable or Serializable
       Class instanceClass = null;
       int b = (byte)WritableUtils.readVInt(in);

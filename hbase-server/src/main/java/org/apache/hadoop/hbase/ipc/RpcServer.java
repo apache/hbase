@@ -122,7 +122,6 @@ import com.google.protobuf.BlockingService;
 import com.google.protobuf.CodedInputStream;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Message;
-import com.google.protobuf.Message.Builder;
 import com.google.protobuf.ServiceException;
 import com.google.protobuf.TextFormat;
 // Uses Writables doing sasl
@@ -1744,7 +1743,9 @@ public class RpcServer implements RpcServerInterface {
       CodedInputStream cis = CodedInputStream.newInstance(buf, offset, buf.length);
       int headerSize = cis.readRawVarint32();
       offset = cis.getTotalBytesRead();
-      RequestHeader header = RequestHeader.newBuilder().mergeFrom(buf, offset, headerSize).build();
+      Message.Builder builder = RequestHeader.newBuilder();
+      ProtobufUtil.mergeFrom(builder, buf, offset, headerSize);
+      RequestHeader header = (RequestHeader) builder.build();
       offset += headerSize;
       int id = header.getCallId();
       if (LOG.isTraceEnabled()) {
@@ -1772,13 +1773,14 @@ public class RpcServer implements RpcServerInterface {
         if (header.hasRequestParam() && header.getRequestParam()) {
           md = this.service.getDescriptorForType().findMethodByName(header.getMethodName());
           if (md == null) throw new UnsupportedOperationException(header.getMethodName());
-          Builder builder = this.service.getRequestPrototype(md).newBuilderForType();
+          builder = this.service.getRequestPrototype(md).newBuilderForType();
           // To read the varint, I need an inputstream; might as well be a CIS.
           cis = CodedInputStream.newInstance(buf, offset, buf.length);
           int paramSize = cis.readRawVarint32();
           offset += cis.getTotalBytesRead();
           if (builder != null) {
-            param = builder.mergeFrom(buf, offset, paramSize).build();
+            ProtobufUtil.mergeFrom(builder, buf, offset, paramSize);
+            param = builder.build();
           }
           offset += paramSize;
         }

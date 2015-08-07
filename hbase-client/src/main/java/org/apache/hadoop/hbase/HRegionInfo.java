@@ -47,8 +47,6 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  * HRegion information.
  * Contains HRegion id, start and end keys, a reference to this HRegions' table descriptor, etc.
@@ -945,11 +943,11 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     if (ProtobufUtil.isPBMagicPrefix(bytes, offset, len)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
-        HBaseProtos.RegionInfo ri =
-            HBaseProtos.RegionInfo.newBuilder().
-                mergeFrom(bytes, pblen + offset, len - pblen).build();
+        HBaseProtos.RegionInfo.Builder builder = HBaseProtos.RegionInfo.newBuilder();
+        ProtobufUtil.mergeFrom(builder, bytes, pblen + offset, len - pblen);
+        HBaseProtos.RegionInfo ri = builder.build();
         return convert(ri);
-      } catch (InvalidProtocolBufferException e) {
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
     } else {

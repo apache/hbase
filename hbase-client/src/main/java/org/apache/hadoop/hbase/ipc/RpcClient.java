@@ -1109,7 +1109,7 @@ public class RpcClient {
           // Call may be null because it may have timedout and been cleaned up on this side already
           if (call != null && call.responseDefaultType != null) {
             Builder builder = call.responseDefaultType.newBuilderForType();
-            builder.mergeDelimitedFrom(in);
+            ProtobufUtil.mergeDelimitedFrom(builder, in);
             value = builder.build();
           }
           CellScanner cellBlockScanner = null;
