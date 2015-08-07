@@ -138,7 +138,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
  * the Hbase API specified in the Hbase.thrift IDL file.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("deprecation")
 public class ThriftServerRunner implements Runnable {
 
   private static final Log LOG = LogFactory.getLog(ThriftServerRunner.class);
@@ -853,7 +852,6 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    @Deprecated
     @Override
     public List<TCell> get(
         ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
@@ -898,7 +896,6 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    @Deprecated
     @Override
     public List<TCell> getVer(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
@@ -941,7 +938,6 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    @Deprecated
     @Override
     public List<TCell> getVerTs(ByteBuffer tableName, ByteBuffer row, ByteBuffer column,
         long timestamp, int numVersions, Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
@@ -1338,7 +1334,6 @@ public class ThriftServerRunner implements Runnable {
       }
     }
 
-    @Deprecated
     @Override
     public long atomicIncrement(
         ByteBuffer tableName, ByteBuffer row, ByteBuffer column, long amount)
