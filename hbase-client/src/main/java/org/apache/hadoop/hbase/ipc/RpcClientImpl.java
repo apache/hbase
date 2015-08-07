@@ -955,7 +955,7 @@ public class RpcClientImpl extends AbstractRpcClient {
           Message value = null;
           if (call.responseDefaultType != null) {
             Builder builder = call.responseDefaultType.newBuilderForType();
-            builder.mergeDelimitedFrom(in);
+            ProtobufUtil.mergeDelimitedFrom(builder, in);
             value = builder.build();
           }
           CellScanner cellBlockScanner = null;

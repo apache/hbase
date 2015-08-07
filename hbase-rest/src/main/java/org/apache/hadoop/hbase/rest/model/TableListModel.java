@@ -28,6 +28,7 @@ import javax.xml.bind.annotation.XmlElementRef;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.TableListMessage.TableList;
 
@@ -104,7 +105,7 @@ public class TableListModel implements Serializable, ProtobufMessageHandler {
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     TableList.Builder builder = TableList.newBuilder();
-    builder.mergeFrom(message);
+    ProtobufUtil.mergeFrom(builder, message);
     for (String table: builder.getNameList()) {
       this.add(new TableModel(table));
     }

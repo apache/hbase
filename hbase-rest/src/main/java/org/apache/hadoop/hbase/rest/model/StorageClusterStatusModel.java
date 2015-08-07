@@ -31,6 +31,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.rest.ProtobufMessageHandler;
 import org.apache.hadoop.hbase.rest.protobuf.generated.StorageClusterStatusMessage.StorageClusterStatus;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -748,7 +749,7 @@ public class StorageClusterStatusModel
   public ProtobufMessageHandler getObjectFromMessage(byte[] message)
       throws IOException {
     StorageClusterStatus.Builder builder = StorageClusterStatus.newBuilder();
-    builder.mergeFrom(message);
+    ProtobufUtil.mergeFrom(builder, message);
     if (builder.hasRegions()) {
       regions = builder.getRegions();
     }

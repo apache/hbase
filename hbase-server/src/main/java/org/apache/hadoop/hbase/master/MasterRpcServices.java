@@ -631,8 +631,9 @@ public class MasterRpcServices extends RSRpcServices
       }
 
       //invoke the method
-      Message execRequest = service.getRequestPrototype(methodDesc).newBuilderForType()
-          .mergeFrom(call.getRequest()).build();
+      Message.Builder builderForType = service.getRequestPrototype(methodDesc).newBuilderForType();
+      ProtobufUtil.mergeFrom(builderForType, call.getRequest());
+      Message execRequest = builderForType.build();
       final Message.Builder responseBuilder =
           service.getResponsePrototype(methodDesc).newBuilderForType();
       service.callMethod(methodDesc, execController, execRequest, new RpcCallback<Message>() {

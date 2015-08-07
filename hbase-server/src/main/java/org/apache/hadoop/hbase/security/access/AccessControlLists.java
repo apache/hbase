@@ -72,7 +72,6 @@ import org.apache.hadoop.io.Text;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
-import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  * Maintains lists of permission grants to users and groups to allow for
@@ -591,11 +590,11 @@ public class AccessControlLists {
     if (ProtobufUtil.isPBMagicPrefix(data)) {
       int pblen = ProtobufUtil.lengthOfPBMagic();
       try {
-        AccessControlProtos.UsersAndPermissions perms =
-          AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
-            data, pblen, data.length - pblen).build();
-        return ProtobufUtil.toUserTablePermissions(perms);
-      } catch (InvalidProtocolBufferException e) {
+        AccessControlProtos.UsersAndPermissions.Builder builder =
+          AccessControlProtos.UsersAndPermissions.newBuilder();
+        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
+        return ProtobufUtil.toUserTablePermissions(builder.build());
+      } catch (IOException e) {
         throw new DeserializationException(e);
       }
     } else {
@@ -662,9 +661,13 @@ public class AccessControlLists {
        Tag tag = tagsIterator.next();
        if (tag.getType() == ACL_TAG_TYPE) {
          // Deserialize the table permissions from the KV
-         ListMultimap<String,Permission> kvPerms = ProtobufUtil.toUsersAndPermissions(
-           AccessControlProtos.UsersAndPermissions.newBuilder().mergeFrom(
-             tag.getBuffer(), tag.getTagOffset(), tag.getTagLength()).build());
+         // TODO: This can be improved. Don't build UsersAndPermissions just to unpack it again,
+         // use the builder
+         AccessControlProtos.UsersAndPermissions.Builder builder = 
+           AccessControlProtos.UsersAndPermissions.newBuilder();
+         ProtobufUtil.mergeFrom(builder, tag.getBuffer(), tag.getTagOffset(), tag.getTagLength());
+         ListMultimap<String,Permission> kvPerms =
+           ProtobufUtil.toUsersAndPermissions(builder.build());
          // Are there permissions for this user?
          List<Permission> userPerms = kvPerms.get(user.getShortName());
          if (userPerms != null) {
