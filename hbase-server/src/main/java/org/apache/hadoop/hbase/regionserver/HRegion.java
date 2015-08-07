@@ -7453,8 +7453,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               " in region "+Bytes.toStringBinary(getRegionInfo().getRegionName()));
     }
 
-    Message request = service.getRequestPrototype(methodDesc).newBuilderForType()
-        .mergeFrom(call.getRequest()).build();
+    Message.Builder builder = service.getRequestPrototype(methodDesc).newBuilderForType();
+    ProtobufUtil.mergeFrom(builder, call.getRequest());
+    Message request = builder.build();
 
     if (coprocessorHost != null) {
       request = coprocessorHost.preEndpointInvocation(service, methodName, request);
