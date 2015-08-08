@@ -54,7 +54,9 @@ public class TestRegionServerHostname {
     } catch (IOException ioe) {
       Throwable t1 = ioe.getCause();
       Throwable t2 = t1.getCause();
-      assertTrue(t2.getMessage().contains("Failed resolve of " + invalidHostname));
+      assertTrue(t1.getMessage() + " - " + t2.getMessage(),
+        t2.getMessage().contains("Failed resolve of " + invalidHostname) ||
+        t2.getMessage().contains("Problem binding to " + invalidHostname));
       return;
     } finally {
       TEST_UTIL.shutdownMiniCluster();
