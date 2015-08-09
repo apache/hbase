@@ -236,7 +236,21 @@ To enable it, do the following.
 
 <<security.gateway.thrift>> describes how to configure the Thrift gateway to authenticate to HBase on the client's behalf, and to access HBase using a proxy user. The limitation of this approach is that after the client is initialized with a particular set of credentials, it cannot change these credentials during the session. The `doAs` feature provides a flexible way to impersonate multiple principals using the same client. This feature was implemented in link:https://issues.apache.org/jira/browse/HBASE-12640[HBASE-12640] for Thrift 1, but is currently not available for Thrift 2.
 
-*To allow proxy users*, add the following to the _hbase-site.xml_ file for every HBase node:
+*To enable the `doAs` feature*, add the following to the _hbase-site.xml_ file for every Thrift gateway:
+
+[source,xml]
+----
+<property>
+  <name>hbase.regionserver.thrift.http</name>
+  <value>true</value>
+</property>
+<property>
+  <name>hbase.thrift.support.proxyuser</name>
+  <value>true/value>
+</property>
+----
+
+*To allow proxy users* when using `doAs` impersonation, add the following to the _hbase-site.xml_ file for every HBase node:
 
 [source,xml]
 ----
@@ -254,21 +268,9 @@ To enable it, do the following.
 </property>
 ----
 
-*To enable the `doAs` feature*, add the following to the _hbase-site.xml_ file for every Thrift gateway:
-
-[source,xml]
-----
-<property>
-  <name>hbase.regionserver.thrift.http</name>
-  <value>true</value>
-</property>
-<property>
-  <name>hbase.thrift.support.proxyuser</name>
-  <value>true/value>
-</property>
-----
-
-Take a look at the link:https://github.com/apache/hbase/blob/master/hbase-examples/src/main/java/org/apache/hadoop/hbase/thrift/HttpDoAsClient.java[demo client] to get an overall idea of how to use this feature in your client.
+Take a look at the
+link:https://github.com/apache/hbase/blob/master/hbase-examples/src/main/java/org/apache/hadoop/hbase/thrift/HttpDoAsClient.java[demo client]
+to get an overall idea of how to use this feature in your client.
 
 === Client-side Configuration for Secure Operation - REST Gateway
 
@@ -305,6 +307,10 @@ To enable REST gateway Kerberos authentication for client access, add the follow
 
 [source,xml]
 ----
+<property>
+  <name>hbase.rest.support.proxyuser</name>
+  <value>true</value>
+</property>
 <property>
   <name>hbase.rest.authentication.type</name>
   <value>kerberos</value>
