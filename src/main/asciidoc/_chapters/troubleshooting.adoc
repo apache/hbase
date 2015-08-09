@@ -559,6 +559,14 @@ You can also tail all the logs at the same time, edit files, etc.
 
 For more information on the HBase client, see <<client,client>>.
 
+=== Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
+If either the client or server version is lower than 0.98.11/1.0.0 and the server
+has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
+requests that reach the server's `hbase.client.scanner.max.result.size` are likely
+to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
+to 2 MB but other versions default to larger values. For this reason, be very careful
+using 0.98.11 servers with any other client version.
+
 [[trouble.client.scantimeout]]
 === ScannerTimeoutException or UnknownScannerException
 
