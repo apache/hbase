@@ -175,4 +175,11 @@ public interface Connection extends Abortable, Closeable {
    */
   boolean isClosed();
 
+  /**
+   * Retrieve the metrics instance for this connection.
+   *
+   * @return a MetricsConnection instance for examining connection metrics.
+   */
+  public MetricsConnection getConnectionMetrics();
+
 }

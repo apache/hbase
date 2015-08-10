@@ -118,6 +118,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final AsyncProcess asyncProcess;
   // single tracker per connection
   private final ServerStatisticTracker stats;
+  private final MetricsConnection metrics;
 
   private volatile boolean closed;
   private volatile boolean aborted;
@@ -154,11 +155,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   // Client rpc instance.
   private RpcClient rpcClient;
 
-  private MetaCache metaCache = new MetaCache();
+  private final MetaCache metaCache;
 
   private int refCount;
 
-  private User user;
+  protected User user;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -236,11 +237,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     } else {
       nonceGenerator = new NoNonceGenerator();
     }
-    stats = ServerStatisticTracker.create(conf);
+    this.stats = ServerStatisticTracker.create(conf);
     this.asyncProcess = createAsyncProcess(this.conf);
     this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+    this.metrics = new MetricsConnection(new MetricsConnectionWrapperImpl(this));
+    this.metaCache = new MetaCache(this.metrics);
   }
 
   /**
@@ -360,6 +363,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public Admin getAdmin() throws IOException {
     return new HBaseAdmin(this);
+  }
+
+  @Override
+  public MetricsConnection getConnectionMetrics() {
+    return this.metrics;
   }
 
   private ExecutorService getBatchPool() {
