@@ -116,24 +116,40 @@ public class SequenceFileLogReader extends ReaderBase {
             Field fIn = FilterInputStream.class.getDeclaredField("in");
             fIn.setAccessible(true);
             Object realIn = fIn.get(this.in);
-            // In hadoop 0.22, DFSInputStream is a standalone class.  Before this,
-            // it was an inner class of DFSClient.
-            if (realIn.getClass().getName().endsWith("DFSInputStream")) {
-              Method getFileLength = realIn.getClass().
-                getDeclaredMethod("getFileLength", new Class<?> []{});
-              getFileLength.setAccessible(true);
-              long realLength = ((Long)getFileLength.
-                invoke(realIn, new Object []{})).longValue();
-              assert(realLength >= this.length);
-              adjust = realLength - this.length;
+            if (this.in.getClass().getName().endsWith("HdfsDataInputStream")
+                || realIn.getClass().getName().endsWith("DFSInputStream")) {
+              // Here we try to use reflection because HdfsDataInputStream is not available in
+              // hadoop 1.1. HBASE-5878
+              try {
+                Class<?> hdfsDataInputStream =
+                    Class.forName("org.apache.hadoop.hdfs.client.HdfsDataInputStream");
+                Method getVisibleLength = hdfsDataInputStream.getDeclaredMethod("getVisibleLength");
+                getVisibleLength.setAccessible(true);
+                long realLength =
+                    ((Long) getVisibleLength.invoke(realIn, new Object[] {})).longValue();
+                assert (realLength >= this.length);
+                adjust = realLength - this.length;
+              } catch (ClassNotFoundException e) {
+                // Failed to found the class HdfsDataInputStream, may be it is deployed on hadoop
+                // 1.1
+                // In hadoop 0.22, DFSInputStream is a standalone class. Before this,
+                // it was an inner class of DFSClient.
+                Method getFileLength =
+                    realIn.getClass().getDeclaredMethod("getFileLength", new Class<?>[] {});
+                getFileLength.setAccessible(true);
+                long realLength =
+                    ((Long) getFileLength.invoke(realIn, new Object[] {})).longValue();
+                assert (realLength >= this.length);
+                adjust = realLength - this.length;
+              }
             } else {
-              LOG.info("Input stream class: " + realIn.getClass().getName() +
-                  ", not adjusting length");
+              LOG.info("Input stream class: " + realIn.getClass().getName()
+                  + ", not adjusting length");
             }
-          } catch(Exception e) {
-            SequenceFileLogReader.LOG.warn(
-              "Error while trying to get accurate file length.  " +
-              "Truncation / data loss may occur if RegionServers die.", e);
+          } catch (Exception e) {
+            LOG.warn("Error while trying to get accurate file length.  "
+                + "Truncation / data loss may occur if RegionServers die.", e);
+            throw new IOException(e);
           }
 
           return adjust + super.getPos();
