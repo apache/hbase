@@ -192,6 +192,12 @@ See <<zookeeper.requirements>>.
 .HBase Default Ports Changed
 The ports used by HBase changed. They used to be in the 600XX range. In HBase 1.0.0 they have been moved up out of the ephemeral port range and are 160XX instead (Master web UI was 60010 and is now 16010; the RegionServer web UI was 60030 and is now 16030, etc.). If you want to keep the old port locations, copy the port setting configs from _hbase-default.xml_ into _hbase-site.xml_, change them back to the old values from the HBase 0.98.x era, and ensure you've distributed your configurations before you restart.
 
+.HBase Master Port Binding Change
+In HBase 1.0.x, the HBase Master binds the RegionServer ports as well as the Master
+ports. This behavior is changed from HBase versions prior to 1.0. In HBase 1.1 and 2.0 branches,
+this behavior is reverted to the pre-1.0 behavior of the HBase master not binding the RegionServer
+ports.
+
 [[upgrade1.0.hbase.bucketcache.percentage.in.combinedcache]]
 .hbase.bucketcache.percentage.in.combinedcache configuration has been REMOVED
 You may have made use of this configuration if you are using BucketCache. If NOT using BucketCache, this change does not effect you. Its removal means that your L1 LruBlockCache is now sized using `hfile.block.cache.size` -- i.e. the way you would size the on-heap L1 LruBlockCache if you were NOT doing BucketCache -- and the BucketCache size is not whatever the setting for `hbase.bucketcache.size` is. You may need to adjust configs to get the LruBlockCache and BucketCache sizes set to what they were in 0.98.x and previous. If you did not set this config., its default value was 0.9. If you do nothing, your BucketCache will increase in size by 10%. Your L1 LruBlockCache will become `hfile.block.cache.size` times your java heap size (`hfile.block.cache.size` is a float between 0.0 and 1.0). To read more, see link:https://issues.apache.org/jira/browse/HBASE-11520[HBASE-11520 Simplify offheap cache config by removing the confusing "hbase.bucketcache.percentage.in.combinedcache"].
