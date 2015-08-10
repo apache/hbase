@@ -1689,7 +1689,9 @@ $ make_patch.sh [-a] [-p <patch_dir>]
   If you decline, the script uses +git diff+ instead.
   The patch is saved in a configurable directory and is ready to be attached to your JIRA.
 
-* .Patching WorkflowAlways patch against the master branch first, even if you want to patch in another branch.
+.Patching Workflow
+
+* Always patch against the master branch first, even if you want to patch in another branch.
   HBase committers always apply patches first to the master branch, and backport if necessary.
 * Submit one single patch for a fix.
   If necessary, squash local commits to merge local commits into a single one first.
@@ -1725,17 +1727,20 @@ Please understand that not every patch may get committed, and that feedback will
   However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
 * If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
 
-.Methods to Create PatchesEclipse::
+.Methods to Create Patches
+Eclipse::
   Select the  menu item.
 
 Git::
-  `git format-patch` is preferred because it preserves commit messages.
+  `git format-patch` is preferred:
+     - It preserves the committer and commit message.
+     - It handles binary files by default, whereas `git diff` ignores them unless
+     you use the `--binary` option.
   Use `git rebase -i` first, to combine (squash) smaller commits into a single larger one.
 
 Subversion::
-
-Make sure you review <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>> for code style.
-If your patch was generated incorrectly or your code does not adhere to the code formatting guidelines, you may be asked to redo some work.
+  Make sure you review <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>> for code style.
+  If your patch was generated incorrectly or your code does not adhere to the code formatting guidelines, you may be asked to redo some work.
 
 [[submitting.patches.tests]]
 ==== Unit Tests
