@@ -20,7 +20,6 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
-import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
@@ -29,8 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Methods;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -97,30 +94,6 @@ public abstract class User {
    * Executes the given action within the context of this user.
    */
   public abstract <T> T runAs(PrivilegedExceptionAction<T> action)
-      throws IOException, InterruptedException;
-
-  /**
-   * Requests an authentication token for this user and stores it in the
-   * user's credentials.
-   *
-   * @throws IOException
-   * @deprecated Use {@code TokenUtil.obtainAuthTokenForJob(Connection,User,Job)}
-   *     instead.
-   */
-  @Deprecated
-  public abstract void obtainAuthTokenForJob(Configuration conf, Job job)
-      throws IOException, InterruptedException;
-
-  /**
-   * Requests an authentication token for this user and stores it in the
-   * user's credentials.
-   *
-   * @throws IOException
-   * @deprecated Use {@code TokenUtil.obtainAuthTokenForJob(Connection,JobConf,User)}
-   *     instead.
-   */
-  @Deprecated
-  public abstract void obtainAuthTokenForJob(JobConf job)
       throws IOException, InterruptedException;
 
   /**
@@ -278,7 +251,7 @@ public abstract class User {
    * {@link org.apache.hadoop.security.UserGroupInformation} for secure Hadoop
    * 0.20 and versions 0.21 and above.
    */
-  private static class SecureHadoopUser extends User {
+  private static final class SecureHadoopUser extends User {
     private String shortName;
 
     private SecureHadoopUser() throws IOException {
@@ -310,55 +283,6 @@ public abstract class User {
     public <T> T runAs(PrivilegedExceptionAction<T> action)
         throws IOException, InterruptedException {
       return ugi.doAs(action);
-    }
-
-    @Override
-    public void obtainAuthTokenForJob(Configuration conf, Job job)
-        throws IOException, InterruptedException {
-      try {
-        Class<?> c = Class.forName(
-            "org.apache.hadoop.hbase.security.token.TokenUtil");
-        Methods.call(c, null, "obtainTokenForJob",
-            new Class[]{Configuration.class, UserGroupInformation.class,
-                Job.class},
-            new Object[]{conf, ugi, job});
-      } catch (ClassNotFoundException cnfe) {
-        throw new RuntimeException("Failure loading TokenUtil class, "
-            +"is secure RPC available?", cnfe);
-      } catch (IOException ioe) {
-        throw ioe;
-      } catch (InterruptedException ie) {
-        throw ie;
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected error calling TokenUtil.obtainAndCacheToken()");
-      }
-    }
-
-    @Override
-    public void obtainAuthTokenForJob(JobConf job)
-        throws IOException, InterruptedException {
-      try {
-        Class<?> c = Class.forName(
-            "org.apache.hadoop.hbase.security.token.TokenUtil");
-        Methods.call(c, null, "obtainTokenForJob",
-            new Class[]{JobConf.class, UserGroupInformation.class},
-            new Object[]{job, ugi});
-      } catch (ClassNotFoundException cnfe) {
-        throw new RuntimeException("Failure loading TokenUtil class, "
-            +"is secure RPC available?", cnfe);
-      } catch (IOException ioe) {
-        throw ioe;
-      } catch (InterruptedException ie) {
-        throw ie;
-      } catch (RuntimeException re) {
-        throw re;
-      } catch (Exception e) {
-        throw new UndeclaredThrowableException(e,
-            "Unexpected error calling TokenUtil.obtainAndCacheToken()");
-      }
     }
 
     /** @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[]) */
