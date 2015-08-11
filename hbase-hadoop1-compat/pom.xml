@@ -26,7 +26,7 @@ limitations under the License.
   </parent>
 
   <artifactId>hbase-hadoop1-compat</artifactId>
-  <name>HBase - Hadoop One Compatibility</name>
+  <name>Apache HBase - Hadoop One Compatibility</name>
   <description> Interfaces to be implemented in order to smooth over hadoop version differences
     </description>
 
