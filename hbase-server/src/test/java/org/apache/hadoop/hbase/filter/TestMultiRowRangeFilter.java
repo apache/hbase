@@ -72,6 +72,29 @@ public class TestMultiRowRangeFilter {
   }
 
   @Test
+  public void testRanges() throws IOException {
+    byte[] key1Start = new byte[] {-3};
+    byte[] key1End  = new byte[] {-2};
+
+    byte[] key2Start = new byte[] {5};
+    byte[] key2End  = new byte[] {6};
+
+    byte[] badKey = new byte[] {-10};
+
+    MultiRowRangeFilter filter = new MultiRowRangeFilter(Arrays.asList(
+      new MultiRowRangeFilter.RowRange(key1Start, true, key1End, false),
+      new MultiRowRangeFilter.RowRange(key2Start, true, key2End, false)
+        ));
+    filter.filterRowKey(KeyValueUtil.createFirstOnRow(badKey));
+    /*
+     * FAILS -- includes BAD key!
+     * Expected :SEEK_NEXT_USING_HINT
+     * Actual   :INCLUDE
+     * */
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterKeyValue(null));
+  }
+
+  @Test
   public void testOutOfOrderScannerNextException() throws Exception {
     MultiRowRangeFilter filter = new MultiRowRangeFilter(Arrays.asList(
             new MultiRowRangeFilter.RowRange(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true),

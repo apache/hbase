@@ -237,6 +237,9 @@ public class MultiRowRangeFilter extends FilterBase {
       if (insertionPosition == 0 && !rangeList.get(insertionPosition).contains(rowKey)) {
         return ROW_BEFORE_FIRST_RANGE;
       }
+      if (!initialized) {
+        initialized = true;
+      }
       return insertionPosition;
     }
     // the row key equals one of the start keys, and the the range exclude the start key
