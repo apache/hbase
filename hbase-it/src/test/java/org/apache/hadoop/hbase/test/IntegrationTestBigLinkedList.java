@@ -523,20 +523,31 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
           // Always add these families. Just skip writing to them when we do not test per CF flush.
           htd.addFamily(new HColumnDescriptor(BIG_FAMILY_NAME));
           htd.addFamily(new HColumnDescriptor(TINY_FAMILY_NAME));
-          int numberOfServers = admin.getClusterStatus().getServers().size();
-          if (numberOfServers == 0) {
-            throw new IllegalStateException("No live regionservers");
+
+          // If we want to pre-split compute how many splits.
+          if (conf.getBoolean(HBaseTestingUtility.PRESPLIT_TEST_TABLE_KEY,
+              HBaseTestingUtility.PRESPLIT_TEST_TABLE)) {
+            int numberOfServers = admin.getClusterStatus().getServers().size();
+            if (numberOfServers == 0) {
+              throw new IllegalStateException("No live regionservers");
+            }
+            int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
+                HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
+            int totalNumberOfRegions = numberOfServers * regionsPerServer;
+            LOG.info("Number of live regionservers: " + numberOfServers + ", " +
+                "pre-splitting table into " + totalNumberOfRegions + " regions " +
+                "(default regions per server: " + regionsPerServer + ")");
+
+
+            byte[][] splits = new RegionSplitter.UniformSplit().split(totalNumberOfRegions);
+
+            admin.createTable(htd, splits);
+          } else {
+            // Looks like we're just letting things play out.
+            // Create a table with on region by default.
+            // This will make the splitting work hard.
+            admin.createTable(htd);
           }
-          int regionsPerServer = conf.getInt(HBaseTestingUtility.REGIONS_PER_SERVER_KEY,
-              HBaseTestingUtility.DEFAULT_REGIONS_PER_SERVER);
-          int totalNumberOfRegions = numberOfServers * regionsPerServer;
-          LOG.info("Number of live regionservers: " + numberOfServers + ", " +
-              "pre-splitting table into " + totalNumberOfRegions + " regions " +
-              "(default regions per server: " + regionsPerServer + ")");
-
-          byte[][] splits = new RegionSplitter.UniformSplit().split(totalNumberOfRegions);
-
-          admin.createTable(htd, splits);
         }
       } catch (MasterNotRunningException e) {
         LOG.error("Master not running", e);
