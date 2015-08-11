@@ -116,10 +116,8 @@
                                 <shadedArtifactAttached>false</shadedArtifactAttached>
                                 <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
                                 <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
+                                <shadeTestJar>true</shadeTestJar>
                                 <artifactSet>
-                                    <includes>
-                                        <include>*:*</include>
-                                    </includes>
                                     <excludes>
                                         <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                                         <exclude>org.slf4j:*</exclude>
@@ -129,31 +127,175 @@
                                         <exclude>log4j:*</exclude>
                                         <exclude>commons-logging:*</exclude>
                                     </excludes>
-
                                 </artifactSet>
                                 <relocations>
+                                    <!-- top level com not including sun-->
                                     <relocation>
-                                        <pattern>com</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com</shadedPattern>
+                                        <pattern>com.google</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.google</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>net</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.net</shadedPattern>
+                                        <pattern>com.jcraft</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.jcraft</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>javax</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.javax</shadedPattern>
+                                        <pattern>com.thoughtworks</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.thoughtworks</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>io</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.io</shadedPattern>
+                                        <pattern>com.jamesmurty</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.jamesmurty</shadedPattern>
                                     </relocation>
                                     <relocation>
-                                        <pattern>org</pattern>
-                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org</shadedPattern>
-                                        <excludes>
-                                            <exclude>org.apache.hadoop.**</exclude>
-                                        </excludes>
+                                        <pattern>com.lmax</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.lmax</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>com.yammer</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.com.yammer</shadedPattern>
+                                    </relocation>
+
+                                    <!-- top level io -->
+                                    <relocation>
+                                        <pattern>io.netty</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.io.netty</shadedPattern>
+                                    </relocation>
+
+                                    <!-- top level org -->
+                                    <relocation>
+                                        <pattern>org.codehaus</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.codehaus</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.jcodings</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jcodings</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.joni</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.joni</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.mortbay</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.mortbay</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.tukaani</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.tukaani</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.xerial</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.xerial</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.znerd</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.znerd</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.aopalliance</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.aopalliance</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.fusesource</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.fusesource</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.iq80</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.iq80</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.jamon</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jamon</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.jets3t</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.jets3t</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.objectweb</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.objectweb</shadedPattern>
+                                    </relocation>
+
+
+                                    <!-- org.apache relocations not in org.apache.hadoop or org.apache.commons -->
+                                    <relocation>
+                                        <pattern>org.apache.avro</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.avro</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.directory</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.directory</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.http</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.http</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.jute</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.jute</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.zookeeper</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.zookeeper</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.jasper</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.jasper</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.taglibs</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons</shadedPattern>
+                                    </relocation>
+
+                                    <!-- org.apache.commons not including logging -->
+                                    <relocation>
+                                        <pattern>org.apache.commons.beanutils</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.beanutils</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.cli</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.cli</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.collections</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.collections</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.configuration</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.configuration</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.daemon</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.daemon</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.io</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.io</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.math</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.math</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.math3</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.math3</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.net</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.net</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.lang</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.lang</shadedPattern>
+                                    </relocation>
+                                    <relocation>
+                                        <pattern>org.apache.commons.el</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.org.apache.commons.el</shadedPattern>
+                                    </relocation>
+
+                                    <!-- top level net-->
+                                    <relocation>
+                                        <pattern>net.iharder</pattern>
+                                        <shadedPattern>org.apache.hadoop.hbase.shaded.net.iharder</shadedPattern>
                                     </relocation>
                                 </relocations>
                                 <transformers>
