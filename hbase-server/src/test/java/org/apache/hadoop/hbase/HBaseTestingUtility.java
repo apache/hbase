@@ -154,8 +154,11 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * The default number of regions per regionserver when creating a pre-split
    * table.
    */
-  public static final int DEFAULT_REGIONS_PER_SERVER = 5;
+  public static final int DEFAULT_REGIONS_PER_SERVER = 3;
 
+
+  public static final String PRESPLIT_TEST_TABLE_KEY = "hbase.test.pre-split-table";
+  public static final boolean PRESPLIT_TEST_TABLE = true;
   /**
    * Set if we were passed a zkCluster.  If so, we won't shutdown zk as
    * part of general shutdown.

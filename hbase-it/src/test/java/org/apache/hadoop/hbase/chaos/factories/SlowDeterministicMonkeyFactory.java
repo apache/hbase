@@ -18,28 +18,7 @@
 
 package org.apache.hadoop.hbase.chaos.factories;
 
-import org.apache.hadoop.hbase.chaos.actions.Action;
-import org.apache.hadoop.hbase.chaos.actions.AddColumnAction;
-import org.apache.hadoop.hbase.chaos.actions.BatchRestartRsAction;
-import org.apache.hadoop.hbase.chaos.actions.ChangeCompressionAction;
-import org.apache.hadoop.hbase.chaos.actions.ChangeBloomFilterAction;
-import org.apache.hadoop.hbase.chaos.actions.ChangeEncodingAction;
-import org.apache.hadoop.hbase.chaos.actions.ChangeVersionsAction;
-import org.apache.hadoop.hbase.chaos.actions.CompactRandomRegionOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.CompactTableAction;
-import org.apache.hadoop.hbase.chaos.actions.DumpClusterStatusAction;
-import org.apache.hadoop.hbase.chaos.actions.FlushRandomRegionOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.FlushTableAction;
-import org.apache.hadoop.hbase.chaos.actions.MergeRandomAdjacentRegionsOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.MoveRandomRegionOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.MoveRegionsOfTableAction;
-import org.apache.hadoop.hbase.chaos.actions.RemoveColumnAction;
-import org.apache.hadoop.hbase.chaos.actions.RestartActiveMasterAction;
-import org.apache.hadoop.hbase.chaos.actions.RestartRandomRsAction;
-import org.apache.hadoop.hbase.chaos.actions.RestartRsHoldingMetaAction;
-import org.apache.hadoop.hbase.chaos.actions.RollingBatchRestartRsAction;
-import org.apache.hadoop.hbase.chaos.actions.SnapshotTableAction;
-import org.apache.hadoop.hbase.chaos.actions.SplitRandomRegionOfTableAction;
+import org.apache.hadoop.hbase.chaos.actions.*;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.chaos.policies.CompositeSequentialPolicy;
@@ -64,6 +43,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
   private long restartRsHoldingMetaSleepTime;
   private float compactTableRatio;
   private float compactRandomRegionRatio;
+  private long decreaseHFileSizeSleepTime;
 
   @Override
   public ChaosMonkey build() {
@@ -92,7 +72,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new ChangeEncodingAction(tableName),
         new ChangeCompressionAction(tableName),
         new ChangeBloomFilterAction(tableName),
-        new ChangeVersionsAction(tableName)
+        new ChangeVersionsAction(tableName),
+        new ChangeSplitPolicyAction(tableName),
     };
 
     // Destructive actions to mess things around.
@@ -105,7 +86,9 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
         new RestartActiveMasterAction(restartActiveMasterSleepTime),
         new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime,
             rollingBatchRestartRSRatio),
-        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime)
+        new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
+        new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, tableName),
+        new SplitAllRegionOfTableAction(tableName),
     };
 
     // Action to log more info for debugging
@@ -169,5 +152,8 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
       compactRandomRegionRatio = Float.parseFloat(this.properties.getProperty(
         MonkeyConstants.COMPACT_RANDOM_REGION_RATIO,
         MonkeyConstants.DEFAULT_COMPACT_RANDOM_REGION_RATIO + ""));
+    decreaseHFileSizeSleepTime = Long.parseLong(this.properties.getProperty(
+        MonkeyConstants.DECREASE_HFILE_SIZE_SLEEP_TIME,
+        MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME + ""));
   }
 }
