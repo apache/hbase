@@ -22,9 +22,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * A class implementing IOEngine interface supports data services for
@@ -38,14 +38,16 @@ public interface IOEngine {
   boolean isPersistent();
 
   /**
-   * Transfers data from IOEngine to a byte buffer
+   * Transfers data from IOEngine to a Cacheable object.
    * @param length How many bytes to be read from the offset
    * @param offset The offset in the IO engine where the first byte to be read
-   * @return Pair of ByteBuffer where data is read and its MemoryType ({@link MemoryType})
+   * @param deserializer The deserializer to be used to make a Cacheable from the data.
+   * @return Cacheable
    * @throws IOException
    * @throws RuntimeException when the length of the ByteBuff read is less than 'len'
    */
-  Pair<ByteBuff, MemoryType> read(long offset, int length) throws IOException;
+  Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
+      throws IOException;
 
   /**
    * Transfers data from the given byte buffer to IOEngine

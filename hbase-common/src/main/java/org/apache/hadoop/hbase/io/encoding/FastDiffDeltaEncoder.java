@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 
 /**
  * Encoder similar to {@link DiffKeyDeltaEncoder} but supposedly faster.
@@ -379,7 +379,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private int familyLengthWithSize;
 
-    public FastDiffSeekerState(Pair<ByteBuffer, Integer> tmpPair, boolean includeTags) {
+    public FastDiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       super(tmpPair, includeTags);
     }
 

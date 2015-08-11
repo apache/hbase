@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferArray;
-import org.apache.hadoop.hbase.util.Pair;
 
 /**
  * IO engine that stores data in memory using an array of ByteBuffers
@@ -67,7 +68,8 @@ public class ByteBufferIOEngine implements IOEngine {
   }
 
   @Override
-  public Pair<ByteBuff, MemoryType> read(long offset, int length) throws IOException {
+  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
+      throws IOException {
     ByteBuff dstBuffer = bufferArray.asSubByteBuff(offset, length);
     // Here the buffer that is created directly refers to the buffer in the actual buckets.
     // When any cell is referring to the blocks created out of these buckets then it means that
@@ -75,7 +77,7 @@ public class ByteBufferIOEngine implements IOEngine {
     // lead to corruption of results. Hence we set the type of the buffer as SHARED_MEMORY
     // so that the readers using this block are aware of this fact and do the necessary action
     // to prevent eviction till the results are either consumed or copied
-    return new Pair<ByteBuff, MemoryType>(dstBuffer, MemoryType.SHARED);
+    return deserializer.deserialize(dstBuffer, true, MemoryType.SHARED);
   }
 
   /**

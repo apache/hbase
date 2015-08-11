@@ -20,14 +20,15 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
+import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -67,14 +68,44 @@ public class TestByteBufferIOEngine {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
       ioEngine.write(srcBuffer, offset);
-      Pair<ByteBuff, MemoryType> pair = ioEngine.read(offset, blockSize);
-      ByteBuff dstBuffer = pair.getFirst();
+      BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+      ioEngine.read(offset, blockSize, deserializer);
+      ByteBuff dstBuffer = deserializer.buf;
       for (int j = 0; j < byteArray.length; ++j) {
         assertTrue(byteArray[j] == dstBuffer.get(j));
       }
     }
     assert testOffsetAtStartNum == 0;
     assert testOffsetAtEndNum == 0;
+  }
+
+  /**
+   * A CacheableDeserializer implementation which just store reference to the {@link ByteBuff} to be
+   * deserialized. Use {@link #getDeserializedByteBuff()} to get this reference.
+   */
+  static class BufferGrabbingDeserializer implements CacheableDeserializer<Cacheable> {
+    private ByteBuff buf;
+
+    @Override
+    public Cacheable deserialize(ByteBuff b) throws IOException {
+      return null;
+    }
+
+    @Override
+    public Cacheable deserialize(final ByteBuff b, boolean reuse, MemoryType memType)
+        throws IOException {
+      this.buf = b;
+      return null;
+    }
+
+    @Override
+    public int getDeserialiserIdentifier() {
+      return 0;
+    }
+
+    public ByteBuff getDeserializedByteBuff() {
+      return this.buf;
+    }
   }
 
   @Test
@@ -107,9 +138,11 @@ public class TestByteBufferIOEngine {
         offset = (int) (Math.random() * (capacity - maxBlockSize));
       }
       ioEngine.write(srcBuffer, offset);
-      Pair<ByteBuff, MemoryType> read = ioEngine.read(offset, blockSize);
+      BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+      ioEngine.read(offset, blockSize, deserializer);
+      ByteBuff dstBuffer = deserializer.buf;
       for (int j = 0; j < byteArray.length; ++j) {
-        assertTrue(srcBuffer.get(j) == read.getFirst().get(j));
+        assertTrue(srcBuffer.get(j) == dstBuffer.get(j));
       }
     }
     assert testOffsetAtStartNum == 0;

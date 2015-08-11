@@ -49,7 +49,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.CachingBlockReader;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -730,7 +730,7 @@ public class HFileBlockIndex {
       // keys[numEntries] = Infinity, then we are maintaining an invariant that
       // keys[low - 1] < key < keys[high + 1] while narrowing down the range.
       ByteBufferedKeyOnlyKeyValue nonRootIndexkeyOnlyKV = new ByteBufferedKeyOnlyKeyValue();
-      Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
+      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
       while (low <= high) {
         mid = (low + high) >>> 1;
 

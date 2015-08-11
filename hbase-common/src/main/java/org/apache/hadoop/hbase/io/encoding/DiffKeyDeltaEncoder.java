@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 
 /**
  * Compress using:
@@ -367,7 +367,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
     private int rowLengthWithSize;
     private long timestamp;
 
-    public DiffSeekerState(Pair<ByteBuffer, Integer> tmpPair, boolean includeTags) {
+    public DiffSeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       super(tmpPair, includeTags);
     }
 

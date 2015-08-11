@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -127,10 +127,10 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected KeyValue.KeyOnlyKeyValue currentKey = new KeyValue.KeyOnlyKeyValue();
     // A temp pair object which will be reused by ByteBuff#asSubByteBuffer calls. This avoids too
     // many object creations.
-    private final Pair<ByteBuffer, Integer> tmpPair;
+    private final ObjectIntPair<ByteBuffer> tmpPair;
     private final boolean includeTags;
 
-    public SeekerState(Pair<ByteBuffer, Integer> tmpPair, boolean includeTags) {
+    public SeekerState(ObjectIntPair<ByteBuffer> tmpPair, boolean includeTags) {
       this.tmpPair = tmpPair;
       this.includeTags = includeTags;
     }
@@ -696,7 +696,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     protected  KeyValue.KeyOnlyKeyValue keyOnlyKV = new KeyValue.KeyOnlyKeyValue();
     // A temp pair object which will be reused by ByteBuff#asSubByteBuffer calls. This avoids too
     // many object creations.
-    protected final Pair<ByteBuffer, Integer> tmpPair = new Pair<ByteBuffer, Integer>();
+    protected final ObjectIntPair<ByteBuffer> tmpPair = new ObjectIntPair<ByteBuffer>();
     protected STATE current, previous;
 
     public BufferedEncodedSeeker(CellComparator comparator,

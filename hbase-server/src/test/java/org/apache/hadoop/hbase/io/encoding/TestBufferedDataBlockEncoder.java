@@ -25,7 +25,7 @@ import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -50,7 +50,7 @@ public class TestBufferedDataBlockEncoder {
   @Test
   public void testEnsureSpaceForKey() {
     BufferedDataBlockEncoder.SeekerState state =
-        new BufferedDataBlockEncoder.SeekerState(new Pair<ByteBuffer, Integer>(), false);
+        new BufferedDataBlockEncoder.SeekerState(new ObjectIntPair<ByteBuffer>(), false);
     for (int i = 1; i <= 65536; ++i) {
       state.keyLength = i;
       state.ensureSpaceForKey();

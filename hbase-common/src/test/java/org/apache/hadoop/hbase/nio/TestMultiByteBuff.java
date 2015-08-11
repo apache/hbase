@@ -32,7 +32,7 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -243,11 +243,11 @@ public class TestMultiByteBuff {
     assertFalse(bb2 == sub);
     assertEquals(l2, ByteBufferUtils.toLong(sub, sub.position()));
     multi.rewind();
-    Pair<ByteBuffer, Integer> p = new Pair<ByteBuffer, Integer>();
+    ObjectIntPair<ByteBuffer> p = new ObjectIntPair<ByteBuffer>();
     multi.asSubByteBuffer(8, Bytes.SIZEOF_LONG, p);
     assertFalse(bb1 == p.getFirst());
     assertFalse(bb2 == p.getFirst());
-    assertEquals(0, p.getSecond().intValue());
+    assertEquals(0, p.getSecond());
     assertEquals(l2, ByteBufferUtils.toLong(sub, p.getSecond()));
   }
 

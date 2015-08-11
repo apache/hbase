@@ -25,7 +25,7 @@ import java.nio.InvalidMarkException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 
 /**
  * Provides a unified view of all the underlying ByteBuffers and will look as if a bigger
@@ -982,7 +982,7 @@ public class MultiByteBuff extends ByteBuff {
    *        set the values on the pair that is passed in by the caller
    */
   @Override
-  public void asSubByteBuffer(int offset, int length, Pair<ByteBuffer, Integer> pair) {
+  public void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair) {
     if (this.itemBeginPos[this.curItemIndex] <= offset) {
       int relOffsetInCurItem = offset - this.itemBeginPos[this.curItemIndex];
       if (this.curItem.limit() - relOffsetInCurItem >= length) {

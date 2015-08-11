@@ -57,7 +57,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.IdLock;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -470,7 +470,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // buffer backed keyonlyKV
     private ByteBufferedKeyOnlyKeyValue bufBackedKeyOnlyKv = new ByteBufferedKeyOnlyKeyValue();
     // A pair for reusing in blockSeek() so that we don't garbage lot of objects
-    final Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
+    final ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
 
     /**
      * The next indexed key is to keep track of the indexed key of the next data block.
@@ -945,7 +945,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public Cell getKey() {
       assertSeeked();
       // Create a new object so that this getKey is cached as firstKey, lastKey
-      Pair<ByteBuffer, Integer> keyPair = new Pair<ByteBuffer, Integer>();
+      ObjectIntPair<ByteBuffer> keyPair = new ObjectIntPair<ByteBuffer>();
       blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE, currKeyLen, keyPair);
       ByteBuffer keyBuf = keyPair.getFirst();
       if (keyBuf.hasArray()) {
@@ -1001,7 +1001,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     public ByteBuffer getValue() {
       assertSeeked();
       // Okie to create new Pair. Not used in hot path
-      Pair<ByteBuffer, Integer> valuePair = new Pair<ByteBuffer, Integer>();
+      ObjectIntPair<ByteBuffer> valuePair = new ObjectIntPair<ByteBuffer>();
       this.blockBuffer.asSubByteBuffer(blockBuffer.position() + KEY_VALUE_LEN_SIZE + currKeyLen,
         currValueLen, valuePair);
       ByteBuffer valBuf = valuePair.getFirst().duplicate();

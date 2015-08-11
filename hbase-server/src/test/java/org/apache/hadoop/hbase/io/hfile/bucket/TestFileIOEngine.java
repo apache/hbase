@@ -24,11 +24,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
+import org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.BufferGrabbingDeserializer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -51,10 +50,11 @@ public class TestFileIOEngine {
           data1[j] = (byte) (Math.random() * 255);
         }
         fileIOEngine.write(ByteBuffer.wrap(data1), offset);
-        Pair<ByteBuff, MemoryType> pair = fileIOEngine.read(offset, len);
-        byte[] data2 = pair.getFirst().array();
+        BufferGrabbingDeserializer deserializer = new BufferGrabbingDeserializer();
+        fileIOEngine.read(offset, len, deserializer);
+        ByteBuff data2 = deserializer.getDeserializedByteBuff();
         for (int j = 0; j < data1.length; ++j) {
-          assertTrue(data1[j] == data2[j]);
+          assertTrue(data1[j] == data2.get(j));
         }
       }
     } finally {

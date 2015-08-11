@@ -69,7 +69,6 @@ import org.apache.hadoop.hbase.util.ConcurrentIndex;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.IdLock;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -423,17 +422,14 @@ public class BucketCache implements BlockCache, HeapSize {
           // TODO : change this area - should be removed after server cells and
           // 12295 are available
           int len = bucketEntry.getLength();
-          Pair<ByteBuff, MemoryType> pair = ioEngine.read(bucketEntry.offset(), len);
-          ByteBuff bb = pair.getFirst();
-          CacheableDeserializer<Cacheable> deserializer =
-            bucketEntry.deserializerReference(this.deserialiserMap);
-          Cacheable cachedBlock = deserializer.deserialize(bb, true, pair.getSecond());
+          Cacheable cachedBlock = ioEngine.read(bucketEntry.offset(), len,
+              bucketEntry.deserializerReference(this.deserialiserMap));
           long timeTaken = System.nanoTime() - start;
           if (updateCacheMetrics) {
             cacheStats.hit(caching);
             cacheStats.ioHit(timeTaken);
           }
-          if (pair.getSecond() == MemoryType.SHARED) {
+          if (cachedBlock.getMemoryType() == MemoryType.SHARED) {
             bucketEntry.refCount.incrementAndGet();
           }
           bucketEntry.access(accessCount.incrementAndGet());

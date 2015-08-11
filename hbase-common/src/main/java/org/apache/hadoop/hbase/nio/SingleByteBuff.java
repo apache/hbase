@@ -21,7 +21,7 @@ import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 
 /**
  * An implementation of ByteBuff where a single BB backs the BBI. This just acts
@@ -95,7 +95,7 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
-  public void asSubByteBuffer(int offset, int length, Pair<ByteBuffer, Integer> pair) {
+  public void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair) {
     // Just return the single BB that is available
     pair.setFirst(this.buf);
     pair.setSecond(offset);
@@ -173,7 +173,7 @@ public class SingleByteBuff extends ByteBuff {
     } else {
       // TODO we can do some optimization here? Call to asSubByteBuffer might
       // create a copy.
-      Pair<ByteBuffer, Integer> pair = new Pair<ByteBuffer, Integer>();
+      ObjectIntPair<ByteBuffer> pair = new ObjectIntPair<ByteBuffer>();
       src.asSubByteBuffer(srcOffset, length, pair);
       ByteBufferUtils.copyFromBufferToBuffer(pair.getFirst(), this.buf, pair.getSecond(), offset,
           length);

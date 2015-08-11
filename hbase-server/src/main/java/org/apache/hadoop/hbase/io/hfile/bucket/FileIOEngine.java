@@ -26,10 +26,11 @@ import java.nio.channels.FileChannel;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CacheableDeserializer;
 import org.apache.hadoop.hbase.io.hfile.Cacheable.MemoryType;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.StringUtils;
 
 /**
@@ -90,7 +91,8 @@ public class FileIOEngine implements IOEngine {
    * @throws IOException
    */
   @Override
-  public Pair<ByteBuff, MemoryType> read(long offset, int length) throws IOException {
+  public Cacheable read(long offset, int length, CacheableDeserializer<Cacheable> deserializer)
+      throws IOException {
     ByteBuffer dstBuffer = ByteBuffer.allocate(length);
     fileChannel.read(dstBuffer, offset);
     // The buffer created out of the fileChannel is formed by copying the data from the file
@@ -101,7 +103,7 @@ public class FileIOEngine implements IOEngine {
       throw new RuntimeException("Only " + dstBuffer.limit() + " bytes read, " + length
           + " expected");
     }
-    return new Pair<ByteBuff, MemoryType>(new SingleByteBuff(dstBuffer), MemoryType.EXCLUSIVE);
+    return deserializer.deserialize(new SingleByteBuff(dstBuffer), true, MemoryType.EXCLUSIVE);
   }
 
   /**

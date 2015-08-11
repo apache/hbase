@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
 
 /**
@@ -119,7 +119,7 @@ public abstract class ByteBuff {
    *        the caller. Thus it avoids more object creations that would happen if the pair that is
    *        returned is created by this method every time.
    */
-  public abstract void asSubByteBuffer(int offset, int length, Pair<ByteBuffer, Integer> pair);
+  public abstract void asSubByteBuffer(int offset, int length, ObjectIntPair<ByteBuffer> pair);
 
   /**
    * Returns the number of elements between the current position and the
