@@ -134,6 +134,7 @@ public class SequenceFileLogReader extends ReaderBase {
             SequenceFileLogReader.LOG.warn(
               "Error while trying to get accurate file length.  " +
               "Truncation / data loss may occur if RegionServers die.", e);
+            throw new IOException(e);
           }
 
           return adjust + super.getPos();
