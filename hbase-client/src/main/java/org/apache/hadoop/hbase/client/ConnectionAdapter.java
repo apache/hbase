@@ -131,11 +131,6 @@ abstract class ConnectionAdapter implements ClusterConnection {
   }
 
   @Override
-  public MetricsConnection getConnectionMetrics() {
-    return wrappedConnection.getConnectionMetrics();
-  }
-
-  @Override
   public boolean isMasterRunning() throws MasterNotRunningException,
       ZooKeeperConnectionException {
     return wrappedConnection.isMasterRunning();
