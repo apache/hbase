@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -1367,4 +1368,11 @@ public interface Admin extends Abortable, Closeable {
    * @throws IOException
    */
   public int getMasterInfoPort() throws IOException;
+
+  /**
+   * Return the set of supported security capabilities.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  List<SecurityCapability> getSecurityCapabilities() throws IOException;
 }

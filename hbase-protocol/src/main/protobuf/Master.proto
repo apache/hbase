@@ -439,6 +439,21 @@ message MajorCompactionTimestampResponse {
   required int64 compaction_timestamp = 1;
 }
 
+message SecurityCapabilitiesRequest {
+}
+
+message SecurityCapabilitiesResponse {
+  enum Capability {
+    SIMPLE_AUTHENTICATION = 0;
+    SECURE_AUTHENTICATION = 1;
+    AUTHORIZATION = 2;
+    CELL_AUTHORIZATION = 3;
+    CELL_VISIBILITY = 4;
+  }
+
+  repeated Capability capabilities = 1;
+}
+
 service MasterService {
   /** Used by the client to get the number of regions that have received the updated schema */
   rpc GetSchemaAlterStatus(GetSchemaAlterStatusRequest)
@@ -666,4 +681,8 @@ service MasterService {
 
   rpc getProcedureResult(GetProcedureResultRequest)
     returns(GetProcedureResultResponse);
+
+  /** Returns the security capabilities in effect on the cluster */
+  rpc getSecurityCapabilities(SecurityCapabilitiesRequest)
+    returns(SecurityCapabilitiesResponse);
 }

@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
@@ -313,6 +314,16 @@ public class TestAccessController extends SecureTestUtil {
         0,
         AccessControlLists.getNamespacePermissions(conf,
             TEST_TABLE.getNamespaceAsString()).size());
+  }
+
+  @Test
+  public void testSecurityCapabilities() throws Exception {
+    List<SecurityCapability> capabilities = TEST_UTIL.getConnection().getAdmin()
+      .getSecurityCapabilities();
+    assertTrue("AUTHORIZATION capability is missing",
+      capabilities.contains(SecurityCapability.AUTHORIZATION));
+    assertTrue("CELL_AUTHORIZATION capability is missing",
+      capabilities.contains(SecurityCapability.CELL_AUTHORIZATION));
   }
 
   @Test

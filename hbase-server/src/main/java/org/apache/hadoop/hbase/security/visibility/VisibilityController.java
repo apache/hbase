@@ -148,11 +148,19 @@ public class VisibilityController extends BaseMasterAndRegionObserver implements
     RESERVED_VIS_TAG_TYPES.add(TagType.STRING_VIS_TAG_TYPE);
   }
 
+  public static boolean isAuthorizationSupported(Configuration conf) {
+    return conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
+  }
+
+  public static boolean isCellAuthorizationSupported(Configuration conf) {
+    return isAuthorizationSupported(conf);
+  }
+
   @Override
   public void start(CoprocessorEnvironment env) throws IOException {
     this.conf = env.getConfiguration();
 
-    authorizationEnabled = conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
+    authorizationEnabled = isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
       LOG.warn("The VisibilityController has been loaded with authorization checks disabled.");
     }
