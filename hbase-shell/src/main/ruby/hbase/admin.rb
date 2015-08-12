@@ -1007,5 +1007,10 @@ module Hbase
       @admin.deleteNamespace(namespace_name)
     end
 
+    #----------------------------------------------------------------------------------------------
+    # Get security capabilities
+    def get_security_capabilities
+      @admin.getSecurityCapabilities
+    end
   end
 end

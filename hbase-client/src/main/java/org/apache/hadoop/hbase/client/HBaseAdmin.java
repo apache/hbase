@@ -66,6 +66,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
@@ -135,6 +136,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -4364,6 +4366,25 @@ public class HBaseAdmin implements Admin {
       } else {
         callable.throwTimeoutException(EnvironmentEdgeManager.currentTime() - startTime);
       }
+    }
+  }
+
+  @Override
+  public List<SecurityCapability> getSecurityCapabilities() throws IOException {
+    try {
+      return executeCallable(new MasterCallable<List<SecurityCapability>>(getConnection()) {
+        @Override
+        public List<SecurityCapability> call(int callTimeout) throws ServiceException {
+          SecurityCapabilitiesRequest req = SecurityCapabilitiesRequest.newBuilder().build();
+          return ProtobufUtil.toSecurityCapabilityList(
+            master.getSecurityCapabilities(null, req).getCapabilitiesList());
+        }
+      });
+    } catch (IOException e) {
+      if (e instanceof RemoteException) {
+        e = ((RemoteException)e).unwrapRemoteException();
+      }
+      throw e;
     }
   }
 }

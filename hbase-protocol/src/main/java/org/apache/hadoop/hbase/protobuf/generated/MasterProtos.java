@@ -49064,6 +49064,974 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.MajorCompactionTimestampResponse)
   }
 
+  public interface SecurityCapabilitiesRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SecurityCapabilitiesRequest}
+   */
+  public static final class SecurityCapabilitiesRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements SecurityCapabilitiesRequestOrBuilder {
+    // Use SecurityCapabilitiesRequest.newBuilder() to construct.
+    private SecurityCapabilitiesRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SecurityCapabilitiesRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SecurityCapabilitiesRequest defaultInstance;
+    public static SecurityCapabilitiesRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SecurityCapabilitiesRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SecurityCapabilitiesRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SecurityCapabilitiesRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SecurityCapabilitiesRequest>() {
+      public SecurityCapabilitiesRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SecurityCapabilitiesRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SecurityCapabilitiesRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SecurityCapabilitiesRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SecurityCapabilitiesRequest)
+    }
+
+    static {
+      defaultInstance = new SecurityCapabilitiesRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SecurityCapabilitiesRequest)
+  }
+
+  public interface SecurityCapabilitiesResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> getCapabilitiesList();
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    int getCapabilitiesCount();
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability getCapabilities(int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.SecurityCapabilitiesResponse}
+   */
+  public static final class SecurityCapabilitiesResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements SecurityCapabilitiesResponseOrBuilder {
+    // Use SecurityCapabilitiesResponse.newBuilder() to construct.
+    private SecurityCapabilitiesResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SecurityCapabilitiesResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SecurityCapabilitiesResponse defaultInstance;
+    public static SecurityCapabilitiesResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SecurityCapabilitiesResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SecurityCapabilitiesResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability value = org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability.valueOf(rawValue);
+              if (value == null) {
+                unknownFields.mergeVarintField(1, rawValue);
+              } else {
+                if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                  capabilities_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability>();
+                  mutable_bitField0_ |= 0x00000001;
+                }
+                capabilities_.add(value);
+              }
+              break;
+            }
+            case 10: {
+              int length = input.readRawVarint32();
+              int oldLimit = input.pushLimit(length);
+              while(input.getBytesUntilLimit() > 0) {
+                int rawValue = input.readEnum();
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability value = org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability.valueOf(rawValue);
+                if (value == null) {
+                  unknownFields.mergeVarintField(1, rawValue);
+                } else {
+                  if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                    capabilities_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability>();
+                    mutable_bitField0_ |= 0x00000001;
+                  }
+                  capabilities_.add(value);
+                }
+              }
+              input.popLimit(oldLimit);
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          capabilities_ = java.util.Collections.unmodifiableList(capabilities_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SecurityCapabilitiesResponse> PARSER =
+        new com.google.protobuf.AbstractParser<SecurityCapabilitiesResponse>() {
+      public SecurityCapabilitiesResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SecurityCapabilitiesResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SecurityCapabilitiesResponse> getParserForType() {
+      return PARSER;
+    }
+
+    /**
+     * Protobuf enum {@code hbase.pb.SecurityCapabilitiesResponse.Capability}
+     */
+    public enum Capability
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>SIMPLE_AUTHENTICATION = 0;</code>
+       */
+      SIMPLE_AUTHENTICATION(0, 0),
+      /**
+       * <code>SECURE_AUTHENTICATION = 1;</code>
+       */
+      SECURE_AUTHENTICATION(1, 1),
+      /**
+       * <code>AUTHORIZATION = 2;</code>
+       */
+      AUTHORIZATION(2, 2),
+      /**
+       * <code>CELL_AUTHORIZATION = 3;</code>
+       */
+      CELL_AUTHORIZATION(3, 3),
+      /**
+       * <code>CELL_VISIBILITY = 4;</code>
+       */
+      CELL_VISIBILITY(4, 4),
+      ;
+
+      /**
+       * <code>SIMPLE_AUTHENTICATION = 0;</code>
+       */
+      public static final int SIMPLE_AUTHENTICATION_VALUE = 0;
+      /**
+       * <code>SECURE_AUTHENTICATION = 1;</code>
+       */
+      public static final int SECURE_AUTHENTICATION_VALUE = 1;
+      /**
+       * <code>AUTHORIZATION = 2;</code>
+       */
+      public static final int AUTHORIZATION_VALUE = 2;
+      /**
+       * <code>CELL_AUTHORIZATION = 3;</code>
+       */
+      public static final int CELL_AUTHORIZATION_VALUE = 3;
+      /**
+       * <code>CELL_VISIBILITY = 4;</code>
+       */
+      public static final int CELL_VISIBILITY_VALUE = 4;
+
+
+      public final int getNumber() { return value; }
+
+      public static Capability valueOf(int value) {
+        switch (value) {
+          case 0: return SIMPLE_AUTHENTICATION;
+          case 1: return SECURE_AUTHENTICATION;
+          case 2: return AUTHORIZATION;
+          case 3: return CELL_AUTHORIZATION;
+          case 4: return CELL_VISIBILITY;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<Capability>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static com.google.protobuf.Internal.EnumLiteMap<Capability>
+          internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Capability>() {
+              public Capability findValueByNumber(int number) {
+                return Capability.valueOf(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(index);
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final Capability[] VALUES = values();
+
+      public static Capability valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int index;
+      private final int value;
+
+      private Capability(int index, int value) {
+        this.index = index;
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:hbase.pb.SecurityCapabilitiesResponse.Capability)
+    }
+
+    // repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;
+    public static final int CAPABILITIES_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> capabilities_;
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> getCapabilitiesList() {
+      return capabilities_;
+    }
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    public int getCapabilitiesCount() {
+      return capabilities_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability getCapabilities(int index) {
+      return capabilities_.get(index);
+    }
+
+    private void initFields() {
+      capabilities_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < capabilities_.size(); i++) {
+        output.writeEnum(1, capabilities_.get(i).getNumber());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      {
+        int dataSize = 0;
+        for (int i = 0; i < capabilities_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeEnumSizeNoTag(capabilities_.get(i).getNumber());
+        }
+        size += dataSize;
+        size += 1 * capabilities_.size();
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse) obj;
+
+      boolean result = true;
+      result = result && getCapabilitiesList()
+          .equals(other.getCapabilitiesList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getCapabilitiesCount() > 0) {
+        hash = (37 * hash) + CAPABILITIES_FIELD_NUMBER;
+        hash = (53 * hash) + hashEnumList(getCapabilitiesList());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.SecurityCapabilitiesResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        capabilities_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse(this);
+        int from_bitField0_ = bitField0_;
+        if (((bitField0_ & 0x00000001) == 0x00000001)) {
+          capabilities_ = java.util.Collections.unmodifiableList(capabilities_);
+          bitField0_ = (bitField0_ & ~0x00000001);
+        }
+        result.capabilities_ = capabilities_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance()) return this;
+        if (!other.capabilities_.isEmpty()) {
+          if (capabilities_.isEmpty()) {
+            capabilities_ = other.capabilities_;
+            bitField0_ = (bitField0_ & ~0x00000001);
+          } else {
+            ensureCapabilitiesIsMutable();
+            capabilities_.addAll(other.capabilities_);
+          }
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> capabilities_ =
+        java.util.Collections.emptyList();
+      private void ensureCapabilitiesIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          capabilities_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability>(capabilities_);
+          bitField0_ |= 0x00000001;
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> getCapabilitiesList() {
+        return java.util.Collections.unmodifiableList(capabilities_);
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public int getCapabilitiesCount() {
+        return capabilities_.size();
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability getCapabilities(int index) {
+        return capabilities_.get(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public Builder setCapabilities(
+          int index, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureCapabilitiesIsMutable();
+        capabilities_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public Builder addCapabilities(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        ensureCapabilitiesIsMutable();
+        capabilities_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public Builder addAllCapabilities(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability> values) {
+        ensureCapabilitiesIsMutable();
+        super.addAll(values, capabilities_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.SecurityCapabilitiesResponse.Capability capabilities = 1;</code>
+       */
+      public Builder clearCapabilities() {
+        capabilities_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.SecurityCapabilitiesResponse)
+    }
+
+    static {
+      defaultInstance = new SecurityCapabilitiesResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.SecurityCapabilitiesResponse)
+  }
+
   /**
    * Protobuf service {@code hbase.pb.MasterService}
    */
@@ -49671,6 +50639,18 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse> done);
 
+      /**
+       * <code>rpc getSecurityCapabilities(.hbase.pb.SecurityCapabilitiesRequest) returns (.hbase.pb.SecurityCapabilitiesResponse);</code>
+       *
+       * <pre>
+       ** Returns the security capabilities in effect on the cluster 
+       * </pre>
+       */
+      public abstract void getSecurityCapabilities(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -50060,6 +51040,14 @@ public final class MasterProtos {
           impl.getProcedureResult(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void getSecurityCapabilities(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse> done) {
+          impl.getSecurityCapabilities(controller, request, done);
+        }
+
       };
     }
 
@@ -50178,6 +51166,8 @@ public final class MasterProtos {
               return impl.getLastMajorCompactionTimestampForRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest)request);
             case 47:
               return impl.getProcedureResult(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest)request);
+            case 48:
+              return impl.getSecurityCapabilities(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -50288,6 +51278,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
             case 47:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+            case 48:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -50398,6 +51390,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
             case 47:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+            case 48:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -51005,6 +51999,18 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse> done);
 
+    /**
+     * <code>rpc getSecurityCapabilities(.hbase.pb.SecurityCapabilitiesRequest) returns (.hbase.pb.SecurityCapabilitiesResponse);</code>
+     *
+     * <pre>
+     ** Returns the security capabilities in effect on the cluster 
+     * </pre>
+     */
+    public abstract void getSecurityCapabilities(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -51267,6 +52273,11 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse>specializeCallback(
               done));
           return;
+        case 48:
+          this.getSecurityCapabilities(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -51377,6 +52388,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
         case 47:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+        case 48:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -51487,6 +52500,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
         case 47:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+        case 48:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -52227,6 +53242,21 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance()));
       }
+
+      public  void getSecurityCapabilities(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(48),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -52473,6 +53503,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse getProcedureResult(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse getSecurityCapabilities(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -53058,6 +54093,18 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse getSecurityCapabilities(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(48),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.MasterService)
@@ -53518,6 +54565,16 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_MajorCompactionTimestampResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -53681,118 +54738,127 @@ public final class MasterProtos {
       "nTimestampForRegionRequest\022)\n\006region\030\001 \002" +
       "(\0132\031.hbase.pb.RegionSpecifier\"@\n MajorCo" +
       "mpactionTimestampResponse\022\034\n\024compaction_" +
-      "timestamp\030\001 \002(\0032\205\"\n\rMasterService\022e\n\024Get" +
-      "SchemaAlterStatus\022%.hbase.pb.GetSchemaAl" +
-      "terStatusRequest\032&.hbase.pb.GetSchemaAlt" +
-      "erStatusResponse\022b\n\023GetTableDescriptors\022" +
-      "$.hbase.pb.GetTableDescriptorsRequest\032%." +
-      "hbase.pb.GetTableDescriptorsResponse\022P\n\r",
-      "GetTableNames\022\036.hbase.pb.GetTableNamesRe" +
-      "quest\032\037.hbase.pb.GetTableNamesResponse\022Y" +
-      "\n\020GetClusterStatus\022!.hbase.pb.GetCluster" +
-      "StatusRequest\032\".hbase.pb.GetClusterStatu" +
-      "sResponse\022V\n\017IsMasterRunning\022 .hbase.pb." +
-      "IsMasterRunningRequest\032!.hbase.pb.IsMast" +
-      "erRunningResponse\022D\n\tAddColumn\022\032.hbase.p" +
-      "b.AddColumnRequest\032\033.hbase.pb.AddColumnR" +
-      "esponse\022M\n\014DeleteColumn\022\035.hbase.pb.Delet" +
-      "eColumnRequest\032\036.hbase.pb.DeleteColumnRe",
-      "sponse\022M\n\014ModifyColumn\022\035.hbase.pb.Modify" +
-      "ColumnRequest\032\036.hbase.pb.ModifyColumnRes" +
-      "ponse\022G\n\nMoveRegion\022\033.hbase.pb.MoveRegio" +
-      "nRequest\032\034.hbase.pb.MoveRegionResponse\022k" +
-      "\n\026DispatchMergingRegions\022\'.hbase.pb.Disp" +
-      "atchMergingRegionsRequest\032(.hbase.pb.Dis" +
-      "patchMergingRegionsResponse\022M\n\014AssignReg" +
-      "ion\022\035.hbase.pb.AssignRegionRequest\032\036.hba" +
-      "se.pb.AssignRegionResponse\022S\n\016UnassignRe" +
-      "gion\022\037.hbase.pb.UnassignRegionRequest\032 .",
-      "hbase.pb.UnassignRegionResponse\022P\n\rOffli" +
-      "neRegion\022\036.hbase.pb.OfflineRegionRequest" +
-      "\032\037.hbase.pb.OfflineRegionResponse\022J\n\013Del" +
-      "eteTable\022\034.hbase.pb.DeleteTableRequest\032\035" +
-      ".hbase.pb.DeleteTableResponse\022P\n\rtruncat" +
-      "eTable\022\036.hbase.pb.TruncateTableRequest\032\037" +
-      ".hbase.pb.TruncateTableResponse\022J\n\013Enabl" +
-      "eTable\022\034.hbase.pb.EnableTableRequest\032\035.h" +
-      "base.pb.EnableTableResponse\022M\n\014DisableTa" +
-      "ble\022\035.hbase.pb.DisableTableRequest\032\036.hba",
-      "se.pb.DisableTableResponse\022J\n\013ModifyTabl" +
-      "e\022\034.hbase.pb.ModifyTableRequest\032\035.hbase." +
-      "pb.ModifyTableResponse\022J\n\013CreateTable\022\034." +
-      "hbase.pb.CreateTableRequest\032\035.hbase.pb.C" +
-      "reateTableResponse\022A\n\010Shutdown\022\031.hbase.p" +
-      "b.ShutdownRequest\032\032.hbase.pb.ShutdownRes" +
-      "ponse\022G\n\nStopMaster\022\033.hbase.pb.StopMaste" +
-      "rRequest\032\034.hbase.pb.StopMasterResponse\022>" +
-      "\n\007Balance\022\030.hbase.pb.BalanceRequest\032\031.hb" +
-      "ase.pb.BalanceResponse\022_\n\022SetBalancerRun",
-      "ning\022#.hbase.pb.SetBalancerRunningReques" +
-      "t\032$.hbase.pb.SetBalancerRunningResponse\022" +
-      "\\\n\021IsBalancerEnabled\022\".hbase.pb.IsBalanc" +
-      "erEnabledRequest\032#.hbase.pb.IsBalancerEn" +
-      "abledResponse\022S\n\016RunCatalogScan\022\037.hbase." +
-      "pb.RunCatalogScanRequest\032 .hbase.pb.RunC" +
-      "atalogScanResponse\022e\n\024EnableCatalogJanit" +
-      "or\022%.hbase.pb.EnableCatalogJanitorReques" +
-      "t\032&.hbase.pb.EnableCatalogJanitorRespons" +
-      "e\022n\n\027IsCatalogJanitorEnabled\022(.hbase.pb.",
-      "IsCatalogJanitorEnabledRequest\032).hbase.p" +
-      "b.IsCatalogJanitorEnabledResponse\022^\n\021Exe" +
-      "cMasterService\022#.hbase.pb.CoprocessorSer" +
-      "viceRequest\032$.hbase.pb.CoprocessorServic" +
-      "eResponse\022A\n\010Snapshot\022\031.hbase.pb.Snapsho" +
-      "tRequest\032\032.hbase.pb.SnapshotResponse\022h\n\025" +
-      "GetCompletedSnapshots\022&.hbase.pb.GetComp" +
-      "letedSnapshotsRequest\032\'.hbase.pb.GetComp" +
-      "letedSnapshotsResponse\022S\n\016DeleteSnapshot" +
-      "\022\037.hbase.pb.DeleteSnapshotRequest\032 .hbas",
-      "e.pb.DeleteSnapshotResponse\022S\n\016IsSnapsho" +
-      "tDone\022\037.hbase.pb.IsSnapshotDoneRequest\032 " +
-      ".hbase.pb.IsSnapshotDoneResponse\022V\n\017Rest" +
-      "oreSnapshot\022 .hbase.pb.RestoreSnapshotRe" +
-      "quest\032!.hbase.pb.RestoreSnapshotResponse" +
-      "\022h\n\025IsRestoreSnapshotDone\022&.hbase.pb.IsR" +
-      "estoreSnapshotDoneRequest\032\'.hbase.pb.IsR" +
-      "estoreSnapshotDoneResponse\022P\n\rExecProced" +
-      "ure\022\036.hbase.pb.ExecProcedureRequest\032\037.hb" +
-      "ase.pb.ExecProcedureResponse\022W\n\024ExecProc",
-      "edureWithRet\022\036.hbase.pb.ExecProcedureReq" +
-      "uest\032\037.hbase.pb.ExecProcedureResponse\022V\n" +
-      "\017IsProcedureDone\022 .hbase.pb.IsProcedureD" +
-      "oneRequest\032!.hbase.pb.IsProcedureDoneRes" +
-      "ponse\022V\n\017ModifyNamespace\022 .hbase.pb.Modi" +
-      "fyNamespaceRequest\032!.hbase.pb.ModifyName" +
-      "spaceResponse\022V\n\017CreateNamespace\022 .hbase" +
-      ".pb.CreateNamespaceRequest\032!.hbase.pb.Cr" +
-      "eateNamespaceResponse\022V\n\017DeleteNamespace" +
-      "\022 .hbase.pb.DeleteNamespaceRequest\032!.hba",
-      "se.pb.DeleteNamespaceResponse\022k\n\026GetName" +
-      "spaceDescriptor\022\'.hbase.pb.GetNamespaceD" +
-      "escriptorRequest\032(.hbase.pb.GetNamespace" +
-      "DescriptorResponse\022q\n\030ListNamespaceDescr" +
-      "iptors\022).hbase.pb.ListNamespaceDescripto" +
-      "rsRequest\032*.hbase.pb.ListNamespaceDescri" +
-      "ptorsResponse\022\206\001\n\037ListTableDescriptorsBy" +
-      "Namespace\0220.hbase.pb.ListTableDescriptor" +
-      "sByNamespaceRequest\0321.hbase.pb.ListTable" +
-      "DescriptorsByNamespaceResponse\022t\n\031ListTa",
-      "bleNamesByNamespace\022*.hbase.pb.ListTable" +
-      "NamesByNamespaceRequest\032+.hbase.pb.ListT" +
-      "ableNamesByNamespaceResponse\022A\n\010SetQuota" +
-      "\022\031.hbase.pb.SetQuotaRequest\032\032.hbase.pb.S" +
-      "etQuotaResponse\022x\n\037getLastMajorCompactio" +
-      "nTimestamp\022).hbase.pb.MajorCompactionTim" +
-      "estampRequest\032*.hbase.pb.MajorCompaction" +
-      "TimestampResponse\022\212\001\n(getLastMajorCompac" +
-      "tionTimestampForRegion\0222.hbase.pb.MajorC" +
-      "ompactionTimestampForRegionRequest\032*.hba",
-      "se.pb.MajorCompactionTimestampResponse\022_" +
-      "\n\022getProcedureResult\022#.hbase.pb.GetProce" +
-      "dureResultRequest\032$.hbase.pb.GetProcedur" +
-      "eResultResponseBB\n*org.apache.hadoop.hba" +
-      "se.protobuf.generatedB\014MasterProtosH\001\210\001\001" +
-      "\240\001\001"
+      "timestamp\030\001 \002(\003\"\035\n\033SecurityCapabilitiesR" +
+      "equest\"\354\001\n\034SecurityCapabilitiesResponse\022" +
+      "G\n\014capabilities\030\001 \003(\01621.hbase.pb.Securit" +
+      "yCapabilitiesResponse.Capability\"\202\001\n\nCap" +
+      "ability\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025SE" +
+      "CURE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZATION\020\002",
+      "\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_VISIBIL" +
+      "ITY\020\0042\357\"\n\rMasterService\022e\n\024GetSchemaAlte" +
+      "rStatus\022%.hbase.pb.GetSchemaAlterStatusR" +
+      "equest\032&.hbase.pb.GetSchemaAlterStatusRe" +
+      "sponse\022b\n\023GetTableDescriptors\022$.hbase.pb" +
+      ".GetTableDescriptorsRequest\032%.hbase.pb.G" +
+      "etTableDescriptorsResponse\022P\n\rGetTableNa" +
+      "mes\022\036.hbase.pb.GetTableNamesRequest\032\037.hb" +
+      "ase.pb.GetTableNamesResponse\022Y\n\020GetClust" +
+      "erStatus\022!.hbase.pb.GetClusterStatusRequ",
+      "est\032\".hbase.pb.GetClusterStatusResponse\022" +
+      "V\n\017IsMasterRunning\022 .hbase.pb.IsMasterRu" +
+      "nningRequest\032!.hbase.pb.IsMasterRunningR" +
+      "esponse\022D\n\tAddColumn\022\032.hbase.pb.AddColum" +
+      "nRequest\032\033.hbase.pb.AddColumnResponse\022M\n" +
+      "\014DeleteColumn\022\035.hbase.pb.DeleteColumnReq" +
+      "uest\032\036.hbase.pb.DeleteColumnResponse\022M\n\014" +
+      "ModifyColumn\022\035.hbase.pb.ModifyColumnRequ" +
+      "est\032\036.hbase.pb.ModifyColumnResponse\022G\n\nM" +
+      "oveRegion\022\033.hbase.pb.MoveRegionRequest\032\034",
+      ".hbase.pb.MoveRegionResponse\022k\n\026Dispatch" +
+      "MergingRegions\022\'.hbase.pb.DispatchMergin" +
+      "gRegionsRequest\032(.hbase.pb.DispatchMergi" +
+      "ngRegionsResponse\022M\n\014AssignRegion\022\035.hbas" +
+      "e.pb.AssignRegionRequest\032\036.hbase.pb.Assi" +
+      "gnRegionResponse\022S\n\016UnassignRegion\022\037.hba" +
+      "se.pb.UnassignRegionRequest\032 .hbase.pb.U" +
+      "nassignRegionResponse\022P\n\rOfflineRegion\022\036" +
+      ".hbase.pb.OfflineRegionRequest\032\037.hbase.p" +
+      "b.OfflineRegionResponse\022J\n\013DeleteTable\022\034",
+      ".hbase.pb.DeleteTableRequest\032\035.hbase.pb." +
+      "DeleteTableResponse\022P\n\rtruncateTable\022\036.h" +
+      "base.pb.TruncateTableRequest\032\037.hbase.pb." +
+      "TruncateTableResponse\022J\n\013EnableTable\022\034.h" +
+      "base.pb.EnableTableRequest\032\035.hbase.pb.En" +
+      "ableTableResponse\022M\n\014DisableTable\022\035.hbas" +
+      "e.pb.DisableTableRequest\032\036.hbase.pb.Disa" +
+      "bleTableResponse\022J\n\013ModifyTable\022\034.hbase." +
+      "pb.ModifyTableRequest\032\035.hbase.pb.ModifyT" +
+      "ableResponse\022J\n\013CreateTable\022\034.hbase.pb.C",
+      "reateTableRequest\032\035.hbase.pb.CreateTable" +
+      "Response\022A\n\010Shutdown\022\031.hbase.pb.Shutdown" +
+      "Request\032\032.hbase.pb.ShutdownResponse\022G\n\nS" +
+      "topMaster\022\033.hbase.pb.StopMasterRequest\032\034" +
+      ".hbase.pb.StopMasterResponse\022>\n\007Balance\022" +
+      "\030.hbase.pb.BalanceRequest\032\031.hbase.pb.Bal" +
+      "anceResponse\022_\n\022SetBalancerRunning\022#.hba" +
+      "se.pb.SetBalancerRunningRequest\032$.hbase." +
+      "pb.SetBalancerRunningResponse\022\\\n\021IsBalan" +
+      "cerEnabled\022\".hbase.pb.IsBalancerEnabledR",
+      "equest\032#.hbase.pb.IsBalancerEnabledRespo" +
+      "nse\022S\n\016RunCatalogScan\022\037.hbase.pb.RunCata" +
+      "logScanRequest\032 .hbase.pb.RunCatalogScan" +
+      "Response\022e\n\024EnableCatalogJanitor\022%.hbase" +
+      ".pb.EnableCatalogJanitorRequest\032&.hbase." +
+      "pb.EnableCatalogJanitorResponse\022n\n\027IsCat" +
+      "alogJanitorEnabled\022(.hbase.pb.IsCatalogJ" +
+      "anitorEnabledRequest\032).hbase.pb.IsCatalo" +
+      "gJanitorEnabledResponse\022^\n\021ExecMasterSer" +
+      "vice\022#.hbase.pb.CoprocessorServiceReques",
+      "t\032$.hbase.pb.CoprocessorServiceResponse\022" +
+      "A\n\010Snapshot\022\031.hbase.pb.SnapshotRequest\032\032" +
+      ".hbase.pb.SnapshotResponse\022h\n\025GetComplet" +
+      "edSnapshots\022&.hbase.pb.GetCompletedSnaps" +
+      "hotsRequest\032\'.hbase.pb.GetCompletedSnaps" +
+      "hotsResponse\022S\n\016DeleteSnapshot\022\037.hbase.p" +
+      "b.DeleteSnapshotRequest\032 .hbase.pb.Delet" +
+      "eSnapshotResponse\022S\n\016IsSnapshotDone\022\037.hb" +
+      "ase.pb.IsSnapshotDoneRequest\032 .hbase.pb." +
+      "IsSnapshotDoneResponse\022V\n\017RestoreSnapsho",
+      "t\022 .hbase.pb.RestoreSnapshotRequest\032!.hb" +
+      "ase.pb.RestoreSnapshotResponse\022h\n\025IsRest" +
+      "oreSnapshotDone\022&.hbase.pb.IsRestoreSnap" +
+      "shotDoneRequest\032\'.hbase.pb.IsRestoreSnap" +
+      "shotDoneResponse\022P\n\rExecProcedure\022\036.hbas" +
+      "e.pb.ExecProcedureRequest\032\037.hbase.pb.Exe" +
+      "cProcedureResponse\022W\n\024ExecProcedureWithR" +
+      "et\022\036.hbase.pb.ExecProcedureRequest\032\037.hba" +
+      "se.pb.ExecProcedureResponse\022V\n\017IsProcedu" +
+      "reDone\022 .hbase.pb.IsProcedureDoneRequest",
+      "\032!.hbase.pb.IsProcedureDoneResponse\022V\n\017M" +
+      "odifyNamespace\022 .hbase.pb.ModifyNamespac" +
+      "eRequest\032!.hbase.pb.ModifyNamespaceRespo" +
+      "nse\022V\n\017CreateNamespace\022 .hbase.pb.Create" +
+      "NamespaceRequest\032!.hbase.pb.CreateNamesp" +
+      "aceResponse\022V\n\017DeleteNamespace\022 .hbase.p" +
+      "b.DeleteNamespaceRequest\032!.hbase.pb.Dele" +
+      "teNamespaceResponse\022k\n\026GetNamespaceDescr" +
+      "iptor\022\'.hbase.pb.GetNamespaceDescriptorR" +
+      "equest\032(.hbase.pb.GetNamespaceDescriptor",
+      "Response\022q\n\030ListNamespaceDescriptors\022).h" +
+      "base.pb.ListNamespaceDescriptorsRequest\032" +
+      "*.hbase.pb.ListNamespaceDescriptorsRespo" +
+      "nse\022\206\001\n\037ListTableDescriptorsByNamespace\022" +
+      "0.hbase.pb.ListTableDescriptorsByNamespa" +
+      "ceRequest\0321.hbase.pb.ListTableDescriptor" +
+      "sByNamespaceResponse\022t\n\031ListTableNamesBy" +
+      "Namespace\022*.hbase.pb.ListTableNamesByNam" +
+      "espaceRequest\032+.hbase.pb.ListTableNamesB" +
+      "yNamespaceResponse\022A\n\010SetQuota\022\031.hbase.p",
+      "b.SetQuotaRequest\032\032.hbase.pb.SetQuotaRes" +
+      "ponse\022x\n\037getLastMajorCompactionTimestamp" +
+      "\022).hbase.pb.MajorCompactionTimestampRequ" +
+      "est\032*.hbase.pb.MajorCompactionTimestampR" +
+      "esponse\022\212\001\n(getLastMajorCompactionTimest" +
+      "ampForRegion\0222.hbase.pb.MajorCompactionT" +
+      "imestampForRegionRequest\032*.hbase.pb.Majo" +
+      "rCompactionTimestampResponse\022_\n\022getProce" +
+      "dureResult\022#.hbase.pb.GetProcedureResult" +
+      "Request\032$.hbase.pb.GetProcedureResultRes",
+      "ponse\022h\n\027getSecurityCapabilities\022%.hbase" +
+      ".pb.SecurityCapabilitiesRequest\032&.hbase." +
+      "pb.SecurityCapabilitiesResponseBB\n*org.a" +
+      "pache.hadoop.hbase.protobuf.generatedB\014M" +
+      "asterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -54345,6 +55411,18 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor,
               new java.lang.String[] { "CompactionTimestamp", });
+          internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor =
+            getDescriptor().getMessageTypes().get(91);
+          internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor =
+            getDescriptor().getMessageTypes().get(92);
+          internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor,
+              new java.lang.String[] { "Capabilities", });
           return null;
         }
       };

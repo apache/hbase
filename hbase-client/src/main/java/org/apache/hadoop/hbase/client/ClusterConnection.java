@@ -300,4 +300,5 @@ public interface ClusterConnection extends HConnection {
    * @return the configured client backoff policy
    */
   ClientBackoffPolicy getBackoffPolicy();
+
 }

@@ -35,7 +35,7 @@ module Hbase
     end
 
     def add_labels(*args)
-      lables_table_available?
+      visibility_feature_available?
       # Normalize args
       if args.kind_of?(Array)
         labels = [ args ].flatten.compact
@@ -63,7 +63,7 @@ module Hbase
     end
 
     def set_auths(user, *args)
-      lables_table_available?
+      visibility_feature_available?
       # Normalize args
       if args.kind_of?(Array)
         auths = [ args ].flatten.compact
@@ -88,7 +88,7 @@ module Hbase
     end
 
     def get_auths(user)
-      lables_table_available?
+      visibility_feature_available?
       begin
         response = VisibilityClient.getAuths(@config, user)
         if response.nil?
@@ -102,7 +102,7 @@ module Hbase
     end
 
     def list_labels(regex = ".*")
-      lables_table_available?
+      visibility_feature_available?
       begin
         response = VisibilityClient.listLabels(@config, regex)
         if response.nil?
@@ -116,7 +116,7 @@ module Hbase
     end
 
     def clear_auths(user, *args)
-      lables_table_available?
+      visibility_feature_available?
       # Normalize args
       if args.kind_of?(Array)
         auths = [ args ].flatten.compact
@@ -141,9 +141,20 @@ module Hbase
     end
 
     # Make sure that lables table is available
-    def lables_table_available?()
-      raise(ArgumentError, "DISABLED: Visibility labels feature is not available") \
-        unless exists?(VisibilityConstants::LABELS_TABLE_NAME)
+    def visibility_feature_available?()
+      caps = []
+      begin
+        # Try the getSecurityCapabilities API where supported.
+        caps = @admin.getSecurityCapabilities
+      rescue
+        # If we are unable to use getSecurityCapabilities, fall back with a check for
+        # deployment of the labels table
+        raise(ArgumentError, "DISABLED: Visibility labels feature is not available") unless \
+          exists?(VisibilityConstants::LABELS_TABLE_NAME)
+        return
+      end
+      raise(ArgumentError, "DISABLED: Visibility labels feature is not available") unless \
+        caps.include? org.apache.hadoop.hbase.client.security.SecurityCapability::CELL_VISIBILITY
     end
 
     # Does table exist?
