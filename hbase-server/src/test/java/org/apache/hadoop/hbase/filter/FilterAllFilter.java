@@ -44,7 +44,7 @@ public class FilterAllFilter extends FilterBase {
 
   @Override
   public boolean filterRowKey(Cell cell) throws IOException {
-    return true;
+    return false;
   }
 
   public static FilterAllFilter parseFrom(final byte[] pbBytes) throws DeserializationException {
