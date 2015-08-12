@@ -60,17 +60,19 @@ public class DefaultCompactor extends Compactor {
 
     List<StoreFileScanner> scanners;
     Collection<StoreFile> readersToClose;
-    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", false)) {
+    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
       // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
       // HFileFiles, and their readers
       readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
       for (StoreFile f : request.getFiles()) {
         readersToClose.add(new StoreFile(f));
       }
-      scanners = createFileScanners(readersToClose, smallestReadPoint);
+      scanners = createFileScanners(readersToClose, smallestReadPoint,
+          store.throttleCompaction(request.getSize()));
     } else {
       readersToClose = Collections.emptyList();
-      scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+      scanners = createFileScanners(request.getFiles(), smallestReadPoint,
+          store.throttleCompaction(request.getSize()));
     }
 
     StoreFile.Writer writer = null;
@@ -81,6 +83,7 @@ public class DefaultCompactor extends Compactor {
       InternalScanner scanner = null;
       try {
         /* Include deletes, unless we are doing a compaction of all files */
+
         ScanType scanType =
             request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
         scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
@@ -102,14 +105,17 @@ public class DefaultCompactor extends Compactor {
         // When all MVCC readpoints are 0, don't write them.
         // See HBASE-8166, HBASE-12600, and HBASE-13389.
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-          fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0);
+          fd.maxMVCCReadpoint > 0, fd.maxTagsLength > 0, store.throttleCompaction(request.getSize()));
+
         boolean finished =
             performCompaction(scanner, writer, smallestReadPoint, cleanSeqId, throughputController);
+
+
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
           writer = null;
-          throw new InterruptedIOException( "Aborting compaction of store " + store +
+          throw new InterruptedIOException("Aborting compaction of store " + store +
               " in region " + store.getRegionInfo().getRegionNameAsString() +
               " because it was interrupted.");
          }

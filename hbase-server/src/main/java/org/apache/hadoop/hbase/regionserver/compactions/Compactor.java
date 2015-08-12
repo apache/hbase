@@ -185,8 +185,14 @@ public abstract class Compactor {
    * @return Scanners.
    */
   protected List<StoreFileScanner> createFileScanners(
-      final Collection<StoreFile> filesToCompact, long smallestReadPoint) throws IOException {
-    return StoreFileScanner.getScannersForStoreFiles(filesToCompact, false, false, true,
+      final Collection<StoreFile> filesToCompact,
+      long smallestReadPoint,
+      boolean useDropBehind) throws IOException {
+    return StoreFileScanner.getScannersForStoreFiles(filesToCompact,
+        /* cache blocks = */ false,
+        /* use pread = */ false,
+        /* is compaction */ true,
+        /* use Drop Behind */ useDropBehind,
       smallestReadPoint);
   }
 
