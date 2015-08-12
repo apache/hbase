@@ -35,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.HTableInterface;
 import org.apache.hadoop.hbase.thrift.ThriftServerRunner.HBaseHandler;
 import org.apache.hadoop.hbase.thrift.generated.TIncrement;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -163,7 +163,6 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
   protected final Log LOG = LogFactory.getLog(this.getClass().getName());
 
-  @SuppressWarnings("deprecation")
   public IncrementCoalescer(HBaseHandler hand) {
     this.handler = hand;
     LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<Runnable>();
@@ -264,8 +263,9 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
           if (counter == null) {
             continue;
           }
+          HTableInterface table = null;
           try {
-            HTable table = handler.getTable(row.getTable());
+            table = handler.getTable(row.getTable());
             if (failures > 2) {
               throw new IOException("Auto-Fail rest of ICVs");
             }
@@ -278,8 +278,11 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
                 + Bytes.toStringBinary(row.getRowKey()) + ", "
                 + Bytes.toStringBinary(row.getFamily()) + ", "
                 + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
+          } finally{
+            if(table != null){
+              table.close();
+            }
           }
-
         }
         return failures;
       }
