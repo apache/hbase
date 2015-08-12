@@ -17,11 +17,15 @@
 
 package org.apache.hadoop.hbase.spark
 
-import org.apache.hadoop.hbase.TableName
+import java.util
+
+import org.apache.hadoop.fs.Path
+import org.apache.hadoop.hbase.{HConstants, TableName}
 import org.apache.hadoop.hbase.client._
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.spark.rdd.RDD
 
+import scala.collection.immutable.HashMap
 import scala.reflect.ClassTag
 
 /**
@@ -157,6 +161,47 @@ object HBaseRDDFunctions
                                         f: (Iterator[T], Connection) => Iterator[R]):
     RDD[R] = {
       hc.mapPartitions[T,R](rdd, f)
+    }
+
+    /**
+     * Implicit method that gives easy access to HBaseContext's
+     * bulkLoad method.
+     *
+     * A Spark Implementation of HBase Bulk load
+     *
+     * This will take the content from an existing RDD then sort and shuffle
+     * it with respect to region splits.  The result of that sort and shuffle
+     * will be written to HFiles.
+     *
+     * After this function is executed the user will have to call
+     * LoadIncrementalHFiles.doBulkLoad(...) to move the files into HBase
+     *
+     * Also note this version of bulk load is different from past versions in
+     * that it includes the qualifier as part of the sort process. The
+     * reason for this is to be able to support rows will very large number
+     * of columns.
+     *
+     * @param tableName                      The HBase table we are loading into
+     * @param flatMap                        A flapMap function that will make every row in the RDD
+     *                                       into N cells for the bulk load
+     * @param stagingDir                     The location on the FileSystem to bulk load into
+     * @param familyHFileWriteOptionsMap     Options that will define how the HFile for a
+     *                                       column family is written
+     * @param compactionExclude              Compaction excluded for the HFiles
+     * @param maxSize                        Max size for the HFiles before they roll
+     */
+    def hbaseBulkLoad(hc: HBaseContext,
+                         tableName: TableName,
+                         flatMap: (T) => Iterator[(KeyFamilyQualifier, Array[Byte])],
+                         stagingDir:String,
+                         familyHFileWriteOptionsMap:
+                         util.Map[Array[Byte], FamilyHFileWriteOptions] =
+                         new util.HashMap[Array[Byte], FamilyHFileWriteOptions](),
+                         compactionExclude: Boolean = false,
+                         maxSize:Long = HConstants.DEFAULT_MAX_FILE_SIZE):Unit = {
+      hc.bulkLoad(rdd, tableName,
+        flatMap, stagingDir, familyHFileWriteOptionsMap,
+        compactionExclude, maxSize)
     }
   }
 }
