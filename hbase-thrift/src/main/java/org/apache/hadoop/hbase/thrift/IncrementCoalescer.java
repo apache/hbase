@@ -264,8 +264,9 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
           if (counter == null) {
             continue;
           }
+          Table table = null;
           try {
-            Table table = handler.getTable(row.getTable());
+            table = handler.getTable(row.getTable());
             if (failures > 2) {
               throw new IOException("Auto-Fail rest of ICVs");
             }
@@ -278,8 +279,11 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
                 + Bytes.toStringBinary(row.getRowKey()) + ", "
                 + Bytes.toStringBinary(row.getFamily()) + ", "
                 + Bytes.toStringBinary(row.getQualifier()) + ", " + counter, e);
+          } finally{
+            if(table != null){
+              table.close();
+            }
           }
-
         }
         return failures;
       }
