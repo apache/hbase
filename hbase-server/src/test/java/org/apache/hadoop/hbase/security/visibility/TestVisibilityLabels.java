@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionActionResult;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
@@ -106,6 +107,13 @@ public abstract class TestVisibilityLabels {
   @After
   public void tearDown() throws Exception {
     killedRS = false;
+  }
+
+  @Test
+  public void testSecurityCapabilities() throws Exception {
+    List<SecurityCapability> capabilities = TEST_UTIL.getHBaseAdmin().getSecurityCapabilities();
+    assertTrue("CELL_VISIBILITY capability is missing",
+      capabilities.contains(SecurityCapability.CELL_VISIBILITY));
   }
 
   @Test

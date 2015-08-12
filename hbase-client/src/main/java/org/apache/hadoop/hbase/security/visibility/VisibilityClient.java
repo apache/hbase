@@ -28,8 +28,10 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.GetAuthsRequest;
@@ -51,6 +53,21 @@ import com.google.protobuf.ServiceException;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class VisibilityClient {
+
+  /**
+   * Return true if cell visibility features are supported and enabled
+   * @param conf
+   * @return true if cell visibility features are supported and enabled, false otherwise
+   * @throws IOException
+   */
+  public static boolean isCellVisibilityEnabled(Configuration conf) throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    try {
+      return admin.getSecurityCapabilities().contains(SecurityCapability.CELL_VISIBILITY);
+    } finally {
+      admin.close();
+    }
+  }
 
   /**
    * Utility method for adding label to the system.

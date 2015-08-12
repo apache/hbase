@@ -191,6 +191,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
@@ -218,7 +221,10 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.R
 import org.apache.hadoop.hbase.regionserver.RegionCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionSplitPolicy;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
@@ -3567,4 +3573,43 @@ MasterServices, Server {
       .getDefaultLoadBalancerClass().getName());
   }
 
+  /** 
+   * Returns the security capabilities in effect on the cluster
+   */
+  @Override
+  public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
+      SecurityCapabilitiesRequest request) throws ServiceException {
+    SecurityCapabilitiesResponse.Builder response = SecurityCapabilitiesResponse.newBuilder();
+    try {
+      checkInitialized();
+      Set<Capability> capabilities = new HashSet<Capability>();
+      // Authentication
+      if (User.isHBaseSecurityEnabled(conf)) {
+        capabilities.add(Capability.SECURE_AUTHENTICATION);
+      } else {
+        capabilities.add(Capability.SIMPLE_AUTHENTICATION);
+      }
+      // The AccessController can provide AUTHORIZATION and CELL_AUTHORIZATION
+      if (cpHost != null &&
+          cpHost.findCoprocessor(AccessController.class.getName()) != null) {
+        if (AccessController.isAuthorizationSupported(conf)) {
+          capabilities.add(Capability.AUTHORIZATION);
+        }
+        if (AccessController.isCellAuthorizationSupported(conf)) {
+          capabilities.add(Capability.CELL_AUTHORIZATION);
+        }
+      }
+      // The VisibilityController can provide CELL_VISIBILITY
+      if (cpHost != null &&
+          cpHost.findCoprocessor(VisibilityController.class.getName()) != null) {
+        if (VisibilityController.isCellAuthorizationSupported(conf)) {
+          capabilities.add(Capability.CELL_VISIBILITY);
+        }
+      }
+      response.addAllCapabilities(capabilities);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+    return response.build();
+  }
 }

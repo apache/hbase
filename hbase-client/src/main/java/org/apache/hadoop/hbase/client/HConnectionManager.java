@@ -152,6 +152,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
@@ -2211,6 +2213,12 @@ public class HConnectionManager {
         public TruncateTableResponse truncateTable(RpcController controller,
             TruncateTableRequest request) throws ServiceException {
           return stub.truncateTable(controller, request);
+        }
+
+        @Override
+        public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
+            SecurityCapabilitiesRequest request) throws ServiceException {
+          return stub.getSecurityCapabilities(controller, request);
         }
       };
     }

@@ -203,6 +203,15 @@ public class AccessController extends BaseMasterAndRegionObserver
   /** if the ACL table is available, only relevant in the master */
   private volatile boolean aclTabAvailable = false;
 
+  public static boolean isAuthorizationSupported(Configuration conf) {
+    return conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
+  }
+
+  public static boolean isCellAuthorizationSupported(Configuration conf) {
+    return isAuthorizationSupported(conf) &&
+        (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS);
+  }
+
   public HRegion getRegion() {
     return regionEnv != null ? regionEnv.getRegion() : null;
   }
@@ -916,7 +925,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     CompoundConfiguration conf = new CompoundConfiguration();
     conf.add(env.getConfiguration());
 
-    authorizationEnabled = conf.getBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
+    authorizationEnabled = isAuthorizationSupported(conf);
     if (!authorizationEnabled) {
       LOG.warn("The AccessController has been loaded with authorization checks disabled.");
     }
@@ -924,7 +933,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     shouldCheckExecPermission = conf.getBoolean(AccessControlConstants.EXEC_PERMISSION_CHECKS_KEY,
       AccessControlConstants.DEFAULT_EXEC_PERMISSION_CHECKS);
 
-    cellFeaturesEnabled = HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS;
+    cellFeaturesEnabled = (HFile.getFormatVersion(conf) >= HFile.MIN_FORMAT_VERSION_WITH_TAGS);
     if (!cellFeaturesEnabled) {
       LOG.info("A minimum HFile version of " + HFile.MIN_FORMAT_VERSION_WITH_TAGS
           + " is required to persist cell ACLs. Consider setting " + HFile.FORMAT_VERSION_KEY

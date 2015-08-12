@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.BlockingRpcCallback;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -62,6 +63,36 @@ public class AccessControlClient {
 
   private static HTable getAclTable(Configuration conf) throws IOException {
     return new HTable(conf, ACL_TABLE_NAME);
+  }
+
+  /**
+   * Return true if authorization is supported and enabled
+   * @param conf
+   * @return true if authorization is supported and enabled, false otherwise
+   * @throws IOException
+   */
+  public static boolean isAuthorizationEnabled(Configuration conf) throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    try {
+      return admin.getSecurityCapabilities().contains(SecurityCapability.AUTHORIZATION);
+    } finally {
+      admin.close();
+    }
+  }
+
+  /**
+   * Return true if cell authorization is supported and enabled
+   * @param conf
+   * @return true if cell authorization is supported and enabled, false otherwise
+   * @throws IOException
+   */
+  public static boolean isCellAuthorizationEnabled(Configuration conf) throws IOException {
+    HBaseAdmin admin = new HBaseAdmin(conf);
+    try {
+      return admin.getSecurityCapabilities().contains(SecurityCapability.CELL_AUTHORIZATION);
+    } finally {
+      admin.close();
+    }
   }
 
   private static BlockingInterface getAccessControlServiceStub(HTable ht)
