@@ -21,7 +21,9 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -140,6 +142,9 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
@@ -167,6 +172,9 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
+import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AccessController;
+import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1504,6 +1512,46 @@ public class MasterRpcServices extends RSRpcServices
       IsBalancerEnabledRequest request) throws ServiceException {
     IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
     response.setEnabled(master.isBalancerOn());
+    return response.build();
+  }
+
+  /** 
+   * Returns the security capabilities in effect on the cluster
+   */
+  @Override
+  public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
+      SecurityCapabilitiesRequest request) throws ServiceException {
+    SecurityCapabilitiesResponse.Builder response = SecurityCapabilitiesResponse.newBuilder();
+    try {
+      master.checkInitialized();
+      Set<Capability> capabilities = new HashSet<>();
+      // Authentication
+      if (User.isHBaseSecurityEnabled(master.getConfiguration())) {
+        capabilities.add(Capability.SECURE_AUTHENTICATION);
+      } else {
+        capabilities.add(Capability.SIMPLE_AUTHENTICATION);
+      }
+      // The AccessController can provide AUTHORIZATION and CELL_AUTHORIZATION
+      if (master.cpHost != null &&
+            master.cpHost.findCoprocessor(AccessController.class.getName()) != null) {
+        if (AccessController.isAuthorizationSupported(master.getConfiguration())) {
+          capabilities.add(Capability.AUTHORIZATION);
+        }
+        if (AccessController.isCellAuthorizationSupported(master.getConfiguration())) {
+          capabilities.add(Capability.CELL_AUTHORIZATION);
+        }
+      }
+      // The VisibilityController can provide CELL_VISIBILITY
+      if (master.cpHost != null &&
+            master.cpHost.findCoprocessor(VisibilityController.class.getName()) != null) {
+        if (VisibilityController.isCellAuthorizationSupported(master.getConfiguration())) {
+          capabilities.add(Capability.CELL_VISIBILITY);
+        }
+      }
+      response.addAllCapabilities(capabilities);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
     return response.build();
   }
 }

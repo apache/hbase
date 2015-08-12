@@ -65,6 +65,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -115,6 +116,7 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.MapReduceProtos;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
@@ -3135,5 +3137,24 @@ public final class ProtobufUtil {
     builder.setDate(VersionInfo.getDate());
     builder.setSrcChecksum(VersionInfo.getSrcChecksum());
     return builder.build();
+  }
+
+  /**
+   * Convert SecurityCapabilitiesResponse.Capability to SecurityCapability
+   * @param caps capabilities returned in the SecurityCapabilitiesResponse message
+   * @return the converted list of SecurityCapability elements
+   */
+  public static List<SecurityCapability> toSecurityCapabilityList(
+      List<MasterProtos.SecurityCapabilitiesResponse.Capability> capabilities) {
+    List<SecurityCapability> scList = new ArrayList<>(capabilities.size());
+    for (MasterProtos.SecurityCapabilitiesResponse.Capability c: capabilities) {
+      try {
+        scList.add(SecurityCapability.valueOf(c.getNumber()));
+      } catch (IllegalArgumentException e) {
+        // Unknown capability, just ignore it. We don't understand the new capability
+        // but don't care since by definition we cannot take advantage of it.
+      }
+    }
+    return scList;
   }
 }

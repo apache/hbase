@@ -56,6 +56,8 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
 import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
@@ -71,6 +73,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.zookeeper.KeeperException;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -1727,6 +1730,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
           IsBalancerEnabledRequest request) throws ServiceException {
         return stub.isBalancerEnabled(controller, request);
+      }
+
+      @Override
+      public SecurityCapabilitiesResponse getSecurityCapabilities(RpcController controller,
+          SecurityCapabilitiesRequest request) throws ServiceException {
+        return stub.getSecurityCapabilities(controller, request);
       }
     };
   }

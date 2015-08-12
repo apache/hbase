@@ -396,6 +396,7 @@ Shell.load_command_group(
   :full_name => 'SECURITY TOOLS',
   :comment => "NOTE: Above commands are only applicable if running with the AccessController coprocessor",
   :commands => %w[
+    list_security_capabilities
     grant
     revoke
     user_permission

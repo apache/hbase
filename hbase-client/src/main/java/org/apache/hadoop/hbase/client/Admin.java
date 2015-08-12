@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.security.SecurityCapability;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -1546,4 +1546,11 @@ public interface Admin extends Abortable, Closeable {
    */
   AdminProtos.GetRegionInfoResponse.CompactionState getMobCompactionState(final TableName tableName)
     throws IOException;
+
+  /**
+   * Return the set of supported security capabilities.
+   * @throws IOException
+   * @throws UnsupportedOperationException
+   */
+  List<SecurityCapability> getSecurityCapabilities() throws IOException;
 }

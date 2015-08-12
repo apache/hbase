@@ -182,10 +182,23 @@ module Hbase
       end
     end
 
-    # Make sure that security tables are available
+    # Make sure that security features are available
     def security_available?()
-      raise(ArgumentError, "DISABLED: Security features are not available") \
-        unless exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+      caps = []
+      begin
+        # Try the getSecurityCapabilities API where supported.
+        # We only need to look at AUTHORIZATION, the AccessController doesn't support
+        # CELL_AUTHORIZATION without AUTHORIZATION also available.
+        caps = @admin.getSecurityCapabilities
+      rescue
+        # If we are unable to use getSecurityCapabilities, fall back with a check for
+        # deployment of the ACL table
+        raise(ArgumentError, "DISABLED: Security features are not available") unless \
+          exists?(org.apache.hadoop.hbase.security.access.AccessControlLists::ACL_TABLE_NAME)
+        return
+      end
+      raise(ArgumentError, "DISABLED: Security features are not available") unless \
+        caps.include? org.apache.hadoop.hbase.client.security.SecurityCapability::AUTHORIZATION
     end
   end
 end
