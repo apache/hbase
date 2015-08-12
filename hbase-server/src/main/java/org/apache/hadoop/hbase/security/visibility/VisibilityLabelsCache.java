@@ -206,27 +206,37 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
   }
 
   public List<String> getUserAuths(String user) {
-    List<String> auths = EMPTY_LIST;
-    Set<Integer> authOrdinals = getUserAuthsAsOrdinals(user);
-    if (!authOrdinals.equals(EMPTY_SET)) {
-      auths = new ArrayList<String>(authOrdinals.size());
-      for (Integer authOrdinal : authOrdinals) {
-        auths.add(ordinalVsLabels.get(authOrdinal));
+    this.lock.readLock().lock();
+    try {
+      List<String> auths = EMPTY_LIST;
+      Set<Integer> authOrdinals = getUserAuthsAsOrdinals(user);
+      if (!authOrdinals.equals(EMPTY_SET)) {
+        auths = new ArrayList<String>(authOrdinals.size());
+        for (Integer authOrdinal : authOrdinals) {
+          auths.add(ordinalVsLabels.get(authOrdinal));
+        }
       }
+      return auths;
+    } finally {
+      this.lock.readLock().unlock();
     }
-    return auths;
   }
 
   public List<String> getGroupAuths(String[] groups) {
-    List<String> auths = EMPTY_LIST;
-    Set<Integer> authOrdinals = getGroupAuthsAsOrdinals(groups);
-    if (!authOrdinals.equals(EMPTY_SET)) {
-      auths = new ArrayList<String>(authOrdinals.size());
-      for (Integer authOrdinal : authOrdinals) {
-        auths.add(ordinalVsLabels.get(authOrdinal));
+    this.lock.readLock().lock();
+    try {
+      List<String> auths = EMPTY_LIST;
+      Set<Integer> authOrdinals = getGroupAuthsAsOrdinals(groups);
+      if (!authOrdinals.equals(EMPTY_SET)) {
+        auths = new ArrayList<String>(authOrdinals.size());
+        for (Integer authOrdinal : authOrdinals) {
+          auths.add(ordinalVsLabels.get(authOrdinal));
+        }
       }
+      return auths;
+    } finally {
+      this.lock.readLock().unlock();
     }
-    return auths;
   }
 
   /**
@@ -270,7 +280,15 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
     }
   }
 
-  public void writeToZookeeper(byte[] data, boolean labelsOrUserAuths) {
+  public void writeToZookeeper(byte[] data, boolean labelsOrUserAuths) throws IOException {
+    // Update local state, then send it to zookeeper
+    if (labelsOrUserAuths) {
+      // True for labels
+      this.refreshLabelsCache(data);
+    } else {
+      // False for user auths
+      this.refreshUserAuthsCache(data);
+    }
     this.zkVisibilityWatcher.writeToZookeeper(data, labelsOrUserAuths);
   }
 }
