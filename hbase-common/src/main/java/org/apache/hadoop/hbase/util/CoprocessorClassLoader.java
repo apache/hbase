@@ -97,7 +97,6 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
   private static final String[] CLASS_PREFIX_EXEMPTIONS = new String[] {
     // Java standard library:
     "com.sun.",
-    "launcher.",
     "java.",
     "javax.",
     "org.ietf",
@@ -110,7 +109,19 @@ public class CoprocessorClassLoader extends ClassLoaderBase {
     "org.apache.log4j",
     "com.hadoop",
     // Hadoop/HBase/ZK:
-    "org.apache.hadoop",
+    "org.apache.hadoop.security",
+    "org.apache.hadoop.HadoopIllegalArgumentException",
+    "org.apache.hadoop.conf",
+    "org.apache.hadoop.fs",
+    "org.apache.hadoop.http",
+    "org.apache.hadoop.io",
+    "org.apache.hadoop.ipc",
+    "org.apache.hadoop.metrics",
+    "org.apache.hadoop.metrics2",
+    "org.apache.hadoop.net",
+    "org.apache.hadoop.util",
+    "org.apache.hadoop.hdfs",
+    "org.apache.hadoop.hbase",
     "org.apache.zookeeper",
   };
 
