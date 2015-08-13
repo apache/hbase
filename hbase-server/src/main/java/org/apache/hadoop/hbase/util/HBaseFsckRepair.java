@@ -117,8 +117,8 @@ public class HBaseFsckRepair {
   public static void waitUntilAssigned(HBaseAdmin admin,
       HRegionInfo region) throws IOException, InterruptedException {
     long timeout = admin.getConfiguration().getLong("hbase.hbck.assign.timeout", 120000);
-    long expiration = timeout + System.currentTimeMillis();
-    while (System.currentTimeMillis() < expiration) {
+    long expiration = timeout + EnvironmentEdgeManager.currentTimeMillis();
+    while (EnvironmentEdgeManager.currentTimeMillis() < expiration) {
       try {
         Map<String, RegionState> rits=
             admin.getClusterStatus().getRegionsInTransition();

@@ -95,7 +95,6 @@ import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
-import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -121,7 +120,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -199,7 +197,7 @@ public class HBaseFsck extends Configured {
   private HTable meta;
   // threads to do ||izable tasks: retrieve data from regionservers, handle overlapping regions
   protected ExecutorService executor;
-  private long startMillis = System.currentTimeMillis();
+  private long startMillis = EnvironmentEdgeManager.currentTimeMillis();
   private HFileCorruptionChecker hfcc;
   private int retcode = 0;
   private Path HBCK_LOCK_PATH;
@@ -280,6 +278,8 @@ public class HBaseFsck extends Configured {
 
   private Map<TableName, Set<String>> orphanTableDirs =
       new HashMap<TableName, Set<String>>();
+
+  private Map<TableName, Set<String>> skippedRegions = new HashMap<TableName, Set<String>>();
 
   /**
    * List of orphaned table ZNodes
@@ -468,6 +468,7 @@ public class HBaseFsck extends Configured {
     errors.clear();
     tablesInfo.clear();
     orphanHdfsDirs.clear();
+    skippedRegions.clear();
   }
 
   /**
@@ -1691,8 +1692,19 @@ public class HBaseFsck extends Configured {
       workItems.add(new CheckRegionConsistencyWorkItem(e.getKey(), e.getValue()));
     }
     checkRegionConsistencyConcurrently(workItems);
+
+    // If some regions is skipped during checkRegionConsistencyConcurrently() phase, we might
+    // not get accurate state of the hbase if continuing. The config here allows users to tune
+    // the tolerance of number of skipped region.
+    // TODO: evaluate the consequence to continue the hbck operation without config.
+    int terminateThreshold =  getConf().getInt("hbase.hbck.skipped.regions.limit", 0);
+    int numOfSkippedRegions = skippedRegions.size();
+    if (numOfSkippedRegions > 0 && numOfSkippedRegions > terminateThreshold) {
+      throw new IOException(numOfSkippedRegions
+        + " region(s) could not be checked or repaired.  See logs for detail.");
+    }
   }
-  
+
   /**
    * Check consistency of all regions using mulitple threads concurrently.
    */
@@ -1733,9 +1745,30 @@ public class HBaseFsck extends Configured {
 
     @Override
     public synchronized Void call() throws Exception {
-      checkRegionConsistency(key, hbi);
+      try {
+        checkRegionConsistency(key, hbi);
+      } catch (Exception e) {
+        // If the region is non-META region, skip this region and send warning/error message; if
+        // the region is META region, we should not continue.
+        LOG.warn("Unable to complete check or repair the region '" + hbi.getRegionNameAsString()
+          + "'.", e);
+        if (hbi.getHdfsHRI().isMetaRegion()) {
+          throw e;
+        }
+        LOG.warn("Skip region '" + hbi.getRegionNameAsString() + "'");
+        addSkippedRegion(hbi);
+      }
       return null;
     }
+  }
+
+  private void addSkippedRegion(final HbckInfo hbi) {
+    Set<String> skippedRegionNames = skippedRegions.get(hbi.getTableName());
+    if (skippedRegionNames == null) {
+      skippedRegionNames = new HashSet<String>();
+    }
+    skippedRegionNames.add(hbi.getRegionNameAsString());
+    skippedRegions.put(hbi.getTableName(), skippedRegionNames);
   }
 
   private void preCheckPermission() throws IOException, AccessDeniedException {
@@ -1931,7 +1964,7 @@ public class HBaseFsck extends Configured {
       (hbi.metaEntry == null)? false: hbi.metaEntry.isSplit() && hbi.metaEntry.isOffline();
     boolean shouldBeDeployed = inMeta && !isTableDisabled(hbi.metaEntry);
     boolean recentlyModified = inHdfs &&
-      hbi.getModTime() + timelag > System.currentTimeMillis();
+      hbi.getModTime() + timelag > EnvironmentEdgeManager.currentTimeMillis();
 
     // ========== First the healthy cases =============
     if (hbi.containsOnlyHdfsEdits()) {
@@ -2922,7 +2955,7 @@ public class HBaseFsck extends Configured {
    */
   HTableDescriptor[] getTables(AtomicInteger numSkipped) {
     List<TableName> tableNames = new ArrayList<TableName>();
-    long now = System.currentTimeMillis();
+    long now = EnvironmentEdgeManager.currentTimeMillis();
 
     for (HbckInfo hbi : regionInfoMap.values()) {
       MetaEntry info = hbi.metaEntry;
@@ -3435,14 +3468,30 @@ public class HBaseFsck extends Configured {
    */
   private void printTableSummary(SortedMap<TableName, TableInfo> tablesInfo) {
     StringBuilder sb = new StringBuilder();
+    int numOfSkippedRegions;
     errors.print("Summary:");
     for (TableInfo tInfo : tablesInfo.values()) {
+      numOfSkippedRegions = (skippedRegions.containsKey(tInfo.getName())) ?
+          skippedRegions.get(tInfo.getName()).size() : 0;
+
       if (errors.tableHasErrors(tInfo)) {
         errors.print("Table " + tInfo.getName() + " is inconsistent.");
-      } else {
-        errors.print("  " + tInfo.getName() + " is okay.");
+      } else if (numOfSkippedRegions > 0){
+        errors.print("Table " + tInfo.getName() + " is okay (with "
+          + numOfSkippedRegions + " skipped regions).");
+      }
+      else {
+        errors.print("Table " + tInfo.getName() + " is okay.");
       }
       errors.print("    Number of regions: " + tInfo.getNumRegions());
+      if (numOfSkippedRegions > 0) {
+        Set<String> skippedRegionStrings = skippedRegions.get(tInfo.getName());
+        System.out.println("    Number of skipped regions: " + numOfSkippedRegions);
+        System.out.println("      List of skipped regions:");
+        for(String sr : skippedRegionStrings) {
+          System.out.println("        " + sr);
+        }
+      }
       sb.setLength(0); // clear out existing buffer, if any.
       sb.append("    Deployed on: ");
       for (ServerName server : tInfo.deployedOn) {
