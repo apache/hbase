@@ -2999,13 +2999,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         boolean valueIsNull = comparator.getValue() == null ||
           comparator.getValue().length == 0;
         boolean matches = false;
+        long cellTs = 0;
         if (result.size() == 0 && valueIsNull) {
           matches = true;
         } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
             valueIsNull) {
           matches = true;
+          cellTs = result.get(0).getTimestamp();
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
+          cellTs = kv.getTimestamp();
           int compareResult = comparator.compareTo(kv.getValueArray(),
               kv.getValueOffset(), kv.getValueLength());
           switch (compareOp) {
@@ -3033,6 +3036,20 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         }
         //If matches put the new put or delete the new delete
         if (matches) {
+          // We have acquired the row lock already. If the system clock is NOT monotonically
+          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
+          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
+          // there is no way to pass the cellTs. See HBASE-14054.
+          long now = EnvironmentEdgeManager.currentTime();
+          long ts = Math.max(now, cellTs); // ensure write is not eclipsed
+          byte[] byteTs = Bytes.toBytes(ts);
+
+          if (w instanceof Put) {
+            updateCellTimestamps(w.getFamilyCellMap().values(), byteTs);
+          }
+          // else delete is not needed since it already does a second get, and sets the timestamp
+          // from get (see prepareDeleteTimestamps).
+
           // All edits for the given row (across all column families) must
           // happen atomically.
           doBatchMutate(w);
@@ -3083,13 +3100,16 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         boolean valueIsNull = comparator.getValue() == null ||
             comparator.getValue().length == 0;
         boolean matches = false;
+        long cellTs = 0;
         if (result.size() == 0 && valueIsNull) {
           matches = true;
         } else if (result.size() > 0 && result.get(0).getValueLength() == 0 &&
             valueIsNull) {
           matches = true;
+          cellTs = result.get(0).getTimestamp();
         } else if (result.size() == 1 && !valueIsNull) {
           Cell kv = result.get(0);
+          cellTs = kv.getTimestamp();
           int compareResult = comparator.compareTo(kv.getValueArray(),
               kv.getValueOffset(), kv.getValueLength());
           switch (compareOp) {
@@ -3117,6 +3137,22 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
         }
         //If matches put the new put or delete the new delete
         if (matches) {
+          // We have acquired the row lock already. If the system clock is NOT monotonically
+          // non-decreasing (see HBASE-14070) we should make sure that the mutation has a
+          // larger timestamp than what was observed via Get. doBatchMutate already does this, but
+          // there is no way to pass the cellTs. See HBASE-14054.
+          long now = EnvironmentEdgeManager.currentTime();
+          long ts = Math.max(now, cellTs); // ensure write is not eclipsed
+          byte[] byteTs = Bytes.toBytes(ts);
+
+          for (Mutation w : rm.getMutations()) {
+            if (w instanceof Put) {
+              updateCellTimestamps(w.getFamilyCellMap().values(), byteTs);
+            }
+            // else delete is not needed since it already does a second get, and sets the timestamp
+            // from get (see prepareDeleteTimestamps).
+          }
+
           // All edits for the given row (across all column families) must
           // happen atomically.
           mutateRow(rm);

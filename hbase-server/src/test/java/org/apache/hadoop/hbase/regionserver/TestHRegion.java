@@ -101,6 +101,7 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -146,6 +147,7 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
@@ -6022,6 +6024,125 @@ public class TestHRegion {
     } finally {
       HRegion.closeHRegion(region);
     }
+  }
+
+  @Test
+  public void testIncrementTimestampsAreMonotonic() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    edge.setValue(10);
+    Increment inc = new Increment(row);
+    inc.setDurability(Durability.SKIP_WAL);
+    inc.addColumn(fam1, qual1, 1L);
+    region.increment(inc);
+
+    Result result = region.get(new Get(row));
+    Cell c = result.getColumnLatestCell(fam1, qual1);
+    assertNotNull(c);
+    assertEquals(c.getTimestamp(), 10L);
+
+    edge.setValue(1); // clock goes back
+    region.increment(inc);
+    result = region.get(new Get(row));
+    c = result.getColumnLatestCell(fam1, qual1);
+    assertEquals(c.getTimestamp(), 10L);
+    assertEquals(Bytes.toLong(c.getValueArray(), c.getValueOffset(), c.getValueLength()), 2L);
+  }
+
+  @Test
+  public void testAppendTimestampsAreMonotonic() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    edge.setValue(10);
+    Append a = new Append(row);
+    a.setDurability(Durability.SKIP_WAL);
+    a.add(fam1, qual1, qual1);
+    region.append(a);
+
+    Result result = region.get(new Get(row));
+    Cell c = result.getColumnLatestCell(fam1, qual1);
+    assertNotNull(c);
+    assertEquals(c.getTimestamp(), 10L);
+
+    edge.setValue(1); // clock goes back
+    region.append(a);
+    result = region.get(new Get(row));
+    c = result.getColumnLatestCell(fam1, qual1);
+    assertEquals(c.getTimestamp(), 10L);
+
+    byte[] expected = new byte[qual1.length*2];
+    System.arraycopy(qual1, 0, expected, 0, qual1.length);
+    System.arraycopy(qual1, 0, expected, qual1.length, qual1.length);
+
+    assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
+      expected, 0, expected.length));
+  }
+
+  @Test
+  public void testCheckAndMutateTimestampsAreMonotonic() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    edge.setValue(10);
+    Put p = new Put(row);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(fam1, qual1, qual1);
+    region.put(p);
+
+    Result result = region.get(new Get(row));
+    Cell c = result.getColumnLatestCell(fam1, qual1);
+    assertNotNull(c);
+    assertEquals(c.getTimestamp(), 10L);
+
+    edge.setValue(1); // clock goes back
+    p = new Put(row);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(fam1, qual1, qual2);
+    region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL, new BinaryComparator(qual1), p, false);
+    result = region.get(new Get(row));
+    c = result.getColumnLatestCell(fam1, qual1);
+    assertEquals(c.getTimestamp(), 10L);
+
+    assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
+      qual2, 0, qual2.length));
+  }
+
+  @Test
+  public void testCheckAndRowMutateTimestampsAreMonotonic() throws IOException {
+    HRegion region = initHRegion(tableName, name.getMethodName(), CONF, fam1);
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    EnvironmentEdgeManager.injectEdge(edge);
+
+    edge.setValue(10);
+    Put p = new Put(row);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(fam1, qual1, qual1);
+    region.put(p);
+
+    Result result = region.get(new Get(row));
+    Cell c = result.getColumnLatestCell(fam1, qual1);
+    assertNotNull(c);
+    assertEquals(c.getTimestamp(), 10L);
+
+    edge.setValue(1); // clock goes back
+    p = new Put(row);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(fam1, qual1, qual2);
+    RowMutations rm = new RowMutations(row);
+    rm.add(p);
+    region.checkAndRowMutate(row, fam1, qual1, CompareOp.EQUAL, new BinaryComparator(qual1),
+      rm, false);
+    result = region.get(new Get(row));
+    c = result.getColumnLatestCell(fam1, qual1);
+    assertEquals(c.getTimestamp(), 10L);
+
+    assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
+      qual2, 0, qual2.length));
   }
 
   private static HRegion initHRegion(byte[] tableName, String callingMethod,
