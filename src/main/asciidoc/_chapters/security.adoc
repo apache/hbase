@@ -175,6 +175,15 @@ Add the following to the `hbase-site.xml` file for every Thrift gateway:
    You may have  to put the concrete full hostname.
    -->
 </property>
+<!-- Add these if you need to configure a different DNS interface from the default -->
+<property>
+  <name>hbase.thrift.dns.interface</name>
+  <value>default</value>
+</property>
+<property>
+  <name>hbase.thrift.dns.nameserver</name>
+  <value>default</value>
+</property>
 ----
 
 Substitute the appropriate credential and keytab for _$USER_ and _$KEYTAB_ respectively.
@@ -307,6 +316,15 @@ To enable REST gateway Kerberos authentication for client access, add the follow
 <property>
   <name>hbase.rest.authentication.kerberos.keytab</name>
   <value>$KEYTAB</value>
+</property>
+<!-- Add these if you need to configure a different DNS interface from the default -->
+<property>
+  <name>hbase.rest.dns.interface</name>
+  <value>default</value>
+</property>
+<property>
+  <name>hbase.rest.dns.nameserver</name>
+  <value>default</value>
 </property>
 ----
 

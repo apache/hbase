@@ -546,7 +546,7 @@ To disable the WAL, see <<wal.disable>>.
 === HBase Client: Group Puts by RegionServer
 
 In addition to using the writeBuffer, grouping `Put`s by RegionServer can reduce the number of client RPC calls per writeBuffer flush.
-There is a utility `HTableUtil` currently on TRUNK that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier.
+There is a utility `HTableUtil` currently on MASTER that does this, but you can either copy that or implement your own version for those still on 0.90.x or earlier.
 
 [[perf.hbase.write.mr.reducer]]
 === MapReduce: Skip The Reducer

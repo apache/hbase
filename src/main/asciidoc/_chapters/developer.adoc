@@ -569,8 +569,8 @@ Checkin the _CHANGES.txt_ and any version changes.
 
 . Update the documentation.
 +
-Update the documentation under _src/main/docbkx_.
-This usually involves copying the latest from trunk and making version-particular adjustments to suit this release candidate version. 
+Update the documentation under _src/main/asciidoc_.
+This usually involves copying the latest from master and making version-particular adjustments to suit this release candidate version. 
 
 . Build the source tarball.
 +
@@ -1339,6 +1339,10 @@ NOTE: End-of-life releases are not included in this list.
 
 | 1.1
 | Nick Dimiduk
+
+| 1.2
+| Sean Busbey
+
 |===
 
 [[code.standards]]
@@ -1685,7 +1689,9 @@ $ make_patch.sh [-a] [-p <patch_dir>]
   If you decline, the script uses +git diff+ instead.
   The patch is saved in a configurable directory and is ready to be attached to your JIRA.
 
-* .Patching WorkflowAlways patch against the master branch first, even if you want to patch in another branch.
+.Patching Workflow
+
+* Always patch against the master branch first, even if you want to patch in another branch.
   HBase committers always apply patches first to the master branch, and backport if necessary.
 * Submit one single patch for a fix.
   If necessary, squash local commits to merge local commits into a single one first.
@@ -1721,17 +1727,20 @@ Please understand that not every patch may get committed, and that feedback will
   However, at times it is easier to refer to different version of a patch if you add `-vX`, where the [replaceable]_X_ is the version (starting with 2).
 * If you need to submit your patch against multiple branches, rather than just master, name each version of the patch with the branch it is for, following the naming conventions in <<submitting.patches.create,submitting.patches.create>>.
 
-.Methods to Create PatchesEclipse::
+.Methods to Create Patches
+Eclipse::
   Select the  menu item.
 
 Git::
-  `git format-patch` is preferred because it preserves commit messages.
+  `git format-patch` is preferred:
+     - It preserves the committer and commit message.
+     - It handles binary files by default, whereas `git diff` ignores them unless
+     you use the `--binary` option.
   Use `git rebase -i` first, to combine (squash) smaller commits into a single larger one.
 
 Subversion::
-
-Make sure you review <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>> for code style.
-If your patch was generated incorrectly or your code does not adhere to the code formatting guidelines, you may be asked to redo some work.
+  Make sure you review <<eclipse.code.formatting,eclipse.code.formatting>> and <<common.patch.feedback,common.patch.feedback>> for code style.
+  If your patch was generated incorrectly or your code does not adhere to the code formatting guidelines, you may be asked to redo some work.
 
 [[submitting.patches.tests]]
 ==== Unit Tests
@@ -1842,13 +1851,13 @@ The instructions and preferences around the way to create patches have changed, 
   This is the indication that the patch was not created with `--no-prefix`.
 +
 ----
-diff --git a/src/main/docbkx/developer.xml b/src/main/docbkx/developer.xml
+diff --git a/src/main/asciidoc/_chapters/developer.adoc b/src/main/asciidoc/_chapters/developer.adoc
 ----
 
 * If the first line of the patch looks similar to the following (without the `a` and `b`), the patch was created with +git diff --no-prefix+ and you need to add `-p0` to the +git apply+                                        command below.
 +
 ----
-diff --git src/main/docbkx/developer.xml src/main/docbkx/developer.xml
+diff --git src/main/asciidoc/_chapters/developer.adoc src/main/asciidoc/_chapters/developer.adoc
 ----
 
 +
@@ -1926,7 +1935,7 @@ If the contributor used +git format-patch+ to generate the patch, their commit m
 [[committer.amending.author]]
 ====== Add Amending-Author when a conflict cherrypick backporting
 
-We've established the practice of committing to trunk and then cherry picking back to branches whenever possible.
+We've established the practice of committing to master and then cherry picking back to branches whenever possible.
 When there is a minor conflict we can fix it up and just proceed with the commit.
 The resulting commit retains the original author.
 When the amending author is different from the original committer, add notice of this at the end of the commit message as: `Amending-Author: Author
@@ -1947,7 +1956,7 @@ A committer should.
 In the thread link:http://search-hadoop.com/m/DHED4EiwOz[HBase, mail # dev - ANNOUNCEMENT: Git Migration In Progress (WAS =>
                                 Re: Git Migration)], it was agreed on the following patch flow 
 
-. Develop and commit the patch against trunk/master first.
+. Develop and commit the patch against master first.
 . Try to cherry-pick the patch when backporting if possible.
 . If this does not work, manually commit the patch to the branch.                        
 

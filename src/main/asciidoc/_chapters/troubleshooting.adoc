@@ -559,6 +559,14 @@ You can also tail all the logs at the same time, edit files, etc.
 
 For more information on the HBase client, see <<client,client>>.
 
+=== Missed Scan Results Due To Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
+If either the client or server version is lower than 0.98.11/1.0.0 and the server
+has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
+requests that reach the server's `hbase.client.scanner.max.result.size` are likely
+to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
+to 2 MB but other versions default to larger values. For this reason, be very careful
+using 0.98.11 servers with any other client version.
+
 [[trouble.client.scantimeout]]
 === ScannerTimeoutException or UnknownScannerException
 
@@ -833,6 +841,31 @@ A file that's currently being written to will appear to have a size of 0 but onc
 Two common use-cases for querying HDFS for HBase objects is research the degree of uncompaction of a table.
 If there are a large number of StoreFiles for each ColumnFamily it could indicate the need for a major compaction.
 Additionally, after a major compaction if the resulting StoreFile is "small" it could indicate the need for a reduction of ColumnFamilies for the table.
+
+=== Unexpected Filesystem Growth
+
+If you see an unexpected spike in filesystem usage by HBase, two possible culprits
+are snapshots and WALs.
+
+Snapshots::
+  When you create a snapshot, HBase retains everything it needs to recreate the table's
+  state at that time of tne snapshot. This includes deleted cells or expired versions.
+  For this reason, your snapshot usage pattern should be well-planned, and you should
+  prune snapshots that you no longer need. Snapshots are stored in `/hbase/.snapshots`,
+  and archives needed to restore snapshots are stored in
+  `/hbase/.archive/<_tablename_>/<_region_>/<_column_family_>/`.
+
+  *Do not* manage snapshots or archives manually via HDFS. HBase provides APIs and
+  HBase Shell commands for managing them. For more information, see <<ops.snapshots>>.
+
+WAL::
+  Write-ahead logs (WALs) are stored in subdirectories of `/hbase/.logs/`, depending
+  on their status. Already-processed WALs are stored in `/hbase/.logs/oldWALs/` and
+  corrupt WALs are stored in `/hbase/.logs/.corrupt/` for examination.
+  If the size of any subdirectory of `/hbase/.logs/` is growing, examine the HBase
+  server logs to find the root cause for why WALs are not being processed correctly.
+
+*Do not* manage WALs manually via HDFS.
 
 [[trouble.network]]
 == Network

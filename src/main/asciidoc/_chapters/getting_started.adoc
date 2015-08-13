@@ -80,15 +80,16 @@ See <<java,Java>> for information about supported JDK versions.
   This will take you to a mirror of _HBase
   Releases_.
   Click on the folder named _stable_ and then download the binary file that ends in _.tar.gz_ to your local filesystem.
-  Be sure to choose the version that corresponds with the version of Hadoop you are likely to use later.
-  In most cases, you should choose the file for Hadoop 2, which will be called something like _hbase-0.98.3-hadoop2-bin.tar.gz_.
+  Prior to 1.x version, be sure to choose the version that corresponds with the version of Hadoop you are
+  likely to use later (in most cases, you should choose the file for Hadoop 2, which will be called
+  something like _hbase-0.98.13-hadoop2-bin.tar.gz_).
   Do not download the file ending in _src.tar.gz_ for now.
 . Extract the downloaded file, and change to the newly-created directory.
 +
 ----
 
-$ tar xzvf hbase-<?eval ${project.version}?>-hadoop2-bin.tar.gz
-$ cd hbase-<?eval ${project.version}?>-hadoop2/
+$ tar xzvf hbase-<?eval ${project.version}?>-bin.tar.gz
+$ cd hbase-<?eval ${project.version}?>/
 ----
 
 . For HBase 0.98.5 and later, you are required to set the `JAVA_HOME` environment variable before starting HBase.
