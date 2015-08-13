@@ -1,5 +1,113 @@
 HBase Change Log
 
+Release Nodes - HBase - Version 1.1.2 08/13/2015
+
+
+Release Notes - HBase - Version 1.1.2
+
+** Sub-task
+    * [HBASE-13832] - Procedure V2: master fail to start due to WALProcedureStore sync failures when HDFS data nodes count is low
+    * [HBASE-13973] - Update documentation for 10070 Phase 2 changes
+    * [HBASE-13983] - Doc how the oddball HTable methods getStartKey, getEndKey, etc. will be removed in 2.0.0
+    * [HBASE-13993] - WALProcedureStore fencing is not effective if new WAL rolls 
+    * [HBASE-14003] - work around jdk8 spec bug in WALPerfEval
+    * [HBASE-14013] - Retry when RegionServerNotYetRunningException rather than go ahead with assign so for sure we don't skip WAL replay
+    * [HBASE-14017] - Procedure v2 - MasterProcedureQueue fix concurrency issue on table queue deletion
+    * [HBASE-14086] - remove unused bundled dependencies
+    * [HBASE-14087] - ensure correct ASF policy compliant headers on source/docs
+    * [HBASE-14104] - Add vectorportal.com to NOTICES.txt as src of our logo
+    * [HBASE-14105] - Add shell tests for Snapshot
+    * [HBASE-14176] - Add missing headers to META-INF files
+
+
+
+
+
+
+
+** Bug
+    * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
+    * [HBASE-12865] - WALs may be deleted before they are replicated to peers
+    * [HBASE-13329] - ArrayIndexOutOfBoundsException in CellComparator#getMinimumMidpointArray
+    * [HBASE-13337] - Table regions are not assigning back, after restarting all regionservers at once.
+    * [HBASE-13352] - Add hbase.import.version to Import usage.
+    * [HBASE-13561] - ITBLL.Verify doesn't actually evaluate counters after job completes
+    * [HBASE-13825] - Use ProtobufUtil#mergeFrom and ProtobufUtil#mergeDelimitedFrom in place of builder methods of same name
+    * [HBASE-13835] - KeyValueHeap.current might be in heap when exception happens in pollRealKV
+    * [HBASE-13861] - BucketCacheTmpl.jamon has wrong bucket free and used labels
+    * [HBASE-13863] - Multi-wal feature breaks reported number and size of HLogs
+    * [HBASE-13865] - Increase the default value for hbase.hregion.memstore.block.multipler from 2 to 4 (part 2)
+    * [HBASE-13881] - Bug in HTable#incrementColumnValue implementation
+    * [HBASE-13888] - Fix refill bug from HBASE-13686
+    * [HBASE-13889] - Fix hbase-shaded-client artifact so it works on hbase-downstreamer
+    * [HBASE-13895] - DATALOSS: Region assigned before WAL replay when abort
+    * [HBASE-13923] - Loaded region coprocessors are not reported in shell status command
+    * [HBASE-13930] - Exclude Findbugs packages from shaded jars
+    * [HBASE-13945] - Prefix_Tree seekBefore() does not work correctly
+    * [HBASE-13958] - RESTApiClusterManager calls kill() instead of suspend() and resume()
+    * [HBASE-13959] - Region splitting uses a single thread in most common cases
+    * [HBASE-13969] - AuthenticationTokenSecretManager is never stopped in RPCServer
+    * [HBASE-13970] - NPE during compaction in trunk
+    * [HBASE-13974] - TestRateLimiter#testFixedIntervalResourceAvailability may fail
+    * [HBASE-13988] - Add exception handler for lease thread
+    * [HBASE-13989] - Threshold for combined MemStore and BlockCache percentages is not checked
+    * [HBASE-13995] - ServerName is not fully case insensitive
+    * [HBASE-13997] - ScannerCallableWithReplicas cause Infinitely blocking
+    * [HBASE-14005] - Set permission to .top hfile in LoadIncrementalHFiles
+    * [HBASE-14010] - TestRegionRebalancing.testRebalanceOnRegionServerNumberChange fails; cluster not balanced
+    * [HBASE-14021] - Quota table has a wrong description on the UI
+    * [HBASE-14042] - Fix FATAL level logging in FSHLog where logged for non fatal exceptions
+    * [HBASE-14050] - NPE in org.apache.hadoop.hbase.ipc.RpcServer$Connection.readAndProcess
+    * [HBASE-14054] - Acknowledged writes may get lost if regionserver clock is set backwards
+    * [HBASE-14089] - Remove unnecessary draw of system entropy from RecoverableZooKeeper
+    * [HBASE-14100] - Fix high priority findbugs warnings
+    * [HBASE-14109] - NPE if we don't load fully before we are shutdown
+    * [HBASE-14119] - Show meaningful error messages instead of stack traces in hbase shell commands. Fixing few commands in this jira.
+    * [HBASE-14146] - Once replication sees an error it slows down forever
+    * [HBASE-14155] - StackOverflowError in reverse scan
+    * [HBASE-14157] - Interfaces implemented by subclasses should be checked when registering CoprocessorService
+    * [HBASE-14168] - Avoid useless retry for DoNotRetryIOException in TableRecordReaderImpl
+    * [HBASE-14178] - regionserver blocks because of waiting for offsetLock
+    * [HBASE-14185] - Incorrect region names logged by MemStoreFlusher
+    * [HBASE-14195] - Closed connections are not removed from ConnectionCache (Thrift, REST)
+    * [HBASE-14196] - Thrift server idle connection timeout issue
+    * [HBASE-14206] - MultiRowRangeFilter returns records whose rowKeys are out of allowed ranges
+    * [HBASE-14209] - TestShell visibility tests failing
+
+
+
+
+
+
+** Improvement
+    * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
+    * [HBASE-14002] - Add --noReplicationSetup option to IntegrationTestReplication
+    * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Task
+    * [HBASE-11276] - Add back support for running ChaosMonkey as standalone tool
+    * [HBASE-13089] - Fix test compilation error on building against htrace-3.2.0-incubating
+    * [HBASE-14085] - Correct LICENSE and NOTICE files in artifacts
+
+
+** Test
+    * [HBASE-14197] - TestRegionServerHostname#testInvalidRegionServerHostnameAbortsServer fails in Jenkins
+
 
 Release Notes - HBase - Version 1.1.1 06/23/2015
 
