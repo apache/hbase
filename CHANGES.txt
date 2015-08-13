@@ -2,9 +2,6 @@ HBase Change Log
 
 Release Nodes - HBase - Version 1.1.2 08/13/2015
 
-
-Release Notes - HBase - Version 1.1.2
-
 ** Sub-task
     * [HBASE-13832] - Procedure V2: master fail to start due to WALProcedureStore sync failures when HDFS data nodes count is low
     * [HBASE-13973] - Update documentation for 10070 Phase 2 changes
@@ -73,6 +70,8 @@ Release Notes - HBase - Version 1.1.2
     * [HBASE-14196] - Thrift server idle connection timeout issue
     * [HBASE-14206] - MultiRowRangeFilter returns records whose rowKeys are out of allowed ranges
     * [HBASE-14209] - TestShell visibility tests failing
+    * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
+    * [HBASE-14219] - src tgz no longer builds after HBASE-14085
 
 
 
@@ -107,6 +106,9 @@ Release Notes - HBase - Version 1.1.2
 
 ** Test
     * [HBASE-14197] - TestRegionServerHostname#testInvalidRegionServerHostnameAbortsServer fails in Jenkins
+
+
+
 
 
 Release Notes - HBase - Version 1.1.1 06/23/2015
