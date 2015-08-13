@@ -44,6 +44,7 @@
         <include>org.apache.hbase:hbase-procedure</include>
         <include>org.apache.hbase:hbase-protocol</include>
         <include>org.apache.hbase:hbase-rest</include>
+        <include>org.apache.hbase:hbase-resource-bundle</include>
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shaded</include>
         <include>org.apache.hbase:hbase-shaded-client</include>
