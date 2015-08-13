@@ -1446,7 +1446,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
         // close each store in parallel
         for (final Store store : stores.values()) {
-          assert abort || store.getFlushableSize() == 0 || writestate.readOnly;
+          long flushableSize = store.getFlushableSize();
+          if (!(abort || flushableSize == 0 || writestate.readOnly)) {
+            getRegionServerServices().abort("Assertion failed while closing store "
+                + getRegionInfo().getRegionNameAsString() + " " + store
+                + ". flushableSize expected=0, actual= " + flushableSize
+                + ". Current memstoreSize=" + getMemstoreSize() + ". Maybe a coprocessor "
+                + "operation failed and left the memstore in a partially updated state.", null);
+          }
           completionService
               .submit(new Callable<Pair<byte[], Collection<StoreFile>>>() {
                 @Override
