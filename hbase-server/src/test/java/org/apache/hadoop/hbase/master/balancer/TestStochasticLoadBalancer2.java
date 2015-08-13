@@ -25,7 +25,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 @Category({FlakeyTests.class, MediumTests.class})
-public class TestStochasticLoadBalancer2 extends TestStochasticLoadBalancer {
+public class TestStochasticLoadBalancer2 extends BalancerTestBase {
   private static final Log LOG = LogFactory.getLog(TestStochasticLoadBalancer2.class);
 
   @Test (timeout = 800000)
@@ -33,6 +33,7 @@ public class TestStochasticLoadBalancer2 extends TestStochasticLoadBalancer {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
+    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     TestStochasticLoadBalancer.loadBalancer.setConf(conf);
     int numNodes = 200;
     int numRegions = 40 * 200;
@@ -47,6 +48,7 @@ public class TestStochasticLoadBalancer2 extends TestStochasticLoadBalancer {
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 90 * 1000); // 90 sec
+    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     loadBalancer.setConf(conf);
     int numNodes = 1000;
     int numRegions = 20 * numNodes; // 20 * replication regions per RS
@@ -60,6 +62,7 @@ public class TestStochasticLoadBalancer2 extends TestStochasticLoadBalancer {
   public void testRegionReplicasOnMidClusterHighReplication() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 4000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
+    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     int numNodes = 80;
@@ -74,6 +77,7 @@ public class TestStochasticLoadBalancer2 extends TestStochasticLoadBalancer {
   public void testRegionReplicationOnMidClusterReplicationGreaterThanNumNodes() {
     conf.setLong(StochasticLoadBalancer.MAX_STEPS_KEY, 2000000L);
     conf.setLong("hbase.master.balancer.stochastic.maxRunningTime", 120 * 1000); // 120 sec
+    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 1.0f);
     loadBalancer.setConf(conf);
     int numNodes = 40;

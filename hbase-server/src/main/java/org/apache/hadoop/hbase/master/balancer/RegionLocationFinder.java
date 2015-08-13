@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -31,17 +30,18 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Lists;
 
 /**
  * This will find where data for a region is located in HDFS. It ranks
@@ -54,31 +54,27 @@ class RegionLocationFinder {
   private static final Log LOG = LogFactory.getLog(RegionLocationFinder.class);
 
   private Configuration conf;
-  private ClusterStatus status;
+  private volatile ClusterStatus status;
   private MasterServices services;
 
-  private CacheLoader<HRegionInfo, List<ServerName>> loader =
-      new CacheLoader<HRegionInfo, List<ServerName>>() {
+  private CacheLoader<HRegionInfo, HDFSBlocksDistribution> loader =
+           new CacheLoader<HRegionInfo, HDFSBlocksDistribution>() {
 
-        @Override
-        public List<ServerName> load(HRegionInfo key) throws Exception {
-          List<ServerName> servers = internalGetTopBlockLocation(key);
-          if (servers == null) {
-            return new LinkedList<ServerName>();
-          }
-          return servers;
-        }
-      };
+    @Override
+    public HDFSBlocksDistribution load(HRegionInfo key) throws Exception {
+      return internalGetTopBlockLocation(key);
+    }
+  };
 
   // The cache for where regions are located.
-  private LoadingCache<HRegionInfo, List<ServerName>> cache = null;
+  private LoadingCache<HRegionInfo, HDFSBlocksDistribution> cache = null;
 
   /**
    * Create a cache for region to list of servers
    * @param mins Number of mins to cache
    * @return A new Cache.
    */
-  private LoadingCache<HRegionInfo, List<ServerName>> createCache(int mins) {
+  private LoadingCache<HRegionInfo, HDFSBlocksDistribution> createCache(int mins) {
     return CacheBuilder.newBuilder().expireAfterAccess(mins, TimeUnit.MINUTES).build(loader);
   }
 
@@ -100,14 +96,9 @@ class RegionLocationFinder {
   }
 
   protected List<ServerName> getTopBlockLocations(HRegionInfo region) {
-    List<ServerName> servers = null;
-    try {
-      servers = cache.get(region);
-    } catch (ExecutionException ex) {
-      servers = new LinkedList<ServerName>();
-    }
-    return servers;
-
+    HDFSBlocksDistribution blocksDistribution = getBlockDistribution(region);
+    List<String> topHosts = blocksDistribution.getTopHosts();
+    return mapHostNameToServerName(topHosts);
   }
 
   /**
@@ -119,22 +110,20 @@ class RegionLocationFinder {
    * @param region region
    * @return ordered list of hosts holding blocks of the specified region
    */
-  protected List<ServerName> internalGetTopBlockLocation(HRegionInfo region) {
-    List<ServerName> topServerNames = null;
+  protected HDFSBlocksDistribution internalGetTopBlockLocation(HRegionInfo region) {
     try {
       HTableDescriptor tableDescriptor = getTableDescriptor(region.getTable());
       if (tableDescriptor != null) {
         HDFSBlocksDistribution blocksDistribution =
             HRegion.computeHDFSBlocksDistribution(getConf(), tableDescriptor, region);
-        List<String> topHosts = blocksDistribution.getTopHosts();
-        topServerNames = mapHostNameToServerName(topHosts);
+        return blocksDistribution;
       }
     } catch (IOException ioe) {
-      LOG.debug("IOException during HDFSBlocksDistribution computation. for " + "region = "
+      LOG.warn("IOException during HDFSBlocksDistribution computation. for " + "region = "
           + region.getEncodedName(), ioe);
     }
 
-    return topServerNames;
+    return new HDFSBlocksDistribution();
   }
 
   /**
@@ -167,7 +156,10 @@ class RegionLocationFinder {
    */
   protected List<ServerName> mapHostNameToServerName(List<String> hosts) {
     if (hosts == null || status == null) {
-      return null;
+      if (hosts == null) {
+        LOG.warn("RegionLocationFinder top hosts is null");
+      }
+      return Lists.newArrayList();
     }
 
     List<ServerName> topServerNames = new ArrayList<ServerName>();
@@ -188,5 +180,26 @@ class RegionLocationFinder {
       }
     }
     return topServerNames;
+  }
+
+  public HDFSBlocksDistribution getBlockDistribution(HRegionInfo hri) {
+    HDFSBlocksDistribution blockDistbn = null;
+    try {
+      if (cache.asMap().containsKey(hri)) {
+        blockDistbn = cache.get(hri);
+        return blockDistbn;
+      } else {
+        LOG.debug("HDFSBlocksDistribution not found in cache for region "
+            + hri.getRegionNameAsString());
+        blockDistbn = internalGetTopBlockLocation(hri);
+        cache.put(hri, blockDistbn);
+        return blockDistbn;
+      }
+    } catch (ExecutionException e) {
+      LOG.warn("Error while fetching cache entry ", e);
+      blockDistbn = internalGetTopBlockLocation(hri);
+      cache.put(hri, blockDistbn);
+      return blockDistbn;
+    }
   }
 }
