@@ -94,9 +94,6 @@ module Hbase
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
         end
-        if response.getAuthList.empty?
-          raise(ArgumentError, "No authentication set for the given user " + user)
-        end
         return response.getAuthList
       end
     end
@@ -107,9 +104,6 @@ module Hbase
         response = VisibilityClient.listLabels(@connection, regex)
         if response.nil?
           raise(ArgumentError, "DISABLED: Visibility labels feature is not available")
-        end
-        if response.getLabelList.empty?
-          raise(ArgumentError, "No auth label defined")
         end
         return response.getLabelList
       end
