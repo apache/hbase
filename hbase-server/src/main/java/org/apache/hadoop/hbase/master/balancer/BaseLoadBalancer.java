@@ -40,6 +40,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -98,6 +99,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     ArrayList<String> tables;
     HRegionInfo[] regions;
     Deque<RegionLoad>[] regionLoads;
+    private RegionLocationFinder regionFinder;
 
     int[][] regionLocations; //regionIndex -> list of serverIndex sorted by locality
 
@@ -122,12 +124,14 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     boolean hasRegionReplicas = false;   //whether there is regions with replicas
 
     Integer[] serverIndicesSortedByRegionCount;
+    Integer[] serverIndicesSortedByLocality;
 
     Map<String, Integer> serversToIndex;
     Map<String, Integer> hostsToIndex;
     Map<String, Integer> racksToIndex;
     Map<String, Integer> tablesToIndex;
     Map<HRegionInfo, Integer> regionsToIndex;
+    float[] localityPerServer;
 
     int numServers;
     int numHosts;
@@ -175,6 +179,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       List<List<Integer>> serversPerHostList = new ArrayList<List<Integer>>();
       List<List<Integer>> serversPerRackList = new ArrayList<List<Integer>>();
       this.clusterState = clusterState;
+      this.regionFinder = regionFinder;
 
       // Use servername and port as there can be dead servers in this list. We want everything with
       // a matching hostname and port to have the same index.
@@ -218,6 +223,8 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       regionLoads = new Deque[numRegions];
       regionLocations = new int[numRegions][];
       serverIndicesSortedByRegionCount = new Integer[numServers];
+      serverIndicesSortedByLocality = new Integer[numServers];
+      localityPerServer = new float[numServers];
 
       serverIndexToHostIndex = new int[numServers];
       serverIndexToRackIndex = new int[numServers];
@@ -249,6 +256,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         }
         primariesOfRegionsPerServer[serverIndex] = new int[regionsPerServer[serverIndex].length];
         serverIndicesSortedByRegionCount[serverIndex] = serverIndex;
+        serverIndicesSortedByLocality[serverIndex] = serverIndex;
       }
 
       hosts = new String[numHosts];
@@ -750,6 +758,123 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         return Integer.valueOf(getNumRegions(integer)).compareTo(getNumRegions(integer2));
       }
     };
+
+    void sortServersByLocality() {
+      Arrays.sort(serverIndicesSortedByLocality, localityComparator);
+    }
+
+    float getLocality(int server) {
+      return localityPerServer[server];
+    }
+
+    private Comparator<Integer> localityComparator = new Comparator<Integer>() {
+      @Override
+      public int compare(Integer integer, Integer integer2) {
+        float locality1 = getLocality(integer);
+        float locality2 = getLocality(integer2);
+        if (locality1 < locality2) {
+          return -1;
+        } else if (locality1 > locality2) {
+          return 1;
+        } else {
+          return 0;
+        }
+      }
+    };
+
+    int getLowestLocalityRegionServer() {
+      if (regionFinder == null) {
+        return -1;
+      } else {
+        sortServersByLocality();
+        // We want to find server with non zero regions having lowest locality.
+        int i = 0;
+        int lowestLocalityServerIndex = serverIndicesSortedByLocality[i];
+        while (localityPerServer[lowestLocalityServerIndex] == 0
+            && (regionsPerServer[lowestLocalityServerIndex].length == 0)) {
+          i++;
+          lowestLocalityServerIndex = serverIndicesSortedByLocality[i];
+        }
+        LOG.debug("Lowest locality region server with non zero regions is "
+            + servers[lowestLocalityServerIndex].getHostname() + " with locality "
+            + localityPerServer[lowestLocalityServerIndex]);
+        return lowestLocalityServerIndex;
+      }
+    }
+
+    int getLowestLocalityRegionOnServer(int serverIndex) {
+      if (regionFinder != null) {
+        float lowestLocality = 1.0f;
+        int lowestLocalityRegionIndex = 0;
+        if (regionsPerServer[serverIndex].length == 0) {
+          // No regions on that region server
+          return -1;
+        }
+        for (int j = 0; j < regionsPerServer[serverIndex].length; j++) {
+          int regionIndex = regionsPerServer[serverIndex][j];
+          HDFSBlocksDistribution distribution = regionFinder
+              .getBlockDistribution(regions[regionIndex]);
+          float locality = distribution.getBlockLocalityIndex(servers[serverIndex].getHostname());
+          if (locality < lowestLocality) {
+            lowestLocality = locality;
+            lowestLocalityRegionIndex = j;
+          }
+        }
+        LOG.debug(" Lowest locality region index is " + lowestLocalityRegionIndex
+            + " and its region server contains " + regionsPerServer[serverIndex].length
+            + " regions");
+        return regionsPerServer[serverIndex][lowestLocalityRegionIndex];
+      } else {
+        return -1;
+      }
+    }
+
+    float getLocalityOfRegion(int region, int server) {
+      if (regionFinder != null) {
+        HDFSBlocksDistribution distribution = regionFinder.getBlockDistribution(regions[region]);
+        return distribution.getBlockLocalityIndex(servers[server].getHostname());
+      } else {
+        return 0f;
+      }
+    }
+
+    int getLeastLoadedTopServerForRegion(int region) {
+      if (regionFinder != null) {
+        List<ServerName> topLocalServers = regionFinder.getTopBlockLocations(regions[region]);
+        int leastLoadedServerIndex = -1;
+        int load = Integer.MAX_VALUE;
+        for (ServerName sn : topLocalServers) {
+          int index = serversToIndex.get(sn);
+          int tempLoad = regionsPerServer[index].length;
+          if (tempLoad <= load) {
+            leastLoadedServerIndex = index;
+            load = tempLoad;
+          }
+        }
+        return leastLoadedServerIndex;
+      } else {
+        return -1;
+      }
+    }
+
+    void calculateRegionServerLocalities() {
+      if (regionFinder == null) {
+        LOG.warn("Region location finder found null, skipping locality calculations.");
+        return;
+      }
+      for (int i = 0; i < regionsPerServer.length; i++) {
+        HDFSBlocksDistribution distribution = new HDFSBlocksDistribution();
+        if (regionsPerServer[i].length > 0) {
+          for (int j = 0; j < regionsPerServer[i].length; j++) {
+            int regionIndex = regionsPerServer[i][j];
+            distribution.add(regionFinder.getBlockDistribution(regions[regionIndex]));
+          }
+        } else {
+          LOG.debug("Server " + servers[i].getHostname() + " had 0 regions.");
+        }
+        localityPerServer[i] = distribution.getBlockLocalityIndex(servers[i].getHostname());
+      }
+    }
 
     @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="SBSC_USE_STRINGBUFFER_CONCATENATION",
         justification="Not important but should be fixed")
