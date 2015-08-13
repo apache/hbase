@@ -355,7 +355,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         break;
       }
     }
-
     long endTime = EnvironmentEdgeManager.currentTime();
 
     metricsBalancer.balanceCluster(endTime - startTime);
@@ -699,46 +698,47 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     @Override
     Cluster.Action generate(Cluster cluster) {
       if (this.masterServices == null) {
-        return Cluster.NullAction;
+        int thisServer = pickRandomServer(cluster);
+        // Pick the other server
+        int otherServer = pickOtherRandomServer(cluster, thisServer);
+        return pickRandomRegions(cluster, thisServer, otherServer);
       }
-      // Pick a random region server
-      int thisServer = pickRandomServer(cluster);
 
-      // Pick a random region on this server
-      int thisRegion = pickRandomRegion(cluster, thisServer, 0.0f);
+      cluster.calculateRegionServerLocalities();
+      // Pick server with lowest locality
+      int thisServer = pickLowestLocalityServer(cluster);
+      int thisRegion;
+      if (thisServer == -1) {
+        LOG.warn("Could not pick lowest locality region server");
+        return Cluster.NullAction;
+      } else {
+      // Pick lowest locality region on this server
+        thisRegion = pickLowestLocalityRegionOnServer(cluster, thisServer);
+      }
 
       if (thisRegion == -1) {
         return Cluster.NullAction;
       }
 
-      // Pick the server with the highest locality
-      int otherServer = pickHighestLocalityServer(cluster, thisServer, thisRegion);
+      // Pick the least loaded server with good locality for the region
+      int otherServer = cluster.getLeastLoadedTopServerForRegion(thisRegion);
 
       if (otherServer == -1) {
         return Cluster.NullAction;
       }
 
-      // pick an region on the other server to potentially swap
-      int otherRegion = this.pickRandomRegion(cluster, otherServer, 0.5f);
+      // Let the candidate region be moved to its highest locality server.
+      int otherRegion = -1;
 
       return getAction(thisServer, thisRegion, otherServer, otherRegion);
     }
 
-    private int pickHighestLocalityServer(Cluster cluster, int thisServer, int thisRegion) {
-      int[] regionLocations = cluster.regionLocations[thisRegion];
+    private int pickLowestLocalityServer(Cluster cluster) {
+      return cluster.getLowestLocalityRegionServer();
+    }
 
-      if (regionLocations == null || regionLocations.length <= 1) {
-        return pickOtherRandomServer(cluster, thisServer);
-      }
-
-      for (int loc : regionLocations) {
-        if (loc >= 0 && loc != thisServer) { // find the first suitable server
-          return loc;
-        }
-      }
-
-      // no location found
-      return pickOtherRandomServer(cluster, thisServer);
+    private int pickLowestLocalityRegionOnServer(Cluster cluster, int server) {
+      return cluster.getLowestLocalityRegionOnServer(server);
     }
 
     void setServices(MasterServices services) {
@@ -1182,11 +1182,9 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         }
 
         if (index < 0) {
-          if (regionLocations.length > 0) {
-            cost += 1;
-          }
+          cost += 1;
         } else {
-          cost += (double) index / (double) regionLocations.length;
+          cost += (1 - cluster.getLocalityOfRegion(i, index));
         }
       }
       return scale(0, max, cost);
