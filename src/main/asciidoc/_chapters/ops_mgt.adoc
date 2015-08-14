@@ -1622,7 +1622,7 @@ handling multiple workloads:
 HBASE-11598 introduces quotas, which allow you to throttle requests based on
 the following limits:
 
-. <<request-quotas,The number or size of requests in a given timeframe>>
+. <<request-quotas,The number or size of requests(read, write, or read+write) in a given timeframe>>
 . <<namespace-quotas,The number of tables allowed in a namespace>>
 
 These limits can be enforced for a specified user, table, or namespace.
@@ -1633,6 +1633,7 @@ Quotas are disabled by default. To enable the feature, set the `hbase.quota.enab
 property to `true` in _hbase-site.xml_ file for all cluster nodes.
 
 .General Quota Syntax
+. THROTTLE_TYPE can be expressed as READ, WRITE, or the default type(read + write).
 . Timeframes  can be expressed in the following units: `sec`, `min`, `hour`, `day`
 . Request sizes can be expressed in the following units: `B` (bytes), `K` (kilobytes),
 `M` (megabytes), `G` (gigabytes), `T` (terabytes), `P` (petabytes)
@@ -1652,17 +1653,26 @@ in `hbase-site.xml`. This property is expressed in milliseconds and defaults to 
 # Limit user u1 to 10 requests per second
 hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10req/sec'
 
+# Limit user u1 to 10 read requests per second
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', LIMIT => '10req/sec'
+
 # Limit user u1 to 10 M per day everywhere
 hbase> set_quota TYPE => THROTTLE, USER => 'u1', LIMIT => '10M/day'
 
+# Limit user u1 to 10 M write size per sec
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => WRITE, USER => 'u1', LIMIT => '10M/sec'
+
 # Limit user u1 to 5k per minute on table t2
 hbase> set_quota TYPE => THROTTLE, USER => 'u1', TABLE => 't2', LIMIT => '5K/min'
+
+# Limit user u1 to 10 read requests per sec on table t2
+hbase> set_quota TYPE => THROTTLE, THROTTLE_TYPE => READ, USER => 'u1', TABLE => 't2', LIMIT => '10req/sec'
 
 # Remove an existing limit from user u1 on namespace ns2
 hbase> set_quota TYPE => THROTTLE, USER => 'u1', NAMESPACE => 'ns2', LIMIT => NONE
 
 # Limit all users to 10 requests per hour on namespace ns1
-hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/shour'
+hbase> set_quota TYPE => THROTTLE, NAMESPACE => 'ns1', LIMIT => '10req/hour'
 
 # Limit all users to 10 T per hour on table t1
 hbase> set_quota TYPE => THROTTLE, TABLE => 't1', LIMIT => '10T/hour'

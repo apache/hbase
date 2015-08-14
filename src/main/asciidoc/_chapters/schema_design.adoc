@@ -27,7 +27,19 @@
 :icons: font
 :experimental:
 
-A good general introduction on the strength and weaknesses modelling on the various non-rdbms datastores is Ian Varley's Master thesis, link:http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf[No Relation: The Mixed Blessings of Non-Relational Databases]. Also, read <<keyvalue,keyvalue>> for how HBase stores data internally, and the section on <<schema.casestudies,schema.casestudies>>.
+A good introduction on the strength and weaknesses modelling on the various non-rdbms datastores is
+to be found in Ian Varley's Master thesis,
+link:http://ianvarley.com/UT/MR/Varley_MastersReport_Full_2009-08-07.pdf[No Relation: The Mixed Blessings of Non-Relational Databases].
+It is a little dated now but a good background read if you have a moment on how HBase schema modeling
+differs from how it is done in an RDBMS. Also,
+read <<keyvalue,keyvalue>> for how HBase stores data internally, and the section on <<schema.casestudies,schema.casestudies>>.
+
+The documentation on the Cloud Bigtable website, link:https://cloud.google.com/bigtable/docs/schema-design[Designing Your Schema],
+is pertinent and nicely done and lessons learned there equally apply here in HBase land; just divide
+any quoted values by ~10 to get what works for HBase: e.g. where it says individual values can be ~10MBs in size, HBase can do similar -- perhaps best
+to go smaller if you can -- and where it says a maximum of 100 column families in Cloud Bigtable, think ~10 when
+modeling on HBase.
+
 
 [[schema.creation]]
 ==  Schema Creation
@@ -700,7 +712,7 @@ See https://hbase.apache.org/apidocs/org/apache/hadoop/hbase/client/Scan.html#se
 ====
 
 [[schema.casestudies.log_timeseries.varkeys]]
-==== Variangle Length or Fixed Length Rowkeys?
+==== Variable Length or Fixed Length Rowkeys?
 
 It is critical to remember that rowkeys are stamped on every column in HBase.
 If the hostname is `a` and the event type is `e1` then the resulting rowkey would be quite small.

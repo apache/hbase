@@ -204,6 +204,14 @@ See the release notes on the issue link:https://issues.apache.org/jira/browse/HB
 .Distributed Log Replay
 <<distributed.log.replay>> is off by default in HBase 1.0.0. Enabling it can make a big difference improving HBase MTTR. Enable this feature if you are doing a clean stop/start when you are upgrading. You cannot rolling upgrade to this feature (caveat if you are running on a version of HBase in excess of HBase 0.98.4 -- see link:https://issues.apache.org/jira/browse/HBASE-12577[HBASE-12577 Disable distributed log replay by default] for more).
 
+.Mismatch Of `hbase.client.scanner.max.result.size` Between Client and Server
+If either the client or server version is lower than 0.98.11/1.0.0 and the server
+has a smaller value for `hbase.client.scanner.max.result.size` than the client, scan
+requests that reach the server's `hbase.client.scanner.max.result.size` are likely
+to miss data. In particular, 0.98.11 defaults `hbase.client.scanner.max.result.size`
+to 2 MB but other versions default to larger values. For this reason, be very careful
+using 0.98.11 servers with any other client version.
+
 [[upgrade1.0.rolling.upgrade]]
 ==== Rolling upgrade from 0.98.x to HBase 1.0.0
 .From 0.96.x to 1.0.0

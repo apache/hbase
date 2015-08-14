@@ -1016,16 +1016,7 @@ For background, see link:https://issues.apache.org/jira/browse/HBASE-2643[HBASE-
 
 ===== Performance Improvements during Log Splitting
 
-WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. <<distributed.log.splitting>> and <<distributed.log.replay>> were developed to improve performance during log splitting.
-
-[[distributed.log.splitting]]
-====== Distributed Log Splitting
-
-_Distributed Log Splitting_ was added in HBase version 0.92 (link:https://issues.apache.org/jira/browse/HBASE-1364[HBASE-1364]) by Prakash Khemani from Facebook.
-It reduces the time to complete log splitting dramatically, improving the availability of regions and tables.
-For example, recovering a crashed cluster took around 9 hours with single-threaded log splitting, but only about six minutes with distributed log splitting.
-
-The information in this section is sourced from Jimmy Xiang's blog post at http://blog.cloudera.com/blog/2012/07/hbase-log-splitting/.
+WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. <<distributed.log.splitting>> was developed to improve performance during log splitting.
 
 .Enabling or Disabling Distributed Log Splitting
 
@@ -2222,18 +2213,6 @@ The region replica having replica_id==0 is called the primary region, and the ot
 Only the primary can accept writes from the client, and the primary will always contain the latest changes.
 Since all writes still have to go through the primary region, the writes are not highly-available (meaning they might block for some time if the region becomes unavailable).
 
-The writes are asynchronously sent to the secondary region replicas using an _Async WAL replication_ feature.
-This works similarly to HBase's multi-datacenter replication, but instead the data from a region is replicated to the secondary regions.
-Each secondary replica always receives and observes the writes in the same order that the primary region committed them.
-This ensures that the secondaries won't diverge from the primary regions data, but since the log replication is asnyc, the data might be stale in secondary regions.
-In some sense, this design can be thought of as _in-cluster replication_, where instead of replicating to a different datacenter, the data goes to a secondary region to keep secondary region's in-memory state up to date.
-The data files are shared between the primary region and the other replicas, so that there is no extra storage overhead.
-However, the secondary regions will have recent non-flushed data in their MemStores, which increases the memory overhead.
-
-
-Async WAL replication feature is being implemented in Phase 2 of issue HBASE-10070.
-Before this, region replicas will only be updated with flushed data files from the primary (see `hbase.regionserver.storefile.refresh.period` below). It is also possible to use this without setting `storefile.refresh.period` for read only tables.
-
 
 === Timeline Consistency
 
@@ -2273,8 +2252,8 @@ In terms of semantics, TIMELINE consistency as implemented by HBase differs from
   There is no stickiness to region replicas or a transaction-id based guarantee.
   If required, this can be implemented later though.
 
-.HFile Version 1
-image::timeline_consistency.png[HFile Version 1]
+.Timeline Consistency
+image::timeline_consistency.png[Timeline Consistency]
 
 To better understand the TIMELINE semantics, lets look at the above diagram.
 Lets say that there are two clients, and the first one writes x=1 at first, then x=2 and x=3 later.
@@ -2309,11 +2288,52 @@ Following are advantages and disadvantages.
 To serve the region data from multiple replicas, HBase opens the regions in secondary mode in the region servers.
 The regions opened in secondary mode will share the same data files with the primary region replica, however each secondary region replica will have its own MemStore to keep the unflushed data (only primary region can do flushes). Also to serve reads from secondary regions, the blocks of data files may be also cached in the block caches for the secondary regions.
 
+=== Where is the code
+This feature is delivered in two phases, Phase 1 and 2. The first phase is done in time for HBase-1.0.0 release. Meaning that using HBase-1.0.x, you can use all the features that are marked for Phase 1. Phase 2 is committed in HBase-1.1.0, meaning all HBase versions after 1.1.0 should contain Phase 2 items. 
+
+=== Propagating writes to region replicas
+As discussed above writes only go to the primary region replica. For propagating the writes from the primary region replica to the secondaries, there are two different mechanisms. For read-only tables, you do not need to use any of the following methods. Disabling and enabling the table should make the data available in all region replicas. For mutable tables, you have to use *only* one of the following mechanisms: storefile refresher, or async wal replication. The latter is recommeded. 
+
+==== StoreFile Refresher
+The first mechanism is store file refresher which is introduced in HBase-1.0+. Store file refresher is a thread per region server, which runs periodically, and does a refresh operation for the store files of the primary region for the secondary region replicas. If enabled, the refresher will ensure that the secondary region replicas see the new flushed, compacted or bulk loaded files from the primary region in a timely manner. However, this means that only flushed data can be read back from the secondary region replicas, and after the refresher is run, making the secondaries lag behind the primary for an a longer time. 
+
+For turning this feature on, you should configure `hbase.regionserver.storefile.refresh.period` to a non-zero value. See Configuration section below. 
+
+==== Asnyc WAL replication
+The second mechanism for propagation of writes to secondaries is done via “Async WAL Replication” feature and is only available in HBase-1.1+. This works similarly to HBase’s multi-datacenter replication, but instead the data from a region is replicated to the secondary regions. Each secondary replica always receives and observes the writes in the same order that the primary region committed them. In some sense, this design can be thought of as “in-cluster replication”, where instead of replicating to a different datacenter, the data goes to secondary regions to keep secondary region’s in-memory state up to date. The data files are shared between the primary region and the other replicas, so that there is no extra storage overhead. However, the secondary regions will have recent non-flushed data in their memstores, which increases the memory overhead. The primary region writes flush, compaction, and bulk load events to its WAL as well, which are also replicated through wal replication to secondaries. When they observe the flush/compaction or bulk load event, the secondary regions replay the event to pick up the new files and drop the old ones.  
+
+Committing writes in the same order as in primary ensures that the secondaries won’t diverge from the primary regions data, but since the log replication is asynchronous, the data might still be stale in secondary regions. Since this feature works as a replication endpoint, the performance and latency characteristics is expected to be similar to inter-cluster replication.
+
+Async WAL Replication is *disabled* by default. You can enable this feature by setting `hbase.region.replica.replication.enabled` to `true`.
+Asyn WAL Replication feature will add a new replication peer named `region_replica_replication` as a replication peer when you create a table with region replication > 1 for the first time. Once enabled, if you want to disable this feature, you need to do two actions:
+* Set configuration property `hbase.region.replica.replication.enabled` to false in `hbase-site.xml` (see Configuration section below)
+* Disable the replication peer named `region_replica_replication` in the cluster using hbase shell or `ReplicationAdmin` class:
+[source,bourne]
+----
+	hbase> disable_peer 'region_replica_replication'
+----
+
+=== Store File TTL 
+In both of the write propagation approaches mentioned above, store files of the primary will be opened in secondaries independent of the primary region. So for files that the primary compacted away, the secondaries might still be referring to these files for reading. Both features are using HFileLinks to refer to files, but there is no protection (yet) for guaranteeing that the file will not be deleted prematurely. Thus, as a guard, you should set the configuration property `hbase.master.hfilecleaner.ttl` to a larger value, such as 1 hour to guarantee that you will not receive IOExceptions for requests going to replicas. 
+
+=== Region replication for META table’s region
+Currently, Async WAL Replication is not done for the META table’s WAL. The meta table’s secondary replicas still refreshes themselves from the persistent store files. Hence the `hbase.regionserver.meta.storefile.refresh.period` needs to be set to a certain non-zero value for refreshing the meta store files. Note that this configuration is configured differently than 
+`hbase.regionserver.storefile.refresh.period`. 
+
+=== Memory accounting
+The secondary region replicas refer to the data files of the primary region replica, but they have their own memstores (in HBase-1.1+) and uses block cache as well. However, one distinction is that the secondary region replicas cannot flush the data when there is memory pressure for their memstores. They can only free up memstore memory when the primary region does a flush and this flush is replicated to the secondary. Since in a region server hosting primary replicas for some regions and secondaries for some others, the secondaries might cause extra flushes to the primary regions in the same host. In extreme situations, there can be no memory left for adding new writes coming from the primary via wal replication. For unblocking this situation (and since secondary cannot flush by itself), the secondary is allowed to do a “store file refresh” by doing a file system list operation to pick up new files from primary, and possibly dropping its memstore. This refresh will only be performed if the memstore size of the biggest secondary region replica is at least `hbase.region.replica.storefile.refresh.memstore.multiplier` (default 4) times bigger than the biggest memstore of a primary replica. One caveat is that if this is performed, the secondary can observe partial row updates across column families (since column families are flushed independently). The default should be good to not do this operation frequently. You can set this value to a large number to disable this feature if desired, but be warned that it might cause the replication to block forever.
+
+=== Secondary replica failover
+When a secondary region replica first comes online, or fails over, it may have served some edits from it’s memstore. Since the recovery is handled differently for secondary replicas, the secondary has to ensure that it does not go back in time before it starts serving requests after assignment. For doing that, the secondary waits until it observes a full flush cycle (start flush, commit flush) or a “region open event” replicated from the primary. Until this happens, the secondary region replica will reject all read requests by throwing an IOException with message “The region's reads are disabled”. However, the other replicas will probably still be available to read, thus not causing any impact for the rpc with TIMELINE consistency. To facilitate faster recovery, the secondary region will trigger a flush request from the primary when it is opened. The configuration property `hbase.region.replica.wait.for.primary.flush` (enabled by default) can be used to disable this feature if needed. 
+
+
+
+
 === Configuration properties
 
-To use highly available reads, you should set the following properties in hbase-site.xml file.
+To use highly available reads, you should set the following properties in `hbase-site.xml` file.
 There is no specific configuration to enable or disable region replicas.
-Instead you can change the number of region replicas per table to increase or decrease at the table creation or with alter table.
+Instead you can change the number of region replicas per table to increase or decrease at the table creation or with alter table. The following configuration is for using async wal replication and using meta replicas of 3. 
 
 
 ==== Server side properties
@@ -2321,11 +2341,27 @@ Instead you can change the number of region replicas per table to increase or de
 [source,xml]
 ----
 <property>
-  <name>hbase.regionserver.storefile.refresh.period</name>
-  <value>0</value>
-  <description>
-    The period (in milliseconds) for refreshing the store files for the secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region. But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting.
-  </description>
+    <name>hbase.regionserver.storefile.refresh.period</name>
+    <value>0</value>
+    <description>
+      The period (in milliseconds) for refreshing the store files for the secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting.
+    </description>
+</property>
+
+<property>
+    <name>hbase.regionserver.meta.storefile.refresh.period</name>
+    <value>300000</value>
+    <description>
+      The period (in milliseconds) for refreshing the store files for the hbase:meta tables secondary regions. 0 means this feature is disabled. Secondary regions sees new files (from flushes and compactions) from primary once the secondary region refreshes the list of files in the region (there is no notification mechanism). But too frequent refreshes might cause extra Namenode pressure. If the files cannot be refreshed for longer than HFile TTL (hbase.master.hfilecleaner.ttl) the requests are rejected. Configuring HFile TTL to a larger value is also recommended with this setting. This should be a non-zero number if meta replicas are enabled (via hbase.meta.replica.count set to greater than 1).
+    </description>
+</property>
+
+<property>
+    <name>hbase.region.replica.replication.enabled</name>
+    <value>true</value>
+    <description>
+      Whether asynchronous WAL replication to the secondary region replicas is enabled or not. If this is enabled, a replication peer named "region_replica_replication" will be created which will tail the logs and replicate the mutatations to region replicas for tables that have region replication > 1. If this is enabled once, disabling this replication also      requires disabling the replication peer using shell or ReplicationAdmin java class. Replication to secondary region replicas works over standard inter-cluster replication. So replication, if disabled explicitly, also has to be enabled by setting "hbase.replication"· to true for this feature to work.
+    </description>
 </property>
 <property>
   <name>hbase.region.replica.replication.memstore.enabled</name>
@@ -2341,6 +2377,38 @@ Instead you can change the number of region replicas per table to increase or de
     of row-level consistency, even when the read requests `Consistency.TIMELINE`.
   </description>
 </property>
+
+<property>
+    <name>hbase.master.hfilecleaner.ttl</name>
+    <value>3600000</value>
+    <description>
+      The period (in milliseconds) to keep store files in the archive folder before deleting them from the file system.</description>
+</property>
+
+<property>
+    <name>hbase.meta.replica.count</name>
+    <value>3</value>
+    <description>
+      Region replication count for the meta regions. Defaults to 1.
+    </description>
+</property>
+
+
+<property> 
+    <name>hbase.region.replica.storefile.refresh.memstore.multiplier</name>
+    <value>4</value>
+    <description>
+      The multiplier for a “store file refresh” operation for the secondary region replica. If a region server has memory pressure, the secondary region will refresh it’s store files if the memstore size of the biggest secondary replica is bigger this many times than the memstore size of the biggest primary replica. Set this to a very big value to disable this feature (not recommended).
+    </description>
+</property>
+
+<property>
+ <name>hbase.region.replica.wait.for.primary.flush</name>
+    <value>true</value>
+    <description>
+      Whether to wait for observing a full flush cycle from the primary before start serving data in a secondary. Disabling this might cause the secondary region replicas to go back in time for reads between region movements.
+    </description>
+</property>
 ----
 
 One thing to keep in mind also is that, region replica placement policy is only enforced by the `StochasticLoadBalancer` which is the default balancer.
@@ -2353,11 +2421,11 @@ Ensure to set the following for all clients (and servers) that will use region r
 [source,xml]
 ----
 <property>
-  <name>hbase.ipc.client.allowsInterrupt</name>
-  <value>true</value>
-  <description>
-    Whether to enable interruption of RPC threads at the client side. This is required for region replicas with fallback RPC’s to secondary regions.
-  </description>
+    <name>hbase.ipc.client.specificThreadForWriting</name>
+    <value>true</value>
+    <description>
+      Whether to enable interruption of RPC threads at the client side. This is required for region replicas with fallback RPC’s to secondary regions.
+    </description>
 </property>
 <property>
   <name>hbase.client.primaryCallTimeout.get</name>
@@ -2380,13 +2448,29 @@ Ensure to set the following for all clients (and servers) that will use region r
     The timeout (in microseconds), before secondary fallback RPC’s are submitted for scan requests with Consistency.TIMELINE to the secondary replicas of the regions. Defaults to 1 sec. Setting this lower will increase the number of RPC’s, but will lower the p99 latencies.
   </description>
 </property>
+<property>
+    <name>hbase.meta.replicas.use</name>
+    <value>true</value>
+    <description>
+      Whether to use meta table replicas or not. Default is false.
+    </description>
+</property>
 ----
+
+Note HBase-1.0.x users should use `hbase.ipc.client.allowsInterrupt` rather than `hbase.ipc.client.specificThreadForWriting`. 
+
+=== User Interface
+
+In the masters user interface, the region replicas of a table are also shown together with the primary regions.
+You can notice that the replicas of a region will share the same start and end keys and the same region name prefix.
+The only difference would be the appended replica_id (which is encoded as hex), and the region encoded name will be different.
+You can also see the replica ids shown explicitly in the UI.
 
 === Creating a table with region replication
 
 Region replication is a per-table property.
-All tables have REGION_REPLICATION = 1 by default, which means that there is only one replica per region.
-You can set and change the number of replicas per region of a table by supplying the REGION_REPLICATION property in the table descriptor.
+All tables have `REGION_REPLICATION = 1` by default, which means that there is only one replica per region.
+You can set and change the number of replicas per region of a table by supplying the `REGION_REPLICATION` property in the table descriptor.
 
 
 ==== Shell
@@ -2414,21 +2498,8 @@ admin.createTable(htd);
 
 You can also use `setRegionReplication()` and alter table to increase, decrease the region replication for a table.
 
-=== Region splits and merges
 
-Region splits and merges are not compatible with regions with replicas yet.
-So you have to pre-split the table, and disable the region splits.
-Also you should not execute region merges on tables with region replicas.
-To disable region splits you can use DisabledRegionSplitPolicy as the split policy.
-
-=== User Interface
-
-In the masters user interface, the region replicas of a table are also shown together with the primary regions.
-You can notice that the replicas of a region will share the same start and end keys and the same region name prefix.
-The only difference would be the appended replica_id (which is encoded as hex), and the region encoded name will be different.
-You can also see the replica ids shown explicitly in the UI.
-
-=== API and Usage
+=== Read API and Usage
 
 ==== Shell
 
@@ -2490,7 +2561,7 @@ scan.setConsistency(Consistency.TIMELINE);
 ResultScanner scanner = table.getScanner(scan);
 ----
 
-You can inspect whether the results are coming from primary region or not by calling the Result.isStale() method:
+You can inspect whether the results are coming from primary region or not by calling the `Result.isStale()` method:
 
 [source,java]
 ----
