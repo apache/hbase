@@ -930,6 +930,7 @@ public class StoreFile {
             // merge(row, qualifier)
             // TODO: could save one buffer copy in case of compound Bloom
             // filters when this involves creating a KeyValue
+            // TODO : Handle while writes also
             bloomKeyKV = KeyValueUtil.createFirstOnRow(cell.getRowArray(), cell.getRowOffset(),
                 cell.getRowLength(), 
                 HConstants.EMPTY_BYTE_ARRAY, 0, 0, cell.getQualifierArray(),
@@ -1219,8 +1220,8 @@ public class StoreFile {
      * checks Bloom filters for single-row or single-row-column scans. Bloom
      * filter checking for multi-gets is implemented as part of the store
      * scanner system (see {@link StoreFileScanner#seekExactly}) and uses
-     * the lower-level API {@link #passesGeneralBloomFilter(byte[], int, int, byte[],
-     * int, int)}.
+     * the lower-level API {@link #passesGeneralRowBloomFilter(byte[], int, int)}
+     * and {@link #passesGeneralRowColBloomFilter(Cell)}.
      *
      * @param scan the scan specification. Used to determine the row, and to
      *          check whether this is a single-row ("get") scan.
@@ -1241,13 +1242,16 @@ public class StoreFile {
       byte[] row = scan.getStartRow();
       switch (this.bloomFilterType) {
         case ROW:
-          return passesGeneralBloomFilter(row, 0, row.length, null, 0, 0);
+          return passesGeneralRowBloomFilter(row, 0, row.length);
 
         case ROWCOL:
           if (columns != null && columns.size() == 1) {
             byte[] column = columns.first();
-            return passesGeneralBloomFilter(row, 0, row.length, column, 0,
-                column.length);
+            // create the required fake key
+            Cell kvKey = KeyValueUtil.createFirstOnRow(row, 0, row.length,
+              HConstants.EMPTY_BYTE_ARRAY, 0, 0, column, 0,
+              column.length);
+            return passesGeneralRowColBloomFilter(kvKey);
           }
 
           // For multi-column queries the Bloom filter is checked from the
@@ -1295,15 +1299,9 @@ public class StoreFile {
      * @param row
      * @param rowOffset
      * @param rowLen
-     * @param col
-     * @param colOffset
-     * @param colLen
      * @return True if passes
      */
-    public boolean passesGeneralBloomFilter(byte[] row, int rowOffset,
-        int rowLen, byte[] col, int colOffset, int colLen) {
-      // Cache Bloom filter as a local variable in case it is set to null by
-      // another thread on an IO error.
+    public boolean passesGeneralRowBloomFilter(byte[] row, int rowOffset, int rowLen) {
       BloomFilter bloomFilter = this.generalBloomFilter;
       if (bloomFilter == null) {
         return true;
@@ -1311,31 +1309,39 @@ public class StoreFile {
 
       // Used in ROW bloom
       byte[] key = null;
-      // Used in ROW_COL bloom
-      KeyValue kvKey = null;
-      switch (bloomFilterType) {
-        case ROW:
-          if (col != null) {
-            throw new RuntimeException("Row-only Bloom filter called with " +
-                "column specified");
-          }
-          if (rowOffset != 0 || rowLen != row.length) {
-              throw new AssertionError("For row-only Bloom filters the row "
-                  + "must occupy the whole array");
-          }
-          key = row;
-          break;
-
-        case ROWCOL:
-          kvKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen,
-              HConstants.EMPTY_BYTE_ARRAY, 0, 0, col, colOffset,
-              colLen);
-          break;
-
-        default:
-          return true;
+      if (rowOffset != 0 || rowLen != row.length) {
+        throw new AssertionError(
+            "For row-only Bloom filters the row " + "must occupy the whole array");
       }
+      key = row;
+      return checkGeneralBloomFilter(key, null, bloomFilter);
+    }
 
+    /**
+     * A method for checking Bloom filters. Called directly from
+     * StoreFileScanner in case of a multi-column query.
+     *
+     * @param cell
+     *          the cell to check if present in BloomFilter
+     * @return True if passes
+     */
+    public boolean passesGeneralRowColBloomFilter(Cell cell) {
+      BloomFilter bloomFilter = this.generalBloomFilter;
+      if (bloomFilter == null) {
+        return true;
+      }
+      // Used in ROW_COL bloom
+      Cell kvKey = null;
+      // Already if the incoming key is a fake rowcol key then use it as it is
+      if (cell.getTypeByte() == KeyValue.Type.Maximum.getCode() && cell.getFamilyLength() == 0) {
+        kvKey = cell;
+      } else {
+        kvKey = CellUtil.createFirstOnRowCol(cell);
+      }
+      return checkGeneralBloomFilter(null, kvKey, bloomFilter);
+    }
+
+    private boolean checkGeneralBloomFilter(byte[] key, Cell kvKey, BloomFilter bloomFilter) {
       // Empty file
       if (reader.getTrailer().getEntryCount() == 0)
         return false;
@@ -1374,8 +1380,7 @@ public class StoreFile {
             // columns, a file might be skipped if using row+col Bloom filter.
             // In order to ensure this file is included an additional check is
             // required looking only for a row bloom.
-            KeyValue rowBloomKey = KeyValueUtil.createFirstOnRow(row, rowOffset, rowLen,
-                HConstants.EMPTY_BYTE_ARRAY, 0, 0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+            Cell rowBloomKey = CellUtil.createFirstOnRow(kvKey);
             // hbase:meta does not have blooms. So we need not have special interpretation
             // of the hbase:meta cells.  We can safely use Bytes.BYTES_RAWCOMPARATOR for ROW Bloom
             if (keyIsAfterLast

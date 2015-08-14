@@ -1225,9 +1225,30 @@ public final class CellUtil {
    * @return First possible Cell on passed Cell's row.
    */
   public static Cell createFirstOnRow(final Cell cell) {
-    return new FirstOnRowFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    if (cell instanceof ByteBufferedCell) {
+      return new FirstOnRowByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength());
+    }
+    return new FirstOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
 
+  /**
+   * Create a Cell that is smaller than all other possible Cells for the given Cell's row.
+   *
+   * @param cell
+   * @return First possible Cell on passed Cell's row.
+   */
+  public static Cell createFirstOnRowCol(final Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return new FirstOnRowColByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength());
+    }
+    return new FirstOnRowColCell(cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength(), HConstants.EMPTY_BYTE_ARRAY, 0, (byte)0, cell.getQualifierArray(),
+        cell.getQualifierOffset(), cell.getQualifierLength());
+  }
   /**
    * Create a Cell that is smaller than all other possible Cells for the given Cell row's next row.
    * Makes the next row's rowkey by appending single byte 0x00 to the end of current row key.
@@ -1236,7 +1257,7 @@ public final class CellUtil {
     byte[] nextRow = new byte[cell.getRowLength() + 1];
     copyRowTo(cell, nextRow, 0);
     nextRow[nextRow.length - 1] = 0;// maybe not necessary
-    return new FirstOnRowFakeCell(nextRow, 0, (short) nextRow.length);
+    return new FirstOnRowCell(nextRow, 0, (short) nextRow.length);
   }
 
   /**
@@ -1250,7 +1271,7 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's rk:cf and passed qualifier.
    */
   public static Cell createFirstOnRowCol(final Cell cell, byte[] qArray, int qoffest, int qlength) {
-    return new FirstOnRowColumnFakeCell(cell.getRowArray(), cell.getRowOffset(),
+    return new FirstOnRowColCell(cell.getRowArray(), cell.getRowOffset(),
         cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         qArray, qoffest, qlength);
   }
@@ -1264,7 +1285,7 @@ public final class CellUtil {
    * @param ts
    */
   public static Cell createFirstOnRowColTS(Cell cell, long ts) {
-    return new FirstOnRowColumnTSFakeCell(cell.getRowArray(), cell.getRowOffset(),
+    return new FirstOnRowColTSCell(cell.getRowArray(), cell.getRowOffset(),
         cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(), ts);
   }
@@ -1276,7 +1297,7 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's row.
    */
   public static Cell createLastOnRow(final Cell cell) {
-    return new LastOnRowFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
+    return new LastOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
 
   /**
@@ -1288,7 +1309,7 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's rk:cf:q.
    */
   public static Cell createLastOnRowCol(final Cell cell) {
-    return new LastOnRowColumnFakeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+    return new LastOnRowColCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
         cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
   }
@@ -1307,7 +1328,11 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static abstract class FakeCell implements Cell {
+  /**
+   * These cells are used in reseeks/seeks to improve the read performance.
+   * They are not real cells that are returned back to the clients
+   */
+  private static abstract class EmptyCell implements Cell {
 
     @Override
     public byte[] getRowArray() {
@@ -1391,12 +1416,150 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class FirstOnRowFakeCell extends FakeCell {
+  /**
+   * These cells are used in reseeks/seeks to improve the read performance.
+   * They are not real cells that are returned back to the clients
+   */
+  private static abstract class EmptyByteBufferedCell extends ByteBufferedCell {
+
+    @Override
+    public byte[] getRowArray() {
+      return CellUtil.cloneRow(this);
+    }
+
+    @Override
+    public int getRowOffset() {
+      return 0;
+    }
+
+    @Override
+    public short getRowLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return CellUtil.cloneFamily(this);
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return 0;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return CellUtil.cloneQualifier(this);
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return 0;
+    }
+
+    @Override
+    public long getSequenceId() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      return CellUtil.cloneValue(this);
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return 0;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return CellUtil.cloneTags(this);
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getTagsLength() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getRowByteBuffer() {
+      return HConstants.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    public int getRowPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getFamilyByteBuffer() {
+      return HConstants.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    public int getFamilyPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getQualifierByteBuffer() {
+      return HConstants.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    public int getQualifierPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getTagsByteBuffer() {
+      return HConstants.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    public int getTagsPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getValueByteBuffer() {
+      return HConstants.EMPTY_BYTE_BUFFER;
+    }
+
+    @Override
+    public int getValuePositionInByteBuffer() {
+      return 0;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowCell extends EmptyCell {
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
 
-    public FirstOnRowFakeCell(final byte[] row, int roffset, short rlength) {
+    public FirstOnRowCell(final byte[] row, int roffset, short rlength) {
       this.rowArray = row;
       this.roffset = roffset;
       this.rlength = rlength;
@@ -1429,7 +1592,85 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class FirstOnRowColumnFakeCell extends FirstOnRowFakeCell {
+  private static class FirstOnRowByteBufferedCell extends EmptyByteBufferedCell {
+    private final ByteBuffer rowBuff;
+    private final int roffset;
+    private final short rlength;
+
+    public FirstOnRowByteBufferedCell(final ByteBuffer row, int roffset, short rlength) {
+      this.rowBuff = row;
+      this.roffset = roffset;
+      this.rlength = rlength;
+    }
+
+    @Override
+    public ByteBuffer getRowByteBuffer() {
+      return this.rowBuff;
+    }
+
+    @Override
+    public int getRowPositionInByteBuffer() {
+      return this.roffset;
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rlength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.LATEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.Maximum.getCode();
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowColByteBufferedCell extends FirstOnRowByteBufferedCell {
+    private final ByteBuffer colBuff;
+    private final int colOffset;
+    private final int colLength;
+
+    public FirstOnRowColByteBufferedCell(final ByteBuffer row, int roffset, short rlength,
+        final ByteBuffer col, final int colOffset, final int colLength) {
+      super(row, roffset, rlength);
+      this.colBuff = col;
+      this.colOffset = colOffset;
+      this.colLength = colLength;
+    }
+
+    @Override
+    public ByteBuffer getQualifierByteBuffer() {
+      return this.colBuff;
+    }
+
+    @Override
+    public int getQualifierPositionInByteBuffer() {
+      return this.colOffset;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.colLength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.LATEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.Maximum.getCode();
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowColCell extends FirstOnRowCell {
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1437,7 +1678,7 @@ public final class CellUtil {
     private final int qoffset;
     private final int qlength;
 
-    public FirstOnRowColumnFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+    public FirstOnRowColCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
         int foffset, byte flength, byte[] qArray, int qoffset, int qlength) {
       super(rArray, roffset, rlength);
       this.fArray = fArray;
@@ -1480,11 +1721,11 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class FirstOnRowColumnTSFakeCell extends FirstOnRowColumnFakeCell {
+  private static class FirstOnRowColTSCell extends FirstOnRowColCell {
 
     private long ts;
 
-    public FirstOnRowColumnTSFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+    public FirstOnRowColTSCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
         int foffset, byte flength, byte[] qArray, int qoffset, int qlength, long ts) {
       super(rArray, roffset, rlength, fArray, foffset, flength, qArray, qoffset, qlength);
       this.ts = ts;
@@ -1497,12 +1738,12 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class LastOnRowFakeCell extends FakeCell {
+  private static class LastOnRowCell extends EmptyCell {
     private final byte[] rowArray;
     private final int roffset;
     private final short rlength;
 
-    public LastOnRowFakeCell(byte[] row, int roffset, short rlength) {
+    public LastOnRowCell(byte[] row, int roffset, short rlength) {
       this.rowArray = row;
       this.roffset = roffset;
       this.rlength = rlength;
@@ -1535,7 +1776,7 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class LastOnRowColumnFakeCell extends LastOnRowFakeCell {
+  private static class LastOnRowColCell extends LastOnRowCell {
     private final byte[] fArray;
     private final int foffset;
     private final byte flength;
@@ -1543,7 +1784,7 @@ public final class CellUtil {
     private final int qoffset;
     private final int qlength;
 
-    public LastOnRowColumnFakeCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
+    public LastOnRowColCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
         int foffset, byte flength, byte[] qArray, int qoffset, int qlength) {
       super(rArray, roffset, rlength);
       this.fArray = fArray;
@@ -1586,7 +1827,7 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
-  private static class FirstOnRowDeleteFamilyCell extends FakeCell {
+  private static class FirstOnRowDeleteFamilyCell extends EmptyCell {
     private final byte[] row;
     private final byte[] fam;
 

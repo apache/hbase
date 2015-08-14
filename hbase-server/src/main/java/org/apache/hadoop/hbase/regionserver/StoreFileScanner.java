@@ -315,9 +315,7 @@ public class StoreFileScanner implements KeyValueScanner {
     if (useBloom) {
       // check ROWCOL Bloom filter first.
       if (reader.getBloomFilterType() == BloomType.ROWCOL) {
-        haveToSeek = reader.passesGeneralBloomFilter(kv.getRowArray(),
-            kv.getRowOffset(), kv.getRowLength(), kv.getQualifierArray(),
-            kv.getQualifierOffset(), kv.getQualifierLength());
+        haveToSeek = reader.passesGeneralRowColBloomFilter(kv);
       } else if (this.matcher != null && !matcher.hasNullColumnInQuery() &&
           ((CellUtil.isDeleteFamily(kv) || CellUtil.isDeleteFamilyVersion(kv)))) {
         // if there is no such delete family kv in the store file,

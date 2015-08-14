@@ -23,6 +23,7 @@ import java.io.DataInput;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -145,11 +146,15 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase
     // We try to store the result in this variable so we can update stats for
     // testing, but when an error happens, we log a message and return.
     int block = index.rootBlockContainingKey(keyCell);
-    // TODO : Will be true KeyValue for now.
-    // When Offheap comes in we can add an else condition to work
-    // on the bytes in offheap
-    KeyValue kvKey = (KeyValue) keyCell;
-    return checkContains(kvKey.getBuffer(), kvKey.getKeyOffset(), kvKey.getKeyLength(), block);
+    // This copy will be needed. Because blooms work on the key part only.
+    // Atleast we now avoid multiple copies until it comes here. If we want to make this to work
+    // with BBs then the Hash.java APIs should also be changed to work with BBs.
+    if (keyCell instanceof KeyValue) {
+      return checkContains(((KeyValue) keyCell).getBuffer(), ((KeyValue) keyCell).getKeyOffset(),
+        ((KeyValue) keyCell).getKeyLength(), block);
+    }
+    byte[] key = CellUtil.getCellKeySerializedAsKeyValueKey(keyCell);
+    return checkContains(key, 0, key.length, block);
   }
 
   public boolean supportsAutoLoading() {
