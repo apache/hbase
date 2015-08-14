@@ -121,10 +121,10 @@
 if ( fqtn != null ) {
   table = new HTable(conf, fqtn);
   if (table.getTableDescriptor().getRegionReplication() > 1) {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th style=\"width:22%\">Name</th><th>Region Server</th><th style=\"width:22%\">Start Key</th><th style=\"width:22%\">End Key</th><th>Locality</th><th>Requests</th><th>ReplicaID</th></tr>";
     withReplica = true;
   } else {
-    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\"><tr><th>Name</th><th>Region Server</th><th>Start Key</th><th>End Key</th><th>Locality</th><th>Requests</th></tr>";
+    tableHeader = "<h2>Table Regions</h2><table class=\"table table-striped\" style=\"table-layout: fixed; word-wrap: break-word;\"><tr><th style=\"width:22%\">Name</th><th>Region Server</th><th style=\"width:22%\">Start Key</th><th style=\"width:22%\">End Key</th><th>Locality</th><th>Requests</th></tr>";
   }
   if ( !readOnly && action != null ) { 
 %>
