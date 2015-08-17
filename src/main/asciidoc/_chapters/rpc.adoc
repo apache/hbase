@@ -71,7 +71,8 @@ Optionally, Cells(KeyValues) can be passed outside of protobufs in follow-behind
 
 
 
-For more detail on the protobufs involved, see the link:http://svn.apache.org/viewvc/hbase/trunk/hbase-protocol/src/main/protobuf/RPC.proto?view=markup[RPC.proto]            file in trunk.
+For more detail on the protobufs involved, see the
+link:https://git-wip-us.apache.org/repos/asf?p=hbase.git;a=blob;f=hbase-protocol/src/main/protobuf/RPC.proto;hb=HEAD[RPC.proto]            file in master.
 
 ==== Connection Setup
 

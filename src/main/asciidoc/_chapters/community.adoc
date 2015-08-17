@@ -62,11 +62,11 @@ Any -1 on a patch by anyone vetos a patch; it cannot be committed until the just
 .How to set fix version in JIRA on issue resolve
 
 Here is how link:http://search-hadoop.com/m/azemIi5RCJ1[we agreed] to set versions in JIRA when we resolve an issue.
-If trunk is going to be 0.98.0 then: 
+If master is going to be 0.98.0 then:
 
-* Commit only to trunk: Mark with 0.98 
-* Commit to 0.95 and trunk : Mark with 0.98, and 0.95.x 
-* Commit to 0.94.x and 0.95, and trunk: Mark with 0.98, 0.95.x, and 0.94.x 
+* Commit only to master: Mark with 0.98
+* Commit to 0.95 and master: Mark with 0.98, and 0.95.x
+* Commit to 0.94.x and 0.95, and master: Mark with 0.98, 0.95.x, and 0.94.x
 * Commit to 89-fb: Mark with 89-fb. 
 * Commit site fixes: no version 
 
@@ -103,7 +103,7 @@ Owners do not need to be committers.
 [[hbase.commit.msg.format]]
 == Commit Message format
 
-We link:http://search-hadoop.com/m/Gwxwl10cFHa1[agreed] to the following SVN commit message format: 
+We link:http://search-hadoop.com/m/Gwxwl10cFHa1[agreed] to the following Git commit message format: 
 [source]
 ----
 HBASE-xxxxx <title>. (<contributor>)

@@ -1016,16 +1016,7 @@ For background, see link:https://issues.apache.org/jira/browse/HBASE-2643[HBASE-
 
 ===== Performance Improvements during Log Splitting
 
-WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. <<distributed.log.splitting>> and <<distributed.log.replay>> were developed to improve performance during log splitting.
-
-[[distributed.log.splitting]]
-====== Distributed Log Splitting
-
-_Distributed Log Splitting_ was added in HBase version 0.92 (link:https://issues.apache.org/jira/browse/HBASE-1364[HBASE-1364]) by Prakash Khemani from Facebook.
-It reduces the time to complete log splitting dramatically, improving the availability of regions and tables.
-For example, recovering a crashed cluster took around 9 hours with single-threaded log splitting, but only about six minutes with distributed log splitting.
-
-The information in this section is sourced from Jimmy Xiang's blog post at http://blog.cloudera.com/blog/2012/07/hbase-log-splitting/.
+WAL log splitting and recovery can be resource intensive and take a long time, depending on the number of RegionServers involved in the crash and the size of the regions. <<distributed.log.splitting>> was developed to improve performance during log splitting.
 
 .Enabling or Disabling Distributed Log Splitting
 
