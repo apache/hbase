@@ -3141,7 +3141,7 @@ public final class ProtobufUtil {
 
   /**
    * Convert SecurityCapabilitiesResponse.Capability to SecurityCapability
-   * @param caps capabilities returned in the SecurityCapabilitiesResponse message
+   * @param capabilities capabilities returned in the SecurityCapabilitiesResponse message
    * @return the converted list of SecurityCapability elements
    */
   public static List<SecurityCapability> toSecurityCapabilityList(
