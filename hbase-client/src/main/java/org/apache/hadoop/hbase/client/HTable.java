@@ -265,30 +265,11 @@ public class HTable implements HTableInterface {
    */
   @Override
   public HTableDescriptor getTableDescriptor() throws IOException {
-    // TODO: This is the same as HBaseAdmin.getTableDescriptor(). Only keep one.
-    if (tableName == null) return null;
-    if (tableName.equals(TableName.META_TABLE_NAME)) {
-      return HTableDescriptor.META_TABLEDESC;
-    }
-    HTableDescriptor htd = executeMasterCallable(
-      new MasterCallable<HTableDescriptor>(getConnection()) {
-      @Override
-      public HTableDescriptor call(int callTimeout) throws ServiceException {
-        GetTableDescriptorsResponse htds;
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(tableName);
-        htds = master.getTableDescriptors(null, req);
-
-        if (!htds.getTableSchemaList().isEmpty()) {
-          return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
-        }
-        return null;
-      }
-    });
+    HTableDescriptor htd = HBaseAdmin.getTableDescriptor(tableName, connection, rpcCallerFactory, operationTimeout);
     if (htd != null) {
       return new UnmodifyableHTableDescriptor(htd);
     }
-    throw new TableNotFoundException(tableName.getNameAsString());
+    return null;
   }
 
   private <V> V executeMasterCallable(MasterCallable<V> callable) throws IOException {

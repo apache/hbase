@@ -446,25 +446,32 @@ public class HBaseAdmin implements Admin {
   @Override
   public HTableDescriptor getTableDescriptor(final TableName tableName)
   throws TableNotFoundException, IOException {
-    if (tableName == null) return null;
-    HTableDescriptor htd = executeCallable(new MasterCallable<HTableDescriptor>(getConnection()) {
-      @Override
-      public HTableDescriptor call(int callTimeout) throws ServiceException {
-        GetTableDescriptorsResponse htds;
-        GetTableDescriptorsRequest req =
-            RequestConverter.buildGetTableDescriptorsRequest(tableName);
-        htds = master.getTableDescriptors(null, req);
+     return getTableDescriptor(tableName, getConnection(), rpcCallerFactory, operationTimeout);
+  }
 
-        if (!htds.getTableSchemaList().isEmpty()) {
-          return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+  static HTableDescriptor getTableDescriptor(final TableName tableName,
+         HConnection connection, RpcRetryingCallerFactory rpcCallerFactory,
+         int operationTimeout) throws TableNotFoundException, IOException {
+
+      if (tableName == null) return null;
+      HTableDescriptor htd = executeCallable(new MasterCallable<HTableDescriptor>(connection) {
+        @Override
+        public HTableDescriptor call(int callTimeout) throws ServiceException {
+          GetTableDescriptorsResponse htds;
+          GetTableDescriptorsRequest req =
+                  RequestConverter.buildGetTableDescriptorsRequest(tableName);
+          htds = master.getTableDescriptors(null, req);
+
+          if (!htds.getTableSchemaList().isEmpty()) {
+            return HTableDescriptor.convert(htds.getTableSchemaList().get(0));
+          }
+          return null;
         }
-        return null;
+      }, rpcCallerFactory, operationTimeout);
+      if (htd != null) {
+        return htd;
       }
-    });
-    if (htd != null) {
-      return htd;
-    }
-    throw new TableNotFoundException(tableName.getNameAsString());
+      throw new TableNotFoundException(tableName.getNameAsString());
   }
 
   public HTableDescriptor getTableDescriptor(final byte[] tableName)
@@ -3986,6 +3993,11 @@ public class HBaseAdmin implements Admin {
 
   private <C extends RetryingCallable<V> & Closeable, V> V executeCallable(C callable)
       throws IOException {
+    return executeCallable(callable, rpcCallerFactory, operationTimeout);
+  }
+
+  private static <C extends RetryingCallable<V> & Closeable, V> V executeCallable(C callable,
+             RpcRetryingCallerFactory rpcCallerFactory, int operationTimeout) throws IOException {
     RpcRetryingCaller<V> caller = rpcCallerFactory.newCaller();
     try {
       return caller.callWithRetries(callable, operationTimeout);
