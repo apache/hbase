@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.2 07/15/2015
+Release Notes - HBase - Version 1.0.2 - 08/21/2015
 
 ** Sub-task
     * [HBASE-7847] - Use zookeeper multi to clear znodes
@@ -14,11 +14,19 @@ Release Notes - HBase - Version 1.0.2 07/15/2015
     * [HBASE-13937] - Partially revert HBASE-13172 
     * [HBASE-13983] - Doc how the oddball HTable methods getStartKey, getEndKey, etc. will be removed in 2.0.0
     * [HBASE-14003] - work around jdk8 spec bug in WALPerfEval
+    * [HBASE-14080] - Cherry-pick addendums to HBASE-13084 
+    * [HBASE-14086] - remove unused bundled dependencies
+    * [HBASE-14087] - ensure correct ASF policy compliant headers on source/docs
+    * [HBASE-14105] - Add shell tests for Snapshot
+    * [HBASE-14176] - Add missing headers to META-INF files
 
 ** Bug
+    * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
+    * [HBASE-10844] - Coprocessor failure during batchmutation leaves the memstore datastructs in an inconsistent state
     * [HBASE-11830] - TestReplicationThrottler.testThrottling failed on virtual boxes
     * [HBASE-12413] - Mismatch in the equals and hashcode methods of KeyValue
     * [HBASE-12743] - [ITBLL] Master fails rejoining cluster stuck splitting logs; Distributed log replay=true
+    * [HBASE-12865] - WALs may be deleted before they are replicated to peers
     * [HBASE-12967] - Invalid FQCNs in alter table command leaves the table unusable
     * [HBASE-13200] - Improper configuration can leads to endless lease recovery during failover
     * [HBASE-13217] - Procedure fails due to ZK issue
@@ -78,6 +86,7 @@ Release Notes - HBase - Version 1.0.2 07/15/2015
     * [HBASE-13809] - TestRowTooBig should use HDFS directory for its region directory
     * [HBASE-13812] - Deleting of last Column Family of a table should not be allowed
     * [HBASE-13821] - WARN if hbase.bucketcache.percentage.in.combinedcache is set
+    * [HBASE-13825] - Use ProtobufUtil#mergeFrom and ProtobufUtil#mergeDelimitedFrom in place of builder methods of same name
     * [HBASE-13826] - Unable to create table when group acls are appropriately set.
     * [HBASE-13833] - LoadIncrementalHFile.doBulkLoad(Path,HTable) doesn't handle unmanaged connections when using SecureBulkLoad
     * [HBASE-13834] - Evict count not properly passed to HeapMemoryTuner.
@@ -90,6 +99,7 @@ Release Notes - HBase - Version 1.0.2 07/15/2015
     * [HBASE-13875] - Clock skew between master and region server may render restored region without server address
     * [HBASE-13877] - Interrupt to flush from TableFlushProcedure causes dataloss in ITBLL
     * [HBASE-13878] - Set hbase.fs.tmp.dir config in HBaseTestingUtility.java for Phoenix UT to use
+    * [HBASE-13881] - Bug in HTable#incrementColumnValue implementation
     * [HBASE-13885] - ZK watches leaks during snapshots
     * [HBASE-13892] - Scanner with all results filtered out results in NPE
     * [HBASE-13901] - Error while calling watcher on creating and deleting an HBase table
@@ -107,6 +117,15 @@ Release Notes - HBase - Version 1.0.2 07/15/2015
     * [HBASE-13989] - Threshold for combined MemStore and BlockCache percentages is not checked
     * [HBASE-13995] - ServerName is not fully case insensitive
     * [HBASE-14005] - Set permission to .top hfile in LoadIncrementalHFiles
+    * [HBASE-14050] - NPE in org.apache.hadoop.hbase.ipc.RpcServer$Connection.readAndProcess
+    * [HBASE-14054] - Acknowledged writes may get lost if regionserver clock is set backwards
+    * [HBASE-14146] - Once replication sees an error it slows down forever
+    * [HBASE-14155] - StackOverflowError in reverse scan
+    * [HBASE-14178] - regionserver blocks because of waiting for offsetLock
+    * [HBASE-14195] - Closed connections are not removed from ConnectionCache (Thrift, REST)
+    * [HBASE-14196] - Thrift server idle connection timeout issue
+    * [HBASE-14209] - TestShell visibility tests failing
+    * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
 
 ** Improvement
     * [HBASE-12415] - Add add(byte[][] arrays) to Bytes.
@@ -122,15 +141,19 @@ Release Notes - HBase - Version 1.0.2 07/15/2015
     * [HBASE-13828] - Add group permissions testing coverage to AC.
     * [HBASE-13846] - Run MiniCluster on top of other MiniDfsCluster
     * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
+    * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
 
 ** New Feature
     * [HBASE-13057] - Provide client utility to easily enable and disable table replication
 
 ** Task
+    * [HBASE-11276] - Add back support for running ChaosMonkey as standalone tool
+    * [HBASE-13089] - Fix test compilation error on building against htrace-3.2.0-incubating
     * [HBASE-13665] - Fix docs and site building on branch-1
     * [HBASE-13666] - book.pdf is not renamed during site build
     * [HBASE-13764] - Backport HBASE-7782 (HBaseTestingUtility.truncateTable() not acting like CLI) to branch-1.x
     * [HBASE-13799] - javadoc how Scan gets polluted when used; if you set attributes or ask for scan metrics
+    * [HBASE-14085] - Correct LICENSE and NOTICE files in artifacts
 
 ** Test
     * [HBASE-13609] - TestFastFail is still failing
