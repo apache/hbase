@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 
-import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.BeforeClass;
@@ -41,7 +40,7 @@ import org.junit.experimental.categories.Category;
 
 import java.io.IOException;
 
-@Category({RegionServerTests.class, LargeTests.class})
+@Category({LargeTests.class})
 public class TestRemoveRegionMetrics {
 
   private static MiniHBaseCluster cluster;
