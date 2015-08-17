@@ -81,6 +81,8 @@ if [ ! -d $GIT_DIR -o ! -d $SVN_DIR ]; then
   exit 1
 fi
 
+export MAVEN_OPTS=${MAVEN_OPTS:-"-Xmx3g -XX:MaxPermSize=256m"}
+
 cd $GIT_DIR
 
 # Get the latest
@@ -93,7 +95,7 @@ if [ $INTERACTIVE ]; then
     read -p "Build the site? (y/n)" yn
     case $yn in
         [Yy]* ) 
-          mvn clean package javadoc:aggregate post-site site:stage -DskipTests
+          mvn clean package javadoc:aggregate post-site site:stage -DskipTests -Dcheckstyle.skip
           status=$?
           if [ $status -ne 0 ]; then
             echo "The website does not build. Aborting."
@@ -106,7 +108,7 @@ if [ $INTERACTIVE ]; then
     esac
 else
   echo "Building the site in auto mode."
-  mvn clean package javadoc:aggregate post-site site:stage -DskipTests
+  mvn clean package javadoc:aggregate post-site site:stage -DskipTests -Dcheckstyle.skip
   status=$?
   if [ $status != 0 ]; then
     echo "The website does not build. Aborting."
