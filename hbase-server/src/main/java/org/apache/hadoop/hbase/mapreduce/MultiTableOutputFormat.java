@@ -119,9 +119,9 @@ public class MultiTableOutputFormat extends OutputFormat<ImmutableBytesWritable,
     @Override
     public void close(TaskAttemptContext context) throws IOException {
       for (BufferedMutator mutator : mutatorMap.values()) {
-        mutator.flush();
+        mutator.close();
       }
-      if(connection != null){
+      if (connection != null) {
         connection.close();
       }
     }
