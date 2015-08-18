@@ -19,11 +19,14 @@ package org.apache.hadoop.hbase.security.access;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -82,8 +85,11 @@ public class TestCellACLs extends SecureTestUtil {
 
   private static Configuration conf;
 
+  private static final String GROUP = "group";
+  private static User GROUP_USER;
   private static User USER_OWNER;
   private static User USER_OTHER;
+  private static String[] usersAndGroups;
 
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
@@ -114,6 +120,9 @@ public class TestCellACLs extends SecureTestUtil {
     // create a set of test users
     USER_OWNER = User.createUserForTesting(conf, "owner", new String[0]);
     USER_OTHER = User.createUserForTesting(conf, "other", new String[0]);
+    GROUP_USER = User.createUserForTesting(conf, "group_user", new String[] { GROUP });
+
+    usersAndGroups = new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) };
   }
 
   @AfterClass
@@ -145,11 +154,11 @@ public class TestCellACLs extends SecureTestUtil {
           Put p;
           // with ro ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
+          p.setACL(prepareCellPermissions(usersAndGroups, Action.READ));
           t.put(p);
           // with rw ACL
           p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ZERO);
-          p.setACL(USER_OTHER.getShortName(), new Permission(Action.READ, Action.WRITE));
+          p.setACL(prepareCellPermissions(usersAndGroups, Action.READ, Action.WRITE));
           t.put(p);
           // no ACL
           p = new Put(TEST_ROW)
@@ -219,13 +228,13 @@ public class TestCellACLs extends SecureTestUtil {
 
     // Confirm special read access set at cell level
 
-    verifyAllowed(getQ1, USER_OTHER);
-    verifyAllowed(getQ2, USER_OTHER);
+    verifyAllowed(getQ1, USER_OTHER, GROUP_USER);
+    verifyAllowed(getQ2, USER_OTHER, GROUP_USER);
 
     // Confirm this access does not extend to other cells
 
-    verifyIfNull(getQ3, USER_OTHER);
-    verifyIfNull(getQ4, USER_OTHER);
+    verifyIfNull(getQ3, USER_OTHER, GROUP_USER);
+    verifyIfNull(getQ4, USER_OTHER, GROUP_USER);
 
     /* ---- Scans ---- */
 
@@ -265,6 +274,10 @@ public class TestCellACLs extends SecureTestUtil {
     // other user will see 2 values
     scanResults.clear();
     verifyAllowed(scanAction, USER_OTHER);
+    assertEquals(2, scanResults.size());
+
+    scanResults.clear();
+    verifyAllowed(scanAction, GROUP_USER);
     assertEquals(2, scanResults.size());
 
     /* ---- Increments ---- */
@@ -327,16 +340,16 @@ public class TestCellACLs extends SecureTestUtil {
       }
     };
 
-    verifyDenied(incrementQ1, USER_OTHER);
-    verifyDenied(incrementQ3, USER_OTHER);
+    verifyDenied(incrementQ1, USER_OTHER, GROUP_USER);
+    verifyDenied(incrementQ3, USER_OTHER, GROUP_USER);
 
-    // We should be able to increment Q2 twice, the previous ACL will be
-    // carried forward
-    verifyAllowed(incrementQ2, USER_OTHER);
+    // We should be able to increment until the permissions are revoked (including the action in
+    // which permissions are revoked, the previous ACL will be carried forward)
+    verifyAllowed(incrementQ2, USER_OTHER, GROUP_USER);
     verifyAllowed(incrementQ2newDenyACL, USER_OTHER);
     // But not again after we denied ourselves write permission with an ACL
     // update
-    verifyDenied(incrementQ2, USER_OTHER);
+    verifyDenied(incrementQ2, USER_OTHER, GROUP_USER);
 
     /* ---- Deletes ---- */
 
@@ -368,8 +381,8 @@ public class TestCellACLs extends SecureTestUtil {
       }
     };
 
-    verifyDenied(deleteFamily, USER_OTHER);
-    verifyDenied(deleteQ1, USER_OTHER);
+    verifyDenied(deleteFamily, USER_OTHER, GROUP_USER);
+    verifyDenied(deleteQ1, USER_OTHER, GROUP_USER);
     verifyAllowed(deleteQ1, USER_OWNER);
   }
 
@@ -380,26 +393,18 @@ public class TestCellACLs extends SecureTestUtil {
   @Test
   public void testCoveringCheck() throws Exception {
     // Grant read access to USER_OTHER
-    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(),
-      TEST_FAMILY, null, Action.READ);
+    grantOnTable(TEST_UTIL, USER_OTHER.getShortName(), TEST_TABLE.getTableName(), TEST_FAMILY,
+      null, Action.READ);
+    // Grant read access to GROUP
+    grantOnTable(TEST_UTIL, AuthUtil.toGroupEntry(GROUP), TEST_TABLE.getTableName(), TEST_FAMILY,
+      null, Action.READ);
 
     // A write by USER_OTHER should be denied.
     // This is where we could have a big problem if there is an error in the
     // covering check logic.
-    verifyDenied(new AccessTestAction() {
-      @Override
-      public Object run() throws Exception {
-        HTable t = new HTable(conf, TEST_TABLE.getTableName());
-        try {
-          Put p;
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
-          t.put(p);
-        } finally {
-          t.close();
-        }
-        return null;
-      }
-    }, USER_OTHER);
+    verifyUserDeniedForWrite(USER_OTHER, ZERO);
+    // A write by GROUP_USER from group GROUP should be denied.
+    verifyUserDeniedForWrite(GROUP_USER, ZERO);
 
     // Add the cell
     verifyAllowed(new AccessTestAction() {
@@ -418,22 +423,34 @@ public class TestCellACLs extends SecureTestUtil {
     }, USER_OWNER);
 
     // A write by USER_OTHER should still be denied, just to make sure
+    verifyUserDeniedForWrite(USER_OTHER, ONE);
+    // A write by GROUP_USER from group GROUP should still be denied
+    verifyUserDeniedForWrite(GROUP_USER, ONE);
+
+    // A read by USER_OTHER should be allowed, just to make sure
+    verifyUserAllowedForRead(USER_OTHER);
+    // A read by GROUP_USER from group GROUP should be allowed
+    verifyUserAllowedForRead(GROUP_USER);
+  }
+
+  private void verifyUserDeniedForWrite(final User user, final byte[] value) throws Exception {
     verifyDenied(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
         HTable t = new HTable(conf, TEST_TABLE.getTableName());
         try {
           Put p;
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ONE);
+          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, value);
           t.put(p);
         } finally {
           t.close();
         }
         return null;
       }
-    }, USER_OTHER);
+    }, user);
+  }
 
-    // A read by USER_OTHER should be allowed, just to make sure
+  private void verifyUserAllowedForRead(final User user) throws Exception {
     verifyAllowed(new AccessTestAction() {
       @Override
       public Object run() throws Exception {
@@ -444,7 +461,15 @@ public class TestCellACLs extends SecureTestUtil {
           t.close();
         }
       }
-    }, USER_OTHER);
+    }, user);
+  }
+
+  private Map<String, Permission> prepareCellPermissions(String[] users, Action... action) {
+    Map<String, Permission> perms = new HashMap<String, Permission>(2);
+    for (String user : users) {
+      perms.put(user, new Permission(action));
+    }
+    return perms;
   }
 
   @After
