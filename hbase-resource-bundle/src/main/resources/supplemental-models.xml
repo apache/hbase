@@ -98,11 +98,43 @@ under the License.
     <project>
       <groupId>com.github.stephenc.high-scale-lib</groupId>
       <artifactId>high-scale-lib</artifactId>
+      <name>Highly Scalable Java</name>
 
       <licenses>
         <license>
           <name>Public Domain</name>
           <distribution>repo</distribution>
+          <url>http://creativecommons.org/licenses/publicdomain/</url>
+          <comments>
+The person or persons who have associated work with this document (the
+"Dedicator" or "Certifier") hereby either (a) certifies that, to the best
+of his knowledge, the work of authorship identified is in the public
+domain of the country from which the work is published, or (b) hereby
+dedicates whatever copyright the dedicators holds in the work of
+authorship identified below (the "Work") to the public domain. A
+certifier, moreover, dedicates any copyright interest he may have in the
+associated work, and for these purposes, is described as a "dedicator"
+below.
+
+A certifier has taken reasonable steps to verify the copyright status of
+this work. Certifier recognizes that his good faith efforts may not
+shield him from liability if in fact the work certified is not in the
+public domain.
+
+Dedicator makes this dedication for the benefit of the public at large and
+to the detriment of the Dedicator's heirs and successors. Dedicator
+intends this dedication to be an overt act of relinquishment in perpetuity
+of all present and future rights under copyright law, whether vested or
+contingent, in the Work. Dedicator understands that such relinquishment of
+all rights includes the relinquishment of all rights to enforce (by
+lawsuit or otherwise) those copyrights in the Work.
+
+Dedicator recognizes that, once placed in the public domain, the Work may
+be freely reproduced, distributed, transmitted, used, modified, built
+upon, or otherwise exploited by anyone for any purpose, commercial or
+non-commercial, and in any way, including by methods that have not yet
+been invented or conceived.
+</comments>
         </license>
       </licenses>
     </project>
@@ -581,6 +613,47 @@ Copyright (c) 2011 FuseSource Corp. All rights reserved.
       </licenses>
     </project>
   </supplement>
+  <supplement>
+    <project>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-core</artifactId>
+
+      <licenses>
+        <license>
+          <name>New BSD license</name>
+          <url>http://www.opensource.org/licenses/bsd-license.php</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2000-2006, www.hamcrest.org
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+Redistributions of source code must retain the above copyright notice, this list of
+conditions and the following disclaimer. Redistributions in binary form must reproduce
+the above copyright notice, this list of conditions and the following disclaimer in
+the documentation and/or other materials provided with the distribution.
+
+Neither the name of Hamcrest nor the names of its contributors may be used to endorse
+or promote products derived from this software without specific prior written
+permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT
+SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED
+TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
+WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
 <!-- Category B licenses that need text in LICENSE and a NOTICE -->
   <supplement>
     <project>
@@ -712,6 +785,63 @@ Copyright (c) 2010-2011 Oracle and/or its affiliates.
   </supplement>
   <supplement>
     <project>
+      <groupId>com.sun.jersey</groupId>
+      <artifactId>jersey-grizzly2</artifactId>
+      <name>Grizzly 2.0 container for Jersey</name>
+      <url>https://java.net/projects/jersey/</url>
+
+      <licenses>
+        <license>
+          <name>CDDL 1.1</name>
+          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2010-2011 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.sun.jersey.jersey-test-framework</groupId>
+      <artifactId>jersey-test-framework-core</artifactId>
+      <name>Jersey Test Framework - Core</name>
+      <url>https://java.net/projects/jersey/</url>
+
+      <licenses>
+        <license>
+          <name>CDDL 1.1</name>
+          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2010-2011 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>com.sun.jersey.jersey-test-framework</groupId>
+      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <name>Jersey Test Framework - Grizzly 2 Module</name>
+      <url>https://java.net/projects/jersey/</url>
+
+      <licenses>
+        <license>
+          <name>CDDL 1.1</name>
+          <url>https://glassfish.java.net/public/CDDL+GPL_1_1.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2010-2011 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
       <groupId>com.sun.jersey.contribs</groupId>
       <artifactId>jersey-guice</artifactId>
       <url>https://java.net/projects/jersey/</url>
@@ -723,6 +853,48 @@ Copyright (c) 2010-2011 Oracle and/or its affiliates.
           <distribution>repo</distribution>
           <comments>
 Copyright (c) 2010-2011 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <name>Java Servlet API</name>
+      <url>http://servlet-spec.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 1997-2011 Oracle and/or its affiliates.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish</groupId>
+      <artifactId>javax.servlet</artifactId>
+      <name>javax.servlet API v.3.0</name>
+      <url>http://jcp.org/en/jsr/detail?id=315</url>
+
+      <licenses>
+        <!-- N.B. This is different than what we get if we examine the pom programmatically.
+             The pom and associated artifacts say in their header that they're CDDL 1.1,
+             but the root pom of the pom ancestry says CDDL 1.0.
+        -->
+        <license>
+          <name>CDDL 1.1</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL_1_1.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 1997-2010 Oracle and/or its affiliates.
 </comments>
         </license>
       </licenses>
@@ -829,6 +1001,142 @@ Copyright 2005 Sun Microsystems, Inc. and portions Copyright Apache Software Fou
       </licenses>
     </project>
   </supplement>
+
+
+  <supplement>
+    <project>
+      <groupId>org.glassfish.external</groupId>
+      <artifactId>management-api</artifactId>
+      <name>GlassFish Common APIs</name>
+      <url>https://kenai.com/hg/gmbal~gf_common</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.gmbal</groupId>
+      <artifactId>gmbal-api-only</artifactId>
+      <name>gmbal API</name>
+      <url>http://kenai.com/hg/gmbal~master</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright 1997-2007 Sun Microsystems, Inc. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+
+  <supplement>
+    <project>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-framework</artifactId>
+      <url>http://grizzly.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-http</artifactId>
+      <url>http://grizzly.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-http-server</artifactId>
+      <url>http://grizzly.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-http-servlet</artifactId>
+      <url>http://grizzly.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2008-2011 Oracle and/or its affiliates. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+  <supplement>
+    <project>
+      <groupId>org.glassfish.grizzly</groupId>
+      <artifactId>grizzly-rcm</artifactId>
+      <url>http://grizzly.java.net</url>
+
+      <licenses>
+        <license>
+          <name>Common Development and Distribution License (CDDL) v1.0</name>
+          <url>https://glassfish.dev.java.net/public/CDDL+GPL.html</url>
+          <distribution>repo</distribution>
+          <comments>
+Copyright (c) 2007-2011 Oracle and/or its affiliates. All rights reserved.
+</comments>
+        </license>
+      </licenses>
+    </project>
+  </supplement>
+
+
+
+
   <supplement>
     <project>
       <groupId>org.jamon</groupId>

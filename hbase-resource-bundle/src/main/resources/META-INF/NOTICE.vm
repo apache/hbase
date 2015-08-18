@@ -298,6 +298,7 @@ Licensed under ${dep.licenses[0].name}, see LICENSE for details.
 incorporated from ${dep.groupId}:${dep.artifactId}:${dep.packaging}:${dep.version}
 
 For source see '${dep.url}'.
+
 #end
 #end
 #end
