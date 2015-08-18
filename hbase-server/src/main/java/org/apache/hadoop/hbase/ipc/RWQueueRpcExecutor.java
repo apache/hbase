@@ -34,8 +34,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Action;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MultiRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.MutateRequest;
-import org.apache.hadoop.hbase.protobuf.generated
-  .RegionServerStatusProtos.ReportRegionStateTransitionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.RegionAction;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.RequestHeader;
@@ -189,7 +188,19 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     if (param instanceof MutateRequest) {
       return true;
     }
-    if (param instanceof ReportRegionStateTransitionRequest) {
+    // Below here are methods for master. It's a pretty brittle version of this.
+    // Not sure that master actually needs a read/write queue since 90% of requests to
+    // master are writing to status or changing the meta table.
+    // All other read requests are admin generated and can be processed whenever.
+    // However changing that would require a pretty drastic change and should be done for
+    // the next major release and not as a fix for HBASE-14239
+    if (param instanceof RegionServerStatusProtos.ReportRegionStateTransitionRequest) {
+      return true;
+    }
+    if (param instanceof RegionServerStatusProtos.RegionServerStartupRequest) {
+      return true;
+    }
+    if (param instanceof RegionServerStatusProtos.RegionServerReportRequest) {
       return true;
     }
     return false;
