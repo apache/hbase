@@ -163,7 +163,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
     if (param == null) {
       return HConstants.NORMAL_QOS;
     }
-    if (methodName.equalsIgnoreCase("multi") && param instanceof MultiRequest) {
+    if (param instanceof MultiRequest) {
       // The multi call has its priority set in the header.  All calls should work this way but
       // only this one has been converted so far.  No priority == NORMAL_QOS.
       return header.hasPriority()? header.getPriority(): HConstants.NORMAL_QOS;
@@ -196,7 +196,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       return HConstants.NORMAL_QOS;
     }
 
-    if (methodName.equalsIgnoreCase("scan")) { // scanner methods...
+    if (param instanceof ScanRequest) { // scanner methods...
       ScanRequest request = (ScanRequest)param;
       if (!request.hasScannerId()) {
         return HConstants.NORMAL_QOS;
@@ -213,7 +213,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
 
     // If meta is moving then all the rest of report the report state transitions will be
     // blocked. We shouldn't be in the same queue.
-    if (methodName.equalsIgnoreCase("ReportRegionStateTransition")) { // Regions are moving
+    if (param instanceof ReportRegionStateTransitionRequest) { // Regions are moving
       ReportRegionStateTransitionRequest tRequest = (ReportRegionStateTransitionRequest) param;
       for (RegionStateTransition transition : tRequest.getTransitionList()) {
         if (transition.getRegionInfoList() != null) {
@@ -238,8 +238,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
    */
   @Override
   public long getDeadline(RequestHeader header, Message param) {
-    String methodName = header.getMethodName();
-    if (methodName.equalsIgnoreCase("scan")) {
+    if (param instanceof ScanRequest) {
       ScanRequest request = (ScanRequest)param;
       if (!request.hasScannerId()) {
         return 0;
