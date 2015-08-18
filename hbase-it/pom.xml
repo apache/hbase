@@ -45,6 +45,10 @@
       <testResource>
          <!-- We depend on hbase-server test resources -->
         <directory>../hbase-server/src/test/resources</directory>
+        <excludes>
+          <exclude>META-INF/NOTICE</exclude>
+          <exclude>META-INF/LICENSE</exclude>
+        </excludes>
       </testResource>
     </testResources>
     <pluginManagement>
