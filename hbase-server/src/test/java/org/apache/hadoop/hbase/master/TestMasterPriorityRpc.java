@@ -45,12 +45,12 @@ public class TestMasterPriorityRpc {
   private PriorityFunction priority = null;
   private User user = null;
 
-  private final Set<String> ADMIN_METHODS = Sets.newHashSet("GetLastFlushedSequenceId",
-      "RegionServerReport", "RegionServerStartup", "ReportRSFatalError",
-      "ReportRegionStateTransition");
+  private final Set<String> ADMIN_METHODS = Sets.newHashSet("GetLastFlushedSequenceId");
 
   private final Set<String> NORMAL_METHODS = Sets.newHashSet("CreateTable", "DeleteTable",
-      "ModifyColumn", "OfflineRegion", "Shutdown");
+      "ModifyColumn", "OfflineRegion", "Shutdown",
+      "RegionServerReport", "RegionServerStartup", "ReportRSFatalError",
+      "ReportRegionStateTransition");
 
   @Before
   public void setup() {
