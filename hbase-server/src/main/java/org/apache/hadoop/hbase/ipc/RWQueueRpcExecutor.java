@@ -135,7 +135,7 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     this.readBalancer = getBalancer(numReadQueues);
     this.scanBalancer = getBalancer(numScanQueues);
 
-    queues = new ArrayList<BlockingQueue<CallRunner>>(writeHandlersCount + readHandlersCount);
+    queues = new ArrayList<BlockingQueue<CallRunner>>(numWriteQueues + numReadQueues + numScanQueues);
     LOG.debug(name + " writeQueues=" + numWriteQueues + " writeHandlers=" + writeHandlersCount +
               " readQueues=" + numReadQueues + " readHandlers=" + readHandlersCount +
               ((numScanQueues == 0) ? "" : " scanQueues=" + numScanQueues +
