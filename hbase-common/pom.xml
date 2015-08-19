@@ -279,6 +279,40 @@
   </dependencies>
 
   <profiles>
+    <!-- Needs to make the profile in apache parent pom -->
+    <profile>
+      <id>apache-release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-resources-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>license-javadocs</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>copy-resources</goal>
+                </goals>
+                <configuration>
+                  <outputDirectory>${project.build.directory}/apidocs</outputDirectory>
+                  <resources>
+                    <resource>
+                      <directory>src/main/javadoc/META-INF/</directory>
+                      <targetPath>META-INF/</targetPath>
+                      <includes>
+                        <include>NOTICE</include>
+                      </includes>
+                      <filtering>true</filtering>
+                    </resource>
+                  </resources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <!-- Skip the tests in this module -->
     <profile>
       <id>skipCommonTests</id>
