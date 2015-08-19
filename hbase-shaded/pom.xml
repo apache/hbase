@@ -33,6 +33,8 @@
     <properties>
       <!-- Don't make a test-jar -->
       <maven.test.skip>true</maven.test.skip>
+      <!-- Don't make a source-jar -->
+      <source.skip>true</source.skip>
       <license.bundles.dependencies>true</license.bundles.dependencies>
     </properties>
     <modules>
@@ -113,10 +115,11 @@
                                 <goal>shade</goal>
                             </goals>
                             <configuration>
+                                <createSourcesJar>false</createSourcesJar>
                                 <shadedArtifactAttached>false</shadedArtifactAttached>
                                 <promoteTransitiveDependencies>true</promoteTransitiveDependencies>
                                 <dependencyReducedPomLocation>${project.build.directory}/dependency-reduced-pom.xml</dependencyReducedPomLocation>
-                                <shadeTestJar>true</shadeTestJar>
+                                <shadeTestJar>false</shadeTestJar>
                                 <artifactSet>
                                     <excludes>
                                         <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
