@@ -702,7 +702,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
-          <version>0.8</version>
+          <version>0.11</version>
           <configuration>
             <excludes>
               <exclude>**/*.versionsBackup</exclude>
