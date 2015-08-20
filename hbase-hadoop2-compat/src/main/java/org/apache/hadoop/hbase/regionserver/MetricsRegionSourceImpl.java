@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -39,12 +40,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   private static final Log LOG = LogFactory.getLog(MetricsRegionSourceImpl.class);
 
-  private boolean closed = false;
-
-  // lock to ensure that lock and pushing metrics can't race.
-  // When changing or acting on the closed boolean this lock must be held.
-  // The write lock must be held when changing closed.
-  private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock(false);
+  private AtomicBoolean closed = new AtomicBoolean(false);
 
   // Non-final so that we can null out the wrapper
   // This is just paranoia. We really really don't want to
@@ -109,16 +105,20 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public void close() {
-    Lock lock = readWriteLock.writeLock();
-    lock.lock();
-    try {
-      if (closed) {
-        return;
-      }
+    boolean wasClosed = closed.getAndSet(false);
 
-      closed = true;
-      agg.deregister(this);
+    // Has someone else already closed this for us?
+    if (wasClosed) {
+      return;
+    }
 
+    // Before removing the metrics remove this region from the aggregate region bean.
+    // This should mean that it's unlikely that snapshot and close happen at the same time.
+    agg.deregister(this);
+
+    // While it's un-likely that snapshot and close happen at the same time it's still possible.
+    // So grab the lock to ensure that all calls to snapshot are done before we remove the metrics
+    synchronized (this) {
       if (LOG.isTraceEnabled()) {
         LOG.trace("Removing region Metrics: " + regionWrapper.getRegionName());
       }
@@ -133,10 +133,6 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       registry.removeHistogramMetrics(regionScanNextKey);
 
       regionWrapper = null;
-
-      JmxCacheBuster.clearJmxCache();
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -186,13 +182,23 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
-    Lock lock = readWriteLock.readLock();
 
-    // Grab the read lock.
-    // This ensures that
-    lock.lock();
-    try {
-      if (closed) {
+    // If there is a close that started be double extra sure
+    // that we're not getting any locks and not putting data
+    // into the metrics that should be removed. So early out
+    // before even getting the lock.
+    if (closed.get()) {
+      return;
+    }
+
+    // Grab the read
+    // This ensures that removes of the metrics
+    // can't happen while we are putting them back in.
+    synchronized (this) {
+
+      // It's possible that a close happened between checking
+      // the closed variable and getting the lock.
+      if (closed.get()) {
         return;
       }
 
@@ -254,8 +260,6 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
             MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "99th percentile: "), ds
             .getPercentile(99d) / 1000);
       }
-    } finally {
-      lock.unlock();
     }
   }
 
