@@ -191,6 +191,14 @@
       <organizationUrl>http://www.explorys.com</organizationUrl>
     </developer>
     <developer>
+      <id>eclark</id>
+      <name>Elliott Clark</name>
+      <email>eclark@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
       <id>enis</id>
       <name>Enis Soztutar</name>
       <email>enis@apache.org</email>
@@ -335,12 +343,28 @@
       <organizationUrl>http://www.xiaomi.com/</organizationUrl>
     </developer>
     <developer>
+      <id>liyin</id>
+      <name>Liyin Tang</name>
+      <email>liyin.tang@fb.com</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
       <id>mbautin</id>
       <name>Mikhail Bautin</name>
       <email>mbautin@apache.org</email>
       <timezone>-8</timezone>
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>mbertozzi</id>
+      <name>Matteo Bertozzi</name>
+      <email>mbertozzi@apache.org</email>
+      <timezone>0</timezone>
+      <organization>Cloudera</organization>
+      <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
     <developer>
       <id>misty</id>
@@ -359,6 +383,14 @@
       <organizationUrl>http://www.hortonworks.com</organizationUrl>
     </developer>
     <developer>
+      <id>nkeywal</id>
+      <name>Nicolas Liochon</name>
+      <email>nkeywal@apache.org</email>
+      <timezone>+1</timezone>
+      <organization>Scaled Risk</organization>
+      <organizationUrl>http://www.scaledrisk.com</organizationUrl>
+    </developer>
+    <developer>
       <id>nspiegelberg</id>
       <name>Nicolas Spiegelberg</name>
       <email>nspiegelberg@fb.com</email>
@@ -373,6 +405,22 @@
       <timezone>0</timezone>
       <organization>Dropbox</organization>
       <organizationUrl>https://www.dropbox.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>rajeshbabu</id>
+      <name>Rajeshbabu Chintaguntla</name>
+      <email>rajeshbabu@apache.org</email>
+      <timezone>+5</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>ramkrishna</id>
+      <name>Ramkrishna S Vasudevan</name>
+      <email>ramkrishna@apache.org</email>
+      <timezone>+5</timezone>
+      <organization>Intel</organization>
+      <organizationUrl>http://www.intel.in</organizationUrl>
     </developer>
     <developer>
       <id>rawson</id>
@@ -407,6 +455,14 @@
       <organizationUrl>http://www.cloudera.com/</organizationUrl>
     </developer>
     <developer>
+      <id>syuanjiang</id>
+      <name>Stephen Yuan Jiang</name>
+      <email>syuanjiang@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Hortonworks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
       <id>tedyu</id>
       <name>Ted Yu</name>
       <email>yuzhihong@gmail.com</email>
@@ -419,54 +475,6 @@
       <name>Todd Lipcon</name>
       <email>todd@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cloudera</organization>
-      <organizationUrl>http://www.cloudera.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>rajeshbabu</id>
-      <name>Rajeshbabu Chintaguntla</name>
-      <email>rajeshbabu@apache.org</email>
-      <timezone>+5</timezone>
-      <organization>Hortonworks</organization>
-      <organizationUrl>http://www.hortonworks.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>ramkrishna</id>
-      <name>Ramkrishna S Vasudevan</name>
-      <email>ramkrishna@apache.org</email>
-      <timezone>+5</timezone>
-      <organization>Intel</organization>
-      <organizationUrl>http://www.intel.in</organizationUrl>
-    </developer>
-    <developer>
-      <id>liyin</id>
-      <name>Liyin Tang</name>
-      <email>liyin.tang@fb.com</email>
-      <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>nkeywal</id>
-      <name>Nicolas Liochon</name>
-      <email>nkeywal@apache.org</email>
-      <timezone>+1</timezone>
-      <organization>Scaled Risk</organization>
-      <organizationUrl>http://www.scaledrisk.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>eclark</id>
-      <name>Elliott Clark</name>
-      <email>eclark@apache.org</email>
-      <timezone>-8</timezone>
-      <organization>Facebook</organization>
-      <organizationUrl>http://www.facebook.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>mbertozzi</id>
-      <name>Matteo Bertozzi</name>
-      <email>mbertozzi@apache.org</email>
-      <timezone>0</timezone>
       <organization>Cloudera</organization>
       <organizationUrl>http://www.cloudera.com</organizationUrl>
     </developer>
