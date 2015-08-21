@@ -31,6 +31,10 @@
     <name>Apache HBase - Protocol</name>
     <description>Protobuf protocol classes used by HBase to communicate.</description>
 
+    <properties>
+      <maven.javadoc.skip>true</maven.javadoc.skip>
+    </properties>
+
     <build>
       <plugins>
         <plugin>
