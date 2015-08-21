@@ -1010,7 +1010,7 @@
       <plugin>
         <groupId>org.asciidoctor</groupId>
         <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>1.5.2</version>
+        <version>${asciidoctor.plugin.version}</version>
         <inherited>false</inherited>
         <dependencies>
           <dependency>
@@ -1201,6 +1201,7 @@
     <jamon.plugin.version>2.3.4</jamon.plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <javadoc.version>2.9</javadoc.version>
+    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
