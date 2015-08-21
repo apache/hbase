@@ -105,7 +105,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public void close() {
-    boolean wasClosed = closed.getAndSet(false);
+    boolean wasClosed = closed.getAndSet(true);
 
     // Has someone else already closed this for us?
     if (wasClosed) {
