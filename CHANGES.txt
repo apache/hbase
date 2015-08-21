@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Nodes - HBase - Version 1.1.2 08/13/2015
+Release Nodes - HBase - Version 1.1.2 08/21/2015
 
 ** Sub-task
     * [HBASE-13832] - Procedure V2: master fail to start due to WALProcedureStore sync failures when HDFS data nodes count is low
@@ -24,6 +24,7 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
 
 ** Bug
     * [HBASE-5878] - Use getVisibleLength public api from HdfsDataInputStream from Hadoop-2.
+    * [HBASE-10844] - Coprocessor failure during batchmutation leaves the memstore datastructs in an inconsistent state
     * [HBASE-12865] - WALs may be deleted before they are replicated to peers
     * [HBASE-13329] - ArrayIndexOutOfBoundsException in CellComparator#getMinimumMidpointArray
     * [HBASE-13337] - Table regions are not assigning back, after restarting all regionservers at once.
@@ -43,6 +44,7 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
     * [HBASE-13945] - Prefix_Tree seekBefore() does not work correctly
     * [HBASE-13958] - RESTApiClusterManager calls kill() instead of suspend() and resume()
     * [HBASE-13959] - Region splitting uses a single thread in most common cases
+    * [HBASE-13966] - Limit column width in table.jsp
     * [HBASE-13969] - AuthenticationTokenSecretManager is never stopped in RPCServer
     * [HBASE-13970] - NPE during compaction in trunk
     * [HBASE-13974] - TestRateLimiter#testFixedIntervalResourceAvailability may fail
@@ -50,6 +52,7 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
     * [HBASE-13989] - Threshold for combined MemStore and BlockCache percentages is not checked
     * [HBASE-13995] - ServerName is not fully case insensitive
     * [HBASE-13997] - ScannerCallableWithReplicas cause Infinitely blocking
+    * [HBASE-14000] - Region server failed to report to Master and was stuck in reportForDuty retry loop
     * [HBASE-14005] - Set permission to .top hfile in LoadIncrementalHFiles
     * [HBASE-14010] - TestRegionRebalancing.testRebalanceOnRegionServerNumberChange fails; cluster not balanced
     * [HBASE-14021] - Quota table has a wrong description on the UI
@@ -72,6 +75,13 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
     * [HBASE-14209] - TestShell visibility tests failing
     * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
     * [HBASE-14219] - src tgz no longer builds after HBASE-14085
+    * [HBASE-14228] - Close BufferedMutator and connection in MultiTableOutputFormat
+    * [HBASE-14234] - Exception encountered in WALProcedureStore#rollWriter() should be properly handled
+    * [HBASE-14241] - Fix deadlock during cluster shutdown due to concurrent connection close
+    * [HBASE-14243] - Incorrect NOTICE file in hbase-it test-jar
+    * [HBASE-14249] - shaded jar modules create spurious source and test jars with incorrect LICENSE/NOTICE info
+    * [HBASE-14250] - branch-1.1 hbase-server test-jar has incorrect LICENSE
+    * [HBASE-14251] - javadoc jars use LICENSE/NOTICE from primary artifact
 
 
 
@@ -82,6 +92,7 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
     * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
     * [HBASE-14002] - Add --noReplicationSetup option to IntegrationTestReplication
     * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
+    * [HBASE-14260] - don't build javadocs for hbase-protocol module
 
 
 
@@ -101,12 +112,15 @@ Release Nodes - HBase - Version 1.1.2 08/13/2015
 ** Task
     * [HBASE-11276] - Add back support for running ChaosMonkey as standalone tool
     * [HBASE-13089] - Fix test compilation error on building against htrace-3.2.0-incubating
+    * [HBASE-13941] - Backport HBASE-13917 (Remove string comparison to identify request priority) to release branches
+    * [HBASE-14066] - clean out old docbook docs from branch-1
     * [HBASE-14085] - Correct LICENSE and NOTICE files in artifacts
+    * [HBASE-14288] - Upgrade asciidoctor plugin to v1.5.2.1
 
 
 ** Test
     * [HBASE-14197] - TestRegionServerHostname#testInvalidRegionServerHostnameAbortsServer fails in Jenkins
-
+    * [HBASE-14210] - Create test for cell level ACLs involving user group
 
 
 
