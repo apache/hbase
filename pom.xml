@@ -998,7 +998,7 @@
       <plugin>
         <groupId>org.asciidoctor</groupId>
         <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>1.5.2</version> 
+        <version>${asciidoctor.plugin.version}</version>
         <executions>
           <execution>
             <id>output-html</id> 
@@ -1138,6 +1138,7 @@
     <maven.site.version>3.3</maven.site.version>
     <javadoc.version>2.9</javadoc.version>
     <maven.resources.plugin.version>2.6</maven.resources.plugin.version>
+    <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
     <!-- General Packaging -->
     <package.prefix>/usr</package.prefix>
     <package.conf.dir>/etc/hbase</package.conf.dir>
