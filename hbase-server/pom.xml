@@ -81,6 +81,7 @@
           <execution>
             <id>default</id>
             <configuration>
+              <attachToTest>false</attachToTest>
               <properties>
                 <copyright-end-year>${build.year}</copyright-end-year>
                 <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
