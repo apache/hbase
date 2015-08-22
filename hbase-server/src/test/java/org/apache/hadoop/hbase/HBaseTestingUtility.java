@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelsCache;
 import org.apache.hadoop.hbase.tool.Canary;
+import org.apache.hadoop.hbase.tool.Canary.RegionTask.TaskType;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -2822,7 +2823,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // RegionOpeningException.  It is crass but when done all will be online.
     HConnection connection = HConnectionManager.createConnection(conf);
     try {
-      Canary.sniff(connection, TableName.valueOf(table));
+      Canary.sniff(connection, TableName.valueOf(table), TaskType.READ);
     } catch (Exception e) {
       throw new IOException(e);
     } finally {
