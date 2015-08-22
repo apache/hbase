@@ -799,7 +799,8 @@ public final class HConstants {
   /**
    * timeout for short operation RPC
    */
-  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY = "hbase.rpc.shortoperation.timeout";
+  public static final String HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY =
+      "hbase.rpc.shortoperation.timeout";
 
   /**
    * Default value of {@link #HBASE_RPC_SHORTOPERATION_TIMEOUT_KEY}
@@ -854,8 +855,8 @@ public final class HConstants {
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
-  public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
-      ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+  public static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+      Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
   public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
       Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
 
@@ -906,7 +907,7 @@ public final class HConstants {
    * 1   => Abort only all of the handers have died
    */
   public static final String REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT =
-		  "hbase.regionserver.handler.abort.on.error.percent";
+      "hbase.regionserver.handler.abort.on.error.percent";
   public static final double DEFAULT_REGION_SERVER_HANDLER_ABORT_ON_ERROR_PERCENT = 0.5;
 
   //High priority handlers to deal with admin requests and system table operation requests
@@ -966,7 +967,8 @@ public final class HConstants {
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
 
   /** Region in Transition metrics threshold time */
-  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD="hbase.metrics.rit.stuck.warning.threshold";
+  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
+      "hbase.metrics.rit.stuck.warning.threshold";
 
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
@@ -1062,7 +1064,8 @@ public final class HConstants {
    * 0.0.0.0.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-9961">HBASE-9961</a>
    */
-  public static final String STATUS_MULTICAST_BIND_ADDRESS = "hbase.status.multicast.bind.address.ip";
+  public static final String STATUS_MULTICAST_BIND_ADDRESS =
+      "hbase.status.multicast.bind.address.ip";
   public static final String DEFAULT_STATUS_MULTICAST_BIND_ADDRESS = "0.0.0.0";
 
   /**
@@ -1190,6 +1193,20 @@ public final class HConstants {
    */
   public static final String REGION_SPLIT_THREADS_MAX =
     "hbase.regionserver.region.split.threads.max";
+
+  /** Canary config keys */
+  public static final String HBASE_CANARY_WRITE_DATA_TTL_KEY = "hbase.canary.write.data.ttl";
+
+  public static final String HBASE_CANARY_WRITE_PERSERVER_REGIONS_LOWERLIMIT_KEY =
+      "hbase.canary.write.perserver.regions.lowerLimit";
+
+  public static final String HBASE_CANARY_WRITE_PERSERVER_REGIONS_UPPERLIMIT_KEY =
+      "hbase.canary.write.perserver.regions.upperLimit";
+
+  public static final String HBASE_CANARY_WRITE_VALUE_SIZE_KEY = "hbase.canary.write.value.size";
+
+  public static final String HBASE_CANARY_WRITE_TABLE_CHECK_PERIOD_KEY =
+      "hbase.canary.write.table.check.period";
 
   private HConstants() {
     // Can't be instantiated with this ctor.
