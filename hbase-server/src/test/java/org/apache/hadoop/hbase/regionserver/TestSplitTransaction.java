@@ -23,10 +23,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -60,7 +59,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableList;
 
@@ -184,6 +182,26 @@ public class TestSplitTransaction {
 
     assertFalse("a region should not be splittable if it has instances of store file references",
                 st.prepare());
+  }
+
+  /**
+   * Test SplitTransactionListener
+   */
+  @Test public void testSplitTransactionListener() throws IOException {
+    SplitTransactionImpl st = new SplitTransactionImpl(this.parent, GOOD_SPLIT_ROW);
+    SplitTransaction.TransactionListener listener =
+            Mockito.mock(SplitTransaction.TransactionListener.class);
+    st.registerTransactionListener(listener);
+    st.prepare();
+    Server mockServer = Mockito.mock(Server.class);
+    when(mockServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
+    PairOfSameType<Region> daughters = st.execute(mockServer, null);
+    verify(listener).transition(st, SplitTransaction.SplitTransactionPhase.STARTED,
+            SplitTransaction.SplitTransactionPhase.PREPARED);
+    verify(listener, times(15)).transition(any(SplitTransaction.class),
+            any(SplitTransaction.SplitTransactionPhase.class),
+            any(SplitTransaction.SplitTransactionPhase.class));
+    verifyNoMoreInteractions(listener);
   }
 
   /**
