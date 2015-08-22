@@ -403,7 +403,13 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         int leastLoadedServerIndex = -1;
         int load = Integer.MAX_VALUE;
         for (ServerName sn : topLocalServers) {
-          int index = serversToIndex.get(sn);
+          if (!serversToIndex.containsKey(sn.getHostAndPort())) {
+            continue;
+          }
+          int index = serversToIndex.get(sn.getHostAndPort());
+          if (regionsPerServer[index] == null) {
+            continue;
+          }
           int tempLoad = regionsPerServer[index].length;
           if (tempLoad <= load) {
             leastLoadedServerIndex = index;
