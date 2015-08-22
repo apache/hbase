@@ -47,6 +47,7 @@ org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.hbase.HTableDescriptor;
 org.apache.hadoop.hbase.HBaseConfiguration;
 org.apache.hadoop.hbase.TableName;
+org.apache.hadoop.hbase.tool.Canary;
 org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 org.apache.hadoop.hbase.master.DeadServer;
 org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -365,11 +366,14 @@ AssignmentManager assignmentManager = master.getAssignmentManager();
     </%if>
     <%java>String description = null;
         if (tableName.equals(TableName.META_TABLE_NAME)){
-            description = "The hbase:meta table holds references to all User Table regions";
+            description = "The hbase:meta table holds references to all User Table regions.";
+        } else if (tableName.equals(Canary.DEFAULT_WRITE_TABLE_NAME)){
+            description = "The hbase:canary table is used to sniff the write availbility of"
+              + " each regionserver.";
         } else if (tableName.equals(AccessControlLists.ACL_TABLE_NAME)){
             description = "The hbase:acl table holds information about acl";
-	 } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
-	     description = "The hbase:labels table holds information about visibility labels";
+        } else if (tableName.equals(VisibilityConstants.LABELS_TABLE_NAME)){
+            description = "The hbase:labels table holds information about visibility labels.";
         } else if (tableName.equals(TableName.NAMESPACE_TABLE_NAME)){
             description = "The hbase:namespace table holds information about namespaces.";
         } else if (tableName.equals(QuotaUtil.QUOTA_TABLE_NAME)){
