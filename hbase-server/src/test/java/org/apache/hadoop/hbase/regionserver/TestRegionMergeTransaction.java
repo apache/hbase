@@ -21,8 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -210,6 +209,35 @@ public class TestRegionMergeTransaction {
     assertFalse(spyMT.prepare(null));
   }
 
+  /**
+   * Test RegionMergeTransactionListener
+   */
+  @Test public void testRegionMergeTransactionListener() throws Exception {
+    RegionMergeTransactionImpl mt = new RegionMergeTransactionImpl(region_a, region_b,
+        false);
+    RegionMergeTransactionImpl spyMT = Mockito.spy(mt);
+    doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
+        region_a.getRegionInfo().getRegionName());
+    doReturn(false).when(spyMT).hasMergeQualifierInMeta(null,
+        region_b.getRegionInfo().getRegionName());
+    RegionMergeTransaction.TransactionListener listener =
+            Mockito.mock(RegionMergeTransaction.TransactionListener.class);
+    mt.registerTransactionListener(listener);
+    mt.prepare(null);
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGIONSERVER_PORT, 0);
+    CoordinatedStateManager cp = CoordinatedStateManagerFactory.getCoordinatedStateManager(
+      TEST_UTIL.getConfiguration());
+    Server mockServer = new HRegionServer(TEST_UTIL.getConfiguration(), cp);
+    mt.execute(mockServer, null);
+    verify(listener).transition(mt,
+            RegionMergeTransaction.RegionMergeTransactionPhase.STARTED,
+            RegionMergeTransaction.RegionMergeTransactionPhase.PREPARED);
+    verify(listener, times(10)).transition(any(RegionMergeTransaction.class),
+            any(RegionMergeTransaction.RegionMergeTransactionPhase.class),
+            any(RegionMergeTransaction.RegionMergeTransactionPhase.class));
+    verifyNoMoreInteractions(listener);
+  }
+
   @Test
   public void testWholesomeMerge() throws IOException, InterruptedException {
     final int rowCountOfRegionA = loadRegion(this.region_a, CF, true);
@@ -355,9 +383,9 @@ public class TestRegionMergeTransaction {
   }
 
   @Test
-  public void testMeregedRegionBoundary() {
+  public void testMergedRegionBoundary() {
     TableName tableName =
-        TableName.valueOf("testMeregedRegionBoundary");
+        TableName.valueOf("testMergedRegionBoundary");
     byte[] a = Bytes.toBytes("a");
     byte[] b = Bytes.toBytes("b");
     byte[] z = Bytes.toBytes("z");
