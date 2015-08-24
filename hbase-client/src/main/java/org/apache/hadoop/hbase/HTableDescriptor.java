@@ -525,14 +525,17 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
    * @param key The key.
    * @param value The value.
    */
-  public HTableDescriptor setValue(final Bytes key,
-      final Bytes value) {
+  public HTableDescriptor setValue(final Bytes key, final Bytes value) {
     if (key.compareTo(DEFERRED_LOG_FLUSH_KEY) == 0) {
       boolean isDeferredFlush = Boolean.valueOf(Bytes.toString(value.get()));
       LOG.warn("HTableDescriptor property:" + DEFERRED_LOG_FLUSH + " is deprecated, " +
           "use " + DURABILITY + " instead");
       setDurability(isDeferredFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
       return this;
+    }
+    Matcher matcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(key.get()));
+    if (matcher.matches()) {
+      LOG.warn("Use addCoprocessor* methods to add a coprocessor instead");
     }
     values.put(key, value);
     return this;
@@ -1195,7 +1198,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     return this.families.remove(column);
   }
 
-
   /**
    * Add a table coprocessor to this table. The coprocessor
    * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
@@ -1210,7 +1212,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
     addCoprocessor(className, null, Coprocessor.PRIORITY_USER, null);
     return this;
   }
-
 
   /**
    * Add a table coprocessor to this table. The coprocessor
@@ -1229,10 +1230,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   public HTableDescriptor addCoprocessor(String className, Path jarFilePath,
                              int priority, final Map<String, String> kvs)
   throws IOException {
-    if (hasCoprocessor(className)) {
-      throw new IOException("Coprocessor " + className + " already exists.");
-    }
-    // validate parameter kvs
+    checkHasCoprocessor(className);
+
+    // Validate parameter kvs and then add key/values to kvString.
     StringBuilder kvString = new StringBuilder();
     if (kvs != null) {
       for (Map.Entry<String, String> e: kvs.entrySet()) {
@@ -1252,40 +1252,72 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       }
     }
 
-    // generate a coprocessor key
-    int maxCoprocessorNumber = 0;
-    Matcher keyMatcher;
-    for (Map.Entry<Bytes, Bytes> e :
-        this.values.entrySet()) {
-      keyMatcher =
-          HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(
-              Bytes.toString(e.getKey().get()));
-      if (!keyMatcher.matches()) {
-        continue;
-      }
-      maxCoprocessorNumber = Math.max(Integer.parseInt(keyMatcher.group(1)),
-          maxCoprocessorNumber);
-    }
-    maxCoprocessorNumber++;
-
-    String key = "coprocessor$" + Integer.toString(maxCoprocessorNumber);
     String value = ((jarFilePath == null)? "" : jarFilePath.toString()) +
         "|" + className + "|" + Integer.toString(priority) + "|" +
         kvString.toString();
-    setValue(key, value);
-    return this;
+    return addCoprocessorToMap(value);
   }
 
+  /**
+   * Add a table coprocessor to this table. The coprocessor
+   * type must be {@link org.apache.hadoop.hbase.coprocessor.RegionObserver}
+   * or Endpoint.
+   * It won't check if the class can be loaded or not.
+   * Whether a coprocessor is loadable or not will be determined when
+   * a region is opened.
+   * @param specStr The Coprocessor specification all in in one String formatted so matches
+   * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
+   * @throws IOException
+   */
+  // Pity about ugly method name. addCoprocessor(String) already taken above.
+  public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
+    String className = getCoprocessorClassNameFromSpecStr(specStr);
+    if (className == null) {
+      throw new IllegalArgumentException("Format does not match " +
+        HConstants.CP_HTD_ATTR_VALUE_PATTERN + ": " + specStr);
+    }
+    checkHasCoprocessor(className);
+    return addCoprocessorToMap(specStr);
+  }
+
+  private void checkHasCoprocessor(final String className) throws IOException {
+    if (hasCoprocessor(className)) {
+      throw new IOException("Coprocessor " + className + " already exists.");
+    }
+  }
+
+  /**
+   * Add coprocessor to values Map
+   * @param specStr The Coprocessor specification all in in one String formatted so matches
+   * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
+   * @return Returns <code>this</code>
+   */
+  private HTableDescriptor addCoprocessorToMap(final String specStr) {
+    if (specStr == null) return this;
+    // generate a coprocessor key
+    int maxCoprocessorNumber = 0;
+    Matcher keyMatcher;
+    for (Map.Entry<Bytes, Bytes> e: this.values.entrySet()) {
+      keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
+      if (!keyMatcher.matches()) {
+        continue;
+      }
+      maxCoprocessorNumber = Math.max(Integer.parseInt(keyMatcher.group(1)), maxCoprocessorNumber);
+    }
+    maxCoprocessorNumber++;
+    String key = "coprocessor$" + Integer.toString(maxCoprocessorNumber);
+    this.values.put(new Bytes(Bytes.toBytes(key)), new Bytes(Bytes.toBytes(specStr)));
+    return this;
+  }
 
   /**
    * Check if the table has an attached co-processor represented by the name className
    *
-   * @param className - Class name of the co-processor
+   * @param classNameToMatch - Class name of the co-processor
    * @return true of the table has a co-processor className
    */
-  public boolean hasCoprocessor(String className) {
+  public boolean hasCoprocessor(String classNameToMatch) {
     Matcher keyMatcher;
-    Matcher valueMatcher;
     for (Map.Entry<Bytes, Bytes> e :
         this.values.entrySet()) {
       keyMatcher =
@@ -1294,15 +1326,9 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       if (!keyMatcher.matches()) {
         continue;
       }
-      valueMatcher =
-        HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(
-            Bytes.toString(e.getValue().get()));
-      if (!valueMatcher.matches()) {
-        continue;
-      }
-      // get className and compare
-      String clazz = valueMatcher.group(2).trim(); // classname is the 2nd field
-      if (clazz.equals(className.trim())) {
+      String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
+      if (className == null) continue;
+      if (className.equals(classNameToMatch.trim())) {
         return true;
       }
     }
@@ -1317,20 +1343,26 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
   public List<String> getCoprocessors() {
     List<String> result = new ArrayList<String>();
     Matcher keyMatcher;
-    Matcher valueMatcher;
     for (Map.Entry<Bytes, Bytes> e : this.values.entrySet()) {
       keyMatcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(e.getKey().get()));
       if (!keyMatcher.matches()) {
         continue;
       }
-      valueMatcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(Bytes
-          .toString(e.getValue().get()));
-      if (!valueMatcher.matches()) {
-        continue;
-      }
-      result.add(valueMatcher.group(2).trim()); // classname is the 2nd field
+      String className = getCoprocessorClassNameFromSpecStr(Bytes.toString(e.getValue().get()));
+      if (className == null) continue;
+      result.add(className); // classname is the 2nd field
     }
     return result;
+  }
+
+  /**
+   * @param spec String formatted as per {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
+   * @return Class parsed from passed in <code>spec</code> or null if no match or classpath found
+   */
+  private static String getCoprocessorClassNameFromSpecStr(final String spec) {
+    Matcher matcher = HConstants.CP_HTD_ATTR_VALUE_PATTERN.matcher(spec);
+    // Classname is the 2nd field
+    return matcher != null && matcher.matches()? matcher.group(2).trim(): null;
   }
 
   /**

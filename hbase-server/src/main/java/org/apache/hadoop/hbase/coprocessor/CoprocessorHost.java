@@ -117,14 +117,14 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
    */
   public Set<String> getCoprocessors() {
     Set<String> returnValue = new TreeSet<String>();
-    for(CoprocessorEnvironment e: coprocessors) {
+    for (CoprocessorEnvironment e: coprocessors) {
       returnValue.add(e.getInstance().getClass().getSimpleName());
     }
     return returnValue;
   }
 
   /**
-   * Load system coprocessors. Read the class names from configuration.
+   * Load system coprocessors once only. Read the class names from configuration.
    * Called by constructor.
    */
   protected void loadSystemCoprocessors(Configuration conf, String confKey) {
@@ -142,17 +142,20 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
       return;
 
     int priority = Coprocessor.PRIORITY_SYSTEM;
-    List<E> configured = new ArrayList<E>();
     for (String className : defaultCPClasses) {
       className = className.trim();
       if (findCoprocessor(className) != null) {
+        // If already loaded will just continue
+        LOG.warn("Attempted duplicate loading of " + className + "; skipped");
         continue;
       }
       ClassLoader cl = this.getClass().getClassLoader();
       Thread.currentThread().setContextClassLoader(cl);
       try {
         implClass = cl.loadClass(className);
-        configured.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
+        // Add coprocessors as we go to guard against case where a coprocessor is specified twice
+        // in the configuration
+        this.coprocessors.add(loadInstance(implClass, Coprocessor.PRIORITY_SYSTEM, conf));
         LOG.info("System coprocessor " + className + " was loaded " +
             "successfully with priority (" + priority++ + ").");
       } catch (Throwable t) {
@@ -160,9 +163,6 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
         abortServer(className, t);
       }
     }
-
-    // add entire set to the collection for COW efficiency
-    coprocessors.addAll(configured);
   }
 
   /**
