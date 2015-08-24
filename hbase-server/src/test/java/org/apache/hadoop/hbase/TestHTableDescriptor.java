@@ -43,6 +43,49 @@ import org.junit.experimental.categories.Category;
 public class TestHTableDescriptor {
   final static Log LOG = LogFactory.getLog(TestHTableDescriptor.class);
 
+  @Test (expected=IOException.class)
+  public void testAddCoprocessorTwice() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
+    String cpName = "a.b.c.d";
+    htd.addCoprocessor(cpName);
+    htd.addCoprocessor(cpName);
+  }
+
+  @Test
+  public void testAddCoprocessorWithSpecStr() throws IOException {
+    HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
+    String cpName = "a.b.c.d";
+    boolean expected = false;
+    try {
+      htd.addCoprocessorWithSpec(cpName);
+    } catch (IllegalArgumentException iae) {
+      expected = true;
+    }
+    if (!expected) fail();
+    // Try minimal spec.
+    try {
+      htd.addCoprocessorWithSpec("file:///some/path" + "|" + cpName);
+    } catch (IllegalArgumentException iae) {
+      expected = false;
+    }
+    if (expected) fail();
+    // Try more spec.
+    String spec = "hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2";
+    try {
+      htd.addCoprocessorWithSpec(spec);
+    } catch (IllegalArgumentException iae) {
+      expected = false;
+    }
+    if (expected) fail();
+    // Try double add of same coprocessor
+    try {
+      htd.addCoprocessorWithSpec(spec);
+    } catch (IOException ioe) {
+      expected = true;
+    }
+    if (!expected) fail();
+  }
+
   @Test
   public void testPb() throws DeserializationException, IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.META_TABLE_NAME);
