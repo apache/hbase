@@ -49,16 +49,10 @@ public class JmxCacheBuster {
   /**
    * For JMX to forget about all previously exported metrics.
    */
-
   public static void clearJmxCache() {
-    clearJmxCache(false);
-  }
-
-  public static synchronized void clearJmxCache(boolean force) {
     //If there are more then 100 ms before the executor will run then everything should be merged.
     ScheduledFuture future = fut.get();
-    if (!force &&
-        (future == null || (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
+    if ((future == null || (!future.isDone() && future.getDelay(TimeUnit.MILLISECONDS) > 100))) {
       // BAIL OUT
       return;
     }
@@ -66,7 +60,7 @@ public class JmxCacheBuster {
     fut.set(future);
   }
 
-  static class JmxCacheBusterRunnable implements Runnable {
+  final static class JmxCacheBusterRunnable implements Runnable {
     @Override
     public void run() {
       if (LOG.isTraceEnabled()) {
@@ -78,6 +72,9 @@ public class JmxCacheBuster {
       try {
         if (DefaultMetricsSystem.instance() != null) {
           DefaultMetricsSystem.instance().stop();
+          // Sleep some time so that the rest of the hadoop metrics
+          // system knows that things are done
+          Thread.sleep(500);
           DefaultMetricsSystem.instance().start();
         }
       }  catch (Exception exception)  {
