@@ -100,7 +100,7 @@ public class TestRegionServerHostname {
           assertTrue(servers.size() == NUM_RS+1);
           for (String server : servers) {
             assertTrue("From zookeeper: " + server + " hostname: " + hostName,
-              server.startsWith(hostName+","));
+              server.startsWith(hostName.toLowerCase()+","));
           }
           zkw.close();
         } finally {
