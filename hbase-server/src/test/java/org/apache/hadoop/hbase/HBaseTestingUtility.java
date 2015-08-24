@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -219,6 +220,40 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public static final Compression.Algorithm[] COMPRESSION_ALGORITHMS ={
       Compression.Algorithm.NONE, Compression.Algorithm.GZ
     };
+
+  /**
+   * Checks to see if a specific port is available.
+   *
+   * @param port the port number to check for availability
+   * @return <tt>true</tt> if the port is available, or <tt>false</tt> if not
+   */
+  public static boolean available(int port) {
+    ServerSocket ss = null;
+    DatagramSocket ds = null;
+    try {
+      ss = new ServerSocket(port);
+      ss.setReuseAddress(true);
+      ds = new DatagramSocket(port);
+      ds.setReuseAddress(true);
+      return true;
+    } catch (IOException e) {
+      // Do nothing
+    } finally {
+      if (ds != null) {
+        ds.close();
+      }
+
+      if (ss != null) {
+        try {
+          ss.close();
+        } catch (IOException e) {
+          /* should not be thrown */
+        }
+      }
+    }
+
+    return false;
+  }
 
   /**
    * Create all combinations of Bloom filters and compression algorithms for

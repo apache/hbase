@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.management.MBeanAttributeInfo;
@@ -82,15 +83,25 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     conf.setFloat("hbase.regions.slop", 0.0f);
     conf.set(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, JMXListener.class.getName());
 
-    for (int i = 0; i < 5; i++) {
+    Random rand = new Random();
+    for (int i = 0; i < 10; i++) {
+      do {
+        int sign = i % 2 == 0 ? 1 : -1;
+        connectorPort += sign * rand.nextInt(100);
+      } while (!HBaseTestingUtility.available(connectorPort));
       try {
         conf.setInt("regionserver.rmi.registry.port", connectorPort);
         UTIL.startMiniCluster();
         break;
       } catch (Exception e) {
-        connectorPort++;
         LOG.debug("Encountered exception when starting mini cluster. Trying port " + connectorPort,
           e);
+        try {
+          // this is to avoid "IllegalStateException: A mini-cluster is already running"
+          UTIL.shutdownMiniCluster();
+        } catch (Exception ex) {
+          LOG.debug("Encountered exception shutting down cluster", ex);
+        }
       }
     }
   }
