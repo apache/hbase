@@ -27,17 +27,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * This is a hammer test that verifies MultiVersionConsistencyControl in a
+ * This is a hammer test that verifies MultiVersionConcurrencyControl in a
  * multiple writer single reader scenario.
  */
 @Category({RegionServerTests.class, SmallTests.class})
-public class TestMultiVersionConsistencyControl extends TestCase {
+public class TestMultiVersionConcurrencyControl extends TestCase {
   static class Writer implements Runnable {
     final AtomicBoolean finished;
-    final MultiVersionConsistencyControl mvcc;
+    final MultiVersionConcurrencyControl mvcc;
     final AtomicBoolean status;
 
-    Writer(AtomicBoolean finished, MultiVersionConsistencyControl mvcc, AtomicBoolean status) {
+    Writer(AtomicBoolean finished, MultiVersionConcurrencyControl mvcc, AtomicBoolean status) {
       this.finished = finished;
       this.mvcc = mvcc;
       this.status = status;
@@ -49,7 +49,7 @@ public class TestMultiVersionConsistencyControl extends TestCase {
     public void run() {
       AtomicLong startPoint = new AtomicLong();
       while (!finished.get()) {
-        MultiVersionConsistencyControl.WriteEntry e = 
+        MultiVersionConcurrencyControl.WriteEntry e =
             mvcc.beginMemstoreInsertWithSeqNum(startPoint.incrementAndGet());
         // System.out.println("Begin write: " + e.getWriteNumber());
         // 10 usec - 500usec (including 0)
@@ -75,7 +75,7 @@ public class TestMultiVersionConsistencyControl extends TestCase {
   }
 
   public void testParallelism() throws Exception {
-    final MultiVersionConsistencyControl mvcc = new MultiVersionConsistencyControl();
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
     final AtomicBoolean finished = new AtomicBoolean(false);
 

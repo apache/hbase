@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
  * the new writes for readers to read (thus forming atomic transactions).
  */
 @InterfaceAudience.Private
-public class MultiVersionConsistencyControl {
+public class MultiVersionConcurrencyControl {
   private static final long NO_WRITE_NUMBER = 0;
   private volatile long memstoreRead = 0;
   private final Object readWaiters = new Object();
@@ -45,7 +45,7 @@ public class MultiVersionConsistencyControl {
   /**
    * Default constructor. Initializes the memstoreRead/Write points to 0.
    */
-  public MultiVersionConsistencyControl() {
+  public MultiVersionConcurrencyControl() {
   }
 
   /**
