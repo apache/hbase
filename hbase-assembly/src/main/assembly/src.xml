@@ -50,11 +50,11 @@
   </moduleSets>
   <fileSets>
     <!--This one is weird.  When we assemble src, it'll be default profile which
-         at the moment is hadoop1.  But we should include the hadoop2 compat module
-         too so can build hadoop2 from src -->
+         at the moment is hadoop2.  But we should include the hadoop1 compat module
+         too so can build hadoop1 from src -->
     <fileSet>
-      <directory>${project.basedir}/../hbase-hadoop2-compat</directory>
-      <outputDirectory>hbase-hadoop2-compat</outputDirectory>
+      <directory>${project.basedir}/../hbase-hadoop1-compat</directory>
+      <outputDirectory>hbase-hadoop1-compat</outputDirectory>
       <fileMode>0644</fileMode>
       <directoryMode>0755</directoryMode>
             <excludes>
