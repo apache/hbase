@@ -1183,7 +1183,7 @@
     <jersey.version>1.9</jersey.version>
     <jmock-junit4.version>2.6.0</jmock-junit4.version>
     <jruby.version>1.6.8</jruby.version>
-    <junit.version>4.11</junit.version>
+    <junit.version>4.12</junit.version>
     <hamcrest.version>1.3</hamcrest.version>
     <htrace.version>3.1.0-incubating</htrace.version>
     <log4j.version>1.2.17</log4j.version>
