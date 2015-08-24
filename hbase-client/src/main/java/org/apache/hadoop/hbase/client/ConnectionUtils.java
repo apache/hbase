@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -106,27 +107,33 @@ public final class ConnectionUtils {
   }
 
   /**
-   * Adapt a HConnection so that it can bypass the RPC layer (serialization,
-   * deserialization, networking, etc..) -- i.e. short-circuit -- when talking to a local server.
-   * @param conn the connection to adapt
+   * Creates a short-circuit connection that can bypass the RPC layer (serialization,
+   * deserialization, networking, etc..) when talking to a local server.
+   * @param conf the current configuration
+   * @param pool the thread pool to use for batch operations
+   * @param user the user the connection is for
    * @param serverName the local server name
    * @param admin the admin interface of the local server
    * @param client the client interface of the local server
-   * @return an adapted/decorated HConnection
+   * @return an short-circuit connection.
+   * @throws IOException
    */
-  public static ClusterConnection createShortCircuitHConnection(final Connection conn,
-      final ServerName serverName, final AdminService.BlockingInterface admin,
-      final ClientService.BlockingInterface client) {
-    return new ConnectionAdapter(conn) {
+  public static ClusterConnection createShortCircuitConnection(final Configuration conf,
+    ExecutorService pool, User user, final ServerName serverName,
+    final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
+    throws IOException {
+    if (user == null) {
+      user = UserProvider.instantiate(conf).getCurrent();
+    }
+    return new ConnectionImplementation(conf, pool, user) {
       @Override
-      public AdminService.BlockingInterface getAdmin(
-          ServerName sn, boolean getMaster) throws IOException {
+      public AdminService.BlockingInterface getAdmin(ServerName sn, boolean getMaster)
+        throws IOException {
         return serverName.equals(sn) ? admin : super.getAdmin(sn, getMaster);
       }
 
       @Override
-      public ClientService.BlockingInterface getClient(
-          ServerName sn) throws IOException {
+      public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
         return serverName.equals(sn) ? client : super.getClient(sn);
       }
     };
