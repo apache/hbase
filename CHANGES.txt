@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release 0.98.14 - 8/21/2015
+Release 0.98.14 - 8/29/2015
 
 ** Sub-task
     * [HBASE-7847] - Use zookeeper multi to clear znodes
@@ -62,17 +62,26 @@ Release 0.98.14 - 8/21/2015
     * [HBASE-14199] - maven-remote-resources-plugin failure processing NOTICE.vm in hbase-assembly
     * [HBASE-14209] - TestShell visibility tests failing
     * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
+    * [HBASE-14225] - Exclude **/target/** from RAT checks
+    * [HBASE-14243] - Incorrect NOTICE file in hbase-it test-jar
+    * [HBASE-14246] - branch 0.98 and earlier has incorrect LICENSE/NOTICE for several dependencies
+    * [HBASE-14250] - branch-1.1 hbase-server test-jar has incorrect LICENSE
+    * [HBASE-14251] - javadoc jars use LICENSE/NOTICE from primary artifact
+    * [HBASE-14291] - NPE On StochasticLoadBalancer Balance Involving RS With No Regions
 
 ** Improvement
     * [HBASE-8642] - [Snapshot] List and delete snapshot by table
     * [HBASE-12596] - bulkload needs to follow locality
+    * [HBASE-13376] - Improvements to Stochastic load balancer
     * [HBASE-13755] - Provide single super user check implementation
     * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
     * [HBASE-13961] - SnapshotManager#initialize should set snapshotLayoutVersion if it allows to create snapshot with old layout format
     * [HBASE-13985] - Add configuration to skip validating HFile format when bulk loading
+    * [HBASE-13996] - Add write sniffing in canary
     * [HBASE-14002] - Add --noReplicationSetup option to IntegrationTestReplication
     * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
     * [HBASE-14122] - Client API for determining if server side supports cell level security
+    * [HBASE-14260] - don't build javadocs for hbase-protocol module
 
 ** New Feature
     * [HBASE-13356] - HBase should provide an InputFormat supporting multiple scans in mapreduce jobs over snapshots
@@ -85,10 +94,13 @@ Release 0.98.14 - 8/21/2015
     * [HBASE-13994] - Backport HBASE-13917 (Remove string comparison to identify request priority) to 0.98
     * [HBASE-14057] - HBase shell user_permission should list super users defined on hbase-site.xml
     * [HBASE-14085] - Correct LICENSE and NOTICE files in artifacts
+    * [HBASE-14264] - Update RAT plugin version in 0.98 branch
+    * [HBASE-14288] - Upgrade asciidoctor plugin to v1.5.2.1
 
 ** Test
     * [HBASE-11819] - Unit test for CoprocessorHConnection 
     * [HBASE-13940] - IntegrationTestBulkLoad needs option to specify output folders used by test
+    * [HBASE-14210] - Create test for cell level ACLs involving user group
 
 
 Release 0.98.13 - 6/18/2015
