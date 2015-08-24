@@ -846,8 +846,17 @@ public final class HConstants {
     */
   public static final float HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD = 0.2f;
 
-  public static final Pattern CP_HTD_ATTR_KEY_PATTERN = Pattern.compile
-      ("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+  public static final Pattern CP_HTD_ATTR_KEY_PATTERN =
+      Pattern.compile("^coprocessor\\$([0-9]+)$", Pattern.CASE_INSENSITIVE);
+
+  /**
+   * Pattern that matches a coprocessor specification. Form is:
+   * <code>
+   *&lt;coprocessor jar file location> '|' &lt<class name> ['|' &lt;priority> ['|' &lt;arguments>]]
+   * </code>
+   * ...where arguments are <code>&lt;KEY> '=' &lt;VALUE> [,...]</code>
+   * <p>For example: <code>hdfs:///foo.jar|com.foo.FooRegionObserver|1001|arg1=1,arg2=2</code>
+   */
   public static final Pattern CP_HTD_ATTR_VALUE_PATTERN =
       Pattern.compile("(^[^\\|]*)\\|([^\\|]+)\\|[\\s]*([\\d]*)[\\s]*(\\|.*)?$");
 
