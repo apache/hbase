@@ -92,7 +92,7 @@ public class TestRegionServerHostname {
           }
           assertTrue(servers.size() == NUM_RS);
           for (String server : servers) {
-            assertTrue(server.startsWith(hostName+","));
+            assertTrue(server.startsWith(hostName.toLowerCase()+","));
           }
           zkw.close();
         } finally {
