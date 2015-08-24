@@ -23,6 +23,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -34,6 +36,8 @@ import org.apache.hadoop.metrics2.lib.MetricsExecutorImpl;
 @InterfaceAudience.Private
 public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     implements MetricsRegionAggregateSource {
+
+  private static final Log LOG = LogFactory.getLog(MetricsRegionAggregateSourceImpl.class);
 
   private final MetricsExecutorImpl executor = new MetricsExecutorImpl();
 
@@ -54,7 +58,7 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
     // Every few mins clean the JMX cache.
     executor.getExecutor().scheduleWithFixedDelay(new Runnable() {
       public void run() {
-        JmxCacheBuster.clearJmxCache(true);
+        JmxCacheBuster.clearJmxCache();
       }
     }, 5, 5, TimeUnit.MINUTES);
   }
@@ -67,12 +71,20 @@ public class MetricsRegionAggregateSourceImpl extends BaseSourceImpl
 
   @Override
   public void deregister(MetricsRegionSource toRemove) {
-    regionSources.remove(toRemove);
+    try {
+      regionSources.remove(toRemove);
+    } catch (Exception e) {
+      // Ignored. If this errors out it means that someone is double
+      // closing the region source and the region is already nulled out.
+      LOG.info(
+          "Error trying to remove " + toRemove + " from " + this.getClass().getSimpleName(),
+          e);
+    }
     clearCache();
   }
 
   private synchronized void clearCache() {
-    JmxCacheBuster.clearJmxCache(true);
+    JmxCacheBuster.clearJmxCache();
   }
 
   /**

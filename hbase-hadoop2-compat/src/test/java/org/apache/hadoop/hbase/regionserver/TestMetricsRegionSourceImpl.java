@@ -42,8 +42,10 @@ public class TestMetricsRegionSourceImpl {
     assertEquals(one.hashCode(), oneClone.hashCode());
     assertNotEquals(one, two);
 
-    assertTrue( one.compareTo(two) < 0);
-    assertTrue( two.compareTo(one) > 0);
+    assertTrue( one.compareTo(two) != 0);
+    assertTrue( two.compareTo(one) != 0);
+    assertTrue( two.compareTo(one) != one.compareTo(two));
+    assertTrue( two.compareTo(two) == 0);
   }
 
 
@@ -59,8 +61,6 @@ public class TestMetricsRegionSourceImpl {
     private String regionName;
 
     public RegionWrapperStub(String regionName) {
-
-
       this.regionName = regionName;
     }
 

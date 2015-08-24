@@ -20,16 +20,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
-import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
 import org.apache.hadoop.metrics2.lib.Interns;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
@@ -65,6 +61,7 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
   private final MutableCounterLong regionAppend;
   private final MutableHistogram regionGet;
   private final MutableHistogram regionScanNext;
+  private final int hashCode;
 
   public MetricsRegionSourceImpl(MetricsRegionWrapper regionWrapper,
                                  MetricsRegionAggregateSourceImpl aggregate) {
@@ -101,6 +98,8 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
     regionScanNextKey = regionNamePrefix + MetricsRegionServerSource.SCAN_NEXT_KEY;
     regionScanNext = registry.newHistogram(regionScanNextKey);
+
+    hashCode = regionWrapper.getRegionHashCode();
   }
 
   @Override
@@ -173,12 +172,16 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public int compareTo(MetricsRegionSource source) {
-    if (!(source instanceof MetricsRegionSourceImpl))
+    if (!(source instanceof MetricsRegionSourceImpl)) {
       return -1;
+    }
 
     MetricsRegionSourceImpl impl = (MetricsRegionSourceImpl) source;
-    return this.regionWrapper.getRegionName()
-        .compareTo(impl.regionWrapper.getRegionName());
+    if (impl == null) {
+      return -1;
+    }
+
+    return Long.compare(hashCode, impl.hashCode);
   }
 
   void snapshot(MetricsRecordBuilder mrb, boolean ignored) {
@@ -203,31 +206,40 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       }
 
       mrb.addGauge(
-          Interns.info(regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
+          Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.STORE_COUNT,
               MetricsRegionServerSource.STORE_COUNT_DESC),
           this.regionWrapper.getNumStores());
-      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
+      mrb.addGauge(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
               MetricsRegionServerSource.STOREFILE_COUNT_DESC),
           this.regionWrapper.getNumStoreFiles());
-      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
+      mrb.addGauge(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
               MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
           this.regionWrapper.getMemstoreSize());
-      mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
+      mrb.addGauge(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.STOREFILE_SIZE,
               MetricsRegionServerSource.STOREFILE_SIZE_DESC),
           this.regionWrapper.getStoreFileSize());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
               MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),
           this.regionWrapper.getNumCompactionsCompleted());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.NUM_BYTES_COMPACTED_COUNT,
               MetricsRegionSource.NUM_BYTES_COMPACTED_DESC),
           this.regionWrapper.getNumBytesCompacted());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionSource.NUM_FILES_COMPACTED_COUNT,
               MetricsRegionSource.NUM_FILES_COMPACTED_DESC),
           this.regionWrapper.getNumFilesCompacted());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.READ_REQUEST_COUNT,
               MetricsRegionServerSource.READ_REQUEST_COUNT_DESC),
           this.regionWrapper.getReadRequestCount());
-      mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
+      mrb.addCounter(Interns.info(
+              regionNamePrefix + MetricsRegionServerSource.WRITE_REQUEST_COUNT,
               MetricsRegionServerSource.WRITE_REQUEST_COUNT_DESC),
           this.regionWrapper.getWriteRequestCount());
 
@@ -265,12 +277,12 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
 
   @Override
   public int hashCode() {
-    return regionWrapper.getRegionHashCode();
+    return hashCode;
   }
 
   @Override
   public boolean equals(Object obj) {
-    if (obj == this) return true;
-    return obj instanceof MetricsRegionSourceImpl && compareTo((MetricsRegionSourceImpl) obj) == 0;
+    return obj == this ||
+        (obj instanceof MetricsRegionSourceImpl && compareTo((MetricsRegionSourceImpl) obj) == 0);
   }
 }

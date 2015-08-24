@@ -68,19 +68,19 @@ public class MetricsRegionServerSourceImpl
     this.rsWrap = rsWrap;
 
     putHisto = getMetricsRegistry().newHistogram(MUTATE_KEY);
-    slowPut = getMetricsRegistry().newCounter(SLOW_MUTATE_KEY, SLOW_MUTATE_DESC, 0l);
+    slowPut = getMetricsRegistry().newCounter(SLOW_MUTATE_KEY, SLOW_MUTATE_DESC, 0L);
 
     deleteHisto = getMetricsRegistry().newHistogram(DELETE_KEY);
-    slowDelete = getMetricsRegistry().newCounter(SLOW_DELETE_KEY, SLOW_DELETE_DESC, 0l);
+    slowDelete = getMetricsRegistry().newCounter(SLOW_DELETE_KEY, SLOW_DELETE_DESC, 0L);
 
     getHisto = getMetricsRegistry().newHistogram(GET_KEY);
-    slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0l);
+    slowGet = getMetricsRegistry().newCounter(SLOW_GET_KEY, SLOW_GET_DESC, 0L);
 
     incrementHisto = getMetricsRegistry().newHistogram(INCREMENT_KEY);
     slowIncrement = getMetricsRegistry().newCounter(SLOW_INCREMENT_KEY, SLOW_INCREMENT_DESC, 0L);
 
     appendHisto = getMetricsRegistry().newHistogram(APPEND_KEY);
-    slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0l);
+    slowAppend = getMetricsRegistry().newCounter(SLOW_APPEND_KEY, SLOW_APPEND_DESC, 0L);
     
     replayHisto = getMetricsRegistry().newHistogram(REPLAY_KEY);
     scanNextHisto = getMetricsRegistry().newHistogram(SCAN_NEXT_KEY);
@@ -88,8 +88,8 @@ public class MetricsRegionServerSourceImpl
     splitTimeHisto = getMetricsRegistry().newHistogram(SPLIT_KEY);
     flushTimeHisto = getMetricsRegistry().newHistogram(FLUSH_KEY);
 
-    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0l);
-    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0l);
+    splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
+    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
   }
 
   @Override
