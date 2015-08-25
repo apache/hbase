@@ -1495,7 +1495,7 @@ The minimum flush unit is per region, not at individual MemStore level.
 * The `RegionScanner` object contains a list of `StoreScanner` objects, one per column family.
 * Each `StoreScanner` object further contains a list of `StoreFileScanner` objects, corresponding to each StoreFile and HFile of the corresponding column family, and a list of `KeyValueScanner` objects for the MemStore.
 * The two lists are merged into one, which is sorted in ascending order with the scan object for the MemStore at the end of the list.
-* When a `StoreFileScanner` object is constructed, it is associated with a `MultiVersionConsistencyControl` read point, which is the current `memstoreTS`, filtering out any new updates beyond the read point.
+* When a `StoreFileScanner` object is constructed, it is associated with a `MultiVersionConcurrencyControl` read point, which is the current `memstoreTS`, filtering out any new updates beyond the read point.
 
 [[hfile]]
 ==== StoreFile (HFile)
