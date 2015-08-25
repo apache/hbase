@@ -182,11 +182,13 @@ end
 # Remove the servername whose hostname portion matches from the passed
 # array of servers.  Returns as side-effect the servername removed.
 def stripServer(servers, hostname, port)
+  upperCaseHostname = hostname.upcase;
   count = servers.length
   servername = nil
   for server in servers
     hostFromServerName, portFromServerName = getHostPortFromServerName(server)
-    if hostFromServerName == hostname and portFromServerName == port
+    hostFromServerName = hostFromServerName.upcase
+    if hostFromServerName == upperCaseHostname and portFromServerName == port
       servername = servers.delete(server)
     end
   end
