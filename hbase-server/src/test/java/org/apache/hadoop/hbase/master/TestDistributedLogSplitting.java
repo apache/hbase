@@ -1,5 +1,6 @@
 /**
  *
+
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -131,9 +132,9 @@ public class TestDistributedLogSplitting {
 
   }
 
-  // Start a cluster with 2 masters and 6 regionservers
+  // Start a cluster with 2 masters and 5 regionservers
   static final int NUM_MASTERS = 2;
-  static final int NUM_RS = 6;
+  static final int NUM_RS = 5;
 
   MiniHBaseCluster cluster;
   HMaster master;
@@ -167,7 +168,6 @@ public class TestDistributedLogSplitting {
     conf.setInt(HConstants.REGIONSERVER_INFO_PORT, -1);
     conf.setFloat(HConstants.LOAD_BALANCER_SLOP_KEY, (float) 100.0); // no load balancing
     conf.setInt("hbase.regionserver.wal.max.splitters", 3);
-    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 40);
     TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.setDFSCluster(dfsCluster);
@@ -1466,8 +1466,8 @@ public class TestDistributedLogSplitting {
       if (ht != null) ht.close();
       if (zkw != null) zkw.close();
     }
-  } 
-  
+  }
+
   Table installTable(ZooKeeperWatcher zkw, String tname, String fname, int nrs) throws Exception {
     return installTable(zkw, tname, fname, nrs, 0);
   }
