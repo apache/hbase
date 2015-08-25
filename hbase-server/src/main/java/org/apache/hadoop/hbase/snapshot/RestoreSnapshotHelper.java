@@ -127,6 +127,7 @@ public class RestoreSnapshotHelper {
 
   private final Configuration conf;
   private final FileSystem fs;
+  private final boolean createBackRefs;
 
   public RestoreSnapshotHelper(final Configuration conf,
       final FileSystem fs,
@@ -134,7 +135,18 @@ public class RestoreSnapshotHelper {
       final HTableDescriptor tableDescriptor,
       final Path rootDir,
       final ForeignExceptionDispatcher monitor,
-      final MonitoredTask status)
+      final MonitoredTask status) {
+    this(conf, fs, manifest, tableDescriptor, rootDir, monitor, status, true);
+  }
+
+  public RestoreSnapshotHelper(final Configuration conf,
+      final FileSystem fs,
+      final SnapshotManifest manifest,
+      final HTableDescriptor tableDescriptor,
+      final Path rootDir,
+      final ForeignExceptionDispatcher monitor,
+      final MonitoredTask status,
+      final boolean createBackRefs)
   {
     this.fs = fs;
     this.conf = conf;
@@ -146,6 +158,7 @@ public class RestoreSnapshotHelper {
     this.tableDir = FSUtils.getTableDir(rootDir, tableDesc.getTableName());
     this.monitor = monitor;
     this.status = status;
+    this.createBackRefs = createBackRefs;
   }
 
   /**
@@ -434,7 +447,7 @@ public class RestoreSnapshotHelper {
         for (SnapshotRegionManifest.StoreFile storeFile: hfilesToAdd) {
           LOG.debug("Adding HFileLink " + storeFile.getName() +
             " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
-          restoreStoreFile(familyDir, regionInfo, storeFile);
+          restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
         }
       } else {
         // Family doesn't exists in the snapshot
@@ -455,7 +468,7 @@ public class RestoreSnapshotHelper {
 
       for (SnapshotRegionManifest.StoreFile storeFile: familyEntry.getValue()) {
         LOG.trace("Adding HFileLink " + storeFile.getName() + " to table=" + tableName);
-        restoreStoreFile(familyDir, regionInfo, storeFile);
+        restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs);
       }
     }
   }
@@ -538,7 +551,7 @@ public class RestoreSnapshotHelper {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       for (SnapshotRegionManifest.StoreFile storeFile: familyFiles.getStoreFilesList()) {
         LOG.info("Adding HFileLink " + storeFile.getName() + " to table=" + tableName);
-        restoreStoreFile(familyDir, snapshotRegionInfo, storeFile);
+        restoreStoreFile(familyDir, snapshotRegionInfo, storeFile, createBackRefs);
       }
     }
   }
@@ -553,17 +566,19 @@ public class RestoreSnapshotHelper {
    * </ul>
    * @param familyDir destination directory for the store file
    * @param regionInfo destination region info for the table
-   * @param hfileName store file name (can be a Reference, HFileLink or simple HFile)
+   * @param storeFile store file name (can be a Reference, HFileLink or simple HFile)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
    */
   private void restoreStoreFile(final Path familyDir, final HRegionInfo regionInfo,
-      final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+      final SnapshotRegionManifest.StoreFile storeFile, final boolean createBackRef)
+          throws IOException {
     String hfileName = storeFile.getName();
     if (HFileLink.isHFileLink(hfileName)) {
-      HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName);
+      HFileLink.createFromHFileLink(conf, fs, familyDir, hfileName, createBackRef);
     } else if (StoreFileInfo.isReference(hfileName)) {
       restoreReferenceFile(familyDir, regionInfo, storeFile);
     } else {
-      HFileLink.create(conf, fs, familyDir, regionInfo, hfileName);
+      HFileLink.create(conf, fs, familyDir, regionInfo, hfileName, createBackRef);
     }
   }
 
@@ -729,8 +744,10 @@ public class RestoreSnapshotHelper {
         "Restoring  snapshot '" + snapshotName + "' to directory " + restoreDir);
     ForeignExceptionDispatcher monitor = new ForeignExceptionDispatcher();
 
+    // we send createBackRefs=false so that restored hfiles do not create back reference links
+    // in the base hbase root dir.
     RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf, fs,
-      manifest, manifest.getTableDescriptor(), restoreDir, monitor, status);
+      manifest, manifest.getTableDescriptor(), restoreDir, monitor, status, false);
     helper.restoreHdfsRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {
