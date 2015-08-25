@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
@@ -28,13 +29,19 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -100,6 +107,50 @@ public abstract class TableSnapshotInputFormatTestBase {
   public void testWithMapReduceAndOfflineHBaseMultiRegion() throws Exception {
     testWithMapReduce(UTIL, "testWithMapReduceAndOfflineHBaseMultiRegion", 10, 8, true);
   }
+
+  // Test that snapshot restore does not create back references in the HBase root dir.
+  @Test
+  public void testRestoreSnapshotDoesNotCreateBackRefLinks() throws Exception {
+    setupCluster();
+    TableName tableName = TableName.valueOf("testRestoreSnapshotDoesNotCreateBackRefLinks");
+    String snapshotName = "foo";
+
+    try {
+      createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
+
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+
+      testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
+
+      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
+      for (Path regionDir : FSUtils.getRegionDirs(fs, FSUtils.getTableDir(rootDir, tableName))) {
+        for (Path storeDir : FSUtils.getFamilyDirs(fs, regionDir)) {
+          for (FileStatus status : fs.listStatus(storeDir)) {
+            System.out.println(status.getPath());
+            if (StoreFileInfo.isValid(status)) {
+              Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(UTIL.getConfiguration(),
+                tableName, regionDir.getName(), storeDir.getName());
+
+              Path path = HFileLink.getBackReferencesDir(storeDir, status.getPath().getName());
+              // assert back references directory is empty
+              assertFalse("There is a back reference in " + path, fs.exists(path));
+
+              path = HFileLink.getBackReferencesDir(archiveStoreDir, status.getPath().getName());
+              // assert back references directory is empty
+              assertFalse("There is a back reference in " + path, fs.exists(path));
+            }
+          }
+        }
+      }
+    } finally {
+      UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+      tearDownCluster();
+    }
+  }
+
+  public abstract void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
+      String snapshotName, Path tmpTableDir) throws Exception;
 
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits, boolean shutdownCluster) throws Exception {
