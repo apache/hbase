@@ -3452,7 +3452,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     Scan scan = new Scan(get);
     InternalScanner scanner = (InternalScanner) store.getScanner(scan,
         scan.getFamilyMap().get(store.getFamily().getName()),
-        // originally MultiVersionConsistencyControl.resetThreadReadPoint() was called to set
+        // originally MultiVersionConcurrencyControl.resetThreadReadPoint() was called to set
         // readpoint 0.
         0);
 
