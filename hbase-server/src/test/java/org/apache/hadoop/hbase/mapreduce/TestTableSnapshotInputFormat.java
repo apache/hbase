@@ -178,6 +178,16 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
     }
   }
 
+  @Override
+  public void testRestoreSnapshotDoesNotCreateBackRefLinksInit(TableName tableName,
+      String snapshotName, Path tmpTableDir) throws Exception {
+    Job job = new Job(UTIL.getConfiguration());
+    TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName,
+      new Scan(), TestTableSnapshotMapper.class, ImmutableBytesWritable.class,
+      NullWritable.class, job, false, tmpTableDir);
+  }
+
+  @Override
   public void testWithMockedMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits) throws Exception {
     setupCluster();

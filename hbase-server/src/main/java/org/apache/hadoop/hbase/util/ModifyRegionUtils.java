@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -33,7 +32,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,10 +42,6 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
-import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
-import org.apache.hadoop.hbase.wal.WAL;
-import org.apache.hadoop.hbase.wal.WALFactory;
 
 /**
  * Utility methods for interacting with the regions.
@@ -176,11 +170,7 @@ public abstract class ModifyRegionUtils {
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
     confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    WAL wal = (new WALFactory(confForWAL,
-        Collections.<WALActionsListener>singletonList(new MetricsWAL()),
-        "hregion-" + RandomStringUtils.randomNumeric(8))).
-        getWAL(newRegion.getEncodedNameAsBytes());
-    HRegion region = HRegion.createHRegion(newRegion, rootDir, conf, hTableDescriptor, wal, false);
+    HRegion region = HRegion.createHRegion(newRegion, rootDir, conf, hTableDescriptor, null, false);
     try {
       // 2. Custom user code to interact with the created region
       if (task != null) {
@@ -189,7 +179,6 @@ public abstract class ModifyRegionUtils {
     } finally {
       // 3. Close the new region to flush to disk. Close log file too.
       region.close();
-      wal.close();
     }
     return region.getRegionInfo();
   }

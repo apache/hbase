@@ -321,9 +321,30 @@ public class HFileLink extends FileLink {
   public static boolean create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final HRegionInfo hfileRegionInfo,
       final String hfileName) throws IOException {
+    return create(conf, fs, dstFamilyPath, hfileRegionInfo, hfileName, true);
+  }
+
+  /**
+   * Create a new HFileLink
+   *
+   * <p>It also adds a back-reference to the hfile back-reference directory
+   * to simplify the reference-count and the cleaning process.
+   *
+   * @param conf {@link Configuration} to read for the archive directory name
+   * @param fs {@link FileSystem} on which to write the HFileLink
+   * @param dstFamilyPath - Destination path (table/region/cf/)
+   * @param hfileRegionInfo - Linked HFile Region Info
+   * @param hfileName - Linked HFile name
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return true if the file is created, otherwise the file exists.
+   * @throws IOException on file or parent directory creation failure
+   */
+  public static boolean create(final Configuration conf, final FileSystem fs,
+      final Path dstFamilyPath, final HRegionInfo hfileRegionInfo,
+      final String hfileName, final boolean createBackRef) throws IOException {
     TableName linkedTable = hfileRegionInfo.getTable();
     String linkedRegion = hfileRegionInfo.getEncodedName();
-    return create(conf, fs, dstFamilyPath, linkedTable, linkedRegion, hfileName);
+    return create(conf, fs, dstFamilyPath, linkedTable, linkedRegion, hfileName, createBackRef);
   }
 
   /**
@@ -344,6 +365,28 @@ public class HFileLink extends FileLink {
   public static boolean create(final Configuration conf, final FileSystem fs,
       final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
       final String hfileName) throws IOException {
+    return create(conf, fs, dstFamilyPath, linkedTable, linkedRegion, hfileName, true);
+  }
+
+  /**
+   * Create a new HFileLink
+   *
+   * <p>It also adds a back-reference to the hfile back-reference directory
+   * to simplify the reference-count and the cleaning process.
+   *
+   * @param conf {@link Configuration} to read for the archive directory name
+   * @param fs {@link FileSystem} on which to write the HFileLink
+   * @param dstFamilyPath - Destination path (table/region/cf/)
+   * @param linkedTable - Linked Table Name
+   * @param linkedRegion - Linked Region Name
+   * @param hfileName - Linked HFile name
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return true if the file is created, otherwise the file exists.
+   * @throws IOException on file or parent directory creation failure
+   */
+  public static boolean create(final Configuration conf, final FileSystem fs,
+      final Path dstFamilyPath, final TableName linkedTable, final String linkedRegion,
+      final String hfileName, final boolean createBackRef) throws IOException {
     String familyName = dstFamilyPath.getName();
     String regionName = dstFamilyPath.getParent().getName();
     String tableName = FSUtils.getTableName(dstFamilyPath.getParent().getParent())
@@ -358,19 +401,24 @@ public class HFileLink extends FileLink {
     // Make sure the FileLink reference directory exists
     Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
           linkedTable, linkedRegion, familyName);
-    Path backRefssDir = getBackReferencesDir(archiveStoreDir, hfileName);
-    fs.mkdirs(backRefssDir);
+    Path backRefPath = null;
+    if (createBackRef) {
+      Path backRefssDir = getBackReferencesDir(archiveStoreDir, hfileName);
+      fs.mkdirs(backRefssDir);
 
-    // Create the reference for the link
-    Path backRefPath = new Path(backRefssDir, refName);
-    fs.createNewFile(backRefPath);
+      // Create the reference for the link
+      backRefPath = new Path(backRefssDir, refName);
+      fs.createNewFile(backRefPath);
+    }
     try {
       // Create the link
       return fs.createNewFile(new Path(dstFamilyPath, name));
     } catch (IOException e) {
       LOG.error("couldn't create the link=" + name + " for " + dstFamilyPath, e);
       // Revert the reference if the link creation failed
-      fs.delete(backRefPath, false);
+      if (createBackRef) {
+        fs.delete(backRefPath, false);
+      }
       throw e;
     }
   }
@@ -389,13 +437,34 @@ public class HFileLink extends FileLink {
    * @throws IOException on file or parent directory creation failure
    */
   public static boolean createFromHFileLink(final Configuration conf, final FileSystem fs,
-      final Path dstFamilyPath, final String hfileLinkName) throws IOException {
+      final Path dstFamilyPath, final String hfileLinkName)
+          throws IOException {
+    return createFromHFileLink(conf, fs, dstFamilyPath, hfileLinkName, true);
+  }
+
+  /**
+   * Create a new HFileLink starting from a hfileLink name
+   *
+   * <p>It also adds a back-reference to the hfile back-reference directory
+   * to simplify the reference-count and the cleaning process.
+   *
+   * @param conf {@link Configuration} to read for the archive directory name
+   * @param fs {@link FileSystem} on which to write the HFileLink
+   * @param dstFamilyPath - Destination path (table/region/cf/)
+   * @param hfileLinkName - HFileLink name (it contains hfile-region-table)
+   * @param createBackRef - Whether back reference should be created. Defaults to true.
+   * @return true if the file is created, otherwise the file exists.
+   * @throws IOException on file or parent directory creation failure
+   */
+  public static boolean createFromHFileLink(final Configuration conf, final FileSystem fs,
+      final Path dstFamilyPath, final String hfileLinkName, final boolean createBackRef)
+          throws IOException {
     Matcher m = LINK_NAME_PATTERN.matcher(hfileLinkName);
     if (!m.matches()) {
       throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
     }
     return create(conf, fs, dstFamilyPath, TableName.valueOf(m.group(1), m.group(2)),
-        m.group(3), m.group(4));
+        m.group(3), m.group(4), createBackRef);
   }
 
   /**
