@@ -63,7 +63,7 @@ public interface RegionScanner extends InternalScanner {
   long getMaxResultSize();
 
   /**
-   * @return The Scanner's MVCC readPt see {@link MultiVersionConsistencyControl}
+   * @return The Scanner's MVCC readPt see {@link MultiVersionConcurrencyControl}
    */
   long getMvccReadPoint();
 
@@ -94,7 +94,7 @@ public interface RegionScanner extends InternalScanner {
    * close a region operation, an synchronize on the scanner object. Example: <code>
    * HRegion region = ...;
    * RegionScanner scanner = ...
-   * MultiVersionConsistencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
+   * MultiVersionConcurrencyControl.setThreadReadPoint(scanner.getMvccReadPoint());
    * region.startRegionOperation();
    * try {
    *   synchronized(scanner) {
