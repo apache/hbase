@@ -614,6 +614,7 @@ public class HConnectionManager {
     ClusterStatusListener clusterStatusListener;
 
     private final Object userRegionLock = new Object();
+    private final Object metaRegionLock = new Object();
 
     // We have a single lock for master & zk to prevent deadlocks. Having
     //  one lock for ZK and one lock for master is not possible:
@@ -1158,12 +1159,46 @@ public class HConnectionManager {
       }
 
       if (tableName.equals(TableName.META_TABLE_NAME)) {
-        return this.registry.getMetaRegionLocation();
+        return locateMeta(tableName, useCache);
       } else {
         // Region not in the cache - have to go to the meta RS
         return locateRegionInMeta(TableName.META_TABLE_NAME, tableName, row,
           useCache, userRegionLock, retry);
       }
+    }
+
+    private HRegionLocation locateMeta(final TableName tableName,
+        boolean useCache) throws IOException {
+      // HBASE-10785: We cache the location of the META itself, so that we are not overloading
+      // zookeeper with one request for every region lookup. We cache the META with empty row
+      // key in MetaCache.
+      byte[] metaCacheKey = HConstants.EMPTY_START_ROW; // use byte[0] as the row for meta
+      HRegionLocation location = null;
+      if (useCache) {
+        location = getCachedLocation(tableName, metaCacheKey);
+        if (location != null) {
+          return location;
+        }
+      }
+
+      // only one thread should do the lookup.
+      synchronized (metaRegionLock) {
+        // Check the cache again for a hit in case some other thread made the
+        // same query while we were waiting on the lock.
+        if (useCache) {
+          location = getCachedLocation(tableName, metaCacheKey);
+          if (location != null) {
+            return location;
+          }
+        }
+
+        // Look up from zookeeper
+        location = this.registry.getMetaRegionLocation();
+        if (location != null) {
+          cacheLocation(tableName, null, location);
+        }
+      }
+      return location;
     }
 
     /*
