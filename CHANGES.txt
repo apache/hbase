@@ -69,6 +69,7 @@ Release 0.98.14 - 8/29/2015
     * [HBASE-14251] - javadoc jars use LICENSE/NOTICE from primary artifact
     * [HBASE-14291] - NPE On StochasticLoadBalancer Balance Involving RS With No Regions
     * [HBASE-14297] - Fix a long standing nit with 0.98 source assemblies
+    * [HBASE-14303] - LICENSE and NOTICE files missing in root dir of Hadoop 1 binary convenience artifact
 
 ** Improvement
     * [HBASE-8642] - [Snapshot] List and delete snapshot by table
