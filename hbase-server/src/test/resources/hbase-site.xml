@@ -51,6 +51,14 @@
     <value>5</value>
   </property>
   <property>
+    <name>hbase.regionserver.metahandler.count</name>
+    <value>5</value>
+  </property>
+  <property>
+      <name>hbase.ipc.server.read.threadpool.size</name>
+    <value>3</value>
+  </property>
+  <property>
     <name>hbase.master.info.port</name>
     <value>-1</value>
     <description>The port for the hbase master web UI

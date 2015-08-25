@@ -69,7 +69,6 @@ public class  TestRollingRestart {
     // Start the cluster
     log("Starting cluster");
     Configuration conf = HBaseConfiguration.create();
-    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 40);
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility(conf);
     TEST_UTIL.startMiniCluster(NUM_MASTERS, NUM_RS);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
@@ -237,7 +236,7 @@ public class  TestRollingRestart {
     }
     return numFound;
   }
-  
+
   private void assertRegionsAssigned(MiniHBaseCluster cluster,
       Set<String> expectedRegions) throws IOException {
     int numFound = getNumberOfOnlineRegions(cluster);

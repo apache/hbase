@@ -146,10 +146,10 @@ public class AsyncRpcChannel {
 
     this.channel = connect(bootstrap).channel();
 
-    name = ("IPC Client (" + channel.hashCode() + ") connection to " +
+    name = ("IPC Client (" + channel.hashCode() + ") to " +
         address.toString() +
         ((ticket == null) ?
-            " from an unknown user" :
+            " from unknown user" :
             (" from " + ticket.getName())));
   }
 

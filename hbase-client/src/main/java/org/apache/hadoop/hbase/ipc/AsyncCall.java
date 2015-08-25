@@ -86,8 +86,9 @@ public class AsyncCall extends DefaultPromise<Message> {
 
   @Override
   public String toString() {
-    return "callId: " + this.id + " methodName: " + this.method.getName() + " param {"
-        + (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + "}";
+    return "callId=" + this.id + ", method=" + this.method.getName() +
+      ", rpcTimeout=" + this.rpcTimeout + ", param {" +
+      (this.param != null ? ProtobufUtil.getShortTextFormat(this.param) : "") + "}";
   }
 
   /**
