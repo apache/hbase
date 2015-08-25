@@ -1,6 +1,6 @@
 HBase Change Log
 
-Release Notes - HBase - Version 1.0.2 - 08/21/2015
+Release Notes - HBase - Version 1.0.2 - 08/31/2015
 
 ** Sub-task
     * [HBASE-7847] - Use zookeeper multi to clear znodes
@@ -17,6 +17,7 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-14080] - Cherry-pick addendums to HBASE-13084 
     * [HBASE-14086] - remove unused bundled dependencies
     * [HBASE-14087] - ensure correct ASF policy compliant headers on source/docs
+    * [HBASE-14104] - Add vectorportal.com to NOTICES.txt as src of our logo
     * [HBASE-14105] - Add shell tests for Snapshot
     * [HBASE-14176] - Add missing headers to META-INF files
 
@@ -40,12 +41,14 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-13430] - HFiles that are in use by a table cloned from a snapshot may be deleted when that snapshot is deleted
     * [HBASE-13437] - ThriftServer leaks ZooKeeper connections
     * [HBASE-13471] - Fix a possible infinite loop in doMiniBatchMutation
+    * [HBASE-13480] - ShortCircuitConnection doesn't short-circuit all calls as expected
     * [HBASE-13520] - NullPointerException in TagRewriteCell
     * [HBASE-13526] - TestRegionServerReportForDuty can be flaky: hang or timeout
     * [HBASE-13527] - The default value for hbase.client.scanner.max.result.size is never actually set on Scans
     * [HBASE-13528] - A bug on selecting compaction pool
     * [HBASE-13546] - NPE on region server status page if all masters are down
     * [HBASE-13555] - StackServlet produces 500 error
+    * [HBASE-13561] - ITBLL.Verify doesn't actually evaluate counters after job completes
     * [HBASE-13564] - Master MBeans are not published
     * [HBASE-13585] - HRegionFileSystem#splitStoreFile() finishes without closing the file handle in some situation
     * [HBASE-13589] - [WINDOWS] hbase.cmd script is broken
@@ -95,6 +98,7 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-13853] - ITBLL improvements after HBASE-13811
     * [HBASE-13861] - BucketCacheTmpl.jamon has wrong bucket free and used labels
     * [HBASE-13863] - Multi-wal feature breaks reported number and size of HLogs
+    * [HBASE-13865] - Increase the default value for hbase.hregion.memstore.block.multipler from 2 to 4 (part 2)
     * [HBASE-13873] - LoadTestTool addAuthInfoToConf throws UnsupportedOperationException
     * [HBASE-13875] - Clock skew between master and region server may render restored region without server address
     * [HBASE-13877] - Interrupt to flush from TableFlushProcedure causes dataloss in ITBLL
@@ -117,8 +121,10 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-13989] - Threshold for combined MemStore and BlockCache percentages is not checked
     * [HBASE-13995] - ServerName is not fully case insensitive
     * [HBASE-14005] - Set permission to .top hfile in LoadIncrementalHFiles
+    * [HBASE-14042] - Fix FATAL level logging in FSHLog where logged for non fatal exceptions
     * [HBASE-14050] - NPE in org.apache.hadoop.hbase.ipc.RpcServer$Connection.readAndProcess
     * [HBASE-14054] - Acknowledged writes may get lost if regionserver clock is set backwards
+    * [HBASE-14089] - Remove unnecessary draw of system entropy from RecoverableZooKeeper
     * [HBASE-14146] - Once replication sees an error it slows down forever
     * [HBASE-14155] - StackOverflowError in reverse scan
     * [HBASE-14178] - regionserver blocks because of waiting for offsetLock
@@ -126,10 +132,18 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-14196] - Thrift server idle connection timeout issue
     * [HBASE-14209] - TestShell visibility tests failing
     * [HBASE-14214] - list_labels shouldn't raise ArgumentError if no labels are defined 
+    * [HBASE-14224] - Fix coprocessor handling of duplicate classes
+    * [HBASE-14228] - Close BufferedMutator and connection in MultiTableOutputFormat
+    * [HBASE-14241] - Fix deadlock during cluster shutdown due to concurrent connection close
+    * [HBASE-14243] - Incorrect NOTICE file in hbase-it test-jar
+    * [HBASE-14250] - branch-1.1 hbase-server test-jar has incorrect LICENSE
+    * [HBASE-14251] - javadoc jars use LICENSE/NOTICE from primary artifact
+    * [HBASE-14302] - TableSnapshotInputFormat should not create back references when restoring snapshot
 
 ** Improvement
     * [HBASE-12415] - Add add(byte[][] arrays) to Bytes.
     * [HBASE-12957] - region_mover#isSuccessfulScan may be extremely slow on region with lots of expired data
+    * [HBASE-13127] - Add timeouts on all tests so less zombie sightings
     * [HBASE-13247] - Change BufferedMutatorExample to use addColumn() since add() is deprecated
     * [HBASE-13344] - Add enforcer rule that matches our JDK support statement
     * [HBASE-13366] - Throw DoNotRetryIOException instead of read only IOException
@@ -142,6 +156,7 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-13846] - Run MiniCluster on top of other MiniDfsCluster
     * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
     * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
+    * [HBASE-14260] - don't build javadocs for hbase-protocol module
 
 ** New Feature
     * [HBASE-13057] - Provide client utility to easily enable and disable table replication
@@ -153,12 +168,15 @@ Release Notes - HBase - Version 1.0.2 - 08/21/2015
     * [HBASE-13666] - book.pdf is not renamed during site build
     * [HBASE-13764] - Backport HBASE-7782 (HBaseTestingUtility.truncateTable() not acting like CLI) to branch-1.x
     * [HBASE-13799] - javadoc how Scan gets polluted when used; if you set attributes or ask for scan metrics
+    * [HBASE-13941] - Backport HBASE-13917 (Remove string comparison to identify request priority) to release branches
     * [HBASE-14085] - Correct LICENSE and NOTICE files in artifacts
+    * [HBASE-14288] - Upgrade asciidoctor plugin to v1.5.2.1
 
 ** Test
     * [HBASE-13609] - TestFastFail is still failing
     * [HBASE-13854] - TestTableLockManager#testLockTimeoutException fails in 0.98 and 1.0 branches
     * [HBASE-13940] - IntegrationTestBulkLoad needs option to specify output folders used by test
+    * [HBASE-14210] - Create test for cell level ACLs involving user group
 
 
 Release Notes - HBase - Version 1.0.1 04/25/2015
