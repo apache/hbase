@@ -595,7 +595,7 @@ public class RpcServer implements RpcServerInterface {
         readers[i] = reader;
         readPool.execute(reader);
       }
-      LOG.info(getName() + ": started " + readThreads + " reader(s).");
+      LOG.info(getName() + ": started " + readThreads + " reader(s) listening on port=" + port);
 
       // Register accepts on the server socket with the selector.
       acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
