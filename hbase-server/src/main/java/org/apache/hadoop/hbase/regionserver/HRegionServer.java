@@ -78,7 +78,6 @@ import org.apache.hadoop.hbase.YouAreDeadException;
 import org.apache.hadoop.hbase.ZNodeClearer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.ClusterConnection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
@@ -609,7 +608,7 @@ public class HRegionServer extends HasThread implements
 
   /**
    * Create a 'smarter' HConnection, one that is capable of by-passing RPC if the request is to
-   * the local server.  Safe to use going to local or remote server.
+   * the local server. Safe to use going to local or remote server.
    * Create this instance in a method can be intercepted and mocked in tests.
    * @throws IOException
    */
@@ -618,8 +617,8 @@ public class HRegionServer extends HasThread implements
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
-    return ConnectionUtils.createShortCircuitHConnection(
-      ConnectionFactory.createConnection(conf), serverName, rpcServices, rpcServices);
+    return ConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
+      serverName, rpcServices, rpcServices);
   }
 
   /**

@@ -22,14 +22,15 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.UserProvider;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -111,6 +112,7 @@ public class ConnectionUtils {
    * @param client the client interface of the local server
    * @return an adapted/decorated HConnection
    */
+  @Deprecated
   public static ClusterConnection createShortCircuitHConnection(final Connection conn,
       final ServerName serverName, final AdminService.BlockingInterface admin,
       final ClientService.BlockingInterface client) {
@@ -124,6 +126,39 @@ public class ConnectionUtils {
       @Override
       public ClientService.BlockingInterface getClient(
           ServerName sn) throws IOException {
+        return serverName.equals(sn) ? client : super.getClient(sn);
+      }
+    };
+  }
+
+  /**
+   * Creates a short-circuit connection that can bypass the RPC layer (serialization,
+   * deserialization, networking, etc..) when talking to a local server.
+   * @param conf the current configuration
+   * @param pool the thread pool to use for batch operations
+   * @param user the user the connection is for
+   * @param serverName the local server name
+   * @param admin the admin interface of the local server
+   * @param client the client interface of the local server
+   * @return a short-circuit connection.
+   * @throws IOException
+   */
+  public static ClusterConnection createShortCircuitConnection(final Configuration conf,
+    ExecutorService pool, User user, final ServerName serverName,
+    final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
+    throws IOException {
+    if (user == null) {
+      user = UserProvider.instantiate(conf).getCurrent();
+    }
+    return new ConnectionManager.HConnectionImplementation(conf, false, pool, user) {
+      @Override
+      public AdminService.BlockingInterface getAdmin(ServerName sn, boolean getMaster)
+        throws IOException {
+        return serverName.equals(sn) ? admin : super.getAdmin(sn, getMaster);
+      }
+
+      @Override
+      public ClientService.BlockingInterface getClient(ServerName sn) throws IOException {
         return serverName.equals(sn) ? client : super.getClient(sn);
       }
     };
