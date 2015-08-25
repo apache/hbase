@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -47,7 +46,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MasterService;
  * Connections skip RPC if request is to local server.
  */
 @InterfaceAudience.Private
-@SuppressWarnings("deprecation")
+@Deprecated
 //NOTE: DO NOT make this class public. It was made package-private on purpose.
 abstract class ConnectionAdapter implements ClusterConnection {
 
