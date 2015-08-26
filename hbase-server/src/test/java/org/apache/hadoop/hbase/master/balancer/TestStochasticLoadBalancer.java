@@ -58,8 +58,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat("hbase.master.balancer.stochastic.maxMovePercent", 0.75f);
     conf.setFloat("hbase.regions.slop", 0.0f);
-    conf.setFloat("hbase.master.balancer.stochastic.localityCost", 0);
-    conf.setInt("hbase.master.balancer.stochastic.maxSteps", 10000000);
     loadBalancer = new StochasticLoadBalancer();
     loadBalancer.setConf(conf);
   }
@@ -134,7 +132,6 @@ public class TestStochasticLoadBalancer extends BalancerTestBase {
       new int[]{13, 14, 6, 10, 10, 10, 8, 10},
       new int[]{130, 14, 60, 10, 100, 10, 80, 10},
       new int[]{130, 140, 60, 100, 100, 100, 80, 100},
-      new int[]{0, 5 , 5, 5, 5},
       largeCluster,
 
   };
