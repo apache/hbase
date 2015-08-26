@@ -410,7 +410,10 @@ public class MasterRpcServices extends RSRpcServices
   public CreateNamespaceResponse createNamespace(RpcController controller,
      CreateNamespaceRequest request) throws ServiceException {
     try {
-      master.createNamespace(ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()));
+      master.createNamespace(
+        ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()),
+        request.getNonceGroup(),
+        request.getNonce());
       return CreateNamespaceResponse.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -450,7 +453,10 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteNamespaceResponse deleteNamespace(RpcController controller,
       DeleteNamespaceRequest request) throws ServiceException {
     try {
-      master.deleteNamespace(request.getNamespaceName());
+      master.deleteNamespace(
+        request.getNamespaceName(),
+        request.getNonceGroup(),
+        request.getNonce());
       return DeleteNamespaceResponse.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -1089,7 +1095,9 @@ public class MasterRpcServices extends RSRpcServices
       ModifyNamespaceRequest request) throws ServiceException {
     try {
       master.modifyNamespace(
-        ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()));
+        ProtobufUtil.toNamespaceDescriptor(request.getNamespaceDescriptor()),
+        request.getNonceGroup(),
+        request.getNonce());
       return ModifyNamespaceResponse.getDefaultInstance();
     } catch (IOException e) {
       throw new ServiceException(e);

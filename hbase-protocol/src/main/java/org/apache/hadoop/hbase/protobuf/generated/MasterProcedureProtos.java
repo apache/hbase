@@ -499,6 +499,315 @@ public final class MasterProcedureProtos {
   }
 
   /**
+   * Protobuf enum {@code hbase.pb.CreateNamespaceState}
+   */
+  public enum CreateNamespaceState
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>CREATE_NAMESPACE_PREPARE = 1;</code>
+     */
+    CREATE_NAMESPACE_PREPARE(0, 1),
+    /**
+     * <code>CREATE_NAMESPACE_CREATE_DIRECTORY = 2;</code>
+     */
+    CREATE_NAMESPACE_CREATE_DIRECTORY(1, 2),
+    /**
+     * <code>CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;</code>
+     */
+    CREATE_NAMESPACE_INSERT_INTO_NS_TABLE(2, 3),
+    /**
+     * <code>CREATE_NAMESPACE_UPDATE_ZK = 4;</code>
+     */
+    CREATE_NAMESPACE_UPDATE_ZK(3, 4),
+    /**
+     * <code>CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;</code>
+     */
+    CREATE_NAMESPACE_SET_NAMESPACE_QUOTA(4, 5),
+    ;
+
+    /**
+     * <code>CREATE_NAMESPACE_PREPARE = 1;</code>
+     */
+    public static final int CREATE_NAMESPACE_PREPARE_VALUE = 1;
+    /**
+     * <code>CREATE_NAMESPACE_CREATE_DIRECTORY = 2;</code>
+     */
+    public static final int CREATE_NAMESPACE_CREATE_DIRECTORY_VALUE = 2;
+    /**
+     * <code>CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;</code>
+     */
+    public static final int CREATE_NAMESPACE_INSERT_INTO_NS_TABLE_VALUE = 3;
+    /**
+     * <code>CREATE_NAMESPACE_UPDATE_ZK = 4;</code>
+     */
+    public static final int CREATE_NAMESPACE_UPDATE_ZK_VALUE = 4;
+    /**
+     * <code>CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;</code>
+     */
+    public static final int CREATE_NAMESPACE_SET_NAMESPACE_QUOTA_VALUE = 5;
+
+
+    public final int getNumber() { return value; }
+
+    public static CreateNamespaceState valueOf(int value) {
+      switch (value) {
+        case 1: return CREATE_NAMESPACE_PREPARE;
+        case 2: return CREATE_NAMESPACE_CREATE_DIRECTORY;
+        case 3: return CREATE_NAMESPACE_INSERT_INTO_NS_TABLE;
+        case 4: return CREATE_NAMESPACE_UPDATE_ZK;
+        case 5: return CREATE_NAMESPACE_SET_NAMESPACE_QUOTA;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<CreateNamespaceState>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<CreateNamespaceState>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<CreateNamespaceState>() {
+            public CreateNamespaceState findValueByNumber(int number) {
+              return CreateNamespaceState.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(4);
+    }
+
+    private static final CreateNamespaceState[] VALUES = values();
+
+    public static CreateNamespaceState valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private CreateNamespaceState(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.CreateNamespaceState)
+  }
+
+  /**
+   * Protobuf enum {@code hbase.pb.ModifyNamespaceState}
+   */
+  public enum ModifyNamespaceState
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>MODIFY_NAMESPACE_PREPARE = 1;</code>
+     */
+    MODIFY_NAMESPACE_PREPARE(0, 1),
+    /**
+     * <code>MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;</code>
+     */
+    MODIFY_NAMESPACE_UPDATE_NS_TABLE(1, 2),
+    /**
+     * <code>MODIFY_NAMESPACE_UPDATE_ZK = 3;</code>
+     */
+    MODIFY_NAMESPACE_UPDATE_ZK(2, 3),
+    ;
+
+    /**
+     * <code>MODIFY_NAMESPACE_PREPARE = 1;</code>
+     */
+    public static final int MODIFY_NAMESPACE_PREPARE_VALUE = 1;
+    /**
+     * <code>MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;</code>
+     */
+    public static final int MODIFY_NAMESPACE_UPDATE_NS_TABLE_VALUE = 2;
+    /**
+     * <code>MODIFY_NAMESPACE_UPDATE_ZK = 3;</code>
+     */
+    public static final int MODIFY_NAMESPACE_UPDATE_ZK_VALUE = 3;
+
+
+    public final int getNumber() { return value; }
+
+    public static ModifyNamespaceState valueOf(int value) {
+      switch (value) {
+        case 1: return MODIFY_NAMESPACE_PREPARE;
+        case 2: return MODIFY_NAMESPACE_UPDATE_NS_TABLE;
+        case 3: return MODIFY_NAMESPACE_UPDATE_ZK;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<ModifyNamespaceState>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<ModifyNamespaceState>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<ModifyNamespaceState>() {
+            public ModifyNamespaceState findValueByNumber(int number) {
+              return ModifyNamespaceState.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(5);
+    }
+
+    private static final ModifyNamespaceState[] VALUES = values();
+
+    public static ModifyNamespaceState valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private ModifyNamespaceState(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.ModifyNamespaceState)
+  }
+
+  /**
+   * Protobuf enum {@code hbase.pb.DeleteNamespaceState}
+   */
+  public enum DeleteNamespaceState
+      implements com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>DELETE_NAMESPACE_PREPARE = 1;</code>
+     */
+    DELETE_NAMESPACE_PREPARE(0, 1),
+    /**
+     * <code>DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;</code>
+     */
+    DELETE_NAMESPACE_DELETE_FROM_NS_TABLE(1, 2),
+    /**
+     * <code>DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;</code>
+     */
+    DELETE_NAMESPACE_REMOVE_FROM_ZK(2, 3),
+    /**
+     * <code>DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;</code>
+     */
+    DELETE_NAMESPACE_DELETE_DIRECTORIES(3, 4),
+    /**
+     * <code>DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;</code>
+     */
+    DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA(4, 5),
+    ;
+
+    /**
+     * <code>DELETE_NAMESPACE_PREPARE = 1;</code>
+     */
+    public static final int DELETE_NAMESPACE_PREPARE_VALUE = 1;
+    /**
+     * <code>DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;</code>
+     */
+    public static final int DELETE_NAMESPACE_DELETE_FROM_NS_TABLE_VALUE = 2;
+    /**
+     * <code>DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;</code>
+     */
+    public static final int DELETE_NAMESPACE_REMOVE_FROM_ZK_VALUE = 3;
+    /**
+     * <code>DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;</code>
+     */
+    public static final int DELETE_NAMESPACE_DELETE_DIRECTORIES_VALUE = 4;
+    /**
+     * <code>DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;</code>
+     */
+    public static final int DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA_VALUE = 5;
+
+
+    public final int getNumber() { return value; }
+
+    public static DeleteNamespaceState valueOf(int value) {
+      switch (value) {
+        case 1: return DELETE_NAMESPACE_PREPARE;
+        case 2: return DELETE_NAMESPACE_DELETE_FROM_NS_TABLE;
+        case 3: return DELETE_NAMESPACE_REMOVE_FROM_ZK;
+        case 4: return DELETE_NAMESPACE_DELETE_DIRECTORIES;
+        case 5: return DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA;
+        default: return null;
+      }
+    }
+
+    public static com.google.protobuf.Internal.EnumLiteMap<DeleteNamespaceState>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static com.google.protobuf.Internal.EnumLiteMap<DeleteNamespaceState>
+        internalValueMap =
+          new com.google.protobuf.Internal.EnumLiteMap<DeleteNamespaceState>() {
+            public DeleteNamespaceState findValueByNumber(int number) {
+              return DeleteNamespaceState.valueOf(number);
+            }
+          };
+
+    public final com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(index);
+    }
+    public final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(6);
+    }
+
+    private static final DeleteNamespaceState[] VALUES = values();
+
+    public static DeleteNamespaceState valueOf(
+        com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int index;
+    private final int value;
+
+    private DeleteNamespaceState(int index, int value) {
+      this.index = index;
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.DeleteNamespaceState)
+  }
+
+  /**
    * Protobuf enum {@code hbase.pb.AddColumnFamilyState}
    */
   public enum AddColumnFamilyState
@@ -582,7 +891,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(4);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(7);
     }
 
     private static final AddColumnFamilyState[] VALUES = values();
@@ -691,7 +1000,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(5);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(8);
     }
 
     private static final ModifyColumnFamilyState[] VALUES = values();
@@ -809,7 +1118,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(6);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(9);
     }
 
     private static final DeleteColumnFamilyState[] VALUES = values();
@@ -927,7 +1236,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(7);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(10);
     }
 
     private static final EnableTableState[] VALUES = values();
@@ -1045,7 +1354,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(8);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(11);
     }
 
     private static final DisableTableState[] VALUES = values();
@@ -1198,7 +1507,7 @@ public final class MasterProcedureProtos {
     }
     public static final com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(9);
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(12);
     }
 
     private static final ServerCrashState[] VALUES = values();
@@ -6091,6 +6400,2071 @@ public final class MasterProcedureProtos {
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.DeleteTableStateData)
+  }
+
+  public interface CreateNamespaceStateDataOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    boolean hasNamespaceDescriptor();
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor();
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.CreateNamespaceStateData}
+   */
+  public static final class CreateNamespaceStateData extends
+      com.google.protobuf.GeneratedMessage
+      implements CreateNamespaceStateDataOrBuilder {
+    // Use CreateNamespaceStateData.newBuilder() to construct.
+    private CreateNamespaceStateData(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private CreateNamespaceStateData(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final CreateNamespaceStateData defaultInstance;
+    public static CreateNamespaceStateData getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public CreateNamespaceStateData getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private CreateNamespaceStateData(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = namespaceDescriptor_.toBuilder();
+              }
+              namespaceDescriptor_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(namespaceDescriptor_);
+                namespaceDescriptor_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_CreateNamespaceStateData_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_CreateNamespaceStateData_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<CreateNamespaceStateData> PARSER =
+        new com.google.protobuf.AbstractParser<CreateNamespaceStateData>() {
+      public CreateNamespaceStateData parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new CreateNamespaceStateData(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<CreateNamespaceStateData> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+    public static final int NAMESPACE_DESCRIPTOR_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_;
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public boolean hasNamespaceDescriptor() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+      return namespaceDescriptor_;
+    }
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+      return namespaceDescriptor_;
+    }
+
+    private void initFields() {
+      namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasNamespaceDescriptor()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getNamespaceDescriptor().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, namespaceDescriptor_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, namespaceDescriptor_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData other = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData) obj;
+
+      boolean result = true;
+      result = result && (hasNamespaceDescriptor() == other.hasNamespaceDescriptor());
+      if (hasNamespaceDescriptor()) {
+        result = result && getNamespaceDescriptor()
+            .equals(other.getNamespaceDescriptor());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNamespaceDescriptor()) {
+        hash = (37 * hash) + NAMESPACE_DESCRIPTOR_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceDescriptor().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.CreateNamespaceStateData}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateDataOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_CreateNamespaceStateData_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_CreateNamespaceStateData_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getNamespaceDescriptorFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_CreateNamespaceStateData_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData result = new org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (namespaceDescriptorBuilder_ == null) {
+          result.namespaceDescriptor_ = namespaceDescriptor_;
+        } else {
+          result.namespaceDescriptor_ = namespaceDescriptorBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData.getDefaultInstance()) return this;
+        if (other.hasNamespaceDescriptor()) {
+          mergeNamespaceDescriptor(other.getNamespaceDescriptor());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasNamespaceDescriptor()) {
+          
+          return false;
+        }
+        if (!getNamespaceDescriptor().isInitialized()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceStateData) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> namespaceDescriptorBuilder_;
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public boolean hasNamespaceDescriptor() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          return namespaceDescriptor_;
+        } else {
+          return namespaceDescriptorBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder setNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          namespaceDescriptor_ = value;
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder setNamespaceDescriptor(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder builderForValue) {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = builderForValue.build();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder mergeNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              namespaceDescriptor_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance()) {
+            namespaceDescriptor_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.newBuilder(namespaceDescriptor_).mergeFrom(value).buildPartial();
+          } else {
+            namespaceDescriptor_ = value;
+          }
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder clearNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder getNamespaceDescriptorBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getNamespaceDescriptorFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+        if (namespaceDescriptorBuilder_ != null) {
+          return namespaceDescriptorBuilder_.getMessageOrBuilder();
+        } else {
+          return namespaceDescriptor_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          getNamespaceDescriptorFieldBuilder() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>(
+                  namespaceDescriptor_,
+                  getParentForChildren(),
+                  isClean());
+          namespaceDescriptor_ = null;
+        }
+        return namespaceDescriptorBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.CreateNamespaceStateData)
+    }
+
+    static {
+      defaultInstance = new CreateNamespaceStateData(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.CreateNamespaceStateData)
+  }
+
+  public interface ModifyNamespaceStateDataOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    boolean hasNamespaceDescriptor();
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor();
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder();
+
+    // optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    boolean hasUnmodifiedNamespaceDescriptor();
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getUnmodifiedNamespaceDescriptor();
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getUnmodifiedNamespaceDescriptorOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ModifyNamespaceStateData}
+   */
+  public static final class ModifyNamespaceStateData extends
+      com.google.protobuf.GeneratedMessage
+      implements ModifyNamespaceStateDataOrBuilder {
+    // Use ModifyNamespaceStateData.newBuilder() to construct.
+    private ModifyNamespaceStateData(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ModifyNamespaceStateData(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ModifyNamespaceStateData defaultInstance;
+    public static ModifyNamespaceStateData getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ModifyNamespaceStateData getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ModifyNamespaceStateData(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = namespaceDescriptor_.toBuilder();
+              }
+              namespaceDescriptor_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(namespaceDescriptor_);
+                namespaceDescriptor_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = unmodifiedNamespaceDescriptor_.toBuilder();
+              }
+              unmodifiedNamespaceDescriptor_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(unmodifiedNamespaceDescriptor_);
+                unmodifiedNamespaceDescriptor_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_ModifyNamespaceStateData_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_ModifyNamespaceStateData_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ModifyNamespaceStateData> PARSER =
+        new com.google.protobuf.AbstractParser<ModifyNamespaceStateData>() {
+      public ModifyNamespaceStateData parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ModifyNamespaceStateData(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ModifyNamespaceStateData> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+    public static final int NAMESPACE_DESCRIPTOR_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_;
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public boolean hasNamespaceDescriptor() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+      return namespaceDescriptor_;
+    }
+    /**
+     * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+      return namespaceDescriptor_;
+    }
+
+    // optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;
+    public static final int UNMODIFIED_NAMESPACE_DESCRIPTOR_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor unmodifiedNamespaceDescriptor_;
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    public boolean hasUnmodifiedNamespaceDescriptor() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getUnmodifiedNamespaceDescriptor() {
+      return unmodifiedNamespaceDescriptor_;
+    }
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getUnmodifiedNamespaceDescriptorOrBuilder() {
+      return unmodifiedNamespaceDescriptor_;
+    }
+
+    private void initFields() {
+      namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+      unmodifiedNamespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasNamespaceDescriptor()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getNamespaceDescriptor().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasUnmodifiedNamespaceDescriptor()) {
+        if (!getUnmodifiedNamespaceDescriptor().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, namespaceDescriptor_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, unmodifiedNamespaceDescriptor_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, namespaceDescriptor_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, unmodifiedNamespaceDescriptor_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData other = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData) obj;
+
+      boolean result = true;
+      result = result && (hasNamespaceDescriptor() == other.hasNamespaceDescriptor());
+      if (hasNamespaceDescriptor()) {
+        result = result && getNamespaceDescriptor()
+            .equals(other.getNamespaceDescriptor());
+      }
+      result = result && (hasUnmodifiedNamespaceDescriptor() == other.hasUnmodifiedNamespaceDescriptor());
+      if (hasUnmodifiedNamespaceDescriptor()) {
+        result = result && getUnmodifiedNamespaceDescriptor()
+            .equals(other.getUnmodifiedNamespaceDescriptor());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNamespaceDescriptor()) {
+        hash = (37 * hash) + NAMESPACE_DESCRIPTOR_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceDescriptor().hashCode();
+      }
+      if (hasUnmodifiedNamespaceDescriptor()) {
+        hash = (37 * hash) + UNMODIFIED_NAMESPACE_DESCRIPTOR_FIELD_NUMBER;
+        hash = (53 * hash) + getUnmodifiedNamespaceDescriptor().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ModifyNamespaceStateData}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateDataOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_ModifyNamespaceStateData_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_ModifyNamespaceStateData_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getNamespaceDescriptorFieldBuilder();
+          getUnmodifiedNamespaceDescriptorFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          unmodifiedNamespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+        } else {
+          unmodifiedNamespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_ModifyNamespaceStateData_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData result = new org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (namespaceDescriptorBuilder_ == null) {
+          result.namespaceDescriptor_ = namespaceDescriptor_;
+        } else {
+          result.namespaceDescriptor_ = namespaceDescriptorBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          result.unmodifiedNamespaceDescriptor_ = unmodifiedNamespaceDescriptor_;
+        } else {
+          result.unmodifiedNamespaceDescriptor_ = unmodifiedNamespaceDescriptorBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData.getDefaultInstance()) return this;
+        if (other.hasNamespaceDescriptor()) {
+          mergeNamespaceDescriptor(other.getNamespaceDescriptor());
+        }
+        if (other.hasUnmodifiedNamespaceDescriptor()) {
+          mergeUnmodifiedNamespaceDescriptor(other.getUnmodifiedNamespaceDescriptor());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasNamespaceDescriptor()) {
+          
+          return false;
+        }
+        if (!getNamespaceDescriptor().isInitialized()) {
+          
+          return false;
+        }
+        if (hasUnmodifiedNamespaceDescriptor()) {
+          if (!getUnmodifiedNamespaceDescriptor().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceStateData) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> namespaceDescriptorBuilder_;
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public boolean hasNamespaceDescriptor() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          return namespaceDescriptor_;
+        } else {
+          return namespaceDescriptorBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder setNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          namespaceDescriptor_ = value;
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder setNamespaceDescriptor(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder builderForValue) {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = builderForValue.build();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder mergeNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              namespaceDescriptor_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance()) {
+            namespaceDescriptor_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.newBuilder(namespaceDescriptor_).mergeFrom(value).buildPartial();
+          } else {
+            namespaceDescriptor_ = value;
+          }
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public Builder clearNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder getNamespaceDescriptorBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getNamespaceDescriptorFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+        if (namespaceDescriptorBuilder_ != null) {
+          return namespaceDescriptorBuilder_.getMessageOrBuilder();
+        } else {
+          return namespaceDescriptor_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.NamespaceDescriptor namespace_descriptor = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          getNamespaceDescriptorFieldBuilder() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>(
+                  namespaceDescriptor_,
+                  getParentForChildren(),
+                  isClean());
+          namespaceDescriptor_ = null;
+        }
+        return namespaceDescriptorBuilder_;
+      }
+
+      // optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor unmodifiedNamespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> unmodifiedNamespaceDescriptorBuilder_;
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public boolean hasUnmodifiedNamespaceDescriptor() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getUnmodifiedNamespaceDescriptor() {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          return unmodifiedNamespaceDescriptor_;
+        } else {
+          return unmodifiedNamespaceDescriptorBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public Builder setUnmodifiedNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          unmodifiedNamespaceDescriptor_ = value;
+          onChanged();
+        } else {
+          unmodifiedNamespaceDescriptorBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public Builder setUnmodifiedNamespaceDescriptor(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder builderForValue) {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          unmodifiedNamespaceDescriptor_ = builderForValue.build();
+          onChanged();
+        } else {
+          unmodifiedNamespaceDescriptorBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public Builder mergeUnmodifiedNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              unmodifiedNamespaceDescriptor_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance()) {
+            unmodifiedNamespaceDescriptor_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.newBuilder(unmodifiedNamespaceDescriptor_).mergeFrom(value).buildPartial();
+          } else {
+            unmodifiedNamespaceDescriptor_ = value;
+          }
+          onChanged();
+        } else {
+          unmodifiedNamespaceDescriptorBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public Builder clearUnmodifiedNamespaceDescriptor() {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          unmodifiedNamespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+          onChanged();
+        } else {
+          unmodifiedNamespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder getUnmodifiedNamespaceDescriptorBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getUnmodifiedNamespaceDescriptorFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getUnmodifiedNamespaceDescriptorOrBuilder() {
+        if (unmodifiedNamespaceDescriptorBuilder_ != null) {
+          return unmodifiedNamespaceDescriptorBuilder_.getMessageOrBuilder();
+        } else {
+          return unmodifiedNamespaceDescriptor_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor unmodified_namespace_descriptor = 2;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          getUnmodifiedNamespaceDescriptorFieldBuilder() {
+        if (unmodifiedNamespaceDescriptorBuilder_ == null) {
+          unmodifiedNamespaceDescriptorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>(
+                  unmodifiedNamespaceDescriptor_,
+                  getParentForChildren(),
+                  isClean());
+          unmodifiedNamespaceDescriptor_ = null;
+        }
+        return unmodifiedNamespaceDescriptorBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ModifyNamespaceStateData)
+    }
+
+    static {
+      defaultInstance = new ModifyNamespaceStateData(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ModifyNamespaceStateData)
+  }
+
+  public interface DeleteNamespaceStateDataOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string namespace_name = 1;
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    boolean hasNamespaceName();
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    java.lang.String getNamespaceName();
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getNamespaceNameBytes();
+
+    // optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    boolean hasNamespaceDescriptor();
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor();
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.DeleteNamespaceStateData}
+   */
+  public static final class DeleteNamespaceStateData extends
+      com.google.protobuf.GeneratedMessage
+      implements DeleteNamespaceStateDataOrBuilder {
+    // Use DeleteNamespaceStateData.newBuilder() to construct.
+    private DeleteNamespaceStateData(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private DeleteNamespaceStateData(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final DeleteNamespaceStateData defaultInstance;
+    public static DeleteNamespaceStateData getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public DeleteNamespaceStateData getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private DeleteNamespaceStateData(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              namespaceName_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = namespaceDescriptor_.toBuilder();
+              }
+              namespaceDescriptor_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(namespaceDescriptor_);
+                namespaceDescriptor_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_DeleteNamespaceStateData_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_DeleteNamespaceStateData_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<DeleteNamespaceStateData> PARSER =
+        new com.google.protobuf.AbstractParser<DeleteNamespaceStateData>() {
+      public DeleteNamespaceStateData parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new DeleteNamespaceStateData(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<DeleteNamespaceStateData> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string namespace_name = 1;
+    public static final int NAMESPACE_NAME_FIELD_NUMBER = 1;
+    private java.lang.Object namespaceName_;
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    public boolean hasNamespaceName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    public java.lang.String getNamespaceName() {
+      java.lang.Object ref = namespaceName_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          namespaceName_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string namespace_name = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNamespaceNameBytes() {
+      java.lang.Object ref = namespaceName_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        namespaceName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;
+    public static final int NAMESPACE_DESCRIPTOR_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_;
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    public boolean hasNamespaceDescriptor() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+      return namespaceDescriptor_;
+    }
+    /**
+     * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+      return namespaceDescriptor_;
+    }
+
+    private void initFields() {
+      namespaceName_ = "";
+      namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasNamespaceName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (hasNamespaceDescriptor()) {
+        if (!getNamespaceDescriptor().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getNamespaceNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, namespaceDescriptor_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getNamespaceNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, namespaceDescriptor_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData other = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData) obj;
+
+      boolean result = true;
+      result = result && (hasNamespaceName() == other.hasNamespaceName());
+      if (hasNamespaceName()) {
+        result = result && getNamespaceName()
+            .equals(other.getNamespaceName());
+      }
+      result = result && (hasNamespaceDescriptor() == other.hasNamespaceDescriptor());
+      if (hasNamespaceDescriptor()) {
+        result = result && getNamespaceDescriptor()
+            .equals(other.getNamespaceDescriptor());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNamespaceName()) {
+        hash = (37 * hash) + NAMESPACE_NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceName().hashCode();
+      }
+      if (hasNamespaceDescriptor()) {
+        hash = (37 * hash) + NAMESPACE_DESCRIPTOR_FIELD_NUMBER;
+        hash = (53 * hash) + getNamespaceDescriptor().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.DeleteNamespaceStateData}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateDataOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_DeleteNamespaceStateData_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_DeleteNamespaceStateData_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.class, org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getNamespaceDescriptorFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        namespaceName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_DeleteNamespaceStateData_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData result = new org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.namespaceName_ = namespaceName_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (namespaceDescriptorBuilder_ == null) {
+          result.namespaceDescriptor_ = namespaceDescriptor_;
+        } else {
+          result.namespaceDescriptor_ = namespaceDescriptorBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData.getDefaultInstance()) return this;
+        if (other.hasNamespaceName()) {
+          bitField0_ |= 0x00000001;
+          namespaceName_ = other.namespaceName_;
+          onChanged();
+        }
+        if (other.hasNamespaceDescriptor()) {
+          mergeNamespaceDescriptor(other.getNamespaceDescriptor());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasNamespaceName()) {
+          
+          return false;
+        }
+        if (hasNamespaceDescriptor()) {
+          if (!getNamespaceDescriptor().isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteNamespaceStateData) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string namespace_name = 1;
+      private java.lang.Object namespaceName_ = "";
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public boolean hasNamespaceName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public java.lang.String getNamespaceName() {
+        java.lang.Object ref = namespaceName_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          namespaceName_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNamespaceNameBytes() {
+        java.lang.Object ref = namespaceName_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          namespaceName_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public Builder setNamespaceName(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        namespaceName_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public Builder clearNamespaceName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        namespaceName_ = getDefaultInstance().getNamespaceName();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string namespace_name = 1;</code>
+       */
+      public Builder setNamespaceNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        namespaceName_ = value;
+        onChanged();
+        return this;
+      }
+
+      // optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> namespaceDescriptorBuilder_;
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public boolean hasNamespaceDescriptor() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor getNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          return namespaceDescriptor_;
+        } else {
+          return namespaceDescriptorBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public Builder setNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          namespaceDescriptor_ = value;
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public Builder setNamespaceDescriptor(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder builderForValue) {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = builderForValue.build();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public Builder mergeNamespaceDescriptor(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor value) {
+        if (namespaceDescriptorBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              namespaceDescriptor_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance()) {
+            namespaceDescriptor_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.newBuilder(namespaceDescriptor_).mergeFrom(value).buildPartial();
+          } else {
+            namespaceDescriptor_ = value;
+          }
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public Builder clearNamespaceDescriptor() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptor_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.getDefaultInstance();
+          onChanged();
+        } else {
+          namespaceDescriptorBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder getNamespaceDescriptorBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getNamespaceDescriptorFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder getNamespaceDescriptorOrBuilder() {
+        if (namespaceDescriptorBuilder_ != null) {
+          return namespaceDescriptorBuilder_.getMessageOrBuilder();
+        } else {
+          return namespaceDescriptor_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.NamespaceDescriptor namespace_descriptor = 2;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder> 
+          getNamespaceDescriptorFieldBuilder() {
+        if (namespaceDescriptorBuilder_ == null) {
+          namespaceDescriptorBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptor.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NamespaceDescriptorOrBuilder>(
+                  namespaceDescriptor_,
+                  getParentForChildren(),
+                  isClean());
+          namespaceDescriptor_ = null;
+        }
+        return namespaceDescriptorBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.DeleteNamespaceStateData)
+    }
+
+    static {
+      defaultInstance = new DeleteNamespaceStateData(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.DeleteNamespaceStateData)
   }
 
   public interface AddColumnFamilyStateDataOrBuilder
@@ -12965,6 +15339,21 @@ public final class MasterProcedureProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_DeleteTableStateData_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_CreateNamespaceStateData_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_CreateNamespaceStateData_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ModifyNamespaceStateData_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_ModifyNamespaceStateData_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_DeleteNamespaceStateData_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_DeleteNamespaceStateData_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_AddColumnFamilyStateData_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -13023,96 +15412,119 @@ public final class MasterProcedureProtos {
       "StateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb." +
       "UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hb" +
       "ase.pb.TableName\022)\n\013region_info\030\003 \003(\0132\024.",
-      "hbase.pb.RegionInfo\"\344\001\n\030AddColumnFamilyS" +
-      "tateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.U" +
-      "serInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hba" +
-      "se.pb.TableName\0229\n\023columnfamily_schema\030\003" +
-      " \002(\0132\034.hbase.pb.ColumnFamilySchema\0226\n\027un" +
+      "hbase.pb.RegionInfo\"W\n\030CreateNamespaceSt" +
+      "ateData\022;\n\024namespace_descriptor\030\001 \002(\0132\035." +
+      "hbase.pb.NamespaceDescriptor\"\237\001\n\030ModifyN" +
+      "amespaceStateData\022;\n\024namespace_descripto" +
+      "r\030\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022F" +
+      "\n\037unmodified_namespace_descriptor\030\002 \001(\0132" +
+      "\035.hbase.pb.NamespaceDescriptor\"o\n\030Delete" +
+      "NamespaceStateData\022\026\n\016namespace_name\030\001 \002" +
+      "(\t\022;\n\024namespace_descriptor\030\002 \001(\0132\035.hbase" +
+      ".pb.NamespaceDescriptor\"\344\001\n\030AddColumnFam",
+      "ilyStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbase." +
+      "pb.UserInformation\022\'\n\ntable_name\030\002 \002(\0132\023" +
+      ".hbase.pb.TableName\0229\n\023columnfamily_sche" +
+      "ma\030\003 \002(\0132\034.hbase.pb.ColumnFamilySchema\0226" +
+      "\n\027unmodified_table_schema\030\004 \001(\0132\025.hbase." +
+      "pb.TableSchema\"\347\001\n\033ModifyColumnFamilySta" +
+      "teData\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.Use" +
+      "rInformation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase" +
+      ".pb.TableName\0229\n\023columnfamily_schema\030\003 \002" +
+      "(\0132\034.hbase.pb.ColumnFamilySchema\0226\n\027unmo",
+      "dified_table_schema\030\004 \001(\0132\025.hbase.pb.Tab" +
+      "leSchema\"\307\001\n\033DeleteColumnFamilyStateData" +
+      "\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInfor" +
+      "mation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.Ta" +
+      "bleName\022\031\n\021columnfamily_name\030\003 \002(\014\0226\n\027un" +
       "modified_table_schema\030\004 \001(\0132\025.hbase.pb.T" +
-      "ableSchema\"\347\001\n\033ModifyColumnFamilyStateDa" +
-      "ta\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserInf" +
-      "ormation\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb." +
-      "TableName\0229\n\023columnfamily_schema\030\003 \002(\0132\034",
-      ".hbase.pb.ColumnFamilySchema\0226\n\027unmodifi" +
-      "ed_table_schema\030\004 \001(\0132\025.hbase.pb.TableSc" +
-      "hema\"\307\001\n\033DeleteColumnFamilyStateData\022,\n\t" +
-      "user_info\030\001 \002(\0132\031.hbase.pb.UserInformati" +
-      "on\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableN" +
-      "ame\022\031\n\021columnfamily_name\030\003 \002(\014\0226\n\027unmodi" +
-      "fied_table_schema\030\004 \001(\0132\025.hbase.pb.Table" +
-      "Schema\"\215\001\n\024EnableTableStateData\022,\n\tuser_" +
-      "info\030\001 \002(\0132\031.hbase.pb.UserInformation\022\'\n" +
-      "\ntable_name\030\002 \002(\0132\023.hbase.pb.TableName\022\036",
-      "\n\026skip_table_state_check\030\003 \002(\010\"\216\001\n\025Disab" +
-      "leTableStateData\022,\n\tuser_info\030\001 \002(\0132\031.hb" +
-      "ase.pb.UserInformation\022\'\n\ntable_name\030\002 \002" +
-      "(\0132\023.hbase.pb.TableName\022\036\n\026skip_table_st" +
-      "ate_check\030\003 \002(\010\"\201\002\n\024ServerCrashStateData" +
-      "\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.ServerN" +
-      "ame\022\036\n\026distributed_log_replay\030\002 \001(\010\0227\n\031r" +
-      "egions_on_crashed_server\030\003 \003(\0132\024.hbase.p" +
-      "b.RegionInfo\022.\n\020regions_assigned\030\004 \003(\0132\024" +
-      ".hbase.pb.RegionInfo\022\025\n\rcarrying_meta\030\005 ",
-      "\001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true*\330\001\n\020" +
-      "CreateTableState\022\036\n\032CREATE_TABLE_PRE_OPE" +
-      "RATION\020\001\022 \n\034CREATE_TABLE_WRITE_FS_LAYOUT" +
-      "\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META\020\003\022\037\n\033CREA" +
-      "TE_TABLE_ASSIGN_REGIONS\020\004\022\"\n\036CREATE_TABL" +
-      "E_UPDATE_DESC_CACHE\020\005\022\037\n\033CREATE_TABLE_PO" +
-      "ST_OPERATION\020\006*\207\002\n\020ModifyTableState\022\030\n\024M" +
-      "ODIFY_TABLE_PREPARE\020\001\022\036\n\032MODIFY_TABLE_PR" +
-      "E_OPERATION\020\002\022(\n$MODIFY_TABLE_UPDATE_TAB" +
-      "LE_DESCRIPTOR\020\003\022&\n\"MODIFY_TABLE_REMOVE_R",
-      "EPLICA_COLUMN\020\004\022!\n\035MODIFY_TABLE_DELETE_F" +
-      "S_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_POST_OPERATIO" +
-      "N\020\006\022#\n\037MODIFY_TABLE_REOPEN_ALL_REGIONS\020\007" +
-      "*\212\002\n\022TruncateTableState\022 \n\034TRUNCATE_TABL" +
-      "E_PRE_OPERATION\020\001\022#\n\037TRUNCATE_TABLE_REMO" +
-      "VE_FROM_META\020\002\022\"\n\036TRUNCATE_TABLE_CLEAR_F" +
-      "S_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_CREATE_FS_L" +
-      "AYOUT\020\004\022\036\n\032TRUNCATE_TABLE_ADD_TO_META\020\005\022" +
-      "!\n\035TRUNCATE_TABLE_ASSIGN_REGIONS\020\006\022!\n\035TR" +
-      "UNCATE_TABLE_POST_OPERATION\020\007*\337\001\n\020Delete",
-      "TableState\022\036\n\032DELETE_TABLE_PRE_OPERATION" +
-      "\020\001\022!\n\035DELETE_TABLE_REMOVE_FROM_META\020\002\022 \n" +
-      "\034DELETE_TABLE_CLEAR_FS_LAYOUT\020\003\022\"\n\036DELET" +
-      "E_TABLE_UPDATE_DESC_CACHE\020\004\022!\n\035DELETE_TA" +
-      "BLE_UNASSIGN_REGIONS\020\005\022\037\n\033DELETE_TABLE_P" +
-      "OST_OPERATION\020\006*\331\001\n\024AddColumnFamilyState" +
-      "\022\035\n\031ADD_COLUMN_FAMILY_PREPARE\020\001\022#\n\037ADD_C" +
+      "ableSchema\"\215\001\n\024EnableTableStateData\022,\n\tu" +
+      "ser_info\030\001 \002(\0132\031.hbase.pb.UserInformatio" +
+      "n\022\'\n\ntable_name\030\002 \002(\0132\023.hbase.pb.TableNa" +
+      "me\022\036\n\026skip_table_state_check\030\003 \002(\010\"\216\001\n\025D",
+      "isableTableStateData\022,\n\tuser_info\030\001 \002(\0132" +
+      "\031.hbase.pb.UserInformation\022\'\n\ntable_name" +
+      "\030\002 \002(\0132\023.hbase.pb.TableName\022\036\n\026skip_tabl" +
+      "e_state_check\030\003 \002(\010\"\201\002\n\024ServerCrashState" +
+      "Data\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.Ser" +
+      "verName\022\036\n\026distributed_log_replay\030\002 \001(\010\022" +
+      "7\n\031regions_on_crashed_server\030\003 \003(\0132\024.hba" +
+      "se.pb.RegionInfo\022.\n\020regions_assigned\030\004 \003" +
+      "(\0132\024.hbase.pb.RegionInfo\022\025\n\rcarrying_met" +
+      "a\030\005 \001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true*",
+      "\330\001\n\020CreateTableState\022\036\n\032CREATE_TABLE_PRE" +
+      "_OPERATION\020\001\022 \n\034CREATE_TABLE_WRITE_FS_LA" +
+      "YOUT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META\020\003\022\037\n\033" +
+      "CREATE_TABLE_ASSIGN_REGIONS\020\004\022\"\n\036CREATE_" +
+      "TABLE_UPDATE_DESC_CACHE\020\005\022\037\n\033CREATE_TABL" +
+      "E_POST_OPERATION\020\006*\207\002\n\020ModifyTableState\022" +
+      "\030\n\024MODIFY_TABLE_PREPARE\020\001\022\036\n\032MODIFY_TABL" +
+      "E_PRE_OPERATION\020\002\022(\n$MODIFY_TABLE_UPDATE" +
+      "_TABLE_DESCRIPTOR\020\003\022&\n\"MODIFY_TABLE_REMO" +
+      "VE_REPLICA_COLUMN\020\004\022!\n\035MODIFY_TABLE_DELE",
+      "TE_FS_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_POST_OPER" +
+      "ATION\020\006\022#\n\037MODIFY_TABLE_REOPEN_ALL_REGIO" +
+      "NS\020\007*\212\002\n\022TruncateTableState\022 \n\034TRUNCATE_" +
+      "TABLE_PRE_OPERATION\020\001\022#\n\037TRUNCATE_TABLE_" +
+      "REMOVE_FROM_META\020\002\022\"\n\036TRUNCATE_TABLE_CLE" +
+      "AR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_CREATE_" +
+      "FS_LAYOUT\020\004\022\036\n\032TRUNCATE_TABLE_ADD_TO_MET" +
+      "A\020\005\022!\n\035TRUNCATE_TABLE_ASSIGN_REGIONS\020\006\022!" +
+      "\n\035TRUNCATE_TABLE_POST_OPERATION\020\007*\337\001\n\020De" +
+      "leteTableState\022\036\n\032DELETE_TABLE_PRE_OPERA",
+      "TION\020\001\022!\n\035DELETE_TABLE_REMOVE_FROM_META\020" +
+      "\002\022 \n\034DELETE_TABLE_CLEAR_FS_LAYOUT\020\003\022\"\n\036D" +
+      "ELETE_TABLE_UPDATE_DESC_CACHE\020\004\022!\n\035DELET" +
+      "E_TABLE_UNASSIGN_REGIONS\020\005\022\037\n\033DELETE_TAB" +
+      "LE_POST_OPERATION\020\006*\320\001\n\024CreateNamespaceS" +
+      "tate\022\034\n\030CREATE_NAMESPACE_PREPARE\020\001\022%\n!CR" +
+      "EATE_NAMESPACE_CREATE_DIRECTORY\020\002\022)\n%CRE" +
+      "ATE_NAMESPACE_INSERT_INTO_NS_TABLE\020\003\022\036\n\032" +
+      "CREATE_NAMESPACE_UPDATE_ZK\020\004\022(\n$CREATE_N" +
+      "AMESPACE_SET_NAMESPACE_QUOTA\020\005*z\n\024Modify",
+      "NamespaceState\022\034\n\030MODIFY_NAMESPACE_PREPA" +
+      "RE\020\001\022$\n MODIFY_NAMESPACE_UPDATE_NS_TABLE" +
+      "\020\002\022\036\n\032MODIFY_NAMESPACE_UPDATE_ZK\020\003*\332\001\n\024D" +
+      "eleteNamespaceState\022\034\n\030DELETE_NAMESPACE_" +
+      "PREPARE\020\001\022)\n%DELETE_NAMESPACE_DELETE_FRO" +
+      "M_NS_TABLE\020\002\022#\n\037DELETE_NAMESPACE_REMOVE_" +
+      "FROM_ZK\020\003\022\'\n#DELETE_NAMESPACE_DELETE_DIR" +
+      "ECTORIES\020\004\022+\n\'DELETE_NAMESPACE_REMOVE_NA" +
+      "MESPACE_QUOTA\020\005*\331\001\n\024AddColumnFamilyState" +
+      "\022\035\n\031ADD_COLUMN_FAMILY_PREPARE\020\001\022#\n\037ADD_C",
       "OLUMN_FAMILY_PRE_OPERATION\020\002\022-\n)ADD_COLU" +
       "MN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022$\n A" +
-      "DD_COLUMN_FAMILY_POST_OPERATION\020\004\022(\n$ADD",
+      "DD_COLUMN_FAMILY_POST_OPERATION\020\004\022(\n$ADD" +
       "_COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\353\001\n\027" +
       "ModifyColumnFamilyState\022 \n\034MODIFY_COLUMN" +
       "_FAMILY_PREPARE\020\001\022&\n\"MODIFY_COLUMN_FAMIL" +
       "Y_PRE_OPERATION\020\002\0220\n,MODIFY_COLUMN_FAMIL" +
       "Y_UPDATE_TABLE_DESCRIPTOR\020\003\022\'\n#MODIFY_CO" +
       "LUMN_FAMILY_POST_OPERATION\020\004\022+\n\'MODIFY_C" +
-      "OLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\226\002\n\027De" +
+      "OLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*\226\002\n\027De",
       "leteColumnFamilyState\022 \n\034DELETE_COLUMN_F" +
       "AMILY_PREPARE\020\001\022&\n\"DELETE_COLUMN_FAMILY_" +
-      "PRE_OPERATION\020\002\0220\n,DELETE_COLUMN_FAMILY_",
+      "PRE_OPERATION\020\002\0220\n,DELETE_COLUMN_FAMILY_" +
       "UPDATE_TABLE_DESCRIPTOR\020\003\022)\n%DELETE_COLU" +
       "MN_FAMILY_DELETE_FS_LAYOUT\020\004\022\'\n#DELETE_C" +
       "OLUMN_FAMILY_POST_OPERATION\020\005\022+\n\'DELETE_" +
       "COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\006*\350\001\n\020E" +
       "nableTableState\022\030\n\024ENABLE_TABLE_PREPARE\020" +
       "\001\022\036\n\032ENABLE_TABLE_PRE_OPERATION\020\002\022)\n%ENA" +
-      "BLE_TABLE_SET_ENABLING_TABLE_STATE\020\003\022$\n " +
+      "BLE_TABLE_SET_ENABLING_TABLE_STATE\020\003\022$\n ",
       "ENABLE_TABLE_MARK_REGIONS_ONLINE\020\004\022(\n$EN" +
       "ABLE_TABLE_SET_ENABLED_TABLE_STATE\020\005\022\037\n\033" +
-      "ENABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021Disabl",
+      "ENABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021Disabl" +
       "eTableState\022\031\n\025DISABLE_TABLE_PREPARE\020\001\022\037" +
       "\n\033DISABLE_TABLE_PRE_OPERATION\020\002\022+\n\'DISAB" +
       "LE_TABLE_SET_DISABLING_TABLE_STATE\020\003\022&\n\"" +
       "DISABLE_TABLE_MARK_REGIONS_OFFLINE\020\004\022*\n&" +
       "DISABLE_TABLE_SET_DISABLED_TABLE_STATE\020\005" +
       "\022 \n\034DISABLE_TABLE_POST_OPERATION\020\006*\234\002\n\020S" +
-      "erverCrashState\022\026\n\022SERVER_CRASH_START\020\001\022" +
+      "erverCrashState\022\026\n\022SERVER_CRASH_START\020\001\022",
       "\035\n\031SERVER_CRASH_PROCESS_META\020\002\022\034\n\030SERVER" +
       "_CRASH_GET_REGIONS\020\003\022\036\n\032SERVER_CRASH_NO_" +
-      "SPLIT_LOGS\020\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020",
+      "SPLIT_LOGS\020\004\022\033\n\027SERVER_CRASH_SPLIT_LOGS\020" +
       "\005\022#\n\037SERVER_CRASH_PREPARE_LOG_REPLAY\020\006\022\027" +
       "\n\023SERVER_CRASH_ASSIGN\020\010\022\037\n\033SERVER_CRASH_" +
       "WAIT_ON_ASSIGN\020\t\022\027\n\023SERVER_CRASH_FINISH\020" +
@@ -13148,38 +15560,56 @@ public final class MasterProcedureProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DeleteTableStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "RegionInfo", });
-          internal_static_hbase_pb_AddColumnFamilyStateData_descriptor =
+          internal_static_hbase_pb_CreateNamespaceStateData_descriptor =
             getDescriptor().getMessageTypes().get(4);
+          internal_static_hbase_pb_CreateNamespaceStateData_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_CreateNamespaceStateData_descriptor,
+              new java.lang.String[] { "NamespaceDescriptor", });
+          internal_static_hbase_pb_ModifyNamespaceStateData_descriptor =
+            getDescriptor().getMessageTypes().get(5);
+          internal_static_hbase_pb_ModifyNamespaceStateData_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_ModifyNamespaceStateData_descriptor,
+              new java.lang.String[] { "NamespaceDescriptor", "UnmodifiedNamespaceDescriptor", });
+          internal_static_hbase_pb_DeleteNamespaceStateData_descriptor =
+            getDescriptor().getMessageTypes().get(6);
+          internal_static_hbase_pb_DeleteNamespaceStateData_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_DeleteNamespaceStateData_descriptor,
+              new java.lang.String[] { "NamespaceName", "NamespaceDescriptor", });
+          internal_static_hbase_pb_AddColumnFamilyStateData_descriptor =
+            getDescriptor().getMessageTypes().get(7);
           internal_static_hbase_pb_AddColumnFamilyStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_AddColumnFamilyStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "ColumnfamilySchema", "UnmodifiedTableSchema", });
           internal_static_hbase_pb_ModifyColumnFamilyStateData_descriptor =
-            getDescriptor().getMessageTypes().get(5);
+            getDescriptor().getMessageTypes().get(8);
           internal_static_hbase_pb_ModifyColumnFamilyStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ModifyColumnFamilyStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "ColumnfamilySchema", "UnmodifiedTableSchema", });
           internal_static_hbase_pb_DeleteColumnFamilyStateData_descriptor =
-            getDescriptor().getMessageTypes().get(6);
+            getDescriptor().getMessageTypes().get(9);
           internal_static_hbase_pb_DeleteColumnFamilyStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DeleteColumnFamilyStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "ColumnfamilyName", "UnmodifiedTableSchema", });
           internal_static_hbase_pb_EnableTableStateData_descriptor =
-            getDescriptor().getMessageTypes().get(7);
+            getDescriptor().getMessageTypes().get(10);
           internal_static_hbase_pb_EnableTableStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_EnableTableStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "SkipTableStateCheck", });
           internal_static_hbase_pb_DisableTableStateData_descriptor =
-            getDescriptor().getMessageTypes().get(8);
+            getDescriptor().getMessageTypes().get(11);
           internal_static_hbase_pb_DisableTableStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_DisableTableStateData_descriptor,
               new java.lang.String[] { "UserInfo", "TableName", "SkipTableStateCheck", });
           internal_static_hbase_pb_ServerCrashStateData_descriptor =
-            getDescriptor().getMessageTypes().get(9);
+            getDescriptor().getMessageTypes().get(12);
           internal_static_hbase_pb_ServerCrashStateData_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_ServerCrashStateData_descriptor,

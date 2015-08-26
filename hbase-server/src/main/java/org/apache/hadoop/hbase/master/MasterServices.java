@@ -74,6 +74,11 @@ public interface MasterServices extends Server {
   MasterCoprocessorHost getMasterCoprocessorHost();
 
   /**
+   * @return Master's instance of {@link TableNamespaceManager}
+   */
+  TableNamespaceManager getTableNamespaceManager();
+
+  /**
    * @return Master's instance of {@link MasterQuotaManager}
    */
   MasterQuotaManager getMasterQuotaManager();
@@ -265,23 +270,50 @@ public interface MasterServices extends Server {
   /**
    * Create a new namespace
    * @param descriptor descriptor which describes the new namespace
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  public void createNamespace(NamespaceDescriptor descriptor) throws IOException;
+  public void createNamespace(
+      final NamespaceDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce) throws IOException;
+
+  /**
+   * Create a new namespace synchronously.
+   * @param descriptor descriptor which describes the new namespace
+   * @param nonceGroup
+   * @param nonce
+   * @throws IOException
+   */
+  public void createNamespaceSync(
+      final NamespaceDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Modify an existing namespace
    * @param descriptor descriptor which updates the existing namespace
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException;
+  public void modifyNamespace(
+      final NamespaceDescriptor descriptor,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Delete an existing namespace. Only empty namespaces (no tables) can be removed.
    * @param name namespace name
+   * @param nonceGroup
+   * @param nonce
    * @throws IOException
    */
-  public void deleteNamespace(String name) throws IOException;
+  public void deleteNamespace(
+      final String name,
+      final long nonceGroup,
+      final long nonce) throws IOException;
 
   /**
    * Get a namespace descriptor by name
