@@ -67,14 +67,12 @@ Release 0.98.14 - 8/29/2015
     * [HBASE-14246] - branch 0.98 and earlier has incorrect LICENSE/NOTICE for several dependencies
     * [HBASE-14250] - branch-1.1 hbase-server test-jar has incorrect LICENSE
     * [HBASE-14251] - javadoc jars use LICENSE/NOTICE from primary artifact
-    * [HBASE-14291] - NPE On StochasticLoadBalancer Balance Involving RS With No Regions
     * [HBASE-14297] - Fix a long standing nit with 0.98 source assemblies
     * [HBASE-14303] - LICENSE and NOTICE files missing in root dir of Hadoop 1 binary convenience artifact
 
 ** Improvement
     * [HBASE-8642] - [Snapshot] List and delete snapshot by table
     * [HBASE-12596] - bulkload needs to follow locality
-    * [HBASE-13376] - Improvements to Stochastic load balancer
     * [HBASE-13755] - Provide single super user check implementation
     * [HBASE-13925] - Use zookeeper multi to clear znodes in ZKProcedureUtil
     * [HBASE-13961] - SnapshotManager#initialize should set snapshotLayoutVersion if it allows to create snapshot with old layout format
@@ -84,6 +82,7 @@ Release 0.98.14 - 8/29/2015
     * [HBASE-14097] - Log link to client scan troubleshooting section when scanner exceptions happen.
     * [HBASE-14122] - Client API for determining if server side supports cell level security
     * [HBASE-14260] - don't build javadocs for hbase-protocol module
+    * [HBASE-14275] - Backport to 0.98 HBASE-10785 Metas own location should be cached
 
 ** New Feature
     * [HBASE-13356] - HBase should provide an InputFormat supporting multiple scans in mapreduce jobs over snapshots
