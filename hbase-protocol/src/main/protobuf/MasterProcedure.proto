@@ -110,6 +110,42 @@ message DeleteTableStateData {
   repeated RegionInfo region_info = 3;
 }
 
+enum CreateNamespaceState {
+  CREATE_NAMESPACE_PREPARE = 1;
+  CREATE_NAMESPACE_CREATE_DIRECTORY = 2;
+  CREATE_NAMESPACE_INSERT_INTO_NS_TABLE = 3;
+  CREATE_NAMESPACE_UPDATE_ZK = 4;
+  CREATE_NAMESPACE_SET_NAMESPACE_QUOTA = 5;
+}
+
+message CreateNamespaceStateData {
+  required NamespaceDescriptor namespace_descriptor = 1;
+}
+
+enum ModifyNamespaceState {
+  MODIFY_NAMESPACE_PREPARE = 1;
+  MODIFY_NAMESPACE_UPDATE_NS_TABLE = 2;
+  MODIFY_NAMESPACE_UPDATE_ZK = 3;
+}
+
+message ModifyNamespaceStateData {
+  required NamespaceDescriptor namespace_descriptor = 1;
+  optional NamespaceDescriptor unmodified_namespace_descriptor = 2;
+}
+
+enum DeleteNamespaceState {
+  DELETE_NAMESPACE_PREPARE = 1;
+  DELETE_NAMESPACE_DELETE_FROM_NS_TABLE = 2;
+  DELETE_NAMESPACE_REMOVE_FROM_ZK = 3;
+  DELETE_NAMESPACE_DELETE_DIRECTORIES = 4;
+  DELETE_NAMESPACE_REMOVE_NAMESPACE_QUOTA = 5;
+}
+
+message DeleteNamespaceStateData {
+  required string namespace_name = 1;
+  optional NamespaceDescriptor namespace_descriptor = 2;
+}
+
 enum AddColumnFamilyState {
   ADD_COLUMN_FAMILY_PREPARE = 1;
   ADD_COLUMN_FAMILY_PRE_OPERATION = 2;

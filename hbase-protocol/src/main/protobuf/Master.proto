@@ -177,6 +177,8 @@ message ModifyTableResponse {
 
 message CreateNamespaceRequest {
   required NamespaceDescriptor namespaceDescriptor = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message CreateNamespaceResponse {
@@ -184,6 +186,8 @@ message CreateNamespaceResponse {
 
 message DeleteNamespaceRequest {
   required string namespaceName = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message DeleteNamespaceResponse {
@@ -191,6 +195,8 @@ message DeleteNamespaceResponse {
 
 message ModifyNamespaceRequest {
   required NamespaceDescriptor namespaceDescriptor = 1;
+  optional uint64 nonce_group = 2 [default = 0];
+  optional uint64 nonce = 3 [default = 0];
 }
 
 message ModifyNamespaceResponse {

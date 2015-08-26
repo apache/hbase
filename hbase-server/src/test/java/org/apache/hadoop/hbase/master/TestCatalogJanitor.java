@@ -395,17 +395,34 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void createNamespace(NamespaceDescriptor descriptor) throws IOException {
+    public void createNamespace(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
       //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
-    public void modifyNamespace(NamespaceDescriptor descriptor) throws IOException {
+    public void createNamespaceSync(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
       //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
-    public void deleteNamespace(String name) throws IOException {
+    public void modifyNamespace(
+        final NamespaceDescriptor descriptor,
+        final long nonceGroup,
+        final long nonce) throws IOException {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public void deleteNamespace(
+        final String name,
+        final long nonceGroup,
+        final long nonce) throws IOException {
       //To change body of implemented methods use File | Settings | File Templates.
     }
 
@@ -500,6 +517,11 @@ public class TestCatalogJanitor {
 
     @Override
     public TableStateManager getTableStateManager() {
+      return null;
+    }
+
+    @Override
+    public TableNamespaceManager getTableNamespaceManager() {
       return null;
     }
 

@@ -169,8 +169,13 @@ public class ZKNamespaceManager extends ZooKeeperListener {
     try {
       ZKUtil.deleteNode(watcher, zNode);
     } catch (KeeperException e) {
-      LOG.error("Failed updating permissions for namespace "+name, e);
-      throw new IOException("Failed updating permissions for namespace "+name, e);
+      if (e instanceof KeeperException.NoNodeException) {
+        // If the node does not exist, it could be already deleted. Continue without fail.
+        LOG.warn("The ZNode " + zNode + " for namespace " + name + " does not exist.");
+      } else {
+        LOG.error("Failed updating permissions for namespace " + name, e);
+        throw new IOException("Failed updating permissions for namespace " + name, e);
+      }
     }
   }
 
