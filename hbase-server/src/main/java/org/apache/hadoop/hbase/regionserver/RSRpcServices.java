@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -864,10 +865,17 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     String name = rs.getProcessName() + "/" + initialIsa.toString();
     // Set how many times to retry talking to another server over HConnection.
     ConnectionUtils.setServerSideHConnectionRetriesConfig(rs.conf, name, LOG);
-    rpcServer = new RpcServer(rs, name, getServices(),
-      bindAddress, // use final bindAddress for this server.
-      rs.conf,
-      rpcSchedulerFactory.create(rs.conf, this, rs));
+    try {
+      rpcServer = new RpcServer(rs, name, getServices(),
+        bindAddress, // use final bindAddress for this server.
+        rs.conf,
+        rpcSchedulerFactory.create(rs.conf, this, rs));
+    } catch(BindException be) {
+      String configName = (this instanceof MasterRpcServices) ? HConstants.MASTER_PORT :
+        HConstants.REGIONSERVER_PORT;
+        throw new IOException(be.getMessage() + ". To switch ports use the '" + configName +
+          "' configuration property.", be.getCause() != null ? be.getCause() : be);
+    }
 
     scannerLeaseTimeoutPeriod = rs.conf.getInt(
       HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,

@@ -2309,16 +2309,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       Constructor<? extends HMaster> c =
         masterClass.getConstructor(Configuration.class, CoordinatedStateManager.class);
       return c.newInstance(conf, cp);
-    } catch (InvocationTargetException ite) {
-      Throwable target = ite.getTargetException() != null?
-        ite.getTargetException(): ite;
-      if (target.getCause() != null) target = target.getCause();
-      throw new RuntimeException("Failed construction of Master: " +
-        masterClass.toString(), target);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed construction of Master: " +
-        masterClass.toString() + ((e.getCause() != null)?
-          e.getCause().getMessage(): ""), e);
+    } catch(Exception e) {
+      Throwable error = e;
+      if (e instanceof InvocationTargetException &&
+          ((InvocationTargetException)e).getTargetException() != null) {
+        error = ((InvocationTargetException)e).getTargetException();
+      }
+      throw new RuntimeException("Failed construction of Master: " + masterClass.toString() + ". "
+        , error);
     }
   }
 
