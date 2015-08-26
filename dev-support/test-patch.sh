@@ -335,10 +335,13 @@ setup () {
   $MVN clean package checkstyle:checkstyle-aggregate findbugs:findbugs -DskipTests \
 	 -D${PROJECT_NAME}PatchProcess > $PATCH_DIR/trunkJavacWarnings.txt 2>&1
   if [[ $? != 0 ]] ; then
+    echo "mvn exit code was $?"
     ERR=`$GREP -A 5 'Compilation failure' $PATCH_DIR/trunkJavacWarnings.txt`
-    echo "Trunk compilation is broken?
-    {code}$ERR{code}"
-    cleanupAndExit 1
+    if [[ ${#ERR} -ge 1 ]] ; then
+      echo "Trunk compilation is broken?
+      {code}$ERR{code}"
+      cleanupAndExit 1
+    fi
   fi
   mv target/checkstyle-result.xml $PATCH_DIR/trunkCheckstyle.xml
   collectFindbugsReports trunk $BASEDIR $PATCH_DIR
