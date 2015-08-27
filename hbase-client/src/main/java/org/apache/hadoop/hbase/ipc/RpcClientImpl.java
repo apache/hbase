@@ -935,7 +935,9 @@ public class RpcClientImpl extends AbstractRpcClient {
         } catch (IOException e) {
           // We set the value inside the synchronized block, this way the next in line
           //  won't even try to write
-          markClosed(e);
+          if (markClosed(e)) {
+            close();
+          }
           writeException = e;
           interrupt();
         }
