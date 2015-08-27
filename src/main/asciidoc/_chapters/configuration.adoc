@@ -223,8 +223,15 @@ Use the following legend to interpret this table:
 |Hadoop-2.4.x | NT | S | S | S | S
 |Hadoop-2.5.x | NT | S | S | S | S
 |Hadoop-2.6.x | NT | NT | S | S | S
-|Hadoop-2.7.x | NT | NT | NT | NT | NT
+|Hadoop-2.7.0 | X | X | X | X | X
+|Hadoop-2.7.1+ | NT | NT | NT | NT | S
 |===
+
+.Hadoop 2.7.x
+[TIP]
+====
+Hadoop version 2.7.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable.
+====
 
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
