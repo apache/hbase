@@ -25,14 +25,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CompactRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.FlushRegionRequest;
@@ -74,14 +69,14 @@ import org.apache.hadoop.hbase.security.User;
 //RegionSpecifier object. Methods can be invoked on the returned object
 //to figure out whether it is a meta region or not.
 @InterfaceAudience.Private
-class AnnotationReadingPriorityFunction implements PriorityFunction {
+public class AnnotationReadingPriorityFunction implements PriorityFunction {
   private static final Log LOG =
     LogFactory.getLog(AnnotationReadingPriorityFunction.class.getName());
 
   /** Used to control the scan delay, currently sqrt(numNextCall * weight) */
   public static final String SCAN_VTIME_WEIGHT_CONF_KEY = "hbase.ipc.server.scan.vtime.weight";
 
-  private final Map<String, Integer> annotatedQos;
+  protected final Map<String, Integer> annotatedQos;
   //We need to mock the regionserver instance for some unit tests (set via
   //setRegionServer method.
   private RSRpcServices rpcServices;
@@ -113,7 +108,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
    * @param rpcServices
    *          The RPC server implementation
    */
-  AnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
+  public AnnotationReadingPriorityFunction(final RSRpcServices rpcServices) {
     this(rpcServices, rpcServices.getClass());
   }
 
@@ -126,7 +121,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
    * @param clz
    *          The concrete RPC server implementation's class
    */
-  AnnotationReadingPriorityFunction(final RSRpcServices rpcServices,
+  public AnnotationReadingPriorityFunction(final RSRpcServices rpcServices,
       Class<? extends RSRpcServices> clz) {
     Map<String,Integer> qosMap = new HashMap<String,Integer>();
     for (Method m : clz.getMethods()) {
@@ -177,9 +172,9 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
    */
   @Override
   public int getPriority(RequestHeader header, Message param, User user) {
-    String methodName = header.getMethodName();
-    Integer priorityByAnnotation = annotatedQos.get(methodName);
-    if (priorityByAnnotation != null) {
+    int priorityByAnnotation = getAnnotatedPriority(header);
+
+    if (priorityByAnnotation >= 0) {
       return priorityByAnnotation;
     }
 
@@ -195,6 +190,30 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       return HConstants.NORMAL_QOS;
     }
 
+    return getBasePriority(header, param);
+  }
+
+  /**
+   * See if the method has an annotation.
+   * @param header
+   * @return Return the priority from the annotation. If there isn't
+   * an annotation, this returns something below zero.
+   */
+  protected int getAnnotatedPriority(RequestHeader header) {
+    String methodName = header.getMethodName();
+    Integer priorityByAnnotation = annotatedQos.get(methodName);
+    if (priorityByAnnotation != null) {
+      return priorityByAnnotation;
+    }
+    return -1;
+  }
+
+  /**
+   * Get the priority for a given request from the header and the param
+   * This doesn't consider which user is sending the request at all.
+   * This doesn't consider annotations
+   */
+  protected int getBasePriority(RequestHeader header, Message param) {
     if (param == null) {
       return HConstants.NORMAL_QOS;
     }
@@ -203,6 +222,7 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       // only this one has been converted so far.  No priority == NORMAL_QOS.
       return header.hasPriority()? header.getPriority(): HConstants.NORMAL_QOS;
     }
+
     String cls = param.getClass().getName();
     Class<? extends Message> rpcArgClass = argumentToClassMap.get(cls);
     RegionSpecifier regionSpecifier = null;
@@ -247,21 +267,6 @@ class AnnotationReadingPriorityFunction implements PriorityFunction {
       }
     }
 
-    // If meta is moving then all the rest of report the report state transitions will be
-    // blocked. We shouldn't be in the same queue.
-    if (param instanceof ReportRegionStateTransitionRequest) { // Regions are moving
-      ReportRegionStateTransitionRequest tRequest = (ReportRegionStateTransitionRequest) param;
-      for (RegionStateTransition transition : tRequest.getTransitionList()) {
-        if (transition.getRegionInfoList() != null) {
-          for (HBaseProtos.RegionInfo info : transition.getRegionInfoList()) {
-            TableName tn = ProtobufUtil.toTableName(info.getTableName());
-            if (tn.isSystemTable()) {
-              return HConstants.SYSTEMTABLE_QOS;
-            }
-          }
-        }
-      }
-    }
     return HConstants.NORMAL_QOS;
   }
 
