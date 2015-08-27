@@ -83,6 +83,7 @@ if [ $# = 0 ]; then
   echo "  hbck            Run the hbase 'fsck' tool"
   echo "  hlog            Write-ahead-log analyzer"
   echo "  snapshot        Create a new snapshot of a table"
+  echo "  snapshotinfo    Tool for dumping snapshot information"
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
   echo "  upgrade         Upgrade hbase"
@@ -301,6 +302,8 @@ elif [ "$COMMAND" = "upgrade" ] ; then
   CLASS="org.apache.hadoop.hbase.migration.UpgradeTo96"
 elif [ "$COMMAND" = "snapshot" ] ; then
   CLASS="org.apache.hadoop.hbase.snapshot.CreateSnapshot"
+elif [ "$COMMAND" = "snapshotinfo" ] ; then
+  CLASS="org.apache.hadoop.hbase.snapshot.SnapshotInfo"
 elif [ "$COMMAND" = "master" ] ; then
   CLASS='org.apache.hadoop.hbase.master.HMaster'
   if [ "$1" != "stop" ] && [ "$1" != "clear" ] ; then
