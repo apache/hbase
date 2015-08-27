@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.filter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.PriorityQueue;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
@@ -157,83 +157,83 @@ public class FuzzyRowFilter extends FilterBase {
 
   @Override
   public Cell getNextCellHint(Cell currentCell) {
-    boolean result = true;
-    if (tracker.needsUpdate()) {
-      result = tracker.updateTracker(currentCell);
-    }
+    boolean result = tracker.updateTracker(currentCell);
     if (result == false) {
       done = true;
       return null;
     }
     byte[] nextRowKey = tracker.nextRow();
-    // We need to compare nextRowKey with currentCell
-    int compareResult =
-        Bytes.compareTo(nextRowKey, 0, nextRowKey.length, currentCell.getRowArray(),
-          currentCell.getRowOffset(), currentCell.getRowLength());
-    if ((reversed && compareResult > 0) || (!reversed && compareResult < 0)) {
-      // This can happen when we have multilpe filters and some other filter
-      // returns next row with hint which is larger (smaller for reverse)
-      // than the current (really?)
-      result = tracker.updateTracker(currentCell);
-      if (result == false) {
-        done = true;
-        return null;
-      } else {
-        nextRowKey = tracker.nextRow();
-      }
-    }
     return KeyValue.createFirstOnRow(nextRowKey);
   }
 
   /**
-   * If we have multiple fuzzy keys, row tracker should improve overall performance It calculates
-   * all next rows (one per every fuzzy key), sort them accordingly (ascending for regular and
-   * descending for reverse). Next time getNextCellHint is called we check row tracker first and
-   * return next row from the tracker if it exists, if there are no rows in the tracker we update
-   * tracker with a current cell and return first row.
+   * If we have multiple fuzzy keys, row tracker should improve overall performance. It calculates
+   * all next rows (one per every fuzzy key) and put them (the fuzzy key is bundled) into a priority
+   * queue so that the smallest row key always appears at queue head, which helps to decide the
+   * "Next Cell Hint". As scanning going on, the number of candidate rows in the RowTracker will
+   * remain the size of fuzzy keys until some of the fuzzy keys won't possibly have matches any
+   * more.
    */
   private class RowTracker {
-    private final List<byte[]> nextRows;
-    private int next = -1;
+    private final PriorityQueue<Pair<byte[], Pair<byte[], byte[]>>> nextRows;
+    private boolean initialized = false;
 
     RowTracker() {
-      nextRows = new ArrayList<byte[]>();
-    }
-
-    boolean needsUpdate() {
-      return next == -1 || next == nextRows.size();
+      nextRows =
+          new PriorityQueue<Pair<byte[], Pair<byte[], byte[]>>>(fuzzyKeysData.size(),
+              new Comparator<Pair<byte[], Pair<byte[], byte[]>>>() {
+                @Override
+                public int compare(Pair<byte[], Pair<byte[], byte[]>> o1,
+                    Pair<byte[], Pair<byte[], byte[]>> o2) {
+                  int compare = Bytes.compareTo(o1.getFirst(), o2.getFirst());
+                  if (!isReversed()) {
+                    return compare;
+                  } else {
+                    return -compare;
+                  }
+                }
+              });
     }
 
     byte[] nextRow() {
-      if (next < 0 || next == nextRows.size()) return null;
-      return nextRows.get(next++);
+      if (nextRows.isEmpty()) {
+        throw new IllegalStateException(
+            "NextRows should not be empty, make sure to call nextRow() after updateTracker() return true");
+      } else {
+        return nextRows.peek().getFirst();
+      }
     }
 
     boolean updateTracker(Cell currentCell) {
-      nextRows.clear();
-      for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
-        byte[] nextRowKeyCandidate =
-            getNextForFuzzyRule(isReversed(), currentCell.getRowArray(),
-              currentCell.getRowOffset(), currentCell.getRowLength(), fuzzyData.getFirst(),
-              fuzzyData.getSecond());
-        if (nextRowKeyCandidate == null) {
-          continue;
+      if (!initialized) {
+        for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
+          updateWith(currentCell, fuzzyData);
         }
-        nextRows.add(nextRowKeyCandidate);
+        initialized = true;
+      } else {
+        while (!nextRows.isEmpty() && !lessThan(currentCell, nextRows.peek().getFirst())) {
+          Pair<byte[], Pair<byte[], byte[]>> head = nextRows.poll();
+          Pair<byte[], byte[]> fuzzyData = head.getSecond();
+          updateWith(currentCell, fuzzyData);
+        }
       }
-      // Sort all next row candidates
-      Collections.sort(nextRows, new Comparator<byte[]>() {
-        @Override
-        public int compare(byte[] o1, byte[] o2) {
-          if (reversed) {
-            return -Bytes.compareTo(o1, o2);
-          } else {
-            return Bytes.compareTo(o1, o2);
-          }
-        }
-      });
-      next = 0;
-      return nextRows.size() > 0;
+      return !nextRows.isEmpty();
+    }
+
+    boolean lessThan(Cell currentCell, byte[] nextRowKey) {
+      int compareResult =
+          Bytes.compareTo(currentCell.getRowArray(), currentCell.getRowOffset(),
+            currentCell.getRowLength(), nextRowKey, 0, nextRowKey.length);
+      return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
+    }
+
+    void updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
+      byte[] nextRowKeyCandidate =
+          getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
+            currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
+      if (nextRowKeyCandidate != null) {
+        nextRows.add(new Pair<byte[], Pair<byte[], byte[]>>(nextRowKeyCandidate, fuzzyData));
+      }
     }
 
   }
@@ -394,8 +394,8 @@ public class FuzzyRowFilter extends FilterBase {
     return SatisfiesCode.YES;
   }
 
-  static SatisfiesCode satisfiesNoUnsafe(boolean reverse, byte[] row, int offset,
-      int length, byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
+  static SatisfiesCode satisfiesNoUnsafe(boolean reverse, byte[] row, int offset, int length,
+      byte[] fuzzyKeyBytes, byte[] fuzzyKeyMeta) {
     if (row == null) {
       // do nothing, let scan to proceed
       return SatisfiesCode.YES;

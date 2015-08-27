@@ -59,12 +59,14 @@ import com.google.common.collect.Lists;
 @Category(MediumTests.class)
 public class TestFuzzyRowFilterEndToEnd {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private final static byte fuzzyValue = (byte) 63;
   private static final Log LOG = LogFactory.getLog(TestFuzzyRowFilterEndToEnd.class);
 
   private static int firstPartCardinality = 50;
-  private static int secondPartCardinality = 40;
-  private static int colQualifiersTotal = 50;
-  private static int totalFuzzyKeys = secondPartCardinality / 2;
+  private static int secondPartCardinality = 50;
+  private static int thirdPartCardinality = 50;
+  private static int colQualifiersTotal = 5;
+  private static int totalFuzzyKeys = thirdPartCardinality / 2;
 
   private static String table = "TestFuzzyRowFilterEndToEnd";
 
@@ -118,25 +120,27 @@ public class TestFuzzyRowFilterEndToEnd {
     // 4 byte qualifier
     // 4 byte value
 
-    for (int i1 = 0; i1 < firstPartCardinality; i1++) {
-      if ((i1 % 1000) == 0) LOG.info("put " + i1);
+    for (int i0 = 0; i0 < firstPartCardinality; i0++) {
 
-      for (int i2 = 0; i2 < secondPartCardinality; i2++) {
-        byte[] rk = new byte[10];
+      for (int i1 = 0; i1 < secondPartCardinality; i1++) {
 
-        ByteBuffer buf = ByteBuffer.wrap(rk);
-        buf.clear();
-        buf.putShort((short) 2);
-        buf.putInt(i1);
-        buf.putInt(i2);
-        for (int c = 0; c < colQualifiersTotal; c++) {
-          byte[] cq = new byte[4];
-          Bytes.putBytes(cq, 0, Bytes.toBytes(c), 0, 4);
+        for (int i2 = 0; i2 < thirdPartCardinality; i2++) {
+          byte[] rk = new byte[10];
 
-          Put p = new Put(rk);
-          p.setDurability(Durability.SKIP_WAL);
-          p.add(cf.getBytes(), cq, Bytes.toBytes(c));
-          ht.put(p);
+          ByteBuffer buf = ByteBuffer.wrap(rk);
+          buf.clear();
+          buf.putShort((short) i0);
+          buf.putInt(i1);
+          buf.putInt(i2);
+          for (int c = 0; c < colQualifiersTotal; c++) {
+            byte[] cq = new byte[4];
+            Bytes.putBytes(cq, 0, Bytes.toBytes(c), 0, 4);
+
+            Put p = new Put(rk);
+            p.setDurability(Durability.SKIP_WAL);
+            p.add(cf.getBytes(), cq, Bytes.toBytes(c));
+            ht.put(p);
+          }
         }
       }
     }
@@ -144,11 +148,12 @@ public class TestFuzzyRowFilterEndToEnd {
     TEST_UTIL.flush();
 
     // test passes
-    runTest(ht);
+    runTest1(ht);
+    runTest2(ht);
 
   }
 
-  private void runTest(HTable hTable) throws IOException {
+  private void runTest1(HTable hTable) throws IOException {
     // [0, 2, ?, ?, ?, ?, 0, 0, 0, 1]
 
     byte[] mask = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
@@ -160,7 +165,7 @@ public class TestFuzzyRowFilterEndToEnd {
       buf.clear();
       buf.putShort((short) 2);
       for (int j = 0; j < 4; j++) {
-        buf.put((byte) 63);
+        buf.put(fuzzyValue);
       }
       buf.putInt(i);
 
@@ -168,7 +173,41 @@ public class TestFuzzyRowFilterEndToEnd {
       list.add(pair);
     }
 
-    int expectedSize = firstPartCardinality * totalFuzzyKeys * colQualifiersTotal;
+    int expectedSize = secondPartCardinality * totalFuzzyKeys * colQualifiersTotal;
+    FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list);
+    // Filters are not stateless - we can't reuse them
+    FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list);
+
+    // regular test
+    runScanner(hTable, expectedSize, fuzzyRowFilter0);
+    // optimized from block cache
+    runScanner(hTable, expectedSize, fuzzyRowFilter1);
+
+  }
+
+  private void runTest2(HTable hTable) throws IOException {
+    // [0, 0, ?, ?, ?, ?, 0, 0, 0, 0] , [0, 1, ?, ?, ?, ?, 0, 0, 0, 1]...
+
+    byte[] mask = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
+
+    List<Pair<byte[], byte[]>> list = new ArrayList<Pair<byte[], byte[]>>();
+
+    for (int i = 0; i < totalFuzzyKeys; i++) {
+      byte[] fuzzyKey = new byte[10];
+      ByteBuffer buf = ByteBuffer.wrap(fuzzyKey);
+      buf.clear();
+      buf.putShort((short) (i * 2));
+      for (int j = 0; j < 4; j++) {
+        buf.put(fuzzyValue);
+      }
+      buf.putInt(i * 2);
+
+      Pair<byte[], byte[]> pair = new Pair<byte[], byte[]>(fuzzyKey, mask);
+      list.add(pair);
+    }
+
+    int expectedSize = totalFuzzyKeys * secondPartCardinality * colQualifiersTotal;
+
     FuzzyRowFilter fuzzyRowFilter0 = new FuzzyRowFilter(list);
     // Filters are not stateless - we can't reuse them
     FuzzyRowFilter fuzzyRowFilter1 = new FuzzyRowFilter(list);
@@ -207,7 +246,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
     assertEquals(expectedSize, found);
   }
-  
+
   @SuppressWarnings("deprecation")
   @Test
   public void testFilterList() throws Exception {
@@ -260,7 +299,7 @@ public class TestFuzzyRowFilterEndToEnd {
     buf.clear();
     buf.putShort((short) 2);
     for (int i = 0; i < 4; i++)
-      buf.put((byte) 63);
+      buf.put(fuzzyValue);
     buf.putInt((short) 1);
     byte[] mask1 = new byte[] { 0, 0, 1, 1, 1, 1, 0, 0, 0, 0 };
 
@@ -270,7 +309,7 @@ public class TestFuzzyRowFilterEndToEnd {
     buf.putShort((short) 2);
     buf.putInt((short) 2);
     for (int i = 0; i < 4; i++)
-      buf.put((byte) 63);
+      buf.put(fuzzyValue);
 
     byte[] mask2 = new byte[] { 0, 0, 0, 0, 0, 0, 1, 1, 1, 1 };
 
@@ -283,7 +322,8 @@ public class TestFuzzyRowFilterEndToEnd {
     runScanner(hTable, expectedSize, fuzzyRowFilter1, fuzzyRowFilter2);
   }
 
-  private void runScanner(HTable hTable, int expectedSize, Filter filter1, Filter filter2) throws IOException {
+  private void runScanner(HTable hTable, int expectedSize, Filter filter1, Filter filter2)
+      throws IOException {
     String cf = "f";
     Scan scan = new Scan();
     scan.addFamily(cf.getBytes());
