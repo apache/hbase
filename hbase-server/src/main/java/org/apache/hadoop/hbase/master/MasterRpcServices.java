@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
+import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
@@ -221,6 +222,11 @@ public class MasterRpcServices extends RSRpcServices
     master = m;
   }
 
+  @Override
+  protected PriorityFunction createPriority() {
+    return new MasterAnnotationReadingPriorityFunction(this);
+  }
+
   enum BalanceSwitchMode {
     SYNC,
     ASYNC
@@ -305,7 +311,7 @@ public class MasterRpcServices extends RSRpcServices
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
-          - (oldLoad != null ? oldLoad.getTotalNumberOfRequests() : 0));
+            - (oldLoad != null ? oldLoad.getTotalNumberOfRequests() : 0));
       }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -355,10 +361,10 @@ public class MasterRpcServices extends RSRpcServices
       AddColumnRequest req) throws ServiceException {
     try {
       master.addColumn(
-        ProtobufUtil.toTableName(req.getTableName()),
-        HColumnDescriptor.convert(req.getColumnFamilies()),
-        req.getNonceGroup(),
-        req.getNonce());
+          ProtobufUtil.toTableName(req.getTableName()),
+          HColumnDescriptor.convert(req.getColumnFamilies()),
+          req.getNonceGroup(),
+          req.getNonce());
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -493,7 +499,7 @@ public class MasterRpcServices extends RSRpcServices
       DeleteTableRequest request) throws ServiceException {
     try {
       long procId = master.deleteTable(ProtobufUtil.toTableName(
-        request.getTableName()), request.getNonceGroup(), request.getNonce());
+          request.getTableName()), request.getNonceGroup(), request.getNonce());
       return DeleteTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -782,7 +788,7 @@ public class MasterRpcServices extends RSRpcServices
     try {
       return GetNamespaceDescriptorResponse.newBuilder()
         .setNamespaceDescriptor(ProtobufUtil.toProtoNamespaceDescriptor(
-          master.getNamespaceDescriptor(request.getNamespaceName())))
+            master.getNamespaceDescriptor(request.getNamespaceName())))
         .build();
     } catch (IOException e) {
       throw new ServiceException(e);
