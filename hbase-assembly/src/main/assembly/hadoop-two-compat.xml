@@ -46,6 +46,7 @@
         <include>org.apache.hbase:hbase-server</include>
         <include>org.apache.hbase:hbase-shell</include>
         <include>org.apache.hbase:hbase-thrift</include>
+        <include>org.apache.hbase:hbase-external-blockcache</include>
       </includes>
       <!-- Binaries for the dependencies also go in the hbase-jars directory -->
       <binaries>

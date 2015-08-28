@@ -67,6 +67,7 @@
     <module>hbase-annotations</module>
     <module>hbase-rest</module>
     <module>hbase-checkstyle</module>
+    <module>hbase-external-blockcache</module>
     <module>hbase-shaded</module>
     <module>hbase-spark</module>
   </modules>
@@ -1432,6 +1433,11 @@
       <dependency>
         <artifactId>hbase-examples</artifactId>
         <groupId>org.apache.hbase</groupId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase-external-blockcache</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

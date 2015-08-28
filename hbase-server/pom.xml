@@ -535,11 +535,7 @@
       <groupId>io.netty</groupId>
       <artifactId>netty-all</artifactId>
     </dependency>
-    <dependency>
-      <groupId>net.spy</groupId>
-      <artifactId>spymemcached</artifactId>
-      <optional>true</optional>
-    </dependency>
+
     <!-- tracing Dependencies -->
     <dependency>
       <groupId>org.apache.htrace</groupId>
