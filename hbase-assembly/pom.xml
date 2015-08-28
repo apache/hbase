@@ -176,6 +176,11 @@
        <version>${project.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-external-blockcache</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
        <groupId>org.apache.hbase</groupId>
        <artifactId>hbase-testing-util</artifactId>
        <version>${project.version}</version>
