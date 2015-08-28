@@ -496,17 +496,17 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
-    Cell peeked = this.heap.peek();
-    if (peeked == null) {
+    Cell cell = this.heap.peek();
+    if (cell == null) {
       close();
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
     // only call setRow if the row changes; avoids confusing the query matcher
     // if scanning intra-row
-    byte[] row = peeked.getRowArray();
-    int offset = peeked.getRowOffset();
-    short length = peeked.getRowLength();
+    byte[] row = cell.getRowArray();
+    int offset = cell.getRowOffset();
+    short length = cell.getRowLength();
 
     // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
     // rows. Else it is possible we are still traversing the same row so we must perform the row
@@ -520,8 +520,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Clear progress away unless invoker has indicated it should be kept.
     if (!scannerContext.getKeepProgress()) scannerContext.clearProgress();
     
-    Cell cell;
-
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
@@ -529,7 +527,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int count = 0;
     long totalBytesRead = 0;
 
-    LOOP: while((cell = this.heap.peek()) != null) {
+    LOOP: do {
       // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
       if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
         scannerContext.updateTimeProgress();
@@ -642,7 +640,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         default:
           throw new RuntimeException("UNEXPECTED");
       }
-    }
+    } while((cell = this.heap.peek()) != null);
 
     if (count > 0) {
       return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
