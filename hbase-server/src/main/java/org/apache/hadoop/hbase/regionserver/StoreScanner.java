@@ -518,8 +518,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
 
-    Cell peeked = this.heap.peek();
-    if (peeked == null) {
+    Cell cell = this.heap.peek();
+    if (cell == null) {
       close(false);// Do all cleanup except heap.close()
       return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     }
@@ -531,15 +531,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // rows. Else it is possible we are still traversing the same row so we must perform the row
     // comparison.
     if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null ||
-        !CellUtil.matchingRow(peeked, matcher.curCell)) {
+        !CellUtil.matchingRow(cell, matcher.curCell)) {
       this.countPerRow = 0;
-      matcher.setToNewRow(peeked);
+      matcher.setToNewRow(cell);
     }
 
     // Clear progress away unless invoker has indicated it should be kept.
     if (!scannerContext.getKeepProgress()) scannerContext.clearProgress();
-    
-    Cell cell;
 
     // Only do a sanity-check if store and comparator are available.
     CellComparator comparator =
@@ -548,7 +546,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     int count = 0;
     long totalBytesRead = 0;
 
-    LOOP: while((cell = this.heap.peek()) != null) {
+    LOOP: do {
       // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
       if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
         scannerContext.updateTimeProgress();
@@ -659,7 +657,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         default:
           throw new RuntimeException("UNEXPECTED");
       }
-    }
+    } while((cell = this.heap.peek()) != null);
 
     if (count > 0) {
       return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
