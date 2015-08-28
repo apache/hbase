@@ -139,9 +139,16 @@ public class CacheConfig {
    * This is used for config.
    */
   private static enum ExternalBlockCaches {
-    memcached(MemcachedBlockCache.class);
+    memcached("org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache");
     // TODO(eclark): Consider more. Redis, etc.
     Class<? extends BlockCache> clazz;
+    ExternalBlockCaches(String clazzName) {
+      try {
+        clazz = (Class<? extends BlockCache>) Class.forName(clazzName);
+      } catch (ClassNotFoundException cnef) {
+        clazz = null;
+      }
+    }
     ExternalBlockCaches(Class<? extends BlockCache> clazz) {
       this.clazz = clazz;
     }
@@ -572,7 +579,12 @@ public class CacheConfig {
     try {
       klass = ExternalBlockCaches.valueOf(c.get(EXTERNAL_BLOCKCACHE_CLASS_KEY, "memcache")).clazz;
     } catch (IllegalArgumentException exception) {
-      klass = c.getClass(EXTERNAL_BLOCKCACHE_CLASS_KEY, MemcachedBlockCache.class);
+      try {
+        klass = c.getClass(EXTERNAL_BLOCKCACHE_CLASS_KEY, Class.forName(
+            "org.apache.hadoop.hbase.io.hfile.MemcachedBlockCache"));
+      } catch (ClassNotFoundException e) {
+        return null;
+      }
     }
 
     // Now try and create an instance of the block cache.
