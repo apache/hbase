@@ -347,13 +347,28 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
     }
   }
 
+  /**
+   * The constructor that uses the basic MetricsBalancer
+   */
+  protected BaseLoadBalancer() {
+    metricsBalancer = new MetricsBalancer();
+  }
+
+  /**
+   * This Constructor accepts an instance of MetricsBalancer,
+   * which will be used instead of creating a new one
+   */
+  protected BaseLoadBalancer(MetricsBalancer metricsBalancer) {
+    this.metricsBalancer = (metricsBalancer != null) ? metricsBalancer : new MetricsBalancer();
+  }
+
   // slop for regions
   protected float slop;
   private Configuration config;
   private static final Random RANDOM = new Random(System.currentTimeMillis());
   private static final Log LOG = LogFactory.getLog(BaseLoadBalancer.class);
 
-  protected final MetricsBalancer metricsBalancer = new MetricsBalancer();
+  protected MetricsBalancer metricsBalancer = null;
   protected MasterServices services;
 
   @Override

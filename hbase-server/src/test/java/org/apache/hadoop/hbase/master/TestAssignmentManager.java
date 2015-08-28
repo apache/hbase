@@ -55,7 +55,7 @@ import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.TableLockManager.NullTableLockManager;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
-import org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer;
+import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -827,7 +827,7 @@ public class TestAssignmentManager {
       Mocking.waitForRegionPendingOpenInRIT(am, REGIONINFO.getEncodedName());
     } finally {
       this.server.getConfiguration().setClass(
-          HConstants.HBASE_MASTER_LOADBALANCER_CLASS, SimpleLoadBalancer.class,
+          HConstants.HBASE_MASTER_LOADBALANCER_CLASS, StochasticLoadBalancer.class,
           LoadBalancer.class);
       am.getExecutorService().shutdown();
       am.shutdown();
@@ -838,7 +838,7 @@ public class TestAssignmentManager {
    * Mocked load balancer class used in the testcase to make sure that the testcase waits until
    * random assignment is called and the gate variable is set to true.
    */
-  public static class MockedLoadBalancer extends SimpleLoadBalancer {
+  public static class MockedLoadBalancer extends StochasticLoadBalancer {
     private AtomicBoolean gate;
 
     public void setGateVariable(AtomicBoolean gate) {
@@ -933,7 +933,7 @@ public class TestAssignmentManager {
           am.getZKTable().isDisabledTable(REGIONINFO.getTable()));
     } finally {
       this.server.getConfiguration().setClass(
-        HConstants.HBASE_MASTER_LOADBALANCER_CLASS, SimpleLoadBalancer.class,
+        HConstants.HBASE_MASTER_LOADBALANCER_CLASS, StochasticLoadBalancer.class,
         LoadBalancer.class);
       am.getZKTable().setEnabledTable(REGIONINFO.getTable());
       am.shutdown();

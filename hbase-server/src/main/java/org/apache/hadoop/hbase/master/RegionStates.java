@@ -783,13 +783,14 @@ public class RegionStates {
     Map<TableName, Map<ServerName, List<HRegionInfo>>> result =
       new HashMap<TableName, Map<ServerName,List<HRegionInfo>>>();
     synchronized (this) {
-      if (!server.getConfiguration().getBoolean("hbase.master.loadbalance.bytable", false)) {
+      if (!server.getConfiguration().getBoolean(
+            HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE, false)) {
         Map<ServerName, List<HRegionInfo>> svrToRegions =
           new HashMap<ServerName, List<HRegionInfo>>(serverHoldings.size());
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           svrToRegions.put(e.getKey(), new ArrayList<HRegionInfo>(e.getValue()));
         }
-        result.put(TableName.valueOf("ensemble"), svrToRegions);
+        result.put(TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME), svrToRegions);
       } else {
         for (Map.Entry<ServerName, Set<HRegionInfo>> e: serverHoldings.entrySet()) {
           for (HRegionInfo hri: e.getValue()) {
