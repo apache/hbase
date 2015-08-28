@@ -449,31 +449,29 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       return false;
     }
 
-    KeyValue peeked = this.heap.peek();
-    if (peeked == null) {
+    KeyValue kv = this.heap.peek();
+    if (kv == null) {
       close();
       return false;
     }
 
     // only call setRow if the row changes; avoids confusing the query matcher
     // if scanning intra-row
-    byte[] row = peeked.getBuffer();
-    int offset = peeked.getRowOffset();
-    short length = peeked.getRowLength();
+    byte[] row = kv.getBuffer();
+    int offset = kv.getRowOffset();
+    short length = kv.getRowLength();
     if (limit < 0 || matcher.row == null || !Bytes.equals(row, offset, length, matcher.row,
         matcher.rowOffset, matcher.rowLength)) {
       this.countPerRow = 0;
       matcher.setRow(row, offset, length);
     }
 
-    KeyValue kv;
-
     // Only do a sanity-check if store and comparator are available.
     KeyValue.KVComparator comparator =
         store != null ? store.getComparator() : null;
 
     int count = 0;
-    LOOP: while((kv = this.heap.peek()) != null) {
+    LOOP: do {
       if (prevKV != kv) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
       checkScanOrder(prevKV, kv, comparator);
       prevKV = kv;
@@ -563,7 +561,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         default:
           throw new RuntimeException("UNEXPECTED");
       }
-    }
+    } while((kv = this.heap.peek()) != null);
 
     if (count > 0) {
       return true;
