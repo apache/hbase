@@ -25,13 +25,26 @@ module Shell
 Trigger the cluster balancer. Returns true if balancer ran and was able to
 tell the region servers to unassign all the regions to balance  (the re-assignment itself is async). 
 Otherwise false (Will not run if regions in transition).
+Parameter tells master whether we should force balance even if there is region in transition.
+
+WARNING: For experts only. Forcing a balance may do more damage than repair
+when assignment is confused
+
+Examples:
+
+  hbase> balancer
+  hbase> balancer "force"
 EOF
       end
 
-      def command()
+      def command(force=nil)
         format_simple_command do
           formatter.row([
-            admin.balancer()? "true": "false"
+            if force.nil?
+              admin.balancer("false")? "true": "false"
+            elsif force == "force"
+              admin.balancer("true")? "true": "false"
+            end
           ])
         end
       end

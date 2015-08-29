@@ -1224,6 +1224,10 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   public boolean balance() throws IOException {
+    return balance(false);
+  }
+
+  public boolean balance(boolean force) throws IOException {
     // if master not initialized, don't run balancer.
     if (!this.initialized) {
       LOG.debug("Master has not been initialized, don't run balancer.");
@@ -1238,10 +1242,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       if (this.assignmentManager.getRegionStates().isRegionsInTransition()) {
         Map<String, RegionState> regionsInTransition =
           this.assignmentManager.getRegionStates().getRegionsInTransition();
-        LOG.debug("Not running balancer because " + regionsInTransition.size() +
+        // if hbase:meta region is in transition, result of assignment cannot be recorded
+        // ignore the force flag in that case
+        boolean metaInTransition = assignmentManager.getRegionStates().isMetaRegionInTransition();
+        String prefix = force && !metaInTransition ? "R" : "Not r";
+        LOG.debug(prefix + "unning balancer because " + regionsInTransition.size() +
           " region(s) in transition: " + org.apache.commons.lang.StringUtils.
             abbreviate(regionsInTransition.toString(), 256));
-        return false;
+        if (!force || metaInTransition) return false;
       }
       if (this.serverManager.areDeadServersInProgress()) {
         LOG.debug("Not running balancer because processing dead regionserver(s): " +

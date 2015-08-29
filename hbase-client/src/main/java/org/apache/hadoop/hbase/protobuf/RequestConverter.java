@@ -1351,8 +1351,8 @@ public final class RequestConverter {
    *
    * @return a BalanceRequest
    */
-  public static BalanceRequest buildBalanceRequest() {
-    return BalanceRequest.newBuilder().build();
+  public static BalanceRequest buildBalanceRequest(boolean force) {
+    return BalanceRequest.newBuilder().setForce(force).build();
   }
 
   /**
