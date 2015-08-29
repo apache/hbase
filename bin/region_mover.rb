@@ -210,9 +210,11 @@ end
 # Return servername that matches passed hostname and port
 def getServerName(servers, hostname, port)
   servername = nil
+  upperCaseHostname = hostname.upcase;
   for server in servers
     hostFromServerName, portFromServerName = getHostPortFromServerName(server)
-    if hostFromServerName == hostname and portFromServerName == port
+    hostFromServerName = hostFromServerName.upcase
+    if hostFromServerName == upperCaseHostname and portFromServerName == port
       servername = server
       break
     end
