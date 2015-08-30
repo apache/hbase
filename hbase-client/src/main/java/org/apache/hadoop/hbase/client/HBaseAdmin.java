@@ -2220,7 +2220,17 @@ public class HBaseAdmin implements Admin {
     return executeCallable(new MasterCallable<Boolean>(getConnection()) {
       @Override
       public Boolean call(int callTimeout) throws ServiceException {
-        return master.balance(null, RequestConverter.buildBalanceRequest()).getBalancerRan();
+        return master.balance(null, RequestConverter.buildBalanceRequest(false)).getBalancerRan();
+      }
+    });
+  }
+
+  @Override
+  public boolean balancer(final boolean force) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.balance(null, RequestConverter.buildBalanceRequest(force)).getBalancerRan();
       }
     });
   }

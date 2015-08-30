@@ -704,6 +704,16 @@ public interface Admin extends Abortable, Closeable {
   boolean balancer() throws IOException;
 
   /**
+   * Invoke the balancer.  Will run the balancer and if regions to move, it will
+   * go ahead and do the reassignments. If there is region in transition, force parameter of true
+   * would still run balancer. Can *not* run for other reasons.  Check
+   * logs.
+   * @param force whether we should force balance even if there is region in transition
+   * @return True if balancer ran, false otherwise.
+   */
+  boolean balancer(boolean force) throws IOException;
+  
+  /**
    * Query the current state of the balancer
    *
    * @return true if the balancer is enabled, false otherwise.
