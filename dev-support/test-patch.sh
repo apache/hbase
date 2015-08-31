@@ -35,6 +35,7 @@ NEWLINE=$'\n'
 
 PROJECT_NAME=HBase
 JENKINS=false
+MOVE_PATCH_DIR=true
 PATCH_DIR=/tmp
 BASEDIR=$(pwd)
 BRANCH_NAME="master"
@@ -89,6 +90,9 @@ parseArgs() {
     case $i in
     --jenkins)
       JENKINS=true
+      ;;
+    --no-move-patch-dir)
+      MOVE_PATCH_DIR=false
       ;;
     --patch-dir=*)
       PATCH_DIR=${i#*=}
@@ -1001,8 +1005,9 @@ $comment"
 ### Cleanup files
 cleanupAndExit () {
   local result=$1
-  if [[ $JENKINS == "true" ]] ; then
+  if [[ ${JENKINS} == "true" && ${MOVE_PATCH_DIR} == "true" ]] ; then
     if [ -e "$PATCH_DIR" ] ; then
+      echo "Relocating patch dir into ${BASEDIR}"
       mv $PATCH_DIR $BASEDIR
     fi
   fi

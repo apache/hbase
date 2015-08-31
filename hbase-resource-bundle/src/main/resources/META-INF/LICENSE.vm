@@ -1560,13 +1560,21 @@ You can redistribute it and/or modify it under either the terms of the GPL
 #set($hadoop = false)
 ## include LICENSE sections for anything not under ASL2.0
 #foreach( ${dep} in ${projects} )
+## if there are no licenses we'll fail the build later, so
+## make sure we output something now that can be used to triage.
+#if(${dep.licenses.size()} == 0)
+No license info included; must update supplemental-models for:
+
+g:${dep.groupId} AND a:${dep.artifactId} AND v:${dep.version}
+
+Until hbase-resource-bundle/src/main/resources/supplemental-models.xml
+is updated, the build should fail.
+#end
 #if(${debug-print-included-work-info.equalsIgnoreCase("true")})
 =====
 Check license for included work
 
-#if(${dep.licenses.size()} == 0)
-No license info included; must update supplemental-models
-#else
+#if(${dep.licenses.size()} > 0)
 License short name: '${dep.licenses[0].name}'
 #end
 
