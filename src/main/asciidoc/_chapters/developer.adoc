@@ -237,7 +237,7 @@ If you would like to assist, please have a look at link:https://issues.apache.or
 === Basic Compile
 
 HBase is compiled using Maven.
-You must use Maven 3.x.
+You must use at least Maven 3.0.4.
 To check your Maven version, run the command +mvn -version+.
 
 .JDK Version Requirements
