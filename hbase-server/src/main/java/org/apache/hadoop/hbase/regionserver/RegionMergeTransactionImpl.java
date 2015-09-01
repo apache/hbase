@@ -949,7 +949,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
 
   @Override
   public List<JournalEntry> getJournal() {
-    return getJournal();
+    return journal;
   }
 
   @Override
