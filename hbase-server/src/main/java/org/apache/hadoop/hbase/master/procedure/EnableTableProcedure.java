@@ -314,9 +314,11 @@ public class EnableTableProcedure
       // was implemented. With table lock, there is no need to set the state here (it will
       // set the state later on). A quick state check should be enough for us to move forward.
       TableStateManager tsm = env.getMasterServices().getAssignmentManager().getTableStateManager();
-      if (!tsm.getTableState(tableName).equals(TableState.State.DISABLED)) {
-        LOG.info("Table " + tableName + " isn't disabled; skipping enable");
-        setFailure("master-enable-table", new TableNotDisabledException(this.tableName));
+      TableState.State state = tsm.getTableState(tableName);
+      if(!state.equals(TableState.State.DISABLED)){
+        LOG.info("Table " + tableName + " isn't disabled;is "+state.name()+"; skipping enable");
+        setFailure("master-enable-table", new TableNotDisabledException(
+                this.tableName+" state is "+state.name()));
         canTableBeEnabled = false;
       }
     }

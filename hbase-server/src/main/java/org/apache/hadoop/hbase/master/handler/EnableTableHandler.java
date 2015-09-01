@@ -100,11 +100,13 @@ public class EnableTableHandler extends EventHandler {
       // After that, no other requests can be accepted until the table reaches
       // DISABLED or ENABLED.
       if (!skipTableStateCheck) {
-        if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
-            this.tableName, TableState.State.ENABLING,
-            TableState.State.DISABLED)) {
-          LOG.info("Table " + tableName + " isn't disabled; skipping enable");
-          throw new TableNotDisabledException(this.tableName);
+        TableState.State state = this.assignmentManager
+                .getTableStateManager().setTableStateIfInStates(
+                this.tableName, TableState.State.ENABLING,
+                TableState.State.DISABLED);
+        if (state!=null) {
+          LOG.info("Table " + tableName + " isn't disabled;is "+state.name()+"; skipping enable");
+          throw new TableNotDisabledException(this.tableName+" state is "+state.name());
         }
       }
       success = true;

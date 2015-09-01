@@ -90,11 +90,13 @@ public class DisableTableHandler extends EventHandler {
       // DISABLED or ENABLED.
       //TODO: reevaluate this since we have table locks now
       if (!skipTableStateCheck) {
-        if (!this.assignmentManager.getTableStateManager().setTableStateIfInStates(
-          this.tableName, TableState.State.DISABLING,
-          TableState.State.ENABLED)) {
-          LOG.info("Table " + tableName + " isn't enabled; skipping disable");
-          throw new TableNotEnabledException(this.tableName);
+        TableState.State state = this.assignmentManager.
+                getTableStateManager().setTableStateIfInStates(
+                this.tableName, TableState.State.DISABLING,
+                TableState.State.ENABLED);
+        if (state!=null) {
+          LOG.info("Table " + tableName + " isn't enabled;is "+state.name()+"; skipping disable");
+          throw new TableNotEnabledException(this.tableName+" state is "+state.name());
         }
       }
       success = true;

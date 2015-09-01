@@ -77,9 +77,10 @@ public class TableStateManager {
    * @param tableName table to change state for
    * @param newState new state
    * @param states states to check against
+   * @return null if succeed or table state if failed
    * @throws IOException
    */
-  public boolean setTableStateIfInStates(TableName tableName,
+  public TableState.State setTableStateIfInStates(TableName tableName,
                                          TableState.State newState,
                                          TableState.State... states)
           throws IOException {
@@ -91,9 +92,9 @@ public class TableStateManager {
       }
       if (currentState.inStates(states)) {
         udpateMetaState(tableName, newState);
-        return true;
+        return null;
       } else {
-        return false;
+        return currentState.getState();
       }
     } finally {
       lock.writeLock().unlock();
