@@ -1772,7 +1772,9 @@ public class HRegion implements HeapSize { // , Writable{
     this.updatesLock.writeLock().lock();
     long totalFlushableSize = 0;
     status.setStatus("Preparing to flush by snapshotting stores");
-    List<StoreFlushContext> storeFlushCtxs = new ArrayList<StoreFlushContext>(stores.size());
+    TreeMap<byte[], StoreFlushContext> storeFlushCtxs
+        = new TreeMap<byte[], StoreFlushContext>(Bytes.BYTES_COMPARATOR);
+    TreeMap<byte[], Long> storeFlushableSize = new TreeMap<byte[], Long>(Bytes.BYTES_COMPARATOR);
     long flushSeqId = -1L;
     try {
       // Record the mvcc for all transactions in progress.
@@ -1794,11 +1796,13 @@ public class HRegion implements HeapSize { // , Writable{
 
       for (Store s : stores.values()) {
         totalFlushableSize += s.getFlushableSize();
-        storeFlushCtxs.add(s.createFlushContext(flushSeqId));
+        byte[] storeName = s.getFamily().getName();
+        storeFlushCtxs.put(storeName, s.createFlushContext(flushSeqId));
+        storeFlushableSize.put(storeName, s.getFlushableSize());
       }
 
       // prepare flush (take a snapshot)
-      for (StoreFlushContext flush : storeFlushCtxs) {
+      for (StoreFlushContext flush : storeFlushCtxs.values()) {
         flush.prepare();
       }
     } finally {
@@ -1837,16 +1841,21 @@ public class HRegion implements HeapSize { // , Writable{
       // just-made new flush store file. The new flushed file is still in the
       // tmp directory.
 
-      for (StoreFlushContext flush : storeFlushCtxs) {
+      for (StoreFlushContext flush : storeFlushCtxs.values()) {
         flush.flushCache(status);
       }
 
       // Switch snapshot (in memstore) -> new hfile (thus causing
       // all the store scanners to reset/reseek).
-      for (StoreFlushContext flush : storeFlushCtxs) {
+      for (Map.Entry<byte[], StoreFlushContext> flushEntry : storeFlushCtxs.entrySet()) {
+        byte[] storeName = flushEntry.getKey();
+        StoreFlushContext flush = flushEntry.getValue();
         boolean needsCompaction = flush.commit(status);
         if (needsCompaction) {
           compactionRequested = true;
+        }
+        if (flush.getCommittedFiles() == null || flush.getCommittedFiles().isEmpty()) {
+          totalFlushableSize -= storeFlushableSize.get(storeName);
         }
       }
       storeFlushCtxs.clear();

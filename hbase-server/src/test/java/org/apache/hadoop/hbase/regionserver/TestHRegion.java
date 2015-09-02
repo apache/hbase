@@ -41,6 +41,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -294,7 +295,49 @@ public class TestHRegion {
     assertTrue("flushable size should be zero, but it is " + sz, sz == 0);
     HRegion.closeHRegion(region);
   }
-  
+
+  /**
+   * Test for HBASE-14229: Flushing canceled by coprocessor still leads to memstoreSize set down
+   */
+  @Test
+  public void testMemstoreSizeWithFlushCanceling() throws IOException {
+    FileSystem fs = FileSystem.get(CONF);
+    Path rootDir = new Path(dir + "testMemstoreSizeWithFlushCanceling");
+    FaultyHLog hLog = new FaultyHLog(fs, rootDir, "testMemstoreSizeWithFlushCanceling", CONF);
+    HRegion region = initHRegion(tableName, null, null, name.getMethodName(),
+        CONF, false, Durability.SYNC_WAL, hLog, COLUMN_FAMILY_BYTES);
+    Store store = region.getStore(COLUMN_FAMILY_BYTES);
+    assertEquals(0, region.getMemstoreSize().get());
+
+    // Put some value and make sure flush could be completed normally
+    byte [] value = Bytes.toBytes(name.getMethodName());
+    Put put = new Put(value);
+    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    region.put(put);
+    long onePutSize = region.getMemstoreSize().get();
+    assertTrue(onePutSize > 0);
+    region.flushcache();
+    assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize().get());
+    assertEquals("flushable size should be zero", 0, store.getFlushableSize());
+
+    // save normalCPHost and replaced by mockedCPHost, which will cancel flush requests
+    RegionCoprocessorHost normalCPHost = region.getCoprocessorHost();
+    RegionCoprocessorHost mockedCPHost = Mockito.mock(RegionCoprocessorHost.class);
+    when(mockedCPHost.preFlush(any(HStore.class), any(InternalScanner.class))).thenReturn(null);
+    region.setCoprocessorHost(mockedCPHost);
+    region.put(put);
+    region.flushcache();
+    assertEquals("memstoreSize should NOT be zero", onePutSize, region.getMemstoreSize().get());
+    assertEquals("flushable size should NOT be zero", onePutSize, store.getFlushableSize());
+
+    // set normalCPHost and flush again, the snapshot will be flushed
+    region.setCoprocessorHost(normalCPHost);
+    region.flushcache();
+    assertEquals("memstoreSize should be zero", 0, region.getMemstoreSize().get());
+    assertEquals("flushable size should be zero", 0, store.getFlushableSize());
+    HRegion.closeHRegion(region);
+  }
+
   /**
    * Test we do not lose data if we fail a flush and then close.
    * Part of HBase-10466.  Tests the following from the issue description:
@@ -3155,10 +3198,10 @@ public class TestHRegion {
 
       // Add a store that has references.
       HStore storeMock = Mockito.mock(HStore.class);
-      Mockito.when(storeMock.hasReferences()).thenReturn(true);
-      Mockito.when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
-      Mockito.when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
-      Mockito.when(storeMock.getColumnFamilyName()).thenReturn("cf");
+      when(storeMock.hasReferences()).thenReturn(true);
+      when(storeMock.getFamily()).thenReturn(new HColumnDescriptor("cf"));
+      when(storeMock.close()).thenReturn(ImmutableList.<StoreFile>of());
+      when(storeMock.getColumnFamilyName()).thenReturn("cf");
       region.stores.put(Bytes.toBytes(storeMock.getColumnFamilyName()), storeMock);
       assertTrue(region.hasReferences());
 
@@ -3880,7 +3923,7 @@ public class TestHRegion {
     HRegionInfo info = null;
     try {
       FileSystem fs = Mockito.mock(FileSystem.class);
-      Mockito.when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
+      when(fs.exists((Path) Mockito.anyObject())).thenThrow(new IOException());
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor("cf"));
       info = new HRegionInfo(htd.getTableName(), HConstants.EMPTY_BYTE_ARRAY,

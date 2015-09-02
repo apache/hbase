@@ -19,7 +19,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.List;
 
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 
@@ -61,4 +63,10 @@ interface StoreFlushContext {
    * @throws IOException
    */
   boolean commit(MonitoredTask status) throws IOException;
+
+  /**
+   * Returns the newly committed files from the flush. Called only if commit returns true
+   * @return a list of Paths for new files
+   */
+  List<Path> getCommittedFiles();
 }
