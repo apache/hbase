@@ -385,7 +385,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     // should we check encryption settings at master side, default true
     this.masterCheckEncryption = conf.getBoolean("hbase.master.check.encryption", true);
 
-    this.metricsMaster = new MetricsMaster( new MetricsMasterWrapperImpl(this));
+    this.metricsMaster = new MetricsMaster(new MetricsMasterWrapperImpl(this));
 
     // Check configuration to see whether procedure is disabled (not execute at all),
     // unused (not used to execute DDL, but executor starts to complete unfinished operations
@@ -2467,6 +2467,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
       }
     }
     return descriptors;
+  }
+
+  @Override
+  public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
+    return this.procedureExecutor.abort(procId, mayInterruptIfRunning);
   }
 
   @Override

@@ -91,6 +91,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescripti
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
@@ -277,6 +279,86 @@ public class HBaseAdmin implements Admin {
   @Override
   public boolean isAborted(){
     return this.aborted;
+  }
+
+  /**
+   * Abort a procedure
+   * @param procId ID of the procedure to abort
+   * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
+   * @return true if aborted, false if procedure already completed or does not exist
+   * @throws IOException
+   */
+  @Override
+  public boolean abortProcedure(
+      final long procId,
+      final boolean mayInterruptIfRunning) throws IOException {
+    Future<Boolean> future = abortProcedureAsync(procId, mayInterruptIfRunning);
+    try {
+      return future.get(syncWaitTimeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException e) {
+      throw new InterruptedIOException("Interrupted when waiting for procedure to be cancelled");
+    } catch (TimeoutException e) {
+      throw new TimeoutIOException(e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof IOException) {
+        throw (IOException)e.getCause();
+      } else {
+        throw new IOException(e.getCause());
+      }
+    }
+  }
+
+  /**
+   * Abort a procedure but does not block and wait for it be completely removed.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param procId ID of the procedure to abort
+   * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
+   * @return true if aborted, false if procedure already completed or does not exist
+   * @throws IOException
+   */
+  @Override
+  public Future<Boolean> abortProcedureAsync(
+    final long procId,
+    final boolean mayInterruptIfRunning) throws IOException {
+    Boolean abortProcResponse = executeCallable(
+      new MasterCallable<AbortProcedureResponse>(getConnection()) {
+    @Override
+    public AbortProcedureResponse call(int callTimeout) throws ServiceException {
+      AbortProcedureRequest abortProcRequest =
+          AbortProcedureRequest.newBuilder().setProcId(procId).build();
+      return master.abortProcedure(null,abortProcRequest);
+      }
+    }).getIsProcedureAborted();
+
+    AbortProcedureFuture abortProcFuture =
+        new AbortProcedureFuture(this, procId, abortProcResponse);
+    return abortProcFuture;
+  }
+
+  private static class AbortProcedureFuture extends ProcedureFuture<Boolean> {
+    private boolean isAbortInProgress;
+
+    public AbortProcedureFuture(
+        final HBaseAdmin admin,
+        final Long procId,
+        final Boolean abortProcResponse) {
+      super(admin, procId);
+      this.isAbortInProgress = abortProcResponse;
+    }
+
+    @Override
+    public Boolean get(long timeout, TimeUnit unit)
+        throws InterruptedException, ExecutionException, TimeoutException {
+      if (!this.isAbortInProgress) {
+        return false;
+      }
+      super.get(timeout, unit);
+      return true;
+    }
   }
 
   /** @return HConnection used by this object. */
@@ -4071,6 +4153,7 @@ public class HBaseAdmin implements Admin {
     private ExecutionException exception = null;
     private boolean procResultFound = false;
     private boolean done = false;
+    private boolean cancelled = false;
     private V result = null;
 
     private final HBaseAdmin admin;
@@ -4083,13 +4166,39 @@ public class HBaseAdmin implements Admin {
 
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-      throw new UnsupportedOperationException();
+      AbortProcedureRequest abortProcRequest = AbortProcedureRequest.newBuilder()
+          .setProcId(procId).setMayInterruptIfRunning(mayInterruptIfRunning).build();
+      try {
+        cancelled = abortProcedureResult(abortProcRequest).getIsProcedureAborted();
+        if (cancelled) {
+          done = true;
+        }
+      } catch (IOException e) {
+        // Cancell thrown exception for some reason. At this time, we are not sure whether
+        // the cancell succeeds or fails. We assume that it is failed, but print out a warning
+        // for debugging purpose.
+        LOG.warn(
+          "Cancelling the procedure with procId=" + procId + " throws exception " + e.getMessage(),
+          e);
+        cancelled = false;
+      }
+      return cancelled;
     }
 
     @Override
     public boolean isCancelled() {
-      // TODO: Abort not implemented yet
-      return false;
+      return cancelled;
+    }
+
+    protected AbortProcedureResponse abortProcedureResult(
+        final AbortProcedureRequest request) throws IOException {
+      return admin.executeCallable(new MasterCallable<AbortProcedureResponse>(
+          admin.getConnection()) {
+        @Override
+        public AbortProcedureResponse call(int callTimeout) throws ServiceException {
+          return master.abortProcedure(null, request);
+        }
+      });
     }
 
     @Override

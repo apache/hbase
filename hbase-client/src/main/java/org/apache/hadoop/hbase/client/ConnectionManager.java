@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse;
+import org.apache.hadoop.hbase.protobuf.generated.*;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -1715,6 +1716,12 @@ class ConnectionManager {
       final MasterService.BlockingInterface stub = this.masterServiceState.stub;
       return new MasterKeepAliveConnection() {
         MasterServiceState mss = masterServiceState;
+        @Override
+        public MasterProtos.AbortProcedureResponse abortProcedure(
+          RpcController controller,
+          MasterProtos.AbortProcedureRequest request) throws ServiceException {
+          return stub.abortProcedure(controller, request);
+        }
         @Override
         public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
         throws ServiceException {
