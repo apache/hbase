@@ -23,7 +23,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Tool for reading ZooKeeper servers from HBase XML configuration and producing
@@ -31,19 +35,30 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 public class ZKServerTool {
-  /**
-   * Run the tool.
-   * @param args Command line arguments.
-   */
-  public static void main(String args[]) {
-    Configuration conf = HBaseConfiguration.create();
+  public static ServerName[] readZKNodes(Configuration conf) {
+    List<ServerName> hosts = new LinkedList<ServerName>();
     String quorum = conf.get(HConstants.ZOOKEEPER_QUORUM, HConstants.LOCALHOST);
 
     String[] values = quorum.split(",");
     for (String value : values) {
       String[] parts = value.split(":");
       String host = parts[0];
-      System.out.println("ZK host:" + host);
+      int port = HConstants.DEFAULT_ZOOKEPER_CLIENT_PORT;
+      if (parts.length > 1) {
+        port = Integer.parseInt(parts[1]);
+      }
+      hosts.add(ServerName.valueOf(host, port, -1));
+    }
+    return hosts.toArray(new ServerName[hosts.size()]);
+  }
+
+  /**
+   * Run the tool.
+   * @param args Command line arguments.
+   */
+  public static void main(String args[]) {
+    for(ServerName server: readZKNodes(HBaseConfiguration.create())) {
+      System.out.println("Zk host: " + server.getHostname());
     }
   }
 }
