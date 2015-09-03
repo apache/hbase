@@ -112,16 +112,14 @@ public class DistributedHBaseCluster extends HBaseCluster {
   public void killRegionServer(ServerName serverName) throws IOException {
     LOG.info("Aborting RS: " + serverName.getServerName());
     clusterManager.kill(ServiceType.HBASE_REGIONSERVER,
-            serverName.getHostname(),
-            serverName.getPort());
+      serverName.getHostname(), serverName.getPort());
   }
 
   @Override
   public void stopRegionServer(ServerName serverName) throws IOException {
     LOG.info("Stopping RS: " + serverName.getServerName());
     clusterManager.stop(ServiceType.HBASE_REGIONSERVER,
-            serverName.getHostname(),
-            serverName.getPort());
+      serverName.getHostname(), serverName.getPort());
   }
 
   @Override
@@ -129,19 +127,95 @@ public class DistributedHBaseCluster extends HBaseCluster {
     waitForServiceToStop(ServiceType.HBASE_REGIONSERVER, serverName, timeout);
   }
 
+  @Override
+  public void startZkNode(String hostname, int port) throws IOException {
+    LOG.info("Starting Zookeeper node on: " + hostname);
+    clusterManager.start(ServiceType.ZOOKEEPER_SERVER, hostname, port);
+  }
+
+  @Override
+  public void killZkNode(ServerName serverName) throws IOException {
+    LOG.info("Aborting Zookeeper node on: " + serverName.getServerName());
+    clusterManager.kill(ServiceType.ZOOKEEPER_SERVER,
+      serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void stopZkNode(ServerName serverName) throws IOException {
+    LOG.info("Stopping Zookeeper node: " + serverName.getServerName());
+    clusterManager.stop(ServiceType.ZOOKEEPER_SERVER,
+      serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void waitForZkNodeToStart(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStart(ServiceType.ZOOKEEPER_SERVER, serverName, timeout);
+  }
+
+  @Override
+  public void waitForZkNodeToStop(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStop(ServiceType.ZOOKEEPER_SERVER, serverName, timeout);
+  }
+
+  @Override
+  public void startDataNode(ServerName serverName) throws IOException {
+    LOG.info("Starting data node on: " + serverName.getServerName());
+    clusterManager.start(ServiceType.HADOOP_DATANODE,
+      serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void killDataNode(ServerName serverName) throws IOException {
+    LOG.info("Aborting data node on: " + serverName.getServerName());
+    clusterManager.kill(ServiceType.HADOOP_DATANODE,
+      serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void stopDataNode(ServerName serverName) throws IOException {
+    LOG.info("Stopping data node on: " + serverName.getServerName());
+    clusterManager.stop(ServiceType.HADOOP_DATANODE,
+      serverName.getHostname(), serverName.getPort());
+  }
+
+  @Override
+  public void waitForDataNodeToStart(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStart(ServiceType.HADOOP_DATANODE, serverName, timeout);
+  }
+
+  @Override
+  public void waitForDataNodeToStop(ServerName serverName, long timeout) throws IOException {
+    waitForServiceToStop(ServiceType.HADOOP_DATANODE, serverName, timeout);
+  }
+
   private void waitForServiceToStop(ServiceType service, ServerName serverName, long timeout)
     throws IOException {
-    LOG.info("Waiting service:" + service + " to stop: " + serverName.getServerName());
+    LOG.info("Waiting for service: " + service + " to stop: " + serverName.getServerName());
     long start = System.currentTimeMillis();
 
     while ((System.currentTimeMillis() - start) < timeout) {
       if (!clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
         return;
       }
-      Threads.sleep(1000);
+      Threads.sleep(100);
     }
     throw new IOException("did timeout waiting for service to stop:" + serverName);
   }
+
+  private void waitForServiceToStart(ServiceType service, ServerName serverName, long timeout)
+    throws IOException {
+    LOG.info("Waiting for service: " + service + " to start: " + serverName.getServerName());
+    long start = System.currentTimeMillis();
+
+    while ((System.currentTimeMillis() - start) < timeout) {
+      if (clusterManager.isRunning(service, serverName.getHostname(), serverName.getPort())) {
+        return;
+      }
+      Threads.sleep(100);
+    }
+    throw new IOException("did timeout waiting for service to start:" + serverName);
+  }
+
 
   @Override
   public MasterService.BlockingInterface getMaster()

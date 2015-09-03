@@ -68,12 +68,14 @@ public abstract class MonkeyFactory {
   public static final String SERVER_KILLING = "serverKilling";
   public static final String STRESS_AM = "stressAM";
   public static final String NO_KILL = "noKill";
+  public static final String SERVER_AND_DEPENDENCIES_KILLING = "serverAndDependenciesKilling";
 
   public static Map<String, MonkeyFactory> FACTORIES = ImmutableMap.<String,MonkeyFactory>builder()
     .put(CALM, new CalmMonkeyFactory())
     .put(SLOW_DETERMINISTIC, new SlowDeterministicMonkeyFactory())
     .put(UNBALANCE, new UnbalanceMonkeyFactory())
     .put(SERVER_KILLING, new ServerKillingMonkeyFactory())
+    .put(SERVER_AND_DEPENDENCIES_KILLING, new ServerAndDependenciesKillingMonkeyFactory())
     .put(STRESS_AM, new StressAssignmentManagerMonkeyFactory())
     .put(NO_KILL, new NoKillMonkeyFactory())
     .build();
