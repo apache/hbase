@@ -419,6 +419,11 @@ public class TestCatalogJanitor {
     }
 
     @Override
+    public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     public List<HTableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
       return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
