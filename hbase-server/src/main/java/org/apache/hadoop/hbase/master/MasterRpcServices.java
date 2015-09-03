@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
@@ -1053,6 +1055,17 @@ public class MasterRpcServices extends RSRpcServices
     } catch (IOException e) {
       throw new ServiceException(e);
     }
+  }
+
+  @Override
+  public AbortProcedureResponse abortProcedure(
+      RpcController rpcController,
+      AbortProcedureRequest request) {
+    AbortProcedureResponse.Builder response = AbortProcedureResponse.newBuilder();
+    boolean abortResult =
+        master.abortProcedure(request.getProcId(), request.getMayInterruptIfRunning());
+    response.setIsProcedureAborted(abortResult);
+    return response.build();
   }
 
   @Override

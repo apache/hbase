@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -65,7 +66,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.protobuf.ServiceException;
-
 
 /**
  * Class to test HBaseAdmin.
@@ -773,5 +773,14 @@ public class TestAdmin2 {
     assertEquals(!initialState, prevState);
     // Current state should be the original state again
     assertEquals(initialState, admin.isNormalizerEnabled());
+  }
+
+  @Test(timeout = 30000)
+  public void testAbortProcedureFail() throws Exception {
+    Random randomGenerator = new Random();
+    long procId = randomGenerator.nextLong();
+
+    boolean abortResult = admin.abortProcedure(procId, true);
+    assertFalse(abortResult);
   }
 }

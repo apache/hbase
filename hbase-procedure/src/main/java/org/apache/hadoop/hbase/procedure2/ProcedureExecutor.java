@@ -696,9 +696,24 @@ public class ProcedureExecutor<TEnvironment> {
    * @return true if the procedure exist and has received the abort, otherwise false.
    */
   public boolean abort(final long procId) {
+    return abort(procId, true);
+  }
+
+  /**
+   * Send an abort notification the specified procedure.
+   * Depending on the procedure implementation the abort can be considered or ignored.
+   * @param procId the procedure to abort
+   * @param mayInterruptIfRunning if the proc completed at least one step, should it be aborted?
+   * @return true if the procedure exist and has received the abort, otherwise false.
+   */
+  public boolean abort(final long procId, final boolean mayInterruptIfRunning) {
     Procedure proc = procedures.get(procId);
     if (proc != null) {
-      return proc.abort(getEnvironment());
+      if (!mayInterruptIfRunning && proc.wasExecuted()) {
+        return false;
+      } else {
+        return proc.abort(getEnvironment());
+      }
     }
     return false;
   }
