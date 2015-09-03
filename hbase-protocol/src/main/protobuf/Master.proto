@@ -396,21 +396,21 @@ message IsMasterRunningResponse {
 }
 
 message ExecProcedureRequest {
-        required ProcedureDescription procedure = 1;
+  required ProcedureDescription procedure = 1;
 }
 
 message ExecProcedureResponse {
-        optional int64 expected_timeout = 1;
-        optional bytes return_data = 2;
+  optional int64 expected_timeout = 1;
+  optional bytes return_data = 2;
 }
 
 message IsProcedureDoneRequest {
-        optional ProcedureDescription procedure = 1;
+  optional ProcedureDescription procedure = 1;
 }
 
 message IsProcedureDoneResponse {
-        optional bool done = 1 [default = false];
-        optional ProcedureDescription snapshot = 2;
+  optional bool done = 1 [default = false];
+  optional ProcedureDescription snapshot = 2;
 }
 
 message GetProcedureResultRequest {
@@ -429,6 +429,15 @@ message GetProcedureResultResponse {
   optional uint64 last_update = 3;
   optional bytes result = 4;
   optional ForeignExceptionMessage exception = 5;
+}
+
+message AbortProcedureRequest {
+  required uint64 proc_id = 1;
+  optional bool mayInterruptIfRunning = 2 [default = true];
+}
+
+message AbortProcedureResponse {
+  required bool is_procedure_aborted = 1;
 }
 
 message SetQuotaRequest {
@@ -707,4 +716,8 @@ service MasterService {
   /** Returns the security capabilities in effect on the cluster */
   rpc getSecurityCapabilities(SecurityCapabilitiesRequest)
     returns(SecurityCapabilitiesResponse);
+
+  /** Abort a procedure */
+  rpc AbortProcedure(AbortProcedureRequest)
+    returns(AbortProcedureResponse);
 }

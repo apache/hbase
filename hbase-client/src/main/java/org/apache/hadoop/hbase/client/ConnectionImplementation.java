@@ -1295,8 +1295,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     if (isDeadServer(sn)) {
       throw new RegionServerStoppedException(sn + " is dead.");
     }
-    String key = getStubKey(ClientProtos.ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-        sn.getPort());
+    String key = getStubKey(
+      ClientProtos.ClientService.BlockingInterface.class.getName(), sn.getHostname(),
+      sn.getPort());
     this.connectionLock.putIfAbsent(key, key);
     ClientProtos.ClientService.BlockingInterface stub = null;
     synchronized (this.connectionLock.get(key)) {
@@ -1409,9 +1410,18 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     final MasterProtos.MasterService.BlockingInterface stub = this.masterServiceState.stub;
     return new MasterKeepAliveConnection() {
       MasterServiceState mss = masterServiceState;
+
       @Override
-      public MasterProtos.AddColumnResponse addColumn(RpcController controller, MasterProtos.AddColumnRequest request)
-      throws ServiceException {
+      public MasterProtos.AbortProcedureResponse abortProcedure(
+          RpcController controller,
+          MasterProtos.AbortProcedureRequest request) throws ServiceException {
+        return stub.abortProcedure(controller, request);
+      }
+
+      @Override
+      public MasterProtos.AddColumnResponse addColumn(
+          RpcController controller,
+          MasterProtos.AddColumnRequest request) throws ServiceException {
         return stub.addColumn(controller, request);
       }
 
@@ -1629,24 +1639,28 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
       @Override
       public MasterProtos.CreateNamespaceResponse createNamespace(
-          RpcController controller, MasterProtos.CreateNamespaceRequest request) throws ServiceException {
+          RpcController controller,
+          MasterProtos.CreateNamespaceRequest request) throws ServiceException {
         return stub.createNamespace(controller, request);
       }
 
       @Override
       public MasterProtos.DeleteNamespaceResponse deleteNamespace(
-          RpcController controller, MasterProtos.DeleteNamespaceRequest request) throws ServiceException {
+          RpcController controller,
+          MasterProtos.DeleteNamespaceRequest request) throws ServiceException {
         return stub.deleteNamespace(controller, request);
       }
 
       @Override
-      public MasterProtos.GetNamespaceDescriptorResponse getNamespaceDescriptor(RpcController controller,
+      public MasterProtos.GetNamespaceDescriptorResponse getNamespaceDescriptor(
+          RpcController controller,
           MasterProtos.GetNamespaceDescriptorRequest request) throws ServiceException {
         return stub.getNamespaceDescriptor(controller, request);
       }
 
       @Override
-      public MasterProtos.ListNamespaceDescriptorsResponse listNamespaceDescriptors(RpcController controller,
+      public MasterProtos.ListNamespaceDescriptorsResponse listNamespaceDescriptors(
+          RpcController controller,
           MasterProtos.ListNamespaceDescriptorsRequest request) throws ServiceException {
         return stub.listNamespaceDescriptors(controller, request);
       }
@@ -2100,7 +2114,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * point, which would be the case if all of its consumers close the
    * connection. However, on the off chance that someone is unable to close
    * the connection, perhaps because it bailed out prematurely, the method
-   * below will ensure that this {@link org.apache.hadoop.hbase.client.HConnection} instance is cleaned up.
+   * below will ensure that this {@link org.apache.hadoop.hbase.client.HConnection} instance
+   * is cleaned up.
    * Caveat: The JVM may take an unknown amount of time to call finalize on an
    * unreachable object, so our hope is that every consumer cleans up after
    * itself, like any good citizen.

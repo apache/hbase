@@ -38,21 +38,18 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category({MasterTests.class, SmallTests.class})
 public class TestProcedureRecovery {
   private static final Log LOG = LogFactory.getLog(TestProcedureRecovery.class);
 
   private static final int PROCEDURE_EXECUTOR_SLOTS = 1;
-  private static final Procedure NULL_PROC = null;
 
   private static TestProcEnv procEnv;
   private static ProcedureExecutor<TestProcEnv> procExecutor;
