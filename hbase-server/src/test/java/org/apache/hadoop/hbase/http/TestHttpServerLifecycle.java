@@ -44,12 +44,14 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Test public void testCreatedServerIsNotAlive() throws Throwable {
+  @Test(timeout=60000)
+  public void testCreatedServerIsNotAlive() throws Throwable {
     HttpServer server = createTestServer();
     assertNotLive(server);
   }
 
-  @Test public void testStopUnstartedServer() throws Throwable {
+  @Test(timeout=60000)
+  public void testStopUnstartedServer() throws Throwable {
     HttpServer server = createTestServer();
     stop(server);
   }
@@ -59,7 +61,7 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Test
+  @Test(timeout=60000)
   public void testStartedServerIsAlive() throws Throwable {
     HttpServer server = null;
     server = createTestServer();
@@ -85,7 +87,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Test public void testStoppedServerIsNotAlive() throws Throwable {
+  @Test(timeout=60000)
+  public void testStoppedServerIsNotAlive() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
     stop(server);
@@ -97,7 +100,8 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
    *
    * @throws Throwable on failure
    */
-  @Test public void testStoppingTwiceServerIsAllowed() throws Throwable {
+  @Test(timeout=60000)
+  public void testStoppingTwiceServerIsAllowed() throws Throwable {
     HttpServer server = createAndStartTestServer();
     assertAlive(server);
     stop(server);
@@ -108,11 +112,11 @@ public class TestHttpServerLifecycle extends HttpServerFunctionalTest {
 
   /**
    * Test that the server is alive once started
-   * 
+   *
    * @throws Throwable
    *           on failure
    */
-  @Test
+  @Test(timeout=60000)
   public void testWepAppContextAfterServerStop() throws Throwable {
     HttpServer server = null;
     String key = "test.attribute.key";
