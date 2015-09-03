@@ -51,4 +51,18 @@ public class RestartActionBaseAction extends Action {
     sleep(sleepTime);
     startRs(server);
   }
+
+  void restartZKNode(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    killZKNode(server);
+    sleep(sleepTime);
+    startZKNode(server);
+  }
+
+  void restartDataNode(ServerName server, long sleepTime) throws IOException {
+    sleepTime = Math.max(sleepTime, 1000);
+    killDataNode(server);
+    sleep(sleepTime);
+    startDataNode(server);
+  }
 }

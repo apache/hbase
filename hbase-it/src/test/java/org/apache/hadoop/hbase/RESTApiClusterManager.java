@@ -321,6 +321,7 @@ public class RESTApiClusterManager extends Configured implements ClusterManager 
 
   // The RoleCommand enum is used by the doRoleCommand method to guard against non-existent methods
   // being invoked on a given role.
+  // TODO: Integrate zookeeper and hdfs related failure injections (Ref: HBASE-14261).
   private enum RoleCommand {
     START, STOP, RESTART;
 
