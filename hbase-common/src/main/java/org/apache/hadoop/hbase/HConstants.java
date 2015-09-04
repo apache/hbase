@@ -1127,6 +1127,12 @@ public final class HConstants {
   /** Configuration key for setting replication codec class name */
   public static final String REPLICATION_CODEC_CONF_KEY = "hbase.replication.rpc.codec";
 
+  /** Maximum number of threads used by the replication source for shipping edits to the sinks */
+  public static final String REPLICATION_SOURCE_MAXTHREADS_KEY =
+      "hbase.replication.source.maxthreads";
+
+  public static final int REPLICATION_SOURCE_MAXTHREADS_DEFAULT = 10;
+
   /** Config for pluggable consensus provider */
   public static final String HBASE_COORDINATED_STATE_MANAGER_CLASS =
     "hbase.coordinated.state.manager.class";
