@@ -32,11 +32,11 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -49,6 +49,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+
+
 
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
@@ -296,7 +298,7 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   }
   
   /**
-   * Wait for sequence number is assigned &amp; return the assigned value
+   * Wait for sequence number to be assigned &amp; return the assigned value
    * @return long the new assigned sequence number
    * @throws IOException
    */
@@ -306,19 +308,21 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
   }
 
   /**
-   * Wait for sequence number is assigned &amp; return the assigned value
-   * @param maxWaitForSeqId maximum duration, in milliseconds, to wait for seq number to be assigned
+   * Wait for sequence number to be assigned &amp; return the assigned value.
+   * @param maxWaitForSeqId maximum time to wait in milliseconds for sequenceid
    * @return long the new assigned sequence number
    * @throws IOException
    */
-  public long getSequenceId(int maxWaitForSeqId) throws IOException {
+  public long getSequenceId(final long maxWaitForSeqId) throws IOException {
+    // TODO: This implementation waiting on a latch is problematic because if a higher level
+    // determines we should stop or abort, there is not global list of all these blocked WALKeys
+    // waiting on a sequence id; they can't be cancelled... interrupted. See getNextSequenceId
     try {
       if (maxWaitForSeqId < 0) {
         this.seqNumAssignedLatch.await();
-      } else {
-        if (!this.seqNumAssignedLatch.await(maxWaitForSeqId, TimeUnit.MILLISECONDS)) {
-          throw new IOException("Timed out waiting for seq number to be assigned");
-        }
+      } else if (!this.seqNumAssignedLatch.await(maxWaitForSeqId, TimeUnit.MILLISECONDS)) {
+        throw new TimeoutIOException("Failed to get sequenceid after " + maxWaitForSeqId +
+          "ms; WAL system stuck or has gone away?");
       }
     } catch (InterruptedException ie) {
       LOG.warn("Thread interrupted waiting for next log sequence number");

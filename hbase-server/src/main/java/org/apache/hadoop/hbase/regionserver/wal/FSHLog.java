@@ -111,6 +111,16 @@ import com.lmax.disruptor.dsl.ProducerType;
  *
  * <p>To read an WAL, call {@link WALFactory#createReader(org.apache.hadoop.fs.FileSystem,
  * org.apache.hadoop.fs.Path)}.
+ * 
+ * <h2>Failure Semantic</h2>
+ * If an exception on append or sync, roll the WAL because the current WAL is now a lame duck;
+ * any more appends or syncs will fail also with the same original exception. If we have made
+ * successful appends to the WAL and we then are unable to sync them, our current semantic is to
+ * return error to the client that the appends failed but also to abort the current context,
+ * usually the hosting server. We need to replay the WALs. TODO: Change this semantic. A roll of
+ * WAL may be sufficient as long as we have flagged client that the append failed. TODO:
+ * replication may pick up these last edits though they have been marked as failed append (Need to
+ * keep our own file lengths, not rely on HDFS).
  */
 @InterfaceAudience.Private
 public class FSHLog implements WAL {
@@ -344,7 +354,7 @@ public class FSHLog implements WAL {
    * WAL Comparator; it compares the timestamp (log filenum), present in the log file name.
    * Throws an IllegalArgumentException if used to compare paths from different wals.
    */
-  public final Comparator<Path> LOG_NAME_COMPARATOR = new Comparator<Path>() {
+  final Comparator<Path> LOG_NAME_COMPARATOR = new Comparator<Path>() {
     @Override
     public int compare(Path o1, Path o2) {
       long t1 = getFileNumFromFileName(o1);
@@ -448,7 +458,7 @@ public class FSHLog implements WAL {
       prefix == null || prefix.isEmpty() ? "wal" : URLEncoder.encode(prefix, "UTF8");
     // we only correctly differentiate suffices when numeric ones start with '.'
     if (suffix != null && !(suffix.isEmpty()) && !(suffix.startsWith(WAL_FILE_NAME_DELIMITER))) {
-      throw new IllegalArgumentException("wal suffix must start with '" + WAL_FILE_NAME_DELIMITER +
+      throw new IllegalArgumentException("WAL suffix must start with '" + WAL_FILE_NAME_DELIMITER +
           "' but instead was '" + suffix + "'");
     }
     // Now that it exists, set the storage policy for the entire directory of wal files related to
@@ -572,7 +582,9 @@ public class FSHLog implements WAL {
    */
   @VisibleForTesting
   OutputStream getOutputStream() {
-    return this.hdfs_out.getWrappedStream();
+    FSDataOutputStream fsdos = this.hdfs_out;
+    if (fsdos == null) return null;
+    return fsdos.getWrappedStream();
   }
 
   @Override
@@ -758,6 +770,19 @@ public class FSHLog implements WAL {
   }
 
   /**
+   * Used to manufacture race condition reliably. For testing only.
+   * @see #beforeWaitOnSafePoint()
+   */
+  @VisibleForTesting
+  protected void afterCreatingZigZagLatch() {}
+
+  /**
+   * @see #afterCreatingZigZagLatch()
+   */
+  @VisibleForTesting
+  protected void beforeWaitOnSafePoint() {};
+
+  /**
    * Cleans up current writer closing it and then puts in place the passed in
    * <code>nextWriter</code>.
    *
@@ -786,6 +811,7 @@ public class FSHLog implements WAL {
     SyncFuture syncFuture = null;
     SafePointZigZagLatch zigzagLatch = (this.ringBufferEventHandler == null)?
       null: this.ringBufferEventHandler.attainSafePoint();
+    afterCreatingZigZagLatch();
     TraceScope scope = Trace.startSpan("FSHFile.replaceWriter");
     try {
       // Wait on the safe point to be achieved.  Send in a sync in case nothing has hit the
@@ -799,9 +825,10 @@ public class FSHLog implements WAL {
           syncFuture = zigzagLatch.waitSafePoint(publishSyncOnRingBuffer());
         }
       } catch (FailedSyncBeforeLogCloseException e) {
+        // If unflushed/unsynced entries on close, it is reason to abort.
         if (isUnflushedEntries()) throw e;
         // Else, let is pass through to the close.
-        LOG.warn("Failed last sync but no outstanding unsync edits so falling through to close; " +
+        LOG.warn("Failed sync but no outstanding unsync'd edits so falling through to close; " +
           e.getMessage());
       }
 
@@ -907,7 +934,7 @@ public class FSHLog implements WAL {
    */
   protected Path computeFilename(final long filenum) {
     if (filenum < 0) {
-      throw new RuntimeException("wal file number can't be < 0");
+      throw new RuntimeException("WAL file number can't be < 0");
     }
     String child = logFilePrefix + WAL_FILE_NAME_DELIMITER + filenum + logFileSuffix;
     return new Path(fullPathLogDir, child);
@@ -939,7 +966,7 @@ public class FSHLog implements WAL {
     if (fileName == null) throw new IllegalArgumentException("file name can't be null");
     if (!ourFiles.accept(fileName)) {
       throw new IllegalArgumentException("The log file " + fileName +
-          " doesn't belong to this wal. (" + toString() + ")");
+          " doesn't belong to this WAL. (" + toString() + ")");
     }
     final String fileNameString = fileName.toString();
     String chompedPath = fileNameString.substring(prefixPathStr.length(),
@@ -1030,6 +1057,7 @@ public class FSHLog implements WAL {
    * @param clusterIds that have consumed the change
    * @return New log key.
    */
+  @SuppressWarnings("deprecation")
   protected WALKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
       long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
     // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
@@ -1082,6 +1110,7 @@ public class FSHLog implements WAL {
    */
   private class SyncRunner extends HasThread {
     private volatile long sequence;
+    // Keep around last exception thrown. Clear on successful sync.
     private final BlockingQueue<SyncFuture> syncFutures;
  
     /**
@@ -1200,28 +1229,27 @@ public class FSHLog implements WAL {
           // while we run.
           TraceScope scope = Trace.continueSpan(takeSyncFuture.getSpan());
           long start = System.nanoTime();
-          Throwable t = null;
+          Throwable lastException = null;
           try {
             Trace.addTimelineAnnotation("syncing writer");
             writer.sync();
             Trace.addTimelineAnnotation("writer synced");
             currentSequence = updateHighestSyncedSequence(currentSequence);
           } catch (IOException e) {
-            LOG.error("Error syncing, request close of wal ", e);
-            t = e;
+            LOG.error("Error syncing, request close of WAL", e);
+            lastException = e;
           } catch (Exception e) {
             LOG.warn("UNEXPECTED", e);
-            t = e;
+            lastException = e;
           } finally {
             // reattach the span to the future before releasing.
             takeSyncFuture.setSpan(scope.detach());
             // First release what we 'took' from the queue.
-            syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, t);
+            syncCount += releaseSyncFuture(takeSyncFuture, currentSequence, lastException);
             // Can we release other syncs?
-            syncCount += releaseSyncFutures(currentSequence, t);
-            if (t != null) {
-              requestLogRoll();
-            } else checkLogRoll();
+            syncCount += releaseSyncFutures(currentSequence, lastException);
+            if (lastException != null) requestLogRoll();
+            else checkLogRoll();
           }
           postSync(System.nanoTime() - start, syncCount);
         } catch (InterruptedException e) {
@@ -1270,7 +1298,7 @@ public class FSHLog implements WAL {
             LOG.warn("HDFS pipeline error detected. " + "Found "
                 + numCurrentReplicas + " replicas but expecting no less than "
                 + this.minTolerableReplication + " replicas. "
-                + " Requesting close of wal. current pipeline: "
+                + " Requesting close of WAL. current pipeline: "
                 + Arrays.toString(getPipeLine()));
             logRollNeeded = true;
             // If rollWriter is requested, increase consecutiveLogRolls. Once it
@@ -1677,6 +1705,11 @@ public class FSHLog implements WAL {
     private volatile int syncFuturesCount = 0;
     private volatile SafePointZigZagLatch zigzagLatch;
     /**
+     * Set if we get an exception appending or syncing so that all subsequence appends and syncs
+     * on this WAL fail until WAL is replaced.
+     */
+    private Exception exception = null;
+    /**
      * Object to block on while waiting on safe point.
      */
     private final Object safePointWaiter = new Object();
@@ -1696,8 +1729,19 @@ public class FSHLog implements WAL {
     }
 
     private void cleanupOutstandingSyncsOnException(final long sequence, final Exception e) {
+      // There could be handler-count syncFutures outstanding.
       for (int i = 0; i < this.syncFuturesCount; i++) this.syncFutures[i].done(sequence, e);
       this.syncFuturesCount = 0;
+    }
+
+    /**
+     * @return True if outstanding sync futures still
+     */
+    private boolean isOutstandingSyncs() {
+      for (int i = 0; i < this.syncFuturesCount; i++) {
+        if (!this.syncFutures[i].isDone()) return true;
+      }
+      return false;
     }
 
     @Override
@@ -1706,7 +1750,9 @@ public class FSHLog implements WAL {
     throws Exception {
       // Appends and syncs are coming in order off the ringbuffer.  We depend on this fact.  We'll
       // add appends to dfsclient as they come in.  Batching appends doesn't give any significant
-      // benefit on measurement.  Handler sync calls we will batch up.
+      // benefit on measurement.  Handler sync calls we will batch up. If we get an exception
+      // appending an edit, we fail all subsequent appends and syncs with the same exception until
+      // the WAL is reset.
 
       try {
         if (truck.hasSyncFuturePayload()) {
@@ -1716,12 +1762,17 @@ public class FSHLog implements WAL {
         } else if (truck.hasFSWALEntryPayload()) {
           TraceScope scope = Trace.continueSpan(truck.unloadSpanPayload());
           try {
-            append(truck.unloadFSWALEntryPayload());
+            FSWALEntry entry = truck.unloadFSWALEntryPayload();
+            // If already an exception, do not try to append. Throw.
+            if (this.exception != null) throw this.exception;
+            append(entry);
           } catch (Exception e) {
+            // Failed append. Record the exception. Throw it from here on out til new WAL in place
+            this.exception = new DamagedWALException(e);
             // If append fails, presume any pending syncs will fail too; let all waiting handlers
             // know of the exception.
-            cleanupOutstandingSyncsOnException(sequence, e);
-            // Return to keep processing.
+            cleanupOutstandingSyncsOnException(sequence, this.exception);
+            // Return to keep processing events coming off the ringbuffer
             return;
           } finally {
             assert scope == NullScope.INSTANCE || !scope.isDetached();
@@ -1748,13 +1799,20 @@ public class FSHLog implements WAL {
         }
 
         // Below expects that the offer 'transfers' responsibility for the outstanding syncs to the
-        // syncRunner. We should never get an exception in here. HBASE-11145 was because queue
-        // was sized exactly to the count of user handlers but we could have more if we factor in
-        // meta handlers doing opens and closes.
+        // syncRunner. We should never get an exception in here.
         int index = Math.abs(this.syncRunnerIndex++) % this.syncRunners.length;
         try {
-          this.syncRunners[index].offer(sequence, this.syncFutures, this.syncFuturesCount);
+          if (this.exception != null) {
+            // Do not try to sync. If a this.exception, then we failed an append. Do not try to
+            // sync a failed append. Fall through to the attainSafePoint below. It is part of the
+            // means by which we put in place a new WAL. A new WAL is how we clean up.
+            // Don't throw because then we'll not get to attainSafePoint.
+            cleanupOutstandingSyncsOnException(sequence, this.exception);
+          } else {
+            this.syncRunners[index].offer(sequence, this.syncFutures, this.syncFuturesCount);
+          }
         } catch (Exception e) {
+          // Should NEVER get here.
           cleanupOutstandingSyncsOnException(sequence, e);
           throw e;
         }
@@ -1777,16 +1835,24 @@ public class FSHLog implements WAL {
     private void attainSafePoint(final long currentSequence) {
       if (this.zigzagLatch == null || !this.zigzagLatch.isCocked()) return;
       // If here, another thread is waiting on us to get to safe point.  Don't leave it hanging.
+      beforeWaitOnSafePoint();
       try {
         // Wait on outstanding syncers; wait for them to finish syncing (unless we've been
-        // shutdown or unless our latch has been thrown because we have been aborted).
+        // shutdown or unless our latch has been thrown because we have been aborted or unless
+        // this WAL is broken and we can't get a sync/append to complete).
         while (!this.shutdown && this.zigzagLatch.isCocked() &&
-            highestSyncedSequence.get() < currentSequence) {
+            highestSyncedSequence.get() < currentSequence &&
+            // We could be in here and all syncs are failing or failed. Check for this. Otherwise
+            // we'll just be stuck here for ever. In other words, ensure there syncs running.
+            isOutstandingSyncs()) {
           synchronized (this.safePointWaiter) {
             this.safePointWaiter.wait(0, 1);
           }
         }
-        // Tell waiting thread we've attained safe point
+        // Tell waiting thread we've attained safe point. Can clear this.throwable if set here
+        // because we know that next event through the ringbuffer will be going to a new WAL
+        // after we do the zigzaglatch dance.
+        this.exception = null;
         this.zigzagLatch.safePointAttained();
       } catch (InterruptedException e) {
         LOG.warn("Interrupted ", e);
@@ -1844,7 +1910,7 @@ public class FSHLog implements WAL {
         // Update metrics.
         postAppend(entry, EnvironmentEdgeManager.currentTime() - start);
       } catch (Exception e) {
-        LOG.warn("Could not append. Requesting close of wal", e);
+        LOG.warn("Could not append. Requesting close of WAL", e);
         requestLogRoll();
         throw e;
       }

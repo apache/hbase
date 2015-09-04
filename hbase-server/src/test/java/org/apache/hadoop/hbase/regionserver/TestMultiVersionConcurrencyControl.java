@@ -129,7 +129,5 @@ public class TestMultiVersionConcurrencyControl extends TestCase {
     for (int i = 0; i < n; ++i) {
       assertTrue(statuses[i].get());
     }
-
   }
-
 }

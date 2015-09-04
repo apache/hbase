@@ -100,6 +100,15 @@ public class LogRoller extends HasThread {
   }
 
   @Override
+  public void interrupt() {
+    // Wake up if we are waiting on rollLog. For tests.
+    synchronized (rollLog) {
+      this.rollLog.notify();
+    }
+    super.interrupt();
+  }
+
+  @Override
   public void run() {
     while (!server.isStopped()) {
       long now = System.currentTimeMillis();
@@ -109,7 +118,9 @@ public class LogRoller extends HasThread {
         if (!periodic) {
           synchronized (rollLog) {
             try {
-              if (!rollLog.get()) rollLog.wait(this.threadWakeFrequency);
+              if (!rollLog.get()) {
+                rollLog.wait(this.threadWakeFrequency);
+              }
             } catch (InterruptedException e) {
               // Fall through
             }
@@ -180,5 +191,4 @@ public class LogRoller extends HasThread {
         requester);
     }
   }
-
 }
