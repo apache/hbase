@@ -68,7 +68,8 @@ public class ZKServerTool {
    */
   public static void main(String args[]) {
     for(ServerName server: readZKNodes(HBaseConfiguration.create())) {
-      System.out.println("Zk host: " + server.getHostname());
+      // bin/zookeeper.sh relies on the "ZK host" string for grepping which is case sensitive.
+      System.out.println("ZK host: " + server.getHostname());
     }
   }
 }
