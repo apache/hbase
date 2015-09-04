@@ -878,8 +878,19 @@ public class FSHLog implements WAL {
         // Let the writer thread go regardless, whether error or not.
         if (zigzagLatch != null) {
           zigzagLatch.releaseSafePoint();
-          // It will be null if we failed our wait on safe point above.
-          if (syncFuture != null) blockOnSync(syncFuture);
+          // syncFuture will be null if we failed our wait on safe point above. Otherwise, if
+          // latch was obtained successfully, the sync we threw in either trigger the latch or it
+          // got stamped with an exception because the WAL was damaged and we could not sync. Now
+          // the write pipeline has been opened up again by releasing the safe point, process the
+          // syncFuture we got above. This is probably a noop but it may be stale exception from
+          // when old WAL was in place. Catch it if so.
+          if (syncFuture != null) {
+            try {
+              blockOnSync(syncFuture);
+            } catch (IOException ioe) {
+              if (LOG.isTraceEnabled()) LOG.trace("Stale sync exception", ioe);
+            }
+          }
         }
       } finally {
         scope.close();
