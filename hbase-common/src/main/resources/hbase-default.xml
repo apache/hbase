@@ -1423,6 +1423,17 @@ possible configurations would overwhelm and obscure the important.
   		using KeyValueCodecWithTags for replication when there are no tags causes no harm.
   	</description>
   </property>
+  <property>
+    <name>hbase.replication.source.maxthreads</name>
+    <value>10</value>
+    <description>
+        The maximum number of threads any replication source will use for
+        shipping edits to the sinks in parallel. This also limits the number of
+        chunks each replication batch is broken into.
+        Larger values can improve the replication throughput between the master and
+        slave clusters. The default of 10 will rarely need to be changed.
+    </description>
+  </property>
   <!-- Static Web User Filter properties. -->
   <property>
     <description>
