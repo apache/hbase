@@ -63,7 +63,7 @@ module Hbase
 
     # Requests to compact all regions on the regionserver
     def compact_regionserver(servername, major = false)
-      @admin.compactRegionServer(ServerName.valueOf(servername), major)
+      @admin.compactRegionServer(org.apache.hadoop.hbase.ServerName.valueOf(servername), major)
     end
 
     #----------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ module Hbase
     #----------------------------------------------------------------------------------------------
     # Requests a regionserver's WAL roll
     def hlog_roll(server_name)
-      @admin.rollWALWriter(ServerName.valueOf(server_name))
+      @admin.rollHLogWriter(server_name)
     end
 
     #----------------------------------------------------------------------------------------------
