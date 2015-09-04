@@ -159,7 +159,7 @@ public class ProtobufLogWriter extends WriterBase {
       output.write(ProtobufLogReader.PB_WAL_COMPLETE_MAGIC);
       this.trailerWritten = true;
     } catch (IOException ioe) {
-      LOG.error("Got IOException while writing trailer", ioe);
+      LOG.warn("Failed to write trailer, non-fatal, continuing...", ioe);
     }
   }
 

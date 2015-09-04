@@ -42,9 +42,9 @@ import org.apache.htrace.Span;
  * SyncFutures as done; i.e. we batch up sync calls rather than do a dfs sync
  * call every time a Handler asks for it.
  * <p>
- * SyncFutures are immutable but recycled. Call {@link #reset(long, Span)} before use even
+ * SyncFutures are immutable but recycled. Call #reset(long, Span) before use even
  * if it the first time, start the sync, then park the 'hitched' thread on a call to
- * {@link #get()}
+ * #get().
  */
 @InterfaceAudience.Private
 class SyncFuture {
