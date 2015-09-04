@@ -302,7 +302,8 @@ public class HFile {
         try {
           ostream.setDropBehind(shouldDropBehind && cacheConf.shouldDropBehindCompaction());
         } catch (UnsupportedOperationException uoe) {
-          LOG.debug("Unable to set drop behind on " + path, uoe);
+          if (LOG.isTraceEnabled()) LOG.trace("Unable to set drop behind on " + path, uoe);
+          else if (LOG.isDebugEnabled()) LOG.debug("Unable to set drop behind on " + path);
         }
       }
       return createWriter(fs, path, ostream,
