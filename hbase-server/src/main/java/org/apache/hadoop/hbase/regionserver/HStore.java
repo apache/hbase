@@ -619,7 +619,8 @@ public class HStore implements Store {
 
     if (newFiles == null) newFiles = new ArrayList<StoreFileInfo>(0);
 
-    HashMap<StoreFileInfo, StoreFile> currentFilesSet = new HashMap<StoreFileInfo, StoreFile>(currentFiles.size());
+    HashMap<StoreFileInfo, StoreFile> currentFilesSet =
+        new HashMap<StoreFileInfo, StoreFile>(currentFiles.size());
     for (StoreFile sf : currentFiles) {
       currentFilesSet.put(sf.getFileInfo(), sf);
     }
@@ -667,7 +668,8 @@ public class HStore implements Store {
     info.setRegionCoprocessorHost(this.region.getCoprocessorHost());
     StoreFile storeFile = new StoreFile(this.getFileSystem(), info, this.conf, this.cacheConf,
       this.family.getBloomFilterType());
-    storeFile.createReader();
+    StoreFile.Reader r = storeFile.createReader();
+    r.setReplicaStoreFile(isPrimaryReplicaStore());
     return storeFile;
   }
 
@@ -1134,7 +1136,7 @@ public class HStore implements Store {
     // but now we get them in ascending order, which I think is
     // actually more correct, since memstore get put at the end.
     List<StoreFileScanner> sfScanners = StoreFileScanner.getScannersForStoreFiles(storeFilesToScan,
-        cacheBlocks, usePread, isCompaction, false, matcher, readPt);
+        cacheBlocks, usePread, isCompaction, false, matcher, readPt, isPrimaryReplicaStore());
     List<KeyValueScanner> scanners =
       new ArrayList<KeyValueScanner>(sfScanners.size()+1);
     scanners.addAll(sfScanners);
@@ -2279,5 +2281,10 @@ public class HStore implements Store {
   @Override
   public double getCompactionPressure() {
     return storeEngine.getStoreFileManager().getCompactionPressure();
+  }
+
+  @Override
+  public boolean isPrimaryReplicaStore() {
+	   return getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID;
   }
 }

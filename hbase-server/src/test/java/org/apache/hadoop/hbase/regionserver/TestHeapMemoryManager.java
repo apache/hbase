@@ -524,13 +524,13 @@ public class TestHeapMemoryManager {
 
     @Override
     public boolean evictBlock(BlockCacheKey cacheKey) {
-      stats.evicted(0);
+      stats.evicted(0, cacheKey != null ? cacheKey.isPrimary() : true);
       return false;
     }
 
     @Override
     public int evictBlocksByHfileName(String hfileName) {
-      stats.evicted(0); // Just assuming only one block for file here.
+      stats.evicted(0, true); // Just assuming only one block for file here.
       return 0;
     }
 

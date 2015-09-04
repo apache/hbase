@@ -87,6 +87,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   /** Filled when we read in the trailer. */
   private final Compression.Algorithm compressAlgo;
 
+  private boolean isPrimaryReplicaReader;
+
   /**
    * What kind of data block encoding should be used while reading, writing,
    * and handling cache.
@@ -352,7 +354,7 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     BlockCache blockCache = this.cacheConf.getBlockCache();
     if (blockCache != null && block != null) {
       BlockCacheKey cacheKey = new BlockCacheKey(this.getFileContext().getHFileName(),
-          block.getOffset());
+          block.getOffset(), this.isPrimaryReplicaReader());
       blockCache.returnBlock(cacheKey, block);
     }
   }
@@ -436,6 +438,16 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
   @Override
   public FixedFileTrailer getTrailer() {
     return trailer;
+  }
+
+  @Override
+  public boolean isPrimaryReplicaReader() {
+    return isPrimaryReplicaReader;
+  }
+
+  @Override
+  public void setPrimaryReplicaReader(boolean isPrimaryReplicaReader) {
+    this.isPrimaryReplicaReader = isPrimaryReplicaReader;
   }
 
   @Override
@@ -1374,7 +1386,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
         .getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset);
+      BlockCacheKey cacheKey = new BlockCacheKey(name, metaBlockOffset,
+        this.isPrimaryReplicaReader());
 
       cacheBlock &= cacheConf.shouldCacheDataOnRead();
       if (cacheConf.isBlockCacheEnabled()) {
@@ -1421,7 +1434,8 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
 
-    BlockCacheKey cacheKey = new BlockCacheKey(name, dataBlockOffset);
+    BlockCacheKey cacheKey = new BlockCacheKey(name, dataBlockOffset,
+      this.isPrimaryReplicaReader());
 
     boolean useLock = false;
     IdLock.Entry lockEntry = null;

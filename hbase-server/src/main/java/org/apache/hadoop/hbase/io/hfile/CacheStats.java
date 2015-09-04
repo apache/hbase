@@ -43,6 +43,9 @@ public class CacheStats {
   /** The number of getBlock requests that were cache hits */
   private final AtomicLong hitCount = new AtomicLong(0);
 
+  /** The number of getBlock requests that were cache hits from primary replica */
+  private final AtomicLong primaryHitCount = new AtomicLong(0);
+  
   /**
    * The number of getBlock requests that were cache hits, but only from
    * requests that were set to use the block cache.  This is because all reads
@@ -54,6 +57,8 @@ public class CacheStats {
   /** The number of getBlock requests that were cache misses */
   private final AtomicLong missCount = new AtomicLong(0);
 
+  /** The number of getBlock requests for primary replica that were cache misses */
+  private final AtomicLong primaryMissCount = new AtomicLong(0);
   /**
    * The number of getBlock requests that were cache misses, but only from
    * requests that were set to use the block cache.
@@ -65,6 +70,9 @@ public class CacheStats {
 
   /** The total number of blocks that have been evicted */
   private final AtomicLong evictedBlockCount = new AtomicLong(0);
+
+  /** The total number of blocks for primary replica that have been evicted */
+  private final AtomicLong primaryEvictedBlockCount = new AtomicLong(0);
 
   /** The number of metrics periods to include in window */
   private final int numPeriodsInWindow;
@@ -112,17 +120,25 @@ public class CacheStats {
       ", missCount=" + getMissCount() + ", missCachingCount=" + getMissCachingCount() +
       ", evictionCount=" + getEvictionCount() +
       ", evictedBlockCount=" + getEvictedCount() +
+      ", primaryMissCount=" + getPrimaryMissCount() +
+      ", primaryHitCount=" + getPrimaryHitCount() +
       ", evictedAgeMean=" + snapshot.getMean() +
       ", evictedAgeStdDev=" + snapshot.getStdDev();
   }
 
-  public void miss(boolean caching) {
+  public void miss(boolean caching, boolean primary) {
     missCount.incrementAndGet();
+    if (primary) primaryMissCount.incrementAndGet();
     if (caching) missCachingCount.incrementAndGet();
   }
 
   public void hit(boolean caching) {
+    hit(caching, true);
+  }
+
+  public void hit(boolean caching, boolean primary) {
     hitCount.incrementAndGet();
+    if (primary) primaryHitCount.incrementAndGet();
     if (caching) hitCachingCount.incrementAndGet();
   }
 
@@ -130,9 +146,12 @@ public class CacheStats {
     evictionCount.incrementAndGet();
   }
 
-  public void evicted(final long t) {
+  public void evicted(final long t, boolean primary) {
     if (t > this.startTime) this.ageAtEviction.update(t - this.startTime);
     this.evictedBlockCount.incrementAndGet();
+    if (primary) {
+      primaryEvictedBlockCount.incrementAndGet();
+    }
   }
 
   public long getRequestCount() {
@@ -147,12 +166,20 @@ public class CacheStats {
     return missCount.get();
   }
 
+  public long getPrimaryMissCount() {
+    return primaryMissCount.get();
+  }
+
   public long getMissCachingCount() {
     return missCachingCount.get();
   }
 
   public long getHitCount() {
     return hitCount.get();
+  }
+
+  public long getPrimaryHitCount() {
+    return primaryHitCount.get();
   }
 
   public long getHitCachingCount() {
@@ -165,6 +192,10 @@ public class CacheStats {
 
   public long getEvictedCount() {
     return this.evictedBlockCount.get();
+  }
+
+  public long getPrimaryEvictedCount() {
+    return primaryEvictedBlockCount.get();
   }
 
   public double getHitRatio() {

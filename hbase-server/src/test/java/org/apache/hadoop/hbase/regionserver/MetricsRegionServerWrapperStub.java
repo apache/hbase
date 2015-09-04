@@ -176,13 +176,28 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getBlockCachePrimaryHitCount() {
+    return 422;
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     return 417;
   }
 
   @Override
+  public long getBlockCachePrimaryMissCount() {
+    return 421;
+  }
+
+  @Override
   public long getBlockCacheEvictedCount() {
     return 418;
+  }
+
+  @Override
+   public long getBlockCachePrimaryEvictedCount() {
+    return 420;
   }
 
   @Override

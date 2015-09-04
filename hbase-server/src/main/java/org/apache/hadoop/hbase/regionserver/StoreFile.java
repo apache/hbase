@@ -1118,6 +1118,13 @@ public class StoreFile {
       bloomFilterType = BloomType.NONE;
     }
 
+    public void setReplicaStoreFile(boolean isPrimaryReplicaStoreFile) {
+      reader.setPrimaryReplicaReader(isPrimaryReplicaStoreFile);
+    }
+    public boolean isPrimaryReplicaReader() {
+      return reader.isPrimaryReplicaReader();
+    }
+
     /**
      * ONLY USE DEFAULT CONSTRUCTOR FOR UNIT TESTS
      */

@@ -198,14 +198,30 @@ public interface MetricsRegionServerWrapper {
   long getBlockCacheHitCount();
 
   /**
+   * Get the count of hits to primary replica in the block cache
+   */
+  long getBlockCachePrimaryHitCount();
+
+  /**
    * Get the count of misses to the block cache.
    */
   long getBlockCacheMissCount();
 
   /**
+   * Get the count of misses to primary replica in the block cache.
+   */
+  long getBlockCachePrimaryMissCount();
+
+  /**
    * Get the number of items evicted from the block cache.
    */
   long getBlockCacheEvictedCount();
+
+  /**
+   * Get the number of items evicted from primary replica in the block cache.
+   */
+  long getBlockCachePrimaryEvictedCount();
+
 
   /**
    * Get the percent of all requests that hit the block cache.
