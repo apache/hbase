@@ -71,7 +71,7 @@ public class TestFSErrorsExposed {
    * Injects errors into the pread calls of an on-disk file, and makes
    * sure those bubble up to the HFile scanner
    */
-  // @Test
+  @Test
   public void testHFileScannerThrowsErrors() throws IOException {
     Path hfilePath = new Path(new Path(
         util.getDataTestDir("internalScannerExposesErrors"),
@@ -121,7 +121,7 @@ public class TestFSErrorsExposed {
    * Injects errors into the pread calls of an on-disk file, and makes
    * sure those bubble up to the StoreFileScanner
    */
-  // @Test
+  @Test
   public void testStoreFileScannerThrowsErrors() throws IOException {
     Path hfilePath = new Path(new Path(
         util.getDataTestDir("internalScannerExposesErrors"),
