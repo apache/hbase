@@ -533,10 +533,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       setDurability(isDeferredFlush ? Durability.ASYNC_WAL : DEFAULT_DURABLITY);
       return this;
     }
-    Matcher matcher = HConstants.CP_HTD_ATTR_KEY_PATTERN.matcher(Bytes.toString(key.get()));
-    if (matcher.matches()) {
-      LOG.warn("Use addCoprocessor* methods to add a coprocessor instead");
-    }
     values.put(key, value);
     return this;
   }
