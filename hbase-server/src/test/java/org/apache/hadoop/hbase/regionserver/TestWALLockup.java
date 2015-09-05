@@ -55,7 +55,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 import org.mockito.Mockito;
-import org.mockito.exceptions.verification.WantedButNotInvoked;
 
 /**
  * Testing for lock up of WAL subsystem.
@@ -226,26 +225,13 @@ public class TestWALLockup {
       // This append provokes a WAL roll.
       dodgyWAL.append(htd, region.getRegionInfo(), key, edit, region.getSequenceId(), true, cells);
       boolean exception = false;
-      Mockito.verify(server, Mockito.atLeast(0)).
-        abort(Mockito.anyString(), (Throwable)Mockito.anyObject());
       try {
         dodgyWAL.sync();
       } catch (Exception e) {
         exception = true;
       }
       assertTrue("Did not get sync exception", exception);
-      // An append in the WAL but the sync failed is a server abort condition. That is our
-      // current semantic. Verify. It takes a while for abort to be called. Just hang here till it
-      // happens. If it don't we'll timeout the whole test. That is fine.
-      while (true) {
-        try {
-          Mockito.verify(server, Mockito.atLeast(1)).
-            abort(Mockito.anyString(), (Throwable)Mockito.anyObject());
-          break;
-        } catch (WantedButNotInvoked t) {
-          Threads.sleep(1);
-        }
-      }
+
       // Get a memstore flush going too so we have same hung profile as up in the issue over
       // in HBASE-14317. Flush hangs trying to get sequenceid because the ringbuffer is held up
       // by the zigzaglatch waiting on syncs to come home.
