@@ -68,6 +68,8 @@ class HBaseContext(@transient sc: SparkContext,
   val broadcastedConf = sc.broadcast(new SerializableWritable(config))
   val credentialsConf = sc.broadcast(new SerializableWritable(job.getCredentials))
 
+  LatestHBaseContextCache.latest = this
+
   if (tmpHdfsConfgFile != null && config != null) {
     val fs = FileSystem.newInstance(config)
     val tmpPath = new Path(tmpHdfsConfgFile)
@@ -837,4 +839,8 @@ class HBaseContext(@transient sc: SparkContext,
       Bytes.hashCode(o1)
     }
   }
+}
+
+object LatestHBaseContextCache {
+  var latest:HBaseContext = null
 }
