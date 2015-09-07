@@ -39,19 +39,23 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.spark.example.hbasecontext.JavaHBaseBulkDeleteExample;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.spark.api.java.*;
 import org.apache.spark.api.java.function.Function;
 import org.junit.*;
+import org.junit.experimental.categories.Category;
 
 import scala.Tuple2;
 
 import com.google.common.io.Files;
 
-public class JavaHBaseContextSuite implements Serializable {
+@Category({MiscTests.class, MediumTests.class})
+public class TestJavaHBaseContext implements Serializable {
   private transient JavaSparkContext jsc;
   HBaseTestingUtility htu;
-  protected static final Log LOG = LogFactory.getLog(JavaHBaseContextSuite.class);
+  protected static final Log LOG = LogFactory.getLog(TestJavaHBaseContext.class);
 
 
   byte[] tableName = Bytes.toBytes("t1");
