@@ -401,7 +401,7 @@ public class BucketCache implements BlockCache, HeapSize {
     RAMQueueEntry re = ramCache.get(key);
     if (re != null) {
       if (updateCacheMetrics) {
-        cacheStats.hit(caching);
+        cacheStats.hit(caching, key.isPrimary());
       }
       re.access(accessCount.incrementAndGet());
       return re.getData();
@@ -427,7 +427,7 @@ public class BucketCache implements BlockCache, HeapSize {
           Cacheable cachedBlock = deserializer.deserialize(bb, true);
           long timeTaken = System.nanoTime() - start;
           if (updateCacheMetrics) {
-            cacheStats.hit(caching);
+            cacheStats.hit(caching, key.isPrimary());
             cacheStats.ioHit(timeTaken);
           }
           bucketEntry.access(accessCount.incrementAndGet());
@@ -446,7 +446,7 @@ public class BucketCache implements BlockCache, HeapSize {
       }
     }
     if (!repeat && updateCacheMetrics) {
-      cacheStats.miss(caching);
+      cacheStats.miss(caching, key.isPrimary());
     }
     return null;
   }
@@ -474,7 +474,7 @@ public class BucketCache implements BlockCache, HeapSize {
     BucketEntry bucketEntry = backingMap.get(cacheKey);
     if (bucketEntry == null) {
       if (removedBlock != null) {
-        cacheStats.evicted(0);
+        cacheStats.evicted(0, cacheKey.isPrimary());
         return true;
       } else {
         return false;
@@ -496,7 +496,7 @@ public class BucketCache implements BlockCache, HeapSize {
         offsetLock.releaseLockEntry(lockEntry);
       }
     }
-    cacheStats.evicted(bucketEntry.getCachedTime());
+    cacheStats.evicted(bucketEntry.getCachedTime(), cacheKey.isPrimary());
     return true;
   }
 

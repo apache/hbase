@@ -58,6 +58,8 @@ public abstract class AbstractHFileReader
   /** Filled when we read in the trailer. */
   protected final Compression.Algorithm compressAlgo;
 
+  private boolean isPrimaryReplicaReader;
+
   /**
    * What kind of data block encoding should be used while reading, writing,
    * and handling cache.
@@ -251,6 +253,15 @@ public abstract class AbstractHFileReader
   }
 
   @Override
+  public boolean isPrimaryReplicaReader() {
+    return isPrimaryReplicaReader;
+  }
+
+  @Override
+  public void setPrimaryReplicaReader(boolean isPrimaryReplicaReader) {
+    this.isPrimaryReplicaReader = isPrimaryReplicaReader;
+  }
+
   public FileInfo loadFileInfo() throws IOException {
     return fileInfo;
   }

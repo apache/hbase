@@ -105,7 +105,7 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
     byte[] stopRow,
     long readPt
   ) throws IOException;
-
+  
   ScanInfo getScanInfo();
 
   /**
@@ -464,4 +464,6 @@ public interface Store extends HeapSize, StoreConfigInformation, PropagatingConf
   void refreshStoreFiles(Collection<String> newFiles) throws IOException;
 
   void bulkLoadHFile(StoreFileInfo fileInfo) throws IOException;
+
+  boolean isPrimaryReplicaStore();
 }
