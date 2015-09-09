@@ -231,13 +231,15 @@ public class TestInterfaceAudienceAnnotations {
 
     // find classes that are:
     // In the main jar
+    // AND are not in a hadoop-compat module
     // AND are public
     // NOT test classes
     // AND NOT generated classes
     // AND are NOT annotated with InterfaceAudience
     // AND are NOT from Clover rewriting sources
     ClassFinder classFinder = new ClassFinder(
-      new MainCodeResourcePathFilter(),
+      new And(new MainCodeResourcePathFilter(),
+              new TestFileNameFilter()),
       new Not((FileNameFilter)new TestFileNameFilter()),
       new And(new PublicClassFilter(),
               new Not(new TestClassFilter()),
@@ -268,13 +270,15 @@ public class TestInterfaceAudienceAnnotations {
 
     // find classes that are:
     // In the main jar
+    // AND are not in a hadoop-compat module
     // AND are public
     // NOT test classes
     // AND NOT generated classes
     // AND are annotated with InterfaceAudience.Public
     // AND NOT annotated with InterfaceStability
     ClassFinder classFinder = new ClassFinder(
-      new MainCodeResourcePathFilter(),
+      new And(new MainCodeResourcePathFilter(),
+              new TestFileNameFilter()),
       new Not((FileNameFilter)new TestFileNameFilter()),
       new And(new PublicClassFilter(),
               new Not(new TestClassFilter()),
