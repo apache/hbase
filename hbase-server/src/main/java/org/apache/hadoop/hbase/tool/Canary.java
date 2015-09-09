@@ -1170,7 +1170,7 @@ public final class Canary implements Tool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(numThreads);
 
     Class<? extends Sink> sinkClass =
-        conf.getClass("hbase.canary.sink.class", StdOutSink.class, Sink.class);
+        conf.getClass("hbase.canary.sink.class", RegionServerStdOutSink.class, Sink.class);
     Sink sink = ReflectionUtils.newInstance(sinkClass);
 
     int exitCode = ToolRunner.run(conf, new Canary(executor, sink), args);
