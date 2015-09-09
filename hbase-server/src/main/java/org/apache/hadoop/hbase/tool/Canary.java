@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -310,13 +311,15 @@ public final class Canary implements Tool {
     private String serverName;
     private HRegionInfo region;
     private ExtendedSink sink;
+    private AtomicLong successes;
 
     RegionServerTask(Connection connection, String serverName, HRegionInfo region,
-        ExtendedSink sink) {
+        ExtendedSink sink, AtomicLong successes) {
       this.connection = connection;
       this.serverName = serverName;
       this.region = region;
       this.sink = sink;
+      this.successes = successes;
     }
 
     @Override
@@ -352,12 +355,14 @@ public final class Canary implements Tool {
           s.close();
           stopWatch.stop();
         }
+        successes.incrementAndGet();
         sink.publishReadTiming(tableName.getNameAsString(), serverName, stopWatch.getTime());
       } catch (TableNotFoundException tnfe) {
         LOG.error("Table may be deleted", tnfe);
         // This is ignored because it doesn't imply that the regionserver is dead
       } catch (TableNotEnabledException tnee) {
         // This is considered a success since we got a response.
+        successes.incrementAndGet();
         LOG.debug("The targeted table was disabled.  Assuming success.");
       } catch (DoNotRetryIOException dnrioe) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
@@ -406,6 +411,7 @@ public final class Canary implements Tool {
   private long timeout = DEFAULT_TIMEOUT;
   private boolean failOnError = true;
   private boolean regionServerMode = false;
+  private boolean regionServerAllRegions = false;
   private boolean writeSniffing = false;
   private TableName writeTableName = DEFAULT_WRITE_TABLE_NAME;
 
@@ -466,6 +472,8 @@ public final class Canary implements Tool {
           }
         } else if(cmd.equals("-regionserver")) {
           this.regionServerMode = true;
+        } else if(cmd.equals("-allRegions")) {
+          this.regionServerAllRegions = true;
         } else if(cmd.equals("-writeSniffing")) {
           this.writeSniffing = true;
         } else if (cmd.equals("-e")) {
@@ -511,6 +519,10 @@ public final class Canary implements Tool {
         // keep track of first table name specified by the user
         index = i;
       }
+    }
+    if (this.regionServerAllRegions && !this.regionServerMode) {
+      System.err.println("-allRegions can only be specified in regionserver mode.");
+      printUsageAndExit();
     }
     return index;
   }
@@ -597,6 +609,8 @@ public final class Canary implements Tool {
     System.err.println("   -help          Show this help and exit.");
     System.err.println("   -regionserver  replace the table argument to regionserver,");
     System.err.println("      which means to enable regionserver mode");
+    System.err.println("   -allRegions    Tries all regions on a regionserver,");
+    System.err.println("      only works in regionserver mode.");
     System.err.println("   -daemon        Continuous check at defined intervals.");
     System.err.println("   -interval <N>  Interval between checks (sec)");
     System.err.println("   -e             Use region/regionserver as regular expression");
@@ -630,7 +644,7 @@ public final class Canary implements Tool {
     if (this.regionServerMode) {
       monitor =
           new RegionServerMonitor(connection, monitorTargets, this.useRegExp,
-              (ExtendedSink) this.sink, this.executor);
+              (ExtendedSink) this.sink, this.executor, this.regionServerAllRegions);
     } else {
       monitor =
           new RegionMonitor(connection, monitorTargets, this.useRegExp, this.sink, this.executor,
@@ -935,9 +949,12 @@ public final class Canary implements Tool {
   // a monitor for regionserver mode
   private static class RegionServerMonitor extends Monitor {
 
+    private boolean allRegions;
+
     public RegionServerMonitor(Connection connection, String[] monitorTargets, boolean useRegExp,
-        ExtendedSink sink, ExecutorService executor) {
+        ExtendedSink sink, ExecutorService executor, boolean allRegions) {
       super(connection, monitorTargets, useRegExp, sink, executor);
+      this.allRegions = allRegions;
     }
 
     private ExtendedSink getSink() {
@@ -986,13 +1003,29 @@ public final class Canary implements Tool {
 
     private void monitorRegionServers(Map<String, List<HRegionInfo>> rsAndRMap) {
       List<RegionServerTask> tasks = new ArrayList<RegionServerTask>();
-      Random rand =new Random();
-      // monitor one region on every region server
+      Map<String, AtomicLong> successMap = new HashMap<String, AtomicLong>();
+      Random rand = new Random();
       for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
         String serverName = entry.getKey();
-        // random select a region
-        HRegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
-        tasks.add(new RegionServerTask(this.connection, serverName, region, getSink()));
+        AtomicLong successes = new AtomicLong(0);
+        successMap.put(serverName, successes);
+        if (this.allRegions) {
+          for (HRegionInfo region : entry.getValue()) {
+            tasks.add(new RegionServerTask(this.connection,
+                serverName,
+                region,
+                getSink(),
+                successes));
+          }
+        } else {
+          // random select a region if flag not set
+          HRegionInfo region = entry.getValue().get(rand.nextInt(entry.getValue().size()));
+          tasks.add(new RegionServerTask(this.connection,
+              serverName,
+              region,
+              getSink(),
+              successes));
+        }
       }
       try {
         for (Future<Void> future : this.executor.invokeAll(tasks)) {
@@ -1001,6 +1034,13 @@ public final class Canary implements Tool {
           } catch (ExecutionException e) {
             LOG.error("Sniff regionserver failed!", e);
             this.errorCode = ERROR_EXIT_CODE;
+          }
+        }
+        if (this.allRegions) {
+          for (Map.Entry<String, List<HRegionInfo>> entry : rsAndRMap.entrySet()) {
+            String serverName = entry.getKey();
+            LOG.info("Successfully read " + successMap.get(serverName) + " regions out of "
+                    + entry.getValue().size() + " on regionserver:" + serverName);
           }
         }
       } catch (InterruptedException e) {
