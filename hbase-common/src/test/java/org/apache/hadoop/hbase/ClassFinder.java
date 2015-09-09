@@ -85,13 +85,28 @@ public class ClassFinder {
     }
   }
 
-  public static class And implements ClassFilter {
+  public static class And implements ClassFilter, ResourcePathFilter {
     ClassFilter[] classFilters;
+    ResourcePathFilter[] resourcePathFilters;
+
     public And(ClassFilter...classFilters) { this.classFilters = classFilters; }
+    public And(ResourcePathFilter... resourcePathFilters) {
+      this.resourcePathFilters = resourcePathFilters;
+    }
+
     @Override
     public boolean isCandidateClass(Class<?> c) {
       for (ClassFilter filter : classFilters) {
         if (!filter.isCandidateClass(c)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override public boolean isCandidatePath(String resourcePath, boolean isJar) {
+      for (ResourcePathFilter filter : resourcePathFilters) {
+        if (!filter.isCandidatePath(resourcePath, isJar)) {
           return false;
         }
       }
