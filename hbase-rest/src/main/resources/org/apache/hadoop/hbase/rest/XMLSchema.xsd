@@ -178,32 +178,4 @@
         <attribute name="currentCompactedKVs" type="int"></attribute>
     </complexType>
 
-    <element name="Namespaces" type="tns:Namespaces"></element>
-
-    <complexType name="Namespaces">
-        <sequence>
-            <element name="Namespace" type="string"
-                maxOccurs="unbounded" minOccurs="0">
-            </element>
-        </sequence>
-    </complexType>
-
-    <complexType name="NamespaceProperties">
-          <sequence>
-               <element name="properties">
-                    <complexType>
-                         <sequence>
-                              <element name="entry" maxOccurs="unbounded" minOccurs="0">
-                                   <complexType>
-                                        <sequence>
-                                             <element type="string" name="key" />
-                                             <element type="string" name="value" />
-                                        </sequence>
-                                   </complexType>
-                              </element>
-                         </sequence>
-                    </complexType>
-               </element>
-          </sequence>
-     </complexType>
 </schema>
