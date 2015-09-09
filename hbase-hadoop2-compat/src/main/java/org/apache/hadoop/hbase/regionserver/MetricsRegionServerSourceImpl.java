@@ -236,10 +236,16 @@ public class MetricsRegionServerSourceImpl
               rsWrap.getBlockCacheSize())
           .addCounter(Interns.info(BLOCK_CACHE_HIT_COUNT, BLOCK_CACHE_HIT_COUNT_DESC),
               rsWrap.getBlockCacheHitCount())
+          .addCounter(Interns.info(BLOCK_CACHE_PRIMARY_HIT_COUNT,
+            BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC), rsWrap.getBlockCachePrimaryHitCount())
           .addCounter(Interns.info(BLOCK_CACHE_MISS_COUNT, BLOCK_COUNT_MISS_COUNT_DESC),
               rsWrap.getBlockCacheMissCount())
+          .addCounter(Interns.info(BLOCK_CACHE_PRIMARY_MISS_COUNT,
+            BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC), rsWrap.getBlockCachePrimaryMissCount())
           .addCounter(Interns.info(BLOCK_CACHE_EVICTION_COUNT, BLOCK_CACHE_EVICTION_COUNT_DESC),
               rsWrap.getBlockCacheEvictedCount())
+          .addCounter(Interns.info(BLOCK_CACHE_PRIMARY_EVICTION_COUNT,
+            BLOCK_CACHE_PRIMARY_EVICTION_COUNT_DESC), rsWrap.getBlockCachePrimaryEvictedCount())
           .addGauge(Interns.info(BLOCK_CACHE_HIT_PERCENT, BLOCK_CACHE_HIT_PERCENT_DESC),
               rsWrap.getBlockCacheHitPercent())
           .addGauge(Interns.info(BLOCK_CACHE_EXPRESS_HIT_PERCENT,

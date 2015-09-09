@@ -207,12 +207,20 @@ public interface MetricsRegionServerSource extends BaseSource {
   String BLOCK_CACHE_SIZE_DESC = "Size of the block cache.";
   String BLOCK_CACHE_HIT_COUNT = "blockCacheHitCount";
   String BLOCK_CACHE_HIT_COUNT_DESC = "Count of the hit on the block cache.";
+  String BLOCK_CACHE_PRIMARY_HIT_COUNT = "blockCacheHitCountPrimary";
+  String BLOCK_CACHE_PRIMARY_HIT_COUNT_DESC = "Count of hit on primary replica in the block cache.";
   String BLOCK_CACHE_MISS_COUNT = "blockCacheMissCount";
   String BLOCK_COUNT_MISS_COUNT_DESC =
       "Number of requests for a block that missed the block cache.";
+  String BLOCK_CACHE_PRIMARY_MISS_COUNT = "blockCacheMissCountPrimary";
+  String BLOCK_COUNT_PRIMARY_MISS_COUNT_DESC =
+      "Number of requests for a block of primary replica that missed the block cache.";
   String BLOCK_CACHE_EVICTION_COUNT = "blockCacheEvictionCount";
   String BLOCK_CACHE_EVICTION_COUNT_DESC =
       "Count of the number of blocks evicted from the block cache.";
+  String BLOCK_CACHE_PRIMARY_EVICTION_COUNT = "blockCacheEvictionCountPrimary";
+  String BLOCK_CACHE_PRIMARY_EVICTION_COUNT_DESC =
+      "Count of the number of blocks evicted from primary replica in the block cache.";
   String BLOCK_CACHE_HIT_PERCENT = "blockCacheCountHitPercent";
   String BLOCK_CACHE_HIT_PERCENT_DESC =
       "Percent of block cache requests that are hits";

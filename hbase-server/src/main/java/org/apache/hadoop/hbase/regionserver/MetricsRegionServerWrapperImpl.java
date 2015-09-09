@@ -246,6 +246,14 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getBlockCachePrimaryHitCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return this.cacheStats.getPrimaryHitCount();
+  }
+
+  @Override
   public long getBlockCacheMissCount() {
     if (this.cacheStats == null) {
       return 0;
@@ -254,11 +262,27 @@ class MetricsRegionServerWrapperImpl
   }
 
   @Override
+  public long getBlockCachePrimaryMissCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return this.cacheStats.getPrimaryMissCount();
+  }
+
+  @Override
   public long getBlockCacheEvictedCount() {
     if (this.cacheStats == null) {
       return 0;
     }
     return this.cacheStats.getEvictedCount();
+  }
+
+  @Override
+  public long getBlockCachePrimaryEvictedCount() {
+    if (this.cacheStats == null) {
+      return 0;
+    }
+    return this.cacheStats.getPrimaryEvictedCount();
   }
 
   @Override
