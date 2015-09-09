@@ -71,7 +71,7 @@ public class ReplicationSink {
 
   private static final Log LOG = LogFactory.getLog(ReplicationSink.class);
   private final Configuration conf;
-  private final Connection sharedHtableCon;
+  private Connection sharedHtableCon;
   private final MetricsSink metrics;
   private final AtomicLong totalReplicatedEdits = new AtomicLong();
 
@@ -87,7 +87,6 @@ public class ReplicationSink {
     this.conf = HBaseConfiguration.create(conf);
     decorateConf();
     this.metrics = new MetricsSink();
-    this.sharedHtableCon = ConnectionFactory.createConnection(this.conf);
   }
 
   /**
@@ -212,7 +211,9 @@ public class ReplicationSink {
    */
   public void stopReplicationSinkServices() {
     try {
-      this.sharedHtableCon.close();
+      if (this.sharedHtableCon != null) {
+        this.sharedHtableCon.close();
+      }
     } catch (IOException e) {
       LOG.warn("IOException while closing the connection", e); // ignoring as we are closing.
     }
@@ -231,6 +232,9 @@ public class ReplicationSink {
     }
     Table table = null;
     try {
+      if (this.sharedHtableCon == null) {
+        this.sharedHtableCon = ConnectionFactory.createConnection(this.conf);
+      }
       table = this.sharedHtableCon.getTable(tableName);
       for (List<Row> rows : allRows) {
         table.batch(rows);
