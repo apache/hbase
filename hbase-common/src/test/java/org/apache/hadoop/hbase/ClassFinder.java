@@ -62,6 +62,58 @@ public class ClassFinder {
     boolean isCandidateClass(Class<?> c);
   };
 
+  public static class Not implements ResourcePathFilter, FileNameFilter, ClassFilter {
+    private ResourcePathFilter resourcePathFilter;
+    private FileNameFilter fileNameFilter;
+    private ClassFilter classFilter;
+
+    public Not(ResourcePathFilter resourcePathFilter){this.resourcePathFilter = resourcePathFilter;}
+    public Not(FileNameFilter fileNameFilter){this.fileNameFilter = fileNameFilter;}
+    public Not(ClassFilter classFilter){this.classFilter = classFilter;}
+
+    @Override
+    public boolean isCandidatePath(String resourcePath, boolean isJar) {
+      return !resourcePathFilter.isCandidatePath(resourcePath, isJar);
+    }
+    @Override
+    public boolean isCandidateFile(String fileName, String absFilePath) {
+      return !fileNameFilter.isCandidateFile(fileName, absFilePath);
+    }
+    @Override
+    public boolean isCandidateClass(Class<?> c) {
+      return !classFilter.isCandidateClass(c);
+    }
+  }
+
+  public static class And implements ClassFilter, ResourcePathFilter {
+    ClassFilter[] classFilters;
+    ResourcePathFilter[] resourcePathFilters;
+
+    public And(ClassFilter...classFilters) { this.classFilters = classFilters; }
+    public And(ResourcePathFilter... resourcePathFilters) {
+      this.resourcePathFilters = resourcePathFilters;
+    }
+
+    @Override
+    public boolean isCandidateClass(Class<?> c) {
+      for (ClassFilter filter : classFilters) {
+        if (!filter.isCandidateClass(c)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override public boolean isCandidatePath(String resourcePath, boolean isJar) {
+      for (ResourcePathFilter filter : resourcePathFilters) {
+        if (!filter.isCandidatePath(resourcePath, isJar)) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
   public ClassFinder() {
     this(null, null, null);
   }

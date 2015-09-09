@@ -50,6 +50,7 @@ public class ClassTestFinder extends ClassFinder {
     return new Class<?>[0];
   }
 
+  /** Filters both test classes and anything in the hadoop-compat modules */
   public static class TestFileNameFilter implements FileNameFilter, ResourcePathFilter {
     private static final Pattern hadoopCompactRe =
         Pattern.compile("hbase-hadoop\\d?-compat");
