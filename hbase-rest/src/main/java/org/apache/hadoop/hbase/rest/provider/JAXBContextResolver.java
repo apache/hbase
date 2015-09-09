@@ -31,8 +31,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.ColumnSchemaModel;
-import org.apache.hadoop.hbase.rest.model.NamespacesInstanceModel;
-import org.apache.hadoop.hbase.rest.model.NamespacesModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.rest.model.StorageClusterStatusModel;
@@ -65,8 +63,6 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     CellModel.class,
     CellSetModel.class,
     ColumnSchemaModel.class,
-    NamespacesModel.class,
-    NamespacesInstanceModel.class,
     RowModel.class,
     ScannerModel.class,
     StorageClusterStatusModel.class,
