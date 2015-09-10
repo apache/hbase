@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.thrift.CallQueue;
@@ -96,9 +97,9 @@ public class ThriftServer {
 
   /**
    * Thrift quality of protection configuration key. Valid values can be:
-   * auth-conf: authentication, integrity and confidentiality checking
-   * auth-int: authentication and integrity checking
-   * auth: authentication only
+   * privacy: authentication, integrity and confidentiality checking
+   * integrity: authentication and integrity checking
+   * authentication: authentication only
    *
    * This is used to authenticate the callers and support impersonation.
    * The thrift server and the HBase cluster must run in secure mode.
@@ -159,7 +160,8 @@ public class ThriftServer {
   }
 
   private static TTransportFactory getTTransportFactory(
-      String qop, String name, String host, boolean framed, int frameSize) {
+      SaslUtil.QualityOfProtection qop, String name, String host,
+      boolean framed, int frameSize) {
     if (framed) {
       if (qop != null) {
         throw new RuntimeException("Thrift server authentication"
@@ -171,7 +173,7 @@ public class ThriftServer {
       return new TTransportFactory();
     } else {
       Map<String, String> saslProperties = new HashMap<String, String>();
-      saslProperties.put(Sasl.QOP, qop);
+      saslProperties.put(Sasl.QOP, qop.getSaslQop());
       TSaslServerTransport.Factory saslFactory = new TSaslServerTransport.Factory();
       saslFactory.addServerDefinition("GSSAPI", name, host, saslProperties,
         new SaslGssCallbackHandler() {
@@ -363,13 +365,10 @@ public class ThriftServer {
     }
 
     UserGroupInformation realUser = userProvider.getCurrent().getUGI();
-    String qop = conf.get(THRIFT_QOP_KEY);
-    if (qop != null) {
-      if (!qop.equals("auth") && !qop.equals("auth-int")
-          && !qop.equals("auth-conf")) {
-        throw new IOException("Invalid " + THRIFT_QOP_KEY + ": " + qop
-          + ", it must be 'auth', 'auth-int', or 'auth-conf'");
-      }
+    String stringQop = conf.get(THRIFT_QOP_KEY);
+    SaslUtil.QualityOfProtection qop = null;
+    if (stringQop != null) {
+      qop = SaslUtil.getQop(stringQop);
       if (!securityEnabled) {
         throw new IOException("Thrift server must"
           + " run in secure mode to support authentication");
