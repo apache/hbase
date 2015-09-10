@@ -74,7 +74,8 @@ public class SaslClientHandler extends ChannelDuplexHandler {
    * @param token                    for Sasl
    * @param serverPrincipal          Server's Kerberos principal name
    * @param fallbackAllowed          True if server may also fall back to less secure connection
-   * @param rpcProtection            Quality of protection. Integrity or privacy
+   * @param rpcProtection            Quality of protection. Can be 'authentication', 'integrity' or
+   *                                 'privacy'.
    * @param exceptionHandler         handler for exceptions
    * @param successfulConnectHandler handler for succesful connects
    * @throws java.io.IOException if handler could not be created
