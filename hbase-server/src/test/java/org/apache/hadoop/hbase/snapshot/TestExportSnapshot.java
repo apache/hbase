@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotFileInfo;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
@@ -376,9 +377,11 @@ public class TestExportSnapshot {
           if (storeFile.hasReference()) {
             // Nothing to do here, we have already the reference embedded
           } else {
-            verifyNonEmptyFile(new Path(exportedArchive,
-              new Path(FSUtils.getTableDir(new Path("./"), tableName),
-                  new Path(regionInfo.getEncodedName(), new Path(family, hfile)))));
+            Path tableDir = FSUtils.getTableDir(new Path("./"), tableName);
+            HRegionFileSystem hrfs = HRegionFileSystem.create(TEST_UTIL.getConfiguration(), fs, tableDir, regionInfo);
+            Path regionDir = hrfs.getRegionDir();
+            verifyNonEmptyFile(new Path(new Path(exportedArchive,
+              regionDir), new Path(family, hfile)));
           }
         }
 

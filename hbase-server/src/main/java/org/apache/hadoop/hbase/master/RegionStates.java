@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -645,7 +646,7 @@ public class RegionStates {
         if (MetaTableAccessor.getRegion(server.getConnection(), hri.getEncodedNameAsBytes()) ==
             null) {
           regionOffline(hri);
-          FSUtils.deleteRegionDir(server.getConfiguration(), hri);
+          HRegionFileSystem.deleteRegionDir(server.getConfiguration(), hri);
         }
       } catch (IOException e) {
         LOG.warn("Got exception while deleting " + hri + " directories from file system.", e);

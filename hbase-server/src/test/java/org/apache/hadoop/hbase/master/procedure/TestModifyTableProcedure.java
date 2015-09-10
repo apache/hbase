@@ -241,7 +241,9 @@ public class TestModifyTableProcedure {
     assertEquals(2, currentHtd.getFamiliesKeys().size());
 
     // cf2 should be added cf3 should be removed
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(),
       tableName, regions, false, "cf1", cf2);
   }
 
@@ -282,7 +284,9 @@ public class TestModifyTableProcedure {
     assertFalse(currentHtd.hasFamily(cf3.getBytes()));
 
     // cf2 should be added cf3 should be removed
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1", cf2);
   }
 
@@ -316,7 +320,9 @@ public class TestModifyTableProcedure {
       ModifyTableState.values());
 
     // cf2 should not be present
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1");
   }
 
@@ -353,7 +359,9 @@ public class TestModifyTableProcedure {
       ModifyTableState.values());
 
     // cf2 should not be present
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(),
       tableName, regions, "cf1");
   }
 
@@ -393,7 +401,9 @@ public class TestModifyTableProcedure {
       ModifyTableState.values());
 
     // "cf2" should be added and "cf1" should be removed
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
+    MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(),
       tableName, regions, false, familyToAddName);
   }
 

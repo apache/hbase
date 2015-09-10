@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
-
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -77,7 +76,7 @@ public class TestHRegionFileSystem {
     assertEquals(regionDir, regionFs.getRegionDir());
 
     // Delete the region
-    HRegionFileSystem.deleteRegionFromFileSystem(conf, fs,
+    HRegionFileSystem.deleteAndArchiveRegionFromFileSystem(conf, fs,
         FSUtils.getTableDir(rootDir, hri.getTable()), hri);
     assertFalse("The region folder should be removed", fs.exists(regionDir));
 
@@ -95,7 +94,7 @@ public class TestHRegionFileSystem {
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
     assertTrue(fs.exists(regionFs.getRegionDir()));
 
-    regionFs = new HRegionFileSystem(conf, new MockFileSystemForCreate(),
+    regionFs = HRegionFileSystem.create(conf, new MockFileSystemForCreate(),
         null, null);
     // HRegionFileSystem.createRegionOnFileSystem(conf, new MockFileSystemForCreate(), rootDir,
     // hri);
@@ -103,11 +102,11 @@ public class TestHRegionFileSystem {
     assertTrue("Couldn't create the directory", result);
 
 
-    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), null, null);
+    regionFs = HRegionFileSystem.create(conf, new MockFileSystem(), null, null);
     result = regionFs.rename(new Path("/foo/bar"), new Path("/foo/bar2"));
     assertTrue("Couldn't rename the directory", result);
 
-    regionFs = new HRegionFileSystem(conf, new MockFileSystem(), null, null);
+    regionFs = HRegionFileSystem.create(conf, new MockFileSystem(), null, null);
     result = regionFs.deleteDir(new Path("/foo/bar"));
     assertTrue("Couldn't delete the directory", result);
     fs.delete(rootDir, true);

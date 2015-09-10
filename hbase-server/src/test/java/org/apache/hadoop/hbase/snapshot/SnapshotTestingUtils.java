@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -331,22 +332,22 @@ public class SnapshotTestingUtils {
    * @return array of the current HFiles in the table (could be a zero-length array)
    * @throws IOException on unexecpted error reading the FS
    */
-  public static Path[] listHFiles(final FileSystem fs, final Path tableDir)
+  public static Path[] listHFiles(final FileSystem fs, HTableDescriptor desc, final Path tableDir)
       throws IOException {
     final ArrayList<Path> hfiles = new ArrayList<Path>();
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       @Override
       public void storeFile(final String region, final String family, final String hfileName)
           throws IOException {
-        hfiles.add(new Path(tableDir, new Path(region, new Path(family, hfileName))));
+        hfiles.add(new Path(new Path(FsLayout.getRegionDir(tableDir, region), family), hfileName));
       }
     });
     return hfiles.toArray(new Path[hfiles.size()]);
   }
 
-  public static String[] listHFileNames(final FileSystem fs, final Path tableDir)
+  public static String[] listHFileNames(final FileSystem fs, HTableDescriptor desc, final Path tableDir)
       throws IOException {
-    Path[] files = listHFiles(fs, tableDir);
+    Path[] files = listHFiles(fs, desc, tableDir);
     String[] names = new String[files.length];
     for (int i = 0; i < files.length; ++i) {
       names[i] = files[i].getName();

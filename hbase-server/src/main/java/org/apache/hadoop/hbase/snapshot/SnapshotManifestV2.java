@@ -118,6 +118,8 @@ public class SnapshotManifestV2 {
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
       final Executor executor,final FileSystem fs, final Path snapshotDir,
       final SnapshotDescription desc) throws IOException {
+    // TODO: Not sure if there's anything I need to do here, made a path change
+    // in SnapshotManifestV1 but doesn't seem anything needed here.
     FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
       @Override
       public boolean accept(Path path) {

@@ -27,6 +27,7 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -63,7 +64,7 @@ public class StoreFileInfo {
    * Group 1, hfile/hfilelink pattern, is this file's id.
    * Group 2 '(.+)' is the reference's parent region name.
    */
-  private static final Pattern REF_NAME_PATTERN =
+  public static final Pattern REF_NAME_PATTERN =
     Pattern.compile(String.format("^(%s|%s)\\.(.+)$",
       HFILE_NAME_REGEX, HFileLink.LINK_NAME_REGEX));
 
@@ -387,36 +388,38 @@ public class StoreFileInfo {
     Matcher m = REF_NAME_PATTERN.matcher(name);
     return m.matches() && m.groupCount() > 1;
   }
-
+  
   /*
    * Return path to the file referred to by a Reference.  Presumes a directory
    * hierarchy of <code>${hbase.rootdir}/data/${namespace}/tablename/regionname/familyname</code>.
+   * Unless the table is a humongous table in which case the hierarchy is 
+   * <code>${hbase.rootdir}/data/${namespace}/tablename/bucket/regionname/familyname</code>.
+   * 
    * @param p Path to a Reference file.
    * @return Calculated path to parent region file.
    * @throws IllegalArgumentException when path regex fails to match.
    */
-  public static Path getReferredToFile(final Path p) {
-    Matcher m = REF_NAME_PATTERN.matcher(p.getName());
+  public static Path getReferredToFile(Path p) {
+    Matcher m = StoreFileInfo.REF_NAME_PATTERN.matcher(p.getName());
     if (m == null || !m.matches()) {
       LOG.warn("Failed match of store file name " + p.toString());
       throw new IllegalArgumentException("Failed match of store file name " +
           p.toString());
     }
-
+  
     // Other region name is suffix on the passed Reference file name
     String otherRegion = m.group(2);
     // Tabledir is up two directories from where Reference was written.
-    Path tableDir = p.getParent().getParent().getParent();
+    Path regionDir = p.getParent().getParent();
+    Path tableDir = FsLayout.getTableDirFromRegionDir(regionDir);
     String nameStrippedOfSuffix = m.group(1);
     if (LOG.isDebugEnabled()) {
       LOG.debug("reference '" + p + "' to region=" + otherRegion
         + " hfile=" + nameStrippedOfSuffix);
     }
-
-    // Build up new path with the referenced region in place of our current
-    // region in the reference path.  Also strip regionname suffix from name.
-    return new Path(new Path(new Path(tableDir, otherRegion),
-      p.getParent().getName()), nameStrippedOfSuffix);
+  
+    return new Path(new Path(FsLayout.getRegionDir(tableDir, otherRegion), p.getParent()
+          .getName()), nameStrippedOfSuffix);
   }
 
   /**

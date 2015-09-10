@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.wal.WALSplitter;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.*;
@@ -148,7 +149,7 @@ public class TestFSVisitor {
     for (int r = 0; r < 10; ++r) {
       String regionName = MD5Hash.getMD5AsHex(Bytes.toBytes(r));
       tableRegions.add(regionName);
-      Path regionDir = new Path(tableDir, regionName);
+      Path regionDir = FsLayout.getRegionDir(tableDir, regionName);
       for (int f = 0; f < 3; ++f) {
         String familyName = "f" + f;
         tableFamilies.add(familyName);
@@ -174,7 +175,7 @@ public class TestFSVisitor {
   private void createRecoverEdits(final Path tableDir, final Set<String> tableRegions,
       final Set<String> recoverEdits) throws IOException {
     for (String region: tableRegions) {
-      Path regionEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(new Path(tableDir, region));
+      Path regionEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(FsLayout.getRegionDir(tableDir, region));
       long seqId = System.currentTimeMillis();
       for (int i = 0; i < 3; ++i) {
         String editName = String.format("%019d", seqId + i);

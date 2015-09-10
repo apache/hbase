@@ -48,11 +48,14 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSHDFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * View to an on-disk Region.
@@ -72,32 +75,39 @@ public class HRegionFileSystem {
   public static final String REGION_SPLITS_DIR = ".splits";
 
   /** Temporary subdirectory of the region directory used for compaction output. */
-  private static final String REGION_TEMP_DIR = ".tmp";
+  protected static final String REGION_TEMP_DIR = ".tmp";
 
-  private final HRegionInfo regionInfo;
+  protected final HRegionInfo regionInfo;
   //regionInfo for interacting with FS (getting encodedName, etc)
-  private final HRegionInfo regionInfoForFs;
-  private final Configuration conf;
-  private final Path tableDir;
-  private final FileSystem fs;
+  protected final HRegionInfo regionInfoForFs;
+  protected final Configuration conf;
+  protected final Path tableDir;
+  protected final FileSystem fs;
+  
+  /** Number of characters for DIR name, 4 characters for 16^4 = 65536 buckets. */
+  public static final int HUMONGOUS_DIR_NAME_SIZE = 4;
 
   /**
    * In order to handle NN connectivity hiccups, one need to retry non-idempotent operation at the
    * client level.
    */
-  private final int hdfsClientRetriesNumber;
-  private final int baseSleepBeforeRetries;
-  private static final int DEFAULT_HDFS_CLIENT_RETRIES_NUMBER = 10;
-  private static final int DEFAULT_BASE_SLEEP_BEFORE_RETRIES = 1000;
+  protected final int hdfsClientRetriesNumber;
+  protected final int baseSleepBeforeRetries;
+  protected static final int DEFAULT_HDFS_CLIENT_RETRIES_NUMBER = 10;
+  protected static final int DEFAULT_BASE_SLEEP_BEFORE_RETRIES = 1000;
 
   /**
+   * Use the static factory methods on this class for construction, unless you are an
+   * HRegionFileSystem subclass constructor or the HRegionFileSystemFactory.
+   * 
    * Create a view to the on-disk region
+   * 
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} that contains the region
    * @param tableDir {@link Path} to where the table is being stored
    * @param regionInfo {@link HRegionInfo} for region
    */
-  HRegionFileSystem(final Configuration conf, final FileSystem fs, final Path tableDir,
+  protected HRegionFileSystem(final Configuration conf, final FileSystem fs, final Path tableDir,
       final HRegionInfo regionInfo) {
     this.fs = fs;
     this.conf = conf;
@@ -110,6 +120,11 @@ public class HRegionFileSystem {
       DEFAULT_BASE_SLEEP_BEFORE_RETRIES);
  }
 
+  public static HRegionFileSystem create(final Configuration conf, final FileSystem fs, final Path tableDir,
+      final HRegionInfo regionInfo) {
+    return FsLayout.getHRegionFileSystemFactory().create(conf, fs, tableDir, regionInfo);
+  }
+  
   /** @return the underlying {@link FileSystem} */
   public FileSystem getFileSystem() {
     return this.fs;
@@ -131,9 +146,14 @@ public class HRegionFileSystem {
 
   /** @return {@link Path} to the region directory. */
   public Path getRegionDir() {
-    return new Path(this.tableDir, this.regionInfoForFs.getEncodedName());
+    return FsLayout.getRegionDir(this.tableDir, this.regionInfoForFs);
   }
-
+    
+  /** @return {@link Path} to the daughter region provided */
+  public Path getDaughterRegionDir(HRegionInfo daughter) {
+    return FsLayout.getRegionDir(this.tableDir, daughter);
+  }
+  
   // ===========================================================================
   //  Temp Helpers
   // ===========================================================================
@@ -242,7 +262,27 @@ public class HRegionFileSystem {
     return ServerRegionReplicaUtil.getStoreFileInfo(conf, fs, regionInfo,
       regionInfoForFs, familyName, new Path(familyDir, fileName));
   }
+  
+  void assertReferenceFileCountOfSplitsDir(int expectedReferenceFileCount, HRegionInfo daughter)
+      throws IOException {
+    Path splitsDir = getSplitsDir(daughter);
+    if (expectedReferenceFileCount != 0 &&
+        expectedReferenceFileCount != FSUtils.getRegionReferenceFileCount(getFileSystem(),
+          splitsDir)) {
+      throw new IOException("Failing split. Expected reference file count isn't equal.");
+    }
+  }
 
+  void assertReferenceFileCountOfDaughterDir(int expectedReferenceFileCount, HRegionInfo daughter)
+      throws IOException {
+    Path daughterRegionDir = FsLayout.getRegionDir(getTableDir(), daughter);
+    if (expectedReferenceFileCount != 0 &&
+        expectedReferenceFileCount != FSUtils.getRegionReferenceFileCount(getFileSystem(),
+          daughterRegionDir)) {
+      throw new IOException("Failing split. Expected reference file count isn't equal.");
+    }
+  }
+  
   /**
    * Returns true if the specified family has reference files
    * @param familyName Column Family Name
@@ -308,7 +348,7 @@ public class HRegionFileSystem {
    * @param suffix extra information to append to the generated name
    * @return Unique file name
    */
-  private static String generateUniqueName(final String suffix) {
+  protected static String generateUniqueName(final String suffix) {
     String name = UUID.randomUUID().toString().replaceAll("-", "");
     if (suffix != null) name += suffix;
     return name;
@@ -365,7 +405,7 @@ public class HRegionFileSystem {
    * @return The new {@link Path} of the committed file
    * @throws IOException
    */
-  private Path commitStoreFile(final String familyName, final Path buildPath,
+  protected Path commitStoreFile(final String familyName, final Path buildPath,
       final long seqNum, final boolean generateNewName) throws IOException {
     Path storeDir = getStoreDir(familyName);
     if(!fs.exists(storeDir) && !createDir(storeDir))
@@ -496,7 +536,7 @@ public class HRegionFileSystem {
     FileStatus[] daughters = FSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
     if (daughters != null) {
       for (FileStatus daughter: daughters) {
-        Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
+        Path daughterDir = FsLayout.getRegionDir(getTableDir(), daughter.getPath().getName());
         if (fs.exists(daughterDir) && !deleteDir(daughterDir)) {
           throw new IOException("Failed delete of " + daughterDir);
         }
@@ -512,7 +552,7 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException {
-    Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
+    Path regionDir = FsLayout.getRegionDir(this.tableDir, regionInfo);
     if (this.fs.exists(regionDir) && !deleteDir(regionDir)) {
       throw new IOException("Failed delete of " + regionDir);
     }
@@ -527,8 +567,13 @@ public class HRegionFileSystem {
    */
   Path commitDaughterRegion(final HRegionInfo regionInfo)
       throws IOException {
-    Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
+    Path regionDir = FsLayout.getRegionDir(this.tableDir, regionInfo);
     Path daughterTmpDir = this.getSplitsDir(regionInfo);
+    
+    // 
+    // 
+    // /table/bucket2/parent/.splits/daughter/.regioninfo
+    // /table/bucket1
 
     if (fs.exists(daughterTmpDir)) {
 
@@ -536,14 +581,29 @@ public class HRegionFileSystem {
       Path regionInfoFile = new Path(daughterTmpDir, REGION_INFO_FILE);
       byte[] regionInfoContent = getRegionInfoFileContent(regionInfo);
       writeRegionInfoFileContent(conf, fs, regionInfoFile, regionInfoContent);
-
-      // Move the daughter temp dir to the table dir
-      if (!rename(daughterTmpDir, regionDir)) {
-        throw new IOException("Unable to rename " + daughterTmpDir + " to " + regionDir);
-      }
+      
+      // Move the daughter region dir to its final place
+      moveNewRegionFromTmpDirToRegionDir(daughterTmpDir, regionDir);
     }
 
     return regionDir;
+  }
+  
+  /**
+   * Finalize the creation of a new region by moving it from a temporary staging
+   * directory to its final region directory in the table directory
+   * 
+   * Example: Moving /table/parent/.splits/daughter to /table/daughter for a new
+   * daughter region created from a region split
+   * 
+   * @param source  temporary staging directory
+   * @param dest    final region directory
+   * @throws IOException 
+   */
+  void moveNewRegionFromTmpDirToRegionDir(Path source, Path dest) throws IOException {
+    if (!rename(source, dest)) {
+      throw new IOException("Unable to rename " + source + " to " + dest);
+    }
   }
 
   /**
@@ -623,7 +683,11 @@ public class HRegionFileSystem {
     String parentRegionName = regionInfoForFs.getEncodedName();
     // Write reference with same file id only with the other region name as
     // suffix and into the new region location (under same family).
-    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
+    return createReferenceFile(r, f, parentRegionName, splitDir);
+  }
+  
+  Path createReferenceFile(Reference r, StoreFile f, String originalRegionName, Path targetDir) throws IOException {
+    Path p = new Path(targetDir, f.getPath().getName() + "." + originalRegionName);
     return r.write(fs, p);
   }
 
@@ -652,7 +716,7 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException {
-    Path regionDir = new Path(this.tableDir, mergedRegion.getEncodedName());
+    Path regionDir = FsLayout.getRegionDir(this.tableDir, mergedRegion);
     if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
       throw new IOException("Failed delete of " + regionDir);
     }
@@ -701,9 +765,7 @@ public class HRegionFileSystem {
     String mergingRegionName = regionInfoForFs.getEncodedName();
     // Write reference with same file id only with the other region name as
     // suffix and into the new region location (under same family).
-    Path p = new Path(referenceDir, f.getPath().getName() + "."
-        + mergingRegionName);
-    return r.write(fs, p);
+    return createReferenceFile(r, f, mergingRegionName, referenceDir);
   }
 
   /**
@@ -713,14 +775,11 @@ public class HRegionFileSystem {
    * @throws IOException
    */
   void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException {
-    Path regionDir = new Path(this.tableDir, mergedRegionInfo.getEncodedName());
+    Path regionDir = FsLayout.getRegionDir(this.tableDir, mergedRegionInfo);
     Path mergedRegionTmpDir = this.getMergesDir(mergedRegionInfo);
     // Move the tmp dir in the expected location
     if (mergedRegionTmpDir != null && fs.exists(mergedRegionTmpDir)) {
-      if (!fs.rename(mergedRegionTmpDir, regionDir)) {
-        throw new IOException("Unable to rename " + mergedRegionTmpDir + " to "
-            + regionDir);
-      }
+      moveNewRegionFromTmpDirToRegionDir(mergedRegionTmpDir, regionDir);
     }
   }
 
@@ -741,7 +800,7 @@ public class HRegionFileSystem {
    * @return Content of the file we write out to the filesystem under a region
    * @throws IOException
    */
-  private static byte[] getRegionInfoFileContent(final HRegionInfo hri) throws IOException {
+  protected static byte[] getRegionInfoFileContent(final HRegionInfo hri) throws IOException {
     return hri.toDelimitedByteArray();
   }
 
@@ -765,7 +824,7 @@ public class HRegionFileSystem {
   /**
    * Write the .regioninfo file on-disk.
    */
-  private static void writeRegionInfoFileContent(final Configuration conf, final FileSystem fs,
+  protected static void writeRegionInfoFileContent(final Configuration conf, final FileSystem fs,
       final Path regionInfoFile, final byte[] content) throws IOException {
     // First check to get the permissions
     FsPermission perms = FSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
@@ -816,7 +875,7 @@ public class HRegionFileSystem {
    * Write out an info file under the region directory. Useful recovering mangled regions.
    * @param useTempDir indicate whether or not using the region .tmp dir for a safer file creation.
    */
-  private void writeRegionInfoOnFilesystem(boolean useTempDir) throws IOException {
+  protected void writeRegionInfoOnFilesystem(boolean useTempDir) throws IOException {
     byte[] content = getRegionInfoFileContent(regionInfoForFs);
     writeRegionInfoOnFilesystem(content, useTempDir);
   }
@@ -826,7 +885,7 @@ public class HRegionFileSystem {
    * @param regionInfoContent serialized version of the {@link HRegionInfo}
    * @param useTempDir indicate whether or not using the region .tmp dir for a safer file creation.
    */
-  private void writeRegionInfoOnFilesystem(final byte[] regionInfoContent,
+  protected void writeRegionInfoOnFilesystem(final byte[] regionInfoContent,
       final boolean useTempDir) throws IOException {
     Path regionInfoFile = new Path(getRegionDir(), REGION_INFO_FILE);
     if (useTempDir) {
@@ -865,11 +924,14 @@ public class HRegionFileSystem {
    * @param fs {@link FileSystem} from which to add the region
    * @param tableDir {@link Path} to where the table is being stored
    * @param regionInfo {@link HRegionInfo} for region to be added
+   * @param humongousTable
    * @throws IOException if the region creation fails due to a FileSystem exception.
    */
-  public static HRegionFileSystem createRegionOnFileSystem(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
+  public static HRegionFileSystem createRegionOnFileSystem(
+      final Configuration conf, final FileSystem fs, final Path tableDir,
+      final HRegionInfo regionInfo)
+      throws IOException {
+    HRegionFileSystem regionFs = create(conf, fs, tableDir, regionInfo);
     Path regionDir = regionFs.getRegionDir();
 
     if (fs.exists(regionDir)) {
@@ -887,23 +949,27 @@ public class HRegionFileSystem {
     regionFs.writeRegionInfoOnFilesystem(false);
     return regionFs;
   }
-
+  
   /**
-   * Open Region from file-system.
-   * @param conf the {@link Configuration} to use
-   * @param fs {@link FileSystem} from which to add the region
-   * @param tableDir {@link Path} to where the table is being stored
-   * @param regionInfo {@link HRegionInfo} for region to be added
-   * @param readOnly True if you don't want to edit the region data
-   * @throws IOException if the region creation fails due to a FileSystem exception.
+   * Call this only if you don't have the HRegionInfo in memory.
+   * This method will load it from disk.
+   * 
+   * @param conf
+   * @param fs
+   * @param tableDir
+   * @param encodedRegionName
+   * @param readOnly
+   * @return
+   * @throws IOException
    */
   public static HRegionFileSystem openRegionFromFileSystem(final Configuration conf,
-      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo, boolean readOnly)
+      final FileSystem fs, final Path tableDir, final String encodedRegionName, boolean readOnly)
       throws IOException {
-    HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
-    Path regionDir = regionFs.getRegionDir();
+    Path regionDir = FsLayout.getRegionDir(tableDir, encodedRegionName);
+    HRegionInfo hri = loadRegionInfoFileContent(fs, regionDir);
+    HRegionFileSystem regionFs = create(conf, fs, tableDir, hri);
 
-    if (!fs.exists(regionDir)) {
+    if (!regionFs.existsOnDisk()) {
       LOG.warn("Trying to open a region that do not exists on disk: " + regionDir);
       throw new IOException("The specified region do not exists on disk: " + regionDir);
     }
@@ -922,6 +988,64 @@ public class HRegionFileSystem {
   }
 
   /**
+   * Open Region from file-system.
+   * @param conf the {@link Configuration} to use
+   * @param fs {@link FileSystem} from which to add the region
+   * @param tableDir {@link Path} to where the table is being stored
+   * @param regionInfo {@link HRegionInfo} for region to be added
+   * @param readOnly True if you don't want to edit the region data
+   * @throws IOException if the region creation fails due to a FileSystem exception.
+   */
+  public static HRegionFileSystem openRegionFromFileSystem(final Configuration conf,
+      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo, boolean readOnly)
+      throws IOException {
+    HRegionFileSystem regionFs = create(conf, fs, tableDir, regionInfo);
+    Path regionDir = regionFs.getRegionDir();
+
+    if (!regionFs.existsOnDisk()) {
+      LOG.warn("Trying to open a region that do not exists on disk: " + regionDir);
+      throw new IOException("The specified region do not exists on disk: " + regionDir);
+    }
+
+    if (!readOnly) {
+      // Cleanup temporary directories
+      regionFs.cleanupTempDir();
+      regionFs.cleanupSplitsDir();
+      regionFs.cleanupMergesDir();
+
+      // if it doesn't exists, Write HRI to a file, in case we need to recover hbase:meta
+      regionFs.checkRegionInfoOnFilesystem();
+    }
+
+    return regionFs;
+  }
+  
+  /**
+   * Does the region directory for this HRFS instance exist on disk
+   * @return true if the region directory exists
+   * @throws IOException
+   */
+  public boolean existsOnDisk() throws IOException {
+    Path regionDir = getRegionDir();
+    return fs.exists(regionDir);
+  }
+  
+  /**
+   * Delete the region directory if exists.
+   * @param conf
+   * @param hri
+   * @return True if deleted the region directory.
+   * @throws IOException
+   */
+  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
+  throws IOException {
+    Path rootDir = FSUtils.getRootDir(conf);
+    FileSystem fs = rootDir.getFileSystem(conf);
+    return FSUtils.deleteDirectory(fs,
+      FsLayout.getRegionDir(FSUtils.getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
+  }
+  
+  /**
    * Remove the region from the table directory, archiving the region's hfiles.
    * @param conf the {@link Configuration} to use
    * @param fs {@link FileSystem} from which to remove the region
@@ -929,9 +1053,9 @@ public class HRegionFileSystem {
    * @param regionInfo {@link HRegionInfo} for region to be deleted
    * @throws IOException if the request cannot be completed
    */
-  public static void deleteRegionFromFileSystem(final Configuration conf,
+  public static void deleteAndArchiveRegionFromFileSystem(final Configuration conf,
       final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, regionInfo);
+    HRegionFileSystem regionFs = create(conf, fs, tableDir, regionInfo);
     Path regionDir = regionFs.getRegionDir();
 
     if (!fs.exists(regionDir)) {
@@ -1037,7 +1161,7 @@ public class HRegionFileSystem {
   /**
    * sleeping logic; handles the interrupt exception.
    */
-  private void sleepBeforeRetry(String msg, int sleepMultiplier) throws InterruptedException {
+  protected void sleepBeforeRetry(String msg, int sleepMultiplier) throws InterruptedException {
     sleepBeforeRetry(msg, sleepMultiplier, baseSleepBeforeRetries, hdfsClientRetriesNumber);
   }
 
@@ -1051,7 +1175,7 @@ public class HRegionFileSystem {
    *         whether the directory exists or not, and returns true if it exists.
    * @throws IOException
    */
-  private static boolean createDirOnFileSystem(FileSystem fs, Configuration conf, Path dir)
+  protected static boolean createDirOnFileSystem(FileSystem fs, Configuration conf, Path dir)
       throws IOException {
     int i = 0;
     IOException lastIOE = null;
@@ -1080,7 +1204,7 @@ public class HRegionFileSystem {
    * sleeping logic for static methods; handles the interrupt exception. Keeping a static version
    * for this to avoid re-looking for the integer values.
    */
-  private static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
+  protected static void sleepBeforeRetry(String msg, int sleepMultiplier, int baseSleepBeforeRetries,
       int hdfsClientRetriesNumber) throws InterruptedException {
     if (sleepMultiplier > hdfsClientRetriesNumber) {
       LOG.debug(msg + ", retries exhausted");

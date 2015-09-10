@@ -97,8 +97,9 @@ public class TestDeleteColumnFamilyProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf1);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(), 
+      UTIL.getHBaseCluster().getMaster(), tableName, cf1);
 
     // Test 2: delete the column family that exists offline
     UTIL.getHBaseAdmin().disableTable(tableName);
@@ -128,8 +129,9 @@ public class TestDeleteColumnFamilyProcedure {
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf2);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(), tableName, cf2);
 
     // delete the column family that does not exist
     long procId2 =
@@ -204,8 +206,9 @@ public class TestDeleteColumnFamilyProcedure {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
       DeleteColumnFamilyState.values());
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf4);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(), tableName, cf4);
   }
 
   @Test(timeout = 60000)
@@ -230,8 +233,9 @@ public class TestDeleteColumnFamilyProcedure {
     MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps,
       DeleteColumnFamilyState.values());
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf5);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(), tableName, cf5);
   }
 
   @Test(timeout = 60000)
@@ -262,6 +266,7 @@ public class TestDeleteColumnFamilyProcedure {
       DeleteColumnFamilyState.values());
 
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2", "f3", cf5);
   }
 
@@ -293,6 +298,7 @@ public class TestDeleteColumnFamilyProcedure {
       DeleteColumnFamilyState.values());
 
     MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, cf5);
   }
 

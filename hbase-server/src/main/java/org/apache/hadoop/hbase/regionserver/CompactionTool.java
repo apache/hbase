@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -131,7 +132,8 @@ public class CompactionTool extends Configured implements Tool {
     private void compactTable(final Path tableDir, final boolean compactOnce, final boolean major)
         throws IOException {
       TableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir);
-      for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
+      // TODO: TableFileSystem??
+      for (Path regionDir: FsLayout.getRegionDirPaths(fs, tableDir)) {
         compactRegion(tableDir, htd.getHTableDescriptor(), regionDir, compactOnce, major);
       }
     }
@@ -312,7 +314,7 @@ public class CompactionTool extends Configured implements Tool {
           }
         } else if (isTableDir(fs, compactDir)) {
           // Lookup regions
-          for (Path regionDir: FSUtils.getRegionDirs(fs, compactDir)) {
+          for (Path regionDir: FsLayout.getRegionDirPaths(fs, compactDir)) {
             for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
               storeDirs.add(familyDir);
             }

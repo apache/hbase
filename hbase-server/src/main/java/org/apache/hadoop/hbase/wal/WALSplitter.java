@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.coordination.BaseCoordinatedStateManager;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.master.SplitLogManager;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -512,21 +513,19 @@ public class WALSplitter {
    * @return Path to file into which to dump split log edits.
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   static Path getRegionSplitEditsPath(final FileSystem fs,
       final Entry logEntry, final Path rootDir, boolean isCreate)
   throws IOException {
     Path tableDir = FSUtils.getTableDir(rootDir, logEntry.getKey().getTablename());
     String encodedRegionName = Bytes.toString(logEntry.getKey().getEncodedRegionName());
-    Path regiondir = HRegion.getRegionDir(tableDir, encodedRegionName);
-    Path dir = getRegionDirRecoveredEditsDir(regiondir);
-
+    Path regiondir = FsLayout.getRegionDir(tableDir, encodedRegionName);
     if (!fs.exists(regiondir)) {
-      LOG.info("This region's directory doesn't exist: "
-          + regiondir.toString() + ". It is very likely that it was" +
-          " already split so it's safe to discard those edits.");
-      return null;
+      LOG.info("This region's directory doesn't exist."
+          + " It is very likely that it was"
+          + " already split so it's safe to discard those edits.");
+      return null;  
     }
+    Path dir = getRegionDirRecoveredEditsDir(regiondir);
     if (fs.exists(dir) && fs.isFile(dir)) {
       Path tmp = new Path("/tmp");
       if (!fs.exists(tmp)) {

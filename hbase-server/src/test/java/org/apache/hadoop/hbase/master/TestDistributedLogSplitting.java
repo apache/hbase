@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
@@ -71,7 +72,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.NonceGenerator;
 import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
@@ -88,7 +88,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.master.SplitLogManager.TaskBatch;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoResponse.CompactionState;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
@@ -120,7 +120,7 @@ import org.junit.experimental.categories.Category;
 @Category({MasterTests.class, LargeTests.class})
 @SuppressWarnings("deprecation")
 public class TestDistributedLogSplitting {
-  private static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
+  static final Log LOG = LogFactory.getLog(TestSplitLogManager.class);
   static {
     // Uncomment the following line if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
@@ -224,7 +224,6 @@ public class TestDistributedLogSplitting {
 
     installTable(new ZooKeeperWatcher(conf, "table-creation", null),
         "table", "family", 40);
-    TableName table = TableName.valueOf("table");
     List<HRegionInfo> regions = null;
     HRegionServer hrs = null;
     for (int i = 0; i < NUM_RS; i++) {
@@ -258,10 +257,10 @@ public class TestDistributedLogSplitting {
 
     int count = 0;
     for (HRegionInfo hri : regions) {
-
-      Path tdir = FSUtils.getTableDir(rootdir, table);
-      Path editsdir =
-        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+      Path tableDir = FSUtils.getTableDir(rootdir, hri.getTable());
+      HRegionFileSystem hrfs = HRegionFileSystem.create(
+        conf, fs, tableDir, hri);
+      Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(hrfs.getRegionDir());
       LOG.debug("checking edits dir " + editsdir);
       FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
         @Override
@@ -849,10 +848,11 @@ public class TestDistributedLogSplitting {
     int count = 0;
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
     Path rootdir = FSUtils.getRootDir(conf);
-    Path tdir = FSUtils.getTableDir(rootdir, TableName.valueOf("disableTable"));
     for (HRegionInfo hri : regions) {
-      Path editsdir =
-        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+      Path tableDir = FSUtils.getTableDir(rootdir, hri.getTable());
+      HRegionFileSystem hrfs = HRegionFileSystem.create(
+        conf, fs, tableDir, hri);
+      Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(hrfs.getRegionDir());
       LOG.debug("checking edits dir " + editsdir);
       if(!fs.exists(editsdir)) continue;
       FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
@@ -880,8 +880,10 @@ public class TestDistributedLogSplitting {
 
     // clean up
     for (HRegionInfo hri : regions) {
-      Path editsdir =
-        WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir, hri.getEncodedName()));
+      Path tableDir = FSUtils.getTableDir(rootdir, hri.getTable());
+      HRegionFileSystem hrfs = HRegionFileSystem.create(
+        conf, fs, tableDir, hri);
+      Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(hrfs.getRegionDir());      
       fs.delete(editsdir, true);
     }
     disablingHT.close();
@@ -1403,14 +1405,19 @@ public class TestDistributedLogSplitting {
     final ZooKeeperWatcher zkw = new ZooKeeperWatcher(conf, "table-creation", null);
     Table ht = installTable(zkw, "table", "family", 10);
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
-    List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
-    long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 1L, 1000L);
-    WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0) , 1L, 1000L);
-    assertEquals(newSeqId + 2000,
-      WALSplitter.writeRegionSequenceIdFile(fs, regionDirs.get(0), 3L, 1000L));
     
-    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regionDirs.get(0));
+    Path tableDir = FSUtils.getTableDir(FSUtils.getRootDir(conf), TableName.valueOf("table"));
+    
+    List<HRegionInfo> tableRegions = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), TableName.valueOf("table"));
+    HRegionInfo hri = tableRegions.get(0);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+    
+    long newSeqId = WALSplitter.writeRegionSequenceIdFile(fs, hrfs.getRegionDir(), 1L, 1000L);
+    WALSplitter.writeRegionSequenceIdFile(fs, hrfs.getRegionDir(), 1L, 1000L);
+    assertEquals(newSeqId + 2000,
+      WALSplitter.writeRegionSequenceIdFile(fs, hrfs.getRegionDir(), 3L, 1000L));
+    
+    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(hrfs.getRegionDir());
     FileStatus[] files = FSUtils.listStatus(fs, editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {
@@ -1421,7 +1428,7 @@ public class TestDistributedLogSplitting {
     assertEquals(1, files.length);
     
     // verify all seqId files aren't treated as recovered.edits files
-    NavigableSet<Path> recoveredEdits = WALSplitter.getSplitEditFilesSorted(fs, regionDirs.get(0));
+    NavigableSet<Path> recoveredEdits = WALSplitter.getSplitEditFilesSorted(fs, hrfs.getRegionDir());
     assertEquals(0, recoveredEdits.size());
     
     ht.close();
@@ -1437,7 +1444,8 @@ public class TestDistributedLogSplitting {
     TableName table = TableName.valueOf(tname);
     byte [] family = Bytes.toBytes(fname);
     LOG.info("Creating table with " + nrs + " regions");
-    Table ht = TEST_UTIL.createMultiRegionTable(table, family, nrs);
+    HTableDescriptor desc = new HTableDescriptor(table);
+    Table ht = TEST_UTIL.createMultiRegionTable(desc, family, nrs);
     int numRegions = -1;
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(table)) {
       numRegions = r.getStartKeys().length;
@@ -1467,7 +1475,7 @@ public class TestDistributedLogSplitting {
     assertEquals(numRegions + 2 + existingRegions, regions.size());
     return ht;
   }
-
+  
   void populateDataInTable(int nrows, String fname) throws Exception {
     byte [] family = Bytes.toBytes(fname);
 
@@ -1614,7 +1622,7 @@ public class TestDistributedLogSplitting {
     return count;
   }
 
-  private void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master) throws Exception {
+  void blockUntilNoRIT(ZooKeeperWatcher zkw, HMaster master) throws Exception {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
   }
 

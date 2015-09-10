@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.SampleRegionWALObserver;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -68,6 +69,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.SequenceFileLogReader;
@@ -176,8 +178,9 @@ public class TestWALFactory {
     for(int i = 0; i < howmany; i++) {
       infos[i] = new HRegionInfo(tableName,
                 Bytes.toBytes("" + i), Bytes.toBytes("" + (i+1)), false);
-      fs.mkdirs(new Path(tabledir, infos[i].getEncodedName()));
-      LOG.info("allo " + new Path(tabledir, infos[i].getEncodedName()).toString());
+      HRegionFileSystem hrfs = HRegionFileSystem.createRegionOnFileSystem(
+        conf, fs, tabledir, infos[i]);
+      LOG.info("allo " + hrfs.getRegionDir());
     }
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addFamily(new HColumnDescriptor("column"));

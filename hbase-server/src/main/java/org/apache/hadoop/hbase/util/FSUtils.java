@@ -64,13 +64,14 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.FSProtos;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSHedgedReadMetrics;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -258,21 +259,6 @@ public abstract class FSUtils {
   public static boolean deleteDirectory(final FileSystem fs, final Path dir)
   throws IOException {
     return fs.exists(dir) && fs.delete(dir, true);
-  }
-
-  /**
-   * Delete the region directory if exists.
-   * @param conf
-   * @param hri
-   * @return True if deleted the region directory.
-   * @throws IOException
-   */
-  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
-  throws IOException {
-    Path rootDir = getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
-    return deleteDirectory(fs,
-      new Path(getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
   }
 
   /**
@@ -660,7 +646,8 @@ public abstract class FSUtils {
   throws IOException, DeserializationException {
     String version = getVersion(fs, rootdir);
     if (version == null) {
-      if (!metaRegionExists(fs, rootdir)) {
+      // TODO: Doesn't feel like a utility should have a dependency like this
+      if (!MasterFileSystem.metaRegionExists(fs, rootdir)) {
         // rootDir is empty (no version file and no root region)
         // just create new version file (HBASE-1195)
         setVersion(fs, rootdir, wait, retries);
@@ -1017,22 +1004,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Checks if meta region exists
-   *
-   * @param fs file system
-   * @param rootdir root directory of HBase installation
-   * @return true if exists
-   * @throws IOException e
-   */
-  @SuppressWarnings("deprecation")
-  public static boolean metaRegionExists(FileSystem fs, Path rootdir)
-  throws IOException {
-    Path metaRegionDir =
-      HRegion.getRegionDir(rootdir, HRegionInfo.FIRST_META_REGIONINFO);
-    return fs.exists(metaRegionDir);
-  }
-
-  /**
    * Compute HDFS blocks distribution of a given file, or a portion of the file
    * @param fs file system
    * @param status file status of the file
@@ -1070,10 +1041,10 @@ public abstract class FSUtils {
       final Path hbaseRootDir)
   throws IOException {
     List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
-    PathFilter regionFilter = new RegionDirFilter(fs);
+    RegionDirFilter regionFilter = new RegionDirFilter(fs);
     PathFilter familyFilter = new FamilyDirFilter(fs);
-    for (Path d : tableDirs) {
-      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
+    for (Path tableDir : tableDirs) {
+      List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir, regionFilter);
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
         // Else its a region name.  Now look in region for families.
@@ -1143,13 +1114,13 @@ public abstract class FSUtils {
     Map<String, Integer> frags = new HashMap<String, Integer>();
     int cfCountTotal = 0;
     int cfFragTotal = 0;
-    PathFilter regionFilter = new RegionDirFilter(fs);
+    RegionDirFilter regionFilter = new RegionDirFilter(fs);
     PathFilter familyFilter = new FamilyDirFilter(fs);
     List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
-    for (Path d : tableDirs) {
+    for (Path tableDir : tableDirs) {
       int cfCount = 0;
       int cfFrag = 0;
-      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
+      List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir, regionFilter);
       for (FileStatus regionDir : regionDirs) {
         Path dd = regionDir.getPath();
         // else its a region name, now look in region for families
@@ -1167,7 +1138,7 @@ public abstract class FSUtils {
         }
       }
       // compute percentage per table and store in result list
-      frags.put(FSUtils.getTableName(d).getNameAsString(),
+      frags.put(FSUtils.getTableName(tableDir).getNameAsString(),
         cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
@@ -1433,25 +1404,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Given a particular table dir, return all the regiondirs inside it, excluding files such as
-   * .tableinfo
-   * @param fs A file system for the Path
-   * @param tableDir Path to a specific table directory &lt;hbase.rootdir&gt;/&lt;tabledir&gt;
-   * @return List of paths to valid region directories in table dir.
-   * @throws IOException
-   */
-  public static List<Path> getRegionDirs(final FileSystem fs, final Path tableDir) throws IOException {
-    // assumes we are in a table dir.
-    FileStatus[] rds = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    List<Path> regionDirs = new ArrayList<Path>(rds.length);
-    for (FileStatus rdfs: rds) {
-      Path rdPath = rdfs.getPath();
-      regionDirs.add(rdPath);
-    }
-    return regionDirs;
-  }
-
-  /**
    * Filter for all dirs that are legal column family names.  This is generally used for colfam
    * dirs &lt;hbase.rootdir&gt;/&lt;tabledir&gt;/&lt;regiondir&gt;/&lt;colfamdir&gt;.
    */
@@ -1616,12 +1568,11 @@ public abstract class FSUtils {
     // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
     // should be regions.
     PathFilter familyFilter = new FamilyDirFilter(fs);
-    FileStatus[] regionDirs = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    for (FileStatus regionDir : regionDirs) {
+    List<Path> regionDirs = FsLayout.getRegionDirPaths(fs, tableDir);
+    for (Path dd : regionDirs) {
       if (null != errors) {
         errors.progress();
       }
-      Path dd = regionDir.getPath();
       // else its a region name, now look in region for families
       FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
       for (FileStatus familyDir : familyDirs) {

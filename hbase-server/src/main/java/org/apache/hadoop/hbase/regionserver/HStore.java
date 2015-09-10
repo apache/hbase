@@ -62,6 +62,7 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -475,7 +476,8 @@ public class HStore implements Store {
   @Deprecated
   public static Path getStoreHomedir(final Path tabledir,
       final String encodedName, final byte[] family) {
-    return new Path(tabledir, new Path(encodedName, Bytes.toString(family)));
+    return new Path(FsLayout.getRegionDir(tabledir, encodedName),
+      Bytes.toString(family));
   }
 
   @Override

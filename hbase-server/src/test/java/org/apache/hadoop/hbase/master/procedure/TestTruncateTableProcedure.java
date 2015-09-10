@@ -164,6 +164,7 @@ public class TestTruncateTableProcedure {
       assertEquals(1, regions.length);
     }
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
 
     // verify that there are no rows in the table
@@ -229,6 +230,7 @@ public class TestTruncateTableProcedure {
       assertEquals(1, regions.length);
     }
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
 
     // verify that there are no rows in the table

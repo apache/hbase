@@ -46,7 +46,6 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Regio
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
@@ -359,35 +358,35 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     transition(SplitTransactionPhase.STARTED_REGION_A_CREATION);
 
-    assertReferenceFileCount(expectedReferences.getFirst(),
-        this.parent.getRegionFileSystem().getSplitsDir(this.hri_a));
+    assertReferenceFileCountOfSplitsDir(expectedReferences.getFirst(), this.hri_a);
     HRegion a = this.parent.createDaughterRegionFromSplits(this.hri_a);
-    assertReferenceFileCount(expectedReferences.getFirst(),
-        new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_a.getEncodedName()));
+    assertReferenceFileCountOfDaughterDir(expectedReferences.getFirst(), this.hri_a);
 
     // Ditto
 
     transition(SplitTransactionPhase.STARTED_REGION_B_CREATION);
 
-    assertReferenceFileCount(expectedReferences.getSecond(),
-        this.parent.getRegionFileSystem().getSplitsDir(this.hri_b));
+    assertReferenceFileCountOfSplitsDir(expectedReferences.getSecond(), this.hri_b);
     HRegion b = this.parent.createDaughterRegionFromSplits(this.hri_b);
-    assertReferenceFileCount(expectedReferences.getSecond(),
-        new Path(this.parent.getRegionFileSystem().getTableDir(), this.hri_b.getEncodedName()));
+    assertReferenceFileCountOfDaughterDir(expectedReferences.getSecond(), this.hri_b);
 
     return new PairOfSameType<Region>(a, b);
   }
-
+  
   @VisibleForTesting
-  void assertReferenceFileCount(int expectedReferenceFileCount, Path dir)
+  void assertReferenceFileCountOfSplitsDir(int expectedReferenceFileCount, HRegionInfo daughter)
       throws IOException {
-    if (expectedReferenceFileCount != 0 &&
-        expectedReferenceFileCount != FSUtils.getRegionReferenceFileCount(parent.getFilesystem(),
-          dir)) {
-      throw new IOException("Failing split. Expected reference file count isn't equal.");
-    }
+    this.parent.getRegionFileSystem().assertReferenceFileCountOfSplitsDir(
+      expectedReferenceFileCount, daughter);
   }
 
+  @VisibleForTesting
+  void assertReferenceFileCountOfDaughterDir(int expectedReferenceFileCount, HRegionInfo daughter)
+      throws IOException {
+    this.parent.getRegionFileSystem().assertReferenceFileCountOfDaughterDir(
+      expectedReferenceFileCount, daughter);
+  }
+  
   /**
    * Perform time consuming opening of the daughter regions.
    * @param server Hosting server instance.  Can be null when testing

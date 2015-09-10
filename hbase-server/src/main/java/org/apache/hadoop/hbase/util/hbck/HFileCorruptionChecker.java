@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -217,8 +218,9 @@ public class HFileCorruptionChecker {
    * @throws IOException
    */
   void checkTableDir(Path tableDir) throws IOException {
-    FileStatus[] rds = fs.listStatus(tableDir, new RegionDirFilter(fs));
-    if (rds.length == 0 && !fs.exists(tableDir)) {
+    // TODO: Maybe a TableFileSystem??
+    List<Path> rds = FsLayout.getRegionDirPaths(fs, tableDir);
+    if (rds.size() == 0 && !fs.exists(tableDir)) {
       // interestingly listStatus does not throw an exception if the path does not exist.
       LOG.warn("Table Directory " + tableDir +
           " does not exist.  Likely due to concurrent delete. Skipping.");
@@ -230,8 +232,7 @@ public class HFileCorruptionChecker {
     List<RegionDirChecker> rdcs = new ArrayList<RegionDirChecker>();
     List<Future<Void>> rdFutures;
 
-    for (FileStatus rdFs : rds) {
-      Path rdDir = rdFs.getPath();
+    for (Path rdDir : rds) {
       RegionDirChecker work = new RegionDirChecker(rdDir);
       rdcs.add(work);
     }

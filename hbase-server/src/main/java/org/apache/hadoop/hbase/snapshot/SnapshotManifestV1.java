@@ -31,6 +31,7 @@ import java.util.concurrent.ExecutorCompletionService;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -114,7 +115,7 @@ public class SnapshotManifestV1 {
   static List<SnapshotRegionManifest> loadRegionManifests(final Configuration conf,
       final Executor executor,final FileSystem fs, final Path snapshotDir,
       final SnapshotDescription desc) throws IOException {
-    FileStatus[] regions = FSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
+    List<FileStatus> regions = FsLayout.getRegionDirFileStats(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
     if (regions == null) {
       LOG.info("No regions under directory:" + snapshotDir);
       return null;
@@ -133,9 +134,9 @@ public class SnapshotManifestV1 {
     }
 
     ArrayList<SnapshotRegionManifest> regionsManifest =
-        new ArrayList<SnapshotRegionManifest>(regions.length);
+        new ArrayList<SnapshotRegionManifest>(regions.size());
     try {
-      for (int i = 0; i < regions.length; ++i) {
+      for (int i = 0; i < regions.size(); ++i) {
         regionsManifest.add(completionService.take().get());
       }
     } catch (InterruptedException e) {

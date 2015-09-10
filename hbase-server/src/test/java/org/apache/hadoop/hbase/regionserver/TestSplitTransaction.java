@@ -22,10 +22,11 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
+import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -71,17 +72,17 @@ import com.google.common.collect.ImmutableList;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestSplitTransaction {
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Path testdir =
     TEST_UTIL.getDataTestDir(this.getClass().getName());
   private HRegion parent;
   private WALFactory wals;
   private FileSystem fs;
-  private static final byte [] STARTROW = new byte [] {'a', 'a', 'a'};
+  static final byte [] STARTROW = new byte [] {'a', 'a', 'a'};
   // '{' is next ascii after 'z'.
-  private static final byte [] ENDROW = new byte [] {'{', '{', '{'};
+  static final byte [] ENDROW = new byte [] {'{', '{', '{'};
   private static final byte [] GOOD_SPLIT_ROW = new byte [] {'d', 'd', 'd'};
-  private static final byte [] CF = HConstants.CATALOG_FAMILY;
+  static final byte [] CF = HConstants.CATALOG_FAMILY;
   
   private static boolean preRollBackCalled = false;
   private static boolean postRollBackCalled = false;
@@ -145,9 +146,8 @@ public class TestSplitTransaction {
     // Make sure that region a and region b are still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-    Path tableDir =  this.parent.getRegionFileSystem().getTableDir();
-    Path daughterADir = new Path(tableDir, spiedUponSt.getFirstDaughter().getEncodedName());
-    Path daughterBDir = new Path(tableDir, spiedUponSt.getSecondDaughter().getEncodedName());
+    Path daughterADir = this.parent.getRegionFileSystem().getDaughterRegionDir(spiedUponSt.getFirstDaughter());
+    Path daughterBDir = this.parent.getRegionFileSystem().getDaughterRegionDir(spiedUponSt.getSecondDaughter());
     assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterADir));
     assertTrue(TEST_UTIL.getTestFileSystem().exists(daughterBDir));
   }
@@ -269,9 +269,8 @@ public class TestSplitTransaction {
     SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
     SplitTransactionImpl spiedUponSt = spy(st);
     doThrow(new IOException("Failing split. Expected reference file count isn't equal."))
-        .when(spiedUponSt).assertReferenceFileCount(anyInt(),
-        eq(new Path(this.parent.getRegionFileSystem().getTableDir(),
-            st.getSecondDaughter().getEncodedName())));
+        .when(spiedUponSt).assertReferenceFileCountOfDaughterDir(anyInt(),
+          eq(st.getSecondDaughter()));
 
     // Run the execute.  Look at what it returns.
     boolean expectedException = false;
@@ -296,8 +295,8 @@ public class TestSplitTransaction {
     HRegion spiedRegion = spy(this.parent);
     SplitTransactionImpl st = prepareGOOD_SPLIT_ROW(spiedRegion);
     SplitTransactionImpl spiedUponSt = spy(st);
-    doNothing().when(spiedUponSt).assertReferenceFileCount(anyInt(),
-        eq(parent.getRegionFileSystem().getSplitsDir(st.getFirstDaughter())));
+    doNothing().when(spiedUponSt).assertReferenceFileCountOfSplitsDir(anyInt(),
+        eq(st.getFirstDaughter()));
     when(spiedRegion.createDaughterRegionFromSplits(spiedUponSt.getSecondDaughter())).
         thenThrow(new MockedFailedDaughterCreation());
     // Run the execute.  Look at what it returns.
@@ -318,8 +317,8 @@ public class TestSplitTransaction {
     assertEquals(parentRowCount, parentRowCount2);
 
     // Assert rollback cleaned up stuff in fs
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getFirstDaughter())));
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir, st.getSecondDaughter())));
+    assertTrue(!this.fs.exists(spiedRegion.getRegionFileSystem().getDaughterRegionDir(st.getFirstDaughter())));
+    assertTrue(!this.fs.exists(spiedRegion.getRegionFileSystem().getDaughterRegionDir(st.getSecondDaughter())));
     assertTrue(!this.parent.lock.writeLock().isHeldByCurrentThread());
 
     // Now retry the split but do not throw an exception this time.

@@ -61,8 +61,10 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -581,7 +583,10 @@ public class TestAssignmentManagerOnCluster {
 
       FileSystem fs = FileSystem.get(conf);
       Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
-      Path regionDir = new Path(tableDir, hri.getEncodedName());
+      
+      HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+      Path regionDir = hrfs.getRegionDir();
+      
       // create a file named the same as the region dir to
       // mess up with region opening
       fs.create(regionDir, true);

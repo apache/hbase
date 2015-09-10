@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -399,7 +400,7 @@ public class RestoreSnapshotHelper {
     Map<String, List<SnapshotRegionManifest.StoreFile>> snapshotFiles =
                 getRegionHFileReferences(regionManifest);
 
-    Path regionDir = new Path(tableDir, regionInfo.getEncodedName());
+    Path regionDir = FsLayout.getRegionDir(tableDir, regionInfo);
     String tableName = tableDesc.getTableName().getNameAsString();
 
     // Restore families present in the table
@@ -531,7 +532,7 @@ public class RestoreSnapshotHelper {
    */
   private void cloneRegion(final HRegion region, final HRegionInfo snapshotRegionInfo,
       final SnapshotRegionManifest manifest) throws IOException {
-    final Path regionDir = new Path(tableDir, region.getRegionInfo().getEncodedName());
+    final Path regionDir = FsLayout.getRegionDir(tableDir, region.getRegionInfo());
     final String tableName = tableDesc.getTableName().getNameAsString();
     for (SnapshotRegionManifest.FamilyFiles familyFiles: manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
@@ -588,12 +589,12 @@ public class RestoreSnapshotHelper {
       final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
     String hfileName = storeFile.getName();
 
-    // Extract the referred information (hfile name and parent region)
-    Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(new Path(
-        snapshotTable.getNameAsString(), regionInfo.getEncodedName()), familyDir.getName()),
-        hfileName));
-    String snapshotRegionName = refPath.getParent().getParent().getName();
-    String fileName = refPath.getName();
+    Path referenceFile = new Path(new Path(FsLayout.getRegionDir(new Path(
+      snapshotTable.getNameAsString()), regionInfo), familyDir.getName()), hfileName);
+    Path referredToFile = StoreFileInfo.getReferredToFile(referenceFile);
+    
+    String snapshotRegionName = referredToFile.getParent().getParent().getName();
+    String fileName = referredToFile.getName();
 
     // The new reference should have the cloned region name as parent, if it is a clone.
     String clonedRegionName = Bytes.toString(regionsMap.get(Bytes.toBytes(snapshotRegionName)));
@@ -619,8 +620,7 @@ public class RestoreSnapshotHelper {
       if (linkPath != null) {
         in = HFileLink.buildFromHFileLinkPattern(conf, linkPath).open(fs);
       } else {
-        linkPath = new Path(new Path(HRegion.getRegionDir(snapshotManifest.getSnapshotDir(),
-                        regionInfo.getEncodedName()), familyDir.getName()), hfileName);
+        linkPath = FsLayout.makeHFileLinkPath(snapshotManifest, regionInfo, familyDir.getName(), hfileName);
         in = fs.open(linkPath);
       }
       OutputStream out = fs.create(outPath);
@@ -651,8 +651,9 @@ public class RestoreSnapshotHelper {
    */
   public HRegionInfo cloneRegionInfo(final HRegionInfo snapshotRegionInfo) {
     HRegionInfo regionInfo = new HRegionInfo(tableDesc.getTableName(),
-                      snapshotRegionInfo.getStartKey(), snapshotRegionInfo.getEndKey(),
-                      snapshotRegionInfo.isSplit(), snapshotRegionInfo.getRegionId());
+        snapshotRegionInfo.getStartKey(),
+        snapshotRegionInfo.getEndKey(), snapshotRegionInfo.isSplit(),
+        snapshotRegionInfo.getRegionId());
     regionInfo.setOffline(snapshotRegionInfo.isOffline());
     return regionInfo;
   }
@@ -662,7 +663,7 @@ public class RestoreSnapshotHelper {
    */
   private List<HRegionInfo> getTableRegions() throws IOException {
     LOG.debug("get table regions: " + tableDir);
-    FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
+    List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regionDirs == null) return null;
 
     List<HRegionInfo> regions = new LinkedList<HRegionInfo>();

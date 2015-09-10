@@ -62,6 +62,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultimap;
 import com.google.protobuf.ServiceException;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
@@ -109,6 +110,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -754,13 +756,14 @@ public class HBaseFsck extends Configured implements Closeable {
       final RegionBoundariesInformation currentRegionBoundariesInformation =
           new RegionBoundariesInformation();
       Path hbaseRoot = FSUtils.getRootDir(getConf());
+      FileSystem fs = hbaseRoot.getFileSystem(getConf());
       for (HRegionInfo regionInfo : regions) {
         Path tableDir = FSUtils.getTableDir(hbaseRoot, regionInfo.getTable());
         currentRegionBoundariesInformation.regionName = regionInfo.getRegionName();
         // For each region, get the start and stop key from the META and compare them to the
         // same information from the Stores.
-        Path path = new Path(tableDir, regionInfo.getEncodedName());
-        FileSystem fs = path.getFileSystem(getConf());
+        HRegionFileSystem hrfs = HRegionFileSystem.create(getConf(), fs, tableDir, regionInfo);
+        Path path = hrfs.getRegionDir();
         FileStatus[] files = fs.listStatus(path);
         // For all the column families in this region...
         byte[] storeFirstKey = null;
@@ -2276,8 +2279,8 @@ public class HBaseFsck extends Configured implements Closeable {
                   LOG.warn(hri + " start and stop keys are in the range of " + region
                       + ". The region might not be cleaned up from hdfs when region " + region
                       + " split failed. Hence deleting from hdfs.");
-                  HRegionFileSystem.deleteRegionFromFileSystem(getConf(), fs,
-                    regionDir.getParent(), hri);
+                  HRegionFileSystem.deleteAndArchiveRegionFromFileSystem(getConf(), fs,
+                    FsLayout.getTableDirFromRegionDir(regionDir), hri);
                   return;
                 }
               }
@@ -2804,8 +2807,8 @@ public class HBaseFsck extends Configured implements Closeable {
                 + "region and regioninfo in HDFS to plug the hole.", getTableInfo());
         HTableDescriptor htd = getTableInfo().getHTD();
         // from curEndKey to EMPTY_START_ROW
-        HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), curEndKey,
-            HConstants.EMPTY_START_ROW);
+        HRegionInfo newRegion = new HRegionInfo(htd.getTableName(),
+            curEndKey, HConstants.EMPTY_START_ROW);
 
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
         LOG.info("Table region end key was not empty.  Created new empty region: " + newRegion
@@ -2915,8 +2918,8 @@ public class HBaseFsck extends Configured implements Closeable {
         // create new empty container region.
         HTableDescriptor htd = getTableInfo().getHTD();
         // from start key to end Key
-        HRegionInfo newRegion = new HRegionInfo(htd.getTableName(), range.getFirst(),
-            range.getSecond());
+        HRegionInfo newRegion = new HRegionInfo(htd.getTableName(),
+            range.getFirst(), range.getSecond());
         HRegion region = HBaseFsckRepair.createHDFSRegionDir(conf, newRegion, htd);
         LOG.info("[" + thread + "] Created new empty container region: " +
             newRegion + " to contain regions: " + Joiner.on(",").join(overlap));
@@ -3601,7 +3604,7 @@ public class HBaseFsck extends Configured implements Closeable {
       } else if (this.hdfsEntry != null) {
         // we are only guaranteed to have a path and not an HRI for hdfsEntry,
         // so we get the name from the Path
-        Path tableDir = this.hdfsEntry.hdfsRegionDir.getParent();
+        Path tableDir = FsLayout.getTableDirFromRegionDir(this.hdfsEntry.hdfsRegionDir);
         return FSUtils.getTableName(tableDir);
       } else {
         // return the info from the first online/deployed hri
@@ -4038,7 +4041,11 @@ public class HBaseFsck extends Configured implements Closeable {
     public synchronized Void call() throws IOException {
       try {
         // level 2: <HBASE_DIR>/<table>/*
-        FileStatus[] regionDirs = fs.listStatus(tableDir.getPath());
+        List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir.getPath(), 
+          new FSUtils.RegionDirFilter(fs));
+        if (regionDirs == null) {
+          return null;
+        }
         for (FileStatus regionDir : regionDirs) {
           errors.progress();
           String encodedName = regionDir.getPath().getName();

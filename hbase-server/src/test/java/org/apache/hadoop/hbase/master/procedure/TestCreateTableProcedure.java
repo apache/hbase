@@ -113,6 +113,7 @@ public class TestCreateTableProcedure {
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
   }
 
@@ -161,6 +162,7 @@ public class TestCreateTableProcedure {
       procExec, procId, 6, CreateTableState.values());
 
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
   }
 

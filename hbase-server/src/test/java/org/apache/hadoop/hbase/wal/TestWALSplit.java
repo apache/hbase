@@ -62,9 +62,9 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter.CorruptedLogFileException;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -92,6 +93,13 @@ import org.mockito.stubbing.Answer;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
+
+
+
+
+
+
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 // imports for things that haven't moved from regionserver.wal yet.
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.regionserver.wal.InstrumentedLogWriter;
@@ -396,15 +404,14 @@ public class TestWALSplit {
   public void testOldRecoveredEditsFileSidelined() throws IOException {
     byte [] encoded = HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes();
     Path tdir = FSUtils.getTableDir(HBASEDIR, TableName.META_TABLE_NAME);
-    Path regiondir = new Path(tdir,
-        HRegionInfo.FIRST_META_REGIONINFO.getEncodedName());
-    fs.mkdirs(regiondir);
+    HRegionFileSystem metaHrfs = HRegionFileSystem.createRegionOnFileSystem(
+      conf, fs, tdir, HRegionInfo.FIRST_META_REGIONINFO);
     long now = System.currentTimeMillis();
     Entry entry =
         new Entry(new WALKey(encoded,
             TableName.META_TABLE_NAME, 1, now, HConstants.DEFAULT_CLUSTER_ID),
       new WALEdit());
-    Path parent = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
+    Path parent = WALSplitter.getRegionDirRecoveredEditsDir(metaHrfs.getRegionDir());
     assertEquals(parent.getName(), HConstants.RECOVERED_EDITS_DIR);
     fs.createNewFile(parent); // create a recovered.edits file
 
@@ -688,7 +695,9 @@ public class TestWALSplit {
     useDifferentDFSClient();
 
     String region = "break";
-    Path regiondir = new Path(TABLEDIR, region);
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(TABLE_NAME, region);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, TABLEDIR, hri);
+    Path regiondir = hrfs.getRegionDir();
     fs.mkdirs(regiondir);
 
     InstrumentedLogWriter.activateFailure = false;
@@ -711,13 +720,15 @@ public class TestWALSplit {
   @Test (timeout=300000)
   public void testSplitDeletedRegion() throws IOException {
     REGIONS.clear();
-    String region = "region_that_splits";
+    String region = "d9ffc3a5cd016-region_that_splits";
     REGIONS.add(region);
 
     generateWALs(1);
     useDifferentDFSClient();
 
-    Path regiondir = new Path(TABLEDIR, region);
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(TABLE_NAME, region);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, TABLEDIR, hri);
+    Path regiondir = hrfs.getRegionDir();
     fs.delete(regiondir, true);
     WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
     assertFalse(fs.exists(regiondir));
@@ -1008,14 +1019,16 @@ public class TestWALSplit {
   @Test (timeout=300000)
   public void testSplitLogFileDeletedRegionDir() throws IOException {
     LOG.info("testSplitLogFileDeletedRegionDir");
-    final String REGION = "region__1";
+    final String REGION = "testSplitLogFileDeletedRegionDir";
     REGIONS.clear();
     REGIONS.add(REGION);
 
     generateWALs(1, 10, -1);
     useDifferentDFSClient();
 
-    Path regiondir = new Path(TABLEDIR, REGION);
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(TABLE_NAME, REGION);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, TABLEDIR, hri);
+    Path regiondir = hrfs.getRegionDir();
     LOG.info("Region directory is" + regiondir);
     fs.delete(regiondir, true);
     WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
@@ -1069,7 +1082,9 @@ public class TestWALSplit {
     LOG.info("testConcurrentSplitLogAndReplayRecoverEdit");
     // Generate wals for our destination region
     String regionName = "r0";
-    final Path regiondir = new Path(TABLEDIR, regionName);
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(TABLE_NAME, regionName);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, TABLEDIR, hri);
+    final Path regiondir = hrfs.getRegionDir();
     REGIONS.clear();
     REGIONS.add(regionName);
     generateWALs(-1);
@@ -1123,8 +1138,11 @@ public class TestWALSplit {
 
   private void makeRegionDirs(List<String> regions) throws IOException {
     for (String region : regions) {
+      HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(TABLE_NAME, region);
+      HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, TABLEDIR, hri);
+      Path regiondir = hrfs.getRegionDir();
       LOG.debug("Creating dir for region " + region);
-      fs.mkdirs(new Path(TABLEDIR, region));
+      fs.mkdirs(regiondir);
     }
   }
 
@@ -1161,9 +1179,10 @@ public class TestWALSplit {
   private Path[] getLogForRegion(Path rootdir, TableName table, String region)
   throws IOException {
     Path tdir = FSUtils.getTableDir(rootdir, table);
-    @SuppressWarnings("deprecation")
-    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(HRegion.getRegionDir(tdir,
-      Bytes.toString(region.getBytes())));
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(table, region);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tdir, hri);
+    Path regiondir = hrfs.getRegionDir();
+    Path editsdir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
     FileStatus[] files = fs.listStatus(editsdir, new PathFilter() {
       @Override
       public boolean accept(Path p) {

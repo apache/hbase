@@ -76,6 +76,7 @@ import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -982,8 +983,8 @@ public class TestSplitTransactionOnCluster {
           FSUtils.getTableDir(cluster.getMaster().getMasterFileSystem().getRootDir(),
             desc.getTableName());
       tableDir.getFileSystem(cluster.getConfiguration());
-      List<Path> regionDirs =
-          FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
+      List<Path> regionDirs = cluster.getMaster().getMasterFileSystem()
+          .getRegionDirs(desc.getTableName());
       assertEquals(3,regionDirs.size());
       cluster.startRegionServer();
       regionServer.kill();
@@ -996,8 +997,8 @@ public class TestSplitTransactionOnCluster {
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
       assertEquals(am.getRegionStates().getRegionsInTransition().toString(), 0, am
           .getRegionStates().getRegionsInTransition().size());
-      regionDirs =
-          FSUtils.getRegionDirs(tableDir.getFileSystem(cluster.getConfiguration()), tableDir);
+      regionDirs = cluster.getMaster().getMasterFileSystem()
+          .getRegionDirs(desc.getTableName());
       assertEquals(1,regionDirs.size());
     } finally {
       TESTING_UTIL.deleteTable(table);
@@ -1255,7 +1256,7 @@ public class TestSplitTransactionOnCluster {
     }
   }
 
-  private List<HRegion> awaitTableRegions(final TableName tableName) throws InterruptedException {
+  List<HRegion> awaitTableRegions(final TableName tableName) throws InterruptedException {
     List<HRegion> regions = null;
     for (int i = 0; i < 100; i++) {
       regions = cluster.getRegions(tableName);
@@ -1265,15 +1266,16 @@ public class TestSplitTransactionOnCluster {
     return regions;
   }
 
-  private Table createTableAndWait(TableName tableName, byte[] cf) throws IOException,
+Table createTableAndWait(TableName tableName, byte[] cf) throws IOException,
       InterruptedException {
-    Table t = TESTING_UTIL.createTable(tableName, cf);
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    HTable t = TESTING_UTIL.createTable(desc, new byte[][]{cf}, TESTING_UTIL.getConfiguration());
     awaitTableRegions(tableName);
     assertTrue("Table not online: " + tableName,
       cluster.getRegions(tableName).size() != 0);
     return t;
   }
-
+  
   private static class SplittingNodeCreationFailedException  extends IOException {
     private static final long serialVersionUID = 1652404976265623004L;
 

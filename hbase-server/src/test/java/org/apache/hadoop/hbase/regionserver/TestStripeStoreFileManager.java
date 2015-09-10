@@ -40,7 +40,9 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,7 +57,8 @@ public class TestStripeStoreFileManager {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path BASEDIR =
       TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());
-  private static final Path CFDIR = HStore.getStoreHomedir(BASEDIR, "region", Bytes.toBytes("cf"));
+  private static final HRegionInfo hri = new HRegionInfo(TableName.valueOf("TestStripeStoreFileManager"));
+  private static final Path CFDIR = HStore.getStoreHomedir(BASEDIR, hri, Bytes.toBytes("cf"));
 
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("bbb");

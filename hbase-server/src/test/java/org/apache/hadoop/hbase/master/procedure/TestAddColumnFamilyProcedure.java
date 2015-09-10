@@ -236,8 +236,9 @@ public class TestAddColumnFamilyProcedure {
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps,
       AddColumnFamilyState.values());
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf6);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(
+      UTIL.getConfiguration(), UTIL.getConnection(),
+      UTIL.getHBaseCluster().getMaster(), tableName, cf6);
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -102,7 +103,7 @@ public class TestRecoveredEdits {
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, htd.getTableName());
     HRegionFileSystem hrfs =
-        new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
+        HRegionFileSystem.create(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
     if (fs.exists(hrfs.getRegionDir())) {
       LOG.info("Region directory already exists. Deleting.");
       fs.delete(hrfs.getRegionDir(), true);
@@ -113,7 +114,7 @@ public class TestRecoveredEdits {
     // There should be no store files.
     assertTrue(storeFiles.isEmpty());
     region.close();
-    Path regionDir = region.getRegionDir(hbaseRootDir, hri);
+    Path regionDir = hrfs.getRegionDir();
     Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regionDir);
     // This is a little fragile getting this path to a file of 10M of edits.
     Path recoveredEditsFile = new Path(new Path(

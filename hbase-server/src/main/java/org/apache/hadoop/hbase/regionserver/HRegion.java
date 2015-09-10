@@ -613,7 +613,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
       final Configuration confParam, final HRegionInfo regionInfo,
       final HTableDescriptor htd, final RegionServerServices rsServices) {
-    this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
+    this(HRegionFileSystem.create(confParam, fs, tableDir, regionInfo),
       wal, confParam, htd, rsServices);
   }
 
@@ -1041,7 +1041,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
-    HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
+    HRegionFileSystem regionFs = HRegionFileSystem.create(conf, fs, tablePath, regionInfo);
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
       Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family.getNameAsString());
       if (storeFiles == null) continue;
@@ -6248,35 +6248,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Bytes.toBytes(HConstants.META_VERSION)));
     meta.put(row, HConstants.CATALOG_FAMILY, cells);
   }
-
-  /**
-   * Computes the Path of the HRegion
-   *
-   * @param tabledir qualified path for table
-   * @param name ENCODED region name
-   * @return Path of HRegion directory
-   * @deprecated For tests only; to be removed.
-   */
-  @Deprecated
-  public static Path getRegionDir(final Path tabledir, final String name) {
-    return new Path(tabledir, name);
-  }
-
-  /**
-   * Computes the Path of the HRegion
-   *
-   * @param rootdir qualified path of HBase root directory
-   * @param info HRegionInfo for the region
-   * @return qualified path of region directory
-   * @deprecated For tests only; to be removed.
-   */
-  @Deprecated
-  @VisibleForTesting
-  public static Path getRegionDir(final Path rootdir, final HRegionInfo info) {
-    return new Path(
-      FSUtils.getTableDir(rootdir, info.getTable()), info.getEncodedName());
-  }
-
+  
   /**
    * Determines if the specified row is within the row range specified by the
    * specified HRegionInfo

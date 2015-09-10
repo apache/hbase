@@ -174,6 +174,7 @@ public class TestMasterFailoverWithProcedures {
     testRecoveryAndDoubleExecution(UTIL, procId, step, CreateTableState.values());
 
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
   }
 
@@ -199,6 +200,7 @@ public class TestMasterFailoverWithProcedures {
       getMasterProcedureExecutor(), tableName, splitKeys, "f1", "f2");
     Path tableDir = FSUtils.getTableDir(getRootDir(), tableName);
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
     UTIL.getHBaseAdmin().disableTable(tableName);
 
@@ -265,6 +267,7 @@ public class TestMasterFailoverWithProcedures {
       assertEquals(1, regions.length);
     }
     MasterProcedureTestingUtility.validateTableCreation(
+      UTIL.getConfiguration(), UTIL.getConnection(),
       UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
 
     // verify that there are no rows in the table

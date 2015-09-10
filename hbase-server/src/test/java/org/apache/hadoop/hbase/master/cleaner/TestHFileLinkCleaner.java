@@ -35,9 +35,12 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -71,20 +74,18 @@ public class TestHFileLinkCleaner {
     HRegionInfo hriLink = new HRegionInfo(tableLinkName);
 
     Path archiveDir = HFileArchiveUtil.getArchivePath(conf);
-    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableName, hri.getEncodedName(), familyName);
-    Path archiveLinkStoreDir = HFileArchiveUtil.getStoreArchivePath(conf,
-          tableLinkName, hriLink.getEncodedName(), familyName);
+    Path tableDir = FSUtils.getTableDir(rootDir, tableName);
+    Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(conf, hri, tableDir, Bytes.toBytes(familyName));
 
     // Create hfile /hbase/table-link/region/cf/getEncodedName.HFILE(conf);
-    Path familyPath = getFamilyDirPath(archiveDir, tableName, hri.getEncodedName(), familyName);
+    Path familyPath = getFamilyDirPath(conf, fs, archiveDir, tableName, hri, familyName);
     fs.mkdirs(familyPath);
     Path hfilePath = new Path(familyPath, hfileName);
     fs.createNewFile(hfilePath);
 
     // Create link to hfile
-    Path familyLinkPath = getFamilyDirPath(rootDir, tableLinkName,
-                                        hriLink.getEncodedName(), familyName);
+    Path familyLinkPath = getFamilyDirPath(conf, fs, rootDir, tableLinkName,
+                                        hriLink, familyName);
     fs.mkdirs(familyLinkPath);
     HFileLink.create(conf, fs, familyLinkPath, hri, hfileName);
     Path linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
@@ -124,9 +125,14 @@ public class TestHFileLinkCleaner {
     assertFalse("Link should be deleted", fs.exists(FSUtils.getTableDir(archiveDir, tableLinkName)));
   }
 
-  private static Path getFamilyDirPath (final Path rootDir, final TableName table,
-    final String region, final String family) {
-    return new Path(new Path(FSUtils.getTableDir(rootDir, table), region), family);
+  private static Path getFamilyDirPath (final Configuration conf, FileSystem fs, 
+      final Path rootDir, final TableName table,
+      final HRegionInfo hri, final String family) {
+    Path tableDir = FSUtils.getTableDir(rootDir, table);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+    Path regionDir = hrfs.getRegionDir();
+    Path familyDir = new Path(regionDir, family);
+    return familyDir;
   }
 
   static class DummyServer implements Server {

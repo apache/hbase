@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -57,11 +58,13 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.util.Tool;
@@ -177,14 +180,15 @@ public class HFilePrettyPrinter extends Configured implements Tool {
     if (cmd.hasOption("r")) {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
-      byte[][] hri = HRegionInfo.parseRegionName(rn);
+      HRegionInfo hri = HRegionInfo.parseRegionInfoFromRegionName(rn);
       Path rootDir = FSUtils.getRootDir(getConf());
-      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(hri[0]));
-      String enc = HRegionInfo.encodeRegionName(rn);
-      Path regionDir = new Path(tableDir, enc);
+      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(
+        hri.getTable().getNameAsString()));
+      FileSystem fs = FileSystem.get(getConf());
+      Path regionDir = HRegionFileSystem.create(getConf(), fs, tableDir, hri).getRegionDir();
       if (verbose)
         System.out.println("region dir -> " + regionDir);
-      List<Path> regionFiles = HFile.getStoreFiles(FileSystem.get(getConf()),
+      List<Path> regionFiles = HFile.getStoreFiles(fs,
           regionDir);
       if (verbose)
         System.out.println("Number of region files found -> "

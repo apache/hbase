@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -98,10 +99,10 @@ public class TestStoreFile extends HBaseTestCase {
    */
   @Test
   public void testBasicHalfMapFile() throws Exception {
-    final HRegionInfo hri =
-        new HRegionInfo(TableName.valueOf("testBasicHalfMapFileTb"));
+    final HRegionInfo hri = createHRegionInfo(TableName.valueOf("testBasicHalfMapFileTb"), null, null);
+    Path tableDir = FSUtils.getTableDir(this.testDir, TableName.valueOf("testBasicHalfMapFileTb"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      conf, fs, new Path(testDir, hri.getTable().getNameAsString()), hri);
+      conf, fs, tableDir, hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(2*1024).build();
     StoreFile.Writer writer = new StoreFile.WriterBuilder(conf, cacheConf, this.fs)
@@ -151,9 +152,10 @@ public class TestStoreFile extends HBaseTestCase {
    */
   @Test
   public void testReference() throws IOException {
-    final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testReferenceTb"));
+    final HRegionInfo hri = createHRegionInfo(TableName.valueOf("testReferenceTb"), null, null);
+    Path tableDir = FSUtils.getTableDir(this.testDir, TableName.valueOf("testReferenceTb"));
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
-      conf, fs, new Path(testDir, hri.getTable().getNameAsString()), hri);
+      conf, fs, tableDir, hri);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
@@ -175,7 +177,7 @@ public class TestStoreFile extends HBaseTestCase {
     kv = KeyValueUtil.createKeyValueFromKey(reader.getLastKey());
     byte [] finalRow = kv.getRow();
     // Make a reference
-    HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
+    HRegionInfo splitHri = createHRegionInfo(hri.getTable(), null, midRow);
     Path refPath = splitStoreFile(regionFs, splitHri, TEST_FAMILY, hsf, midRow, true);
     StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf,
       BloomType.NONE);
@@ -195,7 +197,7 @@ public class TestStoreFile extends HBaseTestCase {
 
   @Test
   public void testHFileLink() throws IOException {
-    final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testHFileLinkTb"));
+    final HRegionInfo hri = createHRegionInfo(TableName.valueOf("testHFileLinkTb"), null, null);
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
     FSUtils.setRootDir(testConf, testDir);
@@ -211,7 +213,7 @@ public class TestStoreFile extends HBaseTestCase {
     writeStoreFile(writer);
 
     Path storeFilePath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
-    Path dstPath = new Path(regionFs.getTableDir(), new Path("test-region", TEST_FAMILY));
+    Path dstPath = createDestinationPath(regionFs);
     HFileLink.create(testConf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
@@ -243,7 +245,7 @@ public class TestStoreFile extends HBaseTestCase {
     FSUtils.setRootDir(testConf, testDir);
 
     // adding legal table name chars to verify regex handles it.
-    HRegionInfo hri = new HRegionInfo(TableName.valueOf("_original-evil-name"));
+    HRegionInfo hri = createHRegionInfo(TableName.valueOf("_original-evil-name"), null, null);
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
       testConf, fs, FSUtils.getTableDir(testDir, hri.getTable()), hri);
 
@@ -257,7 +259,7 @@ public class TestStoreFile extends HBaseTestCase {
     Path storeFilePath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
 
     // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
-    HRegionInfo hriClone = new HRegionInfo(TableName.valueOf("clone"));
+    HRegionInfo hriClone = createHRegionInfo(TableName.valueOf("clone"), null, null);
     HRegionFileSystem cloneRegionFs = HRegionFileSystem.createRegionOnFileSystem(
       testConf, fs, FSUtils.getTableDir(testDir, hri.getTable()),
         hriClone);
@@ -269,8 +271,8 @@ public class TestStoreFile extends HBaseTestCase {
     // create splits of the link.
     // <root>/clone/splitA/<cf>/<reftohfilelink>,
     // <root>/clone/splitB/<cf>/<reftohfilelink>
-    HRegionInfo splitHriA = new HRegionInfo(hri.getTable(), null, SPLITKEY);
-    HRegionInfo splitHriB = new HRegionInfo(hri.getTable(), SPLITKEY, null);
+    HRegionInfo splitHriA = createHRegionInfo(hri.getTable(), null, SPLITKEY);
+    HRegionInfo splitHriB = createHRegionInfo(hri.getTable(), SPLITKEY, null);
     StoreFile f = new StoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE);
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
@@ -318,11 +320,11 @@ public class TestStoreFile extends HBaseTestCase {
     KeyValue midKV = (KeyValue)midkey;
     byte [] midRow = midKV.getRow();
     // Create top split.
-    HRegionInfo topHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
+    HRegionInfo topHri = createHRegionInfo(regionFs.getRegionInfo().getTable(),
         null, midRow);
     Path topPath = splitStoreFile(regionFs, topHri, TEST_FAMILY, f, midRow, true);
     // Create bottom split.
-    HRegionInfo bottomHri = new HRegionInfo(regionFs.getRegionInfo().getTable(),
+    HRegionInfo bottomHri = createHRegionInfo(regionFs.getRegionInfo().getTable(),
         midRow, null);
     Path bottomPath = splitStoreFile(regionFs, bottomHri, TEST_FAMILY, f, midRow, false);
     // Make readers on top and bottom.
@@ -1036,6 +1038,20 @@ public class TestStoreFile extends HBaseTestCase {
     Map<byte[], byte[]> fileInfo = reader.loadFileInfo();
     byte[] value = fileInfo.get(HFileDataBlockEncoder.DATA_BLOCK_ENCODING);
     assertEquals(dataBlockEncoderAlgo.getNameInBytes(), value);
+  }
+
+  HRegionInfo createHRegionInfo(final TableName tableName, final byte[] startKey,
+      final byte[] endKey) {
+    return new HRegionInfo(tableName, startKey, endKey);
+  }
+
+  String getTestRegionName() {
+    String regionName = "d9ffc3a5cd016ae58e23d7a6cb937949";
+    return regionName;
+  }
+  
+  Path createDestinationPath(HRegionFileSystem regionFs) {
+    return HStore.getStoreHomedir(regionFs.getTableDir(), regionFs.getRegionInfo(), Bytes.toBytes(TEST_FAMILY));
   }
 }
 

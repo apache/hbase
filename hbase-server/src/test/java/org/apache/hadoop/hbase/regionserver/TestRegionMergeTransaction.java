@@ -64,7 +64,7 @@ import com.google.common.collect.ImmutableList;
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestRegionMergeTransaction {
-  private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final Path testdir = TEST_UTIL.getDataTestDir(this.getClass()
       .getName());
   private HRegion region_a;
@@ -77,7 +77,7 @@ public class TestRegionMergeTransaction {
   private static final byte[] STARTROW_B = new byte[] { 'g', 'g', 'g' };
   private static final byte[] STARTROW_C = new byte[] { 'w', 'w', 'w' };
   private static final byte[] ENDROW = new byte[] { '{', '{', '{' };
-  private static final byte[] CF = HConstants.CATALOG_FAMILY;
+  static final byte[] CF = HConstants.CATALOG_FAMILY;
 
   @Before
   public void setup() throws IOException {
@@ -291,9 +291,11 @@ public class TestRegionMergeTransaction {
     int rowCountOfRegionB2 = countRows(this.region_b);
     assertEquals(rowCountOfRegionB, rowCountOfRegionB2);
 
+    Path tableDir = this.region_a.getRegionFileSystem().getTableDir();
+    
     // Assert rollback cleaned up stuff in fs
-    assertTrue(!this.fs.exists(HRegion.getRegionDir(this.testdir,
-        mt.getMergedRegionInfo())));
+    assertTrue(!HRegionFileSystem.create(TEST_UTIL.getConfiguration(), 
+      fs, tableDir, mt.getMergedRegionInfo()).existsOnDisk());
 
     assertTrue(!this.region_a.lock.writeLock().isHeldByCurrentThread());
     assertTrue(!this.region_b.lock.writeLock().isHeldByCurrentThread());
@@ -348,10 +350,12 @@ public class TestRegionMergeTransaction {
     // Make sure that merged region is still in the filesystem, that
     // they have not been removed; this is supposed to be the case if we go
     // past point of no return.
-    Path tableDir = this.region_a.getRegionFileSystem().getRegionDir()
-        .getParent();
-    Path mergedRegionDir = new Path(tableDir, mt.getMergedRegionInfo()
-        .getEncodedName());
+    Path tableDir = this.region_a.getRegionFileSystem().getTableDir();
+    
+    HRegionFileSystem mergedRegionFilesystem = HRegionFileSystem.openRegionFromFileSystem(
+      TEST_UTIL.getConfiguration(), fs, tableDir, mt.getMergedRegionInfo(), true);
+    
+    Path mergedRegionDir = mergedRegionFilesystem.getRegionDir();
     assertTrue(TEST_UTIL.getTestFileSystem().exists(mergedRegionDir));
   }
 
@@ -404,7 +408,7 @@ public class TestRegionMergeTransaction {
   private class MockedFailedMergedRegionOpen extends IOException {
   }
 
-  private HRegion createRegion(final Path testdir, final WALFactory wals,
+  HRegion createRegion(final Path testdir, final WALFactory wals,
       final byte[] startrow, final byte[] endrow)
       throws IOException {
     // Make a region with start and end keys.
@@ -418,7 +422,7 @@ public class TestRegionMergeTransaction {
     return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
         TEST_UTIL.getConfiguration());
   }
-
+  
   private int countRows(final HRegion r) throws IOException {
     int rowcount = 0;
     InternalScanner scanner = r.getScanner(new Scan());

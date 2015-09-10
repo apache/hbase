@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -79,21 +82,29 @@ public class MasterProcedureTestingUtility {
     return regions;
   }
 
-  public static void validateTableCreation(final HMaster master, final TableName tableName,
+  public static void validateTableCreation(final Configuration conf, final Connection conn, 
+      final HMaster master, final TableName tableName,
       final HRegionInfo[] regions, String... family) throws IOException {
-    validateTableCreation(master, tableName, regions, true, family);
+    validateTableCreation(conf, conn, master, tableName, regions, true, family);
   }
 
-  public static void validateTableCreation(final HMaster master, final TableName tableName,
+  public static void validateTableCreation(final Configuration conf, final Connection conn, 
+      final HMaster master, final TableName tableName,
       final HRegionInfo[] regions, boolean hasFamilyDirs, String... family) throws IOException {
     // check filesystem
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
     final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
     assertTrue(fs.exists(tableDir));
     FSUtils.logFileSystemState(fs, tableDir, LOG);
-    List<Path> allRegionDirs = FSUtils.getRegionDirs(fs, tableDir);
+    List<Path> allRegionDirs = new ArrayList<Path>();
+    List<HRegionFileSystem> regionFileSystems = master.getMasterFileSystem().getRegionFileSystems(
+      conf, conn, tableName);
+    for (HRegionFileSystem hrfs : regionFileSystems) {
+      allRegionDirs.add(hrfs.getRegionDir());
+    }
     for (int i = 0; i < regions.length; ++i) {
-      Path regionDir = new Path(tableDir, regions[i].getEncodedName());
+      HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, regions[i]);
+      Path regionDir = hrfs.getRegionDir();
       assertTrue(regions[i] + " region dir does not exist", fs.exists(regionDir));
       assertTrue(allRegionDirs.remove(regionDir));
       List<Path> allFamilyDirs = FSUtils.getFamilyDirs(fs, regionDir);
@@ -363,7 +374,8 @@ public class MasterProcedureTestingUtility {
     assertTrue(htd.getHTableDescriptor().hasFamily(family.getBytes()));
   }
 
-  public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
+  public static void validateColumnFamilyDeletion(final Configuration conf, final Connection conn, 
+      final HMaster master, final TableName tableName,
       final String family) throws IOException {
     // verify htd
     TableDescriptor htd = master.getTableDescriptors().getDescriptor(tableName);
@@ -372,9 +384,10 @@ public class MasterProcedureTestingUtility {
 
     // verify fs
     final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
-      final Path familyDir = new Path(regionDir, family);
+    List<HRegionFileSystem> regions = master.getMasterFileSystem().getRegionFileSystems(
+      conf, conn, tableName); 
+    for (HRegionFileSystem hrfs : regions) {
+      final Path familyDir = new Path(hrfs.getRegionDir(), family);
       assertFalse(family + " family dir should not exist", fs.exists(familyDir));
     }
   }

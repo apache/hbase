@@ -299,7 +299,7 @@ public class MetaTableAccessor {
     byte[] row = regionName;
     HRegionInfo parsedInfo = null;
     try {
-      parsedInfo = parseRegionInfoFromRegionName(regionName);
+      parsedInfo = HRegionInfo.parseRegionInfoFromRegionName(regionName);
       row = getMetaKeyForRegion(parsedInfo);
     } catch (Exception parseEx) {
       // Ignore. This is used with tableName passed as regionName.
@@ -332,19 +332,6 @@ public class MetaTableAccessor {
   /** Returns the row key to use for this regionInfo */
   public static byte[] getMetaKeyForRegion(HRegionInfo regionInfo) {
     return RegionReplicaUtil.getRegionInfoForDefaultReplica(regionInfo).getRegionName();
-  }
-
-  /** Returns an HRI parsed from this regionName. Not all the fields of the HRI
-   * is stored in the name, so the returned object should only be used for the fields
-   * in the regionName.
-   */
-  protected static HRegionInfo parseRegionInfoFromRegionName(byte[] regionName)
-    throws IOException {
-    byte[][] fields = HRegionInfo.parseRegionName(regionName);
-    long regionId =  Long.parseLong(Bytes.toString(fields[2]));
-    int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
-    return new HRegionInfo(
-      TableName.valueOf(fields[0]), fields[1], fields[1], false, regionId, replicaId);
   }
 
   /**

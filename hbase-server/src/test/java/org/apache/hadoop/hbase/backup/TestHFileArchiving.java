@@ -35,13 +35,17 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -66,8 +70,9 @@ import org.junit.experimental.categories.Category;
 public class TestHFileArchiving {
 
   private static final Log LOG = LogFactory.getLog(TestHFileArchiving.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final byte[] TEST_FAM = Bytes.toBytes("fam");
+  static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  static final byte[] TEST_FAM = Bytes.toBytes("fam");
+  static final byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
 
   /**
    * Setup the config for the cluster
@@ -117,7 +122,7 @@ public class TestHFileArchiving {
   public void testRemovesRegionDirOnArchive() throws Exception {
     TableName TABLE_NAME =
         TableName.valueOf("testRemovesRegionDirOnArchive");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    createTable(TABLE_NAME);
 
     final Admin admin = UTIL.getHBaseAdmin();
 
@@ -136,8 +141,7 @@ public class TestHFileArchiving {
     FileSystem fs = UTIL.getTestFileSystem();
 
     // now attempt to depose the region
-    Path rootDir = region.getRegionFileSystem().getTableDir().getParent();
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = region.getRegionFileSystem().getRegionDir();
 
     HFileArchiver.archiveRegion(UTIL.getConfiguration(), fs, region.getRegionInfo());
 
@@ -177,7 +181,7 @@ public class TestHFileArchiving {
   public void testDeleteRegionWithNoStoreFiles() throws Exception {
     TableName TABLE_NAME =
         TableName.valueOf("testDeleteRegionWithNoStoreFiles");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    createTable(TABLE_NAME);
 
     // get the current store files for the region
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
@@ -188,8 +192,7 @@ public class TestHFileArchiving {
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
 
     // make sure there are some files in the regiondir
-    Path rootDir = FSUtils.getRootDir(fs.getConf());
-    Path regionDir = HRegion.getRegionDir(rootDir, region.getRegionInfo());
+    Path regionDir = region.getRegionFileSystem().getRegionDir();
     FileStatus[] regionFiles = FSUtils.listStatus(fs, regionDir, null);
     Assert.assertNotNull("No files in the region directory", regionFiles);
     if (LOG.isDebugEnabled()) {
@@ -226,7 +229,7 @@ public class TestHFileArchiving {
   public void testArchiveOnTableDelete() throws Exception {
     TableName TABLE_NAME =
         TableName.valueOf("testArchiveOnTableDelete");
-    UTIL.createTable(TABLE_NAME, TEST_FAM);
+    createTable(TABLE_NAME);
 
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     // make sure we only have 1 region serving this table
@@ -306,7 +309,7 @@ public class TestHFileArchiving {
   public void testArchiveOnTableFamilyDelete() throws Exception {
     TableName TABLE_NAME =
         TableName.valueOf("testArchiveOnTableFamilyDelete");
-    UTIL.createTable(TABLE_NAME, new byte[][] {TEST_FAM, Bytes.toBytes("fam2")});
+    createTwoFamilyTable(TABLE_NAME);
 
     List<HRegion> servingRegions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     // make sure we only have 1 region serving this table
@@ -360,11 +363,16 @@ public class TestHFileArchiving {
     Path rootDir = UTIL.getDataTestDirOnTestFS("testCleaningRace");
     FileSystem fs = UTIL.getTestFileSystem();
 
+    TableName tableName = TableName.valueOf("table");
+
     Path archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    Path regionDir = new Path(FSUtils.getTableDir(new Path("./"),
-        TableName.valueOf("table")), "abcdef");
+    Path tableDir = FSUtils.getTableDir(new Path("./"), tableName);
+    HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(tableName, "abcdefabcdefabcdefabcdefabcdef12");
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+    Path regionDir = hrfs.getRegionDir();
     Path familyDir = new Path(regionDir, "cf");
 
+    Path absoluteTableDir = new Path(rootDir, tableDir);
     Path sourceRegionDir = new Path(rootDir, regionDir);
     fs.mkdirs(sourceRegionDir);
 
@@ -387,7 +395,7 @@ public class TestHFileArchiving {
         try {
           // Try to archive the file
           HFileArchiver.archiveRegion(fs, rootDir,
-              sourceRegionDir.getParent(), sourceRegionDir);
+            absoluteTableDir, sourceRegionDir);
 
           // The archiver succeded, the file is no longer in the original location
           // but it's in the archive location.
@@ -450,5 +458,22 @@ public class TestHFileArchiving {
       } else fileNames.add(file.getPath().getName());
     }
     return fileNames;
+  }
+  
+  void createTable(TableName tn) throws Exception {
+    HTableDescriptor desc = makeDescriptor(tn);
+    desc.addFamily(new HColumnDescriptor(TEST_FAM));
+    UTIL.createTable(desc, null);  
+  }
+  
+  void createTwoFamilyTable(TableName tn) throws Exception {
+    HTableDescriptor desc = makeDescriptor(tn);
+    desc.addFamily(new HColumnDescriptor(TEST_FAM));
+    desc.addFamily(new HColumnDescriptor(TEST_FAM_2));
+    UTIL.createTable(desc, null);  
+  }
+  
+  HTableDescriptor makeDescriptor(TableName tn) {
+    return new HTableDescriptor(tn);
   }
 }

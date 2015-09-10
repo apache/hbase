@@ -70,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
 import org.apache.hadoop.hbase.regionserver.FlushRequestListener;
 import org.apache.hadoop.hbase.regionserver.FlushRequester;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -901,9 +902,12 @@ public class TestWALReplay {
     assertTrue(listStatus.length > 0);
     WALSplitter.splitLogFile(hbaseRootDir, listStatus[0],
         this.fs, this.conf, null, null, null, mode, wals);
+    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+    Path regionDir = hrfs.getRegionDir();
     FileStatus[] listStatus1 = this.fs.listStatus(
-      new Path(FSUtils.getTableDir(hbaseRootDir, tableName), new Path(hri.getEncodedName(),
-          "recovered.edits")), new PathFilter() {
+      new Path(regionDir,
+          "recovered.edits"), new PathFilter() {
         @Override
         public boolean accept(Path p) {
           if (WALSplitter.isSequenceIdFile(p)) {

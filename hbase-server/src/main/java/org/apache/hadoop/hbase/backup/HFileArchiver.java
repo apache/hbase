@@ -32,7 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -72,10 +73,20 @@ public class HFileArchiver {
   public static void archiveRegion(Configuration conf, FileSystem fs, HRegionInfo info)
       throws IOException {
     Path rootDir = FSUtils.getRootDir(conf);
-    archiveRegion(fs, rootDir, FSUtils.getTableDir(rootDir, info.getTable()),
-      HRegion.getRegionDir(rootDir, info));
+    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
+    Path regionDir = FsLayout.getRegionDir(tableDir, info);
+    archiveRegion(fs, rootDir, tableDir, regionDir);
+  }
+  
+  public static Path getRegionArchiveDir(Path rootdir, TableName tableName, Path regionDir) {
+    return FsLayout.getRegionArchiveDir(rootdir, tableName, regionDir);
   }
 
+  public static void archiveRegion(FileSystem fs, Path rootdir, Path tableDir, HRegionInfo hri) 
+      throws IOException {
+    archiveRegion(fs, rootdir, tableDir, FsLayout.getRegionDir(tableDir, hri));
+  }
+  
   /**
    * Remove an entire region from the table directory via archiving the region's hfiles.
    * @param fs {@link FileSystem} from which to remove the region
@@ -106,9 +117,7 @@ public class HFileArchiver {
 
     // make sure the regiondir lives under the tabledir
     Preconditions.checkArgument(regionDir.toString().startsWith(tableDir.toString()));
-    Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(rootdir,
-        FSUtils.getTableName(tableDir),
-        regionDir.getName());
+    Path regionArchiveDir = getRegionArchiveDir(rootdir, FSUtils.getTableName(tableDir), regionDir);
 
     FileStatusConverter getAsFile = new FileStatusConverter(fs);
     // otherwise, we attempt to archive the store files
@@ -161,7 +170,8 @@ public class HFileArchiver {
    */
   public static void archiveFamily(FileSystem fs, Configuration conf,
       HRegionInfo parent, Path tableDir, byte[] family) throws IOException {
-    Path familyDir = new Path(tableDir, new Path(parent.getEncodedName(), Bytes.toString(family)));
+    Path regionDir = FsLayout.getRegionDir(tableDir, parent);
+    Path familyDir = new Path(regionDir, Bytes.toString(family));
     FileStatus[] storeFiles = FSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {
       LOG.debug("No store files to dispose for region=" + parent.getRegionNameAsString() +

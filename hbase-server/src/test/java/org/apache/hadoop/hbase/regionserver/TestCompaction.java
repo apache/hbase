@@ -86,11 +86,11 @@ import org.mockito.stubbing.Answer;
 public class TestCompaction {
   @Rule public TestName name = new TestName();
   private static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
-  private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
+  static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   
-  private HRegion r = null;
-  private HTableDescriptor htd = null;
+  HRegion r = null;
+  HTableDescriptor htd = null;
   private static final byte [] COLUMN_FAMILY = fam1;
   private final byte [] STARTROW = Bytes.toBytes(START_KEY);
   private static final byte [] COLUMN_FAMILY_TEXT = COLUMN_FAMILY;

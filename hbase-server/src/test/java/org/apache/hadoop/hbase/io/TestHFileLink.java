@@ -18,21 +18,24 @@
 
 package org.apache.hadoop.hbase.io;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
+import java.io.IOException;
 import java.util.regex.Matcher;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -83,20 +86,25 @@ public class TestHFileLink {
   }
 
   @Test
-  public void testBackReference() {
+  public void testBackReference() throws IOException {
     Path rootDir = new Path("/root");
     Path archiveDir = new Path(rootDir, ".archive");
     String storeFileName = "121212";
     String linkDir = FileLink.BACK_REFERENCES_DIRECTORY_PREFIX + storeFileName;
-    String encodedRegion = "FEFE";
+    String encodedRegion = "abcabcabcabcabcabcabcabcabcabcab";
     String cf = "cf1";
 
     TableName refTables[] = {TableName.valueOf("refTable"),
         TableName.valueOf("ns", "refTable")};
+    
+    Configuration conf = HBaseConfiguration.create();
 
     for(TableName refTable : refTables) {
       Path refTableDir = FSUtils.getTableDir(archiveDir, refTable);
-      Path refRegionDir = HRegion.getRegionDir(refTableDir, encodedRegion);
+      HRegionInfo refHri = HRegionInfo.makeTestInfoWithEncodedName(refTable, encodedRegion);
+      HRegionFileSystem refHrfs = HRegionFileSystem.create(conf, 
+        rootDir.getFileSystem(conf), refTableDir, refHri);
+      Path refRegionDir = refHrfs.getRegionDir();
       Path refDir = new Path(refRegionDir, cf);
       Path refLinkDir = new Path(refDir, linkDir);
       String refStoreFileName = refTable.getNameAsString().replace(
@@ -107,7 +115,10 @@ public class TestHFileLink {
 
       for( TableName tableName : tableNames) {
         Path tableDir = FSUtils.getTableDir(rootDir, tableName);
-        Path regionDir = HRegion.getRegionDir(tableDir, encodedRegion);
+        HRegionInfo hri = HRegionInfo.makeTestInfoWithEncodedName(tableName, encodedRegion);
+        HRegionFileSystem hrfs = HRegionFileSystem.create(conf, 
+          rootDir.getFileSystem(conf), tableDir, hri);
+        Path regionDir = hrfs.getRegionDir();
         Path cfDir = new Path(regionDir, cf);
 
         //Verify back reference creation

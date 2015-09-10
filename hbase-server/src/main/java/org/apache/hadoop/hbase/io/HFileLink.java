@@ -25,13 +25,13 @@ import java.util.regex.Pattern;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -216,8 +216,9 @@ public class HFileLink extends FileLink {
     String hfileName = m.group(4);
     String familyName = path.getParent().getName();
     Path tableDir = FSUtils.getTableDir(new Path("./"), tableName);
-    return new Path(tableDir, new Path(regionName, new Path(familyName,
-        hfileName)));
+    Path regionDir = FsLayout.getRegionDir(tableDir, regionName);
+    return new Path(regionDir, new Path(familyName,
+          hfileName));
   }
 
   /**
@@ -333,7 +334,7 @@ public class HFileLink extends FileLink {
       final String hfileName) throws IOException {
     String familyName = dstFamilyPath.getName();
     String regionName = dstFamilyPath.getParent().getName();
-    String tableName = FSUtils.getTableName(dstFamilyPath.getParent().getParent())
+    String tableName = FSUtils.getTableName(FsLayout.getTableDirFromRegionDir(dstFamilyPath.getParent()))
         .getNameAsString();
 
     String name = createHFileLinkName(linkedTable, linkedRegion, hfileName);
@@ -410,12 +411,12 @@ public class HFileLink extends FileLink {
     String hfileName = getBackReferenceFileName(linkRefPath.getParent());
     Path familyPath = linkRefPath.getParent().getParent();
     Path regionPath = familyPath.getParent();
-    Path tablePath = regionPath.getParent();
+    Path tablePath = FsLayout.getTableDirFromRegionDir(regionPath);
 
     String linkName = createHFileLinkName(FSUtils.getTableName(tablePath),
             regionPath.getName(), hfileName);
     Path linkTableDir = FSUtils.getTableDir(rootDir, linkTableName);
-    Path regionDir = HRegion.getRegionDir(linkTableDir, linkRegionName);
+    Path regionDir = FsLayout.getRegionDir(linkTableDir, linkRegionName);
     return new Path(new Path(regionDir, familyPath.getName()), linkName);
   }
 

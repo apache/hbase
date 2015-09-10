@@ -36,8 +36,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
+import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
@@ -173,11 +176,12 @@ public class TestHFileCleaner {
     // setup the cleaner
     FileSystem fs = UTIL.getDFSCluster().getFileSystem();
     HFileCleaner cleaner = new HFileCleaner(1000, server, conf, fs, archivedHfileDir);
-
+    
     // make all the directories for archiving files
     Path table = new Path(archivedHfileDir, "table");
-    Path region = new Path(table, "regionsomthing");
-    Path family = new Path(region, "fam");
+    Path family = HStore.getStoreHomedir(table, "regionsomething", Bytes.toBytes("fam"));
+    Path region = family.getParent();
+    
     Path file = new Path(family, "file12345");
     fs.mkdirs(family);
     if (!fs.exists(family)) throw new RuntimeException("Couldn't create test family:" + family);

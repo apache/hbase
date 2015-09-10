@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -367,7 +368,9 @@ public class CatalogJanitor extends ScheduledChore {
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
 
-    Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
+    HRegionFileSystem hrfs = HRegionFileSystem.create(
+      this.services.getConfiguration(), fs, tabledir, daughter);
+    Path daughterRegionDir = hrfs.getRegionDir();
 
     HRegionFileSystem regionFs = null;
 

@@ -341,7 +341,7 @@ public class TestSnapshotFromMaster {
       LOG.debug(fileName);
     }
     // get the archived files for the table
-    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
+    Collection<String> files = getArchivedHFiles(archiveDir, rootDir, fs, htd, TABLE_NAME);
 
     // and make sure that there is a proper subset
     for (String fileName : snapshotHFiles) {
@@ -368,7 +368,7 @@ public class TestSnapshotFromMaster {
     LOG.info("After delete snapshot cleaners run File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);
 
-    files = getArchivedHFiles(archiveDir, rootDir, fs, TABLE_NAME);
+    files = getArchivedHFiles(archiveDir, rootDir, fs, htd, TABLE_NAME);
     assertEquals("Still have some hfiles in the archive, when their snapshot has been deleted.", 0,
       files.size());
   }
@@ -378,9 +378,9 @@ public class TestSnapshotFromMaster {
    * @throws IOException on expected failure
    */
   private final Collection<String> getArchivedHFiles(Path archiveDir, Path rootDir,
-      FileSystem fs, TableName tableName) throws IOException {
+      FileSystem fs, HTableDescriptor desc, TableName tableName) throws IOException {
     Path tableArchive = FSUtils.getTableDir(archiveDir, tableName);
-    Path[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, tableArchive);
+    Path[] archivedHFiles = SnapshotTestingUtils.listHFiles(fs, desc, tableArchive);
     List<String> files = new ArrayList<String>(archivedHFiles.length);
     LOG.debug("Have archived hfiles: " + tableArchive);
     for (Path file : archivedHFiles) {

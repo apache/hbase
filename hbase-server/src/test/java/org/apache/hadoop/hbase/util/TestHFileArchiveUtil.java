@@ -23,6 +23,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -52,7 +54,7 @@ public class TestHFileArchiveUtil {
   @Test
   public void testRegionArchiveDir() {
     Path regionDir = new Path("region");
-    assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
+    assertNotNull(HFileArchiver.getRegionArchiveDir(rootDir,
         TableName.valueOf("table"), regionDir));
   }
   

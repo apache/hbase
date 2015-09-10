@@ -35,6 +35,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.fs.layout.FsLayout;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -205,8 +206,11 @@ public class ExportSnapshot extends Configured implements Tool {
           TableName table =HFileLink.getReferencedTableName(inputPath.getName());
           String region = HFileLink.getReferencedRegionName(inputPath.getName());
           String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
-          path = new Path(FSUtils.getTableDir(new Path("./"), table),
-              new Path(region, new Path(family, hfile)));
+          // TODO: Currently assumes target cluster's layout is same as source cluster layout
+          // Add another config option?
+          Path tableDir = FSUtils.getTableDir(new Path("./"), table);
+          Path regionDir = FsLayout.getRegionDir(tableDir, region);
+          path = new Path(regionDir, new Path(family, hfile));
           break;
         case WAL:
           Path oldLogsDir = new Path(outputRoot, HConstants.HREGION_OLDLOGDIR_NAME);

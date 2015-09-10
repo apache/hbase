@@ -27,10 +27,10 @@ import java.util.List;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
-import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.io.DataInputBuffer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
@@ -235,6 +236,18 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
     // Note: First Meta region replicas names are in old format
     this.regionName = createRegionName(tableName, null, regionId, replicaId, false);
     setHashCode();
+  }
+  
+  /**
+   * This is only meant to be used for tests that require a specific encoded name
+   * The HRegionInfo is only guaranteed to work for methods that operate on the encoded
+   * name or the table name.
+   */
+  @VisibleForTesting
+  public static HRegionInfo makeTestInfoWithEncodedName(TableName tableName, String encodedName) {
+    HRegionInfo hri = new HRegionInfo(System.currentTimeMillis(), tableName, 0);
+    hri.encodedName = encodedName;
+    return hri;
   }
 
   public HRegionInfo(final TableName tableName) {
@@ -503,6 +516,19 @@ public class HRegionInfo implements Comparable<HRegionInfo> {
    */
   public static byte[] getStartKey(final byte[] regionName) throws IOException {
     return parseRegionName(regionName)[1];
+  }
+  
+  /** Returns an HRI parsed from this regionName. Not all the fields of the HRI
+   * is stored in the name, so the returned object should only be used for the fields
+   * in the regionName.
+   */
+  public static HRegionInfo parseRegionInfoFromRegionName(byte[] regionName)
+    throws IOException {
+    byte[][] fields = HRegionInfo.parseRegionName(regionName);
+    long regionId =  Long.parseLong(Bytes.toString(fields[2]));
+    int replicaId = fields.length > 3 ? Integer.parseInt(Bytes.toString(fields[3]), 16) : 0;
+    return new HRegionInfo(
+      TableName.valueOf(fields[0]), fields[1], fields[1], false, regionId, replicaId);
   }
 
   /**

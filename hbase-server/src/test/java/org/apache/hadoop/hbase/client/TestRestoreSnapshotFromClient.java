@@ -23,11 +23,15 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -35,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -286,13 +291,13 @@ public class TestRestoreSnapshotFromClient {
   }
 
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
+    Connection connection = TEST_UTIL.getConnection();
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
+    List<HRegionFileSystem> regions = mfs.getRegionFileSystems(TEST_UTIL.getConfiguration(), 
+      connection, tableName);
     Set<String> families = new HashSet<String>();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
-      for (Path familyDir: FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
-        families.add(familyDir.getName());
-      }
+    for (HRegionFileSystem hrfs : regions) {
+      families.addAll(hrfs.getFamilies());
     }
     return families;
   }

@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 
 /**
@@ -69,39 +68,6 @@ public class HFileArchiveUtil {
     Path rootDir = FSUtils.getRootDir(conf);
     Path tableArchiveDir = getTableArchivePath(rootDir, tableName);
     return HStore.getStoreHomedir(tableArchiveDir, region, family);
-  }
-
-  /**
-   * Get the archive directory for a given region under the specified table
-   * @param tableName the table name. Cannot be null.
-   * @param regiondir the path to the region directory. Cannot be null.
-   * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
-   *         should not be archived
-   */
-  public static Path getRegionArchiveDir(Path rootDir,
-                                         TableName tableName,
-                                         Path regiondir) {
-    // get the archive directory for a table
-    Path archiveDir = getTableArchivePath(rootDir, tableName);
-
-    // then add on the region path under the archive
-    String encodedRegionName = regiondir.getName();
-    return HRegion.getRegionDir(archiveDir, encodedRegionName);
-  }
-
-  /**
-   * Get the archive directory for a given region under the specified table
-   * @param rootDir {@link Path} to the root directory where hbase files are stored (for building
-   *          the archive path)
-   * @param tableName name of the table to archive. Cannot be null.
-   * @return {@link Path} to the directory to archive the given region, or <tt>null</tt> if it
-   *         should not be archived
-   */
-  public static Path getRegionArchiveDir(Path rootDir,
-                                         TableName tableName, String encodedRegionName) {
-    // get the archive directory for a table
-    Path archiveDir = getTableArchivePath(rootDir, tableName);
-    return HRegion.getRegionDir(archiveDir, encodedRegionName);
   }
 
   /**

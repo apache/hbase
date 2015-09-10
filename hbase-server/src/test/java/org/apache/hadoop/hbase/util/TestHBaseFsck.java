@@ -77,7 +77,6 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HConnection;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
@@ -133,23 +132,23 @@ import com.google.common.collect.Multimap;
 public class TestHBaseFsck {
   static final int POOL_SIZE = 7;
   private static final Log LOG = LogFactory.getLog(TestHBaseFsck.class);
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
-  private final static Configuration conf = TEST_UTIL.getConfiguration();
-  private final static String FAM_STR = "fam";
-  private final static byte[] FAM = Bytes.toBytes(FAM_STR);
+  final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  final static Configuration conf = TEST_UTIL.getConfiguration();
+  final static String FAM_STR = "fam";
+  final static byte[] FAM = Bytes.toBytes(FAM_STR);
   private final static int REGION_ONLINE_TIMEOUT = 800;
   private static RegionStates regionStates;
-  private static ExecutorService tableExecutorService;
-  private static ScheduledThreadPoolExecutor hbfsckExecutorService;
-  private static ClusterConnection connection;
+  static ExecutorService tableExecutorService;
+  static ScheduledThreadPoolExecutor hbfsckExecutorService;
+  static ClusterConnection connection;
   private static Admin admin;
 
   // for the instance, reset every test run
-  private Table tbl;
-  private final static byte[][] SPLITS = new byte[][] { Bytes.toBytes("A"),
+  Table tbl;
+  final static byte[][] SPLITS = new byte[][] { Bytes.toBytes("A"),
     Bytes.toBytes("B"), Bytes.toBytes("C") };
   // one row per region.
-  private final static byte[][] ROWKEYS= new byte[][] {
+  final static byte[][] ROWKEYS= new byte[][] {
     Bytes.toBytes("00"), Bytes.toBytes("50"), Bytes.toBytes("A0"), Bytes.toBytes("A5"),
     Bytes.toBytes("B0"), Bytes.toBytes("B5"), Bytes.toBytes("C0"), Bytes.toBytes("C5") };
 
@@ -282,7 +281,7 @@ public class TestHBaseFsck {
   /**
    * Create a new region in META.
    */
-  private HRegionInfo createRegion(final HTableDescriptor
+  HRegionInfo createRegion(final HTableDescriptor
       htd, byte[] startKey, byte[] endKey)
       throws IOException {
     Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService);
@@ -370,8 +369,9 @@ public class TestHBaseFsck {
           LOG.info("deleting hdfs .regioninfo data: " + hri.toString() + hsa.toString());
           Path rootDir = FSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
-              hri.getEncodedName());
+          Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
+          HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+          Path p = hrfs.getRegionDir();
           Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
           fs.delete(hriPath, true);
         }
@@ -380,8 +380,9 @@ public class TestHBaseFsck {
           LOG.info("deleting hdfs data: " + hri.toString() + hsa.toString());
           Path rootDir = FSUtils.getRootDir(conf);
           FileSystem fs = rootDir.getFileSystem(conf);
-          Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
-              hri.getEncodedName());
+          Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
+          HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+          Path p = hrfs.getRegionDir();
           HBaseFsck.debugLsr(conf, p);
           boolean success = fs.delete(p, true);
           LOG.info("Deleted " + p + " sucessfully? " + success);
@@ -441,7 +442,7 @@ public class TestHBaseFsck {
     }
     tbl.put(puts);
   }
-
+  
   /**
    * Counts the number of row to verify data loss or non-dataloss.
    */
@@ -2138,20 +2139,11 @@ public class TestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedHFile(FileSystem fs, TableName table) throws IOException {
-    Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
-    Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
-    Path famDir = new Path(regionDir, FAM_STR);
-
-    // keep doing this until we get a legit hfile
+    Path rootDir = FSUtils.getRootDir(conf);
     while (true) {
-      FileStatus[] hfFss = fs.listStatus(famDir);
-      if (hfFss.length == 0) {
-        continue;
-      }
-      for (FileStatus hfs : hfFss) {
-        if (!hfs.isDirectory()) {
-          return hfs.getPath();
-        }
+      Map<String, Path> tableStoreFilePathMap = FSUtils.getTableStoreFilePathMap(null, fs, rootDir, table);
+      if (!tableStoreFilePathMap.isEmpty()) {
+        return tableStoreFilePathMap.values().iterator().next();
       }
     }
   }
@@ -2339,9 +2331,12 @@ public class TestHBaseFsck {
       // Mess it up by creating a fake reference file
       FileSystem fs = FileSystem.get(conf);
       Path tableDir= FSUtils.getTableDir(FSUtils.getRootDir(conf), table);
-      Path regionDir = FSUtils.getRegionDirs(fs, tableDir).get(0);
+      // Just pick a random region
+      HRegionInfo hri = MetaTableAccessor.getTableRegions(TEST_UTIL.getConnection(), table).get(0);
+      HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, hri);
+      Path regionDir = hrfs.getRegionDir();
       Path famDir = new Path(regionDir, FAM_STR);
-      Path fakeReferenceFile = new Path(famDir, "fbce357483ceea.12144538");
+      Path fakeReferenceFile = new Path(famDir, "fbce357483ceea.d9ffc3a5cd016ae58e23d7a6cb937949");
       fs.create(fakeReferenceFile);
 
       HBaseFsck hbck = doFsck(conf, false);

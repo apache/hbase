@@ -232,15 +232,17 @@ public class TestRegionMergeTransactionOnCluster {
       Path rootDir = master.getMasterFileSystem().getRootDir();
 
       Path tabledir = FSUtils.getTableDir(rootDir, mergedRegionInfo.getTable());
-      Path regionAdir = new Path(tabledir, regionA.getEncodedName());
-      Path regionBdir = new Path(tabledir, regionB.getEncodedName());
-      assertTrue(fs.exists(regionAdir));
-      assertTrue(fs.exists(regionBdir));
+      HRegionFileSystem hrfsA = HRegionFileSystem.create(
+        TEST_UTIL.getConfiguration(), fs, tabledir, regionA);
+      HRegionFileSystem hrfsB = HRegionFileSystem.create(
+        TEST_UTIL.getConfiguration(), fs, tabledir, regionB);
+      assertTrue(hrfsA.existsOnDisk());
+      assertTrue(hrfsB.existsOnDisk());
 
       admin.compactRegion(mergedRegionInfo.getRegionName());
       // wait until merged region doesn't have reference file
       long timeout = System.currentTimeMillis() + waitTime;
-      HRegionFileSystem hrfs = new HRegionFileSystem(
+      HRegionFileSystem hrfs = HRegionFileSystem.create(
           TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
       while (System.currentTimeMillis() < timeout) {
         if (!hrfs.hasReferences(tableDescritor)) {
@@ -254,8 +256,8 @@ public class TestRegionMergeTransactionOnCluster {
       // files of merging regions
       int cleaned = admin.runCatalogScan();
       assertTrue(cleaned > 0);
-      assertFalse(fs.exists(regionAdir));
-      assertFalse(fs.exists(regionBdir));
+      assertFalse(hrfsA.existsOnDisk());
+      assertFalse(hrfsB.existsOnDisk());
 
       mergedRegionResult = MetaTableAccessor.getRegionResult(
         master.getConnection(), mergedRegionInfo.getRegionName());

@@ -107,7 +107,7 @@ public class TestRestoreSnapshotHelper {
 
   private void verifyRestore(final Path rootDir, final HTableDescriptor sourceHtd,
       final HTableDescriptor htdClone) throws IOException {
-    String[] files = SnapshotTestingUtils.listHFileNames(fs,
+    String[] files = SnapshotTestingUtils.listHFileNames(fs, htdClone,
       FSUtils.getTableDir(rootDir, htdClone.getTableName()));
     assertEquals(12, files.length);
     for (int i = 0; i < files.length; i += 2) {
