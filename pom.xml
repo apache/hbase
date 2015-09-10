@@ -219,8 +219,8 @@
       <name>Gary Helmling</name>
       <email>garyh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Cask</organization>
-      <organizationUrl>http://www.cask.co</organizationUrl>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>gchanan</id>
