@@ -62,6 +62,8 @@ public class TestHFileEncryption {
   @BeforeClass
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
+    // Disable block cache in this test.
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
     conf.setInt("hfile.format.version", 3);
@@ -155,32 +157,38 @@ public class TestHFileEncryption {
   public void testHFileEncryptionMetadata() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     CacheConfig cacheConf = new CacheConfig(conf);
-
     HFileContext fileContext = new HFileContextBuilder()
-    .withEncryptionContext(cryptoContext)
-    .build();
+        .withEncryptionContext(cryptoContext)
+        .build();
 
     // write a simple encrypted hfile
     Path path = new Path(TEST_UTIL.getDataTestDir(), "cryptometa.hfile");
     FSDataOutputStream out = fs.create(path);
     HFile.Writer writer = HFile.getWriterFactory(conf, cacheConf)
-      .withOutputStream(out)
-      .withFileContext(fileContext)
-      .create();
-    KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
-    writer.append(kv);
-    writer.close();
-    out.close();
+        .withOutputStream(out)
+        .withFileContext(fileContext)
+        .create();
+    try {
+      KeyValue kv = new KeyValue("foo".getBytes(), "f1".getBytes(), null, "value".getBytes());
+      writer.append(kv);
+    } finally {
+      writer.close();
+      out.close();
+    }
 
     // read it back in and validate correct crypto metadata
     HFile.Reader reader = HFile.createReader(fs, path, cacheConf, conf);
-    reader.loadFileInfo();
-    FixedFileTrailer trailer = reader.getTrailer();
-    assertNotNull(trailer.getEncryptionKey());
-    Encryption.Context readerContext = reader.getFileContext().getEncryptionContext();
-    assertEquals(readerContext.getCipher().getName(), cryptoContext.getCipher().getName());
-    assertTrue(Bytes.equals(readerContext.getKeyBytes(),
-      cryptoContext.getKeyBytes()));
+    try {
+      reader.loadFileInfo();
+      FixedFileTrailer trailer = reader.getTrailer();
+      assertNotNull(trailer.getEncryptionKey());
+      Encryption.Context readerContext = reader.getFileContext().getEncryptionContext();
+      assertEquals(readerContext.getCipher().getName(), cryptoContext.getCipher().getName());
+      assertTrue(Bytes.equals(readerContext.getKeyBytes(),
+          cryptoContext.getKeyBytes()));
+    } finally {
+      reader.close();
+    }
   }
 
   @Test(timeout=6000000)
