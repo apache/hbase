@@ -873,6 +873,15 @@ public class RpcClientImpl extends AbstractRpcClient {
       }
       IOUtils.closeStream(in);
       this.in = null;
+      if (this.socket != null) {
+        try {
+          this.socket.close();
+          this.socket = null;
+        } catch (IOException e) {
+          LOG.error("Error while closing socket", e);
+        }
+      }
+
       disposeSasl();
 
       // log the info
