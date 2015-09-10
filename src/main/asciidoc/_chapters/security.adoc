@@ -222,9 +222,9 @@ To enable it, do the following.
 . Be sure that HBase is configured to allow proxy users, as described in <<security.rest.gateway>>.
 . In _hbase-site.xml_ for each cluster node running a Thrift gateway, set the property `hbase.thrift.security.qop` to one of the following three values:
 +
-* `auth-conf` - authentication, integrity, and confidentiality checking
-* `auth-int` - authentication and integrity checking
-* `auth` - authentication checking only
+* `privacy` - authentication, integrity, and confidentiality checking.
+* `integrity` - authentication and integrity checking
+* `authentication` - authentication checking only
 
 . Restart the Thrift gateway processes for the changes to take effect.
   If a node is running Thrift, the output of the `jps` command will list a `ThriftServer` process.
@@ -765,7 +765,7 @@ For an example of using both together, see <<security.example.config>>.
 </property>
 ----
 +
-Optionally, you can enable transport security, by setting `hbase.rpc.protection` to `auth-conf`.
+Optionally, you can enable transport security, by setting `hbase.rpc.protection` to `privacy`.
 This requires HBase 0.98.4 or newer.
 
 . Set up the Hadoop group mapper in the Hadoop namenode's _core-site.xml_.
@@ -1668,7 +1668,7 @@ All options have been discussed separately in the sections above.
 <!-- Secure RPC Transport -->
 <property>
   <name>hbase.rpc.protection</name>
-  <value>auth-conf</value>
+  <value>privacy</value>
  </property>
  <!-- Transparent Encryption -->
 <property>
