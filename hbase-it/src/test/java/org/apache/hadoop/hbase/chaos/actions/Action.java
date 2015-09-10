@@ -27,6 +27,7 @@ import java.util.List;
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterStatus;
 import org.apache.hadoop.hbase.HBaseCluster;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -35,7 +36,6 @@ import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -44,11 +44,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 public class Action {
 
   public static final String KILL_MASTER_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.killmastertimeout";
+    "hbase.chaosmonkey.action.killmastertimeout";
   public static final String START_MASTER_TIMEOUT_KEY =
-      "hbase.chaosmonkey.action.startmastertimeout";
+    "hbase.chaosmonkey.action.startmastertimeout";
   public static final String KILL_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.killrstimeout";
   public static final String START_RS_TIMEOUT_KEY = "hbase.chaosmonkey.action.startrstimeout";
+  public static final String KILL_ZK_NODE_TIMEOUT_KEY =
+    "hbase.chaosmonkey.action.killzknodetimeout";
+  public static final String START_ZK_NODE_TIMEOUT_KEY =
+    "hbase.chaosmonkey.action.startzknodetimeout";
+  public static final String KILL_DATANODE_TIMEOUT_KEY =
+    "hbase.chaosmonkey.action.killdatanodetimeout";
+  public static final String START_DATANODE_TIMEOUT_KEY =
+    "hbase.chaosmonkey.action.startdatanodetimeout";
 
   protected static Log LOG = LogFactory.getLog(Action.class);
 
@@ -56,6 +64,10 @@ public class Action {
   protected static final long START_MASTER_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long KILL_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
   protected static final long START_RS_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long KILL_ZK_NODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long START_ZK_NODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long KILL_DATANODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
+  protected static final long START_DATANODE_TIMEOUT_DEFAULT = PolicyBasedChaosMonkey.TIMEOUT;
 
   protected ActionContext context;
   protected HBaseCluster cluster;
@@ -66,6 +78,10 @@ public class Action {
   protected long startMasterTimeout;
   protected long killRsTimeout;
   protected long startRsTimeout;
+  protected long killZkNodeTimeout;
+  protected long startZkNodeTimeout;
+  protected long killDataNodeTimeout;
+  protected long startDataNodeTimeout;
 
   public void init(ActionContext context) throws IOException {
     this.context = context;
@@ -75,11 +91,19 @@ public class Action {
     initialServers = regionServers.toArray(new ServerName[regionServers.size()]);
 
     killMasterTimeout = cluster.getConf().getLong(KILL_MASTER_TIMEOUT_KEY,
-        KILL_MASTER_TIMEOUT_DEFAULT);
+      KILL_MASTER_TIMEOUT_DEFAULT);
     startMasterTimeout = cluster.getConf().getLong(START_MASTER_TIMEOUT_KEY,
-        START_MASTER_TIMEOUT_DEFAULT);
+      START_MASTER_TIMEOUT_DEFAULT);
     killRsTimeout = cluster.getConf().getLong(KILL_RS_TIMEOUT_KEY, KILL_RS_TIMEOUT_DEFAULT);
     startRsTimeout = cluster.getConf().getLong(START_RS_TIMEOUT_KEY, START_RS_TIMEOUT_DEFAULT);
+    killZkNodeTimeout = cluster.getConf().getLong(KILL_ZK_NODE_TIMEOUT_KEY,
+      KILL_ZK_NODE_TIMEOUT_DEFAULT);
+    startZkNodeTimeout = cluster.getConf().getLong(START_ZK_NODE_TIMEOUT_KEY,
+      START_ZK_NODE_TIMEOUT_DEFAULT);
+    killDataNodeTimeout = cluster.getConf().getLong(KILL_DATANODE_TIMEOUT_KEY,
+      KILL_DATANODE_TIMEOUT_DEFAULT);
+    startDataNodeTimeout = cluster.getConf().getLong(START_DATANODE_TIMEOUT_KEY,
+      START_DATANODE_TIMEOUT_DEFAULT);
   }
 
   public void perform() throws Exception { }
@@ -132,7 +156,37 @@ public class Action {
     cluster.startRegionServer(server.getHostname());
     cluster.waitForRegionServerToStart(server.getHostname(), startRsTimeout);
     LOG.info("Started region server:" + server + ". Reported num of rs:"
-        + cluster.getClusterStatus().getServersSize());
+      + cluster.getClusterStatus().getServersSize());
+  }
+
+  protected void killZKNode(ServerName server) throws IOException {
+    LOG.info("Killing zookeeper node:" + server);
+    cluster.killZkNode(server);
+    cluster.waitForZkNodeToStop(server, killZkNodeTimeout);
+    LOG.info("Killed zookeeper node:" + server + ". Reported num of rs:"
+      + cluster.getClusterStatus().getServersSize());
+  }
+
+  protected void startZKNode(ServerName server) throws IOException {
+    LOG.info("Starting zookeeper node:" + server.getHostname());
+    cluster.startZkNode(server.getHostname(), server.getPort());
+    cluster.waitForZkNodeToStart(server, startZkNodeTimeout);
+    LOG.info("Started zookeeper node:" + server);
+  }
+
+  protected void killDataNode(ServerName server) throws IOException {
+    LOG.info("Killing datanode:" + server);
+    cluster.killDataNode(server);
+    cluster.waitForDataNodeToStop(server, killDataNodeTimeout);
+    LOG.info("Killed datanode:" + server + ". Reported num of rs:"
+      + cluster.getClusterStatus().getServersSize());
+  }
+
+  protected void startDataNode(ServerName server) throws IOException {
+    LOG.info("Starting datanode:" + server.getHostname());
+    cluster.startDataNode(server);
+    cluster.waitForDataNodeToStart(server, startDataNodeTimeout);
+    LOG.info("Started datanode:" + server);
   }
 
   protected void unbalanceRegions(ClusterStatus clusterStatus,
@@ -172,6 +226,10 @@ public class Action {
     if (!result) {
       LOG.error("Balancer didn't succeed");
     }
+  }
+
+  public Configuration getConf() {
+    return cluster.getConf();
   }
 
   /**

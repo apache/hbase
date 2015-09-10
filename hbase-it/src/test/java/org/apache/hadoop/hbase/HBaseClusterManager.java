@@ -54,9 +54,11 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
 
   /**
    * The command format that is used to execute the remote command. Arguments:
-   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host, 5 original command.
+   * 1 SSH options, 2 user name , 3 "@" if username is set, 4 host,
+   * 5 original command, 6 service user.
    */
-  private static final String DEFAULT_TUNNEL_CMD = "/usr/bin/ssh %1$s %2$s%3$s%4$s \"%5$s\"";
+  private static final String DEFAULT_TUNNEL_CMD =
+      "/usr/bin/ssh %1$s %2$s%3$s%4$s \"sudo -u %6$s %5$s\"";
   private String tunnelCmd;
 
   private static final String RETRY_ATTEMPTS_KEY = "hbase.it.clustermanager.retry.attempts";
@@ -93,11 +95,24 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
         .setSleepInterval(conf.getLong(RETRY_SLEEP_INTERVAL_KEY, DEFAULT_RETRY_SLEEP_INTERVAL)));
   }
 
+  private String getServiceUser(ServiceType service) {
+    Configuration conf = getConf();
+    switch (service) {
+      case HADOOP_DATANODE:
+        return conf.get("hbase.it.clustermanager.hadoop.hdfs.user", "hdfs");
+      case ZOOKEEPER_SERVER:
+        return conf.get("hbase.it.clustermanager.zookeeper.user", "zookeeper");
+      default:
+        return conf.get("hbase.it.clustermanager.hbase.user", "hbase");
+    }
+  }
+
   /**
    * Executes commands over SSH
    */
   protected class RemoteShell extends Shell.ShellCommandExecutor {
     private String hostname;
+    private String user;
 
     public RemoteShell(String hostname, String[] execString, File dir, Map<String, String> env,
         long timeout) {
@@ -120,11 +135,17 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
       this.hostname = hostname;
     }
 
+    public RemoteShell(String hostname, String user, String[] execString) {
+      super(execString);
+      this.hostname = hostname;
+      this.user = user;
+    }
+
     @Override
     public String[] getExecString() {
       String at = sshUserName.isEmpty() ? "" : "@";
       String remoteCmd = StringUtils.join(super.getExecString(), " ");
-      String cmd = String.format(tunnelCmd, sshOptions, sshUserName, at, hostname, remoteCmd);
+      String cmd = String.format(tunnelCmd, sshOptions, sshUserName, at, hostname, remoteCmd, user);
       LOG.info("Executing full command [" + cmd + "]");
       return new String[] { "/usr/bin/env", "bash", "-c", cmd };
     }
@@ -188,13 +209,83 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     }
   }
 
+  /**
+   * CommandProvider to manage the service using sbin/hadoop-* scripts.
+   */
+  static class HadoopShellCommandProvider extends CommandProvider {
+    private final String hadoopHome;
+    private final String confDir;
+
+    HadoopShellCommandProvider(Configuration conf) throws IOException {
+      hadoopHome = conf.get("hbase.it.clustermanager.hadoop.home",
+          System.getenv("HADOOP_HOME"));
+      String tmp = conf.get("hbase.it.clustermanager.hadoop.conf.dir",
+          System.getenv("HADOOP_CONF_DIR"));
+      if (hadoopHome == null) {
+        throw new IOException("Hadoop home configuration parameter i.e. " +
+          "'hbase.it.clustermanager.hadoop.home' is not configured properly.");
+      }
+      if (tmp != null) {
+        confDir = String.format("--config %s", tmp);
+      } else {
+        confDir = "";
+      }
+    }
+
+    @Override
+    public String getCommand(ServiceType service, Operation op) {
+      return String.format("%s/sbin/hadoop-daemon.sh %s %s %s", hadoopHome, confDir,
+          op.toString().toLowerCase(), service);
+    }
+  }
+
+  /**
+   * CommandProvider to manage the service using bin/zk* scripts.
+   */
+  static class ZookeeperShellCommandProvider extends CommandProvider {
+    private final String zookeeperHome;
+    private final String confDir;
+
+    ZookeeperShellCommandProvider(Configuration conf) throws IOException {
+      zookeeperHome = conf.get("hbase.it.clustermanager.zookeeper.home",
+          System.getenv("ZOOBINDIR"));
+      String tmp = conf.get("hbase.it.clustermanager.zookeeper.conf.dir",
+          System.getenv("ZOOCFGDIR"));
+      if (zookeeperHome == null) {
+        throw new IOException("Zookeeper home configuration parameter i.e. " +
+          "'hbase.it.clustermanager.zookeeper.home' is not configured properly.");
+      }
+      if (tmp != null) {
+        confDir = String.format("--config %s", tmp);
+      } else {
+        confDir = "";
+      }
+    }
+
+    @Override
+    public String getCommand(ServiceType service, Operation op) {
+      return String.format("%s/bin/zkServer.sh %s", zookeeperHome, op.toString().toLowerCase());
+    }
+
+    @Override
+    protected String findPidCommand(ServiceType service) {
+      return String.format("ps aux | grep %s | grep -v grep | tr -s ' ' | cut -d ' ' -f2",
+        service);
+    }
+  }
+
   public HBaseClusterManager() {
   }
 
-  protected CommandProvider getCommandProvider(ServiceType service) {
-    //TODO: make it pluggable, or auto-detect the best command provider, should work with
-    //hadoop daemons as well
-    return new HBaseShellCommandProvider(getConf());
+  protected CommandProvider getCommandProvider(ServiceType service) throws IOException {
+    switch (service) {
+      case HADOOP_DATANODE:
+        return new HadoopShellCommandProvider(getConf());
+      case ZOOKEEPER_SERVER:
+        return new ZookeeperShellCommandProvider(getConf());
+      default:
+        return new HBaseShellCommandProvider(getConf());
+    }
   }
 
   /**
@@ -202,10 +293,11 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
    * @return pair of exit code and command output
    * @throws IOException if something goes wrong.
    */
-  private Pair<Integer, String> exec(String hostname, String... cmd) throws IOException {
+  private Pair<Integer, String> exec(String hostname, ServiceType service, String... cmd)
+    throws IOException {
     LOG.info("Executing remote command: " + StringUtils.join(cmd, " ") + " , hostname:" + hostname);
 
-    RemoteShell shell = new RemoteShell(hostname, cmd);
+    RemoteShell shell = new RemoteShell(hostname, getServiceUser(service), cmd);
     try {
       shell.execute();
     } catch (Shell.ExitCodeException ex) {
@@ -222,12 +314,12 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
     return new Pair<Integer, String>(shell.getExitCode(), shell.getOutput());
   }
 
-  private Pair<Integer, String> execWithRetries(String hostname, String... cmd)
+  private Pair<Integer, String> execWithRetries(String hostname, ServiceType service, String... cmd)
       throws IOException {
     RetryCounter retryCounter = retryCounterFactory.create();
     while (true) {
       try {
-        return exec(hostname, cmd);
+        return exec(hostname, service, cmd);
       } catch (IOException e) {
         retryOrThrow(retryCounter, e, hostname, cmd);
       }
@@ -252,7 +344,7 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   }
 
   private void exec(String hostname, ServiceType service, Operation op) throws IOException {
-    execWithRetries(hostname, getCommandProvider(service).getCommand(service, op));
+    execWithRetries(hostname, service, getCommandProvider(service).getCommand(service, op));
   }
 
   @Override
@@ -271,13 +363,13 @@ public class HBaseClusterManager extends Configured implements ClusterManager {
   }
 
   public void signal(ServiceType service, String signal, String hostname) throws IOException {
-    execWithRetries(hostname, getCommandProvider(service).signalCommand(service, signal));
+    execWithRetries(hostname, service, getCommandProvider(service).signalCommand(service, signal));
   }
 
   @Override
   public boolean isRunning(ServiceType service, String hostname) throws IOException {
-    String ret = execWithRetries(hostname, getCommandProvider(service).isRunningCommand(service))
-        .getSecond();
+    String ret = execWithRetries(hostname, service,
+      getCommandProvider(service).isRunningCommand(service)).getSecond();
     return ret.length() > 0;
   }
 

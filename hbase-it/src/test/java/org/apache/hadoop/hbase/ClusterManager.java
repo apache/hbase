@@ -39,6 +39,7 @@ interface ClusterManager extends Configurable {
     HADOOP_DATANODE("datanode"),
     HADOOP_JOBTRACKER("jobtracker"),
     HADOOP_TASKTRACKER("tasktracker"),
+    ZOOKEEPER_SERVER("QuorumPeerMain"),
     HBASE_MASTER("master"),
     HBASE_REGIONSERVER("regionserver");
 

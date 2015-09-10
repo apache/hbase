@@ -163,6 +163,81 @@ public abstract class HBaseCluster implements Closeable, Configurable {
       throws IOException;
 
   /**
+   * Starts a new zookeeper node on the given hostname or if this is a mini/local cluster,
+   * silently logs warning message.
+   * @param hostname the hostname to start the regionserver on
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startZkNode(String hostname, int port) throws IOException;
+
+  /**
+   * Kills the zookeeper node process if this is a distributed cluster, otherwise,
+   * this causes master to exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killZkNode(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the region zookeeper if this is a distributed cluster, otherwise
+   * silently logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopZkNode(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified zookeeper node to join the cluster
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForZkNodeToStart(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
+   * Wait for the specified zookeeper node to stop the thread / process.
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForZkNodeToStop(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
+   * Starts a new datanode on the given hostname or if this is a mini/local cluster,
+   * silently logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void startDataNode(ServerName serverName) throws IOException;
+
+  /**
+   * Kills the datanode process if this is a distributed cluster, otherwise,
+   * this causes master to exit doing basic clean up only.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void killDataNode(ServerName serverName) throws IOException;
+
+  /**
+   * Stops the datanode if this is a distributed cluster, otherwise
+   * silently logs warning message.
+   * @throws IOException if something goes wrong
+   */
+  public abstract void stopDataNode(ServerName serverName) throws IOException;
+
+  /**
+   * Wait for the specified datanode to join the cluster
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForDataNodeToStart(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
+   * Wait for the specified datanode to stop the thread / process.
+   * @return whether the operation finished with success
+   * @throws IOException if something goes wrong or timeout occurs
+   */
+  public abstract void waitForDataNodeToStop(ServerName serverName, long timeout)
+    throws IOException;
+
+  /**
    * Starts a new master on the given hostname or if this is a mini/local cluster,
    * starts a master locally.
    * @param hostname the hostname to start the master on
