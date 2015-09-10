@@ -52,8 +52,10 @@ import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
 import com.google.common.base.Strings;
@@ -70,6 +72,10 @@ public class TestHBaseSaslRpcClient {
   static final String DEFAULT_USER_PASSWORD = "password";
 
   private static final Logger LOG = Logger.getLogger(TestHBaseSaslRpcClient.class);
+
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @BeforeClass
   public static void before() {
@@ -100,6 +106,10 @@ public class TestHBaseSaslRpcClient {
         "integrity");
     assertTrue(SaslUtil.SASL_PROPS.get(Sasl.QOP).equals(SaslUtil.QualityOfProtection.
         INTEGRITY.getSaslQop()));
+
+    exception.expect(IllegalArgumentException.class);
+    new HBaseSaslRpcClient(AuthMethod.DIGEST, token, "principal/host@DOMAIN.COM", false,
+        "wrongvalue");
   }
 
   @Test
