@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.DaemonThreadFactory;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
@@ -29,9 +30,15 @@ import org.apache.hadoop.hbase.zookeeper.ZooKeeperListener;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Handles synchronization of access control list entries and updates
@@ -43,13 +50,16 @@ import java.util.concurrent.CountDownLatch;
  * trigger updates in the {@link TableAuthManager} permission cache.
  */
 @InterfaceAudience.Private
-public class ZKPermissionWatcher extends ZooKeeperListener {
+public class ZKPermissionWatcher extends ZooKeeperListener implements Closeable {
   private static final Log LOG = LogFactory.getLog(ZKPermissionWatcher.class);
   // parent node for permissions lists
   static final String ACL_NODE = "acl";
   TableAuthManager authManager;
   String aclZNode;
   CountDownLatch initialized = new CountDownLatch(1);
+  AtomicReference<List<ZKUtil.NodeAndData>> nodes =
+      new AtomicReference<List<ZKUtil.NodeAndData>>(null);
+  ExecutorService executor;
 
   public ZKPermissionWatcher(ZooKeeperWatcher watcher,
       TableAuthManager authManager, Configuration conf) {
@@ -57,16 +67,34 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
     this.authManager = authManager;
     String aclZnodeParent = conf.get("zookeeper.znode.acl.parent", ACL_NODE);
     this.aclZNode = ZKUtil.joinZNode(watcher.baseZNode, aclZnodeParent);
+    executor = Executors.newSingleThreadExecutor(
+      new DaemonThreadFactory("zk-permission-watcher"));
   }
 
   public void start() throws KeeperException {
     try {
       watcher.registerListener(this);
       if (ZKUtil.watchAndCheckExists(watcher, aclZNode)) {
-        List<ZKUtil.NodeAndData> existing =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        if (existing != null) {
-          refreshNodes(existing);
+        try {
+          executor.submit(new Callable<Void>() {
+            @Override
+            public Void call() throws KeeperException {
+              List<ZKUtil.NodeAndData> existing =
+                  ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
+              if (existing != null) {
+                refreshNodes(existing, null);
+              }
+              return null;
+            }
+          }).get();
+        } catch (ExecutionException ex) {
+          if (ex.getCause() instanceof KeeperException) {
+            throw (KeeperException)ex.getCause();
+          } else {
+            throw new RuntimeException(ex.getCause());
+          }
+        } catch (InterruptedException ex) {
+          Thread.currentThread().interrupt();
         }
       }
     } finally {
@@ -74,11 +102,16 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
     }
   }
 
+  @Override
+  public void close() {
+    executor.shutdown();
+  }
+
   private void waitUntilStarted() {
     try {
       initialized.await();
     } catch (InterruptedException e) {
-      LOG.warn("Interrupted while waiting", e);
+      LOG.warn("Interrupted while waiting for start", e);
       Thread.currentThread().interrupt();
     }
   }
@@ -87,68 +120,103 @@ public class ZKPermissionWatcher extends ZooKeeperListener {
   public void nodeCreated(String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
-      try {
-        List<ZKUtil.NodeAndData> nodes =
-            ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        refreshNodes(nodes);
-      } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper", ke);
-        // only option is to abort
-        watcher.abort("Zookeeper error obtaining acl node children", ke);
-      }
+      executor.submit(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            List<ZKUtil.NodeAndData> nodes =
+                ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
+            refreshNodes(nodes, null);
+          } catch (KeeperException ke) {
+            LOG.error("Error reading data from zookeeper", ke);
+            // only option is to abort
+            watcher.abort("Zookeeper error obtaining acl node children", ke);
+          }
+        }
+      });
     }
   }
 
   @Override
-  public void nodeDeleted(String path) {
+  public void nodeDeleted(final String path) {
     waitUntilStarted();
     if (aclZNode.equals(ZKUtil.getParent(path))) {
-      String table = ZKUtil.getNodeName(path);
-      if(AccessControlLists.isNamespaceEntry(table)) {
-        authManager.removeNamespace(Bytes.toBytes(table));
-      } else {
-        authManager.removeTable(TableName.valueOf(table));
-      }
+      executor.submit(new Runnable() {
+        @Override
+        public void run() {
+          String table = ZKUtil.getNodeName(path);
+          if(AccessControlLists.isNamespaceEntry(table)) {
+            authManager.removeNamespace(Bytes.toBytes(table));
+          } else {
+            authManager.removeTable(TableName.valueOf(table));
+          }
+        }
+      });
     }
   }
 
   @Override
-  public void nodeDataChanged(String path) {
+  public void nodeDataChanged(final String path) {
     waitUntilStarted();
     if (aclZNode.equals(ZKUtil.getParent(path))) {
-      // update cache on an existing table node
-      String entry = ZKUtil.getNodeName(path);
-      try {
-        byte[] data = ZKUtil.getDataAndWatch(watcher, path);
-        refreshAuthManager(entry, data);
-      } catch (KeeperException ke) {
-        LOG.error("Error reading data from zookeeper for node " + entry, ke);
-        // only option is to abort
-        watcher.abort("Zookeeper error getting data for node " + entry, ke);
-      } catch (IOException ioe) {
-        LOG.error("Error reading permissions writables", ioe);
-      }
+      executor.submit(new Runnable() {
+        @Override
+        public void run() {
+          // update cache on an existing table node
+          String entry = ZKUtil.getNodeName(path);
+          try {
+            byte[] data = ZKUtil.getDataAndWatch(watcher, path);
+            refreshAuthManager(entry, data);
+          } catch (KeeperException ke) {
+            LOG.error("Error reading data from zookeeper for node " + entry, ke);
+            // only option is to abort
+            watcher.abort("Zookeeper error getting data for node " + entry, ke);
+          } catch (IOException ioe) {
+            LOG.error("Error reading permissions writables", ioe);
+          }
+        }
+      });
     }
   }
 
   @Override
-  public void nodeChildrenChanged(String path) {
+  public void nodeChildrenChanged(final String path) {
     waitUntilStarted();
     if (path.equals(aclZNode)) {
-      // table permissions changed
       try {
-        List<ZKUtil.NodeAndData> nodes =
+        List<ZKUtil.NodeAndData> nodeList =
             ZKUtil.getChildDataAndWatchForNewChildren(watcher, aclZNode);
-        refreshNodes(nodes);
+        while (!nodes.compareAndSet(null, nodeList)) {
+          try {
+            Thread.sleep(20);
+          } catch (InterruptedException e) {
+            LOG.warn("Interrupted while setting node list", e);
+            Thread.currentThread().interrupt();
+          }
+        }
       } catch (KeeperException ke) {
         LOG.error("Error reading data from zookeeper for path "+path, ke);
         watcher.abort("Zookeeper error get node children for path "+path, ke);
       }
+      executor.submit(new Runnable() {
+        // allows subsequent nodeChildrenChanged event to preempt current processing of
+        // nodeChildrenChanged event
+        @Override
+        public void run() {
+          List<ZKUtil.NodeAndData> nodeList = nodes.get();
+          nodes.set(null);
+          refreshNodes(nodeList, nodes);
+        }
+      });
     }
   }
 
-  private void refreshNodes(List<ZKUtil.NodeAndData> nodes) {
+  private void refreshNodes(List<ZKUtil.NodeAndData> nodes, AtomicReference ref) {
     for (ZKUtil.NodeAndData n : nodes) {
+      if (ref != null && ref.get() != null) {
+        // there is a newer list
+        break;
+      }
       if (n.isEmpty()) continue;
       String path = n.getNode();
       String entry = (ZKUtil.getNodeName(path));
