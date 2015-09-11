@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.security.access;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.zookeeper.KeeperException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
@@ -47,7 +49,7 @@ import com.google.common.collect.Lists;
  * Performs authorization checks for a given user's assigned permissions
  */
 @InterfaceAudience.Private
-public class TableAuthManager {
+public class TableAuthManager implements Closeable {
   private static class PermissionCache<T extends Permission> {
     /** Cache of user permissions */
     private ListMultimap<String,T> userCache = ArrayListMultimap.create();
@@ -94,8 +96,6 @@ public class TableAuthManager {
 
   private static Log LOG = LogFactory.getLog(TableAuthManager.class);
 
-  private static TableAuthManager instance;
-
   /** Cache of global permissions */
   private volatile PermissionCache<Permission> globalCache;
 
@@ -122,6 +122,11 @@ public class TableAuthManager {
     } catch (KeeperException ke) {
       LOG.error("ZooKeeper initialization failed", ke);
     }
+  }
+
+  @Override
+  public void close() {
+    this.zkperms.close();
   }
 
   /**
@@ -738,16 +743,54 @@ public class TableAuthManager {
     return mtime;
   }
 
-  static Map<ZooKeeperWatcher,TableAuthManager> managerMap =
+  private static Map<ZooKeeperWatcher,TableAuthManager> managerMap =
     new HashMap<ZooKeeperWatcher,TableAuthManager>();
 
-  public synchronized static TableAuthManager get(
+  private static Map<TableAuthManager, Integer> refCount = new HashMap<TableAuthManager, Integer>();
+
+  /** Returns a TableAuthManager from the cache. If not cached, constructs a new one. Returned
+   * instance should be released back by calling {@link #release(TableAuthManager)}. */
+  public synchronized static TableAuthManager getOrCreate(
       ZooKeeperWatcher watcher, Configuration conf) throws IOException {
-    instance = managerMap.get(watcher);
+    TableAuthManager instance = managerMap.get(watcher);
     if (instance == null) {
       instance = new TableAuthManager(watcher, conf);
       managerMap.put(watcher, instance);
     }
+    int ref = refCount.get(instance) == null ? 0 : refCount.get(instance).intValue();
+    refCount.put(instance, ref + 1);
     return instance;
+  }
+
+  @VisibleForTesting
+  static int getTotalRefCount() {
+    int total = 0;
+    for (int count : refCount.values()) {
+      total += count;
+    }
+    return total;
+  }
+
+  /**
+   * Releases the resources for the given TableAuthManager if the reference count is down to 0.
+   * @param instance TableAuthManager to be released
+   */
+  public synchronized static void release(TableAuthManager instance) {
+    if (refCount.get(instance) == null || refCount.get(instance) < 1) {
+      String msg = "Something wrong with the TableAuthManager reference counting: " + instance
+          + " whose count is " + refCount.get(instance);
+      LOG.fatal(msg);
+      instance.close();
+      managerMap.remove(instance.getZKPermissionWatcher().getWatcher());
+      instance.getZKPermissionWatcher().getWatcher().abort(msg, null);
+    } else {
+      int ref = refCount.get(instance);
+      refCount.put(instance, ref-1);
+      if (ref-1 == 0) {
+        instance.close();
+        managerMap.remove(instance.getZKPermissionWatcher().getWatcher());
+        refCount.remove(instance);
+      }
+    }
   }
 }

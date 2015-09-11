@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -96,10 +97,18 @@ public class SecureTestUtil {
   }
 
   public static void verifyConfiguration(Configuration conf) {
+    String coprocs = conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    boolean accessControllerLoaded = false;
+    for (String coproc : coprocs.split(",")) {
+      try {
+        accessControllerLoaded = AccessController.class.isAssignableFrom(Class.forName(coproc));
+        if (accessControllerLoaded) break;
+      } catch (ClassNotFoundException cnfe) {
+      }
+    }
     if (!(conf.get(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY).contains(
         AccessController.class.getName())
-        && conf.get(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY).contains(
-            AccessController.class.getName()) && conf.get(
+        && accessControllerLoaded && conf.get(
         CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY).contains(
         AccessController.class.getName()))) {
       throw new RuntimeException("AccessController is missing from a system coprocessor list");

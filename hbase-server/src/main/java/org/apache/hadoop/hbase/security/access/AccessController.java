@@ -964,7 +964,7 @@ public class AccessController extends BaseMasterAndRegionObserver
     // throw RuntimeException so that the coprocessor is unloaded.
     if (zk != null) {
       try {
-        this.authManager = TableAuthManager.get(zk, env.getConfiguration());
+        this.authManager = TableAuthManager.getOrCreate(zk, env.getConfiguration());
       } catch (IOException ioe) {
         throw new RuntimeException("Error obtaining TableAuthManager", ioe);
       }
@@ -982,7 +982,9 @@ public class AccessController extends BaseMasterAndRegionObserver
   }
 
   public void stop(CoprocessorEnvironment env) {
-
+    if (this.authManager != null) {
+      TableAuthManager.release(authManager);
+    }
   }
 
    @Override
