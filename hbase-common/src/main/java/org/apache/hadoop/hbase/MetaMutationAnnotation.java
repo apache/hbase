@@ -25,6 +25,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * The field or the parameter to which this annotation can be applied only when it
  * holds mutations for hbase:meta table.
@@ -32,6 +34,7 @@ import java.lang.annotation.Target;
 @Documented
 @Target( { ElementType.LOCAL_VARIABLE, ElementType.PARAMETER })
 @Retention(RetentionPolicy.CLASS)
+@InterfaceAudience.Private
 public @interface MetaMutationAnnotation {
 
 }

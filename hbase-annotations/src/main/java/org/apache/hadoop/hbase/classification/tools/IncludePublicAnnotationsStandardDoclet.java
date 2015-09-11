@@ -22,6 +22,8 @@ import com.sun.javadoc.LanguageVersion;
 import com.sun.javadoc.RootDoc;
 import com.sun.tools.doclets.standard.Standard;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * A <a href="http://java.sun.com/javase/6/docs/jdk/api/javadoc/doclet/">Doclet</a>
  * that only includes class-level elements that are annotated with
@@ -33,6 +35,7 @@ import com.sun.tools.doclets.standard.Standard;
  * are also excluded.
  * It delegates to the Standard Doclet, and takes the same options.
  */
+@InterfaceAudience.Private
 public class IncludePublicAnnotationsStandardDoclet {
 
   public static LanguageVersion languageVersion() {

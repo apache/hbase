@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 /**
  * Exception thrown by HTable methods when an attempt to do something (like
@@ -46,6 +45,7 @@ public class RetriesExhaustedException extends IOException {
   /**
    * Datastructure that allows adding more info around Throwable incident.
    */
+  @InterfaceAudience.Private
   public static class ThrowableWithExtraContext {
     private final Throwable t;
     private final long when;

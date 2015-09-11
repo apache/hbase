@@ -24,6 +24,7 @@ import java.util.zip.Checksum;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Checksum types. The Checksum type is a one byte number
@@ -31,6 +32,7 @@ import org.apache.commons.logging.LogFactory;
  * used to encode a hfile. The ordinal of these cannot 
  * change or else you risk breaking all existing HFiles out there.
  */
+@InterfaceAudience.Private
 public enum ChecksumType {
 
   NULL((byte)0) {

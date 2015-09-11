@@ -24,12 +24,15 @@ import java.lang.ClassNotFoundException;
 import java.util.zip.Checksum;
 import java.lang.reflect.Constructor;
 
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+
 /**
  * Utility class that is used to generate a Checksum object.
  * The Checksum implementation is pluggable and an application
  * can specify their own class that implements their own
  * Checksum algorithm.
  */
+@InterfaceAudience.Private
 public class ChecksumFactory {
 
   static private final Class<?>[] EMPTY_ARRAY = new Class[]{};

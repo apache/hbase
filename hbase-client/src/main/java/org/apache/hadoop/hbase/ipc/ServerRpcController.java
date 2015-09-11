@@ -23,6 +23,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.Service;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.util.StringUtils;
 
 import java.io.IOException;
@@ -50,6 +52,7 @@ import java.io.IOException;
  * </code>
  * </p>
  */
+@InterfaceAudience.Private
 public class ServerRpcController implements RpcController {
   /**
    * The exception thrown within

@@ -1456,6 +1456,8 @@ public class Base64 {
    * @see Base64
    * @since 1.3
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Stable
   public static class Base64OutputStream extends FilterOutputStream {
     private boolean encode;
     private int position;

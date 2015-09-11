@@ -84,6 +84,7 @@ public final class HConstants {
   /**
    * Status codes used for return values of bulk operations.
    */
+  @InterfaceAudience.Private
   public enum OperationStatusCode {
     NOT_RUN,
     SUCCESS,
@@ -553,6 +554,7 @@ public final class HConstants {
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
   /** modifyTable op for replacing the table descriptor */
+  @InterfaceAudience.Private
   public static enum Modify {
     CLOSE_REGION,
     TABLE_COMPACT,

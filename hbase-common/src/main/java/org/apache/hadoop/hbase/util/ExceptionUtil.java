@@ -20,7 +20,8 @@ package org.apache.hadoop.hbase.util;
 
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
-import java.nio.channels.ClosedByInterruptException;
+
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * This class handles the different interruption classes.
@@ -31,6 +32,7 @@ import java.nio.channels.ClosedByInterruptException;
  * , - SocketTimeoutException inherits InterruptedIOException but is not a real
  * interruption, so we have to distinguish the case. This pattern is unfortunately common.
  */
+@InterfaceAudience.Private
 public class ExceptionUtil {
 
   /**

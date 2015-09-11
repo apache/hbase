@@ -161,6 +161,8 @@ public class NamespaceDescriptor {
     return new Builder(ns);
   }
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class Builder {
     private String bName;
     private Map<String, String> bConfiguration = new TreeMap<String, String>();

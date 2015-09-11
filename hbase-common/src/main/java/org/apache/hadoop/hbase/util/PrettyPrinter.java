@@ -23,10 +23,12 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HConstants;
 
-@InterfaceAudience.Public
+@InterfaceAudience.Public // NOTE: This switches to Private in later versions
 @InterfaceStability.Evolving
 public class PrettyPrinter {
 
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum Unit {
     TIME_INTERVAL,
     NONE

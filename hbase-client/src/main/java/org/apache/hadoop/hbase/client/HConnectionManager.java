@@ -595,6 +595,7 @@ public class HConnectionManager {
   }
 
   /** Encapsulates connection to zookeeper and regionservers.*/
+  @InterfaceAudience.Private
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(
       value="AT_OPERATION_SEQUENCE_ON_CONCURRENT_ABSTRACTION",
       justification="Access to the conncurrent hash map is under a lock so should be fine.")

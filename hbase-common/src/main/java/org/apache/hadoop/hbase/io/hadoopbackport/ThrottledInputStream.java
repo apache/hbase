@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * The ThrottleInputStream provides bandwidth throttling on a specified
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.PositionedReadable;
  * (Thus, while the read-rate might exceed the maximum for a given short interval,
  * the average tends towards the specified maximum, overall.)
  */
+@InterfaceAudience.Private
 public class ThrottledInputStream extends InputStream {
 
   private final InputStream rawStream;

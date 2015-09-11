@@ -19,11 +19,13 @@ package org.apache.hadoop.hbase.ipc;
 
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * Simple delegating controller for use with the {@link RpcControllerFactory} to help override
  * standard behavior of a {@link PayloadCarryingRpcController}.
  */
+@InterfaceAudience.Private
 public class DelegatingPayloadCarryingRpcController extends PayloadCarryingRpcController {
   private PayloadCarryingRpcController delegate;
 

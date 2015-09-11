@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
@@ -50,6 +51,7 @@ import com.google.protobuf.Message;
 /**
  * Utility to help ipc'ing.
  */
+@InterfaceAudience.Private
 class IPCUtil {
   public static final Log LOG = LogFactory.getLog(IPCUtil.class);
   /**
@@ -74,6 +76,7 @@ class IPCUtil {
   /**
    * Thrown if a cellscanner but no codec to encode it with.
    */
+  @InterfaceAudience.Private
   public static class CellScannerButNoCodecException extends HBaseIOException {};
 
   /**

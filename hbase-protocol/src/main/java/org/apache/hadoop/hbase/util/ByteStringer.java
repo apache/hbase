@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.HBaseZeroCopyByteString;
@@ -26,6 +27,7 @@ import com.google.protobuf.HBaseZeroCopyByteString;
 /**
  * Hack to workaround HBASE-1304 issue that keeps bubbling up when a mapreduce context.
  */
+@InterfaceAudience.Private
 public class ByteStringer {
   private static final Log LOG = LogFactory.getLog(ByteStringer.class);
 

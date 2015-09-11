@@ -80,6 +80,8 @@ public class RegexStringComparator extends ByteArrayComparable {
   private Engine engine;
 
   /** Engine implementation type (default=JAVA) */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public enum EngineType {
     JAVA,
     JONI

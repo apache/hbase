@@ -238,6 +238,8 @@ public class HTableMultiplexer {
    * report the number of buffered requests and the number of the failed (dropped) requests
    * in total or on per region server basis.
    */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
   public static class HTableMultiplexerStatus {
     private long totalFailedPutCounter;
     private long totalBufferedPutCounter;

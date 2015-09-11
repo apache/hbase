@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
  * HBase version of Hadoop's Configured class that doesn't initialize the
@@ -26,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
  * only sets the configuration through the {@link #setConf(Configuration)}
  * method
  */
+@InterfaceAudience.Private
 public class BaseConfigurable implements Configurable {
 
   private Configuration conf;
