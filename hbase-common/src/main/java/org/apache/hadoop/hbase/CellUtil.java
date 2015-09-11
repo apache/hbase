@@ -465,9 +465,9 @@ public final class CellUtil {
   public static boolean matchingRow(final Cell left, final byte[] buf, final int offset,
       final int length) {
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getRowByteBuffer(),
           ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(), buf, offset,
-          length) == 0;
+          length);
     }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(), buf, offset,
         length);
@@ -476,22 +476,21 @@ public final class CellUtil {
   public static boolean matchingFamily(final Cell left, final Cell right) {
     byte lfamlength = left.getFamilyLength();
     byte rfamlength = right.getFamilyLength();
-    if (lfamlength != rfamlength) return false;
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getFamilyByteBuffer(),
           ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), lfamlength,
           ((ByteBufferedCell) right).getFamilyByteBuffer(),
-          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), rfamlength) == 0;
+          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), rfamlength);
     }
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getFamilyByteBuffer(),
           ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), lfamlength,
-          right.getFamilyArray(), right.getFamilyOffset(), rfamlength) == 0;
+          right.getFamilyArray(), right.getFamilyOffset(), rfamlength);
     }
     if (right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getFamilyByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) right).getFamilyByteBuffer(),
           ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), rfamlength,
-          left.getFamilyArray(), left.getFamilyOffset(), lfamlength) == 0;
+          left.getFamilyArray(), left.getFamilyOffset(), lfamlength);
     }
     return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
         right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
@@ -507,9 +506,9 @@ public final class CellUtil {
   public static boolean matchingFamily(final Cell left, final byte[] buf, final int offset,
       final int length) {
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getFamilyByteBuffer(),
           ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(), buf,
-          offset, length) == 0;
+          offset, length);
     }
     return Bytes.equals(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(), buf,
         offset, length);
@@ -518,22 +517,21 @@ public final class CellUtil {
   public static boolean matchingQualifier(final Cell left, final Cell right) {
     int lqlength = left.getQualifierLength();
     int rqlength = right.getQualifierLength();
-    if (lqlength != rqlength) return false;
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getQualifierByteBuffer(),
           ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), lqlength,
           ((ByteBufferedCell) right).getQualifierByteBuffer(),
-          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(), rqlength) == 0;
+          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(), rqlength);
     }
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getQualifierByteBuffer(),
           ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), lqlength,
-          right.getQualifierArray(), right.getQualifierOffset(), rqlength) == 0;
+          right.getQualifierArray(), right.getQualifierOffset(), rqlength);
     }
     if (right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getQualifierByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) right).getQualifierByteBuffer(),
           ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(), rqlength,
-          left.getQualifierArray(), left.getQualifierOffset(), lqlength) == 0;
+          left.getQualifierArray(), left.getQualifierOffset(), lqlength);
     }
     return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), right.getQualifierArray(), right.getQualifierOffset(),
@@ -569,9 +567,9 @@ public final class CellUtil {
       return left.getQualifierLength() == 0;
     }
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getQualifierByteBuffer(),
           ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
-          buf, offset, length) == 0;
+          buf, offset, length);
     }
     return Bytes.equals(left.getQualifierArray(), left.getQualifierOffset(),
         left.getQualifierLength(), buf, offset, length);
@@ -599,22 +597,21 @@ public final class CellUtil {
   public static boolean matchingValue(final Cell left, final Cell right) {
     int lvlength = left.getValueLength();
     int rvlength = right.getValueLength();
-    if (lvlength != rvlength) return false;
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getValueByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getValueByteBuffer(),
           ((ByteBufferedCell) left).getValuePositionInByteBuffer(), lvlength,
           ((ByteBufferedCell) right).getValueByteBuffer(),
-          ((ByteBufferedCell) right).getValuePositionInByteBuffer(), rvlength) == 0;
+          ((ByteBufferedCell) right).getValuePositionInByteBuffer(), rvlength);
     }
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getValueByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getValueByteBuffer(),
           ((ByteBufferedCell) left).getValuePositionInByteBuffer(), lvlength,
-          right.getValueArray(), right.getValueOffset(), rvlength) == 0;
+          right.getValueArray(), right.getValueOffset(), rvlength);
     }
     if (right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getValueByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) right).getValueByteBuffer(),
           ((ByteBufferedCell) right).getValuePositionInByteBuffer(), rvlength,
-          left.getValueArray(), left.getValueOffset(), lvlength) == 0;
+          left.getValueArray(), left.getValueOffset(), lvlength);
     }
     return Bytes.equals(left.getValueArray(), left.getValueOffset(), lvlength,
         right.getValueArray(), right.getValueOffset(), rvlength);
@@ -1124,20 +1121,20 @@ public final class CellUtil {
     short rrowlength = right.getRowLength();
     if (lrowlength != rrowlength) return false;
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getRowByteBuffer(),
           ((ByteBufferedCell) left).getRowPositionInByteBuffer(), lrowlength,
           ((ByteBufferedCell) right).getRowByteBuffer(),
-          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), rrowlength) == 0;
+          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), rrowlength);
     }
     if (left instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) left).getRowByteBuffer(),
           ((ByteBufferedCell) left).getRowPositionInByteBuffer(), lrowlength, right.getRowArray(),
-          right.getRowOffset(), rrowlength) == 0;
+          right.getRowOffset(), rrowlength);
     }
     if (right instanceof ByteBufferedCell) {
-      return ByteBufferUtils.compareTo(((ByteBufferedCell) right).getRowByteBuffer(),
+      return ByteBufferUtils.equals(((ByteBufferedCell) right).getRowByteBuffer(),
           ((ByteBufferedCell) right).getRowPositionInByteBuffer(), rrowlength, left.getRowArray(),
-          left.getRowOffset(), lrowlength) == 0;
+          left.getRowOffset(), lrowlength);
     }
     return Bytes.equals(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
         right.getRowArray(), right.getRowOffset(), right.getRowLength());

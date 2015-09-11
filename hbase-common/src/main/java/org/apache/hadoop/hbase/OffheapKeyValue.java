@@ -45,7 +45,7 @@ public class OffheapKeyValue extends ByteBufferedCell implements HeapSize, Clone
   // TODO : See if famLen can be cached or not?
 
   private static final int FIXED_HEAP_SIZE_OVERHEAD = ClassSize.OBJECT + ClassSize.REFERENCE
-      + ClassSize.align(ClassSize.BYTE_BUFFER) + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
+      + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_SHORT
       + Bytes.SIZEOF_BOOLEAN + Bytes.SIZEOF_LONG;
 
   public OffheapKeyValue(ByteBuffer buf, int offset, int length, boolean hasTags, long seqId) {
