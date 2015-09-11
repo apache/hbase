@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.io.IOUtils;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 /**
@@ -692,6 +693,45 @@ public class HFileBlock implements Cacheable {
       bytesRemaining -= ret;
     }
     return bytesRemaining <= 0;
+  }
+
+  /**
+   * Read from an input stream. Analogous to
+   * {@link IOUtils#readFully(InputStream, byte[], int, int)}, but uses
+   * positional read and specifies a number of "extra" bytes that would be
+   * desirable but not absolutely necessary to read.
+   *
+   * @param in the input stream to read from
+   * @param position the position within the stream from which to start reading
+   * @param buf the buffer to read into
+   * @param bufOffset the destination offset in the buffer
+   * @param necessaryLen the number of bytes that are absolutely necessary to
+   *     read
+   * @param extraLen the number of extra bytes that would be nice to read
+   * @return true if and only if extraLen is > 0 and reading those extra bytes
+   *     was successful
+   * @throws IOException if failed to read the necessary bytes
+   */
+  @VisibleForTesting
+  static boolean positionalReadWithExtra(FSDataInputStream in,
+      long position, byte[] buf, int bufOffset, int necessaryLen, int extraLen)
+      throws IOException {
+    int bytesRemaining = necessaryLen + extraLen;
+    int bytesRead = 0;
+    while (bytesRead < necessaryLen) {
+      int ret = in.read(position, buf, bufOffset, bytesRemaining);
+      if (ret < 0) {
+        throw new IOException("Premature EOF from inputStream (positional read "
+            + "returned " + ret + ", was trying to read " + necessaryLen
+            + " necessary bytes and " + extraLen + " extra bytes, "
+            + "successfully read " + bytesRead);
+      }
+      position += ret;
+      bufOffset += ret;
+      bytesRemaining -= ret;
+      bytesRead += ret;
+    }
+    return bytesRead != necessaryLen && bytesRemaining <= 0;
   }
 
   /**
@@ -1374,14 +1414,8 @@ public class HFileBlock implements Cacheable {
       } else {
         // Positional read. Better for random reads; or when the streamLock is already locked.
         int extraSize = peekIntoNextBlock ? hdrSize : 0;
-        int ret = istream.read(fileOffset, dest, destOffset, size + extraSize);
-        if (ret < size) {
-          throw new IOException("Positional read of " + size + " bytes " +
-              "failed at offset " + fileOffset + " (returned " + ret + ")");
-        }
-
-        if (ret == size || ret < size + extraSize) {
-          // Could not read the next block's header, or did not try.
+        if (!positionalReadWithExtra(istream, fileOffset, dest, destOffset,
+            size, extraSize)) {
           return -1;
         }
       }
