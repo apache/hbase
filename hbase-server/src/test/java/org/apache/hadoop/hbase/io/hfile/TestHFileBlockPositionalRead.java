@@ -23,7 +23,6 @@ import static org.mockito.Mockito.*;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,7 +32,7 @@ import org.junit.rules.ExpectedException;
 /**
  * Unit test suite covering HFileBlock positional read logic.
  */
-@Category({IOTests.class, SmallTests.class})
+@Category({SmallTests.class})
 public class TestHFileBlockPositionalRead {
 
   @Rule
