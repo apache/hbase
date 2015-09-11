@@ -74,15 +74,40 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   }
 
   @Before
-  public void setup() throws FailedLogCloseException, IOException {
+  public void setup() throws Exception {
     ReplicationEndpointForTest.contructedCount.set(0);
     ReplicationEndpointForTest.startedCount.set(0);
     ReplicationEndpointForTest.replicateCount.set(0);
     ReplicationEndpointReturningFalse.replicated.set(false);
     ReplicationEndpointForTest.lastEntries = null;
-    for (RegionServerThread rs : utility1.getMiniHBaseCluster().getRegionServerThreads()) {
+    final List<RegionServerThread> rsThreads =
+        utility1.getMiniHBaseCluster().getRegionServerThreads();
+    for (RegionServerThread rs : rsThreads) {
       utility1.getHBaseAdmin().rollWALWriter(rs.getRegionServer().getServerName());
     }
+    // Wait for  all log roll to finish
+    utility1.waitFor(3000, new Waiter.ExplainingPredicate<Exception>() {
+      @Override
+      public boolean evaluate() throws Exception {
+        for (RegionServerThread rs : rsThreads) {
+          if (!rs.getRegionServer().walRollRequestFinished()) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public String explainFailure() throws Exception {
+        List<String> logRollInProgressRsList = new ArrayList<String>();
+        for (RegionServerThread rs : rsThreads) {
+          if (!rs.getRegionServer().walRollRequestFinished()) {
+            logRollInProgressRsList.add(rs.getRegionServer().toString());
+          }
+        }
+        return "Still waiting for log roll on regionservers: " + logRollInProgressRsList;
+      }
+    });
   }
 
   @Test (timeout=120000)

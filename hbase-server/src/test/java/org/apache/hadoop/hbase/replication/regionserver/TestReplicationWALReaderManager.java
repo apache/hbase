@@ -39,8 +39,10 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
@@ -75,6 +77,7 @@ public class TestReplicationWALReaderManager {
   private int nbRows;
   private int walEditKVs;
   private final AtomicLong sequenceId = new AtomicLong(1);
+  @Rule public TestName tn = new TestName();
 
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -127,7 +130,7 @@ public class TestReplicationWALReaderManager {
     List<WALActionsListener> listeners = new ArrayList<WALActionsListener>();
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
-    final WALFactory wals = new WALFactory(conf, listeners, "some server");
+    final WALFactory wals = new WALFactory(conf, listeners, tn.getMethodName());
     log = wals.getWAL(info.getEncodedNameAsBytes());
   }
 

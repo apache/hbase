@@ -191,4 +191,18 @@ public class LogRoller extends HasThread {
         requester);
     }
   }
+
+  /**
+   * For testing only
+   * @return true if all WAL roll finished
+   */
+  @VisibleForTesting
+  public boolean walRollFinished() {
+    for (boolean needRoll : walNeedsRoll.values()) {
+      if (needRoll) {
+        return false;
+      }
+    }
+    return true;
+  }
 }
