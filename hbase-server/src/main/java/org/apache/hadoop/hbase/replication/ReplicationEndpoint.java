@@ -137,6 +137,7 @@ public interface ReplicationEndpoint extends Service {
   static class ReplicateContext {
     List<Entry> entries;
     int size;
+    String walGroupId;
     @InterfaceAudience.Private
     public ReplicateContext() {
     }
@@ -149,11 +150,18 @@ public interface ReplicationEndpoint extends Service {
       this.size = size;
       return this;
     }
+    public ReplicateContext setWalGroupId(String walGroupId) {
+      this.walGroupId = walGroupId;
+      return this;
+    }
     public List<Entry> getEntries() {
       return entries;
     }
     public int getSize() {
       return size;
+    }
+    public String getWalGroupId(){
+      return walGroupId;
     }
   }
 

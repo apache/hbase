@@ -366,4 +366,15 @@ public class DefaultWALProvider implements WALProvider {
     }
   }
 
+  /**
+   * Get prefix of the log from its name, assuming WAL name in format of
+   * log_prefix.filenumber.log_suffix @see {@link FSHLog#getCurrentFileName()}
+   * @param name Name of the WAL to parse
+   * @return prefix of the log
+   */
+  public static String getWALPrefixFromWALName(String name) {
+    int endIndex = name.replaceAll(META_WAL_PROVIDER_ID, "").lastIndexOf(".");
+    return name.substring(0, endIndex);
+  }
+
 }

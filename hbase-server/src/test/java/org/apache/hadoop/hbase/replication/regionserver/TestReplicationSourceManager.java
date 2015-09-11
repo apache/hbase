@@ -25,6 +25,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -232,7 +233,11 @@ public class TestReplicationSourceManager {
     }
     wal.sync();
 
-    assertEquals(6, manager.getWALs().get(slaveId).size());
+    int logNumber = 0;
+    for (Map.Entry<String, SortedSet<String>> entry : manager.getWALs().get(slaveId).entrySet()) {
+      logNumber += entry.getValue().size();
+    }
+    assertEquals(6, logNumber);
 
     wal.rollWriter();
 
@@ -303,8 +308,11 @@ public class TestReplicationSourceManager {
     rq.init(server.getServerName().toString());
     // populate some znodes in the peer znode
     SortedSet<String> files = new TreeSet<String>();
-    files.add("log1");
-    files.add("log2");
+    String group = "testgroup";
+    String file1 = group + ".log1";
+    String file2 = group + ".log2";
+    files.add(file1);
+    files.add(file2);
     for (String file : files) {
       rq.addLog("1", file);
     }
@@ -322,10 +330,10 @@ public class TestReplicationSourceManager {
     w1.join(5000);
     assertEquals(1, manager.getWalsByIdRecoveredQueues().size());
     String id = "1-" + server.getServerName().getServerName();
-    assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id));
-    manager.cleanOldLogs("log2", id, true);
+    assertEquals(files, manager.getWalsByIdRecoveredQueues().get(id).get(group));
+    manager.cleanOldLogs(file2, id, true);
     // log1 should be deleted
-    assertEquals(Sets.newHashSet("log2"), manager.getWalsByIdRecoveredQueues().get(id));
+    assertEquals(Sets.newHashSet(file2), manager.getWalsByIdRecoveredQueues().get(id).get(group));
   }
 
   @Test
