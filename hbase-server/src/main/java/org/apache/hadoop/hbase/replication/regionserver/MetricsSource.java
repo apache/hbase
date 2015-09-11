@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -34,7 +37,8 @@ public class MetricsSource {
 
   private static final Log LOG = LogFactory.getLog(MetricsSource.class);
 
-  private long lastTimestamp = 0;
+  // tracks last shipped timestamp for each wal group
+  private Map<String, Long> lastTimeStamps = new HashMap<String, Long>();
   private int lastQueueSize = 0;
   private String id;
 
@@ -56,23 +60,29 @@ public class MetricsSource {
 
   /**
    * Set the age of the last edit that was shipped
-   *
    * @param timestamp write time of the edit
+   * @param walGroup which group we are setting
    */
-  public void setAgeOfLastShippedOp(long timestamp) {
+  public void setAgeOfLastShippedOp(long timestamp, String walGroup) {
     long age = EnvironmentEdgeManager.currentTime() - timestamp;
     singleSourceSource.setLastShippedAge(age);
     globalSourceSource.setLastShippedAge(age);
-    this.lastTimestamp = timestamp;
+    this.lastTimeStamps.put(walGroup, timestamp);
   }
 
   /**
    * Convenience method to use the last given timestamp to refresh the age of the last edit. Used
    * when replication fails and need to keep that metric accurate.
+   * @param walGroupId id of the group to update
    */
-  public void refreshAgeOfLastShippedOp() {
-    if (this.lastTimestamp > 0) {
-      setAgeOfLastShippedOp(this.lastTimestamp);
+  public void refreshAgeOfLastShippedOp(String walGroupId) {
+    Long lastTimestamp = this.lastTimeStamps.get(walGroupId);
+    if (lastTimestamp == null) {
+      this.lastTimeStamps.put(walGroupId, 0L);
+      lastTimestamp = 0L;
+    }
+    if (lastTimestamp > 0) {
+      setAgeOfLastShippedOp(lastTimestamp, walGroupId);
     }
   }
 
@@ -143,6 +153,7 @@ public class MetricsSource {
   public void clear() {
     singleSourceSource.clear();
     globalSourceSource.decrSizeOfLogQueue(lastQueueSize);
+    lastTimeStamps.clear();
     lastQueueSize = 0;
   }
 
@@ -163,10 +174,16 @@ public class MetricsSource {
   }
 
   /**
-   * Get the timeStampsOfLastShippedOp
+   * Get the timeStampsOfLastShippedOp, if there are multiple groups, return the latest one
    * @return lastTimestampForAge
    */
   public long getTimeStampOfLastShippedOp() {
+    long lastTimestamp = 0L;
+    for (long ts : lastTimeStamps.values()) {
+      if (ts > lastTimestamp) {
+        lastTimestamp = ts;
+      }
+    }
     return lastTimestamp;
   }
 

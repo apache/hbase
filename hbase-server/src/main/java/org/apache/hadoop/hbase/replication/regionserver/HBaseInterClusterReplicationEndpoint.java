@@ -154,6 +154,7 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
   @Override
   public boolean replicate(ReplicateContext replicateContext) {
     List<Entry> entries = replicateContext.getEntries();
+    String walGroupId = replicateContext.getWalGroupId();
     int sleepMultiplier = 1;
 
     if (!peersSelected && this.isRunning()) {
@@ -219,12 +220,13 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
           throw iox;
         }
         // update metrics
-        this.metrics.setAgeOfLastShippedOp(entries.get(entries.size()-1).getKey().getWriteTime());
+        this.metrics.setAgeOfLastShippedOp(entries.get(entries.size() - 1).getKey().getWriteTime(),
+          walGroupId);
         return true;
 
       } catch (IOException ioe) {
         // Didn't ship anything, but must still age the last time we did
-        this.metrics.refreshAgeOfLastShippedOp();
+        this.metrics.refreshAgeOfLastShippedOp(walGroupId);
         if (ioe instanceof RemoteException) {
           ioe = ((RemoteException) ioe).unwrapRemoteException();
           LOG.warn("Can't replicate because of an error on the remote cluster: ", ioe);

@@ -3313,4 +3313,13 @@ public class HRegionServer extends HasThread implements
     }
     return max;
   }
+
+  /**
+   * For testing
+   * @return whether all wal roll request finished for this regionserver
+   */
+  @VisibleForTesting
+  public boolean walRollRequestFinished() {
+    return this.walRoller.walRollFinished();
+  }
 }
