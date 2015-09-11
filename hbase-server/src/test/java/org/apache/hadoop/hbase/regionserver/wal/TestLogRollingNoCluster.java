@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -44,7 +43,7 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 /**
- * Test many concurrent appenders to an {@link #WAL} while rolling the log.
+ * Test many concurrent appenders to an WAL while rolling the log.
  */
 @Category({RegionServerTests.class, SmallTests.class})
 public class TestLogRollingNoCluster {
@@ -60,7 +59,6 @@ public class TestLogRollingNoCluster {
    */
   @Test
   public void testContendedLogRolling() throws IOException, InterruptedException {
-    FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path dir = TEST_UTIL.getDataTestDir();
     // The implementation needs to know the 'handler' count.
     TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREAD_COUNT);
