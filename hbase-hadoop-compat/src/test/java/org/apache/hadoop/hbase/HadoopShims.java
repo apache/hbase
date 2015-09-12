@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
 
 /**
  * A compatibility shim layer for interacting with different versions of Hadoop.
@@ -34,4 +36,10 @@ public interface HadoopShims {
    */
   <T,J> T createTestTaskAttemptContext(final J job, final String taskId);
 
+  /**
+   * Returns an array of DatanodeInfo for all live datanodes in the cluster
+   * @param dfs instance of DistributedFileSystem
+   * @return
+   */
+  <I,DFS> I[] getLiveDatanodes(DFS dfs) throws IOException;
 }

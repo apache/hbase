@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.HadoopShims;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
-import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -48,9 +48,10 @@ public class RestartRandomDataNodeAction extends RestartActionBaseAction {
   public ServerName[] getDataNodes() throws IOException {
     DistributedFileSystem fs = (DistributedFileSystem) FSUtils.getRootDir(getConf())
         .getFileSystem(getConf());
-    DFSClient dfsClient = fs.getClient();
     List<ServerName> hosts = new LinkedList<ServerName>();
-    for (DatanodeInfo dataNode: dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE)) {
+    HadoopShims hadoop = CompatibilitySingletonFactory.getInstance(HadoopShims.class);
+    DatanodeInfo[] dataNodes = hadoop.getLiveDatanodes(fs);
+    for (DatanodeInfo dataNode: dataNodes) {
       hosts.add(ServerName.valueOf(dataNode.getHostName(), -1, -1));
     }
     return hosts.toArray(new ServerName[hosts.size()]);

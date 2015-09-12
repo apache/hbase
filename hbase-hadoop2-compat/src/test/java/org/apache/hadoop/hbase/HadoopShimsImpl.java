@@ -18,6 +18,11 @@
 
 package org.apache.hadoop.hbase;
 
+import java.io.IOException;
+
+import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
@@ -39,5 +44,17 @@ public class HadoopShimsImpl implements HadoopShims {
   public <T, J> T createTestTaskAttemptContext(J job, String taskId) {
     Job j = (Job)job;
     return (T)new TaskAttemptContextImpl(j.getConfiguration(), TaskAttemptID.forName(taskId));
+  }
+
+  /**
+   * Returns an array of DatanodeInfo for all live datanodes in the cluster
+   * @param dfs instance of DistributedFileSystem
+   * @return
+   */
+  @Override
+  @SuppressWarnings("unchecked")
+  public <I, DFS> I[] getLiveDatanodes(DFS dfs) throws IOException {
+    DFSClient dfsClient = ((DistributedFileSystem)dfs).getClient();
+    return (I[])dfsClient.datanodeReport(HdfsConstants.DatanodeReportType.LIVE);
   }
 }
