@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -30,6 +32,7 @@ import java.util.Set;
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
+import javax.management.ObjectInstance;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.master.balancer.BalancerTestBase;
 import org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -114,7 +118,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In Ensemble mode, there should be only one ensemble table
    */
-  @Test
+  @Test (timeout=60000)
   public void testJmxMetrics_EnsembleMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 
@@ -127,7 +131,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     String[] tableNames = new String[] { tableName.getNameAsString() };
     String[] functionNames = loadBalancer.getCostFunctionNames();
-    Set<String> jmxMetrics = readJmxMetrics();
+    Set<String> jmxMetrics = readJmxMetricsWithRetry();
     Set<String> expectedMetrics = getExpectedJmxMetrics(tableNames, functionNames);
 
     // printMetrics(jmxMetrics, "existing metrics in ensemble mode");
@@ -143,7 +147,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * In per-table mode, each table has a set of metrics
    */
-  @Test
+  @Test (timeout=60000)
   public void testJmxMetrics_PerTableMode() throws Exception {
     loadBalancer = new StochasticLoadBalancer();
 
@@ -172,7 +176,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     loadBalancer.balanceCluster(tableName, clusterState);
 
     String[] tableNames = new String[] { TABLE_NAME_1, TABLE_NAME_2, TABLE_NAME_NAMESPACE };
-    Set<String> jmxMetrics = readJmxMetrics();
+    Set<String> jmxMetrics = readJmxMetricsWithRetry();
     Set<String> expectedMetrics = getExpectedJmxMetrics(tableNames, functionNames);
 
     // printMetrics(jmxMetrics, "existing metrics in per-table mode");
@@ -185,21 +189,35 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     }
   }
 
+  private Set<String> readJmxMetricsWithRetry() throws IOException {
+    final int count = 0;
+    for (int i = 0; i < 10; i++) {
+      Set<String> metrics = readJmxMetrics();
+      if (metrics != null) return metrics;
+      LOG.warn("Failed to get jmxmetrics... sleeping, retrying; " + i + " of " + count + " times");
+      Threads.sleep(1000);
+    }
+    return null;
+  }
+
   /**
    * Read the attributes from Hadoop->HBase->Master->Balancer in JMX
+   * @throws IOException 
    */
-  private Set<String> readJmxMetrics() {
+  private Set<String> readJmxMetrics() throws IOException {
     JMXConnector connector = null;
+    ObjectName target = null;
+    MBeanServerConnection mb = null;
     try {
       connector =
           JMXConnectorFactory.connect(JMXListener.buildJMXServiceURL(connectorPort, connectorPort));
-      MBeanServerConnection mb = connector.getMBeanServerConnection();
+      mb = connector.getMBeanServerConnection();
 
       Hashtable<String, String> pairs = new Hashtable<>();
       pairs.put("service", "HBase");
       pairs.put("name", "Master");
       pairs.put("sub", "Balancer");
-      ObjectName target = new ObjectName("Hadoop", pairs);
+      target = new ObjectName("Hadoop", pairs);
       MBeanInfo beanInfo = mb.getMBeanInfo(target);
 
       Set<String> existingAttrs = new HashSet<String>();
@@ -208,7 +226,17 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
       }
       return existingAttrs;
     } catch (Exception e) {
-      e.printStackTrace();
+      LOG.warn("Failed to get bean!!! " + target, e);
+      if (mb != null) {
+        Set<ObjectInstance> instances = mb.queryMBeans(null, null);
+        Iterator<ObjectInstance> iterator = instances.iterator();
+        System.out.println("MBean Found:");
+        while (iterator.hasNext()) {
+          ObjectInstance instance = iterator.next();
+          System.out.println("Class Name: " + instance.getClassName());
+          System.out.println("Object Name: " + instance.getObjectName());
+        }
+      }
     } finally {
       if (connector != null) {
         try {
