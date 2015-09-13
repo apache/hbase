@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.ipc.RemoteException;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -137,7 +138,7 @@ public class TestFastFailWithoutTestUtil {
     assertEquals(context.getServer(), server);
   }
 
-  @Test
+  @Ignore @Test
   public void testInterceptorIntercept50Times() throws IOException,
       InterruptedException {
     for (int i = 0; i < 50; i++) {
