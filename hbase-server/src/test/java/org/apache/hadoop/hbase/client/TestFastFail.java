@@ -275,9 +275,12 @@ public class TestFastFail {
     assertEquals("The regionservers that returned true should equal to the"
         + " number of successful threads", numThreadsReturnedTrue,
         numSuccessfullThreads.get());
-    assertTrue(
+    /* 'should' is not worthy of an assert. Disabling because randomly this seems to randomly
+     * not but true. St.Ack 20151012
+     *
+     * assertTrue(
         "There should be atleast one thread that retried instead of failing",
-        MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);
+        MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);*/
     assertTrue(
         "There should be atleast one PreemptiveFastFail exception,"
             + " otherwise, the test makes little sense."
