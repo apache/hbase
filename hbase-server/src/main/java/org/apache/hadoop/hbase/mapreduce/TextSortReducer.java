@@ -188,14 +188,14 @@ public class TextSortReducer extends
           if (skipBadLines) {
             System.err.println("Bad line." + badLine.getMessage());
             incrementBadLineCount(1);
-            continue;
+            return;
           }
           throw new IOException(badLine);
         } catch (IllegalArgumentException e) {
           if (skipBadLines) {
             System.err.println("Bad line." + e.getMessage());
             incrementBadLineCount(1);
-            continue;
+            return;
           } 
           throw new IOException(e);
         } 
