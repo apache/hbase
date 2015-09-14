@@ -219,4 +219,14 @@ class DisabledWALProvider implements WALProvider {
       return "WAL disabled.";
     }
   }
+
+  @Override
+  public long getNumLogFiles() {
+    return 0;
+  }
+
+  @Override
+  public long getLogFileSize() {
+    return 0;
+  }
 }

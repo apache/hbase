@@ -24,9 +24,10 @@ import java.util.Random;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
-import static org.apache.hadoop.hbase.wal.BoundedRegionGroupingProvider.NUM_REGION_GROUPS;
-import static org.apache.hadoop.hbase.wal.BoundedRegionGroupingProvider.DEFAULT_NUM_REGION_GROUPS;
+import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.NUM_REGION_GROUPS;
+import static org.apache.hadoop.hbase.wal.BoundedGroupingStrategy.DEFAULT_NUM_REGION_GROUPS;
 import static org.apache.hadoop.hbase.wal.WALFactory.WAL_PROVIDER;
+import static org.apache.hadoop.hbase.wal.RegionGroupingProvider.REGION_GROUPING_STRATEGY;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,6 +40,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -49,8 +51,8 @@ import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
 @Category({RegionServerTests.class, LargeTests.class})
-public class TestBoundedRegionGroupingProvider {
-  protected static final Log LOG = LogFactory.getLog(TestBoundedRegionGroupingProvider.class);
+public class TestBoundedRegionGroupingStrategy {
+  protected static final Log LOG = LogFactory.getLog(TestBoundedRegionGroupingStrategy.class);
 
   @Rule
   public TestName currentTest = new TestName();
@@ -85,7 +87,8 @@ public class TestBoundedRegionGroupingProvider {
     conf.setInt("dfs.client.block.recovery.retries", 1);
     conf.setInt("hbase.ipc.client.connection.maxidletime", 500);
 
-    conf.setClass(WAL_PROVIDER, BoundedRegionGroupingProvider.class, WALProvider.class);
+    conf.setClass(WAL_PROVIDER, RegionGroupingProvider.class, WALProvider.class);
+    conf.set(REGION_GROUPING_STRATEGY, RegionGroupingProvider.Strategies.bounded.name());
 
     TEST_UTIL.startMiniDFSCluster(3);
 
