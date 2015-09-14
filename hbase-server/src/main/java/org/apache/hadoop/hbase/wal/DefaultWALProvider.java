@@ -129,36 +129,20 @@ public class DefaultWALProvider implements WALProvider {
    * iff the given WALFactory is using the DefaultWALProvider for meta and/or non-meta,
    * count the number of files (rolled and active). if either of them aren't, count 0
    * for that provider.
-   * @param walFactory may not be null.
    */
-  public static long getNumLogFiles(WALFactory walFactory) {
-    long result = 0;
-    if (walFactory.provider instanceof DefaultWALProvider) {
-      result += ((FSHLog)((DefaultWALProvider)walFactory.provider).log).getNumLogFiles();
-    }
-    WALProvider meta = walFactory.metaProvider.get();
-    if (meta instanceof DefaultWALProvider) {
-      result += ((FSHLog)((DefaultWALProvider)meta).log).getNumLogFiles();
-    }
-    return result;
+  @Override
+  public long getNumLogFiles() {
+    return this.log.getNumLogFiles();
   }
 
   /**
    * iff the given WALFactory is using the DefaultWALProvider for meta and/or non-meta,
    * count the size of files (rolled and active). if either of them aren't, count 0
    * for that provider.
-   * @param walFactory may not be null.
    */
-  public static long getLogFileSize(WALFactory walFactory) {
-    long result = 0;
-    if (walFactory.provider instanceof DefaultWALProvider) {
-      result += ((FSHLog)((DefaultWALProvider)walFactory.provider).log).getLogFileSize();
-    }
-    WALProvider meta = walFactory.metaProvider.get();
-    if (meta instanceof DefaultWALProvider) {
-      result += ((FSHLog)((DefaultWALProvider)meta).log).getLogFileSize();
-    }
-    return result;
+  @Override
+  public long getLogFileSize() {
+    return this.log.getLogFileSize();
   }
 
   /**

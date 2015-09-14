@@ -230,4 +230,14 @@ public class IOTestProvider implements WALProvider {
       }
     }
   }
+
+  @Override
+  public long getNumLogFiles() {
+    return this.log.getNumLogFiles();
+  }
+
+  @Override
+  public long getLogFileSize() {
+    return this.log.getLogFileSize();
+  }
 }

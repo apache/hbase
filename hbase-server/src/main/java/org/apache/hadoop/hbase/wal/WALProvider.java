@@ -80,4 +80,14 @@ public interface WALProvider {
     long getLength() throws IOException;
   }
 
+  /**
+   * Get number of the log files this provider is managing
+   */
+  long getNumLogFiles();
+
+  /**
+   * Get size of the log files this provider is managing
+   */
+  long getLogFileSize();
+
 }
