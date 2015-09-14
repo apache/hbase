@@ -1368,7 +1368,7 @@ The RegionServer splits a region, offlines the split region and then adds the da
 See <<disable.splitting>> for how to manually manage splits (and for why you might do this).
 
 ==== Custom Split Policies
-ou can override the default split policy using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+). Typically a custom split policy should extend
+You can override the default split policy using a custom link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html[RegionSplitPolicy](HBase 0.94+). Typically a custom split policy should extend
 HBase's default split policy: link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html[IncreasingToUpperBoundRegionSplitPolicy].
 
 The policy can set globally through the HBase configuration or on a per-table
@@ -1407,6 +1407,8 @@ HTableDescriptor myHtd = ...;
 myHtd.setValue(HTableDescriptor.SPLIT_POLICY, MyCustomSplitPolicy.class.getName());
 ----
 
+NOTE: The `DisabledRegionSplitPolicy` policy blocks manual region splitting.
+
 [[manual_region_splitting_decisions]]
 === Manual Region Splitting
 
@@ -1425,6 +1427,8 @@ There may be other valid reasons, but the need to manually split your table migh
 * Before a bulk-load which is likely to cause unusual and uneven load across regions.
 
 See <<disable.splitting>> for a discussion about the dangers and possible benefits of managing splitting completely manually.
+
+NOTE: The `DisabledRegionSplitPolicy` policy blocks manual region splitting.
 
 ==== Determining Split Points
 
