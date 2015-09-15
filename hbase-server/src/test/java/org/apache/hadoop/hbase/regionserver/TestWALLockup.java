@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
@@ -81,6 +82,8 @@ public class TestWALLockup {
   public void setup() throws IOException {
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
+    // Disable block cache.
+    CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     tableName = TableName.valueOf(name.getMethodName());
   }
@@ -139,10 +142,10 @@ public class TestWALLockup {
       protected void beforeWaitOnSafePoint() {
         if (throwException) {
           LOG.info("COUNTDOWN");
-          // Don't countdown latch until someone waiting on it.
-          while (this.latch.getCount() <= 0) {
-            Threads.sleep(10);
-          }
+          // Don't countdown latch until someone waiting on it otherwise, the above
+          // afterCreatingZigZagLatch will get to the latch and no one will ever free it and we'll
+          // be stuck; test won't go down
+          while (this.latch.getCount() <= 0) Threads.sleep(1);
           this.latch.countDown();
         }
       }

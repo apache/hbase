@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,11 +34,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.wal.FSHLog;
+import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
@@ -78,6 +81,8 @@ public class TestFailedAppendAndSync {
   public void setup() throws IOException {
     TEST_UTIL = HBaseTestingUtility.createLocalHTU();
     CONF = TEST_UTIL.getConfiguration();
+    // Disable block cache.
+    CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
     tableName = TableName.valueOf(name.getMethodName());
   }
@@ -101,6 +106,7 @@ public class TestFailedAppendAndSync {
    */
   @Test (timeout=300000)
   public void testLockupAroundBadAssignSync() throws IOException {
+    final AtomicLong rolls = new AtomicLong(0);
     // Dodgy WAL. Will throw exceptions when flags set.
     class DodgyFSLog extends FSHLog {
       volatile boolean throwSyncException = false;
@@ -109,6 +115,13 @@ public class TestFailedAppendAndSync {
       public DodgyFSLog(FileSystem fs, Path root, String logDir, Configuration conf)
       throws IOException {
         super(fs, root, logDir, conf);
+      }
+
+      @Override
+      public byte[][] rollWriter(boolean force) throws FailedLogCloseException, IOException {
+        byte [][] regions = super.rollWriter(force);
+        rolls.getAndIncrement();
+        return regions;
       }
 
       @Override
@@ -175,7 +188,7 @@ public class TestFailedAppendAndSync {
       } catch (IOException ioe) {
         fail();
       }
-
+      long rollsCount = rolls.get();
       try {
         dodgyWAL.throwAppendException = true;
         dodgyWAL.throwSyncException = false;
@@ -185,6 +198,9 @@ public class TestFailedAppendAndSync {
       } catch (IOException ioe) {
         threwOnAppend = true;
       }
+      while (rollsCount == rolls.get()) Threads.sleep(100);
+      rollsCount = rolls.get();
+
       // When we get to here.. we should be ok. A new WAL has been put in place. There were no
       // appends to sync. We should be able to continue.
 
@@ -197,6 +213,8 @@ public class TestFailedAppendAndSync {
       } catch (IOException ioe) {
         threwOnBoth = true;
       }
+      while (rollsCount == rolls.get()) Threads.sleep(100);
+
       // Again, all should be good. New WAL and no outstanding unsync'd edits so we should be able
       // to just continue.
 
