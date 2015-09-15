@@ -107,11 +107,10 @@ public abstract class MultiTableInputFormatBase extends
       sc.setStopRow(tSplit.getEndRow());
       trr.setScan(sc);
       trr.setTable(table);
+      trr.setConnection(connection);
     } catch (IOException ioe) {
       // If there is an exception make sure that all
       // resources are closed and released.
-      connection.close();
-      table.close();
       trr.close();
       throw ioe;
     }
