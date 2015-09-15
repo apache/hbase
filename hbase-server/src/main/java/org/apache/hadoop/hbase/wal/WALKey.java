@@ -315,8 +315,12 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
    */
   public long getSequenceId(final long maxWaitForSeqId) throws IOException {
     // TODO: This implementation waiting on a latch is problematic because if a higher level
-    // determines we should stop or abort, there is not global list of all these blocked WALKeys
-    // waiting on a sequence id; they can't be cancelled... interrupted. See getNextSequenceId
+    // determines we should stop or abort, there is no global list of all these blocked WALKeys
+    // waiting on a sequence id; they can't be cancelled... interrupted. See getNextSequenceId.
+    //
+    // UPDATE: I think we can remove the timeout now we are stamping all walkeys with sequenceid,
+    // even those that have failed (previously we were not... so they would just hang out...).
+    // St.Ack 20150910
     try {
       if (maxWaitForSeqId < 0) {
         this.seqNumAssignedLatch.await();
