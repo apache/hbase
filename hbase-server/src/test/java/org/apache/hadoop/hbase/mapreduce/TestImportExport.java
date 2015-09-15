@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -650,7 +651,9 @@ public class TestImportExport {
 
     // Register the wal listener for the import table
     TableWALActionListener walListener = new TableWALActionListener(importTableName);
-    WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(null);
+    HRegionInfo region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+        .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+    WAL wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
     wal.registerWALActionsListener(walListener);
 
     // Run the import with SKIP_WAL
@@ -666,7 +669,9 @@ public class TestImportExport {
     // Run the import with the default durability option
     importTableName = "importTestDurability2";
     importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
-    wal.unregisterWALActionsListener(walListener);
+    region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
+        .getOnlineRegions(importTable.getName()).get(0).getRegionInfo();
+    wal = UTIL.getMiniHBaseCluster().getRegionServer(0).getWAL(region);
     walListener = new TableWALActionListener(importTableName);
     wal.registerWALActionsListener(walListener);
     args = new String[] { importTableName, FQ_OUTPUT_DIR };
