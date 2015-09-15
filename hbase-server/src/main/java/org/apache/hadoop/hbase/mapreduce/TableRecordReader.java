@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
@@ -40,6 +41,7 @@ public class TableRecordReader
 extends RecordReader<ImmutableBytesWritable, Result> {
 
   private TableRecordReaderImpl recordReaderImpl = new TableRecordReaderImpl();
+  private Connection connection = null;
 
   /**
    * Restart from survivable exceptions by creating a new scanner.
@@ -85,8 +87,10 @@ extends RecordReader<ImmutableBytesWritable, Result> {
    * @see org.apache.hadoop.mapreduce.RecordReader#close()
    */
   @Override
-  public void close() {
+  public void close() throws IOException {
     this.recordReaderImpl.close();
+    if (this.connection != null)
+      this.connection.close();
   }
 
   /**
@@ -156,5 +160,9 @@ extends RecordReader<ImmutableBytesWritable, Result> {
   @Override
   public float getProgress() {
     return this.recordReaderImpl.getProgress();
+  }
+
+  public void setConnection(Connection connection) {
+    this.connection = connection;
   }
 }
