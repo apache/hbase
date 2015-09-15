@@ -54,6 +54,12 @@
         </includes>
         <filtering>true</filtering>
       </testResource>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
     </testResources>
 
     <plugins>
