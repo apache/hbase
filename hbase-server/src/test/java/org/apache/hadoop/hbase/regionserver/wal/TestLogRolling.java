@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -71,8 +72,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Test log deletion as logs are rolled.
@@ -88,6 +91,7 @@ public class TestLogRolling  {
   private Admin admin;
   private MiniHBaseCluster cluster;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  @Rule public final TestName name = new TestName();
 
   public TestLogRolling()  {
     this.server = null;
@@ -211,9 +215,11 @@ public class TestLogRolling  {
   @Test
   public void testLogRolling() throws Exception {
     this.tableName = getName();
-      // TODO: Why does this write data take for ever?
-      startAndWriteData();
-    final WAL log = server.getWAL(null);
+    // TODO: Why does this write data take for ever?
+    startAndWriteData();
+    HRegionInfo region =
+        server.getOnlineRegions(TableName.valueOf(tableName)).get(0).getRegionInfo();
+    final WAL log = server.getWAL(region);
     LOG.info("after writing there are " + DefaultWALProvider.getNumRolledLogFiles(log) +
         " log files");
 
@@ -230,8 +236,8 @@ public class TestLogRolling  {
       assertTrue(("actual count: " + count), count <= 2);
   }
 
-  private static String getName() {
-    return "TestLogRolling";
+  private String getName() {
+    return "TestLogRolling-" + name.getMethodName();
   }
 
   void writeData(Table table, int rownum) throws IOException {
@@ -307,7 +313,8 @@ public class TestLogRolling  {
     assertTrue(((HTable) table).isAutoFlush());
 
     server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-    final FSHLog log = (FSHLog) server.getWAL(null);
+    HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
+    final FSHLog log = (FSHLog) server.getWAL(region);
     final AtomicBoolean lowReplicationHookCalled = new AtomicBoolean(false);
 
     log.registerWALActionsListener(new WALActionsListener.Base() {
@@ -424,7 +431,8 @@ public class TestLogRolling  {
       Table table = new HTable(TEST_UTIL.getConfiguration(), desc.getTableName());
 
       server = TEST_UTIL.getRSForFirstRegionInTable(desc.getTableName());
-      final WAL log = server.getWAL(null);
+      HRegionInfo region = server.getOnlineRegions(desc.getTableName()).get(0).getRegionInfo();
+      final WAL log = server.getWAL(region);
       final List<Path> paths = new ArrayList<Path>();
       final List<Integer> preLogRolledCalled = new ArrayList<Integer>();
 
@@ -564,37 +572,35 @@ public class TestLogRolling  {
   @Test
   public void testCompactionRecordDoesntBlockRolling() throws Exception {
     Table table = null;
-    Table table2 = null;
 
     // When the hbase:meta table can be opened, the region servers are running
     Table t = new HTable(TEST_UTIL.getConfiguration(), TableName.META_TABLE_NAME);
     try {
       table = createTestTable(getName());
-      table2 = createTestTable(getName() + "1");
 
       server = TEST_UTIL.getRSForFirstRegionInTable(table.getName());
-      final WAL log = server.getWAL(null);
-      Region region = server.getOnlineRegions(table2.getName()).get(0);
+      Region region = server.getOnlineRegions(table.getName()).get(0);
+      final WAL log = server.getWAL(region.getRegionInfo());
       Store s = region.getStore(HConstants.CATALOG_FAMILY);
 
       //have to flush namespace to ensure it doesn't affect wall tests
       admin.flush(TableName.NAMESPACE_TABLE_NAME);
 
-      // Put some stuff into table2, to make sure we have some files to compact.
+      // Put some stuff into table, to make sure we have some files to compact.
       for (int i = 1; i <= 2; ++i) {
-        doPut(table2, i);
-        admin.flush(table2.getName());
+        doPut(table, i);
+        admin.flush(table.getName());
       }
-      doPut(table2, 3); // don't flush yet, or compaction might trigger before we roll WAL
+      doPut(table, 3); // don't flush yet, or compaction might trigger before we roll WAL
       assertEquals("Should have no WAL after initial writes", 0,
           DefaultWALProvider.getNumRolledLogFiles(log));
       assertEquals(2, s.getStorefilesCount());
 
-      // Roll the log and compact table2, to have compaction record in the 2nd WAL.
+      // Roll the log and compact table, to have compaction record in the 2nd WAL.
       log.rollWriter();
       assertEquals("Should have WAL; one table is not flushed", 1,
           DefaultWALProvider.getNumRolledLogFiles(log));
-      admin.flush(table2.getName());
+      admin.flush(table.getName());
       region.compact(false);
       // Wait for compaction in case if flush triggered it before us.
       Assert.assertNotNull(s);
@@ -604,7 +610,7 @@ public class TestLogRolling  {
       assertEquals("Compaction didn't happen", 1, s.getStorefilesCount());
 
       // Write some value to the table so the WAL cannot be deleted until table is flushed.
-      doPut(table, 0); // Now 2nd WAL will have compaction record for table2 and put for table.
+      doPut(table, 0); // Now 2nd WAL will have both compaction and put record for table.
       log.rollWriter(); // 1st WAL deleted, 2nd not deleted yet.
       assertEquals("Should have WAL; one table is not flushed", 1,
           DefaultWALProvider.getNumRolledLogFiles(log));
@@ -618,7 +624,6 @@ public class TestLogRolling  {
     } finally {
       if (t != null) t.close();
       if (table != null) table.close();
-      if (table2 != null) table2.close();
     }
   }
 

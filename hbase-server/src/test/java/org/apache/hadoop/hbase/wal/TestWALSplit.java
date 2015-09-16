@@ -465,6 +465,9 @@ public class TestWALSplit {
   }
 
   private void testEmptyLogFiles(final boolean close) throws IOException {
+    // we won't create the hlog dir until getWAL got called, so
+    // make dir here when testing empty log file
+    fs.mkdirs(WALDIR);
     injectEmptyFile(".empty", close);
     generateWALs(Integer.MAX_VALUE);
     injectEmptyFile("empty", close);
@@ -593,7 +596,7 @@ public class TestWALSplit {
       LOG.debug("split with 'skip errors' set to 'false' correctly threw");
     }
     assertEquals("if skip.errors is false all files should remain in place",
-        NUM_WRITERS + 1 /* Factory WAL */, fs.listStatus(WALDIR).length);
+        NUM_WRITERS, fs.listStatus(WALDIR).length);
   }
 
   private void ignoreCorruption(final Corruptions corruption, final int entryCount,
@@ -647,8 +650,7 @@ public class TestWALSplit {
     useDifferentDFSClient();
     WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
     FileStatus[] archivedLogs = fs.listStatus(OLDLOGDIR);
-    assertEquals("wrong number of files in the archive log", NUM_WRITERS + 1 /* wal from factory */,
-        archivedLogs.length);
+    assertEquals("wrong number of files in the archive log", NUM_WRITERS, archivedLogs.length);
   }
 
   @Test (timeout=300000)
@@ -791,7 +793,7 @@ public class TestWALSplit {
 
     try {
       WALSplitter.split(HBASEDIR, WALDIR, OLDLOGDIR, spiedFs, conf, wals);
-      assertEquals(NUM_WRITERS + 1 /* wal created by factory */, fs.listStatus(OLDLOGDIR).length);
+      assertEquals(NUM_WRITERS, fs.listStatus(OLDLOGDIR).length);
       assertFalse(fs.exists(WALDIR));
     } catch (IOException e) {
       fail("There shouldn't be any exception but: " + e.toString());
@@ -1019,6 +1021,9 @@ public class TestWALSplit {
   @Test (timeout=300000)
   public void testSplitLogFileEmpty() throws IOException {
     LOG.info("testSplitLogFileEmpty");
+    // we won't create the hlog dir until getWAL got called, so
+    // make dir here when testing empty log file
+    fs.mkdirs(WALDIR);
     injectEmptyFile(".empty", true);
     useDifferentDFSClient();
 
