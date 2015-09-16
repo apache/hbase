@@ -282,7 +282,7 @@ public class ExportSnapshot extends Configured implements Tool {
         context.getCounter(Counter.BYTES_EXPECTED).increment(inputStat.getLen());
 
         // Ensure that the output folder is there and copy the file
-        outputFs.mkdirs(outputPath.getParent());
+        createOutputPath(outputPath.getParent());
         FSDataOutputStream out = outputFs.create(outputPath, true);
         try {
           copyData(context, inputStat.getPath(), in, outputPath, out, inputStat.getLen());
@@ -296,6 +296,23 @@ public class ExportSnapshot extends Configured implements Tool {
         }
       } finally {
         in.close();
+      }
+    }
+
+    /**
+     * Create the output folder and optionally set ownership.
+     */
+    private void createOutputPath(final Path path) throws IOException {
+      if (filesUser == null && filesGroup == null) {
+        outputFs.mkdirs(path);
+      } else {
+        Path parent = path.getParent();
+        if (!outputFs.exists(parent) && !parent.isRoot()) {
+          createOutputPath(parent);
+        }
+        outputFs.mkdirs(path);
+        // override the owner when non-null user/group is specified
+        outputFs.setOwner(path, filesUser, filesGroup);
       }
     }
 
@@ -803,6 +820,21 @@ public class ExportSnapshot extends Configured implements Tool {
   }
 
   /**
+   * Set path ownership.
+   */
+  private void setOwner(final FileSystem fs, final Path path, final String user,
+      final String group, final boolean recursive) throws IOException {
+    if (user != null || group != null) {
+      if (recursive && fs.isDirectory(path)) {
+        for (FileStatus child : fs.listStatus(path)) {
+          setOwner(fs, child.getPath(), user, group, recursive);
+        }
+      }
+      fs.setOwner(path, user, group);
+    }
+  }
+
+  /**
    * Execute the export snapshot by copying the snapshot metadata, hfiles and hlogs.
    * @return 0 on success, and != 0 upon failure.
    */
@@ -925,6 +957,9 @@ public class ExportSnapshot extends Configured implements Tool {
     try {
       LOG.info("Copy Snapshot Manifest");
       FileUtil.copy(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, false, false, conf);
+      if (filesUser != null || filesGroup != null) {
+        setOwner(outputFs, snapshotTmpDir, filesUser, filesGroup, true);
+      }
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
         snapshotDir + " to=" + initialOutputSnapshotDir, e);
