@@ -37,7 +37,7 @@ def path_key(x):
   return path[path.find('hbase-'):]
 
 def print_row(path, master_errors, patch_errors):
-    print '%s\t%s\t%s' % (k,master_dict[k],child_errors)
+    print '%s\t%s\t%s' % (path,master_errors,patch_errors)
 
 master = etree.parse(sys.argv[1])
 patch = etree.parse(sys.argv[2])
