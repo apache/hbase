@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +38,7 @@ import org.apache.hadoop.hbase.replication.WALEntryFilter;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Service;
 
 @InterfaceAudience.Private
 public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
@@ -122,19 +126,16 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
     return delegator.getWALEntryfilter();
   }
 
+  /* Start: com.google.common.util.concurrent.Service overrides */
+
+  @Override
+  public Service startAsync() {
+    return delegator.startAsync();
+  }
+
   @Override
   public boolean isRunning() {
     return delegator.isRunning();
-  }
-
-  @Override
-  public ListenableFuture<State> start() {
-    return delegator.start();
-  }
-
-  @Override
-  public State startAndWait() {
-    return delegator.startAndWait();
   }
 
   @Override
@@ -143,13 +144,39 @@ public class VisibilityReplicationEndpoint implements ReplicationEndpoint {
   }
 
   @Override
-  public ListenableFuture<State> stop() {
-    return delegator.stop();
+  public Service stopAsync() {
+    return delegator.stopAsync();
   }
 
   @Override
-  public State stopAndWait() {
-    return delegator.stopAndWait();
+  public void awaitRunning() {
+    delegator.awaitRunning();
   }
 
+  @Override
+  public void awaitRunning(long timeout, TimeUnit unit) throws TimeoutException {
+    delegator.awaitRunning();
+  }
+
+  @Override
+  public void awaitTerminated() {
+    delegator.awaitTerminated();
+  }
+
+  @Override
+  public void awaitTerminated(long timeout, TimeUnit unit) throws TimeoutException {
+    delegator.awaitTerminated(timeout, unit);
+  }
+
+  @Override
+  public Throwable failureCause() {
+    return delegator.failureCause();
+  }
+
+  @Override
+  public void addListener(Listener listener, Executor executor) {
+    delegator.addListener(listener, executor);
+  }
+
+  /* End: com.google.common.util.concurrent.Service overrides */
 }

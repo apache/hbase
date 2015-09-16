@@ -253,7 +253,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     when(context.getMetrics()).thenReturn(mock(MetricsSource.class));
 
     replicator.init(context);
-    replicator.start();
+    replicator.startAsync();
 
     //load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
@@ -286,7 +286,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     when(context.getReplicationPeer()).thenReturn(mockPeer);
 
     replicator.init(context);
-    replicator.start();
+    replicator.startAsync();
 
     // test the filter for the RE, not actual replication
     WALEntryFilter filter = replicator.getWALEntryfilter();
