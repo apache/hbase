@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobCounter;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.junit.After;
@@ -214,6 +215,12 @@ public abstract class MultiTableInputFormatTestBase {
     testScan("yzy", null, "zzz");
   }
 
+  @Test
+  public void testScan5ATo5A() throws IOException, InterruptedException,
+  ClassNotFoundException {
+      testScan("aaaaa", "aaaaa", "apo");
+  }
+
   /**
    * Tests a MR scan using specific start and stop rows.
    *
@@ -266,6 +273,14 @@ public abstract class MultiTableInputFormatTestBase {
     LOG.info("Started " + job.getJobName());
     job.waitForCompletion(true);
     assertTrue(job.isSuccessful());
+
+    long mapNumbers = job.getCounters().findCounter(JobCounter.TOTAL_LAUNCHED_MAPS).getValue();
+    LOG.info("Check launched maps of map/reduce job, the number of maps launched is " + mapNumbers);
+
+    //MultiTableSplits  the number of splits matches the number of regions in a table, 
+    //so the total number of maps must be equal to or greater than the number of scans.See HBASE-14442
+    assertTrue(mapNumbers >= scans.size());
+    
     LOG.info("After map/reduce completion - job " + jobName);
   }
 

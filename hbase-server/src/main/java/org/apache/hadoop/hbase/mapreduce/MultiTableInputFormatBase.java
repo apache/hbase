@@ -179,7 +179,7 @@ public abstract class MultiTableInputFormatBase extends
             if ((startRow.length == 0 || keys.getSecond()[i].length == 0 ||
                     Bytes.compareTo(startRow, keys.getSecond()[i]) < 0) &&
                     (stopRow.length == 0 || Bytes.compareTo(stopRow,
-                            keys.getFirst()[i]) > 0)) {
+                            keys.getFirst()[i]) >= 0)) {
               byte[] splitStart = startRow.length == 0 ||
                       Bytes.compareTo(keys.getFirst()[i], startRow) >= 0 ?
                       keys.getFirst()[i] : startRow;
