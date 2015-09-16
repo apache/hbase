@@ -25,4 +25,12 @@
     <name>hbase.defaults.for.version.skip</name>
     <value>true</value>
   </property>
+  <property>
+    <name>hbase.hconnection.meta.lookup.threads.core</name>
+    <value>4</value>
+  </property>
+  <property>
+    <name>hbase.hconnection.threads.keepalivetime</name>
+    <value>3</value>
+  </property>
 </configuration>
