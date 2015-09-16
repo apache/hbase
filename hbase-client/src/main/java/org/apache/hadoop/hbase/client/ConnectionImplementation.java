@@ -370,9 +370,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       synchronized (this) {
         if (batchPool == null) {
           this.batchPool = getThreadPool(conf.getInt("hbase.hconnection.threads.max", 256),
-            conf.getInt("hbase.hconnection.threads.core",
-              Runtime.getRuntime().availableProcessors()),
-            "-shared-", null); 
+              conf.getInt("hbase.hconnection.threads.core", 256), "-shared-", null); 
           this.cleanupPool = true;
         }
       }
@@ -387,7 +385,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       maxThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
     if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors();
+      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
     long keepAliveTime = conf.getLong("hbase.hconnection.threads.keepalivetime", 60);
     BlockingQueue<Runnable> workQueue = passedWorkQueue;
