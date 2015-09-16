@@ -25,12 +25,14 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 
 /**
  * Thread that walks over the filesystem, and computes the mappings
@@ -41,12 +43,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
 class FSRegionScanner implements Runnable {
   static private final Log LOG = LogFactory.getLog(FSRegionScanner.class);
 
-  private Path regionPath;
-
-  /**
-   * The file system used
-   */
-  private FileSystem fs;
+  private HRegionFileSystem rfs;
 
   /**
    * Maps each region to the RS with highest locality for that region.
@@ -59,11 +56,10 @@ class FSRegionScanner implements Runnable {
    */
   private Map<String, Map<String, Float>> regionDegreeLocalityMapping;
 
-  FSRegionScanner(FileSystem fs, Path regionPath,
+  FSRegionScanner(Configuration conf, HRegionInfo hri,
                   Map<String, String> regionToBestLocalityRSMapping,
                   Map<String, Map<String, Float>> regionDegreeLocalityMapping) {
-    this.fs = fs;
-    this.regionPath = regionPath;
+    this.rfs = HRegionFileSystem.open(conf, hri);
     this.regionToBestLocalityRSMapping = regionToBestLocalityRSMapping;
     this.regionDegreeLocalityMapping = regionDegreeLocalityMapping;
   }
@@ -75,33 +71,13 @@ class FSRegionScanner implements Runnable {
       Map<String, AtomicInteger> blockCountMap = new HashMap<String, AtomicInteger>();
 
       //get table name
-      String tableName = regionPath.getParent().getName();
+      String tableName = rfs.getTable();
       int totalBlkCount = 0;
 
-      // ignore null
-      FileStatus[] cfList = fs.listStatus(regionPath, new FSUtils.FamilyDirFilter(fs));
-      if (null == cfList) {
-        return;
-      }
-
-      // for each cf, get all the blocks information
-      for (FileStatus cfStatus : cfList) {
-        if (!cfStatus.isDirectory()) {
-          // skip because this is not a CF directory
-          continue;
-        }
-
-        FileStatus[] storeFileLists = fs.listStatus(cfStatus.getPath());
-        if (null == storeFileLists) {
-          continue;
-        }
-
-        for (FileStatus storeFile : storeFileLists) {
-          BlockLocation[] blkLocations =
-            fs.getFileBlockLocations(storeFile, 0, storeFile.getLen());
-          if (null == blkLocations) {
-            continue;
-          }
+      for (String family: rfs.getFamilies()) {
+        for (StoreFileInfo storeFile: rfs.getStoreFiles(family)) {
+          BlockLocation[] blkLocations = storeFile.getFileBlockLocations(fs);
+          if (blkLocations == null) continue;
 
           totalBlkCount += blkLocations.length;
           for(BlockLocation blk: blkLocations) {
@@ -138,7 +114,7 @@ class FSRegionScanner implements Runnable {
         if (hostToRun.endsWith(".")) {
           hostToRun = hostToRun.substring(0, hostToRun.length()-1);
         }
-        String name = tableName + ":" + regionPath.getName();
+        String name = tableName + ":" + rfs.getRegionInfo().getEncodedName();
         synchronized (regionToBestLocalityRSMapping) {
           regionToBestLocalityRSMapping.put(name,  hostToRun);
         }
@@ -157,7 +133,7 @@ class FSRegionScanner implements Runnable {
         }
         // Put the locality map into the result map, keyed by the encoded name
         // of the region.
-        regionDegreeLocalityMapping.put(regionPath.getName(), hostLocalityMap);
+        regionDegreeLocalityMapping.put(rfs.getRegionInfo().getEncodedName(), hostLocalityMap);
       }
     } catch (IOException e) {
       LOG.warn("Problem scanning file system", e);

@@ -24,6 +24,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -56,10 +57,11 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.HFile.FileInfo;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.BloomFilter;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
@@ -181,29 +183,26 @@ public class HFilePrettyPrinter extends Configured implements Tool {
       String regionName = cmd.getOptionValue("r");
       byte[] rn = Bytes.toBytes(regionName);
       HRegionInfo hri = HRegionInfo.parseRegionInfoFromRegionName(rn);
-      Path rootDir = FSUtils.getRootDir(getConf());
-      Path tableDir = FSUtils.getTableDir(rootDir, TableName.valueOf(
-        hri.getTable().getNameAsString()));
-      FileSystem fs = FileSystem.get(getConf());
-      Path regionDir = HRegionFileSystem.create(getConf(), fs, tableDir, hri).getRegionDir();
-      if (verbose)
-        System.out.println("region dir -> " + regionDir);
-      List<Path> regionFiles = HFile.getStoreFiles(fs,
-          regionDir);
-      if (verbose)
-        System.out.println("Number of region files found -> "
-            + regionFiles.size());
-      if (verbose) {
+      HRegionFileSystem rfs = HRegionFileSystem.open(getConf(), hri, true);
+      printIfVerbose("region dir -> " + rfs);
+      for (String family: rfs.getFamilies()) {
+        Collection<StoreFileInfo> storeFiles = rfs.getStoreFiles(family);
+        printIfVerbose("Number of region files found -> " + storeFiles.size());
         int i = 1;
-        for (Path p : regionFiles) {
-          if (verbose)
-            System.out.println("Found file[" + i++ + "] -> " + p);
+        for (StoreFileInfo storeFile : storeFiles) {
+          printIfVerbose("Found file[%d] -> %s", i++, storeFile.getPath());
+          files.add(storeFile.getPath());
         }
       }
-      files.addAll(regionFiles);
     }
 
     return true;
+  }
+
+  private void printIfVerbose(String format, Object... args) {
+    if (verbose) {
+      System.out.println(String.format(format, args));
+    }
   }
 
   /**
@@ -245,8 +244,7 @@ public class HFilePrettyPrinter extends Configured implements Tool {
   }
 
   private void processFile(Path file) throws IOException {
-    if (verbose)
-      System.out.println("Scanning -> " + file);
+    printIfVerbose("Scanning -> " + file);
     FileSystem fs = file.getFileSystem(getConf());
     if (!fs.exists(file)) {
       System.err.println("ERROR, file doesnt exist: " + file);

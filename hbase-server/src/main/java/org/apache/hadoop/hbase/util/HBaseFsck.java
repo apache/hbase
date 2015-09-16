@@ -111,6 +111,7 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.layout.FsLayout;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
@@ -118,7 +119,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -395,7 +395,7 @@ public class HBaseFsck extends Configured implements Closeable {
           LOG.info("Failed to create lock file " + hbckLockFilePath.getName()
               + ", try=" + (retryCounter.getAttemptTimes() + 1) + " of "
               + retryCounter.getMaxAttempts());
-          LOG.debug("Failed to create lock file " + hbckLockFilePath.getName(), 
+          LOG.debug("Failed to create lock file " + hbckLockFilePath.getName(),
               ioe);
           try {
             exception = ioe;
@@ -762,7 +762,7 @@ public class HBaseFsck extends Configured implements Closeable {
         currentRegionBoundariesInformation.regionName = regionInfo.getRegionName();
         // For each region, get the start and stop key from the META and compare them to the
         // same information from the Stores.
-        HRegionFileSystem hrfs = HRegionFileSystem.create(getConf(), fs, tableDir, regionInfo);
+        HRegionFileSystem hrfs = HRegionFileSystem.open(getConf(), regionInfo, true);
         Path path = hrfs.getRegionDir();
         FileStatus[] files = fs.listStatus(path);
         // For all the column families in this region...
@@ -2279,8 +2279,7 @@ public class HBaseFsck extends Configured implements Closeable {
                   LOG.warn(hri + " start and stop keys are in the range of " + region
                       + ". The region might not be cleaned up from hdfs when region " + region
                       + " split failed. Hence deleting from hdfs.");
-                  HRegionFileSystem.deleteAndArchiveRegionFromFileSystem(getConf(), fs,
-                    FsLayout.getTableDirFromRegionDir(regionDir), hri);
+                  HRegionFileSystem.destroy(getConf(), hri);
                   return;
                 }
               }
@@ -2688,10 +2687,10 @@ public class HBaseFsck extends Configured implements Closeable {
         }
         regionsFromMeta = Ordering.natural().immutableSortedCopy(regions);
       }
-      
+
       return regionsFromMeta;
     }
-    
+
     private class IntegrityFixSuggester extends TableIntegrityErrorHandlerImpl {
       ErrorReporter errors;
 
@@ -4041,7 +4040,7 @@ public class HBaseFsck extends Configured implements Closeable {
     public synchronized Void call() throws IOException {
       try {
         // level 2: <HBASE_DIR>/<table>/*
-        List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir.getPath(), 
+        List<FileStatus> regionDirs = FsLayout.getRegionDirFileStats(fs, tableDir.getPath(),
           new FSUtils.RegionDirFilter(fs));
         if (regionDirs == null) {
           return null;

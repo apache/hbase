@@ -248,7 +248,7 @@ public class HFile {
     protected FileSystem fs;
     protected Path path;
     protected FSDataOutputStream ostream;
-    protected CellComparator comparator = 
+    protected CellComparator comparator =
         CellComparator.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
@@ -827,33 +827,6 @@ public class HFile {
     // Expecting the size() of a block not exceeding 4GB. Assuming the
     // size() will wrap to negative integer if it exceeds 2GB (From tfile).
     return (int)(l & 0x00000000ffffffffL);
-  }
-
-  /**
-   * Returns all HFiles belonging to the given region directory. Could return an
-   * empty list.
-   *
-   * @param fs  The file system reference.
-   * @param regionDir  The region directory to scan.
-   * @return The list of files found.
-   * @throws IOException When scanning the files fails.
-   */
-  static List<Path> getStoreFiles(FileSystem fs, Path regionDir)
-      throws IOException {
-    List<Path> regionHFiles = new ArrayList<Path>();
-    PathFilter dirFilter = new FSUtils.DirFilter(fs);
-    FileStatus[] familyDirs = fs.listStatus(regionDir, dirFilter);
-    for(FileStatus dir : familyDirs) {
-      FileStatus[] files = fs.listStatus(dir.getPath());
-      for (FileStatus file : files) {
-        if (!file.isDirectory() &&
-            (!file.getPath().toString().contains(HConstants.HREGION_OLDLOGDIR_NAME)) &&
-            (!file.getPath().toString().contains(HConstants.RECOVERED_EDITS_DIR))) {
-          regionHFiles.add(file.getPath());
-        }
-      }
-    }
-    return regionHFiles;
   }
 
   /**

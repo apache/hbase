@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.io.hfile.InvalidHFileException;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
@@ -208,7 +209,7 @@ public class HStore implements Store {
     this.fs = region.getRegionFileSystem();
 
     // Assemble the store's home directory and Ensure it exists.
-    fs.createStoreDir(family.getNameAsString());
+    fs.openFamily(family.getNameAsString());
     this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
@@ -1197,8 +1198,7 @@ public class HStore implements Store {
       // Ready to go. Have list of files to compact.
       LOG.info("Starting compaction of " + filesToCompact.size() + " file(s) in "
           + this + " of " + this.getRegionInfo().getRegionNameAsString()
-          + " into tmpdir=" + fs.getTempDir() + ", totalSize="
-          + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
+          + ", totalSize=" + TraditionalBinaryPrefix.long2String(cr.getSize(), "", 1));
 
       // Commence the compaction.
       List<Path> newFiles = compaction.compact(throughputController);

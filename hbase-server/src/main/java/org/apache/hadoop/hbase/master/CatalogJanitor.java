@@ -44,7 +44,8 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.fs.layout.FsLayout;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.RegionDoesNotExistException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -188,8 +189,7 @@ public class CatalogJanitor extends ScheduledChore {
     HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
     HRegionFileSystem regionFs = null;
     try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          this.services.getConfiguration(), fs, tabledir, mergedRegion, true);
+      regionFs = HRegionFileSystem.open(this.services.getConfiguration(), mergedRegion, true);
     } catch (IOException e) {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
@@ -368,25 +368,14 @@ public class CatalogJanitor extends ScheduledChore {
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, daughter.getTable());
 
-    HRegionFileSystem hrfs = HRegionFileSystem.create(
-      this.services.getConfiguration(), fs, tabledir, daughter);
+    HRegionFileSystem hrfs = HRegionFileSystem.create(this.services.getConfiguration(), daughter);
     Path daughterRegionDir = hrfs.getRegionDir();
 
-    HRegionFileSystem regionFs = null;
-
+    HRegionFileSystem regionFs;
     try {
-      if (!FSUtils.isExists(fs, daughterRegionDir)) {
-        return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
-      }
-    } catch (IOException ioe) {
-      LOG.warn("Error trying to determine if daughter region exists, " +
-               "assuming exists and has references", ioe);
-      return new Pair<Boolean, Boolean>(Boolean.TRUE, Boolean.TRUE);
-    }
-
-    try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          this.services.getConfiguration(), fs, tabledir, daughter, true);
+      regionFs = HRegionFileSystem.open(this.services.getConfiguration(), daughter, true);
+    } catch (RegionDoesNotExistException e) {
+      return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
     } catch (IOException e) {
       LOG.warn("Error trying to determine referenced files from : " + daughter.getEncodedName()
           + ", to: " + parent.getEncodedName() + " assuming has references", e);

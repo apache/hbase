@@ -221,6 +221,7 @@ public class FSTableDescriptors implements TableDescriptors {
     } else {
       LOG.debug("Fetching table descriptors from the filesystem.");
       boolean allvisited = true;
+      HMasterFileSystem mfs = HMasterFileSystem.open(conf, rootdir);
       for (Path d : FSUtils.getTableDirs(fs, rootdir)) {
         TableDescriptor htd = null;
         try {

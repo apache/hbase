@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
@@ -372,7 +373,7 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     return new PairOfSameType<Region>(a, b);
   }
-  
+
   @VisibleForTesting
   void assertReferenceFileCountOfSplitsDir(int expectedReferenceFileCount, HRegionInfo daughter)
       throws IOException {
@@ -386,7 +387,7 @@ public class SplitTransactionImpl implements SplitTransaction {
     this.parent.getRegionFileSystem().assertReferenceFileCountOfDaughterDir(
       expectedReferenceFileCount, daughter);
   }
-  
+
   /**
    * Perform time consuming opening of the daughter regions.
    * @param server Hosting server instance.  Can be null when testing

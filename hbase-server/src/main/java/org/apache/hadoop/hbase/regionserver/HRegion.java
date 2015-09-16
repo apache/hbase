@@ -116,6 +116,7 @@ import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.filter.FilterWrapper;
 import org.apache.hadoop.hbase.filter.IncompatibleFilterException;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
@@ -593,35 +594,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * extensions.  Instances of HRegion should be instantiated with the
    * {@link HRegion#createHRegion} or {@link HRegion#openHRegion} method.
    *
-   * @param tableDir qualified path of directory where region should be located,
-   * usually the table directory.
-   * @param wal The WAL is the outbound log for any updates to the HRegion
-   * The wal file is a logfile from the previous execution that's
-   * custom-computed for this HRegion. The HRegionServer computes and sorts the
-   * appropriate wal info for this HRegion. If there is a previous wal file
-   * (implying that the HRegion has been written-to before), then read it from
-   * the supplied path.
-   * @param fs is the filesystem.
-   * @param confParam is global configuration settings.
-   * @param regionInfo - HRegionInfo that describes the region
-   * is new), then read them from the supplied path.
-   * @param htd the table descriptor
-   * @param rsServices reference to {@link RegionServerServices} or null
-   * @deprecated Use other constructors.
-   */
-  @Deprecated
-  public HRegion(final Path tableDir, final WAL wal, final FileSystem fs,
-      final Configuration confParam, final HRegionInfo regionInfo,
-      final HTableDescriptor htd, final RegionServerServices rsServices) {
-    this(HRegionFileSystem.create(confParam, fs, tableDir, regionInfo),
-      wal, confParam, htd, rsServices);
-  }
-
-  /**
-   * HRegion constructor. This constructor should only be used for testing and
-   * extensions.  Instances of HRegion should be instantiated with the
-   * {@link HRegion#createHRegion} or {@link HRegion#openHRegion} method.
-   *
    * @param fs is the filesystem.
    * @param wal The WAL is the outbound log for any updates to the HRegion
    * The wal file is a logfile from the previous execution that's
@@ -794,7 +766,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     // Write HRI to a file in case we need to recover hbase:meta
     status.setStatus("Writing region info on filesystem");
-    fs.checkRegionInfoOnFilesystem();
+    fs.writeRecoveryCheckPoint();
 
     // Initialize all the HStores
     status.setStatus("Initializing all the Stores");
@@ -808,16 +780,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (this.writestate.writesEnabled) {
       // Remove temporary data left over from old regions
       status.setStatus("Cleaning up temporary data from old regions");
-      fs.cleanupTempDir();
-    }
-
-    if (this.writestate.writesEnabled) {
-      status.setStatus("Cleaning up detritus from prior splits");
-      // Get rid of any splits or merges that were lost in-progress.  Clean out
-      // these directories here on open.  We may be opening a region that was
-      // being split but we crashed in the middle of it all.
-      fs.cleanupAnySplitDetritus();
-      fs.cleanupMergesDir();
+      fs.cleanup();
     }
 
     // Initialize split policy
@@ -1041,7 +1004,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
     FileSystem fs = tablePath.getFileSystem(conf);
 
-    HRegionFileSystem regionFs = HRegionFileSystem.create(conf, fs, tablePath, regionInfo);
+    HRegionFileSystem regionFs = HRegionFileSystem.create(conf, regionInfo);
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
       Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(family.getNameAsString());
       if (storeFiles == null) continue;
@@ -5868,20 +5831,18 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    * @param htd the table descriptor
    * @return the new instance
    */
-  static HRegion newHRegion(Path tableDir, WAL wal, FileSystem fs,
-      Configuration conf, HRegionInfo regionInfo, final HTableDescriptor htd,
-      RegionServerServices rsServices) {
+  static HRegion newHRegion(Configuration conf, HTableDescriptor htd,
+      HRegionInfo regionInfo, WAL wal, RegionServerServices rsServices) {
     try {
       @SuppressWarnings("unchecked")
       Class<? extends HRegion> regionClass =
           (Class<? extends HRegion>) conf.getClass(HConstants.REGION_IMPL, HRegion.class);
 
       Constructor<? extends HRegion> c =
-          regionClass.getConstructor(Path.class, WAL.class, FileSystem.class,
-              Configuration.class, HRegionInfo.class, HTableDescriptor.class,
-              RegionServerServices.class);
+          regionClass.getConstructor(Configuration.class, HTableDescriptor.class,
+              HRegionInfo.class, WAL.class, RegionServerServices.class);
 
-      return c.newInstance(tableDir, wal, fs, conf, regionInfo, htd, rsServices);
+      return c.newInstance(conf, htd, regionInfo, wal, rsServices);
     } catch (Throwable e) {
       // todo: what should I throw here?
       throw new IllegalStateException("Could not instantiate a region instance.", e);
@@ -5905,11 +5866,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     LOG.info("creating HRegion " + info.getTable().getNameAsString()
         + " HTD == " + hTableDescriptor + " RootDir = " + rootDir +
         " Table name == " + info.getTable().getNameAsString());
-    FileSystem fs = FileSystem.get(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
-    HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, info);
-    HRegion region = HRegion.newHRegion(tableDir,
-        wal, fs, conf, info, hTableDescriptor, null);
+    HRegionFileSystem.create(conf, info);
+    HRegion region = HRegion.newHRegion(conf, hTableDescriptor, info, wal, null);
     if (initialize) {
       // If initializing, set the sequenceId. It is also required by WALPerformanceEvaluation when
       // verifying the WALEdits.
@@ -6086,7 +6044,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (LOG.isDebugEnabled()) {
       LOG.debug("Opening region: " + info);
     }
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    HRegion r = HRegion.newHRegion(conf, htd, info, wal, rsServices);
     return r.openHRegion(reporter);
   }
 
@@ -6101,8 +6059,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   public static HRegion openHRegion(final HRegion other, final CancelableProgressable reporter)
       throws IOException {
     HRegionFileSystem regionFs = other.getRegionFileSystem();
-    HRegion r = newHRegion(regionFs.getTableDir(), other.getWAL(), regionFs.getFileSystem(),
-        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
+    HRegion r = newHRegion(other.baseConf, other.getTableDesc(),
+        other.getRegionInfo(), other.getWAL(), null);
     return r.openHRegion(reporter);
   }
 
@@ -6150,9 +6108,6 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       LOG.debug("HRegion.Warming up region: " + info);
     }
 
-    Path rootDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, info.getTable());
-
     FileSystem fs = null;
     if (rsServices != null) {
       fs = rsServices.getFileSystem();
@@ -6161,7 +6116,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       fs = FileSystem.get(conf);
     }
 
-    HRegion r = HRegion.newHRegion(tableDir, wal, fs, conf, info, htd, rsServices);
+    HRegion r = HRegion.newHRegion(conf, htd, info, wal, rsServices);
     r.initializeWarmup(reporter);
     r.close();
   }
@@ -6195,8 +6150,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     fs.commitDaughterRegion(hri);
 
     // Create the daughter HRegion instance
-    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(), fs.getFileSystem(),
-        this.getBaseConf(), hri, this.getTableDesc(), rsServices);
+    HRegion r = HRegion.newHRegion(this.getBaseConf(), this.getTableDesc(),
+        hri, this.getWAL(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
     r.writeRequestsCount.set(this.getWriteRequestsCount() / 2);
     return r;
@@ -6210,14 +6165,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
    */
   HRegion createMergedRegionFromMerges(final HRegionInfo mergedRegionInfo,
       final HRegion region_b) throws IOException {
-    HRegion r = HRegion.newHRegion(this.fs.getTableDir(), this.getWAL(),
-        fs.getFileSystem(), this.getBaseConf(), mergedRegionInfo,
-        this.getTableDesc(), this.rsServices);
-    r.readRequestsCount.set(this.getReadRequestsCount()
-        + region_b.getReadRequestsCount());
-    r.writeRequestsCount.set(this.getWriteRequestsCount()
-
-        + region_b.getWriteRequestsCount());
+    HRegion r = HRegion.newHRegion(this.getBaseConf(), this.getTableDesc(),
+        mergedRegionInfo, this.getWAL(), this.rsServices);
+    r.readRequestsCount.set(this.getReadRequestsCount() + region_b.getReadRequestsCount());
+    r.writeRequestsCount.set(this.getWriteRequestsCount() + region_b.getWriteRequestsCount());
     this.fs.commitMergedRegion(mergedRegionInfo);
     return r;
   }
@@ -6248,7 +6199,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       Bytes.toBytes(HConstants.META_VERSION)));
     meta.put(row, HConstants.CATALOG_FAMILY, cells);
   }
-  
+
   /**
    * Determines if the specified row is within the row range specified by the
    * specified HRegionInfo
@@ -7342,9 +7293,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     if (FSUtils.getTableName(p).equals(TableName.META_TABLE_NAME)) {
       final WAL wal = walFactory.getMetaWAL(
           HRegionInfo.FIRST_META_REGIONINFO.getEncodedNameAsBytes());
-      region = HRegion.newHRegion(p, wal, fs, c,
-        HRegionInfo.FIRST_META_REGIONINFO,
-          fst.get(TableName.META_TABLE_NAME), null);
+      region = HRegion.newHRegion(c, fst.get(TableName.META_TABLE_NAME),
+        HRegionInfo.FIRST_META_REGIONINFO, wal, null);
     } else {
       throw new IOException("Not a known catalog table: " + p.toString());
     }

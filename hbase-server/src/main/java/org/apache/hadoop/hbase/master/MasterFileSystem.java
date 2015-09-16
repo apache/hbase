@@ -51,10 +51,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.fs.layout.FsLayout;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -504,7 +503,7 @@ public class MasterFileSystem {
 
     return rd;
   }
-  
+
   /**
    * Checks if meta region exists
    *
@@ -625,7 +624,7 @@ public class MasterFileSystem {
 
     Path regionDir = FsLayout.getRegionDir(tableDir, region);
     Path familyDir = new Path(regionDir, Bytes.toString(familyName));
-    
+
     if (fs.delete(familyDir, true) == false) {
       if (fs.exists(familyDir)) {
         throw new IOException("Could not delete family "
@@ -702,38 +701,7 @@ public class MasterFileSystem {
     this.services.getTableDescriptors().add(htd);
     return htd;
   }
-  
-  // TODO: Can't get rid of this in totality because the caller of this method
-  // (TestSplitTransactionOnCluster.testSSHCleanupDaughterRegionsOfABortedSplit)
-  // is testing something where the FS does not agree with the meta
-  // At best can just make an assertion about # of region dirs in MFS and not expose 
-  // what they actually are
-  public List<Path> getRegionDirs(TableName tableName) throws IOException {
-    FileSystem fs = getFileSystem();
-    Path rootDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, tableName);
-    return FsLayout.getRegionDirPaths(fs, tableDir);
-  }
-  
-  // Only returns region filesystems for regions in meta
-  // Will ignore anything on filesystem
-  public List<HRegionFileSystem> getRegionFileSystems(Configuration conf, 
-    Connection connection, TableName tableName) throws IOException {
-    
-    FileSystem fs = getFileSystem();
-    Path rootDir = FSUtils.getRootDir(conf);
-    Path tableDir = FSUtils.getTableDir(rootDir, tableName);
-    
-    List<HRegionInfo> regionInfos = MetaTableAccessor.getTableRegions(connection, tableName);
-    
-    List<HRegionFileSystem> results = new ArrayList<HRegionFileSystem>();
-    for (HRegionInfo regionInfo : regionInfos) {
-      HRegionFileSystem hrfs = HRegionFileSystem.create(conf, fs, tableDir, regionInfo);
-      results.add(hrfs);
-    }
-    return results;
-  }
-  
+
   /**
    * The function is used in SSH to set recovery mode based on configuration after all outstanding
    * log split tasks drained.

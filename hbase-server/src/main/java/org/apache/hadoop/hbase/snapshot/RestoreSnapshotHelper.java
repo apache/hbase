@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.fs.layout.FsLayout;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -55,7 +56,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -592,7 +592,7 @@ public class RestoreSnapshotHelper {
     Path referenceFile = new Path(new Path(FsLayout.getRegionDir(new Path(
       snapshotTable.getNameAsString()), regionInfo), familyDir.getName()), hfileName);
     Path referredToFile = StoreFileInfo.getReferredToFile(referenceFile);
-    
+
     String snapshotRegionName = referredToFile.getParent().getParent().getName();
     String fileName = referredToFile.getName();
 

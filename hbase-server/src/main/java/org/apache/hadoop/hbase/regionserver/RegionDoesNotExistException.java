@@ -17,14 +17,26 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.RegionException;
 
-public class HRegionFileSystemFactory {
-  public HRegionFileSystem create(final Configuration conf, final FileSystem fs, final Path tableDir,
-      final HRegionInfo regionInfo) {
-    return new HRegionFileSystem(conf, fs, tableDir, regionInfo);
+@SuppressWarnings("serial")
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+public class RegionDoesNotExistException extends RegionException {
+  /**
+   * @param msg full description of the failure
+   */
+  public RegionDoesNotExistException(String msg) {
+    super(msg);
+  }
+
+  /**
+   * @param hri expected region to find
+   */
+  public RegionDoesNotExistException(HRegionInfo hri) {
+    super("Region '" + hri + "' doesn't exist on the filesystem");
   }
 }

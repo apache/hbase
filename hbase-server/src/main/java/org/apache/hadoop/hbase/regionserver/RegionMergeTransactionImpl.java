@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.LoggingProgressable;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -197,7 +198,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
           region_a.getRegionInfo().getRegionName());
       if (regionAHasMergeQualifier ||
           hasMergeQualifierInMeta(services, region_b.getRegionInfo().getRegionName())) {
-        LOG.debug("Region " + (regionAHasMergeQualifier ? 
+        LOG.debug("Region " + (regionAHasMergeQualifier ?
             region_a.getRegionInfo().getRegionNameAsString()
                 : region_b.getRegionInfo().getRegionNameAsString())
             + " is not mergeable because it has merge qualifier in META");

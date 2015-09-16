@@ -1,4 +1,5 @@
 /**
+ *
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,34 +16,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+
+package org.apache.hadoop.hbase.fs;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.fs.layout.StandardHBaseFsLayout;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.util.FSUtils;
 
-import com.google.common.annotations.VisibleForTesting;
-
-public class HierarchicalHRegionFileSystem extends HRegionFileSystem {
-  protected HierarchicalHRegionFileSystem(Configuration conf, FileSystem fs, Path tableDir,
-      HRegionInfo regionInfo) {
-    super(conf, fs, tableDir, regionInfo);
+public class HierarchicalMasterFileSystem extends LegacyMasterFileSystem {
+  public HierarchicalMasterFileSystem(Configuration conf, Path rootDir) {
+    super(conf, rootDir);
   }
 
-  @Override
-  void moveNewRegionFromTmpDirToRegionDir(Path source, Path dest) throws IOException {
-    fs.mkdirs(dest.getParent());
-    super.moveNewRegionFromTmpDirToRegionDir(source, dest);
-  }
-
-  // Probably will never use this function for real, just in tests to compare
-  // humongous vs regular region dir functionality
-  @VisibleForTesting
-  public Path getStandadHBaseRegionDir() {
-    return StandardHBaseFsLayout.get().getRegionDir(tableDir, regionInfoForFs.getEncodedName());
+  public Collection<HRegionInfo> getRegions(TableName tableName) throws IOException {
+    /*
+    for (...ns bucket..) {
+      for (...rs...) {
+        ...
+      }
+    }
+    */
+    return null;
   }
 }

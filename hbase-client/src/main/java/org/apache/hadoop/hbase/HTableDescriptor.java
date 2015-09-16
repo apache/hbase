@@ -1368,25 +1368,6 @@ public class HTableDescriptor implements Comparable<HTableDescriptor> {
       remove(match);
   }
 
-  /**
-   * Returns the {@link Path} object representing the table directory under
-   * path rootdir
-   *
-   * Deprecated use FSUtils.getTableDir() instead.
-   *
-   * @param rootdir qualified path of HBase root directory
-   * @param tableName name of table
-   * @return {@link Path} for table
-   */
-  @Deprecated
-  public static Path getTableDir(Path rootdir, final byte [] tableName) {
-    //This is bad I had to mirror code from FSUTils.getTableDir since
-    //there is no module dependency between hbase-client and hbase-server
-    TableName name = TableName.valueOf(tableName);
-    return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
-              new Path(name.getNamespaceAsString(), new Path(name.getQualifierAsString()))));
-  }
-
   /** Table descriptor for <code>hbase:meta</code> catalog table
    * Deprecated, use TableDescriptors#get(TableName.META_TABLE) or
    * Admin#getTableDescriptor(TableName.META_TABLE) instead.

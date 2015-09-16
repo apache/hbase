@@ -61,7 +61,7 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.NoServerForRegionException;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -412,7 +412,7 @@ public class RegionSplitter {
    * Alternative getCurrentNrHRS which is no longer available.
    * @param connection
    * @return Rough count of regionservers out on cluster.
-   * @throws IOException 
+   * @throws IOException
    */
   private static int getRegionServerCount(final Connection connection) throws IOException {
     try (Admin admin = connection.getAdmin()) {
@@ -767,7 +767,7 @@ public class RegionSplitter {
    * @param conf
    * @param tableName
    * @return A Pair where first item is table dir and second is the split file.
-   * @throws IOException 
+   * @throws IOException
    */
   private static Pair<Path, Path> getTableDirAndSplitFile(final Configuration conf,
       final TableName tableName)
@@ -785,7 +785,7 @@ public class RegionSplitter {
       getTableDirAndSplitFile(connection.getConfiguration(), tableName);
     Path tableDir = tableDirAndSplitFile.getFirst();
     Path splitFile = tableDirAndSplitFile.getSecond();
- 
+
     FileSystem fs = tableDir.getFileSystem(connection.getConfiguration());
 
     // Using strings because (new byte[]{0}).equals(new byte[]{0}) == false

@@ -36,10 +36,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -76,8 +76,7 @@ public class SnapshotManifestV1 {
     }
 
     public HRegionFileSystem regionOpen(final HRegionInfo regionInfo) throws IOException {
-      HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        fs, snapshotDir, regionInfo);
+      HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createSnapshot(conf, regionInfo);
       return snapshotRegionFs;
     }
 
@@ -157,8 +156,7 @@ public class SnapshotManifestV1 {
 
   static SnapshotRegionManifest buildManifestFromDisk (final Configuration conf,
       final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-          tableDir, regionInfo, true);
+    HRegionFileSystem regionFs = HRegionFileSystem.open(conf, regionInfo, true);
     SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
 
     // 1. dump region meta info into the snapshot directory

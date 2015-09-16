@@ -40,12 +40,12 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
+import org.apache.hadoop.hbase.fs.HRegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -200,8 +200,7 @@ public class SnapshotManifest {
     RegionVisitor visitor = createRegionVisitor(desc);
 
     // Open the RegionFS
-    HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-          tableDir, regionInfo, true);
+    HRegionFileSystem regionFs = HRegionFileSystem.open(conf, regionInfo, true);
     monitor.rethrowException();
 
     // 1. dump region meta info into the snapshot directory
