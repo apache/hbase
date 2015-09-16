@@ -29,6 +29,7 @@ import java.util.NavigableSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -137,6 +138,7 @@ public class Scan extends Query {
   private TimeRange tr = new TimeRange();
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], TimeRange> cftr = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
   private Boolean loadColumnFamiliesOnDemand = null;
   private Boolean asyncPrefetch = null;
 
@@ -232,6 +234,7 @@ public class Scan extends Query {
     small = scan.isSmall();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
+
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
     for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
       byte [] fam = entry.getKey();
@@ -262,6 +265,7 @@ public class Scan extends Query {
     this.storeLimit = get.getMaxResultsPerColumnFamily();
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
+    this.cftr = get.getColumnFamilyTimeRange();
     this.familyMap = get.getFamilyMap();
     this.getScan = true;
     this.asyncPrefetch = false;
@@ -330,6 +334,27 @@ public class Scan extends Query {
     tr = new TimeRange(minStamp, maxStamp);
     return this;
   }
+
+  /**
+   * Get versions of columns only within the specified timestamp range,
+   * [minStamp, maxStamp) on a per CF bases.  Note, default maximum versions to return is 1.  If
+   * your time range spans more than one version and you want all versions
+   * returned, up the number of versions beyond the default.
+   *
+   * @param cf       the column family for which you want to restrict
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @return this
+   * @throws IOException if invalid time range
+   * @see #setMaxVersions()
+   * @see #setMaxVersions(int)
+   */
+
+  public Scan setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp) throws IOException {
+    cftr.put(cf, new TimeRange(minStamp, maxStamp));
+    return this;
+  }
+
 
   /**
    * Get versions of columns with the specified timestamp. Note, default maximum
@@ -635,6 +660,25 @@ public class Scan extends Query {
    */
   public TimeRange getTimeRange() {
     return this.tr;
+  }
+
+  /**
+   * @return Map<byte[], TimeRange>
+   */
+  public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
+    return this.cftr;
+  }
+
+  /**
+   * @param cf Column Family
+   * @return TimeRange
+   */
+  public TimeRange getTimeRangeForColumnFamily(byte[] cf) {
+    TimeRange timeRange = cftr.get(cf);
+    if (timeRange == null) {
+      timeRange = getTimeRange();
+    }
+    return timeRange;
   }
 
   /**

@@ -82,6 +82,7 @@ message Get {
   optional bool existence_only = 10 [default = false];
 
   optional Consistency consistency = 12 [default = STRONG];
+  repeated ColumnFamilyTimeRange cf_time_range = 13;
 }
 
 message Result {
@@ -251,6 +252,7 @@ message Scan {
   optional bool reversed = 15 [default = false];
   optional Consistency consistency = 16 [default = STRONG];
   optional uint32 caching = 17;
+  repeated ColumnFamilyTimeRange cf_time_range = 18;
 }
 
 /**
