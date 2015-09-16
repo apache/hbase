@@ -35,16 +35,11 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HDFSBlocksDistribution;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -1160,11 +1155,13 @@ public class StoreFile {
      * @param isCompaction is scanner being used for compaction?
      * @return a scanner
      */
+    // @TODO: RG - does this work for an empty store file?
     public StoreFileScanner getStoreFileScanner(boolean cacheBlocks,
                                                boolean pread,
                                                boolean isCompaction, long readPt) {
       return new StoreFileScanner(this,
                                  getScanner(cacheBlocks, pread, isCompaction),
+                                 reader.getFirstKey().getFamilyArray(),
                                  !isCompaction, reader.hasMVCCInfo(), readPt);
     }
 
@@ -1208,16 +1205,16 @@ public class StoreFile {
     /**
      * Check if this storeFile may contain keys within the TimeRange that
      * have not expired (i.e. not older than oldestUnexpiredTS).
-     * @param scan the current scan
+     * @param timeRange the timeRange to restrict
      * @param oldestUnexpiredTS the oldest timestamp that is not expired, as
      *          determined by the column family's TTL
      * @return false if queried keys definitely don't exist in this StoreFile
      */
-    boolean passesTimerangeFilter(Scan scan, long oldestUnexpiredTS) {
+    boolean passesTimerangeFilter(TimeRange timeRange, long oldestUnexpiredTS) {
       if (timeRangeTracker == null) {
         return true;
       } else {
-        return timeRangeTracker.includesTimeRange(scan.getTimeRange()) &&
+        return timeRangeTracker.includesTimeRange(timeRange) &&
             timeRangeTracker.getMaximumTimestamp() >= oldestUnexpiredTS;
       }
     }

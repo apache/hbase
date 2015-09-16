@@ -1935,6 +1935,31 @@ public final class ClientProtos {
      * <code>optional .hbase.pb.Consistency consistency = 12 [default = STRONG];</code>
      */
     org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency getConsistency();
+
+    // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> 
+        getCfTimeRangeList();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index);
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    int getCfTimeRangeCount();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+        getCfTimeRangeOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.Get}
@@ -2077,6 +2102,14 @@ public final class ClientProtos {
               }
               break;
             }
+            case 106: {
+              if (!((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+                cfTimeRange_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange>();
+                mutable_bitField0_ |= 0x00000800;
+              }
+              cfTimeRange_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -2090,6 +2123,9 @@ public final class ClientProtos {
         }
         if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
           attribute_ = java.util.Collections.unmodifiableList(attribute_);
+        }
+        if (((mutable_bitField0_ & 0x00000800) == 0x00000800)) {
+          cfTimeRange_ = java.util.Collections.unmodifiableList(cfTimeRange_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -2361,6 +2397,42 @@ public final class ClientProtos {
       return consistency_;
     }
 
+    // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;
+    public static final int CF_TIME_RANGE_FIELD_NUMBER = 13;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> cfTimeRange_;
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> getCfTimeRangeList() {
+      return cfTimeRange_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+        getCfTimeRangeOrBuilderList() {
+      return cfTimeRange_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    public int getCfTimeRangeCount() {
+      return cfTimeRange_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index) {
+      return cfTimeRange_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+        int index) {
+      return cfTimeRange_.get(index);
+    }
+
     private void initFields() {
       row_ = com.google.protobuf.ByteString.EMPTY;
       column_ = java.util.Collections.emptyList();
@@ -2373,6 +2445,7 @@ public final class ClientProtos {
       storeOffset_ = 0;
       existenceOnly_ = false;
       consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
+      cfTimeRange_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -2397,6 +2470,12 @@ public final class ClientProtos {
       }
       if (hasFilter()) {
         if (!getFilter().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getCfTimeRangeCount(); i++) {
+        if (!getCfTimeRange(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -2440,6 +2519,9 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         output.writeEnum(12, consistency_.getNumber());
+      }
+      for (int i = 0; i < cfTimeRange_.size(); i++) {
+        output.writeMessage(13, cfTimeRange_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -2493,6 +2575,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00000100) == 0x00000100)) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(12, consistency_.getNumber());
+      }
+      for (int i = 0; i < cfTimeRange_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(13, cfTimeRange_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -2566,6 +2652,8 @@ public final class ClientProtos {
         result = result &&
             (getConsistency() == other.getConsistency());
       }
+      result = result && getCfTimeRangeList()
+          .equals(other.getCfTimeRangeList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -2622,6 +2710,10 @@ public final class ClientProtos {
       if (hasConsistency()) {
         hash = (37 * hash) + CONSISTENCY_FIELD_NUMBER;
         hash = (53 * hash) + hashEnum(getConsistency());
+      }
+      if (getCfTimeRangeCount() > 0) {
+        hash = (37 * hash) + CF_TIME_RANGE_FIELD_NUMBER;
+        hash = (53 * hash) + getCfTimeRangeList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2735,6 +2827,7 @@ public final class ClientProtos {
           getAttributeFieldBuilder();
           getFilterFieldBuilder();
           getTimeRangeFieldBuilder();
+          getCfTimeRangeFieldBuilder();
         }
       }
       private static Builder create() {
@@ -2781,6 +2874,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00000200);
         consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
         bitField0_ = (bitField0_ & ~0x00000400);
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRange_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+        } else {
+          cfTimeRangeBuilder_.clear();
+        }
         return this;
       }
 
@@ -2871,6 +2970,15 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00000100;
         }
         result.consistency_ = consistency_;
+        if (cfTimeRangeBuilder_ == null) {
+          if (((bitField0_ & 0x00000800) == 0x00000800)) {
+            cfTimeRange_ = java.util.Collections.unmodifiableList(cfTimeRange_);
+            bitField0_ = (bitField0_ & ~0x00000800);
+          }
+          result.cfTimeRange_ = cfTimeRange_;
+        } else {
+          result.cfTimeRange_ = cfTimeRangeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -2966,6 +3074,32 @@ public final class ClientProtos {
         if (other.hasConsistency()) {
           setConsistency(other.getConsistency());
         }
+        if (cfTimeRangeBuilder_ == null) {
+          if (!other.cfTimeRange_.isEmpty()) {
+            if (cfTimeRange_.isEmpty()) {
+              cfTimeRange_ = other.cfTimeRange_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+            } else {
+              ensureCfTimeRangeIsMutable();
+              cfTimeRange_.addAll(other.cfTimeRange_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.cfTimeRange_.isEmpty()) {
+            if (cfTimeRangeBuilder_.isEmpty()) {
+              cfTimeRangeBuilder_.dispose();
+              cfTimeRangeBuilder_ = null;
+              cfTimeRange_ = other.cfTimeRange_;
+              bitField0_ = (bitField0_ & ~0x00000800);
+              cfTimeRangeBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getCfTimeRangeFieldBuilder() : null;
+            } else {
+              cfTimeRangeBuilder_.addAllMessages(other.cfTimeRange_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -2989,6 +3123,12 @@ public final class ClientProtos {
         }
         if (hasFilter()) {
           if (!getFilter().isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getCfTimeRangeCount(); i++) {
+          if (!getCfTimeRange(i).isInitialized()) {
             
             return false;
           }
@@ -3984,6 +4124,246 @@ public final class ClientProtos {
         consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
         onChanged();
         return this;
+      }
+
+      // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> cfTimeRange_ =
+        java.util.Collections.emptyList();
+      private void ensureCfTimeRangeIsMutable() {
+        if (!((bitField0_ & 0x00000800) == 0x00000800)) {
+          cfTimeRange_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange>(cfTimeRange_);
+          bitField0_ |= 0x00000800;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> cfTimeRangeBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> getCfTimeRangeList() {
+        if (cfTimeRangeBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(cfTimeRange_);
+        } else {
+          return cfTimeRangeBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public int getCfTimeRangeCount() {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.size();
+        } else {
+          return cfTimeRangeBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.get(index);
+        } else {
+          return cfTimeRangeBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder setCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.set(index, value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder setCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder addCfTimeRange(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder addCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(index, value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder addCfTimeRange(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder addCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder addAllCfTimeRange(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> values) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          super.addAll(values, cfTimeRange_);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder clearCfTimeRange() {
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRange_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000800);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public Builder removeCfTimeRange(int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.remove(index);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder getCfTimeRangeBuilder(
+          int index) {
+        return getCfTimeRangeFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+          int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.get(index);  } else {
+          return cfTimeRangeBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+           getCfTimeRangeOrBuilderList() {
+        if (cfTimeRangeBuilder_ != null) {
+          return cfTimeRangeBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(cfTimeRange_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder addCfTimeRangeBuilder() {
+        return getCfTimeRangeFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder addCfTimeRangeBuilder(
+          int index) {
+        return getCfTimeRangeFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 13;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder> 
+           getCfTimeRangeBuilderList() {
+        return getCfTimeRangeFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+          getCfTimeRangeFieldBuilder() {
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRangeBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder>(
+                  cfTimeRange_,
+                  ((bitField0_ & 0x00000800) == 0x00000800),
+                  getParentForChildren(),
+                  isClean());
+          cfTimeRange_ = null;
+        }
+        return cfTimeRangeBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.Get)
@@ -13682,6 +14062,31 @@ public final class ClientProtos {
      * <code>optional uint32 caching = 17;</code>
      */
     int getCaching();
+
+    // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> 
+        getCfTimeRangeList();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index);
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    int getCfTimeRangeCount();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+        getCfTimeRangeOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+        int index);
   }
   /**
    * Protobuf type {@code hbase.pb.Scan}
@@ -13858,6 +14263,14 @@ public final class ClientProtos {
               caching_ = input.readUInt32();
               break;
             }
+            case 146: {
+              if (!((mutable_bitField0_ & 0x00020000) == 0x00020000)) {
+                cfTimeRange_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange>();
+                mutable_bitField0_ |= 0x00020000;
+              }
+              cfTimeRange_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.PARSER, extensionRegistry));
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -13871,6 +14284,9 @@ public final class ClientProtos {
         }
         if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
           attribute_ = java.util.Collections.unmodifiableList(attribute_);
+        }
+        if (((mutable_bitField0_ & 0x00020000) == 0x00020000)) {
+          cfTimeRange_ = java.util.Collections.unmodifiableList(cfTimeRange_);
         }
         this.unknownFields = unknownFields.build();
         makeExtensionsImmutable();
@@ -14236,6 +14652,42 @@ public final class ClientProtos {
       return caching_;
     }
 
+    // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;
+    public static final int CF_TIME_RANGE_FIELD_NUMBER = 18;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> cfTimeRange_;
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> getCfTimeRangeList() {
+      return cfTimeRange_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+        getCfTimeRangeOrBuilderList() {
+      return cfTimeRange_;
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    public int getCfTimeRangeCount() {
+      return cfTimeRange_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index) {
+      return cfTimeRange_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+        int index) {
+      return cfTimeRange_.get(index);
+    }
+
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -14254,6 +14706,7 @@ public final class ClientProtos {
       reversed_ = false;
       consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
       caching_ = 0;
+      cfTimeRange_ = java.util.Collections.emptyList();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14274,6 +14727,12 @@ public final class ClientProtos {
       }
       if (hasFilter()) {
         if (!getFilter().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      for (int i = 0; i < getCfTimeRangeCount(); i++) {
+        if (!getCfTimeRange(i).isInitialized()) {
           memoizedIsInitialized = 0;
           return false;
         }
@@ -14335,6 +14794,9 @@ public final class ClientProtos {
       }
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         output.writeUInt32(17, caching_);
+      }
+      for (int i = 0; i < cfTimeRange_.size(); i++) {
+        output.writeMessage(18, cfTimeRange_.get(i));
       }
       getUnknownFields().writeTo(output);
     }
@@ -14412,6 +14874,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(17, caching_);
+      }
+      for (int i = 0; i < cfTimeRange_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(18, cfTimeRange_.get(i));
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14515,6 +14981,8 @@ public final class ClientProtos {
         result = result && (getCaching()
             == other.getCaching());
       }
+      result = result && getCfTimeRangeList()
+          .equals(other.getCfTimeRangeList());
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14595,6 +15063,10 @@ public final class ClientProtos {
       if (hasCaching()) {
         hash = (37 * hash) + CACHING_FIELD_NUMBER;
         hash = (53 * hash) + getCaching();
+      }
+      if (getCfTimeRangeCount() > 0) {
+        hash = (37 * hash) + CF_TIME_RANGE_FIELD_NUMBER;
+        hash = (53 * hash) + getCfTimeRangeList().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -14712,6 +15184,7 @@ public final class ClientProtos {
           getAttributeFieldBuilder();
           getFilterFieldBuilder();
           getTimeRangeFieldBuilder();
+          getCfTimeRangeFieldBuilder();
         }
       }
       private static Builder create() {
@@ -14770,6 +15243,12 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00008000);
         caching_ = 0;
         bitField0_ = (bitField0_ & ~0x00010000);
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRange_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00020000);
+        } else {
+          cfTimeRangeBuilder_.clear();
+        }
         return this;
       }
 
@@ -14884,6 +15363,15 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00004000;
         }
         result.caching_ = caching_;
+        if (cfTimeRangeBuilder_ == null) {
+          if (((bitField0_ & 0x00020000) == 0x00020000)) {
+            cfTimeRange_ = java.util.Collections.unmodifiableList(cfTimeRange_);
+            bitField0_ = (bitField0_ & ~0x00020000);
+          }
+          result.cfTimeRange_ = cfTimeRange_;
+        } else {
+          result.cfTimeRange_ = cfTimeRangeBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14997,6 +15485,32 @@ public final class ClientProtos {
         if (other.hasCaching()) {
           setCaching(other.getCaching());
         }
+        if (cfTimeRangeBuilder_ == null) {
+          if (!other.cfTimeRange_.isEmpty()) {
+            if (cfTimeRange_.isEmpty()) {
+              cfTimeRange_ = other.cfTimeRange_;
+              bitField0_ = (bitField0_ & ~0x00020000);
+            } else {
+              ensureCfTimeRangeIsMutable();
+              cfTimeRange_.addAll(other.cfTimeRange_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.cfTimeRange_.isEmpty()) {
+            if (cfTimeRangeBuilder_.isEmpty()) {
+              cfTimeRangeBuilder_.dispose();
+              cfTimeRangeBuilder_ = null;
+              cfTimeRange_ = other.cfTimeRange_;
+              bitField0_ = (bitField0_ & ~0x00020000);
+              cfTimeRangeBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getCfTimeRangeFieldBuilder() : null;
+            } else {
+              cfTimeRangeBuilder_.addAllMessages(other.cfTimeRange_);
+            }
+          }
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
@@ -15016,6 +15530,12 @@ public final class ClientProtos {
         }
         if (hasFilter()) {
           if (!getFilter().isInitialized()) {
+            
+            return false;
+          }
+        }
+        for (int i = 0; i < getCfTimeRangeCount(); i++) {
+          if (!getCfTimeRange(i).isInitialized()) {
             
             return false;
           }
@@ -16208,6 +16728,246 @@ public final class ClientProtos {
         caching_ = 0;
         onChanged();
         return this;
+      }
+
+      // repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> cfTimeRange_ =
+        java.util.Collections.emptyList();
+      private void ensureCfTimeRangeIsMutable() {
+        if (!((bitField0_ & 0x00020000) == 0x00020000)) {
+          cfTimeRange_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange>(cfTimeRange_);
+          bitField0_ |= 0x00020000;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> cfTimeRangeBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> getCfTimeRangeList() {
+        if (cfTimeRangeBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(cfTimeRange_);
+        } else {
+          return cfTimeRangeBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public int getCfTimeRangeCount() {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.size();
+        } else {
+          return cfTimeRangeBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange getCfTimeRange(int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.get(index);
+        } else {
+          return cfTimeRangeBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder setCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.set(index, value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder setCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder addCfTimeRange(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder addCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange value) {
+        if (cfTimeRangeBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(index, value);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder addCfTimeRange(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder addCfTimeRange(
+          int index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder builderForValue) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder addAllCfTimeRange(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange> values) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          super.addAll(values, cfTimeRange_);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder clearCfTimeRange() {
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRange_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00020000);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public Builder removeCfTimeRange(int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          ensureCfTimeRangeIsMutable();
+          cfTimeRange_.remove(index);
+          onChanged();
+        } else {
+          cfTimeRangeBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder getCfTimeRangeBuilder(
+          int index) {
+        return getCfTimeRangeFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder getCfTimeRangeOrBuilder(
+          int index) {
+        if (cfTimeRangeBuilder_ == null) {
+          return cfTimeRange_.get(index);  } else {
+          return cfTimeRangeBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+           getCfTimeRangeOrBuilderList() {
+        if (cfTimeRangeBuilder_ != null) {
+          return cfTimeRangeBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(cfTimeRange_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder addCfTimeRangeBuilder() {
+        return getCfTimeRangeFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder addCfTimeRangeBuilder(
+          int index) {
+        return getCfTimeRangeFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.ColumnFamilyTimeRange cf_time_range = 18;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder> 
+           getCfTimeRangeBuilderList() {
+        return getCfTimeRangeFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder> 
+          getCfTimeRangeFieldBuilder() {
+        if (cfTimeRangeBuilder_ == null) {
+          cfTimeRangeBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRange.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilyTimeRangeOrBuilder>(
+                  cfTimeRange_,
+                  ((bitField0_ & 0x00020000) == 0x00020000),
+                  getParentForChildren(),
+                  isClean());
+          cfTimeRange_ = null;
+        }
+        return cfTimeRangeBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.Scan)
@@ -33121,7 +33881,7 @@ public final class ClientProtos {
       "o\032\017MapReduce.proto\"\037\n\016Authorizations\022\r\n\005" +
       "label\030\001 \003(\t\"$\n\016CellVisibility\022\022\n\nexpress" +
       "ion\030\001 \002(\t\"+\n\006Column\022\016\n\006family\030\001 \002(\014\022\021\n\tq" +
-      "ualifier\030\002 \003(\014\"\336\002\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
+      "ualifier\030\002 \003(\014\"\226\003\n\003Get\022\013\n\003row\030\001 \002(\014\022 \n\006c" +
       "olumn\030\002 \003(\0132\020.hbase.pb.Column\022*\n\tattribu" +
       "te\030\003 \003(\0132\027.hbase.pb.NameBytesPair\022 \n\006fil" +
       "ter\030\004 \001(\0132\020.hbase.pb.Filter\022\'\n\ntime_rang" +
@@ -33130,125 +33890,128 @@ public final class ClientProtos {
       "e\022\023\n\013store_limit\030\010 \001(\r\022\024\n\014store_offset\030\t" +
       " \001(\r\022\035\n\016existence_only\030\n \001(\010:\005false\0222\n\013c" +
       "onsistency\030\014 \001(\0162\025.hbase.pb.Consistency:" +
-      "\006STRONG\"\203\001\n\006Result\022\034\n\004cell\030\001 \003(\0132\016.hbase" +
-      ".pb.Cell\022\035\n\025associated_cell_count\030\002 \001(\005\022" +
-      "\016\n\006exists\030\003 \001(\010\022\024\n\005stale\030\004 \001(\010:\005false\022\026\n" +
-      "\007partial\030\005 \001(\010:\005false\"S\n\nGetRequest\022)\n\006r" +
-      "egion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\032" +
-      "\n\003get\030\002 \002(\0132\r.hbase.pb.Get\"/\n\013GetRespons",
-      "e\022 \n\006result\030\001 \001(\0132\020.hbase.pb.Result\"\222\001\n\t" +
-      "Condition\022\013\n\003row\030\001 \002(\014\022\016\n\006family\030\002 \002(\014\022\021" +
-      "\n\tqualifier\030\003 \002(\014\022+\n\014compare_type\030\004 \002(\0162" +
-      "\025.hbase.pb.CompareType\022(\n\ncomparator\030\005 \002" +
-      "(\0132\024.hbase.pb.Comparator\"\364\006\n\rMutationPro" +
-      "to\022\013\n\003row\030\001 \001(\014\0229\n\013mutate_type\030\002 \001(\0162$.h" +
-      "base.pb.MutationProto.MutationType\0229\n\014co" +
-      "lumn_value\030\003 \003(\0132#.hbase.pb.MutationProt" +
-      "o.ColumnValue\022\021\n\ttimestamp\030\004 \001(\004\022*\n\tattr" +
-      "ibute\030\005 \003(\0132\027.hbase.pb.NameBytesPair\022C\n\n",
-      "durability\030\006 \001(\0162\".hbase.pb.MutationProt" +
-      "o.Durability:\013USE_DEFAULT\022\'\n\ntime_range\030" +
-      "\007 \001(\0132\023.hbase.pb.TimeRange\022\035\n\025associated" +
-      "_cell_count\030\010 \001(\005\022\r\n\005nonce\030\t \001(\004\032\371\001\n\013Col" +
-      "umnValue\022\016\n\006family\030\001 \002(\014\022K\n\017qualifier_va" +
-      "lue\030\002 \003(\01322.hbase.pb.MutationProto.Colum" +
-      "nValue.QualifierValue\032\214\001\n\016QualifierValue" +
-      "\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005value\030\002 \001(\014\022\021\n\tti" +
-      "mestamp\030\003 \001(\004\0227\n\013delete_type\030\004 \001(\0162\".hba" +
-      "se.pb.MutationProto.DeleteType\022\014\n\004tags\030\005",
-      " \001(\014\"W\n\nDurability\022\017\n\013USE_DEFAULT\020\000\022\014\n\010S" +
-      "KIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002\022\014\n\010SYNC_WAL\020\003\022\r" +
-      "\n\tFSYNC_WAL\020\004\">\n\014MutationType\022\n\n\006APPEND\020" +
-      "\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020\002\022\n\n\006DELETE\020\003\"p\n" +
-      "\nDeleteType\022\026\n\022DELETE_ONE_VERSION\020\000\022\034\n\030D" +
-      "ELETE_MULTIPLE_VERSIONS\020\001\022\021\n\rDELETE_FAMI" +
-      "LY\020\002\022\031\n\025DELETE_FAMILY_VERSION\020\003\"\242\001\n\rMuta" +
-      "teRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Reg" +
-      "ionSpecifier\022)\n\010mutation\030\002 \002(\0132\027.hbase.p" +
-      "b.MutationProto\022&\n\tcondition\030\003 \001(\0132\023.hba",
-      "se.pb.Condition\022\023\n\013nonce_group\030\004 \001(\004\"E\n\016" +
-      "MutateResponse\022 \n\006result\030\001 \001(\0132\020.hbase.p" +
-      "b.Result\022\021\n\tprocessed\030\002 \001(\010\"\346\003\n\004Scan\022 \n\006" +
-      "column\030\001 \003(\0132\020.hbase.pb.Column\022*\n\tattrib" +
-      "ute\030\002 \003(\0132\027.hbase.pb.NameBytesPair\022\021\n\tst" +
-      "art_row\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022 \n\006filte" +
-      "r\030\005 \001(\0132\020.hbase.pb.Filter\022\'\n\ntime_range\030" +
-      "\006 \001(\0132\023.hbase.pb.TimeRange\022\027\n\014max_versio" +
-      "ns\030\007 \001(\r:\0011\022\032\n\014cache_blocks\030\010 \001(\010:\004true\022" +
-      "\022\n\nbatch_size\030\t \001(\r\022\027\n\017max_result_size\030\n",
-      " \001(\004\022\023\n\013store_limit\030\013 \001(\r\022\024\n\014store_offse" +
-      "t\030\014 \001(\r\022&\n\036load_column_families_on_deman" +
-      "d\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010" +
-      ":\005false\0222\n\013consistency\030\020 \001(\0162\025.hbase.pb." +
-      "Consistency:\006STRONG\022\017\n\007caching\030\021 \001(\r\"\220\002\n" +
-      "\013ScanRequest\022)\n\006region\030\001 \001(\0132\031.hbase.pb." +
-      "RegionSpecifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb" +
-      ".Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_r" +
-      "ows\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext" +
-      "_call_seq\030\006 \001(\004\022\037\n\027client_handles_partia",
-      "ls\030\007 \001(\010\022!\n\031client_handles_heartbeats\030\010 " +
-      "\001(\010\022\032\n\022track_scan_metrics\030\t \001(\010\"\232\002\n\014Scan" +
-      "Response\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nsc" +
-      "anner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003" +
-      "ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Re" +
-      "sult\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag_per_" +
-      "result\030\007 \003(\010\022\036\n\026more_results_in_region\030\010" +
-      " \001(\010\022\031\n\021heartbeat_message\030\t \001(\010\022+\n\014scan_" +
-      "metrics\030\n \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n" +
-      "\024BulkLoadHFileRequest\022)\n\006region\030\001 \002(\0132\031.",
-      "hbase.pb.RegionSpecifier\022>\n\013family_path\030" +
-      "\002 \003(\0132).hbase.pb.BulkLoadHFileRequest.Fa" +
-      "milyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFami" +
-      "lyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025" +
-      "BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n" +
-      "\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014" +
-      "service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022" +
-      "\017\n\007request\030\004 \002(\014\"B\n\030CoprocessorServiceRe" +
-      "sult\022&\n\005value\030\001 \001(\0132\027.hbase.pb.NameBytes" +
-      "Pair\"v\n\031CoprocessorServiceRequest\022)\n\006reg",
-      "ion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\004" +
-      "call\030\002 \002(\0132 .hbase.pb.CoprocessorService" +
-      "Call\"o\n\032CoprocessorServiceResponse\022)\n\006re" +
-      "gion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022&\n" +
-      "\005value\030\002 \002(\0132\027.hbase.pb.NameBytesPair\"\226\001" +
-      "\n\006Action\022\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(" +
-      "\0132\027.hbase.pb.MutationProto\022\032\n\003get\030\003 \001(\0132" +
-      "\r.hbase.pb.Get\0226\n\014service_call\030\004 \001(\0132 .h" +
-      "base.pb.CoprocessorServiceCall\"k\n\014Region" +
-      "Action\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Region",
-      "Specifier\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(" +
-      "\0132\020.hbase.pb.Action\"D\n\017RegionLoadStats\022\027" +
-      "\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy" +
-      "\030\002 \001(\005:\0010\"\332\001\n\021ResultOrException\022\r\n\005index" +
-      "\030\001 \001(\r\022 \n\006result\030\002 \001(\0132\020.hbase.pb.Result" +
-      "\022*\n\texception\030\003 \001(\0132\027.hbase.pb.NameBytes" +
-      "Pair\022:\n\016service_result\030\004 \001(\0132\".hbase.pb." +
-      "CoprocessorServiceResult\022,\n\tloadStats\030\005 " +
-      "\001(\0132\031.hbase.pb.RegionLoadStats\"x\n\022Region" +
-      "ActionResult\0226\n\021resultOrException\030\001 \003(\0132",
-      "\033.hbase.pb.ResultOrException\022*\n\texceptio" +
-      "n\030\002 \001(\0132\027.hbase.pb.NameBytesPair\"x\n\014Mult" +
-      "iRequest\022,\n\014regionAction\030\001 \003(\0132\026.hbase.p" +
-      "b.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tco" +
-      "ndition\030\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMu" +
-      "ltiResponse\0228\n\022regionActionResult\030\001 \003(\0132" +
-      "\034.hbase.pb.RegionActionResult\022\021\n\tprocess" +
-      "ed\030\002 \001(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010T" +
-      "IMELINE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.hba" +
-      "se.pb.GetRequest\032\025.hbase.pb.GetResponse\022",
-      ";\n\006Mutate\022\027.hbase.pb.MutateRequest\032\030.hba" +
-      "se.pb.MutateResponse\0225\n\004Scan\022\025.hbase.pb." +
-      "ScanRequest\032\026.hbase.pb.ScanResponse\022P\n\rB" +
-      "ulkLoadHFile\022\036.hbase.pb.BulkLoadHFileReq" +
-      "uest\032\037.hbase.pb.BulkLoadHFileResponse\022X\n" +
-      "\013ExecService\022#.hbase.pb.CoprocessorServi" +
-      "ceRequest\032$.hbase.pb.CoprocessorServiceR" +
-      "esponse\022d\n\027ExecRegionServerService\022#.hba" +
-      "se.pb.CoprocessorServiceRequest\032$.hbase." +
-      "pb.CoprocessorServiceResponse\0228\n\005Multi\022\026",
-      ".hbase.pb.MultiRequest\032\027.hbase.pb.MultiR" +
-      "esponseBB\n*org.apache.hadoop.hbase.proto" +
-      "buf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "\006STRONG\0226\n\rcf_time_range\030\r \003(\0132\037.hbase.p" +
+      "b.ColumnFamilyTimeRange\"\203\001\n\006Result\022\034\n\004ce" +
+      "ll\030\001 \003(\0132\016.hbase.pb.Cell\022\035\n\025associated_c" +
+      "ell_count\030\002 \001(\005\022\016\n\006exists\030\003 \001(\010\022\024\n\005stale" +
+      "\030\004 \001(\010:\005false\022\026\n\007partial\030\005 \001(\010:\005false\"S\n" +
+      "\nGetRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.R",
+      "egionSpecifier\022\032\n\003get\030\002 \002(\0132\r.hbase.pb.G" +
+      "et\"/\n\013GetResponse\022 \n\006result\030\001 \001(\0132\020.hbas" +
+      "e.pb.Result\"\222\001\n\tCondition\022\013\n\003row\030\001 \002(\014\022\016" +
+      "\n\006family\030\002 \002(\014\022\021\n\tqualifier\030\003 \002(\014\022+\n\014com" +
+      "pare_type\030\004 \002(\0162\025.hbase.pb.CompareType\022(" +
+      "\n\ncomparator\030\005 \002(\0132\024.hbase.pb.Comparator" +
+      "\"\364\006\n\rMutationProto\022\013\n\003row\030\001 \001(\014\0229\n\013mutat" +
+      "e_type\030\002 \001(\0162$.hbase.pb.MutationProto.Mu" +
+      "tationType\0229\n\014column_value\030\003 \003(\0132#.hbase" +
+      ".pb.MutationProto.ColumnValue\022\021\n\ttimesta",
+      "mp\030\004 \001(\004\022*\n\tattribute\030\005 \003(\0132\027.hbase.pb.N" +
+      "ameBytesPair\022C\n\ndurability\030\006 \001(\0162\".hbase" +
+      ".pb.MutationProto.Durability:\013USE_DEFAUL" +
+      "T\022\'\n\ntime_range\030\007 \001(\0132\023.hbase.pb.TimeRan" +
+      "ge\022\035\n\025associated_cell_count\030\010 \001(\005\022\r\n\005non" +
+      "ce\030\t \001(\004\032\371\001\n\013ColumnValue\022\016\n\006family\030\001 \002(\014" +
+      "\022K\n\017qualifier_value\030\002 \003(\01322.hbase.pb.Mut" +
+      "ationProto.ColumnValue.QualifierValue\032\214\001" +
+      "\n\016QualifierValue\022\021\n\tqualifier\030\001 \001(\014\022\r\n\005v" +
+      "alue\030\002 \001(\014\022\021\n\ttimestamp\030\003 \001(\004\0227\n\013delete_",
+      "type\030\004 \001(\0162\".hbase.pb.MutationProto.Dele" +
+      "teType\022\014\n\004tags\030\005 \001(\014\"W\n\nDurability\022\017\n\013US" +
+      "E_DEFAULT\020\000\022\014\n\010SKIP_WAL\020\001\022\r\n\tASYNC_WAL\020\002" +
+      "\022\014\n\010SYNC_WAL\020\003\022\r\n\tFSYNC_WAL\020\004\">\n\014Mutatio" +
+      "nType\022\n\n\006APPEND\020\000\022\r\n\tINCREMENT\020\001\022\007\n\003PUT\020" +
+      "\002\022\n\n\006DELETE\020\003\"p\n\nDeleteType\022\026\n\022DELETE_ON" +
+      "E_VERSION\020\000\022\034\n\030DELETE_MULTIPLE_VERSIONS\020" +
+      "\001\022\021\n\rDELETE_FAMILY\020\002\022\031\n\025DELETE_FAMILY_VE" +
+      "RSION\020\003\"\242\001\n\rMutateRequest\022)\n\006region\030\001 \002(" +
+      "\0132\031.hbase.pb.RegionSpecifier\022)\n\010mutation",
+      "\030\002 \002(\0132\027.hbase.pb.MutationProto\022&\n\tcondi" +
+      "tion\030\003 \001(\0132\023.hbase.pb.Condition\022\023\n\013nonce" +
+      "_group\030\004 \001(\004\"E\n\016MutateResponse\022 \n\006result" +
+      "\030\001 \001(\0132\020.hbase.pb.Result\022\021\n\tprocessed\030\002 " +
+      "\001(\010\"\236\004\n\004Scan\022 \n\006column\030\001 \003(\0132\020.hbase.pb." +
+      "Column\022*\n\tattribute\030\002 \003(\0132\027.hbase.pb.Nam" +
+      "eBytesPair\022\021\n\tstart_row\030\003 \001(\014\022\020\n\010stop_ro" +
+      "w\030\004 \001(\014\022 \n\006filter\030\005 \001(\0132\020.hbase.pb.Filte" +
+      "r\022\'\n\ntime_range\030\006 \001(\0132\023.hbase.pb.TimeRan" +
+      "ge\022\027\n\014max_versions\030\007 \001(\r:\0011\022\032\n\014cache_blo",
+      "cks\030\010 \001(\010:\004true\022\022\n\nbatch_size\030\t \001(\r\022\027\n\017m" +
+      "ax_result_size\030\n \001(\004\022\023\n\013store_limit\030\013 \001(" +
+      "\r\022\024\n\014store_offset\030\014 \001(\r\022&\n\036load_column_f" +
+      "amilies_on_demand\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027" +
+      "\n\010reversed\030\017 \001(\010:\005false\0222\n\013consistency\030\020" +
+      " \001(\0162\025.hbase.pb.Consistency:\006STRONG\022\017\n\007c" +
+      "aching\030\021 \001(\r\0226\n\rcf_time_range\030\022 \003(\0132\037.hb" +
+      "ase.pb.ColumnFamilyTimeRange\"\220\002\n\013ScanReq" +
+      "uest\022)\n\006region\030\001 \001(\0132\031.hbase.pb.RegionSp" +
+      "ecifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb.Scan\022\022\n",
+      "\nscanner_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(" +
+      "\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_call_se" +
+      "q\030\006 \001(\004\022\037\n\027client_handles_partials\030\007 \001(\010" +
+      "\022!\n\031client_handles_heartbeats\030\010 \001(\010\022\032\n\022t" +
+      "rack_scan_metrics\030\t \001(\010\"\232\002\n\014ScanResponse" +
+      "\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner_id" +
+      "\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(" +
+      "\r\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Result\022\r\n\005" +
+      "stale\030\006 \001(\010\022\037\n\027partial_flag_per_result\030\007" +
+      " \003(\010\022\036\n\026more_results_in_region\030\010 \001(\010\022\031\n\021",
+      "heartbeat_message\030\t \001(\010\022+\n\014scan_metrics\030" +
+      "\n \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n\024BulkLoa" +
+      "dHFileRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb" +
+      ".RegionSpecifier\022>\n\013family_path\030\002 \003(\0132)." +
+      "hbase.pb.BulkLoadHFileRequest.FamilyPath" +
+      "\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016" +
+      "\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoad" +
+      "HFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026Coproce" +
+      "ssorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_" +
+      "name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007reque",
+      "st\030\004 \002(\014\"B\n\030CoprocessorServiceResult\022&\n\005" +
+      "value\030\001 \001(\0132\027.hbase.pb.NameBytesPair\"v\n\031" +
+      "CoprocessorServiceRequest\022)\n\006region\030\001 \002(" +
+      "\0132\031.hbase.pb.RegionSpecifier\022.\n\004call\030\002 \002" +
+      "(\0132 .hbase.pb.CoprocessorServiceCall\"o\n\032" +
+      "CoprocessorServiceResponse\022)\n\006region\030\001 \002" +
+      "(\0132\031.hbase.pb.RegionSpecifier\022&\n\005value\030\002" +
+      " \002(\0132\027.hbase.pb.NameBytesPair\"\226\001\n\006Action" +
+      "\022\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(\0132\027.hbas" +
+      "e.pb.MutationProto\022\032\n\003get\030\003 \001(\0132\r.hbase.",
+      "pb.Get\0226\n\014service_call\030\004 \001(\0132 .hbase.pb." +
+      "CoprocessorServiceCall\"k\n\014RegionAction\022)" +
+      "\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifie" +
+      "r\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(\0132\020.hbas" +
+      "e.pb.Action\"D\n\017RegionLoadStats\022\027\n\014memsto" +
+      "reLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\001" +
+      "0\"\332\001\n\021ResultOrException\022\r\n\005index\030\001 \001(\r\022 " +
+      "\n\006result\030\002 \001(\0132\020.hbase.pb.Result\022*\n\texce" +
+      "ption\030\003 \001(\0132\027.hbase.pb.NameBytesPair\022:\n\016" +
+      "service_result\030\004 \001(\0132\".hbase.pb.Coproces",
+      "sorServiceResult\022,\n\tloadStats\030\005 \001(\0132\031.hb" +
+      "ase.pb.RegionLoadStats\"x\n\022RegionActionRe" +
+      "sult\0226\n\021resultOrException\030\001 \003(\0132\033.hbase." +
+      "pb.ResultOrException\022*\n\texception\030\002 \001(\0132" +
+      "\027.hbase.pb.NameBytesPair\"x\n\014MultiRequest" +
+      "\022,\n\014regionAction\030\001 \003(\0132\026.hbase.pb.Region" +
+      "Action\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tcondition\030" +
+      "\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMultiRespo" +
+      "nse\0228\n\022regionActionResult\030\001 \003(\0132\034.hbase." +
+      "pb.RegionActionResult\022\021\n\tprocessed\030\002 \001(\010",
+      "*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020" +
+      "\0012\203\004\n\rClientService\0222\n\003Get\022\024.hbase.pb.Ge" +
+      "tRequest\032\025.hbase.pb.GetResponse\022;\n\006Mutat" +
+      "e\022\027.hbase.pb.MutateRequest\032\030.hbase.pb.Mu" +
+      "tateResponse\0225\n\004Scan\022\025.hbase.pb.ScanRequ" +
+      "est\032\026.hbase.pb.ScanResponse\022P\n\rBulkLoadH" +
+      "File\022\036.hbase.pb.BulkLoadHFileRequest\032\037.h" +
+      "base.pb.BulkLoadHFileResponse\022X\n\013ExecSer" +
+      "vice\022#.hbase.pb.CoprocessorServiceReques" +
+      "t\032$.hbase.pb.CoprocessorServiceResponse\022",
+      "d\n\027ExecRegionServerService\022#.hbase.pb.Co" +
+      "processorServiceRequest\032$.hbase.pb.Copro" +
+      "cessorServiceResponse\0228\n\005Multi\022\026.hbase.p" +
+      "b.MultiRequest\032\027.hbase.pb.MultiResponseB" +
+      "B\n*org.apache.hadoop.hbase.protobuf.gene" +
+      "ratedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -33278,7 +34041,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_Get_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Get_descriptor,
-              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "Consistency", });
+              new java.lang.String[] { "Row", "Column", "Attribute", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "StoreLimit", "StoreOffset", "ExistenceOnly", "Consistency", "CfTimeRange", });
           internal_static_hbase_pb_Result_descriptor =
             getDescriptor().getMessageTypes().get(4);
           internal_static_hbase_pb_Result_fieldAccessorTable = new
@@ -33338,7 +34101,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", "Consistency", "Caching", });
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", "Consistency", "Caching", "CfTimeRange", });
           internal_static_hbase_pb_ScanRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
           internal_static_hbase_pb_ScanRequest_fieldAccessorTable = new

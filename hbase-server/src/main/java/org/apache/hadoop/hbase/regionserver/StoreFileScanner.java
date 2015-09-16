@@ -27,14 +27,12 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Reader;
 
@@ -47,6 +45,7 @@ public class StoreFileScanner implements KeyValueScanner {
   // the reader it comes from:
   private final StoreFile.Reader reader;
   private final HFileScanner hfs;
+  private final byte[] columnFamily;
   private Cell cur = null;
 
   private boolean realSeekDone;
@@ -62,7 +61,8 @@ public class StoreFileScanner implements KeyValueScanner {
   private static AtomicLong seekCount;
 
   private ScanQueryMatcher matcher;
-  
+
+
   private long readPt;
 
   /**
@@ -71,9 +71,15 @@ public class StoreFileScanner implements KeyValueScanner {
    */
   public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, boolean useMVCC,
       boolean hasMVCC, long readPt) {
+    this(reader, hfs, null, useMVCC, hasMVCC, readPt);
+  }
+
+  public StoreFileScanner(StoreFile.Reader reader, HFileScanner hfs, byte[] columnFamily,
+      boolean useMVCC, boolean hasMVCC, long readPt) {
     this.readPt = readPt;
     this.reader = reader;
     this.hfs = hfs;
+    this.columnFamily = columnFamily;
     this.enforceMVCC = useMVCC;
     this.hasMVCCInfo = hasMVCC;
   }
@@ -423,7 +429,9 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   public boolean shouldUseScanner(Scan scan, SortedSet<byte[]> columns, long oldestUnexpiredTS) {
-    return reader.passesTimerangeFilter(scan, oldestUnexpiredTS)
+    validateScanRestrictions(scan);
+    TimeRange timeRange = scan.getTimeRangeForColumnFamily(columnFamily);
+    return reader.passesTimerangeFilter(timeRange, oldestUnexpiredTS)
         && reader.passesKeyRangeFilter(scan) && reader.passesBloomFilter(scan, columns);
   }
 
@@ -503,5 +511,16 @@ public class StoreFileScanner implements KeyValueScanner {
   @Override
   public void shipped() throws IOException {
     this.hfs.shipped();
+  }
+
+  // if we have a scan that restricts per column family time ranges but our
+  // store file scanner does not have the HColumnDescriptor set we can not
+  // figure out which CF we are scanning thus we throw an exception
+  @VisibleForTesting void validateScanRestrictions(Scan scan) {
+    if (!scan.getColumnFamilyTimeRange().isEmpty() && this.columnFamily == null) {
+      throw new UnsupportedOperationException("Scan is trying to restrict time ranges on a per "
+          + "column family basis but null column family passed to the StoreFileScannerConstructor");
+    }
+
   }
 }

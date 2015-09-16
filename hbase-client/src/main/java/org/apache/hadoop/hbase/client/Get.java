@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.google.common.collect.Maps;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -79,6 +80,7 @@ public class Get extends Query
   private boolean closestRowBefore = false;
   private Map<byte [], NavigableSet<byte []>> familyMap =
     new TreeMap<byte [], NavigableSet<byte []>>(Bytes.BYTES_COMPARATOR);
+  private Map<byte[], TimeRange> cftr = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
 
   /**
    * Create a Get operation for the specified row.
@@ -109,6 +111,7 @@ public class Get extends Query
     this.storeLimit = get.getMaxResultsPerColumnFamily();
     this.storeOffset = get.getRowOffsetPerColumnFamily();
     this.tr = get.getTimeRange();
+    this.cftr = get.getColumnFamilyTimeRange();
     this.checkExistenceOnly = get.isCheckExistenceOnly();
     Map<byte[], NavigableSet<byte[]>> fams = get.getFamilyMap();
     for (Map.Entry<byte[],NavigableSet<byte[]>> entry : fams.entrySet()) {
@@ -201,6 +204,21 @@ public class Get extends Query
   public Get setTimeRange(long minStamp, long maxStamp)
   throws IOException {
     tr = new TimeRange(minStamp, maxStamp);
+    return this;
+  }
+
+  /**
+   * Get versions of columns only within the specified timestamp range and column family,
+   * [cf, minStamp, maxStamp).
+   * @param cf the column family to restrict
+   * @param minStamp minimum timestamp value, inclusive
+   * @param maxStamp maximum timestamp value, exclusive
+   * @throws IOException if invalid time range
+   * @return this for invocation chaining
+   */
+  public Get setColumnFamilyTimeRange(byte[] cf, long minStamp, long maxStamp)
+      throws IOException {
+    cftr.put(cf, new TimeRange(minStamp, maxStamp));
     return this;
   }
 
@@ -338,6 +356,14 @@ public class Get extends Query
    */
   public TimeRange getTimeRange() {
     return this.tr;
+  }
+
+  /**
+   * Method for retrieving the get's TimeRange by Column Family
+   * @return Map<byte[], TimeRange>
+   */
+  public Map<byte[], TimeRange> getColumnFamilyTimeRange() {
+    return this.cftr;
   }
 
   /**
