@@ -933,6 +933,11 @@ public class RegionStates {
     String encodedName = hri.getEncodedName();
     regionsInTransition.remove(encodedName);
     regionStates.remove(encodedName);
+    TableName table = hri.getTable();
+    Map<String, RegionState> indexMap = regionStatesTableIndex.get(table);
+    indexMap.remove(encodedName);
+    if (indexMap.size() == 0)
+      regionStatesTableIndex.remove(table);
     lastAssignments.remove(encodedName);
     ServerName sn = regionAssignments.remove(hri);
     if (sn != null) {
