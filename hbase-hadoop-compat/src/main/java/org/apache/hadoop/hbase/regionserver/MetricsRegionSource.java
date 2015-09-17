@@ -37,6 +37,8 @@ public interface MetricsRegionSource extends Comparable<MetricsRegionSource> {
       "Number of files that were input for finished, successful or aborted, compactions";
   String COPROCESSOR_EXECUTION_STATISTICS = "coprocessorExecutionStatistics";
   String COPROCESSOR_EXECUTION_STATISTICS_DESC = "Statistics for coprocessor execution times";
+  String REPLICA_ID = "replicaid";
+  String REPLICA_ID_DESC = "The replica ID of a region. 0 is primary, otherwise is secondary";
 
   /**
    * Close the region's metrics as this region is closing.
