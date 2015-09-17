@@ -133,5 +133,13 @@ public class TestMetricsRegionSourceImpl {
     public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
       return null;
     }
+
+    /**
+     * Always return 0 for testing
+     */
+    @Override
+    public int getReplicaId() {
+      return 0;
+    }
   }
 }
