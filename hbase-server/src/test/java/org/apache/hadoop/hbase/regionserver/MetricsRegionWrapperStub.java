@@ -24,6 +24,21 @@ import java.util.Map;
 import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 
 public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
+  int replicaid = 0;
+
+  /**
+   * Replica ID set to 0
+   */
+  public MetricsRegionWrapperStub() {
+    this.replicaid = 0;
+  }
+
+  /**
+   * Pass in replica ID
+   */
+  public MetricsRegionWrapperStub(int replicaid) {
+    this.replicaid = replicaid;
+  }
 
   @Override
   public String getTableName() {
@@ -93,5 +108,13 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
     return new HashMap<String, DescriptiveStatistics>();
+  }
+
+  /**
+   * Get the replica id of this region.
+   */
+  @Override
+  public int getReplicaId() {
+    return replicaid;
   }
 }
