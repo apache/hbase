@@ -21,10 +21,10 @@ package org.apache.hadoop.hbase.codec.prefixtree;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.LongEncoder;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 import org.apache.hadoop.hbase.util.vint.UVLongTool;
@@ -56,8 +56,6 @@ public class PrefixTreeBlockMeta {
 
 
   /**************** transient fields *********************/
-
-  protected int arrayOffset;
   protected int bufferOffset;
 
 
@@ -116,7 +114,6 @@ public class PrefixTreeBlockMeta {
 
   public PrefixTreeBlockMeta(InputStream is) throws IOException{
     this.version = VERSION;
-    this.arrayOffset = 0;
     this.bufferOffset = 0;
     readVariableBytesFromInputStream(is);
   }
@@ -124,14 +121,13 @@ public class PrefixTreeBlockMeta {
   /**
    * @param buffer positioned at start of PtBlockMeta
    */
-  public PrefixTreeBlockMeta(ByteBuffer buffer) {
+  public PrefixTreeBlockMeta(ByteBuff buffer) {
     initOnBlock(buffer);
   }
 
-  public void initOnBlock(ByteBuffer buffer) {
-    arrayOffset = buffer.arrayOffset();
+  public void initOnBlock(ByteBuff buffer) {
     bufferOffset = buffer.position();
-    readVariableBytesFromArray(buffer.array(), arrayOffset + bufferOffset);
+    readVariableBytesFromBuffer(buffer, bufferOffset);
   }
 
 
@@ -263,79 +259,79 @@ public class PrefixTreeBlockMeta {
       numUniqueTags = UVIntTool.getInt(is);
   }
 
-  public void readVariableBytesFromArray(byte[] bytes, int offset) {
+  public void readVariableBytesFromBuffer(ByteBuff buf, int offset) {
     int position = offset;
 
-    version = UVIntTool.getInt(bytes, position);
+    version = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(version);
-    numMetaBytes = UVIntTool.getInt(bytes, position);
+    numMetaBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numMetaBytes);
-    numKeyValueBytes = UVIntTool.getInt(bytes, position);
+    numKeyValueBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numKeyValueBytes);
-    setIncludesMvccVersion(bytes[position]);
+    setIncludesMvccVersion(buf.get(position));
     ++position;
 
-    numRowBytes = UVIntTool.getInt(bytes, position);
+    numRowBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numRowBytes);
-    numFamilyBytes = UVIntTool.getInt(bytes, position);
+    numFamilyBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numFamilyBytes);
-    numQualifierBytes = UVIntTool.getInt(bytes, position);
+    numQualifierBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numQualifierBytes);
-    numTagsBytes = UVIntTool.getInt(bytes, position);
+    numTagsBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numTagsBytes);
-    numTimestampBytes = UVIntTool.getInt(bytes, position);
+    numTimestampBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numTimestampBytes);
-    numMvccVersionBytes = UVIntTool.getInt(bytes, position);
+    numMvccVersionBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numMvccVersionBytes);
-    numValueBytes = UVIntTool.getInt(bytes, position);
+    numValueBytes = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numValueBytes);
 
-    nextNodeOffsetWidth = UVIntTool.getInt(bytes, position);
+    nextNodeOffsetWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(nextNodeOffsetWidth);
-    familyOffsetWidth = UVIntTool.getInt(bytes, position);
+    familyOffsetWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(familyOffsetWidth);
-    qualifierOffsetWidth = UVIntTool.getInt(bytes, position);
+    qualifierOffsetWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(qualifierOffsetWidth);
-    tagsOffsetWidth = UVIntTool.getInt(bytes, position);
+    tagsOffsetWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(tagsOffsetWidth);
-    timestampIndexWidth = UVIntTool.getInt(bytes, position);
+    timestampIndexWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(timestampIndexWidth);
-    mvccVersionIndexWidth = UVIntTool.getInt(bytes, position);
+    mvccVersionIndexWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(mvccVersionIndexWidth);
-    valueOffsetWidth = UVIntTool.getInt(bytes, position);
+    valueOffsetWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(valueOffsetWidth);
-    valueLengthWidth = UVIntTool.getInt(bytes, position);
+    valueLengthWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(valueLengthWidth);
 
-    rowTreeDepth = UVIntTool.getInt(bytes, position);
+    rowTreeDepth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(rowTreeDepth);
-    maxRowLength = UVIntTool.getInt(bytes, position);
+    maxRowLength = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(maxRowLength);
-    maxQualifierLength = UVIntTool.getInt(bytes, position);
+    maxQualifierLength = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(maxQualifierLength);
-    maxTagsLength = UVIntTool.getInt(bytes, position);
+    maxTagsLength = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(maxTagsLength);
-    minTimestamp = UVLongTool.getLong(bytes, position);
+    minTimestamp = UVLongTool.getLong(buf, position);
     position += UVLongTool.numBytes(minTimestamp);
-    timestampDeltaWidth = UVIntTool.getInt(bytes, position);
+    timestampDeltaWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(timestampDeltaWidth);
-    minMvccVersion = UVLongTool.getLong(bytes, position);
+    minMvccVersion = UVLongTool.getLong(buf, position);
     position += UVLongTool.numBytes(minMvccVersion);
-    mvccVersionDeltaWidth = UVIntTool.getInt(bytes, position);
+    mvccVersionDeltaWidth = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(mvccVersionDeltaWidth);
 
-    setAllSameType(bytes[position]);
+    setAllSameType(buf.get(position));
     ++position;
-    allTypes = bytes[position];
+    allTypes =  buf.get(position);
     ++position;
 
-    numUniqueRows = UVIntTool.getInt(bytes, position);
+    numUniqueRows = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numUniqueRows);
-    numUniqueFamilies = UVIntTool.getInt(bytes, position);
+    numUniqueFamilies = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numUniqueFamilies);
-    numUniqueQualifiers = UVIntTool.getInt(bytes, position);
+    numUniqueQualifiers = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numUniqueQualifiers);
-    numUniqueTags = UVIntTool.getInt(bytes, position);
+    numUniqueTags = UVIntTool.getInt(buf, position);
     position += UVIntTool.numBytes(numUniqueTags);
   }
 
@@ -404,8 +400,6 @@ public class PrefixTreeBlockMeta {
     if (allSameType != other.allSameType)
       return false;
     if (allTypes != other.allTypes)
-      return false;
-    if (arrayOffset != other.arrayOffset)
       return false;
     if (bufferOffset != other.bufferOffset)
       return false;
@@ -483,7 +477,6 @@ public class PrefixTreeBlockMeta {
     int result = 1;
     result = prime * result + (allSameType ? 1231 : 1237);
     result = prime * result + allTypes;
-    result = prime * result + arrayOffset;
     result = prime * result + bufferOffset;
     result = prime * result + valueLengthWidth;
     result = prime * result + valueOffsetWidth;
@@ -525,9 +518,7 @@ public class PrefixTreeBlockMeta {
   @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
-    builder.append("PtBlockMeta [arrayOffset=");
-    builder.append(arrayOffset);
-    builder.append(", bufferOffset=");
+    builder.append("PtBlockMeta [bufferOffset=");
     builder.append(bufferOffset);
     builder.append(", version=");
     builder.append(version);
@@ -602,12 +593,8 @@ public class PrefixTreeBlockMeta {
 
   /************** absolute getters *******************/
 
-  public int getAbsoluteMetaOffset() {
-    return arrayOffset + bufferOffset;
-  }
-
   public int getAbsoluteRowOffset() {
-    return getAbsoluteMetaOffset() + numMetaBytes;
+    return getBufferOffset() + numMetaBytes;
   }
 
   public int getAbsoluteFamilyOffset() {
@@ -747,14 +734,6 @@ public class PrefixTreeBlockMeta {
 
   public void setNumMetaBytes(int numMetaBytes) {
     this.numMetaBytes = numMetaBytes;
-  }
-
-  public int getArrayOffset() {
-    return arrayOffset;
-  }
-
-  public void setArrayOffset(int arrayOffset) {
-    this.arrayOffset = arrayOffset;
   }
 
   public int getBufferOffset() {

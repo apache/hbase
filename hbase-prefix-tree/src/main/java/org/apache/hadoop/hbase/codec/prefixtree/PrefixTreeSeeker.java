@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree;
 
 import java.nio.ByteBuffer;
 
+import org.apache.hadoop.hbase.ByteBufferedCell;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellScannerPosition;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoder.EncodedSeeker;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -57,9 +59,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
 
   @Override
   public void setCurrentBuffer(ByteBuff fullBlockBuffer) {
-    block = fullBlockBuffer.asSubByteBuffer(fullBlockBuffer.limit());
-    // TODO : change to Bytebuff
-    ptSearcher = DecoderFactory.checkOut(block, includeMvccVersion);
+    ptSearcher = DecoderFactory.checkOut(fullBlockBuffer, includeMvccVersion);
     rewind();
   }
 
@@ -99,16 +99,29 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    */
   @Override
   public Cell getCell() {
-    Cell cell = ptSearcher.current();
+    // The PrefixTreecell is of type BytebufferedCell and the value part of the cell
+    // determines whether we are offheap cell or onheap cell.  All other parts of the cell-
+    // row, fam and col are all represented as onheap byte[]
+    ByteBufferedCell cell = (ByteBufferedCell)ptSearcher.current();
     if (cell == null) {
       return null;
     }
-    return new ClonedPrefixTreeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
-        cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
-        cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
-        cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), cell.getTagsArray(),
-        cell.getTagsOffset(), cell.getTagsLength(), cell.getTimestamp(), cell.getTypeByte(),
-        cell.getSequenceId());
+    // Use the ByteBuffered cell to see if the Cell is onheap or offheap
+    if (cell.getValueByteBuffer().hasArray()) {
+      return new OnheapPrefixTreeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+          cell.getValueArray(), cell.getValueOffset(), cell.getValueLength(), cell.getTagsArray(),
+          cell.getTagsOffset(), cell.getTagsLength(), cell.getTimestamp(), cell.getTypeByte(),
+          cell.getSequenceId());
+    } else {
+      return new OffheapPrefixTreeCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
+          cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(),
+          cell.getValueByteBuffer(), cell.getValuePositionInByteBuffer(), cell.getValueLength(),
+          cell.getTagsArray(), cell.getTagsOffset(), cell.getTagsLength(), cell.getTimestamp(),
+          cell.getTypeByte(), cell.getSequenceId());
+    }
   }
 
   /**
@@ -208,12 +221,13 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     return comparator.compare(key,
         ptSearcher.current());
   }
+
   /**
    * Cloned version of the PrefixTreeCell where except the value part, the rest
    * of the key part is deep copied
    *
    */
-  private static class ClonedPrefixTreeCell implements Cell, SettableSequenceId, HeapSize {
+  private static class OnheapPrefixTreeCell implements Cell, SettableSequenceId, HeapSize {
     private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
         + (5 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_INT)
         + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (5 * ClassSize.ARRAY));
@@ -232,7 +246,7 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     private long seqId;
     private byte type;
 
-    public ClonedPrefixTreeCell(byte[] row, int rowOffset, short rowLength, byte[] fam,
+    public OnheapPrefixTreeCell(byte[] row, int rowOffset, short rowLength, byte[] fam,
         int famOffset, byte famLength, byte[] qual, int qualOffset, int qualLength, byte[] val,
         int valOffset, int valLength, byte[] tag, int tagOffset, int tagLength, long ts, byte type,
         long seqId) {
@@ -365,6 +379,217 @@ public class PrefixTreeSeeker implements EncodedSeeker {
     @Override
     public long heapSize() {
       return FIXED_OVERHEAD + rowLength + famLength + qualLength + valLength + tagsLength;
+    }
+  }
+
+  private static class OffheapPrefixTreeCell extends ByteBufferedCell implements Cell,
+      SettableSequenceId, HeapSize {
+    private static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
+        + (5 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_LONG) + (4 * Bytes.SIZEOF_INT)
+        + (Bytes.SIZEOF_SHORT) + (2 * Bytes.SIZEOF_BYTE) + (5 * ClassSize.BYTE_BUFFER));
+    private ByteBuffer rowBuff;
+    private short rowLength;
+    private ByteBuffer famBuff;
+    private byte famLength;
+    private ByteBuffer qualBuff;
+    private int qualLength;
+    private ByteBuffer val;
+    private int valOffset;
+    private int valLength;
+    private ByteBuffer tagBuff;
+    private int tagsLength;
+    private long ts;
+    private long seqId;
+    private byte type;
+    public OffheapPrefixTreeCell(byte[] row, int rowOffset, short rowLength, byte[] fam,
+        int famOffset, byte famLength, byte[] qual, int qualOffset, int qualLength, ByteBuffer val,
+        int valOffset, int valLength, byte[] tag, int tagOffset, int tagLength, long ts, byte type,
+        long seqId) {
+      byte[] tmpRow = new byte[rowLength];
+      System.arraycopy(row, rowOffset, tmpRow, 0, rowLength);
+      this.rowBuff = ByteBuffer.wrap(tmpRow);
+      this.rowLength = rowLength;
+      byte[] tmpFam = new byte[famLength];
+      System.arraycopy(fam, famOffset, tmpFam, 0, famLength);
+      this.famBuff = ByteBuffer.wrap(tmpFam);
+      this.famLength = famLength;
+      byte[] tmpQual = new byte[qualLength];
+      System.arraycopy(qual, qualOffset, tmpQual, 0, qualLength);
+      this.qualBuff = ByteBuffer.wrap(tmpQual);
+      this.qualLength = qualLength;
+      byte[] tmpTag = new byte[tagLength];
+      System.arraycopy(tag, tagOffset, tmpTag, 0, tagLength);
+      this.tagBuff = ByteBuffer.wrap(tmpTag);
+      this.tagsLength = tagLength;
+      this.val = val;
+      this.valLength = valLength;
+      this.valOffset = valOffset;
+      this.ts = ts;
+      this.seqId = seqId;
+      this.type = type;
+    }
+    
+    @Override
+    public void setSequenceId(long seqId) {
+      this.seqId = seqId;
+    }
+
+    @Override
+    public byte[] getRowArray() {
+      return this.rowBuff.array();
+    }
+
+    @Override
+    public int getRowOffset() {
+      return getRowPositionInByteBuffer();
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rowLength;
+    }
+
+    @Override
+    public byte[] getFamilyArray() {
+      return this.famBuff.array();
+    }
+
+    @Override
+    public int getFamilyOffset() {
+      return getFamilyPositionInByteBuffer();
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.famLength;
+    }
+
+    @Override
+    public byte[] getQualifierArray() {
+      return this.qualBuff.array();
+    }
+
+    @Override
+    public int getQualifierOffset() {
+      return getQualifierPositionInByteBuffer();
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.qualLength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return ts;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return type;
+    }
+
+    @Override
+    public long getSequenceId() {
+      return seqId;
+    }
+
+    @Override
+    public byte[] getValueArray() {
+      byte[] tmpVal = new byte[valLength];
+      ByteBufferUtils.copyFromBufferToArray(tmpVal, val, valOffset, 0, valLength);
+      return tmpVal;
+    }
+
+    @Override
+    public int getValueOffset() {
+      return 0;
+    }
+
+    @Override
+    public int getValueLength() {
+      return this.valLength;
+    }
+
+    @Override
+    public byte[] getTagsArray() {
+      return this.tagBuff.array();
+    }
+
+    @Override
+    public int getTagsOffset() {
+      return getTagsPositionInByteBuffer();
+    }
+
+    @Override
+    public int getTagsLength() {
+      return this.tagsLength;
+    }
+    
+    @Override
+    public ByteBuffer getRowByteBuffer() {
+      return this.rowBuff;
+    }
+    
+    @Override
+    public int getRowPositionInByteBuffer() {
+      return 0;
+    }
+    
+    @Override
+    public ByteBuffer getFamilyByteBuffer() {
+      return this.famBuff;
+    }
+    
+    @Override
+    public int getFamilyPositionInByteBuffer() {
+      return 0;
+    }
+    
+    @Override
+    public ByteBuffer getQualifierByteBuffer() {
+      return this.qualBuff;
+    }
+
+    @Override
+    public int getQualifierPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getTagsByteBuffer() {
+      return this.tagBuff;
+    }
+
+    @Override
+    public int getTagsPositionInByteBuffer() {
+      return 0;
+    }
+
+    @Override
+    public ByteBuffer getValueByteBuffer() {
+      return this.val;
+    }
+
+    @Override
+    public int getValuePositionInByteBuffer() {
+      return this.valOffset;
+    }
+
+    @Override
+    public long heapSize() {
+      return FIXED_OVERHEAD + rowLength + famLength + qualLength + valLength + tagsLength;
+    }
+
+    @Override
+    public String toString() {
+      String row = Bytes.toStringBinary(getRowArray(), getRowOffset(), getRowLength());
+      String family = Bytes.toStringBinary(getFamilyArray(), getFamilyOffset(), getFamilyLength());
+      String qualifier = Bytes.toStringBinary(getQualifierArray(), getQualifierOffset(),
+          getQualifierLength());
+      String timestamp = String.valueOf((getTimestamp()));
+      return row + "/" + family + (family != null && family.length() > 0 ? ":" : "") + qualifier
+          + "/" + timestamp + "/" + Type.codeToType(type);
     }
   }
 }

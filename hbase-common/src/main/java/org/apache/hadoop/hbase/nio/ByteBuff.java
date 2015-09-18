@@ -208,6 +208,16 @@ public abstract class ByteBuff {
   public abstract void get(byte[] dst, int offset, int length);
 
   /**
+   * Copies the specified number of bytes from this ByteBuff's given position to
+   * the byte[]'s offset. The position of the ByteBuff remains in the current position only
+   * @param sourceOffset the offset in this ByteBuff from where the copy should happen
+   * @param dst the byte[] to which the ByteBuff's content is to be copied
+   * @param offset within the current array
+   * @param length upto which the bytes to be copied
+   */
+  public abstract void get(int sourceOffset, byte[] dst, int offset, int length);
+
+  /**
    * Copies the content from this ByteBuff's current position to the byte array and fills it. Also
    * advances the position of the ByteBuff by the length of the byte[].
    * @param dst
@@ -453,5 +463,55 @@ public abstract class ByteBuff {
       i = i | (b & 0xFF);
     }
     return (WritableUtils.isNegativeVInt(firstByte) ? (i ^ -1L) : i);
+  }
+
+  /**
+   * Search sorted array "a" for byte "key".
+   * 
+   * @param a Array to search. Entries must be sorted and unique.
+   * @param fromIndex First index inclusive of "a" to include in the search.
+   * @param toIndex Last index exclusive of "a" to include in the search.
+   * @param key The byte to search for.
+   * @return The index of key if found. If not found, return -(index + 1), where
+   *         negative indicates "not found" and the "index + 1" handles the "-0"
+   *         case.
+   */
+  public static int unsignedBinarySearch(ByteBuff a, int fromIndex, int toIndex, byte key) {
+    int unsignedKey = key & 0xff;
+    int low = fromIndex;
+    int high = toIndex - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      int midVal = a.get(mid) & 0xff;
+
+      if (midVal < unsignedKey) {
+        low = mid + 1;
+      } else if (midVal > unsignedKey) {
+        high = mid - 1;
+      } else {
+        return mid; // key found
+      }
+    }
+    return -(low + 1); // key not found.
+  }
+
+  public static String toStringBinary(final ByteBuff b, int off, int len) {
+    StringBuilder result = new StringBuilder();
+    // Just in case we are passed a 'len' that is > buffer length...
+    if (off >= b.capacity())
+      return result.toString();
+    if (off + len > b.capacity())
+      len = b.capacity() - off;
+    for (int i = off; i < off + len; ++i) {
+      int ch = b.get(i) & 0xFF;
+      if ((ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')
+          || " `~!@#$%^&*()-_=+[]{}|;:'\",.<>/?".indexOf(ch) >= 0) {
+        result.append((char) ch);
+      } else {
+        result.append(String.format("\\x%02X", ch));
+      }
+    }
+    return result.toString();
   }
 }

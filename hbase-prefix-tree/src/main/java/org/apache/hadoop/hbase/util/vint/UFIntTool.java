@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  * UFInt is an abbreviation for Unsigned Fixed-width Integer.
@@ -103,12 +104,12 @@ public class UFIntTool {
     return value;
   }
 
-  public static long fromBytes(final byte[] bytes, final int offset, final int width) {
+  public static long fromBytes(final ByteBuff buf, final int offset, final int width) {
     long value = 0;
-    value |= bytes[0 + offset] & 0xff;// these seem to do ok without casting the byte to int
+    value |= buf.get(offset + 0) & 0xff;// these seem to do ok without casting the byte to int
     for (int i = 1; i < width; ++i) {
       value <<= 8;
-      value |= bytes[i + offset] & 0xff;
+      value |= buf.get(i + offset) & 0xff;
     }
     return value;
   }

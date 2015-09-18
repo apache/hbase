@@ -114,7 +114,7 @@ public class RowNodeWriter{
       width += numCells * fixedBytesPerCell;
     }
 
-    if( ! tokenizerNode.isLeaf()){
+    if (!tokenizerNode.isLeaf()) {
       width += fanOut * offsetWidth;
     }
 

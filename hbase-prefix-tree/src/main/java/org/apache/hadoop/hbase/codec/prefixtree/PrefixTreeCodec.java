@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.io.WritableUtils;
 
@@ -83,7 +84,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
       int skipLastBytes, HFileBlockDecodingContext decodingCtx) throws IOException {
     ByteBuffer sourceAsBuffer = ByteBufferUtils.drainInputStreamToBuffer(source);// waste
     sourceAsBuffer.mark();
-    PrefixTreeBlockMeta blockMeta = new PrefixTreeBlockMeta(sourceAsBuffer);
+    PrefixTreeBlockMeta blockMeta = new PrefixTreeBlockMeta(new SingleByteBuff(sourceAsBuffer));
     sourceAsBuffer.rewind();
     int numV1BytesWithHeader = allocateHeaderLength + blockMeta.getNumKeyValueBytes();
     byte[] keyValueBytesWithHeader = new byte[numV1BytesWithHeader];
@@ -92,7 +93,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
     CellSearcher searcher = null;
     try {
       boolean includesMvcc = decodingCtx.getHFileContext().isIncludesMvcc();
-      searcher = DecoderFactory.checkOut(sourceAsBuffer, includesMvcc);
+      searcher = DecoderFactory.checkOut(new SingleByteBuff(sourceAsBuffer), includesMvcc);
       while (searcher.advance()) {
         KeyValue currentCell = KeyValueUtil.copyToNewKeyValue(searcher.current());
         // needs to be modified for DirectByteBuffers. no existing methods to
@@ -121,9 +122,7 @@ public class PrefixTreeCodec implements DataBlockEncoder {
     PrefixTreeArraySearcher searcher = null;
     try {
       // should i includeMemstoreTS (second argument)?  i think PrefixKeyDeltaEncoder is, so i will
-      // TODO : Change to work with BBs
-      searcher = DecoderFactory.checkOut(block.asSubByteBuffer(block.limit() - block.position()),
-          true);
+      searcher = DecoderFactory.checkOut(block, true);
       if (!searcher.positionAtFirstCell()) {
         return null;
       }

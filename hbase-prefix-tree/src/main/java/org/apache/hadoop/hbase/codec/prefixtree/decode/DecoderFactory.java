@@ -18,28 +18,21 @@
 
 package org.apache.hadoop.hbase.codec.prefixtree.decode;
 
-import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.scanner.CellSearcher;
-
+import org.apache.hadoop.hbase.nio.ByteBuff;
 /**
  * Static wrapper class for the ArraySearcherPool.
  */
 @InterfaceAudience.Private
 public class DecoderFactory {
-
   private static final ArraySearcherPool POOL = new ArraySearcherPool();
 
   //TODO will need a PrefixTreeSearcher on top of CellSearcher
-  public static PrefixTreeArraySearcher checkOut(final ByteBuffer buffer, 
+  public static PrefixTreeArraySearcher checkOut(final ByteBuff buffer, 
       boolean includeMvccVersion) {
-    if (buffer.isDirect()) {
-      throw new IllegalArgumentException("DirectByteBuffers not supported yet");
-      // TODO implement PtByteBufferBlockScanner
-    }
-
     PrefixTreeArraySearcher searcher = POOL.checkOut(buffer,
       includeMvccVersion);
     return searcher;
@@ -59,14 +52,14 @@ public class DecoderFactory {
 
 
   /**************************** helper ******************************/
-  public static PrefixTreeArraySearcher ensureArraySearcherValid(ByteBuffer buffer,
+  public static PrefixTreeArraySearcher ensureArraySearcherValid(ByteBuff buffer,
       PrefixTreeArraySearcher searcher, boolean includeMvccVersion) {
     if (searcher == null) {
       PrefixTreeBlockMeta blockMeta = new PrefixTreeBlockMeta(buffer);
       searcher = new PrefixTreeArraySearcher(blockMeta, blockMeta.getRowTreeDepth(),
           blockMeta.getMaxRowLength(), blockMeta.getMaxQualifierLength(),
           blockMeta.getMaxTagsLength());
-      searcher.initOnBlock(blockMeta, buffer.array(), includeMvccVersion);
+      searcher.initOnBlock(blockMeta, buffer, includeMvccVersion);
       return searcher;
     }
 
@@ -83,7 +76,7 @@ public class DecoderFactory {
           qualifierBufferLength, tagBufferLength);
     }
     //this is where we parse the BlockMeta
-    searcher.initOnBlock(blockMeta, buffer.array(), includeMvccVersion);
+    searcher.initOnBlock(blockMeta, buffer, includeMvccVersion);
     return searcher;
   }
 

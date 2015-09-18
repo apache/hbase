@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.timestamp;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 
 /**
@@ -29,7 +30,7 @@ import org.apache.hadoop.hbase.util.vint.UFIntTool;
 public class TimestampDecoder {
 
   protected PrefixTreeBlockMeta blockMeta;
-  protected byte[] block;
+  protected ByteBuff block;
 
 
   /************** construct ***********************/
@@ -37,7 +38,7 @@ public class TimestampDecoder {
   public TimestampDecoder() {
   }
 
-  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block) {
+  public void initOnBlock(PrefixTreeBlockMeta blockMeta, ByteBuff block) {
     this.block = block;
     this.blockMeta = blockMeta;
   }

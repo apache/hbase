@@ -20,8 +20,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.row;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.SimpleMutableByteRange;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 
@@ -34,7 +33,7 @@ public class RowNodeReader {
 
   /************* fields ***********************************/
 
-  protected byte[] block;
+  protected ByteBuff block;
   protected int offset;
   protected int fanIndex;
 
@@ -58,7 +57,7 @@ public class RowNodeReader {
 
   /******************* construct **************************/
 
-  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block, int offset) {
+  public void initOnBlock(PrefixTreeBlockMeta blockMeta, ByteBuff block, int offset) {
     this.block = block;
 
     this.offset = offset;
@@ -120,14 +119,14 @@ public class RowNodeReader {
   }
 
   public byte getFanByte(int i) {
-    return block[fanOffset + i];
+    return block.get(fanOffset + i);
   }
   
   /**
    * for debugging
    */
   protected String getFanByteReadable(int i){
-    return Bytes.toStringBinary(block, fanOffset + i, 1);
+    return ByteBuff.toStringBinary(block, fanOffset + i, 1);
   }
 
   public int getFamilyOffset(int index, PrefixTreeBlockMeta blockMeta) {
@@ -164,7 +163,7 @@ public class RowNodeReader {
     if (blockMeta.isAllSameType()) {
       return blockMeta.getAllTypes();
     }
-    return block[operationTypesOffset + index];
+    return block.get(operationTypesOffset + index);
   }
 
   public int getValueOffset(int index, PrefixTreeBlockMeta blockMeta) {
@@ -215,8 +214,9 @@ public class RowNodeReader {
   }
 
   public byte[] getToken() {
-    // TODO pass in reusable ByteRange
-    return new SimpleMutableByteRange(block, tokenOffset, tokenLength).deepCopyToNewArray();
+    byte[] newToken = new byte[tokenLength];
+    block.get(tokenOffset, newToken, 0, tokenLength);
+    return newToken;
   }
 
   public int getOffset() {
@@ -227,7 +227,7 @@ public class RowNodeReader {
     if( ! hasFan()){
       throw new IllegalStateException("This row node has no fan, so can't search it");
     }
-    int fanIndexInBlock = Bytes.unsignedBinarySearch(block, fanOffset, fanOffset + fanOut,
+    int fanIndexInBlock = ByteBuff.unsignedBinarySearch(block, fanOffset, fanOffset + fanOut,
       searchForByte);
     if (fanIndexInBlock >= 0) {// found it, but need to adjust for position of fan in overall block
       return fanIndexInBlock - fanOffset;
@@ -269,8 +269,8 @@ public class RowNodeReader {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("fan:" + Bytes.toStringBinary(block, fanOffset, fanOut));
-    sb.append(",token:" + Bytes.toStringBinary(block, tokenOffset, tokenLength));
+    sb.append("fan:" + ByteBuff.toStringBinary(block, fanOffset, fanOut));
+    sb.append(",token:" + ByteBuff.toStringBinary(block, tokenOffset, tokenLength));
     sb.append(",numCells:" + numCells);
     sb.append(",fanIndex:"+fanIndex);
     if(fanIndex>=0){

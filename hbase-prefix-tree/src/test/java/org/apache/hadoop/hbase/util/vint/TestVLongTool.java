@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.util.vint;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Random;
 
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.number.RandomNumberUtils;
@@ -62,13 +64,14 @@ public class TestVLongTool {
 
   @Test
   public void testFromBytesOffset() {
-    Assert.assertEquals(Long.MAX_VALUE, UVLongTool.getLong(UVLongTool.MAX_VALUE_BYTES, 0));
+    Assert.assertEquals(Long.MAX_VALUE,
+      UVLongTool.getLong(new SingleByteBuff(ByteBuffer.wrap(UVLongTool.MAX_VALUE_BYTES)), 0));
 
     long ms = 1318966363481L;
 //    System.out.println(ms);
     byte[] bytes = UVLongTool.getBytes(ms);
 //    System.out.println(Arrays.toString(bytes));
-    long roundTripped = UVLongTool.getLong(bytes, 0);
+    long roundTripped = UVLongTool.getLong(new SingleByteBuff(ByteBuffer.wrap(bytes)), 0);
     Assert.assertEquals(ms, roundTripped);
 
     int calculatedNumBytes = UVLongTool.numBytes(ms);
@@ -78,7 +81,8 @@ public class TestVLongTool {
     byte[] shiftedBytes = new byte[1000];
     int shift = 33;
     System.arraycopy(bytes, 0, shiftedBytes, shift, bytes.length);
-    long shiftedRoundTrip = UVLongTool.getLong(shiftedBytes, shift);
+    long shiftedRoundTrip =
+        UVLongTool.getLong(new SingleByteBuff(ByteBuffer.wrap(shiftedBytes)), shift);
     Assert.assertEquals(ms, shiftedRoundTrip);
   }
 

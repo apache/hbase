@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.column;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.vint.UFIntTool;
 import org.apache.hadoop.hbase.util.vint.UVIntTool;
 
@@ -30,7 +31,7 @@ public class ColumnNodeReader {
   /**************** fields ************************/
 
   protected PrefixTreeBlockMeta blockMeta;
-  protected byte[] block;
+  protected ByteBuff block;
   protected ColumnNodeType nodeType;
   protected byte[] columnBuffer;
 
@@ -48,7 +49,7 @@ public class ColumnNodeReader {
     this.nodeType = nodeType;
   }
 
-  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block) {
+  public void initOnBlock(PrefixTreeBlockMeta blockMeta, ByteBuff block) {
     this.blockMeta = blockMeta;
     this.block = block;
   }
@@ -73,7 +74,7 @@ public class ColumnNodeReader {
   }
 
   public void prependTokenToBuffer(int bufferStartIndex) {
-    System.arraycopy(block, tokenOffsetIntoBlock, columnBuffer, bufferStartIndex, tokenLength);
+    block.get(tokenOffsetIntoBlock, columnBuffer, bufferStartIndex, tokenLength);
   }
 
   public boolean isRoot() {

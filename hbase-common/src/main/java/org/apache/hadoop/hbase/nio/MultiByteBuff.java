@@ -613,6 +613,25 @@ public class MultiByteBuff extends ByteBuff {
     }
   }
 
+  @Override
+  public void get(int sourceOffset, byte[] dst, int offset, int length) {
+    int itemIndex = getItemIndex(sourceOffset);
+    ByteBuffer item = this.items[itemIndex];
+    sourceOffset = sourceOffset - this.itemBeginPos[itemIndex];
+    while (length > 0) {
+      int toRead = Math.min((item.limit() - sourceOffset), length);
+      ByteBufferUtils.copyFromBufferToArray(dst, item, sourceOffset, offset,
+          toRead);
+      length -= toRead;
+      if (length == 0)
+        break;
+      itemIndex++;
+      item = this.items[itemIndex];
+      offset += toRead;
+      sourceOffset = 0;
+    }
+  }
+
   /**
    * Marks the limit of this MBB.
    * @param limit

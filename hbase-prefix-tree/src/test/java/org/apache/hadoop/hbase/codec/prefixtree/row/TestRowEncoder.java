@@ -28,11 +28,14 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.decode.PrefixTreeArraySearcher;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.PrefixTreeEncoder;
+import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,7 +70,7 @@ public class TestRowEncoder {
   protected int totalBytes;
   protected PrefixTreeBlockMeta blockMetaWriter;
   protected byte[] outputBytes;
-  protected ByteBuffer buffer;
+  protected ByteBuff buffer;
   protected ByteArrayInputStream is;
   protected PrefixTreeBlockMeta blockMetaReader;
   protected byte[] inputBytes;
@@ -93,13 +96,16 @@ public class TestRowEncoder {
     outputBytes = os.toByteArray();
 
     // start reading, but save the assertions for @Test methods
-    buffer = ByteBuffer.wrap(outputBytes);
+    ByteBuffer out = ByteBuffer.allocateDirect(outputBytes.length);
+    ByteBufferUtils.copyFromArrayToBuffer(out, outputBytes, 0, outputBytes.length);
+    out.position(0);
+    buffer = new SingleByteBuff(out);
     blockMetaReader = new PrefixTreeBlockMeta(buffer);
 
     searcher = new PrefixTreeArraySearcher(blockMetaReader, blockMetaReader.getRowTreeDepth(),
         blockMetaReader.getMaxRowLength(), blockMetaReader.getMaxQualifierLength(),
         blockMetaReader.getMaxTagsLength());
-    searcher.initOnBlock(blockMetaReader, outputBytes, includeMemstoreTS);
+    searcher.initOnBlock(blockMetaReader, buffer, includeMemstoreTS);
   }
 
   @Test

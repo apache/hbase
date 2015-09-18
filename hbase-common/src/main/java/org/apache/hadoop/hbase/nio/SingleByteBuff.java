@@ -161,6 +161,11 @@ public class SingleByteBuff extends ByteBuff {
   }
 
   @Override
+  public void get(int sourceOffset, byte[] dst, int offset, int length) {
+    ByteBufferUtils.copyFromBufferToArray(dst, buf, sourceOffset, offset, length);
+  }
+
+  @Override
   public void get(byte[] dst) {
     get(dst, 0, dst.length);
   }

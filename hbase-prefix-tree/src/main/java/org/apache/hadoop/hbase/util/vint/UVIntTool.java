@@ -23,6 +23,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  * Simple Variable Length Integer encoding.  Left bit of 0 means we are on the last byte.  If left
@@ -81,14 +82,10 @@ public class UVIntTool {
 
   /******************** bytes -&gt; int **************************/
 
-  public static int getInt(byte[] bytes) {
-    return getInt(bytes, 0);
-  }
-
-  public static int getInt(byte[] bytes, int offset) {
+  public static int getInt(ByteBuff buffer, int offset) {
     int value = 0;
     for (int i = 0;; ++i) {
-      byte b = bytes[offset + i];
+      byte b = buffer.get(offset + i);
       int shifted = BYTE_7_RIGHT_BITS_SET & b;// kill leftmost bit
       shifted <<= 7 * i;
       value |= shifted;

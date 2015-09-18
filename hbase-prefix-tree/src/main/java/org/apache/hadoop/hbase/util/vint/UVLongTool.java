@@ -21,8 +21,11 @@ package org.apache.hadoop.hbase.util.vint;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 
 /**
  * Simple Variable Length Integer encoding.  Left bit of 0 means we are on the last byte.  If left
@@ -80,13 +83,13 @@ public class UVLongTool{
   /******************** bytes -&gt; long **************************/
 
   public static long getLong(byte[] bytes) {
-    return getLong(bytes, 0);
+    return getLong(new SingleByteBuff(ByteBuffer.wrap(bytes)), 0);
   }
 
-  public static long getLong(byte[] bytes, int offset) {
+  public static long getLong(ByteBuff buf, int offset) {
     long value = 0;
     for (int i = 0;; ++i) {
-      byte b = bytes[offset + i];
+      byte b = buf.get(offset + i);
       long shifted = BYTE_7_RIGHT_BITS_SET & b;// kill leftmost bit
       shifted <<= 7 * i;
       value |= shifted;

@@ -20,9 +20,11 @@ package org.apache.hadoop.hbase.codec.prefixtree.column;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
@@ -103,7 +105,7 @@ public class TestColumnBuilder {
     bytes = baos.toByteArray();
     buffer = new byte[blockMeta.getMaxQualifierLength()];
     reader = new ColumnReader(buffer, ColumnNodeType.QUALIFIER);
-    reader.initOnBlock(blockMeta, bytes);
+    reader.initOnBlock(blockMeta, new SingleByteBuff(ByteBuffer.wrap(bytes)));
 
     List<TokenizerNode> builderNodes = Lists.newArrayList();
     builder.appendNodes(builderNodes, true, true);

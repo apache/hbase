@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
@@ -83,7 +84,7 @@ public class TestBlockMeta {
     ByteArrayOutputStream os = new ByteArrayOutputStream(10000);
     original.writeVariableBytesToOutputStream(os);
     ByteBuffer buffer = ByteBuffer.wrap(os.toByteArray());
-    PrefixTreeBlockMeta roundTripped = new PrefixTreeBlockMeta(buffer);
+    PrefixTreeBlockMeta roundTripped = new PrefixTreeBlockMeta(new SingleByteBuff(buffer));
     Assert.assertTrue(original.equals(roundTripped));
   }
 

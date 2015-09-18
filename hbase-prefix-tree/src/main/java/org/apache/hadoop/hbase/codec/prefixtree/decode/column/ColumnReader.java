@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.codec.prefixtree.decode.column;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.codec.prefixtree.PrefixTreeBlockMeta;
 import org.apache.hadoop.hbase.codec.prefixtree.encode.other.ColumnNodeType;
+import org.apache.hadoop.hbase.nio.ByteBuff;
 
 /**
  * Position one of these appropriately in the data block and you can call its methods to retrieve
@@ -49,7 +50,7 @@ public class ColumnReader {
     this.columnNodeReader = new ColumnNodeReader(columnBuffer, nodeType);
   }
 
-  public void initOnBlock(PrefixTreeBlockMeta blockMeta, byte[] block) {
+  public void initOnBlock(PrefixTreeBlockMeta blockMeta, ByteBuff block) {
     this.blockMeta = blockMeta;
     clearColumnBuffer();
     columnNodeReader.initOnBlock(blockMeta, block);

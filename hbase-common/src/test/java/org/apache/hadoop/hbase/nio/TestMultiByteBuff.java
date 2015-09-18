@@ -314,4 +314,32 @@ public class TestMultiByteBuff {
     int intRes = mbb1.getIntAfterPosition(1);
     assertEquals(3, intRes);
   }
+
+  @Test
+  public void testPositonalCopyToByteArray() throws Exception {
+    byte[] b = new byte[4];
+    byte[] b1 = new byte[8];
+    ByteBuffer bb1 = ByteBuffer.wrap(b);
+    ByteBuffer bb2 = ByteBuffer.wrap(b1);
+    MultiByteBuff mbb1 = new MultiByteBuff(bb1, bb2);
+    mbb1.position(2);
+    mbb1.putInt(4);
+    mbb1.position(7);
+    mbb1.put((byte) 2);
+    mbb1.putInt(3);
+    byte[] dst = new byte[4];
+    mbb1.get(2, dst, 0, 4);
+    assertEquals(4, Bytes.toInt(dst));
+    assertEquals(12, mbb1.position());
+    mbb1.position(1);
+    dst = new byte[4];
+    mbb1.get(8, dst, 0, 4);
+    assertEquals(3, Bytes.toInt(dst));
+    assertEquals(1, mbb1.position());
+    mbb1.position(12);
+    dst = new byte[1];
+    mbb1.get(7, dst, 0, 1);
+    assertEquals(2, dst[0]);
+    assertEquals(12, mbb1.position());
+  }
 }
