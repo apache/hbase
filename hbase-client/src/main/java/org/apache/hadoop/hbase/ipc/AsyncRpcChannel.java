@@ -712,6 +712,21 @@ public class AsyncRpcChannel {
   public int getConnectionHashCode() {
     return ConnectionId.hashCode(ticket, serviceName, address);
   }
+  
+  @Override
+  public int hashCode() {
+    return getConnectionHashCode();
+  }
+     
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof AsyncRpcChannel) {
+      AsyncRpcChannel channel = (AsyncRpcChannel) obj;
+      return channel.hashCode() == obj.hashCode();
+    }
+    return false;
+  }
+
 
   @Override
   public String toString() {
