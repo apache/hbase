@@ -67,11 +67,9 @@ import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.ipc.MasterCoprocessorRpcChannel;
-import org.apache.hadoop.hbase.ipc.PayloadCarryingRpcController;
 import org.apache.hadoop.hbase.ipc.RegionServerCoprocessorRpcChannel;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionResponse;
@@ -83,9 +81,6 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.GetRegionInfoRespo
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.RollWALWriterResponse;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.StopServerRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ClientService;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
-import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ProcedureDescription;
@@ -672,27 +667,25 @@ public class HBaseAdmin implements Abortable, Closeable {
     // Wait until all regions deleted
     for (int tries = 0; tries < (this.numRetries * this.retryLongerMultiplier); tries++) {
       try {
-        HRegionLocation firstMetaServer = getFirstMetaServerForTable(tableName);
-        Scan scan = MetaReader.getScanForTableName(tableName);
-        scan.addColumn(HConstants.CATALOG_FAMILY, HConstants.REGIONINFO_QUALIFIER);
-        ScanRequest request = RequestConverter.buildScanRequest(
-          firstMetaServer.getRegionInfo().getRegionName(), scan, 1, true);
-        Result[] values = null;
-        // Get a batch at a time.
-        ClientService.BlockingInterface server = connection.getClient(firstMetaServer
-            .getServerName());
-        PayloadCarryingRpcController controller = new PayloadCarryingRpcController();
-        try {
-          controller.setPriority(tableName);
-          ScanResponse response = server.scan(controller, request);
-          values = ResponseConverter.getResults(controller.cellScanner(), response);
-        } catch (ServiceException se) {
-          throw ProtobufUtil.getRemoteException(se);
-        }
-
+        final AtomicInteger count = new AtomicInteger(0);
+        MetaScannerVisitor visitor = new MetaScannerVisitorBase() {
+          @Override
+          public boolean processRow(Result rowResult) throws IOException {
+            HRegionInfo info = HRegionInfo.getHRegionInfo(rowResult);
+            if (info == null) {
+              return true;
+            }
+            if (!info.getTable().equals(tableName)) {
+              return false;
+            }
+            count.incrementAndGet();
+            return true;
+          }
+        };
+        MetaScanner.metaScan(conf, connection, visitor, tableName);
         // let us wait until hbase:meta table is updated and
         // HMaster removes the table from its HTableDescriptors
-        if (values == null || values.length == 0) {
+        if (count.get() == 0) {
           tableExists = false;
           GetTableDescriptorsResponse htds;
           MasterKeepAliveConnection master = connection.getKeepAliveMasterService();
@@ -712,12 +705,11 @@ public class HBaseAdmin implements Abortable, Closeable {
         }
       } catch (IOException ex) {
         failures++;
-        if(failures == numRetries - 1) {           // no more tries left
+        if (failures == numRetries - 1) {           // no more tries left
           if (ex instanceof RemoteException) {
-            throw ((RemoteException) ex).unwrapRemoteException();
-          } else {
-            throw ex;
+            ex = ((RemoteException) ex).unwrapRemoteException();
           }
+          throw ex;
         }
       }
       try {
