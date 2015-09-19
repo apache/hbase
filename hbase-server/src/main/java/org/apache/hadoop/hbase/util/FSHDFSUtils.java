@@ -27,6 +27,7 @@ import java.net.URI;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.Collection;
 
 import com.google.common.collect.Sets;
 import org.apache.commons.logging.Log;
@@ -66,8 +67,17 @@ public class FSHDFSUtils extends FSUtils {
           dfsUtilClazz = Class.forName("org.apache.hadoop.hdfs.DFSUtil");
         }
         if (getNNAddressesMethod == null) {
-          getNNAddressesMethod =
-                  dfsUtilClazz.getMethod("getNNServiceRpcAddresses", Configuration.class);
+          try {
+            // getNNServiceRpcAddressesForCluster is available only in version
+            // equal to or later than Hadoop 2.6
+            getNNAddressesMethod =
+                dfsUtilClazz.getMethod("getNNServiceRpcAddressesForCluster", Configuration.class);
+          } catch (NoSuchMethodError e) {
+            // If hadoop version is older than hadoop 2.6
+            getNNAddressesMethod =
+                dfsUtilClazz.getMethod("getNNServiceRpcAddresses", Configuration.class);
+          }
+
         }
 
         Map<String, Map<String, InetSocketAddress>> addressMap =
@@ -114,6 +124,17 @@ public class FSHDFSUtils extends FSUtils {
     }
     if (srcServiceName.equals(desServiceName)) {
       return true;
+    }
+    if (srcServiceName.startsWith("ha-hdfs") && desServiceName.startsWith("ha-hdfs")) {
+      Collection<String> internalNameServices =
+          conf.getTrimmedStringCollection("dfs.internal.nameservices");
+      if (!internalNameServices.isEmpty()) {
+        if (internalNameServices.contains(srcServiceName.split(":")[1])) {
+          return true;
+        } else {
+          return false;
+        }
+      }
     }
     if (srcFs instanceof DistributedFileSystem && desFs instanceof DistributedFileSystem) {
       //If one serviceName is an HA format while the other is a non-HA format,
