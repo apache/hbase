@@ -398,12 +398,12 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * Remove connection from pool
    */
   public void removeConnection(AsyncRpcChannel connection) {
-    int connectionHashCode = connection.getConnectionHashCode();
+    int connectionHashCode = connection.hashCode();
     synchronized (connections) {
       // we use address as cache key, so we should check here to prevent removing the
       // wrong connection
       AsyncRpcChannel connectionInPool = this.connections.get(connectionHashCode);
-      if (connectionInPool == connection) {
+      if (connectionInPool.equals(connection)) {
         this.connections.remove(connectionHashCode);
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(String.format("%s already removed, expected instance %08x, actual %08x",
