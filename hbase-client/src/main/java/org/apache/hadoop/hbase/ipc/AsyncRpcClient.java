@@ -398,7 +398,7 @@ public class AsyncRpcClient extends AbstractRpcClient {
       // we use address as cache key, so we should check here to prevent removing the
       // wrong connection
       AsyncRpcChannel connectionInPool = this.connections.get(connectionHashCode);
-      if (connectionInPool.equals(connection)) {
+      if (connectionInPool != null && connectionInPool.equals(connection)) {
         this.connections.remove(connectionHashCode);
       } else if (LOG.isDebugEnabled()) {
         LOG.debug(String.format("%s already removed, expected instance %08x, actual %08x",
