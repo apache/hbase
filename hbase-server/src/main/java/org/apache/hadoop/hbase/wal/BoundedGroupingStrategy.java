@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
 
 /**
- * A WAL grouping strategy that limits the number of delegate providers (i.e. wal group) to
+ * A WAL grouping strategy that limits the number of wal groups to
  * "hbase.wal.regiongrouping.numgroups".
  */
 @InterfaceAudience.Private

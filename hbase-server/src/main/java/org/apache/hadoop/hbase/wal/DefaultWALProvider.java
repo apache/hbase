@@ -76,7 +76,7 @@ public class DefaultWALProvider implements WALProvider {
     void init(FileSystem fs, Path path, Configuration c, boolean overwritable) throws IOException;
   }
 
-  protected FSHLog log = null;
+  protected volatile FSHLog log = null;
   private WALFactory factory = null;
   private Configuration conf = null;
   private List<WALActionsListener> listeners = null;
@@ -121,13 +121,16 @@ public class DefaultWALProvider implements WALProvider {
 
   @Override
   public WAL getWAL(final byte[] identifier) throws IOException {
-    // must lock since getWAL will create hlog on fs which is time consuming
-    synchronized (walCreateLock) {
-      if (log == null) {
-        log = new FSHLog(FileSystem.get(conf), FSUtils.getRootDir(conf),
-                getWALDirectoryName(factory.factoryId), HConstants.HREGION_OLDLOGDIR_NAME, conf,
-                listeners, true, logPrefix,
-                META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+    if (log == null) {
+      // only lock when need to create wal, and need to lock since
+      // creating hlog on fs is time consuming
+      synchronized (walCreateLock) {
+        if (log == null) {
+          log = new FSHLog(FileSystem.get(conf), FSUtils.getRootDir(conf),
+              getWALDirectoryName(factory.factoryId), HConstants.HREGION_OLDLOGDIR_NAME, conf,
+              listeners, true, logPrefix,
+              META_WAL_PROVIDER_ID.equals(providerId) ? META_WAL_PROVIDER_ID : null);
+        }
       }
     }
     return log;
