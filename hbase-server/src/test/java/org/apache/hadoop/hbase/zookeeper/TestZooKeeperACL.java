@@ -25,6 +25,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
+import javax.security.auth.login.AppConfigurationEntry;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,7 +36,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
-
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -284,5 +285,40 @@ public class TestZooKeeperACL {
     assertEquals(testJaasConfig, false);
     saslConfFile.delete();
   }
+  
+  /**
+   * Check if Programmatic way of setting zookeeper security settings is valid.
+   */
+  @Test
+  public void testIsZooKeeperSecureWithProgrammaticConfig() throws Exception {
+
+    javax.security.auth.login.Configuration.setConfiguration(new DummySecurityConfiguration());
+
+    Configuration config = new Configuration(HBaseConfiguration.create());
+    boolean testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    assertEquals(testJaasConfig, false);
+
+    // Now set authentication scheme to Kerberos still it should return false
+    // because no configuration set
+    config.set("hbase.security.authentication", "kerberos");
+    testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    assertEquals(testJaasConfig, false);
+
+    // Now set programmatic options related to security
+    config.set(HConstants.ZK_CLIENT_KEYTAB_FILE, "/dummy/file");
+    config.set(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, "dummy");
+    config.set(HConstants.ZK_SERVER_KEYTAB_FILE, "/dummy/file");
+    config.set(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, "dummy");
+    testJaasConfig = ZKUtil.isSecureZooKeeper(config);
+    assertEquals(true, testJaasConfig);
+  }
+
+  private static class DummySecurityConfiguration extends javax.security.auth.login.Configuration {
+    @Override
+    public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+      return null;
+    }
+  }
+
 }
 
