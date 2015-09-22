@@ -495,8 +495,8 @@ public class HRegionServer extends HasThread implements
     serverName = ServerName.valueOf(hostName, rpcServices.isa.getPort(), startcode);
 
     // login the zookeeper client principal (if using security)
-    ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
-      "hbase.zookeeper.client.kerberos.principal", hostName);
+    ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+      HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
     // login the server principal (if using secure Hadoop)
     login(userProvider, hostName);
 

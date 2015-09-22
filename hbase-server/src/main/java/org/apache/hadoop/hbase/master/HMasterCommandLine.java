@@ -169,8 +169,8 @@ public class HMasterCommandLine extends ServerCommandLine {
         }
 
         // login the zookeeper server principal (if using security)
-        ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
-          "hbase.zookeeper.server.kerberos.principal", null);
+        ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+          HConstants.ZK_SERVER_KERBEROS_PRINCIPAL, null);
         int localZKClusterSessionTimeout =
           conf.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster", 10*1000);
         conf.setInt(HConstants.ZK_SESSION_TIMEOUT, localZKClusterSessionTimeout);
