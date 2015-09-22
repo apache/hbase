@@ -227,7 +227,7 @@ This project bundles portions of the 'JQuery' project under the terms of the MIT
     WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ----
-This project bundles a derivative of portions of the 'Asciiidoctor' project
+This project bundles a derivative of portions of the 'Asciidoctor' project
 under the terms of the MIT license.
 
     The MIT License
