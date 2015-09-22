@@ -1191,6 +1191,17 @@ public final class HConstants {
   public static final String REGION_SPLIT_THREADS_MAX =
     "hbase.regionserver.region.split.threads.max";
 
+
+  /**
+   * Configuration keys for programmatic JAAS configuration for secured ZK interaction
+   */
+  public static final String ZK_CLIENT_KEYTAB_FILE = "hbase.zookeeper.client.keytab.file";
+  public static final String ZK_CLIENT_KERBEROS_PRINCIPAL =
+      "hbase.zookeeper.client.kerberos.principal";
+  public static final String ZK_SERVER_KEYTAB_FILE = "hbase.zookeeper.server.keytab.file";
+  public static final String ZK_SERVER_KERBEROS_PRINCIPAL =
+      "hbase.zookeeper.server.kerberos.principal";  
+
   private HConstants() {
     // Can't be instantiated with this ctor.
   }
