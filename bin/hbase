@@ -87,8 +87,7 @@ if [ $# = 0 ]; then
   echo "  wal             Write-ahead-log analyzer"
   echo "  hfile           Store file analyzer"
   echo "  zkcli           Run the ZooKeeper shell"
-  echo "  upgrade         Upgrade hbase"
-  echo "  master          Run an HBase HMaster node" 
+  echo "  master          Run an HBase HMaster node"
   echo "  regionserver    Run an HBase HRegionServer node" 
   echo "  zookeeper       Run a Zookeeper server"
   echo "  rest            Run an HBase REST server" 
@@ -305,7 +304,9 @@ elif [ "$COMMAND" = "hfile" ] ; then
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer"
 elif [ "$COMMAND" = "upgrade" ] ; then
-  CLASS="org.apache.hadoop.hbase.migration.UpgradeTo96"
+  echo "This command was used to upgrade to HBase 0.96, it was removed in HBase 2.0.0."
+  echo "Please follow the documentation at http://hbase.apache.org/book.html#upgrading."
+  exit 1
 elif [ "$COMMAND" = "snapshot" ] ; then
   CLASS="org.apache.hadoop.hbase.snapshot.CreateSnapshot"
 elif [ "$COMMAND" = "snapshotinfo" ] ; then

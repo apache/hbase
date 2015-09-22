@@ -211,7 +211,7 @@ goto :MakeCmdArgsLoop
 set hbase-command-arguments=%_hbasearguments%
 
 @rem figure out which class to run
-set corecommands=shell master regionserver thrift thrift2 rest avro hlog wal hbck hfile zookeeper zkcli upgrade mapredcp
+set corecommands=shell master regionserver thrift thrift2 rest avro hlog wal hbck hfile zookeeper zkcli mapredcp
 for %%i in ( %corecommands% ) do (
   if "%hbase-command%"=="%%i" set corecommand=true
 )
@@ -393,10 +393,6 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.zookeeper.ZooKeeperMainServer
   goto :eof
 
-:upgrade
-  set CLASS=org.apache.hadoop.hbase.migration.UpgradeTo96
-  goto :eof
-
 :mapredcp
   set CLASS=org.apache.hadoop.hbase.util.MapreduceDependencyClasspathTool
   goto :eof
@@ -425,7 +421,6 @@ goto :eof
   echo   wal             Write-ahead-log analyzer
   echo   hfile           Store file analyzer
   echo   zkcli           Run the ZooKeeper shell
-  echo   upgrade         Upgrade hbase
   echo   master          Run an HBase HMaster node
   echo   regionserver    Run an HBase HRegionServer node
   echo   zookeeper       Run a Zookeeper server

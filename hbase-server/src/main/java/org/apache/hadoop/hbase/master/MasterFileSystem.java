@@ -419,7 +419,6 @@ public class MasterFileSystem {
    * needed populating the directory with necessary bootup files).
    * @throws IOException
    */
-  @SuppressWarnings("deprecation")
   private Path checkRootDir(final Path rd, final Configuration c,
     final FileSystem fs)
   throws IOException {
@@ -486,10 +485,6 @@ public class MasterFileSystem {
     // Make sure the meta region directory exists!
     if (!FSUtils.metaRegionExists(fs, rd)) {
       bootstrap(rd, c);
-    } else {
-      // Migrate table descriptor files if necessary
-      org.apache.hadoop.hbase.util.FSTableDescriptorMigrationToSubdir
-        .migrateFSTableDescriptorsIfNecessary(fs, rd);
     }
 
     // Create tableinfo-s for hbase:meta if not already there.
