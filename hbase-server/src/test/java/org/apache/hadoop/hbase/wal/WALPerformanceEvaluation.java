@@ -485,7 +485,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     // Initialize HRegion
     HRegionInfo regionInfo = new HRegionInfo(htd.getTableName());
     // Initialize WAL
-    final WAL wal = wals.getWAL(regionInfo.getEncodedNameAsBytes());
+    final WAL wal =
+        wals.getWAL(regionInfo.getEncodedNameAsBytes(), regionInfo.getTable().getNamespace());
     // If we haven't already, attach a listener to this wal to handle rolls and metrics.
     if (walsListenedTo.add(wal)) {
       roller.addWAL(wal);

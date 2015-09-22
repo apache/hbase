@@ -164,7 +164,7 @@ public class TestWALObserver {
    */
   @Test
   public void testWALObserverWriteToWAL() throws Exception {
-    final WAL log = wals.getWAL(UNSPECIFIED_REGION);
+    final WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     verifyWritesSeen(log, getCoprocessor(log, SampleRegionWALObserver.class), false);
   }
 
@@ -175,7 +175,7 @@ public class TestWALObserver {
    */
   @Test
   public void testLegacyWALObserverWriteToWAL() throws Exception {
-    final WAL log = wals.getWAL(UNSPECIFIED_REGION);
+    final WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     verifyWritesSeen(log, getCoprocessor(log, SampleRegionWALObserver.Legacy.class), true);
   }
 
@@ -279,7 +279,7 @@ public class TestWALObserver {
 
     final Configuration newConf = HBaseConfiguration.create(this.conf);
 
-    final WAL wal = wals.getWAL(UNSPECIFIED_REGION);
+    final WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
     final SampleRegionWALObserver newApi = getCoprocessor(wal, SampleRegionWALObserver.class);
     newApi.setTestValues(TEST_TABLE, TEST_ROW, null, null, null, null, null, null);
     final SampleRegionWALObserver oldApi = getCoprocessor(wal,
@@ -351,7 +351,7 @@ public class TestWALObserver {
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
     final AtomicLong sequenceId = new AtomicLong(0);
 
-    WAL log = wals.getWAL(UNSPECIFIED_REGION);
+    WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     try {
       SampleRegionWALObserver cp = getCoprocessor(log, SampleRegionWALObserver.class);
 
@@ -396,7 +396,7 @@ public class TestWALObserver {
     final Configuration newConf = HBaseConfiguration.create(this.conf);
 
     // WAL wal = new WAL(this.fs, this.dir, this.oldLogDir, this.conf);
-    WAL wal = wals.getWAL(UNSPECIFIED_REGION);
+    WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
     // Put p = creatPutWith2Families(TEST_ROW);
     WALEdit edit = new WALEdit();
     long now = EnvironmentEdgeManager.currentTime();
@@ -421,7 +421,7 @@ public class TestWALObserver {
         FileSystem newFS = FileSystem.get(newConf);
         // Make a new wal for new region open.
         final WALFactory wals2 = new WALFactory(conf, null, currentTest.getMethodName()+"2");
-        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION);;
+        WAL wal2 = wals2.getWAL(UNSPECIFIED_REGION, null);;
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir,
             hri, htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);
         long seqid2 = region.getOpenSeqNum();
@@ -449,7 +449,7 @@ public class TestWALObserver {
    */
   @Test
   public void testWALObserverLoaded() throws Exception {
-    WAL log = wals.getWAL(UNSPECIFIED_REGION);
+    WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     assertNotNull(getCoprocessor(log, SampleRegionWALObserver.class));
   }
 

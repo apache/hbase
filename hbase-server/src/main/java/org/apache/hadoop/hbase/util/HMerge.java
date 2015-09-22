@@ -193,11 +193,13 @@ class HMerge {
       for (int i = 0; i < info.length - 1; i++) {
         if (currentRegion == null) {
           currentRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i], this.htd,
-              walFactory.getWAL(info[i].getEncodedNameAsBytes()));
+              walFactory.getWAL(info[i].getEncodedNameAsBytes(),
+                info[i].getTable().getNamespace()));
           currentSize = currentRegion.getLargestHStoreSize();
         }
         nextRegion = HRegion.openHRegion(conf, fs, this.rootDir, info[i + 1], this.htd,
-            walFactory.getWAL(info[i+1].getEncodedNameAsBytes()));
+            walFactory.getWAL(info[i + 1].getEncodedNameAsBytes(),
+              info[i + 1].getTable().getNamespace()));
         nextSize = nextRegion.getLargestHStoreSize();
 
         if ((currentSize + nextSize) <= (maxFilesize / 2)) {

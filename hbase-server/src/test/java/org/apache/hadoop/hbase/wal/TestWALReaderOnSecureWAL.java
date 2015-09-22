@@ -109,7 +109,8 @@ public class TestWALReaderOnSecureWAL {
       final AtomicLong sequenceId = new AtomicLong(1);
 
       // Write the WAL
-      WAL wal = wals.getWAL(regioninfo.getEncodedNameAsBytes());
+      WAL wal =
+          wals.getWAL(regioninfo.getEncodedNameAsBytes(), regioninfo.getTable().getNamespace());
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));

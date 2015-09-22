@@ -67,7 +67,7 @@ class DisabledWALProvider implements WALProvider {
   }
 
   @Override
-  public WAL getWAL(final byte[] identifier) throws IOException {
+  public WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException {
     return disabled;
   }
 

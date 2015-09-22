@@ -119,7 +119,7 @@ public class TestWALRecordReader {
   @Test
   public void testPartialRead() throws Exception {
     final WALFactory walfactory = new WALFactory(conf, null, getName());
-    WAL log = walfactory.getWAL(info.getEncodedNameAsBytes());
+    WAL log = walfactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
     // This test depends on timestamp being millisecond based and the filename of the WAL also
     // being millisecond based.
     long ts = System.currentTimeMillis();
@@ -182,7 +182,7 @@ public class TestWALRecordReader {
   @Test
   public void testWALRecordReader() throws Exception {
     final WALFactory walfactory = new WALFactory(conf, null, getName());
-    WAL log = walfactory.getWAL(info.getEncodedNameAsBytes());
+    WAL log = walfactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
     byte [] value = Bytes.toBytes("value");
     final AtomicLong sequenceId = new AtomicLong(0);
     WALEdit edit = new WALEdit();

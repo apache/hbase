@@ -362,7 +362,7 @@ public class TestHRegion {
     FSUtils.setRootDir(walConf, logDir);
     return (new WALFactory(walConf,
         Collections.<WALActionsListener>singletonList(new MetricsWAL()), callingMethod))
-        .getWAL(tableName.toBytes());
+        .getWAL(tableName.toBytes(), tableName.getNamespace());
   }
 
   /**
@@ -934,7 +934,7 @@ public class TestHRegion {
     final Configuration walConf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(walConf, logDir);
     final WALFactory wals = new WALFactory(walConf, null, method);
-    final WAL wal = wals.getWAL(tableName.getName());
+    final WAL wal = wals.getWAL(tableName.getName(), tableName.getNamespace());
 
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
       HConstants.EMPTY_END_ROW, method, CONF, false, Durability.USE_DEFAULT, wal, family);
@@ -4762,7 +4762,7 @@ public class TestHRegion {
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, logDir);
     final WALFactory wals = new WALFactory(walConf, null, UUID.randomUUID().toString());
-    final WAL wal = spy(wals.getWAL(tableName.getName()));
+    final WAL wal = spy(wals.getWAL(tableName.getName(), tableName.getNamespace()));
     this.region = initHRegion(tableName, HConstants.EMPTY_START_ROW,
         HConstants.EMPTY_END_ROW, method, conf, false, tableDurability, wal,
         new byte[][] { family });

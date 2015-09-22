@@ -131,7 +131,7 @@ public class TestReplicationWALReaderManager {
     pathWatcher = new PathWatcher();
     listeners.add(pathWatcher);
     final WALFactory wals = new WALFactory(conf, listeners, tn.getMethodName());
-    log = wals.getWAL(info.getEncodedNameAsBytes());
+    log = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
   }
 
   @After

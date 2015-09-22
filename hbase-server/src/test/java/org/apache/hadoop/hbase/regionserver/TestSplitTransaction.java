@@ -380,7 +380,8 @@ public class TestSplitTransaction {
     HRegion r = HBaseTestingUtility.createRegionAndWAL(hri, testdir, TEST_UTIL.getConfiguration(),
         htd);
     HBaseTestingUtility.closeRegionAndWAL(r);
-    return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
+    return HRegion.openHRegion(testdir, hri, htd,
+      wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
       TEST_UTIL.getConfiguration());
   }
   

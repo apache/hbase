@@ -962,7 +962,7 @@ public class TestDefaultMemStore extends TestCase {
     desc.addFamily(new HColumnDescriptor("foo".getBytes()));
     HRegion r =
         HRegion.createHRegion(hri, testDir, conf, desc,
-            wFactory.getWAL(hri.getEncodedNameAsBytes()));
+            wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
     HRegion.addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
     StringBuffer sb = new StringBuffer();

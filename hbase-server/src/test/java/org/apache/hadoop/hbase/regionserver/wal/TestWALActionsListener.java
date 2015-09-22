@@ -91,7 +91,7 @@ public class TestWALActionsListener {
     final AtomicLong sequenceId = new AtomicLong(1);
     HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
              SOME_BYTES, SOME_BYTES, false);
-    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes());
+    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
 
     for (int i = 0; i < 20; i++) {
       byte[] b = Bytes.toBytes(i+"");

@@ -85,7 +85,7 @@ public class TestDurability {
   public void testDurability() throws Exception {
     final WALFactory wals = new WALFactory(CONF, null, "TestDurability");
     byte[] tableName = Bytes.toBytes("TestDurability");
-    final WAL wal = wals.getWAL(tableName);
+    final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "region", wal, Durability.USE_DEFAULT);
     HRegion deferredRegion = createHRegion(tableName, "deferredRegion", wal, Durability.ASYNC_WAL);
 
@@ -148,7 +148,7 @@ public class TestDurability {
     // Setting up region
     final WALFactory wals = new WALFactory(CONF, null, "TestIncrement");
     byte[] tableName = Bytes.toBytes("TestIncrement");
-    final WAL wal = wals.getWAL(tableName);
+    final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
 
     // col1: amount = 1, 1 write back to WAL
@@ -206,7 +206,7 @@ public class TestDurability {
     // Setting up region
     final WALFactory wals = new WALFactory(CONF, null, "testIncrementWithReturnResultsSetToFalse");
     byte[] tableName = Bytes.toBytes("testIncrementWithReturnResultsSetToFalse");
-    final WAL wal = wals.getWAL(tableName);
+    final WAL wal = wals.getWAL(tableName, null);
     HRegion region = createHRegion(tableName, "increment", wal, Durability.USE_DEFAULT);
 
     Increment inc1 = new Increment(row1);

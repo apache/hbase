@@ -80,7 +80,7 @@ public class TestWALMethods {
 
     final Configuration walConf = new Configuration(util.getConfiguration());
     FSUtils.setRootDir(walConf, regiondir);
-    (new WALFactory(walConf, null, "dummyLogName")).getWAL(new byte[]{});
+    (new WALFactory(walConf, null, "dummyLogName")).getWAL(new byte[] {}, null);
 
     NavigableSet<Path> files = WALSplitter.getSplitEditFilesSorted(fs, regiondir);
     assertEquals(7, files.size());

@@ -65,7 +65,7 @@ public class TestLogRollingNoCluster {
     final Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     FSUtils.setRootDir(conf, dir);
     final WALFactory wals = new WALFactory(conf, null, TestLogRollingNoCluster.class.getName());
-    final WAL wal = wals.getWAL(new byte[]{});
+    final WAL wal = wals.getWAL(new byte[]{}, null);
     
     Appender [] appenders = null;
 

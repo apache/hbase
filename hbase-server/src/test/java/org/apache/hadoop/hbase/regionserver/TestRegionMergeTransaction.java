@@ -415,8 +415,9 @@ public class TestRegionMergeTransaction {
     HRegion a = HBaseTestingUtility.createRegionAndWAL(hri, testdir,
         TEST_UTIL.getConfiguration(), htd);
     HBaseTestingUtility.closeRegionAndWAL(a);
-    return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
-        TEST_UTIL.getConfiguration());
+    return HRegion.openHRegion(testdir, hri, htd,
+      wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
+      TEST_UTIL.getConfiguration());
   }
 
   private int countRows(final HRegion r) throws IOException {

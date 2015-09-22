@@ -185,7 +185,8 @@ public class TestWALFactory {
     final AtomicLong sequenceId = new AtomicLong(1);
     for (int ii = 0; ii < howmany; ii++) {
       for (int i = 0; i < howmany; i++) {
-        final WAL log = wals.getWAL(infos[i].getEncodedNameAsBytes());
+        final WAL log =
+            wals.getWAL(infos[i].getEncodedNameAsBytes(), infos[i].getTable().getNamespace());
         for (int j = 0; j < howmany; j++) {
           WALEdit edit = new WALEdit();
           byte [] family = Bytes.toBytes("column");
@@ -246,7 +247,7 @@ public class TestWALFactory {
                   null,null, false);
       HTableDescriptor htd = new HTableDescriptor(tableName);
       htd.addFamily(new HColumnDescriptor(tableName.getName()));
-      final WAL wal = wals.getWAL(info.getEncodedNameAsBytes());
+      final WAL wal = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
 
       for (int i = 0; i < total; i++) {
         WALEdit kvs = new WALEdit();
@@ -361,7 +362,8 @@ public class TestWALFactory {
     HRegionInfo regioninfo = new HRegionInfo(tableName,
              HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, false);
 
-    final WAL wal = wals.getWAL(regioninfo.getEncodedNameAsBytes());
+    final WAL wal =
+        wals.getWAL(regioninfo.getEncodedNameAsBytes(), regioninfo.getTable().getNamespace());
     final AtomicLong sequenceId = new AtomicLong(1);
     final int total = 20;
 
@@ -498,7 +500,7 @@ public class TestWALFactory {
       }
       HRegionInfo info = new HRegionInfo(htd.getTableName(),
         row,Bytes.toBytes(Bytes.toString(row) + "1"), false);
-      final WAL log = wals.getWAL(info.getEncodedNameAsBytes());
+      final WAL log = wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace());
 
       final long txid = log.append(htd, info,
         new WALKey(info.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis()),
@@ -556,7 +558,7 @@ public class TestWALFactory {
       }
       HRegionInfo hri = new HRegionInfo(htd.getTableName(),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      final WAL log = wals.getWAL(hri.getEncodedNameAsBytes());
+      final WAL log = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
       final long txid = log.append(htd, hri,
         new WALKey(hri.getEncodedNameAsBytes(), htd.getTableName(), System.currentTimeMillis()),
         cols, sequenceId, true, null);
@@ -605,7 +607,7 @@ public class TestWALFactory {
 
     HRegionInfo hri = new HRegionInfo(tableName,
         HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-    final WAL log = wals.getWAL(hri.getEncodedNameAsBytes());
+    final WAL log = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
     log.registerWALActionsListener(visitor);
     for (int i = 0; i < COL_COUNT; i++) {
       WALEdit cols = new WALEdit();
@@ -634,7 +636,7 @@ public class TestWALFactory {
   @Test
   public void testWALCoprocessorLoaded() throws Exception {
     // test to see whether the coprocessor is loaded or not.
-    WALCoprocessorHost host = wals.getWAL(UNSPECIFIED_REGION).getCoprocessorHost();
+    WALCoprocessorHost host = wals.getWAL(UNSPECIFIED_REGION, null).getCoprocessorHost();
     Coprocessor c = host.findCoprocessor(SampleRegionWALObserver.class.getName());
     assertNotNull(c);
   }

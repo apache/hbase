@@ -1342,7 +1342,7 @@ public class HBaseFsck extends Configured implements Closeable {
     WAL wal = (new WALFactory(confForWAL,
         Collections.<WALActionsListener>singletonList(new MetricsWAL()),
         "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
-        getWAL(metaHRI.getEncodedNameAsBytes());
+        getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
     HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
     MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;

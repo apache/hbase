@@ -275,7 +275,7 @@ public class TestMergeTool extends HBaseTestCase {
       // Close the region and delete the log
       HBaseTestingUtility.closeRegionAndWAL(regions[i]);
     }
-    WAL log = wals.getWAL(new byte[]{});
+    WAL log = wals.getWAL(new byte[]{}, null);
      // Merge Region 0 and Region 1
     HRegion merged = mergeAndVerify("merging regions 0 and 1 ",
       this.sourceRegions[0].getRegionNameAsString(),

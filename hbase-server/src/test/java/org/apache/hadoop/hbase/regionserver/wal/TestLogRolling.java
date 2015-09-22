@@ -199,7 +199,7 @@ public class TestLogRolling  {
     final Configuration conf = TEST_UTIL.getConfiguration();
     final WALFactory wals = new WALFactory(conf, null,
         ServerName.valueOf("test.com",8080, 1).toString());
-    final WAL newLog = wals.getWAL(new byte[]{});
+    final WAL newLog = wals.getWAL(new byte[]{}, null);
     try {
       // Now roll the log before we write anything.
       newLog.rollWriter(true);

@@ -198,7 +198,7 @@ public class TestDefaultWALProvider {
       HRegionInfo hri2 = new HRegionInfo(htd2.getTableName(),
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       // we want to mix edits from regions, so pick our own identifier.
-      final WAL log = wals.getWAL(UNSPECIFIED_REGION);
+      final WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
 
       // Add a single edit and make sure that rolling won't remove the file
       // Before HBASE-3198 it used to delete it
@@ -265,7 +265,7 @@ public class TestDefaultWALProvider {
     localConf.set(WALFactory.WAL_PROVIDER, DefaultWALProvider.class.getName());
     final WALFactory wals = new WALFactory(localConf, null, currentTest.getMethodName());
     try {
-      final WAL wal = wals.getWAL(UNSPECIFIED_REGION);
+      final WAL wal = wals.getWAL(UNSPECIFIED_REGION, null);
       assertEquals(0, DefaultWALProvider.getNumRolledLogFiles(wal));
       HRegionInfo hri1 =
           new HRegionInfo(table1.getTableName(), HConstants.EMPTY_START_ROW,
@@ -351,10 +351,11 @@ public class TestDefaultWALProvider {
       final Set<WAL> seen = new HashSet<WAL>(1);
       final Random random = new Random();
       assertTrue("first attempt to add WAL from default provider should work.",
-          seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()))));
+          seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()), null)));
       for (int i = 0; i < 1000; i++) {
-        assertFalse("default wal provider is only supposed to return a single wal, which should " +
-            "compare as .equals itself.", seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()))));
+        assertFalse("default wal provider is only supposed to return a single wal, which should "
+            + "compare as .equals itself.",
+          seen.add(wals.getWAL(Bytes.toBytes(random.nextInt()), null)));
       }
     } finally {
       wals.close();

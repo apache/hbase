@@ -100,8 +100,8 @@ public class TestDefaultCompactSelection extends TestCase {
     region = HBaseTestingUtility.createRegionAndWAL(info, basedir, conf, htd);
     HBaseTestingUtility.closeRegionAndWAL(region);
     Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
-    region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes()), fs, conf, info, htd,
-        null);
+    region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes(), info.getTable()
+        .getNamespace()), fs, conf, info, htd, null);
 
     store = new HStore(region, hcd, conf);
 
