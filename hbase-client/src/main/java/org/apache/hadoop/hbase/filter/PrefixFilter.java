@@ -40,11 +40,9 @@ import com.google.protobuf.InvalidProtocolBufferException;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class PrefixFilter extends FilterBase {
-  public static final int MAX_SKIPPED_COMPARE_ROW_NUM = 100;
   protected byte [] prefix = null;
   protected boolean passedPrefix = false;
   protected boolean filterRow = true;
-  protected int skippedCompareRows = 0;
 
   public PrefixFilter(final byte [] prefix) {
     this.prefix = prefix;
@@ -58,12 +56,7 @@ public class PrefixFilter extends FilterBase {
     if (firstRowCell == null || this.prefix == null)
       return true;
     int length = firstRowCell.getRowLength();
-    if (length < prefix.length && skippedCompareRows < MAX_SKIPPED_COMPARE_ROW_NUM) {
-      ++skippedCompareRows;
-      return true;
-    }   
-    skippedCompareRows = 0;
-    
+    if (length < prefix.length) return true;
     // if they are equal, return false => pass row
     // else return true, filter row
     // if we are passed the prefix, set flag
