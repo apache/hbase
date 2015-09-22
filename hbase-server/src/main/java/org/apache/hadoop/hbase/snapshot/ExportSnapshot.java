@@ -300,8 +300,13 @@ public class ExportSnapshot extends Configured implements Tool {
           createOutputPath(parent);
         }
         outputFs.mkdirs(path);
-        // override the owner when non-null user/group is specified
-        outputFs.setOwner(path, filesUser, filesGroup);
+        if (filesUser != null || filesGroup != null) {
+          // override the owner when non-null user/group is specified
+          outputFs.setOwner(path, filesUser, filesGroup);
+        }
+        if (filesMode > 0) {
+          outputFs.setPermission(path, new FsPermission(filesMode));
+        }
       }
     }
 
@@ -835,6 +840,22 @@ public class ExportSnapshot extends Configured implements Tool {
   }
 
   /**
+   * Set path permission.
+   */
+  private void setPermission(final FileSystem fs, final Path path, final short filesMode,
+      final boolean recursive) throws IOException {
+    if (filesMode > 0) {
+      FsPermission perm = new FsPermission(filesMode);
+      if (recursive && fs.isDirectory(path)) {
+        for (FileStatus child : fs.listStatus(path)) {
+          setPermission(fs, child.getPath(), filesMode, recursive);
+        }
+      }
+      fs.setPermission(path, perm);
+    }
+  }
+
+  /**
    * Execute the export snapshot by copying the snapshot metadata, hfiles and wals.
    * @return 0 on success, and != 0 upon failure.
    */
@@ -959,6 +980,9 @@ public class ExportSnapshot extends Configured implements Tool {
       FileUtil.copy(inputFs, snapshotDir, outputFs, initialOutputSnapshotDir, false, false, conf);
       if (filesUser != null || filesGroup != null) {
         setOwner(outputFs, snapshotTmpDir, filesUser, filesGroup, true);
+      }
+      if (filesMode > 0) {
+        setPermission(outputFs, snapshotTmpDir, (short)filesMode, true);
       }
     } catch (IOException e) {
       throw new ExportSnapshotException("Failed to copy the snapshot directory: from=" +
