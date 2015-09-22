@@ -1231,6 +1231,16 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_WRITE_TABLE_CHECK_PERIOD_KEY =
       "hbase.canary.write.table.check.period";
+  
+  /**
+   * Configuration keys for programmatic JAAS configuration for secured ZK interaction
+   */
+  public static final String ZK_CLIENT_KEYTAB_FILE = "hbase.zookeeper.client.keytab.file";
+  public static final String ZK_CLIENT_KERBEROS_PRINCIPAL =
+      "hbase.zookeeper.client.kerberos.principal";
+  public static final String ZK_SERVER_KEYTAB_FILE = "hbase.zookeeper.server.keytab.file";
+  public static final String ZK_SERVER_KERBEROS_PRINCIPAL =
+      "hbase.zookeeper.server.kerberos.principal";  
 
   private HConstants() {
     // Can't be instantiated with this ctor.
