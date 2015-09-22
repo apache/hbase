@@ -2129,10 +2129,13 @@ public class RpcServer implements RpcServerInterface {
             " processingTime: " + processingTime +
             " totalTime: " + totalTime);
       }
+      long requestSize = param.getSerializedSize();
+      long responseSize = result.getSerializedSize();
       metrics.dequeuedCall(qTime);
       metrics.processedCall(processingTime);
       metrics.totalCall(totalTime);
-      long responseSize = result.getSerializedSize();
+      metrics.receivedRequest(requestSize);
+      metrics.sentResponse(responseSize);
       // log any RPC responses that are slower than the configured warn
       // response time or larger than configured warning size
       boolean tooSlow = (processingTime > warnResponseTime && warnResponseTime > -1);
