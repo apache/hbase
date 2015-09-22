@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
@@ -660,8 +661,6 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     ZKClusterId.setClusterId(this.zooKeeper, fileSystemManager.getClusterId());
     this.serverManager = createServerManager(this, this);
 
-    setupClusterConnection();
-
     // Invalidate all write locks held previously
     this.tableLockManager.reapWriteLocks();
     this.tableStateManager = new TableStateManager(this);
@@ -850,6 +849,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   throws IOException {
     // We put this out here in a method so can do a Mockito.spy and stub it out
     // w/ a mocked up ServerManager.
+    setupClusterConnection();
     return new ServerManager(master, services);
   }
 

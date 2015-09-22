@@ -219,7 +219,7 @@ public class ServerManager {
     Configuration c = master.getConfiguration();
     maxSkew = c.getLong("hbase.master.maxclockskew", 30000);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
-    this.connection = connect ? (ClusterConnection)ConnectionFactory.createConnection(c) : null;
+    this.connection = connect ? master.getConnection() : null;
     int pingMaxAttempts = Math.max(1, master.getConfiguration().getInt(
       "hbase.master.maximum.ping.server.attempts", 10));
     int pingSleepInterval = Math.max(1, master.getConfiguration().getInt(
