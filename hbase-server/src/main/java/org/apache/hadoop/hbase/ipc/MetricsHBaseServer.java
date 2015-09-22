@@ -61,6 +61,10 @@ public class MetricsHBaseServer {
     source.receivedBytes(count);
   }
 
+  void sentResponse(long count) { source.sentResponse(count); }
+
+  void receivedRequest(long count) { source.receivedRequest(count); }
+
   void dequeuedCall(int qTime) {
     source.dequeuedCall(qTime);
   }
