@@ -947,7 +947,9 @@ public class ZKUtil {
           && testConfig.getAppConfigurationEntry(
             JaasConfiguration.CLIENT_KEYTAB_KERBEROS_CONFIG_NAME) == null
           && testConfig.getAppConfigurationEntry(
-              JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null) {
+              JaasConfiguration.SERVER_KEYTAB_KERBEROS_CONFIG_NAME) == null 
+          && conf.get(HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL) == null
+          && conf.get(HConstants.ZK_SERVER_KERBEROS_PRINCIPAL) == null) {
         return false;
       }
     } catch(Exception e) {

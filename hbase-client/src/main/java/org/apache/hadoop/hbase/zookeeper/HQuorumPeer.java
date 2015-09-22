@@ -22,6 +22,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.util.StringUtils;
@@ -69,8 +70,8 @@ public class HQuorumPeer {
       zkConfig.parseProperties(zkProperties);
 
       // login the zookeeper server principal (if using security)
-      ZKUtil.loginServer(conf, "hbase.zookeeper.server.keytab.file",
-        "hbase.zookeeper.server.kerberos.principal",
+      ZKUtil.loginServer(conf, HConstants.ZK_SERVER_KEYTAB_FILE,
+        HConstants.ZK_SERVER_KERBEROS_PRINCIPAL,
         zkConfig.getClientPortAddress().getHostName());
 
       runZKServer(zkConfig);

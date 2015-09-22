@@ -640,8 +640,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     useZKForAssignment = ConfigUtil.useZKForAssignment(conf);
 
     // login the zookeeper client principal (if using security)
-    ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
-      "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
+    ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+      HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, this.isa.getHostName());
 
     // login the server principal (if using secure Hadoop)
     userProvider.login("hbase.regionserver.keytab.file",

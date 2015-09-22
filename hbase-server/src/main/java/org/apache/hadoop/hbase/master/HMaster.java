@@ -522,8 +522,8 @@ MasterServices, Server {
       conf.getLong("hbase.master.buffer.for.rs.fatals", 1*1024*1024));
 
     // login the zookeeper client principal (if using security)
-    ZKUtil.loginClient(this.conf, "hbase.zookeeper.client.keytab.file",
-      "hbase.zookeeper.client.kerberos.principal", this.isa.getHostName());
+    ZKUtil.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
+      HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, this.isa.getHostName());
 
     // initialize server principal (if using secure Hadoop)
     UserProvider provider = UserProvider.instantiate(conf);
