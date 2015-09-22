@@ -38,6 +38,10 @@ public interface MetricsHBaseServerSource extends BaseSource {
   String SENT_BYTES_DESC = "Number of bytes sent.";
   String RECEIVED_BYTES_NAME = "receivedBytes";
   String RECEIVED_BYTES_DESC = "Number of bytes received.";
+  String REQUEST_SIZE_NAME = "requestSize";
+  String REQUEST_SIZE_DESC = "Request size in bytes.";
+  String RESPONSE_SIZE_NAME = "responseSize";
+  String RESPONSE_SIZE_DESC = "Response size in bytes.";
   String QUEUE_CALL_TIME_NAME = "queueCallTime";
   String QUEUE_CALL_TIME_DESC = "Queue Call Time.";
   String PROCESS_CALL_TIME_NAME = "processCallTime";
@@ -91,6 +95,10 @@ public interface MetricsHBaseServerSource extends BaseSource {
   void sentBytes(long count);
 
   void receivedBytes(int count);
+
+  void sentResponse(long count);
+
+  void receivedRequest(long count);
 
   void dequeuedCall(int qTime);
 
