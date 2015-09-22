@@ -119,6 +119,11 @@ public class TestRpcMetrics {
     HELPER.assertCounter("sentBytes", 309, serverSource);
     HELPER.assertCounter("receivedBytes", 208, serverSource);
 
+    mrpc.receivedRequest(105);
+    mrpc.sentResponse(106);
+    HELPER.assertCounter("requestSize_NumOps", 1, serverSource);
+    HELPER.assertCounter("responseSize_NumOps", 1, serverSource);
+
     mrpc.exception(null);
     HELPER.assertCounter("exceptions", 1, serverSource);
 

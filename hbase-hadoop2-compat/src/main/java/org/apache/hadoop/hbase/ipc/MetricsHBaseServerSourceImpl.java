@@ -51,6 +51,8 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   private MutableHistogram queueCallTime;
   private MutableHistogram processCallTime;
   private MutableHistogram totalCallTime;
+  private MutableHistogram requestSize;
+  private MutableHistogram responseSize;
 
   public MetricsHBaseServerSourceImpl(String metricsName,
                                       String metricsDescription,
@@ -93,6 +95,10 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
         PROCESS_CALL_TIME_DESC);
     this.totalCallTime = this.getMetricsRegistry().newHistogram(TOTAL_CALL_TIME_NAME,
         TOTAL_CALL_TIME_DESC);
+    this.requestSize = this.getMetricsRegistry().newHistogram(REQUEST_SIZE_NAME,
+        REQUEST_SIZE_DESC);
+    this.responseSize = this.getMetricsRegistry().newHistogram(RESPONSE_SIZE_NAME,
+              RESPONSE_SIZE_DESC);
   }
 
   @Override
@@ -159,6 +165,12 @@ public class MetricsHBaseServerSourceImpl extends BaseSourceImpl
   public void receivedBytes(int count) {
     this.receivedBytes.incr(count);
   }
+
+  @Override
+  public void sentResponse(long count) { this.responseSize.add(count); }
+
+  @Override
+  public void receivedRequest(long count) { this.requestSize.add(count); }
 
   @Override
   public void dequeuedCall(int qTime) {
