@@ -89,10 +89,6 @@ public class TestLogRolling  {
   private MiniHBaseCluster cluster;
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  /**
-   * constructor
-   * @throws Exception
-   */
   public TestLogRolling()  {
     this.server = null;
     this.tableName = null;
@@ -527,7 +523,16 @@ public class TestLogRolling  {
 
       // flush all regions
       for (Region r: server.getOnlineRegionsLocalContext()) {
-        r.flush(true);
+        try {
+          r.flush(true);
+        } catch (Exception e) {
+          // This try/catch was added by HBASE-14317. It is needed
+          // because this issue tightened up the semantic such that
+          // a failed append could not be followed by a successful
+          // sync. What is coming out here is a failed sync, a sync
+          // that used to 'pass'.
+          LOG.info(e);
+        }
       }
 
       ResultScanner scanner = table.getScanner(new Scan());
