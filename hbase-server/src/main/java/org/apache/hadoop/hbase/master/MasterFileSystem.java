@@ -248,10 +248,6 @@ public class MasterFileSystem {
           FileStatus[] curLogFiles = FSUtils.listStatus(this.fs, status.getPath(), null);
           if (curLogFiles == null || curLogFiles.length == 0) {
             // Empty log folder. No recovery needed
-            // Just delete the directory
-            if (!fs.delete(status.getPath(), false)) {
-              LOG.warn("Unable to delete " + status.getPath());
-            }
             continue;
           }
           final ServerName serverName = DefaultWALProvider.getServerNameFromWALDirectoryName(
