@@ -365,6 +365,8 @@
                       <include>CellMessage.proto</include>
                       <include>CellSetMessage.proto</include>
                       <include>ColumnSchemaMessage.proto</include>
+                      <include>NamespacesMessage.proto</include>
+                      <include>NamespacePropertiesMessage.proto</include>
                       <include>ScannerMessage.proto</include>
                       <include>StorageClusterStatusMessage.proto</include>
                       <include>TableInfoMessage.proto</include>
