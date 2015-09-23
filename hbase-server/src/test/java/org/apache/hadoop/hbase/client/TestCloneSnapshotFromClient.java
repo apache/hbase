@@ -46,21 +46,20 @@ import org.junit.experimental.categories.Category;
 public class TestCloneSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestCloneSnapshotFromClient.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private final byte[] FAMILY = Bytes.toBytes("cf");
+  protected final byte[] FAMILY = Bytes.toBytes("cf");
 
-  private byte[] emptySnapshot;
-  private byte[] snapshotName0;
-  private byte[] snapshotName1;
-  private byte[] snapshotName2;
-  private int snapshot0Rows;
-  private int snapshot1Rows;
-  private TableName tableName;
-  private Admin admin;
+  protected byte[] emptySnapshot;
+  protected byte[] snapshotName0;
+  protected byte[] snapshotName1;
+  protected byte[] snapshotName2;
+  protected TableName tableName;
+  protected int snapshot0Rows;
+  protected int snapshot1Rows;
+  protected Admin admin;
 
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  protected static void setupConfiguration() {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
@@ -69,6 +68,11 @@ public class TestCloneSnapshotFromClient {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
+  }
+
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    setupConfiguration();
     TEST_UTIL.startMiniCluster(3);
   }
 
@@ -93,6 +97,10 @@ public class TestCloneSnapshotFromClient {
     snapshotName1 = Bytes.toBytes("snaptb1-" + tid);
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
+    createTableAndSnapshots();
+  }
+
+  protected void createTableAndSnapshots() throws Exception {
     // create Table and disable it
     SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
     admin.disableTable(tableName);
@@ -164,7 +172,7 @@ public class TestCloneSnapshotFromClient {
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshotRows);
+    verifyRowCount(TEST_UTIL, tableName, snapshotRows);
 
     verifyReplicasCameOnline(tableName);
     TEST_UTIL.deleteTable(tableName);
@@ -193,7 +201,7 @@ public class TestCloneSnapshotFromClient {
     // Clone a table from the first snapshot
     TableName clonedTableName = TableName.valueOf("clonedtb1-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
 
     // Take a snapshot of this cloned table.
     admin.disableTable(clonedTableName);
@@ -202,7 +210,7 @@ public class TestCloneSnapshotFromClient {
     // Clone the snapshot of the cloned table
     TableName clonedTableName2 = TableName.valueOf("clonedtb2-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName2);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
 
     // Remove the original table
@@ -211,11 +219,11 @@ public class TestCloneSnapshotFromClient {
 
     // Verify the first cloned table
     admin.enableTable(clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
 
     // Verify the second cloned table
     admin.enableTable(clonedTableName2);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
     admin.disableTable(clonedTableName2);
 
     // Delete the first cloned table
@@ -224,12 +232,12 @@ public class TestCloneSnapshotFromClient {
 
     // Verify the second cloned table
     admin.enableTable(clonedTableName2);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName2, snapshot0Rows);
 
     // Clone a new table from cloned
     TableName clonedTableName3 = TableName.valueOf("clonedtb3-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName2, clonedTableName3);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName3, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName3, snapshot0Rows);
 
     // Delete the cloned tables
     TEST_UTIL.deleteTable(clonedTableName2);
@@ -243,5 +251,10 @@ public class TestCloneSnapshotFromClient {
 
   private void waitCleanerRun() throws InterruptedException {
     TEST_UTIL.getMiniHBaseCluster().getMaster().getHFileCleaner().choreForTesting();
+  }
+
+  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+      long expectedRows) throws IOException {
+    SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
   }
 }

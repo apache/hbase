@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -56,21 +57,27 @@ import org.junit.experimental.categories.Category;
 public class TestRestoreSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestRestoreSnapshotFromClient.class);
 
-  private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private final byte[] FAMILY = Bytes.toBytes("cf");
+  protected final byte[] FAMILY = Bytes.toBytes("cf");
+  protected final byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
 
+  protected TableName tableName;
   private byte[] emptySnapshot;
   private byte[] snapshotName0;
   private byte[] snapshotName1;
   private byte[] snapshotName2;
   private int snapshot0Rows;
   private int snapshot1Rows;
-  private TableName tableName;
   private Admin admin;
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setupCluster() throws Exception {
+    setupConf(TEST_UTIL.getConfiguration());
+    TEST_UTIL.startMiniCluster(3);
+  }
+
+  protected static void setupConf(Configuration conf) {
     TEST_UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     TEST_UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10);
@@ -79,7 +86,6 @@ public class TestRestoreSnapshotFromClient {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     TEST_UTIL.getConfiguration().setBoolean(
         "hbase.master.enabletable.roundrobin", true);
-    TEST_UTIL.startMiniCluster(3);
   }
 
   @AfterClass
@@ -105,7 +111,7 @@ public class TestRestoreSnapshotFromClient {
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    createTable();
     admin.disableTable(tableName);
 
     // take an empty snapshot
@@ -115,7 +121,7 @@ public class TestRestoreSnapshotFromClient {
     admin.enableTable(tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-      snapshot0Rows = TEST_UTIL.countRows(table);
+      snapshot0Rows = countRows(table);
     }
     admin.disableTable(tableName);
 
@@ -126,8 +132,12 @@ public class TestRestoreSnapshotFromClient {
     admin.enableTable(tableName);
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, FAMILY);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
-      snapshot1Rows = TEST_UTIL.countRows(table);
+      snapshot1Rows = countRows(table);
     }
+  }
+
+  protected void createTable() throws Exception {
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
   }
 
   @After
@@ -139,33 +149,33 @@ public class TestRestoreSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshot() throws IOException {
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
     admin.disableTable(tableName);
     admin.snapshot(snapshotName1, tableName);
     // Restore from snapshot-0
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from emptySnapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, 0);
+    verifyRowCount(TEST_UTIL, tableName, 0);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
 
     // Restore from snapshot-1
     TEST_UTIL.deleteTable(tableName);
     admin.restoreSnapshot(snapshotName1);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
@@ -173,23 +183,25 @@ public class TestRestoreSnapshotFromClient {
     return 1;
   }
 
+  protected HColumnDescriptor getTestRestoreSchemaChangeHCD() {
+    return new HColumnDescriptor(TEST_FAMILY2);
+  }
+
   @Test
   public void testRestoreSchemaChange() throws Exception {
-    byte[] TEST_FAMILY2 = Bytes.toBytes("cf2");
-
     Table table = TEST_UTIL.getConnection().getTable(tableName);
 
     // Add one column family and put some data in it
     admin.disableTable(tableName);
-    admin.addColumnFamily(tableName, new HColumnDescriptor(TEST_FAMILY2));
+    admin.addColumnFamily(tableName, getTestRestoreSchemaChangeHCD());
     admin.enableTable(tableName);
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
     HTableDescriptor htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
     SnapshotTestingUtils.loadData(TEST_UTIL, tableName, 500, TEST_FAMILY2);
     long snapshot2Rows = snapshot1Rows + 500;
-    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
-    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
+    assertEquals(snapshot2Rows, countRows(table));
+    assertEquals(500, countRows(table, TEST_FAMILY2));
     Set<String> fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(2, fsFamilies.size());
 
@@ -202,12 +214,12 @@ public class TestRestoreSnapshotFromClient {
     admin.enableTable(tableName);
     assertEquals(1, table.getTableDescriptor().getFamilies().size());
     try {
-      TEST_UTIL.countRows(table, TEST_FAMILY2);
+      countRows(table, TEST_FAMILY2);
       fail("family '" + Bytes.toString(TEST_FAMILY2) + "' should not exists");
     } catch (NoSuchColumnFamilyException e) {
       // expected
     }
-    assertEquals(snapshot0Rows, TEST_UTIL.countRows(table));
+    assertEquals(snapshot0Rows, countRows(table));
     htd = admin.getTableDescriptor(tableName);
     assertEquals(1, htd.getFamilies().size());
     fsFamilies = getFamiliesFromFS(tableName);
@@ -220,8 +232,8 @@ public class TestRestoreSnapshotFromClient {
     htd = admin.getTableDescriptor(tableName);
     assertEquals(2, htd.getFamilies().size());
     assertEquals(2, table.getTableDescriptor().getFamilies().size());
-    assertEquals(500, TEST_UTIL.countRows(table, TEST_FAMILY2));
-    assertEquals(snapshot2Rows, TEST_UTIL.countRows(table));
+    assertEquals(500, countRows(table, TEST_FAMILY2));
+    assertEquals(snapshot2Rows, countRows(table));
     fsFamilies = getFamiliesFromFS(tableName);
     assertEquals(2, fsFamilies.size());
     table.close();
@@ -232,7 +244,7 @@ public class TestRestoreSnapshotFromClient {
     TableName clonedTableName =
         TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
@@ -240,7 +252,7 @@ public class TestRestoreSnapshotFromClient {
     waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
     TEST_UTIL.deleteTable(clonedTableName);
   }
@@ -251,14 +263,14 @@ public class TestRestoreSnapshotFromClient {
     waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName0, tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
     waitCleanerRun();
 
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
+    verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
     SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
   }
 
@@ -295,5 +307,14 @@ public class TestRestoreSnapshotFromClient {
       }
     }
     return families;
+  }
+
+  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+      long expectedRows) throws IOException {
+    SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
+  }
+
+  protected int countRows(final Table table, final byte[]... families) throws IOException {
+    return TEST_UTIL.countRows(table, families);
   }
 }

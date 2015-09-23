@@ -21,6 +21,7 @@ import java.io.IOException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -51,20 +52,25 @@ import org.junit.experimental.categories.Category;
 public class TestRestoreFlushSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestRestoreFlushSnapshotFromClient.class);
 
-  private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private final byte[] FAMILY = Bytes.toBytes("cf");
+  protected final byte[] FAMILY = Bytes.toBytes("cf");
 
-  private byte[] snapshotName0;
-  private byte[] snapshotName1;
-  private byte[] snapshotName2;
-  private int snapshot0Rows;
-  private int snapshot1Rows;
-  private TableName tableName;
-  private Admin admin;
+  protected byte[] snapshotName0;
+  protected byte[] snapshotName1;
+  protected byte[] snapshotName2;
+  protected int snapshot0Rows;
+  protected int snapshot1Rows;
+  protected TableName tableName;
+  protected Admin admin;
 
   @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  public static void setupCluster() throws Exception {
+    setupConf(UTIL.getConfiguration());
+    UTIL.startMiniCluster(3);
+  }
+
+  protected static void setupConf(Configuration conf) {
     UTIL.getConfiguration().setBoolean("hbase.online.schema.update.enable", true);
     UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     UTIL.getConfiguration().setInt("hbase.client.pause", 250);
@@ -76,13 +82,15 @@ public class TestRestoreFlushSnapshotFromClient {
     UTIL.getConfiguration().setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     UTIL.getConfiguration().setLong(RegionServerSnapshotManager.SNAPSHOT_TIMEOUT_MILLIS_KEY,
       RegionServerSnapshotManager.SNAPSHOT_TIMEOUT_MILLIS_DEFAULT * 2);
-
-    UTIL.startMiniCluster(3);
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
+  }
+
+  protected void createTable() throws Exception {
+    SnapshotTestingUtils.createTable(UTIL, tableName, FAMILY);
   }
 
   /**
@@ -101,10 +109,10 @@ public class TestRestoreFlushSnapshotFromClient {
     snapshotName2 = Bytes.toBytes("snaptb2-" + tid);
 
     // create Table and disable it
-    SnapshotTestingUtils.createTable(UTIL, tableName, FAMILY);
+    createTable();
     SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
     Table table = UTIL.getConnection().getTable(tableName);
-    snapshot0Rows = UTIL.countRows(table);
+    snapshot0Rows = countRows(table);
     LOG.info("=== before snapshot with 500 rows");
     logFSTree();
 
@@ -117,7 +125,7 @@ public class TestRestoreFlushSnapshotFromClient {
 
     // insert more data
     SnapshotTestingUtils.loadData(UTIL, tableName, 500, FAMILY);
-    snapshot1Rows = UTIL.countRows(table);
+    snapshot1Rows = countRows(table);
     LOG.info("=== before snapshot with 1000 rows");
     logFSTree();
 
@@ -142,7 +150,7 @@ public class TestRestoreFlushSnapshotFromClient {
 
   @Test
   public void testRestoreSnapshot() throws IOException {
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
+    verifyRowCount(UTIL, tableName, snapshot1Rows);
 
     // Restore from snapshot-0
     admin.disableTable(tableName);
@@ -151,13 +159,13 @@ public class TestRestoreFlushSnapshotFromClient {
     admin.enableTable(tableName);
     LOG.info("=== after restore with 500 row snapshot");
     logFSTree();
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot0Rows);
+    verifyRowCount(UTIL, tableName, snapshot0Rows);
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshot1Rows);
+    verifyRowCount(UTIL, tableName, snapshot1Rows);
   }
 
   @Test(expected=SnapshotDoesNotExistException.class)
@@ -178,7 +186,7 @@ public class TestRestoreFlushSnapshotFromClient {
       int snapshotRows) throws IOException, InterruptedException {
     // create a new table from snapshot
     admin.cloneSnapshot(snapshotName, tableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, tableName, snapshotRows);
+    verifyRowCount(UTIL, tableName, snapshotRows);
 
     UTIL.deleteTable(tableName);
   }
@@ -187,12 +195,12 @@ public class TestRestoreFlushSnapshotFromClient {
   public void testRestoreSnapshotOfCloned() throws IOException, InterruptedException {
     TableName clonedTableName = TableName.valueOf("clonedtb-" + System.currentTimeMillis());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
     admin.snapshot(Bytes.toString(snapshotName2), clonedTableName, SnapshotDescription.Type.FLUSH);
     UTIL.deleteTable(clonedTableName);
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
-    SnapshotTestingUtils.verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
+    verifyRowCount(UTIL, clonedTableName, snapshot0Rows);
     UTIL.deleteTable(clonedTableName);
   }
 
@@ -202,5 +210,14 @@ public class TestRestoreFlushSnapshotFromClient {
   private void logFSTree() throws IOException {
     MasterFileSystem mfs = UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
     FSUtils.logFileSystemState(mfs.getFileSystem(), mfs.getRootDir(), LOG);
+  }
+
+  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+      long expectedRows) throws IOException {
+    SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
+  }
+
+  protected int countRows(final Table table, final byte[]... families) throws IOException {
+    return UTIL.countRows(table, families);
   }
 }

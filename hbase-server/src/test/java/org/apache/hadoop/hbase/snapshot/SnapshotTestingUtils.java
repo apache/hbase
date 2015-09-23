@@ -448,7 +448,7 @@ public class SnapshotTestingUtils {
   //  Snapshot Mock
   // ==========================================================================
   public static class SnapshotMock {
-    private final static String TEST_FAMILY = "cf";
+    protected final static String TEST_FAMILY = "cf";
     public final static int TEST_NUM_REGIONS = 4;
 
     private final Configuration conf;

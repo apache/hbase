@@ -63,9 +63,10 @@ import com.google.common.collect.Lists;
 @Category({LargeTests.class, ClientTests.class})
 public class TestSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestSnapshotFromClient.class);
+
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final int NUM_RS = 2;
-  private static final String STRING_TABLE_NAME = "test";
+  protected static final int NUM_RS = 2;
+  protected static final String STRING_TABLE_NAME = "test";
   protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
   protected static final TableName TABLE_NAME =
       TableName.valueOf(STRING_TABLE_NAME);
@@ -80,7 +81,7 @@ public class TestSnapshotFromClient {
     UTIL.startMiniCluster(NUM_RS);
   }
 
-  private static void setupConf(Configuration conf) {
+  protected static void setupConf(Configuration conf) {
     // disable the ui
     conf.setInt("hbase.regionsever.info.port", -1);
     // change the flush size to a small amount, regulating number of store files
@@ -99,6 +100,10 @@ public class TestSnapshotFromClient {
 
   @Before
   public void setup() throws Exception {
+    createTable();
+  }
+
+  protected void createTable() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.setRegionReplication(getNumReplicas());
     UTIL.createTable(htd, new byte[][]{TEST_FAM}, null);

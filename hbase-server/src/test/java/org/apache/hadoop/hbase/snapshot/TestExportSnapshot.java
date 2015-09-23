@@ -68,12 +68,12 @@ public class TestExportSnapshot {
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private final static byte[] FAMILY = Bytes.toBytes("cf");
+  protected final static byte[] FAMILY = Bytes.toBytes("cf");
 
+  protected TableName tableName;
   private byte[] emptySnapshotName;
   private byte[] snapshotName;
   private int tableNumFiles;
-  private TableName tableName;
   private Admin admin;
 
   public static void setUpBaseConf(Configuration conf) {
@@ -111,7 +111,7 @@ public class TestExportSnapshot {
     emptySnapshotName = Bytes.toBytes("emptySnaptb0-" + tid);
 
     // create Table
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
+    createTable();
 
     // Take an empty snapshot
     admin.snapshot(emptySnapshotName, tableName);
@@ -122,6 +122,10 @@ public class TestExportSnapshot {
 
     // take a snapshot
     admin.snapshot(snapshotName, tableName);
+  }
+
+  protected void createTable() throws Exception {
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, FAMILY);
   }
 
   @After
@@ -356,6 +360,10 @@ public class TestExportSnapshot {
     assertEquals(listFiles(fs1, root1, root1), listFiles(fs2, root2, root2));
   }
 
+  protected boolean bypassRegion(HRegionInfo regionInfo) {
+    return false;
+  }
+
   /*
    * Verify if the files exists
    */
@@ -370,6 +378,9 @@ public class TestExportSnapshot {
         @Override
         public void storeFile(final HRegionInfo regionInfo, final String family,
             final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          if (bypassRegion(regionInfo))
+            return;
+
           String hfile = storeFile.getName();
           snapshotFiles.add(hfile);
           if (storeFile.hasReference()) {

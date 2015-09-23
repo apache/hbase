@@ -67,28 +67,20 @@ import org.junit.experimental.categories.Category;
 @Category({RegionServerTests.class, LargeTests.class})
 public class TestFlushSnapshotFromClient {
   private static final Log LOG = LogFactory.getLog(TestFlushSnapshotFromClient.class);
-  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static final int NUM_RS = 2;
-  private static final byte[] TEST_FAM = Bytes.toBytes("fam");
-  private static final TableName TABLE_NAME = TableName.valueOf("test");
-  private final int DEFAULT_NUM_ROWS = 100;
 
-  /**
-   * Setup the config for the cluster
-   * @throws Exception on failure
-   */
+  protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  protected static final int NUM_RS = 2;
+  protected static final byte[] TEST_FAM = Bytes.toBytes("fam");
+  protected static final TableName TABLE_NAME = TableName.valueOf("test");
+  protected final int DEFAULT_NUM_ROWS = 100;
+
   @BeforeClass
   public static void setupCluster() throws Exception {
-    // Uncomment the following lines if more verbosity is needed for
-    // debugging (see HBASE-12285 for details).
-    //((Log4JLogger)RpcServer.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)AbstractRpcClient.LOG).getLogger().setLevel(Level.ALL);
-    //((Log4JLogger)ScannerCallable.LOG).getLogger().setLevel(Level.ALL);
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }
 
-  private static void setupConf(Configuration conf) {
+  protected static void setupConf(Configuration conf) {
     // disable the ui
     conf.setInt("hbase.regionsever.info.port", -1);
     // change the flush size to a small amount, regulating number of store files
@@ -107,6 +99,10 @@ public class TestFlushSnapshotFromClient {
 
   @Before
   public void setup() throws Exception {
+    createTable();
+  }
+
+  protected void createTable() throws Exception {
     SnapshotTestingUtils.createTable(UTIL, TABLE_NAME, TEST_FAM);
   }
 
@@ -344,9 +340,9 @@ public class TestFlushSnapshotFromClient {
     admin.cloneSnapshot(snapshotBeforeMergeName, cloneAfterMergeName);
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneAfterMergeName);
 
-    SnapshotTestingUtils.verifyRowCount(UTIL, TABLE_NAME, numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, cloneBeforeMergeName, numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, cloneAfterMergeName, numRows);
+    verifyRowCount(UTIL, TABLE_NAME, numRows);
+    verifyRowCount(UTIL, cloneBeforeMergeName, numRows);
+    verifyRowCount(UTIL, cloneAfterMergeName, numRows);
 
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneAfterMergeName);
@@ -390,8 +386,8 @@ public class TestFlushSnapshotFromClient {
     admin.cloneSnapshot(snapshotName, cloneName);
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, cloneName);
 
-    SnapshotTestingUtils.verifyRowCount(UTIL, TABLE_NAME, numRows);
-    SnapshotTestingUtils.verifyRowCount(UTIL, cloneName, numRows);
+    verifyRowCount(UTIL, TABLE_NAME, numRows);
+    verifyRowCount(UTIL, cloneName, numRows);
 
     // test that we can delete the snapshot
     UTIL.deleteTable(cloneName);
@@ -538,5 +534,15 @@ public class TestFlushSnapshotFromClient {
       Thread.sleep(100);
     }
     SnapshotTestingUtils.waitForTableToBeOnline(UTIL, TABLE_NAME);
+  }
+
+
+  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
+      long expectedRows) throws IOException {
+    SnapshotTestingUtils.verifyRowCount(util, tableName, expectedRows);
+  }
+
+  protected int countRows(final Table table, final byte[]... families) throws IOException {
+    return UTIL.countRows(table, families);
   }
 }
