@@ -90,24 +90,31 @@ public class HeapMemorySizeUtil {
   }
 
   /**
-   * Retrieve configured size for global memstore lower water mark as percentage of total heap.
-   * @param c
-   * @param globalMemStorePercent
+   * Retrieve configured size for global memstore lower water mark as fraction of global memstore
+   * size.
    */
-  public static float getGlobalMemStoreLowerMark(final Configuration c, float globalMemStorePercent) {
-    String lowMarkPercentStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_KEY);
+  public static float getGlobalMemStoreLowerMark(final Configuration conf, float globalMemStorePercent) {
+    String lowMarkPercentStr = conf.get(MEMSTORE_SIZE_LOWER_LIMIT_KEY);
     if (lowMarkPercentStr != null) {
-      return Float.parseFloat(lowMarkPercentStr);
+      float lowMarkPercent = Float.parseFloat(lowMarkPercentStr);
+      if (lowMarkPercent > 1.0f) {
+        LOG.error("Bad configuration value for " + MEMSTORE_SIZE_LOWER_LIMIT_KEY + ": " +
+            lowMarkPercent + ". Using 1.0f instead.");
+        lowMarkPercent = 1.0f;
+      }
+      return lowMarkPercent;
     }
-    String lowerWaterMarkOldValStr = c.get(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY);
+    String lowerWaterMarkOldValStr = conf.get(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY);
     if (lowerWaterMarkOldValStr != null) {
       LOG.warn(MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " is deprecated. Instead use "
           + MEMSTORE_SIZE_LOWER_LIMIT_KEY);
       float lowerWaterMarkOldVal = Float.parseFloat(lowerWaterMarkOldValStr);
       if (lowerWaterMarkOldVal > globalMemStorePercent) {
         lowerWaterMarkOldVal = globalMemStorePercent;
-        LOG.info("Setting globalMemStoreLimitLowMark == globalMemStoreLimit " + "because supplied "
-            + MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " was > " + MEMSTORE_SIZE_OLD_KEY);
+        LOG.error("Value of " + MEMSTORE_SIZE_LOWER_LIMIT_OLD_KEY + " (" + lowerWaterMarkOldVal
+            + ") is greater than global memstore limit (" + globalMemStorePercent + ") set by "
+            + MEMSTORE_SIZE_KEY + "/" + MEMSTORE_SIZE_OLD_KEY + ". Setting memstore lower limit "
+            + "to " + globalMemStorePercent);
       }
       return lowerWaterMarkOldVal / globalMemStorePercent;
     }
