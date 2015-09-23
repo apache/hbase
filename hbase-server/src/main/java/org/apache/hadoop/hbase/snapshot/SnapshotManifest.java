@@ -65,7 +65,7 @@ import org.apache.hadoop.hbase.util.Threads;
  * On open() the snapshot will be loaded to the current in-memory format.
  */
 @InterfaceAudience.Private
-public class SnapshotManifest {
+public final class SnapshotManifest {
   private static final Log LOG = LogFactory.getLog(SnapshotManifest.class);
 
   private static final String DATA_MANIFEST_NAME = "data.manifest";

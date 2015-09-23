@@ -1028,7 +1028,6 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
       // Inject snapshot cleaners, if snapshot.enable is true
       hfileCleaners.add(SnapshotHFileCleaner.class.getName());
       hfileCleaners.add(HFileLinkCleaner.class.getName());
-      logCleaners.add(SnapshotLogCleaner.class.getName());
 
       // Set cleaners conf
       conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
@@ -1037,7 +1036,7 @@ public class SnapshotManager extends MasterProcedureManager implements Stoppable
         logCleaners.toArray(new String[logCleaners.size()]));
     } else {
       // Verify if cleaners are present
-      snapshotEnabled = logCleaners.contains(SnapshotLogCleaner.class.getName()) &&
+      snapshotEnabled =
         hfileCleaners.contains(SnapshotHFileCleaner.class.getName()) &&
         hfileCleaners.contains(HFileLinkCleaner.class.getName());
 

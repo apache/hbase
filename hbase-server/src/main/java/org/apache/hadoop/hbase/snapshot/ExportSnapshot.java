@@ -209,8 +209,7 @@ public class ExportSnapshot extends Configured implements Tool {
               new Path(region, new Path(family, hfile)));
           break;
         case WAL:
-          Path oldLogsDir = new Path(outputRoot, HConstants.HREGION_OLDLOGDIR_NAME);
-          path = new Path(oldLogsDir, inputInfo.getWalName());
+          LOG.warn("snapshot does not keeps WALs: " + inputInfo);
           break;
         default:
           throw new IOException("Invalid File Type: " + inputInfo.getType().toString());
@@ -558,19 +557,6 @@ public class ExportSnapshot extends Configured implements Tool {
             }
             files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
           }
-        }
-
-        @Override
-        public void logFile (final String server, final String logfile)
-            throws IOException {
-          SnapshotFileInfo fileInfo = SnapshotFileInfo.newBuilder()
-            .setType(SnapshotFileInfo.Type.WAL)
-            .setWalServer(server)
-            .setWalName(logfile)
-            .build();
-
-          long size = new WALLink(conf, server, logfile).getFileStatus(fs).getLen();
-          files.add(new Pair<SnapshotFileInfo, Long>(fileInfo, size));
         }
     });
 

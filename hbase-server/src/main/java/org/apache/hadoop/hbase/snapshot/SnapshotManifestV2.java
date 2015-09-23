@@ -53,12 +53,14 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *      /snapshotName/manifest.regionName
  */
 @InterfaceAudience.Private
-public class SnapshotManifestV2 {
+public final class SnapshotManifestV2 {
   private static final Log LOG = LogFactory.getLog(SnapshotManifestV2.class);
 
   public static final int DESCRIPTOR_VERSION = 2;
 
   private static final String SNAPSHOT_MANIFEST_PREFIX = "region-manifest.";
+
+  private SnapshotManifestV2() {}
 
   static class ManifestBuilder implements SnapshotManifest.RegionVisitor<
                     SnapshotRegionManifest.Builder, SnapshotRegionManifest.FamilyFiles.Builder> {

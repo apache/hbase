@@ -42,9 +42,7 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.wal.DefaultWALProvider;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 
 /**
@@ -59,8 +57,7 @@ public final class SnapshotReferenceUtil {
        final SnapshotRegionManifest.StoreFile storeFile) throws IOException;
   }
 
-  public interface SnapshotVisitor extends StoreFileVisitor,
-    FSVisitor.LogFileVisitor {
+  public interface SnapshotVisitor extends StoreFileVisitor {
   }
 
   private SnapshotReferenceUtil() {
@@ -68,18 +65,7 @@ public final class SnapshotReferenceUtil {
   }
 
   /**
-   * Get log directory for a server in a snapshot.
-   *
-   * @param snapshotDir directory where the specific snapshot is stored
-   * @param serverName name of the parent regionserver for the log files
-   * @return path to the log home directory for the archive files.
-   */
-  public static Path getLogsDir(Path snapshotDir, String serverName) {
-    return new Path(snapshotDir, DefaultWALProvider.getWALDirectoryName(serverName));
-  }
-
-  /**
-   * Iterate over the snapshot store files, restored.edits and logs
+   * Iterate over the snapshot store files
    *
    * @param conf The current {@link Configuration} instance.
    * @param fs {@link FileSystem}
@@ -108,7 +94,6 @@ public final class SnapshotReferenceUtil {
       final Path snapshotDir, final SnapshotDescription desc, final SnapshotVisitor visitor)
       throws IOException {
     visitTableStoreFiles(conf, fs, snapshotDir, desc, visitor);
-    visitLogFiles(fs, snapshotDir, visitor);
   }
 
   /**©
@@ -152,19 +137,6 @@ public final class SnapshotReferenceUtil {
         visitor.storeFile(regionInfo, familyName, storeFile);
       }
     }
-  }
-
-  /**
-   * Iterate over the snapshot log files
-   *
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @param visitor callback object to get the log files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static void visitLogFiles(final FileSystem fs, final Path snapshotDir,
-      final FSVisitor.LogFileVisitor visitor) throws IOException {
-    FSVisitor.visitLogFiles(fs, snapshotDir, visitor);
   }
 
   /**
@@ -363,26 +335,6 @@ public final class SnapshotReferenceUtil {
         } else {
           names.add(hfile);
         }
-      }
-    });
-    return names;
-  }
-
-  /**
-   * Returns the log file names available in the snapshot.
-   *
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @throws IOException if an error occurred while scanning the directory
-   * @return the names of wals in the specified snaphot
-   */
-  public static Set<String> getWALNames(final FileSystem fs, final Path snapshotDir)
-      throws IOException {
-    final Set<String> names = new HashSet<String>();
-    visitLogFiles(fs, snapshotDir, new FSVisitor.LogFileVisitor() {
-      @Override
-      public void logFile (final String server, final String logfile) throws IOException {
-        names.add(logfile);
       }
     });
     return names;

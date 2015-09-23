@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptor;
@@ -558,43 +557,6 @@ public class MasterFileSystem {
     }
   }
 
-
-  public void deleteRegion(HRegionInfo region) throws IOException {
-    HFileArchiver.archiveRegion(conf, fs, region);
-  }
-
-  public void deleteTable(TableName tableName) throws IOException {
-    fs.delete(FSUtils.getTableDir(rootdir, tableName), true);
-  }
-
-  /**
-   * Move the specified table to the hbase temp directory
-   * @param tableName Table name to move
-   * @return The temp location of the table moved
-   * @throws IOException in case of file-system failure
-   */
-  public Path moveTableToTemp(TableName tableName) throws IOException {
-    Path srcPath = FSUtils.getTableDir(rootdir, tableName);
-    Path tempPath = FSUtils.getTableDir(this.tempdir, tableName);
-
-    // Ensure temp exists
-    if (!fs.exists(tempPath.getParent()) && !fs.mkdirs(tempPath.getParent())) {
-      throw new IOException("HBase temp directory '" + tempPath.getParent() + "' creation failure.");
-    }
-
-    if (!fs.rename(srcPath, tempPath)) {
-      throw new IOException("Unable to move '" + srcPath + "' to temp '" + tempPath + "'");
-    }
-
-    return tempPath;
-  }
-
-  public void updateRegionInfo(HRegionInfo region) {
-    // TODO implement this.  i think this is currently broken in trunk i don't
-    //      see this getting updated.
-    //      @see HRegion.checkRegioninfoOnFilesystem()
-  }
-
   public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName, boolean hasMob)
       throws IOException {
     // archive family store files
@@ -636,67 +598,6 @@ public class MasterFileSystem {
     if (splitLogManager != null) {
       this.splitLogManager.stop();
     }
-  }
-
-  /**
-   * Delete column of a table
-   * @param tableName
-   * @param familyName
-   * @return Modified HTableDescriptor with requested column deleted.
-   * @throws IOException
-   */
-  public HTableDescriptor deleteColumn(TableName tableName, byte[] familyName)
-      throws IOException {
-    LOG.info("DeleteColumn. Table = " + tableName
-        + " family = " + Bytes.toString(familyName));
-    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
-    htd.removeFamily(familyName);
-    this.services.getTableDescriptors().add(htd);
-    return htd;
-  }
-
-  /**
-   * Modify Column of a table
-   * @param tableName
-   * @param hcd HColumnDesciptor
-   * @return Modified HTableDescriptor with the column modified.
-   * @throws IOException
-   */
-  public HTableDescriptor modifyColumn(TableName tableName, HColumnDescriptor hcd)
-      throws IOException {
-    LOG.info("AddModifyColumn. Table = " + tableName
-        + " HCD = " + hcd.toString());
-
-    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
-    byte [] familyName = hcd.getName();
-    if(!htd.hasFamily(familyName)) {
-      throw new InvalidFamilyOperationException("Family '" +
-        Bytes.toString(familyName) + "' doesn't exists so cannot be modified");
-    }
-    htd.modifyFamily(hcd);
-    this.services.getTableDescriptors().add(htd);
-    return htd;
-  }
-
-  /**
-   * Add column to a table
-   * @param tableName
-   * @param hcd
-   * @return Modified HTableDescriptor with new column added.
-   * @throws IOException
-   */
-  public HTableDescriptor addColumn(TableName tableName, HColumnDescriptor hcd)
-      throws IOException {
-    LOG.info("AddColumn. Table = " + tableName + " HCD = " +
-      hcd.toString());
-    HTableDescriptor htd = this.services.getTableDescriptors().get(tableName);
-    if (htd == null) {
-      throw new InvalidFamilyOperationException("Family '" +
-        hcd.getNameAsString() + "' cannot be modified as HTD is null");
-    }
-    htd.addFamily(hcd);
-    this.services.getTableDescriptors().add(htd);
-    return htd;
   }
 
   /**

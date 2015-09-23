@@ -381,13 +381,6 @@ public class TestMobExportSnapshot {
           }
         }
 
-        @Override
-        public void logFile (final String server, final String logfile)
-            throws IOException {
-          snapshotFiles.add(logfile);
-          verifyNonEmptyFile(new Path(exportedSnapshot, new Path(server, logfile)));
-        }
-
         private void verifyNonEmptyFile(final Path path) throws IOException {
           assertTrue(path + " should exists", fs.exists(path));
           assertTrue(path + " should not be empty", fs.getFileStatus(path).getLen() > 0);

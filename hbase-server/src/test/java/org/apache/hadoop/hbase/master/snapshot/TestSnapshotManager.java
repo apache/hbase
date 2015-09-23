@@ -121,7 +121,6 @@ public class TestSnapshotManager {
     conf = new Configuration();
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
-    conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, SnapshotLogCleaner.class.getName());
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     manager = getNewManager(conf);
     assertFalse("Snapshot should be disabled", isSnapshotSupported(manager));
@@ -130,7 +129,6 @@ public class TestSnapshotManager {
     conf = new Configuration();
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS,
       SnapshotHFileCleaner.class.getName(), HFileLinkCleaner.class.getName());
-    conf.set(HConstants.HBASE_MASTER_LOGCLEANER_PLUGINS, SnapshotLogCleaner.class.getName());
     manager = getNewManager(conf);
     assertTrue("Snapshot should be enabled, because cleaners are present",
       isSnapshotSupported(manager));
