@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.CloseRegionRequest
 import org.apache.hadoop.hbase.regionserver.handler.OpenRegionHandler;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.zookeeper.ZKAssign;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
@@ -92,12 +93,14 @@ public class TestRegionServerNoMaster {
 
   public static void stopMasterAndAssignMeta(HBaseTestingUtility HTU)
       throws NodeExistsException, KeeperException, IOException, InterruptedException {
-    // No master
-    HTU.getHBaseCluster().getMaster().stopMaster();
+    // Stop master
+    HMaster master = HTU.getHBaseCluster().getMaster();
+    Thread masterThread = HTU.getHBaseCluster().getMasterThread();
+    ServerName masterAddr = master.getServerName();
+    master.stopMaster();
 
     Log.info("Waiting until master thread exits");
-    while (HTU.getHBaseCluster().getMasterThread() != null
-        && HTU.getHBaseCluster().getMasterThread().isAlive()) {
+    while (masterThread != null && masterThread.isAlive()) {
       Threads.sleep(100);
     }
   }
