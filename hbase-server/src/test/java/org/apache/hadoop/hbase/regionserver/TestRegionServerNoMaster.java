@@ -92,12 +92,12 @@ public class TestRegionServerNoMaster {
       throws IOException, InterruptedException {
     // Stop master
     HMaster master = HTU.getHBaseCluster().getMaster();
+    Thread masterThread = HTU.getHBaseCluster().getMasterThread();
     ServerName masterAddr = master.getServerName();
     master.stopMaster();
 
     Log.info("Waiting until master thread exits");
-    while (HTU.getHBaseCluster().getMasterThread() != null
-        && HTU.getHBaseCluster().getMasterThread().isAlive()) {
+    while (masterThread != null && masterThread.isAlive()) {
       Threads.sleep(100);
     }
 
