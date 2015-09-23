@@ -19,14 +19,12 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -50,16 +48,15 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.LogRoller;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.trace.HBaseHTraceConfiguration;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.htrace.HTraceConfiguration;
 import org.apache.htrace.Sampler;
 import org.apache.htrace.Trace;
 import org.apache.htrace.TraceScope;
@@ -98,6 +95,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
       TimeUnit.MILLISECONDS);
   private final Histogram latencyHistogram =
     metrics.newHistogram(WALPerformanceEvaluation.class, "latencyHistogram", "nanos", true);
+
+  private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
   private HBaseTestingUtility TEST_UTIL;
 
@@ -179,8 +178,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
             WALEdit walEdit = new WALEdit();
             addFamilyMapToWALEdit(put.getFamilyCellMap(), walEdit);
             HRegionInfo hri = region.getRegionInfo();
-            final WALKey logkey = new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now);
-            wal.append(htd, hri, logkey, walEdit, region.getSequenceId(), true, null);
+            final WALKey logkey =
+                new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc);
+            wal.append(htd, hri, logkey, walEdit, true);
             if (!this.noSync) {
               if (++lastSync >= this.syncInterval) {
                 wal.sync();

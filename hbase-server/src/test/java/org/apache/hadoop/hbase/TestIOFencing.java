@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -46,12 +45,12 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
-import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -225,8 +224,7 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompaction() throws Exception {
-    doTest(BlockCompactionsInPrepRegion.class, false);
-    doTest(BlockCompactionsInPrepRegion.class, true);
+    doTest(BlockCompactionsInPrepRegion.class);
   }
 
   /**
@@ -237,13 +235,11 @@ public class TestIOFencing {
    */
   @Test
   public void testFencingAroundCompactionAfterWALSync() throws Exception {
-    doTest(BlockCompactionsInCompletionRegion.class, false);
-    doTest(BlockCompactionsInCompletionRegion.class, true);
+    doTest(BlockCompactionsInCompletionRegion.class);
   }
 
-  public void doTest(Class<?> regionClass, boolean distributedLogReplay) throws Exception {
+  public void doTest(Class<?> regionClass) throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
-    c.setBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY, distributedLogReplay);
     // Insert our custom region
     c.setClass(HConstants.REGION_IMPL, regionClass, HRegion.class);
     c.setBoolean("dfs.support.append", true);
@@ -285,7 +281,7 @@ public class TestIOFencing {
         FAMILY, Lists.newArrayList(new Path("/a")), Lists.newArrayList(new Path("/b")),
         new Path("store_dir"));
       WALUtil.writeCompactionMarker(compactingRegion.getWAL(), table.getTableDescriptor(),
-        oldHri, compactionDescriptor, new AtomicLong(Long.MAX_VALUE-100));
+        oldHri, compactionDescriptor, compactingRegion.getMVCC());
 
       // Wait till flush has happened, otherwise there won't be multiple store files
       long startWaitTime = System.currentTimeMillis();

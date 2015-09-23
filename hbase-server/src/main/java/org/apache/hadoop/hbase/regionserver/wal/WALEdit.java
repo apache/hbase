@@ -73,7 +73,7 @@ import com.google.common.annotations.VisibleForTesting;
  * where, the WALEdit is serialized as:
  *   &lt;-1, # of edits, &lt;KeyValue&gt;, &lt;KeyValue&gt;, ... &gt;
  * For example:
- *   &lt;-1, 3, &lt;Keyvalue-for-edit-c1&gt;, &lt;KeyValue-for-edit-c2&gt;, &lt;KeyValue-for-edit-c3&gt;&gt;
+ *   &lt;-1, 3, &lt;KV-for-edit-c1&gt;, &lt;KV-for-edit-c2&gt;, &lt;KV-for-edit-c3&gt;&gt;
  *
  * The -1 marker is just a special way of being backward compatible with
  * an old WAL which would have contained a single &lt;KeyValue&gt;.
@@ -104,6 +104,9 @@ public class WALEdit implements Writable, HeapSize {
   public static final WALEdit EMPTY_WALEDIT = new WALEdit();
 
   // Only here for legacy writable deserialization
+  /**
+   * @deprecated Legacy
+   */
   @Deprecated
   private NavigableMap<byte[], Integer> scopes;
 

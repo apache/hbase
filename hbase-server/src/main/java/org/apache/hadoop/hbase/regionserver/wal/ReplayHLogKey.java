@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 
 /**
  * An HLogKey specific to WalEdits coming from replay.
@@ -32,13 +33,15 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 public class ReplayHLogKey extends HLogKey {
 
   public ReplayHLogKey(final byte [] encodedRegionName, final TableName tablename,
-      final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    super(encodedRegionName, tablename, now, clusterIds, nonceGroup, nonce);
+      final long now, List<UUID> clusterIds, long nonceGroup, long nonce,
+      MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, now, clusterIds, nonceGroup, nonce, mvcc);
   }
 
   public ReplayHLogKey(final byte [] encodedRegionName, final TableName tablename,
-      long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    super(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce);
+      long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce,
+      MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc);
   }
 
   /**

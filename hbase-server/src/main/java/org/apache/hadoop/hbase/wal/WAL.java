@@ -114,19 +114,16 @@ public interface WAL {
    * @param key Modified by this call; we add to it this edits region edit/sequence id.
    * @param edits Edits to append. MAY CONTAIN NO EDITS for case where we want to get an edit
    * sequence id that is after all currently appended edits.
-   * @param htd used to give scope for replication TODO refactor out in favor of table name and info
-   * @param sequenceId A reference to the atomic long the <code>info</code> region is using as
-   * source of its incrementing edits sequence id.  Inside in this call we will increment it and
-   * attach the sequence to the edit we apply the WAL.
+   * @param htd used to give scope for replication TODO refactor out in favor of table name and
+   * info
    * @param inMemstore Always true except for case where we are writing a compaction completion
    * record into the WAL; in this case the entry is just so we can finish an unfinished compaction
    * -- it is not an edit for memstore.
-   * @param memstoreKVs list of KVs added into memstore
    * @return Returns a 'transaction id' and <code>key</code> will have the region edit/sequence id
    * in it.
    */
   long append(HTableDescriptor htd, HRegionInfo info, WALKey key, WALEdit edits,
-      AtomicLong sequenceId, boolean inMemstore, List<Cell> memstoreKVs)
+    boolean inMemstore)
   throws IOException;
 
   /**

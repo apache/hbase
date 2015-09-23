@@ -96,7 +96,7 @@ public class TestBulkLoad {
       {
         oneOf(log).append(with(any(HTableDescriptor.class)), with(any(HRegionInfo.class)),
                 with(any(WALKey.class)), with(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-                with(any(AtomicLong.class)), with(any(boolean.class)), with(any(List.class)));
+                with(any(boolean.class)));
         will(returnValue(0l));
         oneOf(log).sync(with(any(long.class)));
       }
@@ -122,8 +122,7 @@ public class TestBulkLoad {
     Expectations expection = new Expectations() {
       {
         oneOf(log).append(with(any(HTableDescriptor.class)), with(any(HRegionInfo.class)),
-                with(any(WALKey.class)), with(bulkEventMatcher),
-                with(any(AtomicLong.class)), with(any(boolean.class)), with(any(List.class)));
+                with(any(WALKey.class)), with(bulkEventMatcher), with(any(boolean.class)));
         will(returnValue(0l));
         oneOf(log).sync(with(any(long.class)));
       }

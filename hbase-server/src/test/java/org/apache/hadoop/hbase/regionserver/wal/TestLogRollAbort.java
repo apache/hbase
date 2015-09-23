@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.Assert;
@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -192,8 +191,7 @@ public class TestLogRollAbort {
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
       final WAL log = wals.getWAL(regioninfo.getEncodedNameAsBytes(),
           regioninfo.getTable().getNamespace());
-    
-      final AtomicLong sequenceId = new AtomicLong(1);
+      MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
 
       final int total = 20;
       for (int i = 0; i < total; i++) {
@@ -202,7 +200,7 @@ public class TestLogRollAbort {
         HTableDescriptor htd = new HTableDescriptor(tableName);
         htd.addFamily(new HColumnDescriptor("column"));
         log.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis()), kvs, sequenceId, true, null);
+            System.currentTimeMillis(), mvcc), kvs, true);
       }
       // Send the data to HDFS datanodes and close the HDFS writer
       log.sync();

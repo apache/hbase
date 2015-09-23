@@ -50,7 +50,7 @@ public class TestMultiVersionConcurrencyControl extends TestCase {
       AtomicLong startPoint = new AtomicLong();
       while (!finished.get()) {
         MultiVersionConcurrencyControl.WriteEntry e =
-            mvcc.beginMemstoreInsertWithSeqNum(startPoint.incrementAndGet());
+            mvcc.begin();
         // System.out.println("Begin write: " + e.getWriteNumber());
         // 10 usec - 500usec (including 0)
         int sleepTime = rnd.nextInt(500);
@@ -61,7 +61,7 @@ public class TestMultiVersionConcurrencyControl extends TestCase {
         } catch (InterruptedException e1) {
         }
         try {
-          mvcc.completeMemstoreInsert(e);
+          mvcc.completeAndWait(e);
         } catch (RuntimeException ex) {
           // got failure
           System.out.println(ex.toString());
@@ -84,9 +84,9 @@ public class TestMultiVersionConcurrencyControl extends TestCase {
     final AtomicLong failedAt = new AtomicLong();
     Runnable reader = new Runnable() {
       public void run() {
-        long prev = mvcc.memstoreReadPoint();
+        long prev = mvcc.getReadPoint();
         while (!finished.get()) {
-          long newPrev = mvcc.memstoreReadPoint();
+          long newPrev = mvcc.getReadPoint();
           if (newPrev < prev) {
             // serious problem.
             System.out.println("Reader got out of order, prev: " + prev + " next was: " + newPrev);

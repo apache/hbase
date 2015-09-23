@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat.WALKeyRecordReader;
 import org.apache.hadoop.hbase.mapreduce.WALInputFormat.WALRecordReader;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
@@ -75,6 +76,7 @@ public class TestWALRecordReader {
   private static final byte [] value = Bytes.toBytes("value");
   private static HTableDescriptor htd;
   private static Path logDir;
+  protected MultiVersionConcurrencyControl mvcc;
 
   private static String getName() {
     return "TestWALRecordReader";
@@ -82,6 +84,7 @@ public class TestWALRecordReader {
 
   @Before
   public void setUp() throws Exception {
+    mvcc = new MultiVersionConcurrencyControl();
     FileStatus[] entries = fs.listStatus(hbaseDir);
     for (FileStatus dir : entries) {
       fs.delete(dir.getPath(), true);
@@ -124,13 +127,11 @@ public class TestWALRecordReader {
     // being millisecond based.
     long ts = System.currentTimeMillis();
     WALEdit edit = new WALEdit();
-    final AtomicLong sequenceId = new AtomicLong(0);
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"), ts, value));
-    log.append(htd, info, getWalKey(ts), edit, sequenceId, true, null);
+    log.append(htd, info, getWalKey(ts), edit, true);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"), ts+1, value));
-    log.append(htd, info, getWalKey(ts+1), edit, sequenceId,
-        true, null);
+    log.append(htd, info, getWalKey(ts+1), edit, true);
     log.sync();
     LOG.info("Before 1st WAL roll " + log.toString());
     log.rollWriter();
@@ -141,12 +142,10 @@ public class TestWALRecordReader {
 
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("3"), ts1+1, value));
-    log.append(htd, info, getWalKey(ts1+1), edit, sequenceId,
-        true, null);
+    log.append(htd, info, getWalKey(ts1+1), edit, true);
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("4"), ts1+2, value));
-    log.append(htd, info, getWalKey(ts1+2), edit, sequenceId,
-        true, null);
+    log.append(htd, info, getWalKey(ts1+2), edit, true);
     log.sync();
     log.shutdown();
     walfactory.shutdown();
@@ -188,8 +187,7 @@ public class TestWALRecordReader {
     WALEdit edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("1"),
         System.currentTimeMillis(), value));
-    long txid = log.append(htd, info, getWalKey(System.currentTimeMillis()), edit, sequenceId, true,
-        null);
+    long txid = log.append(htd, info, getWalKey(System.currentTimeMillis()), edit, true);
     log.sync(txid);
 
     Thread.sleep(1); // make sure 2nd log gets a later timestamp
@@ -199,8 +197,7 @@ public class TestWALRecordReader {
     edit = new WALEdit();
     edit.add(new KeyValue(rowName, family, Bytes.toBytes("2"),
         System.currentTimeMillis(), value));
-    txid = log.append(htd, info, getWalKey(System.currentTimeMillis()), edit, sequenceId, true,
-        null);
+    txid = log.append(htd, info, getWalKey(System.currentTimeMillis()), edit, true);
     log.sync(txid);
     log.shutdown();
     walfactory.shutdown();
@@ -239,8 +236,8 @@ public class TestWALRecordReader {
     testSplit(splits.get(1));
   }
 
-  protected WALKey getWalKey(final long sequenceid) {
-    return new WALKey(info.getEncodedNameAsBytes(), tableName, sequenceid);
+  protected WALKey getWalKey(final long time) {
+    return new WALKey(info.getEncodedNameAsBytes(), tableName, time, mvcc);
   }
 
   protected WALRecordReader getReader() {

@@ -56,9 +56,9 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.lang.RandomStringUtils;
@@ -659,7 +659,7 @@ public class TestHRegion {
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
-      region.getMVCC().initialize(seqId);
+      region.getMVCC().advanceTo(seqId);
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
@@ -713,7 +713,7 @@ public class TestHRegion {
       }
       long seqId = region.replayRecoveredEditsIfAny(regiondir, maxSeqIdInStores, null, status);
       assertEquals(maxSeqId, seqId);
-      region.getMVCC().initialize(seqId);
+      region.getMVCC().advanceTo(seqId);
       Get get = new Get(row);
       Result result = region.get(get);
       for (long i = minSeqId; i <= maxSeqId; i += 10) {
@@ -881,7 +881,7 @@ public class TestHRegion {
           .getRegionFileSystem().getStoreDir(Bytes.toString(family)));
 
       WALUtil.writeCompactionMarker(region.getWAL(), this.region.getTableDesc(),
-          this.region.getRegionInfo(), compactionDescriptor, new AtomicLong(1));
+          this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
 
       Path recoveredEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(regiondir);
 
@@ -1536,14 +1536,19 @@ public class TestHRegion {
 
       LOG.info("batchPut will have to break into four batches to avoid row locks");
       RowLock rowLock1 = region.getRowLock(Bytes.toBytes("row_2"));
-      RowLock rowLock2 = region.getRowLock(Bytes.toBytes("row_4"));
-      RowLock rowLock3 = region.getRowLock(Bytes.toBytes("row_6"));
+      RowLock rowLock2 = region.getRowLock(Bytes.toBytes("row_1"));
+      RowLock rowLock3 = region.getRowLock(Bytes.toBytes("row_3"));
+      RowLock rowLock4 = region.getRowLock(Bytes.toBytes("row_3"), true);
+
 
       MultithreadedTestUtil.TestContext ctx = new MultithreadedTestUtil.TestContext(CONF);
       final AtomicReference<OperationStatus[]> retFromThread = new AtomicReference<OperationStatus[]>();
+      final CountDownLatch startingPuts = new CountDownLatch(1);
+      final CountDownLatch startingClose = new CountDownLatch(1);
       TestThread putter = new TestThread(ctx) {
         @Override
         public void doWork() throws IOException {
+          startingPuts.countDown();
           retFromThread.set(region.batchMutate(puts));
         }
       };
@@ -1551,43 +1556,38 @@ public class TestHRegion {
       ctx.addThread(putter);
       ctx.startThreads();
 
-      LOG.info("...waiting for put thread to sync 1st time");
-      waitForCounter(source, "syncTimeNumOps", syncs + 1);
-
       // Now attempt to close the region from another thread.  Prior to HBASE-12565
       // this would cause the in-progress batchMutate operation to to fail with
       // exception because it use to release and re-acquire the close-guard lock
       // between batches.  Caller then didn't get status indicating which writes succeeded.
       // We now expect this thread to block until the batchMutate call finishes.
-      Thread regionCloseThread = new Thread() {
+      Thread regionCloseThread = new TestThread(ctx) {
         @Override
-        public void run() {
+        public void doWork() {
           try {
+            startingPuts.await();
+            // Give some time for the batch mutate to get in.
+            // We don't want to race with the mutate
+            Thread.sleep(10);
+            startingClose.countDown();
             HBaseTestingUtility.closeRegionAndWAL(region);
           } catch (IOException e) {
+            throw new RuntimeException(e);
+          } catch (InterruptedException e) {
             throw new RuntimeException(e);
           }
         }
       };
       regionCloseThread.start();
 
+      startingClose.await();
+      startingPuts.await();
+      Thread.sleep(100);
       LOG.info("...releasing row lock 1, which should let put thread continue");
       rowLock1.release();
-
-      LOG.info("...waiting for put thread to sync 2nd time");
-      waitForCounter(source, "syncTimeNumOps", syncs + 2);
-
-      LOG.info("...releasing row lock 2, which should let put thread continue");
       rowLock2.release();
-
-      LOG.info("...waiting for put thread to sync 3rd time");
-      waitForCounter(source, "syncTimeNumOps", syncs + 3);
-
-      LOG.info("...releasing row lock 3, which should let put thread continue");
       rowLock3.release();
-
-      LOG.info("...waiting for put thread to sync 4th time");
-      waitForCounter(source, "syncTimeNumOps", syncs + 4);
+      waitForCounter(source, "syncTimeNumOps", syncs + 1);
 
       LOG.info("...joining on put thread");
       ctx.stop();
@@ -1598,6 +1598,7 @@ public class TestHRegion {
         assertEquals((i == 5) ? OperationStatusCode.BAD_FAMILY : OperationStatusCode.SUCCESS,
             codes[i].getOperationStatusCode());
       }
+      rowLock4.release();
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(this.region);
       this.region = null;
@@ -4750,7 +4751,6 @@ public class TestHRegion {
 
   }
 
-  @SuppressWarnings("unchecked")
   private void durabilityTest(String method, Durability tableDurability,
       Durability mutationDurability, long timeout, boolean expectAppend, final boolean expectSync,
       final boolean expectSyncFromLogSyncer) throws Exception {
@@ -4775,7 +4775,7 @@ public class TestHRegion {
     //verify append called or not
     verify(wal, expectAppend ? times(1) : never())
       .append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any(),
-          (WALEdit)any(), (AtomicLong)any(), Mockito.anyBoolean(), (List<Cell>)any());
+          (WALEdit)any(), Mockito.anyBoolean());
 
     // verify sync called or not
     if (expectSync || expectSyncFromLogSyncer) {
@@ -5901,7 +5901,6 @@ public class TestHRegion {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testOpenRegionWrittenToWAL() throws Exception {
     final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
@@ -5936,7 +5935,7 @@ public class TestHRegion {
         TEST_UTIL.getConfiguration(), rss, null);
 
       verify(wal, times(1)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
-        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+        , editCaptor.capture(), anyBoolean());
 
       WALEdit edit = editCaptor.getValue();
       assertNotNull(edit);
@@ -6003,8 +6002,8 @@ public class TestHRegion {
           ,sf.getReader().getHFileReader().getFileContext().isIncludesTags());
     }
   }
+
   @Test
-  @SuppressWarnings("unchecked")
   public void testOpenRegionWrittenToWALForLogReplay() throws Exception {
     // similar to the above test but with distributed log replay
     final ServerName serverName = ServerName.valueOf("testOpenRegionWrittenToWALForLogReplay",
@@ -6050,7 +6049,7 @@ public class TestHRegion {
       // verify that we have not appended region open event to WAL because this region is still
       // recovering
       verify(wal, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
-        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+        , editCaptor.capture(), anyBoolean());
 
       // not put the region out of recovering state
       new FinishRegionRecoveringHandler(rss, region.getRegionInfo().getEncodedName(), "/foo")
@@ -6058,7 +6057,7 @@ public class TestHRegion {
 
       // now we should have put the entry
       verify(wal, times(1)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any()
-        , editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+        , editCaptor.capture(), anyBoolean());
 
       WALEdit edit = editCaptor.getValue();
       assertNotNull(edit);
@@ -6094,7 +6093,6 @@ public class TestHRegion {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testCloseRegionWrittenToWAL() throws Exception {
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
@@ -6122,7 +6120,7 @@ public class TestHRegion {
 
     // 2 times, one for region open, the other close region
     verify(wal, times(2)).append((HTableDescriptor)any(), (HRegionInfo)any(), (WALKey)any(),
-      editCaptor.capture(), (AtomicLong)any(), anyBoolean(), (List<Cell>)any());
+      editCaptor.capture(), anyBoolean());
 
     WALEdit edit = editCaptor.getAllValues().get(1);
     assertNotNull(edit);

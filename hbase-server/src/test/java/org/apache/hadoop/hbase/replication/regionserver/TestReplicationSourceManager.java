@@ -31,7 +31,6 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -52,6 +51,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
@@ -190,9 +190,9 @@ public class TestReplicationSourceManager {
 
   @Test
   public void testLogRoll() throws Exception {
-    long seq = 0;
     long baseline = 1000;
     long time = baseline;
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     KeyValue kv = new KeyValue(r1, f1, r1);
     WALEdit edit = new WALEdit();
     edit.add(kv);
@@ -202,7 +202,6 @@ public class TestReplicationSourceManager {
     final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
         URLEncoder.encode("regionserver:60020", "UTF8"));
     final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
-    final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf("tableame"));
     htd.addFamily(new HColumnDescriptor(f1));
@@ -212,8 +211,11 @@ public class TestReplicationSourceManager {
         wal.rollWriter();
       }
       LOG.info(i);
-      final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
-          System.currentTimeMillis()), edit, sequenceId, true ,null);
+      final long txid = wal.append(htd,
+          hri,
+          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+          edit,
+          true);
       wal.sync(txid);
     }
 
@@ -225,8 +227,10 @@ public class TestReplicationSourceManager {
     LOG.info(baseline + " and " + time);
 
     for (int i = 0; i < 3; i++) {
-      wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
-          System.currentTimeMillis()), edit, sequenceId, true, null);
+      wal.append(htd, hri,
+          new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+          edit,
+          true);
     }
     wal.sync();
 
@@ -241,8 +245,10 @@ public class TestReplicationSourceManager {
     manager.logPositionAndCleanOldLogs(manager.getSources().get(0).getCurrentPath(),
         "1", 0, false, false);
 
-    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), test,
-        System.currentTimeMillis()), edit, sequenceId, true, null);
+    wal.append(htd, hri,
+        new WALKey(hri.getEncodedNameAsBytes(), test, System.currentTimeMillis(), mvcc),
+        edit,
+        true);
     wal.sync();
 
     assertEquals(1, manager.getWALs().size());

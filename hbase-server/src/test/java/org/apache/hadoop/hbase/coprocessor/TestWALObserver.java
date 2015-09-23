@@ -29,7 +29,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 import org.apache.hadoop.hbase.regionserver.wal.WALCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
@@ -188,7 +188,6 @@ public class TestWALObserver {
     Path basedir = new Path(this.hbaseRootDir, Bytes.toString(TEST_TABLE));
     deleteDir(basedir);
     fs.mkdirs(new Path(basedir, hri.getEncodedName()));
-    final AtomicLong sequenceId = new AtomicLong(0);
 
     // TEST_FAMILY[0] shall be removed from WALEdit.
     // TEST_FAMILY[1] value shall be changed.
@@ -237,7 +236,7 @@ public class TestWALObserver {
     long now = EnvironmentEdgeManager.currentTime();
     // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
     long txid = log.append(htd, hri, new HLogKey(hri.getEncodedNameAsBytes(), hri.getTable(), now),
-        edit, sequenceId, true, null);
+        edit, true);
     log.sync(txid);
 
     // the edit shall have been change now by the coprocessor.
@@ -273,7 +272,7 @@ public class TestWALObserver {
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes
         .toString(TEST_TABLE));
     final HRegionInfo hri = new HRegionInfo(tableName, null, null);
-    final AtomicLong sequenceId = new AtomicLong(0);
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
     fs.mkdirs(new Path(FSUtils.getTableDir(hbaseRootDir, tableName), hri.getEncodedName()));
 
@@ -300,7 +299,7 @@ public class TestWALObserver {
     final int countPerFamily = 5;
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          EnvironmentEdgeManager.getDelegate(), wal, htd, sequenceId);
+          EnvironmentEdgeManager.getDelegate(), wal, htd, mvcc);
     }
 
     LOG.debug("Verify that only the non-legacy CP saw edits.");
@@ -324,7 +323,7 @@ public class TestWALObserver {
     final WALEdit edit = new WALEdit();
     final byte[] nonce = Bytes.toBytes("1772");
     edit.add(new KeyValue(TEST_ROW, TEST_FAMILY[0], nonce, now, nonce));
-    final long txid = wal.append(htd, hri, legacyKey, edit, sequenceId, true, null);
+    final long txid = wal.append(htd, hri, legacyKey, edit, true);
     wal.sync(txid);
 
     LOG.debug("Make sure legacy cps can see supported edits after having been skipped.");
@@ -349,7 +348,7 @@ public class TestWALObserver {
   public void testEmptyWALEditAreNotSeen() throws Exception {
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(Bytes.toString(TEST_TABLE));
     final HTableDescriptor htd = createBasic3FamilyHTD(Bytes.toString(TEST_TABLE));
-    final AtomicLong sequenceId = new AtomicLong(0);
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
     WAL log = wals.getWAL(UNSPECIFIED_REGION, null);
     try {
@@ -361,8 +360,9 @@ public class TestWALObserver {
       assertFalse(cp.isPostWALWriteCalled());
 
       final long now = EnvironmentEdgeManager.currentTime();
-      long txid = log.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now),
-          new WALEdit(), sequenceId, true, null);
+      long txid = log.append(htd, hri,
+          new WALKey(hri.getEncodedNameAsBytes(), hri.getTable(), now, mvcc),
+          new WALEdit(), true);
       log.sync(txid);
 
       assertFalse("Empty WALEdit should skip coprocessor evaluation.", cp.isPreWALWriteCalled());
@@ -381,7 +381,7 @@ public class TestWALObserver {
     // ultimately called by HRegion::initialize()
     TableName tableName = TableName.valueOf("testWALCoprocessorReplay");
     final HTableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
-    final AtomicLong sequenceId = new AtomicLong(0);
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     // final HRegionInfo hri =
     // createBasic3FamilyHRegionInfo(Bytes.toString(tableName));
     // final HRegionInfo hri1 =
@@ -405,10 +405,9 @@ public class TestWALObserver {
     // for (HColumnDescriptor hcd: hri.getTableDesc().getFamilies()) {
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       addWALEdits(tableName, hri, TEST_ROW, hcd.getName(), countPerFamily,
-          EnvironmentEdgeManager.getDelegate(), wal, htd, sequenceId);
+          EnvironmentEdgeManager.getDelegate(), wal, htd, mvcc);
     }
-    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now), edit, sequenceId,
-        true, null);
+    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc), edit, true);
     // sync to fs.
     wal.sync();
 
@@ -528,7 +527,7 @@ public class TestWALObserver {
 
   private void addWALEdits(final TableName tableName, final HRegionInfo hri, final byte[] rowName,
       final byte[] family, final int count, EnvironmentEdge ee, final WAL wal,
-      final HTableDescriptor htd, final AtomicLong sequenceId) throws IOException {
+      final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc) throws IOException {
     String familyStr = Bytes.toString(family);
     long txid = -1;
     for (int j = 0; j < count; j++) {
@@ -539,7 +538,7 @@ public class TestWALObserver {
       // uses WALKey instead of HLogKey on purpose. will only work for tests where we don't care
       // about legacy coprocessors
       txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,
-          ee.currentTime()), edit, sequenceId, true, null);
+          ee.currentTime(), mvcc), edit, true);
     }
     if (-1 != txid) {
       wal.sync(txid);

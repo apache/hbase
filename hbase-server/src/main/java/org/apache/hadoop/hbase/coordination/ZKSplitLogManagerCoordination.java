@@ -878,13 +878,7 @@ public class ZKSplitLogManagerCoordination extends ZooKeeperListener implements
    * @return true when distributed log replay is turned on
    */
   private boolean isDistributedLogReplay(Configuration conf) {
-    boolean dlr =
-        conf.getBoolean(HConstants.DISTRIBUTED_LOG_REPLAY_KEY,
-          HConstants.DEFAULT_DISTRIBUTED_LOG_REPLAY_CONFIG);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed log replay=" + dlr);
-    }
-    return dlr;
+    return false;
   }
 
   private boolean resubmit(ServerName serverName, String path, int version) {

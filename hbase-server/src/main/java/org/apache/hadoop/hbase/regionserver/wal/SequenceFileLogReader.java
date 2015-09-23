@@ -37,7 +37,8 @@ import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.SequenceFile.Metadata;
 import org.apache.hadoop.io.Text;
 
-@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX, HBaseInterfaceAudience.CONFIG})
+@InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.COPROC, HBaseInterfaceAudience.PHOENIX,
+  HBaseInterfaceAudience.CONFIG})
 public class SequenceFileLogReader extends ReaderBase {
   private static final Log LOG = LogFactory.getLog(SequenceFileLogReader.class);
 
@@ -273,8 +274,10 @@ public class SequenceFileLogReader extends ReaderBase {
       end = fEnd.getLong(this.reader);
     } catch(NoSuchFieldException nfe) {
        /* reflection failure, keep going */
+      if (LOG.isTraceEnabled()) LOG.trace(nfe);
     } catch(IllegalAccessException iae) {
        /* reflection failure, keep going */
+      if (LOG.isTraceEnabled()) LOG.trace(iae);
     } catch(Exception e) {
        /* All other cases. Should we handle it more aggressively? */
        LOG.warn("Unexpected exception when accessing the end field", e);
@@ -293,8 +296,10 @@ public class SequenceFileLogReader extends ReaderBase {
         .initCause(ioe);
     } catch(NoSuchMethodException nfe) {
        /* reflection failure, keep going */
+      if (LOG.isTraceEnabled()) LOG.trace(nfe);
     } catch(IllegalAccessException iae) {
        /* reflection failure, keep going */
+      if (LOG.isTraceEnabled()) LOG.trace(iae);
     } catch(Exception e) {
        /* All other cases. Should we handle it more aggressively? */
        LOG.warn("Unexpected exception when accessing the end field", e);

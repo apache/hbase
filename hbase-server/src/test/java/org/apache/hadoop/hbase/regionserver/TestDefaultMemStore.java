@@ -124,7 +124,7 @@ public class TestDefaultMemStore extends TestCase {
       scanner.close();
     }
 
-    memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
+    memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Now assert can count same number even if a snapshot mid-scan.
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
     count = 0;
@@ -149,7 +149,7 @@ public class TestDefaultMemStore extends TestCase {
     for (KeyValueScanner scanner : memstorescanners) {
       scanner.close();
     }
-    memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
+    memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     // Assert that new values are seen in kvset as we scan.
     long ts = System.currentTimeMillis();
     s = new StoreScanner(scan, scanInfo, scanType, null, memstorescanners);
@@ -214,7 +214,7 @@ public class TestDefaultMemStore extends TestCase {
 
   private void verifyScanAcrossSnapshot2(KeyValue kv1, KeyValue kv2)
       throws IOException {
-    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.memstoreReadPoint());
+    List<KeyValueScanner> memstorescanners = this.memstore.getScanners(mvcc.getReadPoint());
     assertEquals(1, memstorescanners.size());
     final KeyValueScanner scanner = memstorescanners.get(0);
     scanner.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
@@ -249,31 +249,31 @@ public class TestDefaultMemStore extends TestCase {
     final byte[] v = Bytes.toBytes("value");
 
     MultiVersionConcurrencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+        mvcc.begin();
 
     KeyValue kv1 = new KeyValue(row, f, q1, v);
     kv1.setSequenceId(w.getWriteNumber());
     memstore.add(kv1);
 
-    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{});
 
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
 
-    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+    w = mvcc.begin();
     KeyValue kv2 = new KeyValue(row, f, q2, v);
     kv2.setSequenceId(w.getWriteNumber());
     memstore.add(kv2);
 
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1});
 
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv1, kv2});
   }
 
@@ -293,7 +293,7 @@ public class TestDefaultMemStore extends TestCase {
 
     // INSERT 1: Write both columns val1
     MultiVersionConcurrencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+        mvcc.begin();
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setSequenceId(w.getWriteNumber());
@@ -302,14 +302,14 @@ public class TestDefaultMemStore extends TestCase {
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
     kv12.setSequenceId(w.getWriteNumber());
     memstore.add(kv12);
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
-    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START INSERT 2: Write both columns val2
-    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+    w = mvcc.begin();
     KeyValue kv21 = new KeyValue(row, f, q1, v2);
     kv21.setSequenceId(w.getWriteNumber());
     memstore.add(kv21);
@@ -319,16 +319,16 @@ public class TestDefaultMemStore extends TestCase {
     memstore.add(kv22);
 
     // BEFORE COMPLETING INSERT 2, SEE FIRST KVS
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // COMPLETE INSERT 2
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
     // NOW SHOULD SEE NEW KVS IN ADDITION TO OLD KVS.
     // See HBASE-1485 for discussion about what we should do with
     // the duplicate-TS inserts
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv21, kv11, kv22, kv12});
   }
 
@@ -345,7 +345,7 @@ public class TestDefaultMemStore extends TestCase {
     final byte[] v1 = Bytes.toBytes("value1");
     // INSERT 1: Write both columns val1
     MultiVersionConcurrencyControl.WriteEntry w =
-        mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+        mvcc.begin();
 
     KeyValue kv11 = new KeyValue(row, f, q1, v1);
     kv11.setSequenceId(w.getWriteNumber());
@@ -354,28 +354,28 @@ public class TestDefaultMemStore extends TestCase {
     KeyValue kv12 = new KeyValue(row, f, q2, v1);
     kv12.setSequenceId(w.getWriteNumber());
     memstore.add(kv12);
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
     // BEFORE STARTING INSERT 2, SEE FIRST KVS
-    KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // START DELETE: Insert delete for one of the columns
-    w = mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+    w = mvcc.begin();
     KeyValue kvDel = new KeyValue(row, f, q2, kv11.getTimestamp(),
         KeyValue.Type.DeleteColumn);
     kvDel.setSequenceId(w.getWriteNumber());
     memstore.add(kvDel);
 
     // BEFORE COMPLETING DELETE, SEE FIRST KVS
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kv12});
 
     // COMPLETE DELETE
-    mvcc.completeMemstoreInsert(w);
+    mvcc.completeAndWait(w);
 
     // NOW WE SHOULD SEE DELETE
-    s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+    s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
     assertScannerResults(s, new KeyValue[]{kv11, kvDel, kv12});
   }
 
@@ -419,7 +419,7 @@ public class TestDefaultMemStore extends TestCase {
     private void internalRun() throws IOException {
       for (long i = 0; i < NUM_TRIES && caughtException.get() == null; i++) {
         MultiVersionConcurrencyControl.WriteEntry w =
-            mvcc.beginMemstoreInsertWithSeqNum(this.startSeqNum.incrementAndGet());
+            mvcc.begin();
 
         // Insert the sequence value (i)
         byte[] v = Bytes.toBytes(i);
@@ -427,10 +427,10 @@ public class TestDefaultMemStore extends TestCase {
         KeyValue kv = new KeyValue(row, f, q1, i, v);
         kv.setSequenceId(w.getWriteNumber());
         memstore.add(kv);
-        mvcc.completeMemstoreInsert(w);
+        mvcc.completeAndWait(w);
 
         // Assert that we can read back
-        KeyValueScanner s = this.memstore.getScanners(mvcc.memstoreReadPoint()).get(0);
+        KeyValueScanner s = this.memstore.getScanners(mvcc.getReadPoint()).get(0);
         s.seek(kv);
 
         Cell ret = s.next();

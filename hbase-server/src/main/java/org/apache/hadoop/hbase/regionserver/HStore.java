@@ -651,7 +651,7 @@ public class HStore implements Store {
     // readers might pick it up. This assumes that the store is not getting any writes (otherwise
     // in-flight transactions might be made visible)
     if (!toBeAddedFiles.isEmpty()) {
-      region.getMVCC().advanceMemstoreReadPointIfNeeded(this.getMaxSequenceId());
+      region.getMVCC().advanceTo(this.getMaxSequenceId());
     }
 
     // notify scanners, close file readers, and recompute store size
@@ -1308,7 +1308,7 @@ public class HStore implements Store {
     CompactionDescriptor compactionDescriptor = ProtobufUtil.toCompactionDescriptor(info,
         family.getName(), inputPaths, outputPaths, fs.getStoreDir(getFamily().getNameAsString()));
     WALUtil.writeCompactionMarker(region.getWAL(), this.region.getTableDesc(),
-        this.region.getRegionInfo(), compactionDescriptor, this.region.getSequenceId());
+        this.region.getRegionInfo(), compactionDescriptor, region.getMVCC());
   }
 
   @VisibleForTesting

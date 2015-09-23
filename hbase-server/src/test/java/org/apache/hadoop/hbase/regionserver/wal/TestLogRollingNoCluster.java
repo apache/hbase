@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,6 +31,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -121,7 +121,7 @@ public class TestLogRollingNoCluster {
     @Override
     public void run() {
       this.log.info(getName() +" started");
-      final AtomicLong sequenceId = new AtomicLong(1);
+      final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
       try {
         for (int i = 0; i < this.count; i++) {
           long now = System.currentTimeMillis();
@@ -135,7 +135,7 @@ public class TestLogRollingNoCluster {
           final HRegionInfo hri = HRegionInfo.FIRST_META_REGIONINFO;
           final HTableDescriptor htd = TEST_UTIL.getMetaTableDescriptor();
           final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
-              TableName.META_TABLE_NAME, now), edit, sequenceId, true, null);
+              TableName.META_TABLE_NAME, now, mvcc), edit, true);
           wal.sync(txid);
         }
         String msg = getName() + " finished";

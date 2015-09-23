@@ -141,6 +141,4 @@ public class TestRegionObserverStacking extends TestCase {
     assertTrue(idB < idC);
     HBaseTestingUtility.closeRegionAndWAL(region);
   }
-
 }
-

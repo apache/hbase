@@ -415,7 +415,7 @@ public final class HConstants {
 
   /**
    * The hbase:meta table's name.
-   *
+   * @deprecated For upgrades of 0.94 to 0.96
    */
   @Deprecated  // for compat from 0.94 -> 0.96.
   public static final byte[] META_TABLE_NAME = TableName.META_TABLE_NAME.getName();
@@ -605,7 +605,7 @@ public final class HConstants {
    * 1, 2, 3, 5, 10, 20, 40, 100, 100, 100.
    * With 100ms, a back-off of 200 means 20s
    */
-  public static final int RETRY_BACKOFF[] = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
+  public static final int [] RETRY_BACKOFF = {1, 2, 3, 5, 10, 20, 40, 100, 100, 100, 100, 200, 200};
 
   public static final String REGION_IMPL = "hbase.hregion.impl";
 
