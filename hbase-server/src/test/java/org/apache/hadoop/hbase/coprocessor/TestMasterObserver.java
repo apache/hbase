@@ -1177,11 +1177,6 @@ public class TestMasterObserver {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
         CPMasterObserver.class.getName());
-    conf.set("hbase.master.hfilecleaner.plugins",
-      "org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner," +
-      "org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner");
-    conf.set("hbase.master.logcleaner.plugins",
-      "org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner");
     // We need more than one data server on this test
     UTIL.startMiniCluster(2);
   }

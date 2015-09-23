@@ -1051,44 +1051,6 @@ public abstract class FSUtils {
     return blocksDistribution;
   }
 
-
-
-  /**
-   * Runs through the hbase rootdir and checks all stores have only
-   * one file in them -- that is, they've been major compacted.  Looks
-   * at root and meta tables too.
-   * @param fs filesystem
-   * @param hbaseRootDir hbase root directory
-   * @return True if this hbase install is major compacted.
-   * @throws IOException e
-   */
-  public static boolean isMajorCompacted(final FileSystem fs,
-      final Path hbaseRootDir)
-  throws IOException {
-    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
-    PathFilter regionFilter = new RegionDirFilter(fs);
-    PathFilter familyFilter = new FamilyDirFilter(fs);
-    for (Path d : tableDirs) {
-      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
-      for (FileStatus regionDir : regionDirs) {
-        Path dd = regionDir.getPath();
-        // Else its a region name.  Now look in region for families.
-        FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
-        for (FileStatus familyDir : familyDirs) {
-          Path family = familyDir.getPath();
-          // Now in family make sure only one file.
-          FileStatus[] familyStatus = fs.listStatus(family);
-          if (familyStatus.length > 1) {
-            LOG.debug(family.toString() + " has " + familyStatus.length +
-                " files.");
-            return false;
-          }
-        }
-      }
-    }
-    return true;
-  }
-
   // TODO move this method OUT of FSUtils. No dependencies to HMaster
   /**
    * Returns the total overall fragmentation percentage. Includes hbase:meta and

@@ -54,31 +54,21 @@ public class TestFSVisitor {
 
   private Set<String> tableFamilies;
   private Set<String> tableRegions;
-  private Set<String> recoveredEdits;
   private Set<String> tableHFiles;
-  private Set<String> regionServers;
-  private Set<String> serverLogs;
 
   private FileSystem fs;
   private Path tableDir;
-  private Path logsDir;
   private Path rootDir;
 
   @Before
   public void setUp() throws Exception {
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
     rootDir = TEST_UTIL.getDataTestDir("hbase");
-    logsDir = new Path(rootDir, HConstants.HREGION_LOGDIR_NAME);
 
     tableFamilies = new HashSet<String>();
     tableRegions = new HashSet<String>();
-    recoveredEdits = new HashSet<String>();
     tableHFiles = new HashSet<String>();
-    regionServers = new HashSet<String>();
-    serverLogs = new HashSet<String>();
     tableDir = createTableFiles(rootDir, TABLE_NAME, tableRegions, tableFamilies, tableHFiles);
-    createRecoverEdits(tableDir, tableRegions, recoveredEdits);
-    createLogs(logsDir, regionServers, serverLogs);
     FSUtils.logFileSystemState(fs, rootDir, LOG);
   }
 
@@ -104,36 +94,6 @@ public class TestFSVisitor {
     assertEquals(tableFamilies, families);
     assertEquals(tableHFiles, hfiles);
   }
-
-  @Test
-  public void testVisitRecoveredEdits() throws IOException {
-    final Set<String> regions = new HashSet<String>();
-    final Set<String> edits = new HashSet<String>();
-    FSVisitor.visitTableRecoveredEdits(fs, tableDir, new FSVisitor.RecoveredEditsVisitor() {
-      public void recoveredEdits (final String region, final String logfile)
-          throws IOException {
-        regions.add(region);
-        edits.add(logfile);
-      }
-    });
-    assertEquals(tableRegions, regions);
-    assertEquals(recoveredEdits, edits);
-  }
-
-  @Test
-  public void testVisitLogFiles() throws IOException {
-    final Set<String> servers = new HashSet<String>();
-    final Set<String> logs = new HashSet<String>();
-    FSVisitor.visitLogFiles(fs, rootDir, new FSVisitor.LogFileVisitor() {
-      public void logFile (final String server, final String logfile) throws IOException {
-        servers.add(server);
-        logs.add(logfile);
-      }
-    });
-    assertEquals(regionServers, servers);
-    assertEquals(serverLogs, logs);
-  }
-
 
   /*
    * |-testtb/
@@ -165,67 +125,5 @@ public class TestFSVisitor {
       }
     }
     return tableDir;
-  }
-
-  /*
-   * |-testtb/
-   * |----f1d3ff8443297732862df21dc4e57262/
-   * |-------recovered.edits/
-   * |----------0000001351969633479
-   * |----------0000001351969633481
-   */
-  private void createRecoverEdits(final Path tableDir, final Set<String> tableRegions,
-      final Set<String> recoverEdits) throws IOException {
-    for (String region: tableRegions) {
-      Path regionEditsDir = WALSplitter.getRegionDirRecoveredEditsDir(new Path(tableDir, region));
-      long seqId = System.currentTimeMillis();
-      for (int i = 0; i < 3; ++i) {
-        String editName = String.format("%019d", seqId + i);
-        recoverEdits.add(editName);
-        FSDataOutputStream stream = fs.create(new Path(regionEditsDir, editName));
-        stream.write(Bytes.toBytes("test"));
-        stream.close();
-      }
-    }
-  }
-
-  /*
-   * Old style
-   * |-.logs/
-   * |----server5,5,1351969633508/
-   * |-------server5,5,1351969633508.0
-   * |----server6,6,1351969633512/
-   * |-------server6,6,1351969633512.0
-   * |-------server6,6,1351969633512.3
-   * New style
-   * |-.logs/
-   * |----server3,5,1351969633508/
-   * |-------server3,5,1351969633508.default.0
-   * |----server4,6,1351969633512/
-   * |-------server4,6,1351969633512.default.0
-   * |-------server4,6,1351969633512.some_provider.3
-   */
-  private void createLogs(final Path logDir, final Set<String> servers,
-      final Set<String> logs) throws IOException {
-    for (int s = 0; s < 7; ++s) {
-      String server = String.format("server%d,%d,%d", s, s, System.currentTimeMillis());
-      servers.add(server);
-      Path serverLogDir = new Path(logDir, server);
-      if (s % 2 == 0) {
-        if (s % 3 == 0) {
-          server += ".default";
-        } else {
-          server += "." + s;
-        }
-      }
-      fs.mkdirs(serverLogDir);
-      for (int i = 0; i < 5; ++i) {
-        String logfile = server + '.' + i;
-        logs.add(logfile);
-        FSDataOutputStream stream = fs.create(new Path(serverLogDir, logfile));
-        stream.write(Bytes.toBytes("test"));
-        stream.close();
-      }
-    }
   }
 }

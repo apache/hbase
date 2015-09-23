@@ -54,7 +54,7 @@ import org.apache.hadoop.hbase.util.FSUtils;
  *      /snapshotName/regionName/familyName/fileName
  */
 @InterfaceAudience.Private
-public class SnapshotManifestV1 {
+public final class SnapshotManifestV1 {
   private static final Log LOG = LogFactory.getLog(SnapshotManifestV1.class);
 
   public static final int DESCRIPTOR_VERSION = 0;
@@ -154,7 +154,7 @@ public class SnapshotManifestV1 {
     fs.delete(new Path(snapshotDir, regionName), true);
   }
 
-  static SnapshotRegionManifest buildManifestFromDisk (final Configuration conf,
+  static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf,
       final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
     HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
           tableDir, regionInfo, true);

@@ -95,41 +95,6 @@ public class TestSnapshotFileCache {
   }
 
   @Test
-  public void testJustFindLogsDirectory() throws Exception {
-    // don't refresh the cache unless we tell it to
-    long period = Long.MAX_VALUE;
-    Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
-    SnapshotFileCache cache = new SnapshotFileCache(fs, rootDir, period, 10000000,
-        "test-snapshot-file-cache-refresh", new SnapshotFileCache.SnapshotFileInspector() {
-            public Collection<String> filesUnderSnapshot(final Path snapshotDir)
-                throws IOException {
-              return SnapshotReferenceUtil.getWALNames(fs, snapshotDir);
-            }
-        });
-
-    // create a file in a 'completed' snapshot
-    SnapshotDescription desc = SnapshotDescription.newBuilder().setName("snapshot").build();
-    Path snapshot = SnapshotDescriptionUtils.getCompletedSnapshotDir(desc, rootDir);
-    SnapshotDescriptionUtils.writeSnapshotInfo(desc, snapshot, fs);
-    Path file1 = new Path(new Path(new Path(snapshot, "7e91021"), "fam"), "file1");
-    fs.createNewFile(file1);
-
-    // and another file in the logs directory
-    Path logs = SnapshotReferenceUtil.getLogsDir(snapshot, "server");
-    Path log = new Path(logs, "me.hbase.com%2C58939%2C1350424310315.1350424315552");
-    fs.createNewFile(log);
-
-    FSUtils.logFileSystemState(fs, rootDir, LOG);
-
-    // then make sure the cache only finds the log files
-    Iterable<FileStatus> notSnapshot = getNonSnapshotFiles(cache, file1);
-    assertFalse("Cache found '" + file1 + "', but it shouldn't have.",
-        Iterables.contains(notSnapshot, file1.getName()));
-    notSnapshot = getNonSnapshotFiles(cache, log);
-    assertTrue("Cache didn't find:" + log, !Iterables.contains(notSnapshot, log));
-  }
-
-  @Test
   public void testReloadModifiedDirectory() throws IOException {
     // don't refresh the cache unless we tell it to
     long period = Long.MAX_VALUE;
@@ -214,10 +179,6 @@ public class TestSnapshotFileCache {
     SnapshotReferenceUtil
         .visitReferencedFiles(UTIL.getConfiguration(), fs, builder.getSnapshotsDir(),
             new SnapshotReferenceUtil.SnapshotVisitor() {
-              @Override public void logFile(String server, String logfile) throws IOException {
-                // do nothing.
-              }
-
               @Override public void storeFile(HRegionInfo regionInfo, String familyName,
                   SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile) throws IOException {
                 FileStatus status = mockStoreFile(storeFile.getName());
@@ -238,7 +199,6 @@ public class TestSnapshotFileCache {
   class SnapshotFiles implements SnapshotFileCache.SnapshotFileInspector {
     public Collection<String> filesUnderSnapshot(final Path snapshotDir) throws IOException {
       Collection<String> files =  new HashSet<String>();
-      files.addAll(SnapshotReferenceUtil.getWALNames(fs, snapshotDir));
       files.addAll(SnapshotReferenceUtil.getHFileNames(UTIL.getConfiguration(), fs, snapshotDir));
       return files;
     }

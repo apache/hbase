@@ -413,20 +413,6 @@ public final class SnapshotInfo extends Configured implements Tool {
               state == null ? "" : "(" + state + ")");
           }
         }
-
-        @Override
-        public void logFile (final String server, final String logfile)
-            throws IOException {
-          SnapshotStats.FileInfo info = stats.addLogFile(server, logfile);
-
-          if (showFiles) {
-            String state = info.getStateToString();
-            System.out.printf("%8s log %s on server %s (%s)%n",
-              (info.isMissing() ? "-" : fileSizeToString(info.getSize())),
-              logfile, server,
-              state == null ? "" : "(" + state + ")");
-          }
-        }
     });
 
     // Dump the stats
@@ -496,11 +482,6 @@ public final class SnapshotInfo extends Configured implements Tool {
           if (!storeFile.hasReference()) {
             stats.addStoreFile(regionInfo, family, storeFile);
           }
-        }
-
-        @Override
-        public void logFile (final String server, final String logfile) throws IOException {
-          stats.addLogFile(server, logfile);
         }
     });
     return stats;
