@@ -79,11 +79,10 @@ public class MultiVersionConsistencyControl {
     // current MVCC completes. Theoretically the bump only needs to be 2 * the number of handlers
     // because each handler could increment sequence num twice and max concurrent in-flight
     // transactions is the number of RPC handlers.
-    // We can't use Long.MAX_VALUE because we still want to maintain the ordering when multiple
-    // changes touch same row key.
+    // we can't use Long.MAX_VALUE because we still want to maintain the ordering when multiple
+    // changes touch same row key
     // If for any reason, the bumped value isn't reset due to failure situations, we'll reset
-    // curSeqNum to NO_WRITE_NUMBER in order NOT to advance memstore read point at all.
-    // St.Ack 20150901 Where is the reset to NO_WRITE_NUMBER done?
+    // curSeqNum to NO_WRITE_NUMBER in order NOT to advance memstore read point at all
     return sequenceId.incrementAndGet() + 1000000000;
   }
 
@@ -126,23 +125,6 @@ public class MultiVersionConsistencyControl {
       e.setWriteNumber(NO_WRITE_NUMBER);
     }
     waitForPreviousTransactionsComplete(e);
-  }
-
-  /**
-   * Cancel a write insert that failed.
-   * Removes the write entry without advancing read point or without interfering with write
-   * entries queued behind us. It is like #advanceMemstore(WriteEntry) only this method
-   * will move the read point to the sequence id that is in WriteEntry even if it ridiculous (see
-   * the trick in HRegion where we call {@link #getPreAssignedWriteNumber(AtomicLong)} just to mark
-   * it as for special handling).
-   * @param writeEntry Failed attempt at write. Does cleanup.
-   */
-  public void cancelMemstoreInsert(WriteEntry writeEntry) {
-    // I'm not clear on how this voodoo all works but setting write number to -1 does NOT advance
-    // readpoint and gets my little writeEntry completed and removed from queue of outstanding
-    // events which seems right.  St.Ack 20150901.
-    writeEntry.setWriteNumber(NO_WRITE_NUMBER);
-    advanceMemstore(writeEntry);
   }
 
   /**

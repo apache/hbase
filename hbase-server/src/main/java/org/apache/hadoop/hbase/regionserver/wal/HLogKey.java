@@ -126,9 +126,6 @@ public class HLogKey extends WALKey implements Writable {
     super(encodedRegionName, tablename, logSeqNum, nonceGroup, nonce);
   }
 
-  /**
-   * @deprecated Don't use these Writables methods. Use PB instead.
-   */
   @Override
   @Deprecated
   public void write(DataOutput out) throws IOException {
@@ -207,7 +204,6 @@ public class HLogKey extends WALKey implements Writable {
         in.readByte();
       } catch(EOFException e) {
         // Means it's a very old key, just continue
-        if (LOG.isTraceEnabled()) LOG.trace(e);
       }
     }
     try {

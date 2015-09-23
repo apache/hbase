@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.wal.WALKey;
  * region sequence id (we want to use this later, just before we write the WAL to ensure region
  * edits maintain order).  The extra info added here is not 'serialized' as part of the WALEdit
  * hence marked 'transient' to underline this fact.  It also adds mechanism so we can wait on
- * the assign of the region sequence id.  See #stampRegionSequenceId().
+ * the assign of the region sequence id.  See {@link #stampRegionSequenceId()}.
  */
 @InterfaceAudience.Private
 class FSWALEntry extends Entry {

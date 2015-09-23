@@ -104,15 +104,6 @@ public class LogRoller extends HasThread {
   }
 
   @Override
-  public void interrupt() {
-    // Wake up if we are waiting on rollLog. For tests.
-    synchronized (rollLog) {
-      this.rollLog.notify();
-    }
-    super.interrupt();
-  }
-
-  @Override
   public void run() {
     while (!server.isStopped()) {
       long now = System.currentTimeMillis();
@@ -122,9 +113,7 @@ public class LogRoller extends HasThread {
         if (!periodic) {
           synchronized (rollLog) {
             try {
-              if (!rollLog.get()) {
-                rollLog.wait(this.threadWakeFrequency);
-              }
+              if (!rollLog.get()) rollLog.wait(this.threadWakeFrequency);
             } catch (InterruptedException e) {
               // Fall through
             }
@@ -157,14 +146,12 @@ public class LogRoller extends HasThread {
       } catch (java.net.ConnectException e) {
         server.abort("Failed log close in log roller", e);
       } catch (IOException ex) {
-        LOG.fatal("Aborting", ex);
         // Abort if we get here.  We probably won't recover an IOE. HBASE-1132
         server.abort("IOE in log roller",
           RemoteExceptionHandler.checkIOException(ex));
       } catch (Exception ex) {
-        final String msg = "Failed rolling WAL; aborting to recover edits!";
-        LOG.error(msg, ex);
-        server.abort(msg, ex);
+        LOG.error("Log rolling failed", ex);
+        server.abort("Log rolling failed", ex);
       } finally {
         try {
           rollLog.set(false);
@@ -197,4 +184,5 @@ public class LogRoller extends HasThread {
         requester);
     }
   }
+
 }
