@@ -278,7 +278,7 @@ public abstract class MultiTableInputFormatTestBase {
     LOG.info("Check launched maps of map/reduce job, the number of maps launched is " + mapNumbers);
 
     //MultiTableSplits  the number of splits matches the number of regions in a table, 
-    //so the total number of maps must be equal to or greater than the number of scans.See HBASE-14442
+    //so the total number of maps must be equal to or greater than the number of scans. See HBASE-14442
     assertTrue(mapNumbers >= scans.size());
     
     LOG.info("After map/reduce completion - job " + jobName);
