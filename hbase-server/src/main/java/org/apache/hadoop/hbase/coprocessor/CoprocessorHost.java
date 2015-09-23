@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -67,7 +66,7 @@ import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
-import org.apache.hadoop.hbase.util.SortedCopyOnWriteSet;
+import org.apache.hadoop.hbase.util.SortedList;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.MultipleIOException;
 
@@ -106,8 +105,8 @@ public abstract class CoprocessorHost<E extends CoprocessorEnvironment> {
   protected static final Log LOG = LogFactory.getLog(CoprocessorHost.class);
   protected Abortable abortable;
   /** Ordered set of loaded coprocessors with lock */
-  protected SortedSet<E> coprocessors =
-      new SortedCopyOnWriteSet<E>(new EnvironmentPriorityComparator());
+  protected SortedList<E> coprocessors =
+      new SortedList<E>(new EnvironmentPriorityComparator());
   protected Configuration conf;
   // unique file prefix to use for local copies of jars when classloading
   protected String pathPrefix;

@@ -21,6 +21,7 @@
 package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -104,7 +105,9 @@ public class WALCoprocessorHost
       throws IOException {
     boolean bypass = false;
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);
@@ -137,7 +140,9 @@ public class WALCoprocessorHost
   public void postWALWrite(final HRegionInfo info, final HLogKey logKey, final WALEdit logEdit)
       throws IOException {
     ObserverContext<WALCoprocessorEnvironment> ctx = null;
-    for (WALEnvironment env: coprocessors) {
+    List<WALEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      WALEnvironment env = envs.get(i);
       if (env.getInstance() instanceof
           org.apache.hadoop.hbase.coprocessor.WALObserver) {
         ctx = ObserverContext.createAndPrepare(env, ctx);

@@ -263,9 +263,10 @@ public class RegionServerCoprocessorHost extends
 
   private boolean execOperation(final CoprocessorOperation ctx) throws IOException {
     if (ctx == null) return false;
-
     boolean bypass = false;
-    for (RegionServerEnvironment env: coprocessors) {
+    List<RegionServerEnvironment> envs = coprocessors.get();
+    for (int i = 0; i < envs.size(); i++) {
+      RegionServerEnvironment env = envs.get(i);
       if (env.getInstance() instanceof RegionServerObserver) {
         ctx.prepare(env);
         Thread currentThread = Thread.currentThread();
