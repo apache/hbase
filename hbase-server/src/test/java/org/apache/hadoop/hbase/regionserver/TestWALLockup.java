@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -243,8 +244,8 @@ public class TestWALLockup {
           try {
             region.flush(false);
           } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            LOG.info("In flush", e);
+            fail();
           }
         };
       };
@@ -256,13 +257,21 @@ public class TestWALLockup {
       assertTrue(originalWAL != dodgyWAL.getCurrentFileName());
       // Can I append to it?
       dodgyWAL.throwException = false;
-      region.put(put);
+      try {
+        region.put(put);
+      } catch (Exception e) {
+        LOG.info("In the put", e);
+      }
     } finally {
       // To stop logRoller, its server has to say it is stopped.
       Mockito.when(server.isStopped()).thenReturn(true);
       if (logRoller != null) logRoller.interrupt();
-      if (region != null) region.close();
-      if (dodgyWAL != null) dodgyWAL.close();
+      try {
+        if (region != null) region.close();
+        if (dodgyWAL != null) dodgyWAL.close();
+      } catch (Exception e) {
+        LOG.info("On way out", e);
+      }
     }
   }
 
