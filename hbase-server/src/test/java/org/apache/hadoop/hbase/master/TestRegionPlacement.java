@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -102,7 +103,7 @@ public class TestRegionPlacement {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Ignore ("Test for unfinished feature") @Test
   public void testRegionPlacement() throws Exception {
     String tableStr = "testRegionAssignment";
     TableName table = TableName.valueOf(tableStr);
@@ -247,7 +248,7 @@ public class TestRegionPlacement {
   /**
    * Used to test the correctness of this class.
    */
-  @Test
+  @Ignore ("Test for unfinished feature") @Test
   public void testRandomizedMatrix() {
     int rows = 100;
     int cols = 100;
