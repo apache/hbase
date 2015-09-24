@@ -22,7 +22,6 @@
 </%args>
 <%import>
         java.util.*;
-        org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
         org.apache.hadoop.hbase.regionserver.HRegionServer;
         org.apache.hadoop.hbase.util.Bytes;
         org.apache.hadoop.hbase.HRegionInfo;
@@ -48,7 +47,6 @@
             <li class=""><a href="#tab_regionStoreStats" data-toggle="tab">Storefile Metrics</a></li>
             <li class=""><a href="#tab_regionMemstoreStats" data-toggle="tab">Memstore Metrics</a></li>
             <li class=""><a href="#tab_regionCompactStats" data-toggle="tab">Compaction Metrics</a></li>
-            <li class=""><a href="#tab_coprocessorStats" data-toggle="tab">Coprocessor Metrics</a></li>
         </ul>
         <div class="tab-content" style="padding-bottom: 9px; border-bottom: 1px solid #ddd;">
             <div class="tab-pane active" id="tab_regionBaseInfo">
@@ -65,9 +63,6 @@
             </div>
             <div class="tab-pane" id="tab_regionCompactStats">
                 <& compactStats; onlineRegions = onlineRegions; &>
-            </div>
-            <div class="tab-pane" id="tab_coprocessorStats">
-                <& coprocessorStats; onlineRegions = onlineRegions; &>
             </div>
         </div>
     </div>
@@ -237,68 +232,6 @@
             <td><% load.getMemstoreSizeMB() %>m</td>
             </%if>
         </tr>
-        </%for>
-    </table>
-</%def>
-
-<%def coprocessorStats>
-<%args>
-    List<HRegionInfo> onlineRegions;
-</%args>
-    <table class="table table-striped">
-        <tr>
-            <th>Region Name</th>
-            <th>Coprocessor</th>
-            <th>Execution Time Statistics</th>
-        </tr>
-
-        <%for HRegionInfo r: onlineRegions %>
-        <%java>    
-            Region region = regionServer.getFromOnlineRegions(r.getEncodedName());
-            MetricsRegionWrapper mWrap = region == null ? null: region.getMetrics().getRegionWrapper();
-        </%java>
-        
-        <%if mWrap != null %>
-
-            <%for Map.Entry<String, DescriptiveStatistics> entry: mWrap.getCoprocessorExecutionStatistics().entrySet() %>
-            <tr>
-                <%java>
-                    String coprocessorName = entry.getKey();
-                    DescriptiveStatistics ds = entry.getValue();
-                </%java>
-                <td><% r.getRegionNameAsString() %></td>
-                <td><% coprocessorName %></td>
-                <td>
-                <table class="table-condensed">
-                <tr>
-                    <td>Min Time </td>
-                    <td><% String.format("%.3f%n", ds.getMin()/1000/1000) %>ms</td>
-                </tr>
-                <tr>
-                    <td>Avg Time </td>
-                    <td><% String.format("%.3f%n", ds.getMean()/1000/1000) %>ms</td>
-                </tr>
-                <tr>
-                    <td>Max Time </td>
-                    <td><% String.format("%.3f%n", ds.getMax()/1000/1000) %>ms</td>
-                </tr>
-                <tr>
-                    <td>90th percentile </td>
-                    <td><% String.format("%.3f%n", ds.getPercentile(90d)/1000/1000) %>ms</td>
-                </tr>
-                <tr>
-                    <td>95th percentile </td>
-                    <td><% String.format("%.3f%n", ds.getPercentile(95d)/1000/1000) %>ms</td>
-                </tr>
-                <tr>
-                    <td>99th percentile </td>
-                    <td><% String.format("%.3f%n", ds.getPercentile(99d)/1000/1000) %>ms</td>
-                </tr>
-                </table>
-                </td>
-            </tr>
-            </%for>
-        </%if>
         </%for>
     </table>
 </%def>
