@@ -32,9 +32,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.CreateNamespaceState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -125,10 +125,11 @@ public class TestCreateNamespaceProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
 
     // Second create should fail with NamespaceExistException
-    ProcedureResult result = procExec.getResult(procId2);
+    ProcedureInfo result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Create namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof NamespaceExistException);
+    LOG.debug("Create namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceExistException);
   }
 
   @Test(timeout=60000)
@@ -143,10 +144,11 @@ public class TestCreateNamespaceProcedure {
       nonce);
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Create namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof NamespaceExistException);
+    LOG.debug("Create namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceExistException);
   }
 
   @Test(timeout=60000)
@@ -165,10 +167,10 @@ public class TestCreateNamespaceProcedure {
       nonce);
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Create namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof ConstraintException);
+    LOG.debug("Create namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
   @Test(timeout=60000)
@@ -187,10 +189,10 @@ public class TestCreateNamespaceProcedure {
       nonce);
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Create namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof ConstraintException);
+    LOG.debug("Create namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
   @Test(timeout=60000)

@@ -26,10 +26,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.EnableTableState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -140,10 +140,11 @@ public class TestEnableTableProcedure {
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
-    ProcedureResult result = procExec.getResult(procId1);
+    ProcedureInfo result = procExec.getResult(procId1);
     assertTrue(result.isFailed());
-    LOG.debug("Enable failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof TableNotDisabledException);
+    LOG.debug("Enable failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof TableNotDisabledException);
 
     // Enable the table with skipping table state check flag (simulate recovery scenario)
     long procId2 = procExec.submitProcedure(

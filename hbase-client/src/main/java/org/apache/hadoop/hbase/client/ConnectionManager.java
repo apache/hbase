@@ -1726,6 +1726,12 @@ class ConnectionManager {
           return stub.abortProcedure(controller, request);
         }
         @Override
+        public MasterProtos.ListProceduresResponse listProcedures(
+            RpcController controller,
+            MasterProtos.ListProceduresRequest request) throws ServiceException {
+          return stub.listProcedures(controller, request);
+        }
+        @Override
         public AddColumnResponse addColumn(RpcController controller, AddColumnRequest request)
         throws ServiceException {
           return stub.addColumn(controller, request);

@@ -29,9 +29,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.ModifyNamespaceState;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -149,10 +149,11 @@ public class TestModifyNamespaceProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
     // Expect fail with NamespaceNotFoundException
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("modify namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof NamespaceNotFoundException);
+    LOG.debug("modify namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof NamespaceNotFoundException);
   }
 
   @Test(timeout=60000)
@@ -174,10 +175,10 @@ public class TestModifyNamespaceProcedure {
       nonce);
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Modify namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof ConstraintException);
+    LOG.debug("Modify namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
   @Test(timeout=60000)
@@ -199,10 +200,10 @@ public class TestModifyNamespaceProcedure {
       nonce);
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     assertTrue(result.isFailed());
-    LOG.debug("Modify namespace failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof ConstraintException);
+    LOG.debug("Modify namespace failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(ProcedureTestingUtility.getExceptionCause(result) instanceof ConstraintException);
   }
 
   @Test(timeout = 60000)
