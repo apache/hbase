@@ -1419,6 +1419,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.ListProceduresResponse listProcedures(
+          RpcController controller,
+          MasterProtos.ListProceduresRequest request) throws ServiceException {
+        return stub.listProcedures(controller, request);
+      }
+
+      @Override
       public MasterProtos.AddColumnResponse addColumn(
           RpcController controller,
           MasterProtos.AddColumnRequest request) throws ServiceException {
@@ -1933,7 +1940,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    * If the method returns it means that there is no error, and the 'results' array will
    * contain no exception. On error, an exception is thrown, and the 'results' array will
    * contain results and exceptions.
-   * @deprecated since 0.96 - Use {@link org.apache.hadoop.hbase.client.HTable#processBatchCallback} instead
+   * @deprecated since 0.96 -
+   *   Use {@link org.apache.hadoop.hbase.client.HTable#processBatchCallback} instead
    */
   @Override
   @Deprecated

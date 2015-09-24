@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -124,6 +125,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshot
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
@@ -144,6 +146,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.StopMasterRequest
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.quotas.QuotaFilter;
 import org.apache.hadoop.hbase.quotas.QuotaRetriever;
 import org.apache.hadoop.hbase.quotas.QuotaSettings;
@@ -2815,6 +2818,28 @@ public class HBaseAdmin implements Admin {
               res[i] = ProtobufUtil.toNamespaceDescriptor(list.get(i));
             }
             return res;
+          }
+        });
+  }
+
+  /**
+   * List procedures
+   * @return procedure list
+   * @throws IOException
+   */
+  @Override
+  public ProcedureInfo[] listProcedures() throws IOException {
+    return
+        executeCallable(new MasterCallable<ProcedureInfo[]>(getConnection()) {
+          @Override
+          public ProcedureInfo[] call(int callTimeout) throws Exception {
+            List<ProcedureProtos.Procedure> procList = master.listProcedures(
+              null, ListProceduresRequest.newBuilder().build()).getProcedureList();
+            ProcedureInfo[] procInfoList = new ProcedureInfo[procList.size()];
+            for (int i = 0; i < procList.size(); i++) {
+              procInfoList[i] = ProcedureInfo.convert(procList.get(i));
+            }
+            return procInfoList;
           }
         });
   }

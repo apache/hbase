@@ -28,15 +28,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.NoopProcedureStore;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
+import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 public class ProcedureTestingUtility {
   private static final Log LOG = LogFactory.getLog(ProcedureTestingUtility.class);
@@ -166,23 +169,42 @@ public class ProcedureTestingUtility {
 
   public static <TEnv> void assertProcNotFailed(ProcedureExecutor<TEnv> procExecutor,
       long procId) {
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     assertTrue("expected procedure result", result != null);
     assertProcNotFailed(result);
   }
 
-  public static void assertProcNotFailed(final ProcedureResult result) {
-    Exception exception = result.getException();
-    String msg = exception != null ? exception.toString() : "no exception found";
+  public static void assertProcNotFailed(final ProcedureInfo result) {
+    ForeignExceptionMessage exception = result.getForeignExceptionMessage();
+    String msg = exception != null ? result.getExceptionFullMessage() : "no exception found";
     assertFalse(msg, result.isFailed());
   }
 
-  public static void assertIsAbortException(final ProcedureResult result) {
-    LOG.info(result.getException());
+  public static void assertIsAbortException(final ProcedureInfo result) {
     assertEquals(true, result.isFailed());
-    Throwable cause = result.getException().getCause();
-    assertTrue("expected abort exception, got "+ cause,
-        cause instanceof ProcedureAbortedException);
+    LOG.info(result.getExceptionFullMessage());
+    Throwable cause = getExceptionCause(result);
+    assertTrue("expected abort exception, got "+ cause, cause instanceof ProcedureAbortedException);
+  }
+
+  public static void assertIsTimeoutException(final ProcedureInfo result) {
+    assertEquals(true, result.isFailed());
+    LOG.info(result.getExceptionFullMessage());
+    Throwable cause = getExceptionCause(result);
+    assertTrue("expected TimeoutIOException, got " + cause, cause instanceof TimeoutIOException);
+  }
+
+  public static void assertIsIllegalArgumentException(final ProcedureInfo result) {
+    assertEquals(true, result.isFailed());
+    LOG.info(result.getExceptionFullMessage());
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue("expected IllegalArgumentIOException, got " + cause,
+      cause instanceof IllegalArgumentIOException);
+  }
+
+  public static Throwable getExceptionCause(final ProcedureInfo procInfo) {
+    assert procInfo.getForeignExceptionMessage() != null;
+    return RemoteProcedureException.fromProto(procInfo.getForeignExceptionMessage()).getCause();
   }
 
   public static class TestProcedure extends Procedure<Void> {

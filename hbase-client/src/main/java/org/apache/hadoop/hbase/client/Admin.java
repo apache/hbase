@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -1043,6 +1044,14 @@ public interface Admin extends Abortable, Closeable {
   Future<Boolean> abortProcedureAsync(
     final long procId,
     final boolean mayInterruptIfRunning) throws IOException;
+
+  /**
+   * List procedures
+   * @return procedure list
+   * @throws IOException
+   */
+  ProcedureInfo[] listProcedures()
+      throws IOException;
 
   /**
    * Roll the log writer. I.e. for filesystem based write ahead logs, start writing to a new file.

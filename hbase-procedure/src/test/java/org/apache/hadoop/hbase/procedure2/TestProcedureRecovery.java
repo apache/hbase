@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -197,7 +198,7 @@ public class TestProcedureRecovery {
     long restartTs = EnvironmentEdgeManager.currentTime();
     restart();
     waitProcedure(procId);
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     assertTrue(result.getLastUpdate() > restartTs);
     ProcedureTestingUtility.assertProcNotFailed(result);
     assertEquals(1, Bytes.toInt(result.getResult()));
@@ -236,7 +237,7 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
@@ -283,7 +284,7 @@ public class TestProcedureRecovery {
     waitProcedure(procId);
 
     // The procedure is completed
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertIsAbortException(result);
   }
 
@@ -304,7 +305,7 @@ public class TestProcedureRecovery {
     long procId2 = ProcedureTestingUtility.submitAndWait(procExecutor, proc2, nonceGroup, nonce);
     assertTrue(procId == procId2);
 
-    ProcedureResult result = procExecutor.getResult(procId2);
+    ProcedureInfo result = procExecutor.getResult(procId2);
     ProcedureTestingUtility.assertProcNotFailed(result);
   }
 
@@ -451,7 +452,7 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertProcNotFailed(result);
     assertEquals(15, Bytes.toInt(result.getResult()));
   }
@@ -505,7 +506,7 @@ public class TestProcedureRecovery {
     assertTrue(procExecutor.isRunning());
 
     // The procedure is completed
-    ProcedureResult result = procExecutor.getResult(procId);
+    ProcedureInfo result = procExecutor.getResult(procId);
     ProcedureTestingUtility.assertIsAbortException(result);
   }
 

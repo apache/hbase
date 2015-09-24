@@ -26,7 +26,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +40,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -737,5 +736,11 @@ public class TestAdmin2 {
 
     boolean abortResult = admin.abortProcedure(procId, true);
     assertFalse(abortResult);
+  }
+
+  @Test(timeout = 300000)
+  public void testListProcedures() throws Exception {
+    ProcedureInfo[] procList = admin.listProcedures();
+    assertTrue(procList.length >= 0);
   }
 }

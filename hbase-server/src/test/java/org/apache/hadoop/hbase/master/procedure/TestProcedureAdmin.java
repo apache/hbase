@@ -19,6 +19,7 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import java.util.Random;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -27,11 +28,13 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -179,6 +182,41 @@ public class TestProcedureAdmin {
 
     boolean abortResult = procExec.abort(procId, true);
     assertFalse(abortResult);
+  }
+
+  @Test(timeout=60000)
+  public void testListProcedure() throws Exception {
+    final TableName tableName = TableName.valueOf("testListProcedure");
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f");
+    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
+
+    long procId = procExec.submitProcedure(
+      new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
+
+    List<ProcedureInfo> listProcedures = procExec.listProcedures();
+    assertTrue(listProcedures.size() >= 1);
+    boolean found = false;
+    for (ProcedureInfo procInfo: listProcedures) {
+      if (procInfo.getProcId() == procId) {
+        assertTrue(procInfo.getProcState() == ProcedureState.RUNNABLE);
+        found = true;
+      } else {
+        assertTrue(procInfo.getProcState() == ProcedureState.FINISHED);
+      }
+    }
+    assertTrue(found);
+
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
+    ProcedureTestingUtility.restart(procExec);
+    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+    listProcedures = procExec.listProcedures();
+    for (ProcedureInfo procInfo: listProcedures) {
+      assertTrue(procInfo.getProcState() == ProcedureState.FINISHED);
+    }
   }
 
   private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {

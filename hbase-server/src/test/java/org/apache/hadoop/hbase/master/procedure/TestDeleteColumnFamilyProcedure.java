@@ -28,9 +28,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos.DeleteColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -151,10 +151,11 @@ public class TestDeleteColumnFamilyProcedure {
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
 
     // Second delete should fail with InvalidFamilyOperationException
-    ProcedureResult result = procExec.getResult(procId2);
+    ProcedureInfo result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Delete online failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof InvalidFamilyOperationException);
+    LOG.debug("Delete online failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
 
     // Try again, this time with table disabled.
     UTIL.getHBaseAdmin().disableTable(tableName);
@@ -167,8 +168,9 @@ public class TestDeleteColumnFamilyProcedure {
     // Expect fail with InvalidFamilyOperationException
     result = procExec.getResult(procId2);
     assertTrue(result.isFailed());
-    LOG.debug("Delete offline failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof InvalidFamilyOperationException);
+    LOG.debug("Delete offline failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
   }
 
   @Test(timeout=60000)
@@ -219,10 +221,11 @@ public class TestDeleteColumnFamilyProcedure {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
 
-    ProcedureResult result = procExec.getResult(procId1);
+    ProcedureInfo result = procExec.getResult(procId1);
     assertTrue(result.isFailed());
-    LOG.debug("Delete failed with exception: " + result.getException());
-    assertTrue(result.getException().getCause() instanceof InvalidFamilyOperationException);
+    LOG.debug("Delete failed with exception: " + result.getExceptionFullMessage());
+    assertTrue(
+      ProcedureTestingUtility.getExceptionCause(result) instanceof InvalidFamilyOperationException);
   }
 
   @Test(timeout=60000)

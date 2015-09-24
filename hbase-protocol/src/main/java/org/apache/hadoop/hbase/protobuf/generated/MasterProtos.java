@@ -48641,6 +48641,1065 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.AbortProcedureResponse)
   }
 
+  public interface ListProceduresRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ListProceduresRequest}
+   */
+  public static final class ListProceduresRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements ListProceduresRequestOrBuilder {
+    // Use ListProceduresRequest.newBuilder() to construct.
+    private ListProceduresRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ListProceduresRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ListProceduresRequest defaultInstance;
+    public static ListProceduresRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ListProceduresRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListProceduresRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ListProceduresRequest> PARSER =
+        new com.google.protobuf.AbstractParser<ListProceduresRequest>() {
+      public ListProceduresRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ListProceduresRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ListProceduresRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ListProceduresRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListProceduresRequest)
+    }
+
+    static {
+      defaultInstance = new ListProceduresRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListProceduresRequest)
+  }
+
+  public interface ListProceduresResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // repeated .hbase.pb.Procedure procedure = 1;
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> 
+        getProcedureList();
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index);
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    int getProcedureCount();
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+        getProcedureOrBuilderList();
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code hbase.pb.ListProceduresResponse}
+   */
+  public static final class ListProceduresResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements ListProceduresResponseOrBuilder {
+    // Use ListProceduresResponse.newBuilder() to construct.
+    private ListProceduresResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private ListProceduresResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final ListProceduresResponse defaultInstance;
+    public static ListProceduresResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public ListProceduresResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private ListProceduresResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              if (!((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+                procedure_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure>();
+                mutable_bitField0_ |= 0x00000001;
+              }
+              procedure_.add(input.readMessage(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.PARSER, extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000001) == 0x00000001)) {
+          procedure_ = java.util.Collections.unmodifiableList(procedure_);
+        }
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<ListProceduresResponse> PARSER =
+        new com.google.protobuf.AbstractParser<ListProceduresResponse>() {
+      public ListProceduresResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new ListProceduresResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ListProceduresResponse> getParserForType() {
+      return PARSER;
+    }
+
+    // repeated .hbase.pb.Procedure procedure = 1;
+    public static final int PROCEDURE_FIELD_NUMBER = 1;
+    private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> procedure_;
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> getProcedureList() {
+      return procedure_;
+    }
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+        getProcedureOrBuilderList() {
+      return procedure_;
+    }
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    public int getProcedureCount() {
+      return procedure_.size();
+    }
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index) {
+      return procedure_.get(index);
+    }
+    /**
+     * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
+        int index) {
+      return procedure_.get(index);
+    }
+
+    private void initFields() {
+      procedure_ = java.util.Collections.emptyList();
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      for (int i = 0; i < getProcedureCount(); i++) {
+        if (!getProcedure(i).isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      for (int i = 0; i < procedure_.size(); i++) {
+        output.writeMessage(1, procedure_.get(i));
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      for (int i = 0; i < procedure_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, procedure_.get(i));
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse) obj;
+
+      boolean result = true;
+      result = result && getProcedureList()
+          .equals(other.getProcedureList());
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (getProcedureCount() > 0) {
+        hash = (37 * hash) + PROCEDURE_FIELD_NUMBER;
+        hash = (53 * hash) + getProcedureList().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.ListProceduresResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getProcedureFieldBuilder();
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        if (procedureBuilder_ == null) {
+          procedure_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+        } else {
+          procedureBuilder_.clear();
+        }
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_hbase_pb_ListProceduresResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse(this);
+        int from_bitField0_ = bitField0_;
+        if (procedureBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            procedure_ = java.util.Collections.unmodifiableList(procedure_);
+            bitField0_ = (bitField0_ & ~0x00000001);
+          }
+          result.procedure_ = procedure_;
+        } else {
+          result.procedure_ = procedureBuilder_.build();
+        }
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance()) return this;
+        if (procedureBuilder_ == null) {
+          if (!other.procedure_.isEmpty()) {
+            if (procedure_.isEmpty()) {
+              procedure_ = other.procedure_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+            } else {
+              ensureProcedureIsMutable();
+              procedure_.addAll(other.procedure_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.procedure_.isEmpty()) {
+            if (procedureBuilder_.isEmpty()) {
+              procedureBuilder_.dispose();
+              procedureBuilder_ = null;
+              procedure_ = other.procedure_;
+              bitField0_ = (bitField0_ & ~0x00000001);
+              procedureBuilder_ = 
+                com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders ?
+                   getProcedureFieldBuilder() : null;
+            } else {
+              procedureBuilder_.addAllMessages(other.procedure_);
+            }
+          }
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        for (int i = 0; i < getProcedureCount(); i++) {
+          if (!getProcedure(i).isInitialized()) {
+            
+            return false;
+          }
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // repeated .hbase.pb.Procedure procedure = 1;
+      private java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> procedure_ =
+        java.util.Collections.emptyList();
+      private void ensureProcedureIsMutable() {
+        if (!((bitField0_ & 0x00000001) == 0x00000001)) {
+          procedure_ = new java.util.ArrayList<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure>(procedure_);
+          bitField0_ |= 0x00000001;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> procedureBuilder_;
+
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> getProcedureList() {
+        if (procedureBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(procedure_);
+        } else {
+          return procedureBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public int getProcedureCount() {
+        if (procedureBuilder_ == null) {
+          return procedure_.size();
+        } else {
+          return procedureBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure getProcedure(int index) {
+        if (procedureBuilder_ == null) {
+          return procedure_.get(index);
+        } else {
+          return procedureBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder setProcedure(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (procedureBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureProcedureIsMutable();
+          procedure_.set(index, value);
+          onChanged();
+        } else {
+          procedureBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder setProcedure(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
+        if (procedureBuilder_ == null) {
+          ensureProcedureIsMutable();
+          procedure_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          procedureBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder addProcedure(org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (procedureBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureProcedureIsMutable();
+          procedure_.add(value);
+          onChanged();
+        } else {
+          procedureBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder addProcedure(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure value) {
+        if (procedureBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureProcedureIsMutable();
+          procedure_.add(index, value);
+          onChanged();
+        } else {
+          procedureBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder addProcedure(
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
+        if (procedureBuilder_ == null) {
+          ensureProcedureIsMutable();
+          procedure_.add(builderForValue.build());
+          onChanged();
+        } else {
+          procedureBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder addProcedure(
+          int index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder builderForValue) {
+        if (procedureBuilder_ == null) {
+          ensureProcedureIsMutable();
+          procedure_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          procedureBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder addAllProcedure(
+          java.lang.Iterable<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure> values) {
+        if (procedureBuilder_ == null) {
+          ensureProcedureIsMutable();
+          super.addAll(values, procedure_);
+          onChanged();
+        } else {
+          procedureBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder clearProcedure() {
+        if (procedureBuilder_ == null) {
+          procedure_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000001);
+          onChanged();
+        } else {
+          procedureBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public Builder removeProcedure(int index) {
+        if (procedureBuilder_ == null) {
+          ensureProcedureIsMutable();
+          procedure_.remove(index);
+          onChanged();
+        } else {
+          procedureBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder getProcedureBuilder(
+          int index) {
+        return getProcedureFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder getProcedureOrBuilder(
+          int index) {
+        if (procedureBuilder_ == null) {
+          return procedure_.get(index);  } else {
+          return procedureBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public java.util.List<? extends org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+           getProcedureOrBuilderList() {
+        if (procedureBuilder_ != null) {
+          return procedureBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(procedure_);
+        }
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder addProcedureBuilder() {
+        return getProcedureFieldBuilder().addBuilder(
+            org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder addProcedureBuilder(
+          int index) {
+        return getProcedureFieldBuilder().addBuilder(
+            index, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .hbase.pb.Procedure procedure = 1;</code>
+       */
+      public java.util.List<org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder> 
+           getProcedureBuilderList() {
+        return getProcedureFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder> 
+          getProcedureFieldBuilder() {
+        if (procedureBuilder_ == null) {
+          procedureBuilder_ = new com.google.protobuf.RepeatedFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.Procedure.Builder, org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureOrBuilder>(
+                  procedure_,
+                  ((bitField0_ & 0x00000001) == 0x00000001),
+                  getParentForChildren(),
+                  isClean());
+          procedure_ = null;
+        }
+        return procedureBuilder_;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.ListProceduresResponse)
+    }
+
+    static {
+      defaultInstance = new ListProceduresResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.ListProceduresResponse)
+  }
+
   public interface SetQuotaRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -53599,6 +54658,18 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse> done);
 
+      /**
+       * <code>rpc ListProcedures(.hbase.pb.ListProceduresRequest) returns (.hbase.pb.ListProceduresResponse);</code>
+       *
+       * <pre>
+       ** returns a list of procedures 
+       * </pre>
+       */
+      public abstract void listProcedures(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse> done);
+
     }
 
     public static com.google.protobuf.Service newReflectiveService(
@@ -54012,6 +55083,14 @@ public final class MasterProtos {
           impl.abortProcedure(controller, request, done);
         }
 
+        @java.lang.Override
+        public  void listProcedures(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse> done) {
+          impl.listProcedures(controller, request, done);
+        }
+
       };
     }
 
@@ -54136,6 +55215,8 @@ public final class MasterProtos {
               return impl.getSecurityCapabilities(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)request);
             case 50:
               return impl.abortProcedure(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest)request);
+            case 51:
+              return impl.listProcedures(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -54252,6 +55333,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
             case 50:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest.getDefaultInstance();
+            case 51:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -54368,6 +55451,8 @@ public final class MasterProtos {
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
             case 50:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse.getDefaultInstance();
+            case 51:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
           }
@@ -55011,6 +56096,18 @@ public final class MasterProtos {
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse> done);
 
+    /**
+     * <code>rpc ListProcedures(.hbase.pb.ListProceduresRequest) returns (.hbase.pb.ListProceduresResponse);</code>
+     *
+     * <pre>
+     ** returns a list of procedures 
+     * </pre>
+     */
+    public abstract void listProcedures(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse> done);
+
     public static final
         com.google.protobuf.Descriptors.ServiceDescriptor
         getDescriptor() {
@@ -55288,6 +56385,11 @@ public final class MasterProtos {
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse>specializeCallback(
               done));
           return;
+        case 51:
+          this.listProcedures(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse>specializeCallback(
+              done));
+          return;
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -55404,6 +56506,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
         case 50:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest.getDefaultInstance();
+        case 51:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -55520,6 +56624,8 @@ public final class MasterProtos {
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
         case 50:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse.getDefaultInstance();
+        case 51:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
       }
@@ -56305,6 +57411,21 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse.class,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse.getDefaultInstance()));
       }
+
+      public  void listProcedures(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(51),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance()));
+      }
     }
 
     public static BlockingInterface newBlockingStub(
@@ -56566,6 +57687,11 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse abortProcedure(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse listProcedures(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request)
           throws com.google.protobuf.ServiceException;
     }
 
@@ -57187,6 +58313,18 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse.getDefaultInstance());
       }
 
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse listProcedures(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(51),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse.getDefaultInstance());
+      }
+
     }
 
     // @@protoc_insertion_point(class_scope:hbase.pb.MasterService)
@@ -57643,6 +58781,16 @@ public final class MasterProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_AbortProcedureResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ListProceduresRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_ListProceduresResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_SetQuotaRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -57688,294 +58836,299 @@ public final class MasterProtos {
     java.lang.String[] descriptorData = {
       "\n\014Master.proto\022\010hbase.pb\032\013HBase.proto\032\014C" +
       "lient.proto\032\023ClusterStatus.proto\032\023ErrorH" +
-      "andling.proto\032\013Quota.proto\"\234\001\n\020AddColumn" +
-      "Request\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.T" +
-      "ableName\0225\n\017column_families\030\002 \002(\0132\034.hbas" +
-      "e.pb.ColumnFamilySchema\022\026\n\013nonce_group\030\003" +
-      " \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"\023\n\021AddColumnRe" +
-      "sponse\"}\n\023DeleteColumnRequest\022\'\n\ntable_n" +
-      "ame\030\001 \002(\0132\023.hbase.pb.TableName\022\023\n\013column" +
-      "_name\030\002 \002(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005n",
-      "once\030\004 \001(\004:\0010\"\026\n\024DeleteColumnResponse\"\237\001" +
-      "\n\023ModifyColumnRequest\022\'\n\ntable_name\030\001 \002(" +
-      "\0132\023.hbase.pb.TableName\0225\n\017column_familie" +
-      "s\030\002 \002(\0132\034.hbase.pb.ColumnFamilySchema\022\026\n" +
-      "\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"" +
-      "\026\n\024ModifyColumnResponse\"n\n\021MoveRegionReq" +
-      "uest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSp" +
-      "ecifier\022.\n\020dest_server_name\030\002 \001(\0132\024.hbas" +
-      "e.pb.ServerName\"\024\n\022MoveRegionResponse\"\222\001" +
-      "\n\035DispatchMergingRegionsRequest\022+\n\010regio",
-      "n_a\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022+\n\010" +
-      "region_b\030\002 \002(\0132\031.hbase.pb.RegionSpecifie" +
-      "r\022\027\n\010forcible\030\003 \001(\010:\005false\" \n\036DispatchMe" +
-      "rgingRegionsResponse\"@\n\023AssignRegionRequ" +
-      "est\022)\n\006region\030\001 \002(\0132\031.hbase.pb.RegionSpe" +
-      "cifier\"\026\n\024AssignRegionResponse\"X\n\025Unassi" +
-      "gnRegionRequest\022)\n\006region\030\001 \002(\0132\031.hbase." +
-      "pb.RegionSpecifier\022\024\n\005force\030\002 \001(\010:\005false" +
-      "\"\030\n\026UnassignRegionResponse\"A\n\024OfflineReg" +
-      "ionRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Re",
-      "gionSpecifier\"\027\n\025OfflineRegionResponse\"\177" +
-      "\n\022CreateTableRequest\022+\n\014table_schema\030\001 \002" +
-      "(\0132\025.hbase.pb.TableSchema\022\022\n\nsplit_keys\030" +
-      "\002 \003(\014\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004" +
-      " \001(\004:\0010\"&\n\023CreateTableResponse\022\017\n\007proc_i" +
-      "d\030\001 \001(\004\"g\n\022DeleteTableRequest\022\'\n\ntable_n" +
-      "ame\030\001 \002(\0132\023.hbase.pb.TableName\022\026\n\013nonce_" +
-      "group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n\023Dele" +
-      "teTableResponse\022\017\n\007proc_id\030\001 \001(\004\"\207\001\n\024Tru" +
-      "ncateTableRequest\022&\n\ttableName\030\001 \002(\0132\023.h",
-      "base.pb.TableName\022\035\n\016preserveSplits\030\002 \001(" +
-      "\010:\005false\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonc" +
-      "e\030\004 \001(\004:\0010\"(\n\025TruncateTableResponse\022\017\n\007p" +
-      "roc_id\030\001 \001(\004\"g\n\022EnableTableRequest\022\'\n\nta" +
-      "ble_name\030\001 \002(\0132\023.hbase.pb.TableName\022\026\n\013n" +
-      "once_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"&\n" +
-      "\023EnableTableResponse\022\017\n\007proc_id\030\001 \001(\004\"h\n" +
-      "\023DisableTableRequest\022\'\n\ntable_name\030\001 \002(\013" +
-      "2\023.hbase.pb.TableName\022\026\n\013nonce_group\030\002 \001" +
-      "(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\'\n\024DisableTableR",
-      "esponse\022\017\n\007proc_id\030\001 \001(\004\"\224\001\n\022ModifyTable" +
-      "Request\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.T" +
-      "ableName\022+\n\014table_schema\030\002 \002(\0132\025.hbase.p" +
-      "b.TableSchema\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n" +
-      "\005nonce\030\004 \001(\004:\0010\"&\n\023ModifyTableResponse\022\017" +
-      "\n\007proc_id\030\001 \001(\004\"~\n\026CreateNamespaceReques" +
-      "t\022:\n\023namespaceDescriptor\030\001 \002(\0132\035.hbase.p" +
-      "b.NamespaceDescriptor\022\026\n\013nonce_group\030\002 \001" +
-      "(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\031\n\027CreateNamespa" +
-      "ceResponse\"Y\n\026DeleteNamespaceRequest\022\025\n\r",
-      "namespaceName\030\001 \002(\t\022\026\n\013nonce_group\030\002 \001(\004" +
-      ":\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\031\n\027DeleteNamespace" +
-      "Response\"~\n\026ModifyNamespaceRequest\022:\n\023na" +
-      "mespaceDescriptor\030\001 \002(\0132\035.hbase.pb.Names" +
-      "paceDescriptor\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020" +
-      "\n\005nonce\030\003 \001(\004:\0010\"\031\n\027ModifyNamespaceRespo" +
-      "nse\"6\n\035GetNamespaceDescriptorRequest\022\025\n\r" +
-      "namespaceName\030\001 \002(\t\"\\\n\036GetNamespaceDescr" +
-      "iptorResponse\022:\n\023namespaceDescriptor\030\001 \002" +
-      "(\0132\035.hbase.pb.NamespaceDescriptor\"!\n\037Lis",
-      "tNamespaceDescriptorsRequest\"^\n ListName" +
-      "spaceDescriptorsResponse\022:\n\023namespaceDes" +
-      "criptor\030\001 \003(\0132\035.hbase.pb.NamespaceDescri" +
-      "ptor\"?\n&ListTableDescriptorsByNamespaceR" +
-      "equest\022\025\n\rnamespaceName\030\001 \002(\t\"U\n\'ListTab" +
-      "leDescriptorsByNamespaceResponse\022*\n\013tabl" +
-      "eSchema\030\001 \003(\0132\025.hbase.pb.TableSchema\"9\n " +
-      "ListTableNamesByNamespaceRequest\022\025\n\rname" +
-      "spaceName\030\001 \002(\t\"K\n!ListTableNamesByNames" +
-      "paceResponse\022&\n\ttableName\030\001 \003(\0132\023.hbase.",
-      "pb.TableName\"\021\n\017ShutdownRequest\"\022\n\020Shutd" +
-      "ownResponse\"\023\n\021StopMasterRequest\"\024\n\022Stop" +
-      "MasterResponse\"\037\n\016BalanceRequest\022\r\n\005forc" +
-      "e\030\001 \001(\010\"\'\n\017BalanceResponse\022\024\n\014balancer_r" +
-      "an\030\001 \002(\010\"<\n\031SetBalancerRunningRequest\022\n\n" +
-      "\002on\030\001 \002(\010\022\023\n\013synchronous\030\002 \001(\010\"8\n\032SetBal" +
-      "ancerRunningResponse\022\032\n\022prev_balance_val" +
-      "ue\030\001 \001(\010\"\032\n\030IsBalancerEnabledRequest\",\n\031" +
-      "IsBalancerEnabledResponse\022\017\n\007enabled\030\001 \002" +
-      "(\010\"\027\n\025RunCatalogScanRequest\"-\n\026RunCatalo",
-      "gScanResponse\022\023\n\013scan_result\030\001 \001(\005\"-\n\033En" +
-      "ableCatalogJanitorRequest\022\016\n\006enable\030\001 \002(" +
-      "\010\"2\n\034EnableCatalogJanitorResponse\022\022\n\npre" +
-      "v_value\030\001 \001(\010\" \n\036IsCatalogJanitorEnabled" +
-      "Request\"0\n\037IsCatalogJanitorEnabledRespon" +
-      "se\022\r\n\005value\030\001 \002(\010\"B\n\017SnapshotRequest\022/\n\010" +
-      "snapshot\030\001 \002(\0132\035.hbase.pb.SnapshotDescri" +
-      "ption\",\n\020SnapshotResponse\022\030\n\020expected_ti" +
-      "meout\030\001 \002(\003\"\036\n\034GetCompletedSnapshotsRequ" +
-      "est\"Q\n\035GetCompletedSnapshotsResponse\0220\n\t",
-      "snapshots\030\001 \003(\0132\035.hbase.pb.SnapshotDescr" +
-      "iption\"H\n\025DeleteSnapshotRequest\022/\n\010snaps" +
-      "hot\030\001 \002(\0132\035.hbase.pb.SnapshotDescription" +
-      "\"\030\n\026DeleteSnapshotResponse\"I\n\026RestoreSna" +
-      "pshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hbase.p" +
-      "b.SnapshotDescription\"\031\n\027RestoreSnapshot" +
-      "Response\"H\n\025IsSnapshotDoneRequest\022/\n\010sna" +
-      "pshot\030\001 \001(\0132\035.hbase.pb.SnapshotDescripti" +
-      "on\"^\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001" +
-      "(\010:\005false\022/\n\010snapshot\030\002 \001(\0132\035.hbase.pb.S",
-      "napshotDescription\"O\n\034IsRestoreSnapshotD" +
+      "andling.proto\032\017Procedure.proto\032\013Quota.pr" +
+      "oto\"\234\001\n\020AddColumnRequest\022\'\n\ntable_name\030\001" +
+      " \002(\0132\023.hbase.pb.TableName\0225\n\017column_fami" +
+      "lies\030\002 \002(\0132\034.hbase.pb.ColumnFamilySchema" +
+      "\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:" +
+      "\0010\"\023\n\021AddColumnResponse\"}\n\023DeleteColumnR" +
+      "equest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Ta" +
+      "bleName\022\023\n\013column_name\030\002 \002(\014\022\026\n\013nonce_gr",
+      "oup\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"\026\n\024Delete" +
+      "ColumnResponse\"\237\001\n\023ModifyColumnRequest\022\'" +
+      "\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName\022" +
+      "5\n\017column_families\030\002 \002(\0132\034.hbase.pb.Colu" +
+      "mnFamilySchema\022\026\n\013nonce_group\030\003 \001(\004:\0010\022\020" +
+      "\n\005nonce\030\004 \001(\004:\0010\"\026\n\024ModifyColumnResponse" +
+      "\"n\n\021MoveRegionRequest\022)\n\006region\030\001 \002(\0132\031." +
+      "hbase.pb.RegionSpecifier\022.\n\020dest_server_" +
+      "name\030\002 \001(\0132\024.hbase.pb.ServerName\"\024\n\022Move" +
+      "RegionResponse\"\222\001\n\035DispatchMergingRegion",
+      "sRequest\022+\n\010region_a\030\001 \002(\0132\031.hbase.pb.Re" +
+      "gionSpecifier\022+\n\010region_b\030\002 \002(\0132\031.hbase." +
+      "pb.RegionSpecifier\022\027\n\010forcible\030\003 \001(\010:\005fa" +
+      "lse\" \n\036DispatchMergingRegionsResponse\"@\n" +
+      "\023AssignRegionRequest\022)\n\006region\030\001 \002(\0132\031.h" +
+      "base.pb.RegionSpecifier\"\026\n\024AssignRegionR" +
+      "esponse\"X\n\025UnassignRegionRequest\022)\n\006regi" +
+      "on\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022\024\n\005f" +
+      "orce\030\002 \001(\010:\005false\"\030\n\026UnassignRegionRespo" +
+      "nse\"A\n\024OfflineRegionRequest\022)\n\006region\030\001 ",
+      "\002(\0132\031.hbase.pb.RegionSpecifier\"\027\n\025Offlin" +
+      "eRegionResponse\"\177\n\022CreateTableRequest\022+\n" +
+      "\014table_schema\030\001 \002(\0132\025.hbase.pb.TableSche" +
+      "ma\022\022\n\nsplit_keys\030\002 \003(\014\022\026\n\013nonce_group\030\003 " +
+      "\001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023CreateTableR" +
+      "esponse\022\017\n\007proc_id\030\001 \001(\004\"g\n\022DeleteTableR" +
+      "equest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.Ta" +
+      "bleName\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce" +
+      "\030\003 \001(\004:\0010\"&\n\023DeleteTableResponse\022\017\n\007proc" +
+      "_id\030\001 \001(\004\"\207\001\n\024TruncateTableRequest\022&\n\tta",
+      "bleName\030\001 \002(\0132\023.hbase.pb.TableName\022\035\n\016pr" +
+      "eserveSplits\030\002 \001(\010:\005false\022\026\n\013nonce_group" +
+      "\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"(\n\025TruncateT" +
+      "ableResponse\022\017\n\007proc_id\030\001 \001(\004\"g\n\022EnableT" +
+      "ableRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase." +
+      "pb.TableName\022\026\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005" +
+      "nonce\030\003 \001(\004:\0010\"&\n\023EnableTableResponse\022\017\n" +
+      "\007proc_id\030\001 \001(\004\"h\n\023DisableTableRequest\022\'\n" +
+      "\ntable_name\030\001 \002(\0132\023.hbase.pb.TableName\022\026" +
+      "\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010",
+      "\"\'\n\024DisableTableResponse\022\017\n\007proc_id\030\001 \001(" +
+      "\004\"\224\001\n\022ModifyTableRequest\022\'\n\ntable_name\030\001" +
+      " \002(\0132\023.hbase.pb.TableName\022+\n\014table_schem" +
+      "a\030\002 \002(\0132\025.hbase.pb.TableSchema\022\026\n\013nonce_" +
+      "group\030\003 \001(\004:\0010\022\020\n\005nonce\030\004 \001(\004:\0010\"&\n\023Modi" +
+      "fyTableResponse\022\017\n\007proc_id\030\001 \001(\004\"~\n\026Crea" +
+      "teNamespaceRequest\022:\n\023namespaceDescripto" +
+      "r\030\001 \002(\0132\035.hbase.pb.NamespaceDescriptor\022\026" +
+      "\n\013nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010" +
+      "\"\031\n\027CreateNamespaceResponse\"Y\n\026DeleteNam",
+      "espaceRequest\022\025\n\rnamespaceName\030\001 \002(\t\022\026\n\013" +
+      "nonce_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\031" +
+      "\n\027DeleteNamespaceResponse\"~\n\026ModifyNames" +
+      "paceRequest\022:\n\023namespaceDescriptor\030\001 \002(\013" +
+      "2\035.hbase.pb.NamespaceDescriptor\022\026\n\013nonce" +
+      "_group\030\002 \001(\004:\0010\022\020\n\005nonce\030\003 \001(\004:\0010\"\031\n\027Mod" +
+      "ifyNamespaceResponse\"6\n\035GetNamespaceDesc" +
+      "riptorRequest\022\025\n\rnamespaceName\030\001 \002(\t\"\\\n\036" +
+      "GetNamespaceDescriptorResponse\022:\n\023namesp" +
+      "aceDescriptor\030\001 \002(\0132\035.hbase.pb.Namespace",
+      "Descriptor\"!\n\037ListNamespaceDescriptorsRe" +
+      "quest\"^\n ListNamespaceDescriptorsRespons" +
+      "e\022:\n\023namespaceDescriptor\030\001 \003(\0132\035.hbase.p" +
+      "b.NamespaceDescriptor\"?\n&ListTableDescri" +
+      "ptorsByNamespaceRequest\022\025\n\rnamespaceName" +
+      "\030\001 \002(\t\"U\n\'ListTableDescriptorsByNamespac" +
+      "eResponse\022*\n\013tableSchema\030\001 \003(\0132\025.hbase.p" +
+      "b.TableSchema\"9\n ListTableNamesByNamespa" +
+      "ceRequest\022\025\n\rnamespaceName\030\001 \002(\t\"K\n!List" +
+      "TableNamesByNamespaceResponse\022&\n\ttableNa",
+      "me\030\001 \003(\0132\023.hbase.pb.TableName\"\021\n\017Shutdow" +
+      "nRequest\"\022\n\020ShutdownResponse\"\023\n\021StopMast" +
+      "erRequest\"\024\n\022StopMasterResponse\"\037\n\016Balan" +
+      "ceRequest\022\r\n\005force\030\001 \001(\010\"\'\n\017BalanceRespo" +
+      "nse\022\024\n\014balancer_ran\030\001 \002(\010\"<\n\031SetBalancer" +
+      "RunningRequest\022\n\n\002on\030\001 \002(\010\022\023\n\013synchronou" +
+      "s\030\002 \001(\010\"8\n\032SetBalancerRunningResponse\022\032\n" +
+      "\022prev_balance_value\030\001 \001(\010\"\032\n\030IsBalancerE" +
+      "nabledRequest\",\n\031IsBalancerEnabledRespon" +
+      "se\022\017\n\007enabled\030\001 \002(\010\"\027\n\025RunCatalogScanReq",
+      "uest\"-\n\026RunCatalogScanResponse\022\023\n\013scan_r" +
+      "esult\030\001 \001(\005\"-\n\033EnableCatalogJanitorReque" +
+      "st\022\016\n\006enable\030\001 \002(\010\"2\n\034EnableCatalogJanit" +
+      "orResponse\022\022\n\nprev_value\030\001 \001(\010\" \n\036IsCata" +
+      "logJanitorEnabledRequest\"0\n\037IsCatalogJan" +
+      "itorEnabledResponse\022\r\n\005value\030\001 \002(\010\"B\n\017Sn" +
+      "apshotRequest\022/\n\010snapshot\030\001 \002(\0132\035.hbase." +
+      "pb.SnapshotDescription\",\n\020SnapshotRespon" +
+      "se\022\030\n\020expected_timeout\030\001 \002(\003\"\036\n\034GetCompl" +
+      "etedSnapshotsRequest\"Q\n\035GetCompletedSnap",
+      "shotsResponse\0220\n\tsnapshots\030\001 \003(\0132\035.hbase" +
+      ".pb.SnapshotDescription\"H\n\025DeleteSnapsho" +
+      "tRequest\022/\n\010snapshot\030\001 \002(\0132\035.hbase.pb.Sn" +
+      "apshotDescription\"\030\n\026DeleteSnapshotRespo" +
+      "nse\"I\n\026RestoreSnapshotRequest\022/\n\010snapsho" +
+      "t\030\001 \002(\0132\035.hbase.pb.SnapshotDescription\"\031" +
+      "\n\027RestoreSnapshotResponse\"H\n\025IsSnapshotD" +
       "oneRequest\022/\n\010snapshot\030\001 \001(\0132\035.hbase.pb." +
-      "SnapshotDescription\"4\n\035IsRestoreSnapshot" +
-      "DoneResponse\022\023\n\004done\030\001 \001(\010:\005false\"F\n\033Get" +
-      "SchemaAlterStatusRequest\022\'\n\ntable_name\030\001" +
-      " \002(\0132\023.hbase.pb.TableName\"T\n\034GetSchemaAl" +
-      "terStatusResponse\022\035\n\025yet_to_update_regio" +
-      "ns\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\213\001\n\032GetT" +
-      "ableDescriptorsRequest\022(\n\013table_names\030\001 " +
-      "\003(\0132\023.hbase.pb.TableName\022\r\n\005regex\030\002 \001(\t\022",
-      "!\n\022include_sys_tables\030\003 \001(\010:\005false\022\021\n\tna" +
-      "mespace\030\004 \001(\t\"J\n\033GetTableDescriptorsResp" +
-      "onse\022+\n\014table_schema\030\001 \003(\0132\025.hbase.pb.Ta" +
-      "bleSchema\"[\n\024GetTableNamesRequest\022\r\n\005reg" +
-      "ex\030\001 \001(\t\022!\n\022include_sys_tables\030\002 \001(\010:\005fa" +
-      "lse\022\021\n\tnamespace\030\003 \001(\t\"A\n\025GetTableNamesR" +
-      "esponse\022(\n\013table_names\030\001 \003(\0132\023.hbase.pb." +
-      "TableName\"?\n\024GetTableStateRequest\022\'\n\ntab" +
-      "le_name\030\001 \002(\0132\023.hbase.pb.TableName\"B\n\025Ge" +
-      "tTableStateResponse\022)\n\013table_state\030\001 \002(\013",
-      "2\024.hbase.pb.TableState\"\031\n\027GetClusterStat" +
-      "usRequest\"K\n\030GetClusterStatusResponse\022/\n" +
-      "\016cluster_status\030\001 \002(\0132\027.hbase.pb.Cluster" +
-      "Status\"\030\n\026IsMasterRunningRequest\"4\n\027IsMa" +
-      "sterRunningResponse\022\031\n\021is_master_running" +
-      "\030\001 \002(\010\"I\n\024ExecProcedureRequest\0221\n\tproced" +
-      "ure\030\001 \002(\0132\036.hbase.pb.ProcedureDescriptio" +
-      "n\"F\n\025ExecProcedureResponse\022\030\n\020expected_t" +
-      "imeout\030\001 \001(\003\022\023\n\013return_data\030\002 \001(\014\"K\n\026IsP" +
-      "rocedureDoneRequest\0221\n\tprocedure\030\001 \001(\0132\036",
-      ".hbase.pb.ProcedureDescription\"`\n\027IsProc" +
-      "edureDoneResponse\022\023\n\004done\030\001 \001(\010:\005false\0220" +
-      "\n\010snapshot\030\002 \001(\0132\036.hbase.pb.ProcedureDes" +
-      "cription\",\n\031GetProcedureResultRequest\022\017\n" +
-      "\007proc_id\030\001 \002(\004\"\371\001\n\032GetProcedureResultRes" +
-      "ponse\0229\n\005state\030\001 \002(\0162*.hbase.pb.GetProce" +
-      "dureResultResponse.State\022\022\n\nstart_time\030\002" +
-      " \001(\004\022\023\n\013last_update\030\003 \001(\004\022\016\n\006result\030\004 \001(" +
-      "\014\0224\n\texception\030\005 \001(\0132!.hbase.pb.ForeignE" +
-      "xceptionMessage\"1\n\005State\022\r\n\tNOT_FOUND\020\000\022",
-      "\013\n\007RUNNING\020\001\022\014\n\010FINISHED\020\002\"M\n\025AbortProce" +
-      "dureRequest\022\017\n\007proc_id\030\001 \002(\004\022#\n\025mayInter" +
-      "ruptIfRunning\030\002 \001(\010:\004true\"6\n\026AbortProced" +
-      "ureResponse\022\034\n\024is_procedure_aborted\030\001 \002(" +
-      "\010\"\315\001\n\017SetQuotaRequest\022\021\n\tuser_name\030\001 \001(\t" +
-      "\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tnamespace\030\003 \001(\t\022" +
-      "\'\n\ntable_name\030\004 \001(\0132\023.hbase.pb.TableName" +
-      "\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass_globals\030\006" +
-      " \001(\010\022+\n\010throttle\030\007 \001(\0132\031.hbase.pb.Thrott" +
-      "leRequest\"\022\n\020SetQuotaResponse\"J\n\037MajorCo",
-      "mpactionTimestampRequest\022\'\n\ntable_name\030\001" +
-      " \002(\0132\023.hbase.pb.TableName\"U\n(MajorCompac" +
-      "tionTimestampForRegionRequest\022)\n\006region\030" +
-      "\001 \002(\0132\031.hbase.pb.RegionSpecifier\"@\n Majo" +
-      "rCompactionTimestampResponse\022\034\n\024compacti" +
-      "on_timestamp\030\001 \002(\003\"\035\n\033SecurityCapabiliti" +
-      "esRequest\"\354\001\n\034SecurityCapabilitiesRespon" +
-      "se\022G\n\014capabilities\030\001 \003(\01621.hbase.pb.Secu" +
-      "rityCapabilitiesResponse.Capability\"\202\001\n\n" +
-      "Capability\022\031\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n",
-      "\025SECURE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZATIO" +
-      "N\020\002\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_VISI" +
-      "BILITY\020\0042\226$\n\rMasterService\022e\n\024GetSchemaA" +
-      "lterStatus\022%.hbase.pb.GetSchemaAlterStat" +
-      "usRequest\032&.hbase.pb.GetSchemaAlterStatu" +
-      "sResponse\022b\n\023GetTableDescriptors\022$.hbase" +
-      ".pb.GetTableDescriptorsRequest\032%.hbase.p" +
-      "b.GetTableDescriptorsResponse\022P\n\rGetTabl" +
-      "eNames\022\036.hbase.pb.GetTableNamesRequest\032\037" +
-      ".hbase.pb.GetTableNamesResponse\022Y\n\020GetCl",
-      "usterStatus\022!.hbase.pb.GetClusterStatusR" +
-      "equest\032\".hbase.pb.GetClusterStatusRespon" +
-      "se\022V\n\017IsMasterRunning\022 .hbase.pb.IsMaste" +
-      "rRunningRequest\032!.hbase.pb.IsMasterRunni" +
-      "ngResponse\022D\n\tAddColumn\022\032.hbase.pb.AddCo" +
-      "lumnRequest\032\033.hbase.pb.AddColumnResponse" +
-      "\022M\n\014DeleteColumn\022\035.hbase.pb.DeleteColumn" +
-      "Request\032\036.hbase.pb.DeleteColumnResponse\022" +
-      "M\n\014ModifyColumn\022\035.hbase.pb.ModifyColumnR" +
-      "equest\032\036.hbase.pb.ModifyColumnResponse\022G",
-      "\n\nMoveRegion\022\033.hbase.pb.MoveRegionReques" +
-      "t\032\034.hbase.pb.MoveRegionResponse\022k\n\026Dispa" +
-      "tchMergingRegions\022\'.hbase.pb.DispatchMer" +
-      "gingRegionsRequest\032(.hbase.pb.DispatchMe" +
-      "rgingRegionsResponse\022M\n\014AssignRegion\022\035.h" +
-      "base.pb.AssignRegionRequest\032\036.hbase.pb.A" +
-      "ssignRegionResponse\022S\n\016UnassignRegion\022\037." +
-      "hbase.pb.UnassignRegionRequest\032 .hbase.p" +
-      "b.UnassignRegionResponse\022P\n\rOfflineRegio" +
-      "n\022\036.hbase.pb.OfflineRegionRequest\032\037.hbas",
-      "e.pb.OfflineRegionResponse\022J\n\013DeleteTabl" +
-      "e\022\034.hbase.pb.DeleteTableRequest\032\035.hbase." +
-      "pb.DeleteTableResponse\022P\n\rtruncateTable\022" +
-      "\036.hbase.pb.TruncateTableRequest\032\037.hbase." +
-      "pb.TruncateTableResponse\022J\n\013EnableTable\022" +
-      "\034.hbase.pb.EnableTableRequest\032\035.hbase.pb" +
-      ".EnableTableResponse\022M\n\014DisableTable\022\035.h" +
-      "base.pb.DisableTableRequest\032\036.hbase.pb.D" +
-      "isableTableResponse\022J\n\013ModifyTable\022\034.hba" +
-      "se.pb.ModifyTableRequest\032\035.hbase.pb.Modi",
-      "fyTableResponse\022J\n\013CreateTable\022\034.hbase.p" +
-      "b.CreateTableRequest\032\035.hbase.pb.CreateTa" +
-      "bleResponse\022A\n\010Shutdown\022\031.hbase.pb.Shutd" +
-      "ownRequest\032\032.hbase.pb.ShutdownResponse\022G" +
-      "\n\nStopMaster\022\033.hbase.pb.StopMasterReques" +
-      "t\032\034.hbase.pb.StopMasterResponse\022>\n\007Balan" +
-      "ce\022\030.hbase.pb.BalanceRequest\032\031.hbase.pb." +
-      "BalanceResponse\022_\n\022SetBalancerRunning\022#." +
-      "hbase.pb.SetBalancerRunningRequest\032$.hba" +
-      "se.pb.SetBalancerRunningResponse\022\\\n\021IsBa",
-      "lancerEnabled\022\".hbase.pb.IsBalancerEnabl" +
-      "edRequest\032#.hbase.pb.IsBalancerEnabledRe" +
-      "sponse\022S\n\016RunCatalogScan\022\037.hbase.pb.RunC" +
-      "atalogScanRequest\032 .hbase.pb.RunCatalogS" +
-      "canResponse\022e\n\024EnableCatalogJanitor\022%.hb" +
-      "ase.pb.EnableCatalogJanitorRequest\032&.hba" +
-      "se.pb.EnableCatalogJanitorResponse\022n\n\027Is" +
-      "CatalogJanitorEnabled\022(.hbase.pb.IsCatal" +
-      "ogJanitorEnabledRequest\032).hbase.pb.IsCat" +
-      "alogJanitorEnabledResponse\022^\n\021ExecMaster",
-      "Service\022#.hbase.pb.CoprocessorServiceReq" +
-      "uest\032$.hbase.pb.CoprocessorServiceRespon" +
-      "se\022A\n\010Snapshot\022\031.hbase.pb.SnapshotReques" +
-      "t\032\032.hbase.pb.SnapshotResponse\022h\n\025GetComp" +
-      "letedSnapshots\022&.hbase.pb.GetCompletedSn" +
-      "apshotsRequest\032\'.hbase.pb.GetCompletedSn" +
-      "apshotsResponse\022S\n\016DeleteSnapshot\022\037.hbas" +
-      "e.pb.DeleteSnapshotRequest\032 .hbase.pb.De" +
-      "leteSnapshotResponse\022S\n\016IsSnapshotDone\022\037" +
-      ".hbase.pb.IsSnapshotDoneRequest\032 .hbase.",
-      "pb.IsSnapshotDoneResponse\022V\n\017RestoreSnap" +
-      "shot\022 .hbase.pb.RestoreSnapshotRequest\032!" +
-      ".hbase.pb.RestoreSnapshotResponse\022h\n\025IsR" +
-      "estoreSnapshotDone\022&.hbase.pb.IsRestoreS" +
-      "napshotDoneRequest\032\'.hbase.pb.IsRestoreS" +
-      "napshotDoneResponse\022P\n\rExecProcedure\022\036.h" +
-      "base.pb.ExecProcedureRequest\032\037.hbase.pb." +
-      "ExecProcedureResponse\022W\n\024ExecProcedureWi" +
-      "thRet\022\036.hbase.pb.ExecProcedureRequest\032\037." +
-      "hbase.pb.ExecProcedureResponse\022V\n\017IsProc",
-      "edureDone\022 .hbase.pb.IsProcedureDoneRequ" +
-      "est\032!.hbase.pb.IsProcedureDoneResponse\022V" +
-      "\n\017ModifyNamespace\022 .hbase.pb.ModifyNames" +
-      "paceRequest\032!.hbase.pb.ModifyNamespaceRe" +
-      "sponse\022V\n\017CreateNamespace\022 .hbase.pb.Cre" +
-      "ateNamespaceRequest\032!.hbase.pb.CreateNam" +
-      "espaceResponse\022V\n\017DeleteNamespace\022 .hbas" +
-      "e.pb.DeleteNamespaceRequest\032!.hbase.pb.D" +
-      "eleteNamespaceResponse\022k\n\026GetNamespaceDe" +
-      "scriptor\022\'.hbase.pb.GetNamespaceDescript",
-      "orRequest\032(.hbase.pb.GetNamespaceDescrip" +
-      "torResponse\022q\n\030ListNamespaceDescriptors\022" +
-      ").hbase.pb.ListNamespaceDescriptorsReque" +
-      "st\032*.hbase.pb.ListNamespaceDescriptorsRe" +
-      "sponse\022\206\001\n\037ListTableDescriptorsByNamespa" +
-      "ce\0220.hbase.pb.ListTableDescriptorsByName" +
-      "spaceRequest\0321.hbase.pb.ListTableDescrip" +
-      "torsByNamespaceResponse\022t\n\031ListTableName" +
-      "sByNamespace\022*.hbase.pb.ListTableNamesBy" +
-      "NamespaceRequest\032+.hbase.pb.ListTableNam",
-      "esByNamespaceResponse\022P\n\rGetTableState\022\036" +
-      ".hbase.pb.GetTableStateRequest\032\037.hbase.p" +
-      "b.GetTableStateResponse\022A\n\010SetQuota\022\031.hb" +
-      "ase.pb.SetQuotaRequest\032\032.hbase.pb.SetQuo" +
-      "taResponse\022x\n\037getLastMajorCompactionTime" +
-      "stamp\022).hbase.pb.MajorCompactionTimestam" +
-      "pRequest\032*.hbase.pb.MajorCompactionTimes" +
-      "tampResponse\022\212\001\n(getLastMajorCompactionT" +
-      "imestampForRegion\0222.hbase.pb.MajorCompac" +
-      "tionTimestampForRegionRequest\032*.hbase.pb",
-      ".MajorCompactionTimestampResponse\022_\n\022get" +
-      "ProcedureResult\022#.hbase.pb.GetProcedureR" +
-      "esultRequest\032$.hbase.pb.GetProcedureResu" +
-      "ltResponse\022h\n\027getSecurityCapabilities\022%." +
-      "hbase.pb.SecurityCapabilitiesRequest\032&.h" +
-      "base.pb.SecurityCapabilitiesResponse\022S\n\016" +
-      "AbortProcedure\022\037.hbase.pb.AbortProcedure" +
-      "Request\032 .hbase.pb.AbortProcedureRespons" +
-      "eBB\n*org.apache.hadoop.hbase.protobuf.ge" +
-      "neratedB\014MasterProtosH\001\210\001\001\240\001\001"
+      "SnapshotDescription\"^\n\026IsSnapshotDoneRes" +
+      "ponse\022\023\n\004done\030\001 \001(\010:\005false\022/\n\010snapshot\030\002",
+      " \001(\0132\035.hbase.pb.SnapshotDescription\"O\n\034I" +
+      "sRestoreSnapshotDoneRequest\022/\n\010snapshot\030" +
+      "\001 \001(\0132\035.hbase.pb.SnapshotDescription\"4\n\035" +
+      "IsRestoreSnapshotDoneResponse\022\023\n\004done\030\001 " +
+      "\001(\010:\005false\"F\n\033GetSchemaAlterStatusReques" +
+      "t\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.pb.TableNa" +
+      "me\"T\n\034GetSchemaAlterStatusResponse\022\035\n\025ye" +
+      "t_to_update_regions\030\001 \001(\r\022\025\n\rtotal_regio" +
+      "ns\030\002 \001(\r\"\213\001\n\032GetTableDescriptorsRequest\022" +
+      "(\n\013table_names\030\001 \003(\0132\023.hbase.pb.TableNam",
+      "e\022\r\n\005regex\030\002 \001(\t\022!\n\022include_sys_tables\030\003" +
+      " \001(\010:\005false\022\021\n\tnamespace\030\004 \001(\t\"J\n\033GetTab" +
+      "leDescriptorsResponse\022+\n\014table_schema\030\001 " +
+      "\003(\0132\025.hbase.pb.TableSchema\"[\n\024GetTableNa" +
+      "mesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022include_sys" +
+      "_tables\030\002 \001(\010:\005false\022\021\n\tnamespace\030\003 \001(\t\"" +
+      "A\n\025GetTableNamesResponse\022(\n\013table_names\030" +
+      "\001 \003(\0132\023.hbase.pb.TableName\"?\n\024GetTableSt" +
+      "ateRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase.p" +
+      "b.TableName\"B\n\025GetTableStateResponse\022)\n\013",
+      "table_state\030\001 \002(\0132\024.hbase.pb.TableState\"" +
+      "\031\n\027GetClusterStatusRequest\"K\n\030GetCluster" +
+      "StatusResponse\022/\n\016cluster_status\030\001 \002(\0132\027" +
+      ".hbase.pb.ClusterStatus\"\030\n\026IsMasterRunni" +
+      "ngRequest\"4\n\027IsMasterRunningResponse\022\031\n\021" +
+      "is_master_running\030\001 \002(\010\"I\n\024ExecProcedure" +
+      "Request\0221\n\tprocedure\030\001 \002(\0132\036.hbase.pb.Pr" +
+      "ocedureDescription\"F\n\025ExecProcedureRespo" +
+      "nse\022\030\n\020expected_timeout\030\001 \001(\003\022\023\n\013return_" +
+      "data\030\002 \001(\014\"K\n\026IsProcedureDoneRequest\0221\n\t",
+      "procedure\030\001 \001(\0132\036.hbase.pb.ProcedureDesc" +
+      "ription\"`\n\027IsProcedureDoneResponse\022\023\n\004do" +
+      "ne\030\001 \001(\010:\005false\0220\n\010snapshot\030\002 \001(\0132\036.hbas" +
+      "e.pb.ProcedureDescription\",\n\031GetProcedur" +
+      "eResultRequest\022\017\n\007proc_id\030\001 \002(\004\"\371\001\n\032GetP" +
+      "rocedureResultResponse\0229\n\005state\030\001 \002(\0162*." +
+      "hbase.pb.GetProcedureResultResponse.Stat" +
+      "e\022\022\n\nstart_time\030\002 \001(\004\022\023\n\013last_update\030\003 \001" +
+      "(\004\022\016\n\006result\030\004 \001(\014\0224\n\texception\030\005 \001(\0132!." +
+      "hbase.pb.ForeignExceptionMessage\"1\n\005Stat",
+      "e\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNING\020\001\022\014\n\010FINISHE" +
+      "D\020\002\"M\n\025AbortProcedureRequest\022\017\n\007proc_id\030" +
+      "\001 \002(\004\022#\n\025mayInterruptIfRunning\030\002 \001(\010:\004tr" +
+      "ue\"6\n\026AbortProcedureResponse\022\034\n\024is_proce" +
+      "dure_aborted\030\001 \002(\010\"\027\n\025ListProceduresRequ" +
+      "est\"@\n\026ListProceduresResponse\022&\n\tprocedu" +
+      "re\030\001 \003(\0132\023.hbase.pb.Procedure\"\315\001\n\017SetQuo" +
+      "taRequest\022\021\n\tuser_name\030\001 \001(\t\022\022\n\nuser_gro" +
+      "up\030\002 \001(\t\022\021\n\tnamespace\030\003 \001(\t\022\'\n\ntable_nam" +
+      "e\030\004 \001(\0132\023.hbase.pb.TableName\022\022\n\nremove_a",
+      "ll\030\005 \001(\010\022\026\n\016bypass_globals\030\006 \001(\010\022+\n\010thro" +
+      "ttle\030\007 \001(\0132\031.hbase.pb.ThrottleRequest\"\022\n" +
+      "\020SetQuotaResponse\"J\n\037MajorCompactionTime" +
+      "stampRequest\022\'\n\ntable_name\030\001 \002(\0132\023.hbase" +
+      ".pb.TableName\"U\n(MajorCompactionTimestam" +
+      "pForRegionRequest\022)\n\006region\030\001 \002(\0132\031.hbas" +
+      "e.pb.RegionSpecifier\"@\n MajorCompactionT" +
+      "imestampResponse\022\034\n\024compaction_timestamp" +
+      "\030\001 \002(\003\"\035\n\033SecurityCapabilitiesRequest\"\354\001" +
+      "\n\034SecurityCapabilitiesResponse\022G\n\014capabi",
+      "lities\030\001 \003(\01621.hbase.pb.SecurityCapabili" +
+      "tiesResponse.Capability\"\202\001\n\nCapability\022\031" +
+      "\n\025SIMPLE_AUTHENTICATION\020\000\022\031\n\025SECURE_AUTH" +
+      "ENTICATION\020\001\022\021\n\rAUTHORIZATION\020\002\022\026\n\022CELL_" +
+      "AUTHORIZATION\020\003\022\023\n\017CELL_VISIBILITY\020\0042\353$\n" +
+      "\rMasterService\022e\n\024GetSchemaAlterStatus\022%" +
+      ".hbase.pb.GetSchemaAlterStatusRequest\032&." +
+      "hbase.pb.GetSchemaAlterStatusResponse\022b\n" +
+      "\023GetTableDescriptors\022$.hbase.pb.GetTable" +
+      "DescriptorsRequest\032%.hbase.pb.GetTableDe",
+      "scriptorsResponse\022P\n\rGetTableNames\022\036.hba" +
+      "se.pb.GetTableNamesRequest\032\037.hbase.pb.Ge" +
+      "tTableNamesResponse\022Y\n\020GetClusterStatus\022" +
+      "!.hbase.pb.GetClusterStatusRequest\032\".hba" +
+      "se.pb.GetClusterStatusResponse\022V\n\017IsMast" +
+      "erRunning\022 .hbase.pb.IsMasterRunningRequ" +
+      "est\032!.hbase.pb.IsMasterRunningResponse\022D" +
+      "\n\tAddColumn\022\032.hbase.pb.AddColumnRequest\032" +
+      "\033.hbase.pb.AddColumnResponse\022M\n\014DeleteCo" +
+      "lumn\022\035.hbase.pb.DeleteColumnRequest\032\036.hb",
+      "ase.pb.DeleteColumnResponse\022M\n\014ModifyCol" +
+      "umn\022\035.hbase.pb.ModifyColumnRequest\032\036.hba" +
+      "se.pb.ModifyColumnResponse\022G\n\nMoveRegion" +
+      "\022\033.hbase.pb.MoveRegionRequest\032\034.hbase.pb" +
+      ".MoveRegionResponse\022k\n\026DispatchMergingRe" +
+      "gions\022\'.hbase.pb.DispatchMergingRegionsR" +
+      "equest\032(.hbase.pb.DispatchMergingRegions" +
+      "Response\022M\n\014AssignRegion\022\035.hbase.pb.Assi" +
+      "gnRegionRequest\032\036.hbase.pb.AssignRegionR" +
+      "esponse\022S\n\016UnassignRegion\022\037.hbase.pb.Una",
+      "ssignRegionRequest\032 .hbase.pb.UnassignRe" +
+      "gionResponse\022P\n\rOfflineRegion\022\036.hbase.pb" +
+      ".OfflineRegionRequest\032\037.hbase.pb.Offline" +
+      "RegionResponse\022J\n\013DeleteTable\022\034.hbase.pb" +
+      ".DeleteTableRequest\032\035.hbase.pb.DeleteTab" +
+      "leResponse\022P\n\rtruncateTable\022\036.hbase.pb.T" +
+      "runcateTableRequest\032\037.hbase.pb.TruncateT" +
+      "ableResponse\022J\n\013EnableTable\022\034.hbase.pb.E" +
+      "nableTableRequest\032\035.hbase.pb.EnableTable" +
+      "Response\022M\n\014DisableTable\022\035.hbase.pb.Disa",
+      "bleTableRequest\032\036.hbase.pb.DisableTableR" +
+      "esponse\022J\n\013ModifyTable\022\034.hbase.pb.Modify" +
+      "TableRequest\032\035.hbase.pb.ModifyTableRespo" +
+      "nse\022J\n\013CreateTable\022\034.hbase.pb.CreateTabl" +
+      "eRequest\032\035.hbase.pb.CreateTableResponse\022" +
+      "A\n\010Shutdown\022\031.hbase.pb.ShutdownRequest\032\032" +
+      ".hbase.pb.ShutdownResponse\022G\n\nStopMaster" +
+      "\022\033.hbase.pb.StopMasterRequest\032\034.hbase.pb" +
+      ".StopMasterResponse\022>\n\007Balance\022\030.hbase.p" +
+      "b.BalanceRequest\032\031.hbase.pb.BalanceRespo",
+      "nse\022_\n\022SetBalancerRunning\022#.hbase.pb.Set" +
+      "BalancerRunningRequest\032$.hbase.pb.SetBal" +
+      "ancerRunningResponse\022\\\n\021IsBalancerEnable" +
+      "d\022\".hbase.pb.IsBalancerEnabledRequest\032#." +
+      "hbase.pb.IsBalancerEnabledResponse\022S\n\016Ru" +
+      "nCatalogScan\022\037.hbase.pb.RunCatalogScanRe" +
+      "quest\032 .hbase.pb.RunCatalogScanResponse\022" +
+      "e\n\024EnableCatalogJanitor\022%.hbase.pb.Enabl" +
+      "eCatalogJanitorRequest\032&.hbase.pb.Enable" +
+      "CatalogJanitorResponse\022n\n\027IsCatalogJanit",
+      "orEnabled\022(.hbase.pb.IsCatalogJanitorEna" +
+      "bledRequest\032).hbase.pb.IsCatalogJanitorE" +
+      "nabledResponse\022^\n\021ExecMasterService\022#.hb" +
+      "ase.pb.CoprocessorServiceRequest\032$.hbase" +
+      ".pb.CoprocessorServiceResponse\022A\n\010Snapsh" +
+      "ot\022\031.hbase.pb.SnapshotRequest\032\032.hbase.pb" +
+      ".SnapshotResponse\022h\n\025GetCompletedSnapsho" +
+      "ts\022&.hbase.pb.GetCompletedSnapshotsReque" +
+      "st\032\'.hbase.pb.GetCompletedSnapshotsRespo" +
+      "nse\022S\n\016DeleteSnapshot\022\037.hbase.pb.DeleteS",
+      "napshotRequest\032 .hbase.pb.DeleteSnapshot" +
+      "Response\022S\n\016IsSnapshotDone\022\037.hbase.pb.Is" +
+      "SnapshotDoneRequest\032 .hbase.pb.IsSnapsho" +
+      "tDoneResponse\022V\n\017RestoreSnapshot\022 .hbase" +
+      ".pb.RestoreSnapshotRequest\032!.hbase.pb.Re" +
+      "storeSnapshotResponse\022h\n\025IsRestoreSnapsh" +
+      "otDone\022&.hbase.pb.IsRestoreSnapshotDoneR" +
+      "equest\032\'.hbase.pb.IsRestoreSnapshotDoneR" +
+      "esponse\022P\n\rExecProcedure\022\036.hbase.pb.Exec" +
+      "ProcedureRequest\032\037.hbase.pb.ExecProcedur",
+      "eResponse\022W\n\024ExecProcedureWithRet\022\036.hbas" +
+      "e.pb.ExecProcedureRequest\032\037.hbase.pb.Exe" +
+      "cProcedureResponse\022V\n\017IsProcedureDone\022 ." +
+      "hbase.pb.IsProcedureDoneRequest\032!.hbase." +
+      "pb.IsProcedureDoneResponse\022V\n\017ModifyName" +
+      "space\022 .hbase.pb.ModifyNamespaceRequest\032" +
+      "!.hbase.pb.ModifyNamespaceResponse\022V\n\017Cr" +
+      "eateNamespace\022 .hbase.pb.CreateNamespace" +
+      "Request\032!.hbase.pb.CreateNamespaceRespon" +
+      "se\022V\n\017DeleteNamespace\022 .hbase.pb.DeleteN",
+      "amespaceRequest\032!.hbase.pb.DeleteNamespa" +
+      "ceResponse\022k\n\026GetNamespaceDescriptor\022\'.h" +
+      "base.pb.GetNamespaceDescriptorRequest\032(." +
+      "hbase.pb.GetNamespaceDescriptorResponse\022" +
+      "q\n\030ListNamespaceDescriptors\022).hbase.pb.L" +
+      "istNamespaceDescriptorsRequest\032*.hbase.p" +
+      "b.ListNamespaceDescriptorsResponse\022\206\001\n\037L" +
+      "istTableDescriptorsByNamespace\0220.hbase.p" +
+      "b.ListTableDescriptorsByNamespaceRequest" +
+      "\0321.hbase.pb.ListTableDescriptorsByNamesp",
+      "aceResponse\022t\n\031ListTableNamesByNamespace" +
+      "\022*.hbase.pb.ListTableNamesByNamespaceReq" +
+      "uest\032+.hbase.pb.ListTableNamesByNamespac" +
+      "eResponse\022P\n\rGetTableState\022\036.hbase.pb.Ge" +
+      "tTableStateRequest\032\037.hbase.pb.GetTableSt" +
+      "ateResponse\022A\n\010SetQuota\022\031.hbase.pb.SetQu" +
+      "otaRequest\032\032.hbase.pb.SetQuotaResponse\022x" +
+      "\n\037getLastMajorCompactionTimestamp\022).hbas" +
+      "e.pb.MajorCompactionTimestampRequest\032*.h" +
+      "base.pb.MajorCompactionTimestampResponse",
+      "\022\212\001\n(getLastMajorCompactionTimestampForR" +
+      "egion\0222.hbase.pb.MajorCompactionTimestam" +
+      "pForRegionRequest\032*.hbase.pb.MajorCompac" +
+      "tionTimestampResponse\022_\n\022getProcedureRes" +
+      "ult\022#.hbase.pb.GetProcedureResultRequest" +
+      "\032$.hbase.pb.GetProcedureResultResponse\022h" +
+      "\n\027getSecurityCapabilities\022%.hbase.pb.Sec" +
+      "urityCapabilitiesRequest\032&.hbase.pb.Secu" +
+      "rityCapabilitiesResponse\022S\n\016AbortProcedu" +
+      "re\022\037.hbase.pb.AbortProcedureRequest\032 .hb",
+      "ase.pb.AbortProcedureResponse\022S\n\016ListPro" +
+      "cedures\022\037.hbase.pb.ListProceduresRequest" +
+      "\032 .hbase.pb.ListProceduresResponseBB\n*or" +
+      "g.apache.hadoop.hbase.protobuf.generated" +
+      "B\014MasterProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -58522,44 +59675,56 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_AbortProcedureResponse_descriptor,
               new java.lang.String[] { "IsProcedureAborted", });
-          internal_static_hbase_pb_SetQuotaRequest_descriptor =
+          internal_static_hbase_pb_ListProceduresRequest_descriptor =
             getDescriptor().getMessageTypes().get(90);
+          internal_static_hbase_pb_ListProceduresRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_ListProceduresRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_hbase_pb_ListProceduresResponse_descriptor =
+            getDescriptor().getMessageTypes().get(91);
+          internal_static_hbase_pb_ListProceduresResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_ListProceduresResponse_descriptor,
+              new java.lang.String[] { "Procedure", });
+          internal_static_hbase_pb_SetQuotaRequest_descriptor =
+            getDescriptor().getMessageTypes().get(92);
           internal_static_hbase_pb_SetQuotaRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetQuotaRequest_descriptor,
               new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", });
           internal_static_hbase_pb_SetQuotaResponse_descriptor =
-            getDescriptor().getMessageTypes().get(91);
+            getDescriptor().getMessageTypes().get(93);
           internal_static_hbase_pb_SetQuotaResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SetQuotaResponse_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor =
-            getDescriptor().getMessageTypes().get(92);
+            getDescriptor().getMessageTypes().get(94);
           internal_static_hbase_pb_MajorCompactionTimestampRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampRequest_descriptor,
               new java.lang.String[] { "TableName", });
           internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor =
-            getDescriptor().getMessageTypes().get(93);
+            getDescriptor().getMessageTypes().get(95);
           internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampForRegionRequest_descriptor,
               new java.lang.String[] { "Region", });
           internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor =
-            getDescriptor().getMessageTypes().get(94);
+            getDescriptor().getMessageTypes().get(96);
           internal_static_hbase_pb_MajorCompactionTimestampResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_MajorCompactionTimestampResponse_descriptor,
               new java.lang.String[] { "CompactionTimestamp", });
           internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor =
-            getDescriptor().getMessageTypes().get(95);
+            getDescriptor().getMessageTypes().get(97);
           internal_static_hbase_pb_SecurityCapabilitiesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SecurityCapabilitiesRequest_descriptor,
               new java.lang.String[] { });
           internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor =
-            getDescriptor().getMessageTypes().get(96);
+            getDescriptor().getMessageTypes().get(98);
           internal_static_hbase_pb_SecurityCapabilitiesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_SecurityCapabilitiesResponse_descriptor,
@@ -58574,6 +59739,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.ClusterStatusProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.getDescriptor(),
+          org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.getDescriptor(),
           org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.getDescriptor(),
         }, assigner);
   }
