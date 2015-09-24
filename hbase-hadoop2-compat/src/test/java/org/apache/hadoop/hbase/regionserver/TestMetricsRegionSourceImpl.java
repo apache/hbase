@@ -129,11 +129,6 @@ public class TestMetricsRegionSourceImpl {
       return regionName.hashCode();
     }
 
-    @Override
-    public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
-      return null;
-    }
-
     /**
      * Always return 0 for testing
      */

@@ -18,11 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-
 public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   int replicaid = 0;
 
@@ -103,11 +98,6 @@ public class MetricsRegionWrapperStub implements MetricsRegionWrapper {
   @Override
   public int getRegionHashCode() {
     return 42;
-  }
-
-  @Override
-  public Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics() {
-    return new HashMap<String, DescriptiveStatistics>();
   }
 
   /**
