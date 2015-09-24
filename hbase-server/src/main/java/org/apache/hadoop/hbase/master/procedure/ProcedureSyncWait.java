@@ -24,12 +24,12 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
@@ -41,7 +41,7 @@ import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
+import org.apache.hadoop.hbase.procedure2.RemoteProcedureException;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -78,11 +78,12 @@ public final class ProcedureSyncWait {
       // Dev Consideration: are we waiting forever, or we can set up some timeout value?
       Threads.sleepWithoutInterrupt(250);
     }
-    ProcedureResult result = procExec.getResult(procId);
+    ProcedureInfo result = procExec.getResult(procId);
     if (result != null) {
       if (result.isFailed()) {
         // If the procedure fails, we should always have an exception captured. Throw it.
-        throw result.getException().unwrapRemoteException();
+        throw RemoteProcedureException.fromProto(
+          result.getForeignExceptionMessage()).unwrapRemoteException();
       }
       return result.getResult();
     } else {

@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -290,6 +291,13 @@ public interface MasterServices extends Server {
    * @return true if aborted, false if procedure already completed or does not exist
    */
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning);
+
+  /**
+   * List procedures
+   * @return procedure list
+   * @throws IOException
+   */
+  public List<ProcedureInfo> listProcedures() throws IOException;
 
   /**
    * Get a namespace descriptor by name

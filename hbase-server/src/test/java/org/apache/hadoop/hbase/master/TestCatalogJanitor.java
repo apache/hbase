@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MetaMockingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -404,6 +405,11 @@ public class TestCatalogJanitor {
     @Override
     public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
       return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public List<ProcedureInfo> listProcedures() throws IOException {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
     @Override
