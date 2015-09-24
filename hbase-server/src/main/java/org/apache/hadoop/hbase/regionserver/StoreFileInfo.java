@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HalfStoreFileReader;
 import org.apache.hadoop.hbase.io.Reference;
-import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -175,21 +174,24 @@ public class StoreFileInfo {
    * @return The StoreFile.Reader for the file
    */
   public StoreFile.Reader open(final FileSystem fs,
-      final CacheConfig cacheConf) throws IOException {
+      final CacheConfig cacheConf, final boolean canUseDropBehind) throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
 
+    final boolean doDropBehind = canUseDropBehind && cacheConf.shouldDropBehindCompaction();
     if (this.link != null) {
       // HFileLink
-      in = new FSDataInputStreamWrapper(fs, this.link);
+      in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind);
       status = this.link.getFileStatus(fs);
     } else if (this.reference != null) {
       // HFile Reference
       Path referencePath = getReferredToFile(this.getPath());
-      in = new FSDataInputStreamWrapper(fs, referencePath);
+      in = new FSDataInputStreamWrapper(fs, referencePath,
+          doDropBehind);
       status = fs.getFileStatus(referencePath);
     } else {
-      in = new FSDataInputStreamWrapper(fs, this.getPath());
+      in = new FSDataInputStreamWrapper(fs, this.getPath(),
+          doDropBehind);
       status = fileStatus;
     }
     long length = status.getLen();

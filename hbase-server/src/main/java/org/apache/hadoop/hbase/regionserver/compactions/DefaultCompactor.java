@@ -60,17 +60,19 @@ public class DefaultCompactor extends Compactor {
 
     List<StoreFileScanner> scanners;
     Collection<StoreFile> readersToClose;
-    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", false)) {
+    if (this.conf.getBoolean("hbase.regionserver.compaction.private.readers", true)) {
       // clone all StoreFiles, so we'll do the compaction on a independent copy of StoreFiles,
       // HFileFiles, and their readers
       readersToClose = new ArrayList<StoreFile>(request.getFiles().size());
       for (StoreFile f : request.getFiles()) {
         readersToClose.add(new StoreFile(f));
       }
-      scanners = createFileScanners(readersToClose, smallestReadPoint);
+      scanners = createFileScanners(readersToClose, smallestReadPoint,
+          store.throttleCompaction(request.getSize()));
     } else {
       readersToClose = Collections.emptyList();
-      scanners = createFileScanners(request.getFiles(), smallestReadPoint);
+      scanners = createFileScanners(request.getFiles(), smallestReadPoint,
+          store.throttleCompaction(request.getSize()));
     }
 
     StoreFile.Writer writer = null;
@@ -94,14 +96,16 @@ public class DefaultCompactor extends Compactor {
         // Create the writer even if no kv(Empty store file is also ok),
         // because we need record the max seq id for the store file, see HBASE-6059
         writer = store.createWriterInTmp(fd.maxKeyCount, this.compactionCompression, true,
-            fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0);
+          fd.maxMVCCReadpoint >= smallestReadPoint, fd.maxTagsLength > 0, store.throttleCompaction(request.getSize()));
+
         boolean finished =
             performCompaction(scanner, writer, smallestReadPoint, throughputController);
+
         if (!finished) {
           writer.close();
           store.getFileSystem().delete(writer.getPath(), false);
           writer = null;
-          throw new InterruptedIOException( "Aborting compaction of store " + store +
+          throw new InterruptedIOException("Aborting compaction of store " + store +
               " in region " + store.getRegionInfo().getRegionNameAsString() +
               " because it was interrupted.");
          }

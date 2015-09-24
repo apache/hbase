@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
+import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -256,6 +257,7 @@ public class HFile {
     protected KVComparator comparator = KeyValue.COMPARATOR;
     protected InetSocketAddress[] favoredNodes;
     private HFileContext fileContext;
+    protected boolean shouldDropBehind = false;
 
     WriterFactory(Configuration conf, CacheConfig cacheConf) {
       this.conf = conf;
@@ -293,6 +295,12 @@ public class HFile {
       return this;
     }
 
+    public WriterFactory withShouldDropCacheBehind(boolean shouldDropBehind) {
+      this.shouldDropBehind = shouldDropBehind;
+      return this;
+    }
+
+
     public Writer create() throws IOException {
       if ((path != null ? 1 : 0) + (ostream != null ? 1 : 0) != 1) {
         throw new AssertionError("Please specify exactly one of " +
@@ -300,6 +308,23 @@ public class HFile {
       }
       if (path != null) {
         ostream = AbstractHFileWriter.createOutputStream(conf, fs, path, favoredNodes);
+        try {
+          Class<? extends FSDataOutputStream> outStreamClass = ostream.getClass();
+          try {
+            Method m = outStreamClass.getDeclaredMethod("setDropBehind",
+              new Class[]{ boolean.class });
+            m.invoke(ostream, new Object[] {
+              shouldDropBehind && cacheConf.shouldDropBehindCompaction() });
+          } catch (NoSuchMethodException e) {
+            // Not supported, we can just ignore it
+          } catch (Exception e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Failed to invoke output stream's setDropBehind method, continuing");
+            }
+          }
+        } catch (UnsupportedOperationException uoe) {
+          LOG.debug("Unable to set drop behind on " + path, uoe);
+        }
       }
       return createWriter(fs, path, ostream,
                    comparator, fileContext);

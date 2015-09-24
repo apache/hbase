@@ -67,8 +67,11 @@ public class DefaultStoreFlusher extends StoreFlusher {
       synchronized (flushLock) {
         status.setStatus("Flushing " + store + ": creating writer");
         // Write the map out to the disk
-        writer = store.createWriterInTmp(
-            snapshot.size(), store.getFamily().getCompression(), false, true, true);
+        writer = store.createWriterInTmp(snapshot.size(), store.getFamily().getCompression(),
+            /* isCompaction = */ false,
+            /* includeMVCCReadpoint = */ true,
+            /* includesTags = */ true,
+            /* shouldDropBehind = */ false);
         writer.setTimeRangeTracker(snapshotTimeRangeTracker);
         IOException e = null;
         try {

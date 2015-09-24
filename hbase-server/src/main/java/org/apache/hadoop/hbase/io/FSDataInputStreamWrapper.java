@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.FileLink;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -33,6 +35,8 @@ import com.google.common.annotations.VisibleForTesting;
  * see method comments.
  */
 public class FSDataInputStreamWrapper {
+  static final Log LOG = LogFactory.getLog(FSDataInputStreamWrapper.class);
+
   private final HFileSystem hfs;
   private final Path path;
   private final FileLink link;
@@ -76,14 +80,23 @@ public class FSDataInputStreamWrapper {
   private volatile int hbaseChecksumOffCount = -1;
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
-    this(fs, null, path);
+    this(fs, null, path, false);
+  }
+
+  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind) throws IOException {
+    this(fs, null, path, dropBehind);
   }
 
   public FSDataInputStreamWrapper(FileSystem fs, FileLink link) throws IOException {
-    this(fs, link, null);
+    this(fs, link, null, false);
+  }
+  public FSDataInputStreamWrapper(FileSystem fs, FileLink link,
+                                  boolean dropBehind) throws IOException {
+    this(fs, link, null, dropBehind);
   }
 
-  private FSDataInputStreamWrapper(FileSystem fs, FileLink link, Path path) throws IOException {
+  private FSDataInputStreamWrapper(FileSystem fs, FileLink link,
+                                   Path path, boolean dropBehind) throws IOException {
     assert (path == null) != (link == null);
     this.path = path;
     this.link = link;
@@ -96,7 +109,24 @@ public class FSDataInputStreamWrapper {
     // Initially we are going to read the tail block. Open the reader w/FS checksum.
     this.useHBaseChecksumConfigured = this.useHBaseChecksum = false;
     this.stream = (link != null) ? link.open(hfs) : hfs.open(path);
+    try {
+      Class<? extends FSDataInputStream> inputStreamClass = this.stream.getClass();
+      try {
+        Method m = inputStreamClass.getDeclaredMethod("setDropBehind",
+          new Class[] { boolean.class });
+        m.invoke(stream, new Object[] { dropBehind });
+      } catch (NoSuchMethodException e) {
+        // Not supported, we can just ignore it
+      } catch (Exception e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Failed to invoke input stream's setDropBehind method, continuing");
+        }
+      }
+    } catch (Exception e) {
+      // Skipped.
+    }
   }
+
 
   /**
    * Prepares the streams for block reader. NOT THREAD SAFE. Must be called once, after any

@@ -81,7 +81,7 @@ public class StripeCompactor extends Compactor {
       throughputController);
   }
 
-  private List<Path> compactInternal(StripeMultiFileWriter mw, CompactionRequest request,
+  private List<Path> compactInternal(StripeMultiFileWriter mw, final CompactionRequest request,
       byte[] majorRangeFromRow, byte[] majorRangeToRow,
       CompactionThroughputController throughputController) throws IOException {
     final Collection<StoreFile> filesToCompact = request.getFiles();
@@ -89,7 +89,8 @@ public class StripeCompactor extends Compactor {
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
     long smallestReadPoint = getSmallestReadPoint();
-    List<StoreFileScanner> scanners = createFileScanners(filesToCompact, smallestReadPoint);
+    List<StoreFileScanner> scanners = createFileScanners(filesToCompact,
+        smallestReadPoint, store.throttleCompaction(request.getSize()));
 
     boolean finished = false;
     InternalScanner scanner = null;
@@ -117,7 +118,8 @@ public class StripeCompactor extends Compactor {
         @Override
         public Writer createWriter() throws IOException {
           return store.createWriterInTmp(
-              fd.maxKeyCount, compression, true, needMvcc, fd.maxTagsLength > 0);
+              fd.maxKeyCount, compression, true, needMvcc, fd.maxTagsLength > 0,
+              store.throttleCompaction(request.getSize()));
         }
       };
 
