@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
@@ -760,5 +761,11 @@ public class TestAdmin2 {
 
     boolean abortResult = admin.abortProcedure(procId, true);
     assertFalse(abortResult);
+  }
+
+  @Test(timeout = 300000)
+  public void testListProcedures() throws Exception {
+    ProcedureInfo[] procList = admin.listProcedures();
+    assertTrue(procList.length >= 0);
   }
 }

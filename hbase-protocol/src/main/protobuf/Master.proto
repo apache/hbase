@@ -29,6 +29,7 @@ import "HBase.proto";
 import "Client.proto";
 import "ClusterStatus.proto";
 import "ErrorHandling.proto";
+import "Procedure.proto";
 import "Quota.proto";
 
 /* Column-level protobufs */
@@ -422,6 +423,13 @@ message AbortProcedureResponse {
   required bool is_procedure_aborted = 1;
 }
 
+message ListProceduresRequest {
+}
+
+message ListProceduresResponse {
+  repeated Procedure procedure = 1;
+}
+
 message SetQuotaRequest {
   optional string user_name = 1;
   optional string user_group = 2;
@@ -679,4 +687,8 @@ service MasterService {
   /** Abort a procedure */
   rpc AbortProcedure(AbortProcedureRequest)
     returns(AbortProcedureResponse);
+
+  /** returns a list of procedures */
+  rpc ListProcedures(ListProceduresRequest)
+    returns(ListProceduresResponse);
 }

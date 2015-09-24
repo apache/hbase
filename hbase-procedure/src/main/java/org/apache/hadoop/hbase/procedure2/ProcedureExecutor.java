@@ -41,8 +41,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
@@ -135,13 +137,13 @@ public class ProcedureExecutor<TEnvironment> {
     private static final String EVICT_ACKED_TTL_CONF_KEY ="hbase.procedure.cleaner.acked.evict.ttl";
     private static final int DEFAULT_ACKED_EVICT_TTL = 5 * 60000; // 5min
 
-    private final Map<Long, ProcedureResult> completed;
+    private final Map<Long, ProcedureInfo> completed;
     private final Map<NonceKey, Long> nonceKeysToProcIdsMap;
     private final ProcedureStore store;
     private final Configuration conf;
 
     public CompletedProcedureCleaner(final Configuration conf, final ProcedureStore store,
-        final Map<Long, ProcedureResult> completedMap,
+        final Map<Long, ProcedureInfo> completedMap,
         final Map<NonceKey, Long> nonceKeysToProcIdsMap) {
       // set the timeout interval that triggers the periodic-procedure
       setTimeout(conf.getInt(CLEANER_INTERVAL_CONF_KEY, DEFAULT_CLEANER_INTERVAL));
@@ -163,10 +165,10 @@ public class ProcedureExecutor<TEnvironment> {
       final long evictAckTtl = conf.getInt(EVICT_ACKED_TTL_CONF_KEY, DEFAULT_ACKED_EVICT_TTL);
 
       long now = EnvironmentEdgeManager.currentTime();
-      Iterator<Map.Entry<Long, ProcedureResult>> it = completed.entrySet().iterator();
+      Iterator<Map.Entry<Long, ProcedureInfo>> it = completed.entrySet().iterator();
       while (it.hasNext() && store.isRunning()) {
-        Map.Entry<Long, ProcedureResult> entry = it.next();
-        ProcedureResult result = entry.getValue();
+        Map.Entry<Long, ProcedureInfo> entry = it.next();
+        ProcedureInfo result = entry.getValue();
 
         // TODO: Select TTL based on Procedure type
         if ((result.hasClientAckTime() && (now - result.getClientAckTime()) >= evictAckTtl) ||
@@ -212,12 +214,12 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
-   * Map the the procId returned by submitProcedure(), the Root-ProcID, to the ProcedureResult.
+   * Map the the procId returned by submitProcedure(), the Root-ProcID, to the ProcedureInfo.
    * Once a Root-Procedure completes (success or failure), the result will be added to this map.
    * The user of ProcedureExecutor should call getResult(procId) to get the result.
    */
-  private final ConcurrentHashMap<Long, ProcedureResult> completed =
-    new ConcurrentHashMap<Long, ProcedureResult>();
+  private final ConcurrentHashMap<Long, ProcedureInfo> completed =
+    new ConcurrentHashMap<Long, ProcedureInfo>();
 
   /**
    * Map the the procId returned by submitProcedure(), the Root-ProcID, to the RootProcedureState.
@@ -339,7 +341,8 @@ public class ProcedureExecutor<TEnvironment> {
               " isFailed=" + proc.hasException() + ": " + proc);
         }
         assert !rollbackStack.containsKey(proc.getProcId());
-        completed.put(proc.getProcId(), newResultFromProcedure(proc));
+
+        completed.put(proc.getProcId(), Procedure.createProcedureInfo(proc, proc.getNonceKey()));
 
         continue;
       }
@@ -533,6 +536,26 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   /**
+   * List procedures.
+   * @return the procedures in a list
+   */
+  public List<ProcedureInfo> listProcedures() {
+    List<ProcedureInfo> procedureLists =
+        new ArrayList<ProcedureInfo>(procedures.size() + completed.size());
+    for (java.util.Map.Entry<Long, Procedure> p: procedures.entrySet()) {
+      procedureLists.add(Procedure.createProcedureInfo(p.getValue(), null));
+    }
+    for (java.util.Map.Entry<Long, ProcedureInfo> e: completed.entrySet()) {
+      // Note: The procedure could show up twice in the list with different state, as
+      // it could complete after we walk through procedures list and insert into
+      // procedureList - it is ok, as we will use the information in the ProcedureInfo
+      // to figure it out; to prevent this would increase the complexity of the logic.
+      procedureLists.add(e.getValue());
+    }
+    return procedureLists;
+  }
+
+  /**
    * Add a new root-procedure to the executor.
    * @param proc the new procedure to execute.
    * @return the procedure id, that can be used to monitor the operation
@@ -604,7 +627,7 @@ public class ProcedureExecutor<TEnvironment> {
     return currentProcId;
   }
 
-  public ProcedureResult getResult(final long procId) {
+  public ProcedureInfo getResult(final long procId) {
     return completed.get(procId);
   }
 
@@ -637,7 +660,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @param procId the ID of the procedure to remove
    */
   public void removeResult(final long procId) {
-    ProcedureResult result = completed.get(procId);
+    ProcedureInfo result = completed.get(procId);
     if (result == null) {
       assert !procedures.containsKey(procId) : "procId=" + procId + " is still running";
       if (LOG.isDebugEnabled()) {
@@ -679,7 +702,7 @@ public class ProcedureExecutor<TEnvironment> {
     return false;
   }
 
-  public Map<Long, ProcedureResult> getResults() {
+  public Map<Long, ProcedureInfo> getResults() {
     return Collections.unmodifiableMap(completed);
   }
 
@@ -977,7 +1000,7 @@ public class ProcedureExecutor<TEnvironment> {
               if (subproc == null) {
                 String msg = "subproc[" + i + "] is null, aborting the procedure";
                 procedure.setFailure(new RemoteProcedureException(msg,
-                  new IllegalArgumentException(msg)));
+                  new IllegalArgumentIOException(msg)));
                 subprocs = null;
                 break;
               }
@@ -1141,7 +1164,7 @@ public class ProcedureExecutor<TEnvironment> {
     }
 
     // update the executor internal state maps
-    completed.put(proc.getProcId(), newResultFromProcedure(proc));
+    completed.put(proc.getProcId(), Procedure.createProcedureInfo(proc, proc.getNonceKey()));
     rollbackStack.remove(proc.getProcId());
     procedures.remove(proc.getProcId());
 
@@ -1157,8 +1180,8 @@ public class ProcedureExecutor<TEnvironment> {
     sendProcedureFinishedNotification(proc.getProcId());
   }
 
-  public Pair<ProcedureResult, Procedure> getResultOrProcedure(final long procId) {
-    ProcedureResult result = completed.get(procId);
+  public Pair<ProcedureInfo, Procedure> getResultOrProcedure(final long procId) {
+    ProcedureInfo result = completed.get(procId);
     Procedure proc = null;
     if (result == null) {
       proc = procedures.get(procId);
@@ -1167,14 +1190,5 @@ public class ProcedureExecutor<TEnvironment> {
       }
     }
     return new Pair(result, proc);
-  }
-
-  private static ProcedureResult newResultFromProcedure(final Procedure proc) {
-    if (proc.isFailed()) {
-      return new ProcedureResult(
-        proc.getNonceKey(), proc.getStartTime(), proc.getLastUpdate(), proc.getException());
-    }
-    return new ProcedureResult(
-      proc.getNonceKey(), proc.getStartTime(), proc.getLastUpdate(), proc.getResult());
   }
 }

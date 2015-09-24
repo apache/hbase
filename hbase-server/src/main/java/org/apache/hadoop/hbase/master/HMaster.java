@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -2472,6 +2473,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   @Override
   public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
     return this.procedureExecutor.abort(procId, mayInterruptIfRunning);
+  }
+
+  @Override
+  public List<ProcedureInfo> listProcedures() throws IOException {
+    return this.procedureExecutor.listProcedures();
   }
 
   @Override

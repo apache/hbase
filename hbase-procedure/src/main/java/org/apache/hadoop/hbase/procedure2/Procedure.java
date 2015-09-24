@@ -26,11 +26,12 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
@@ -194,6 +195,13 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
 
     sb.append(" state=");
     sb.append(getState());
+    return sb.toString();
+  }
+
+  protected String toStringClass() {
+    StringBuilder sb = new StringBuilder();
+    toStringClassDetails(sb);
+
     return sb.toString();
   }
 
@@ -370,7 +378,7 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
   protected synchronized boolean setTimeoutFailure() {
     if (state == ProcedureState.WAITING_TIMEOUT) {
       long timeDiff = EnvironmentEdgeManager.currentTime() - lastUpdate;
-      setFailure("ProcedureExecutor", new TimeoutException(
+      setFailure("ProcedureExecutor", new TimeoutIOException(
         "Operation timed out after " + StringUtils.humanTimeDiff(timeDiff)));
       return true;
     }
@@ -583,6 +591,37 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
       throw new IOException("The procedure class " + proc.getClass().getName() +
           " must be accessible and have an empty constructor", e);
     }
+  }
+
+  /**
+   * Helper to create the ProcedureInfo from Procedure.
+   */
+  @InterfaceAudience.Private
+  public static ProcedureInfo createProcedureInfo(final Procedure proc, final NonceKey nonceKey) {
+    RemoteProcedureException exception;
+
+    if (proc.hasException()) {
+      exception = proc.getException();
+    } else {
+      exception = null;
+    }
+    ProcedureInfo procInfo = new ProcedureInfo(
+      proc.getProcId(),
+      proc.toStringClass(),
+      proc.getOwner(),
+      proc.getState(),
+      proc.hasParent() ? proc.getParentProcId() : -1,
+      exception != null ?
+          RemoteProcedureException.toProto(exception.getSource(), exception.getCause()) : null,
+      proc.getLastUpdate(),
+      proc.getStartTime(),
+      proc.getResult());
+
+    if (nonceKey != null) {
+      procInfo.setNonceKey(nonceKey);
+    }
+
+    return procInfo;
   }
 
   /**

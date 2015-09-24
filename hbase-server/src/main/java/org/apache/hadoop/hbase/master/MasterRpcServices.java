@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PleaseHoldException;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -45,7 +46,6 @@ import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.procedure2.ProcedureResult;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.RequestConverter;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
@@ -113,6 +113,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneReq
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListProceduresResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest;
@@ -1010,15 +1012,15 @@ public class MasterRpcServices extends RSRpcServices
       master.checkInitialized();
       GetProcedureResultResponse.Builder builder = GetProcedureResultResponse.newBuilder();
 
-      Pair<ProcedureResult, Procedure> v = master.getMasterProcedureExecutor()
+      Pair<ProcedureInfo, Procedure> v = master.getMasterProcedureExecutor()
           .getResultOrProcedure(request.getProcId());
       if (v.getFirst() != null) {
-        ProcedureResult result = v.getFirst();
+        ProcedureInfo result = v.getFirst();
         builder.setState(GetProcedureResultResponse.State.FINISHED);
         builder.setStartTime(result.getStartTime());
         builder.setLastUpdate(result.getLastUpdate());
         if (result.isFailed()) {
-          builder.setException(result.getException().convert());
+          builder.setException(result.getForeignExceptionMessage());
         }
         if (result.hasResultData()) {
           builder.setResult(ByteStringer.wrap(result.getResult()));
@@ -1049,6 +1051,22 @@ public class MasterRpcServices extends RSRpcServices
         master.abortProcedure(request.getProcId(), request.getMayInterruptIfRunning());
     response.setIsProcedureAborted(abortResult);
     return response.build();
+  }
+
+  @Override
+  public ListProceduresResponse listProcedures(
+      RpcController rpcController,
+      ListProceduresRequest request) throws ServiceException {
+    try {
+      ListProceduresResponse.Builder response =
+          ListProceduresResponse.newBuilder();
+      for(ProcedureInfo p: master.listProcedures()) {
+        response.addProcedure(ProcedureInfo.convertToProcedureProto(p));
+      }
+      return response.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
