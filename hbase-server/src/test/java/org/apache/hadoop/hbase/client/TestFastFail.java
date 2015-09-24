@@ -96,7 +96,7 @@ public class TestFastFail {
     // Nothing to do.
   }
 
-  @Test
+  @Ignore ("Can go zombie -- see HBASE-14421; FIX") @Test
   public void testFastFail() throws IOException, InterruptedException {
     Admin admin = TEST_UTIL.getHBaseAdmin();
 
