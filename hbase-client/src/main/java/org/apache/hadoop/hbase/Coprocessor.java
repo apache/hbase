@@ -22,11 +22,13 @@ package org.apache.hadoop.hbase;
 import java.io.IOException;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
 
 /**
  * Coprocessor interface.
  */
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+@InterfaceStability.Evolving
 public interface Coprocessor {
   int VERSION = 1;
 
