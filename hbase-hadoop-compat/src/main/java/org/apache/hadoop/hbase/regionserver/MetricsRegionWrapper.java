@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Map;
-
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
-
 /**
  * Interface of class that will wrap an HRegion and export numbers so they can be
  * used in MetricsRegionSource
@@ -85,11 +81,6 @@ public interface MetricsRegionWrapper {
   long getNumCompactionsCompleted();
 
   int getRegionHashCode();
-
-  /**
-   * Get the time spent by coprocessors in this region.
-   */
-  Map<String, DescriptiveStatistics> getCoprocessorExecutionStatistics();
 
   /**
    * Get the replica id of this region.

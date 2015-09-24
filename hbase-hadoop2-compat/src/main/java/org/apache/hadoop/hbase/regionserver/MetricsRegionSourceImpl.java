@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.stat.descriptive.DescriptiveStatistics;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
@@ -245,36 +243,6 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       mrb.addCounter(Interns.info(regionNamePrefix + MetricsRegionSource.REPLICA_ID,
               MetricsRegionSource.REPLICA_ID_DESC),
           this.regionWrapper.getReplicaId());
-
-      for (Map.Entry<String, DescriptiveStatistics> entry : this.regionWrapper
-          .getCoprocessorExecutionStatistics()
-          .entrySet()) {
-        DescriptiveStatistics ds = entry.getValue();
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Min: "),
-            ds.getMin() / 1000);
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Mean: "),
-            ds.getMean() / 1000);
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                    + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-                MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "Max: "),
-            ds.getMax() / 1000);
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "90th percentile: "), ds
-            .getPercentile(90d) / 1000);
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "95th percentile: "), ds
-            .getPercentile(95d) / 1000);
-        mrb.addGauge(Interns.info(regionNamePrefix + " " + entry.getKey() + " "
-                + MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS,
-            MetricsRegionSource.COPROCESSOR_EXECUTION_STATISTICS_DESC + "99th percentile: "), ds
-            .getPercentile(99d) / 1000);
-      }
     }
   }
 
