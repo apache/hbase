@@ -32,6 +32,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -106,6 +107,8 @@ public class TestAccessController2 extends SecureTestUtil {
   @BeforeClass
   public static void setupBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
+    // Up the handlers; this test needs more than usual.
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     // Enable security
     enableSecurity(conf);
     // Verify enableSecurity sets up what we require
@@ -166,7 +169,7 @@ public class TestAccessController2 extends SecureTestUtil {
     assertEquals(0, AccessControlLists.getNamespacePermissions(conf, namespace).size());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testCreateWithCorrectOwner() throws Exception {
     // Create a test user
     final User testUser = User.createUserForTesting(TEST_UTIL.getConfiguration(), "TestUser",
@@ -203,7 +206,7 @@ public class TestAccessController2 extends SecureTestUtil {
     assertTrue(perms.get(0).implies(Permission.Action.ADMIN));
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testCreateTableWithGroupPermissions() throws Exception {
     grantGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.CREATE);
     try {
@@ -228,7 +231,7 @@ public class TestAccessController2 extends SecureTestUtil {
     }
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testACLTableAccess() throws Exception {
     final Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -471,7 +474,7 @@ public class TestAccessController2 extends SecureTestUtil {
   public static class MyAccessController extends AccessController {
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testCoprocessorLoading() throws Exception {
     MasterCoprocessorHost cpHost =
         TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterCoprocessorHost();
@@ -486,7 +489,7 @@ public class TestAccessController2 extends SecureTestUtil {
       MyAccessController.class, ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testACLZNodeDeletion() throws Exception {
     String baseAclZNode = "/hbase/acl/";
     String ns = "testACLZNodeDeletionNamespace";

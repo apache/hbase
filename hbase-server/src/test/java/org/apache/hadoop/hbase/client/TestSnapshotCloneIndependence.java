@@ -69,8 +69,10 @@ public class TestSnapshotCloneIndependence {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }
-
+ 
   private static void setupConf(Configuration conf) {
+    // Up the handlers; this test needs more than usual.
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     // enable snapshot support
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     // disable the ui

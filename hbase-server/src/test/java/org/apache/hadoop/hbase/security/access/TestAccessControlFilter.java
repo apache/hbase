@@ -29,6 +29,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.HTable;
@@ -70,6 +71,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
+    // Up the handlers; this test needs more than usual.
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     enableSecurity(conf);
     verifyConfiguration(conf);
 
@@ -89,7 +92,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testQualifierAccess() throws Exception {
     final Table table = createTable(TEST_UTIL, TABLE, new byte[][] { FAMILY });
     try {
