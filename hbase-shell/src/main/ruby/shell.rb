@@ -396,6 +396,14 @@ Shell.load_command_group(
 )
 
 Shell.load_command_group(
+  'procedures',
+  :full_name => 'PROCEDURES MANAGEMENT',
+  :commands => %w[
+    list_procedures
+  ]
+)
+
+Shell.load_command_group(
   'visibility labels',
   :full_name => 'VISIBILITY LABEL TOOLS',
   :comment => "NOTE: Above commands are only applicable if running with the VisibilityController coprocessor",
