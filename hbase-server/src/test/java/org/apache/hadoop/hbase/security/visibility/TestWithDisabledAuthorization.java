@@ -73,7 +73,8 @@ public class TestWithDisabledAuthorization {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-
+    // Up the handlers; this test needs more than usual.
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     // Set up superuser
     SecureTestUtil.configureSuperuser(conf);
 
@@ -114,7 +115,7 @@ public class TestWithDisabledAuthorization {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testManageUserAuths() throws Throwable {
     // Even though authorization is disabled, we should be able to manage user auths
 
@@ -188,7 +189,7 @@ public class TestWithDisabledAuthorization {
     assertEquals(0, authsList.size());
   }
 
-  @Test
+  @Test (timeout=180000)
   public void testPassiveVisibility() throws Exception {
     // No values should be filtered regardless of authorization if we are passive
     try (Table t = createTableAndWriteDataWithLabels(

@@ -130,6 +130,8 @@ public class TestHCM {
   @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
+    // Up the handlers; this test needs more than usual.
+    TEST_UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     TEST_UTIL.startMiniCluster(2);
   }
 
@@ -137,7 +139,7 @@ public class TestHCM {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testClusterConnection() throws IOException {
     ThreadPoolExecutor otherPool = new ThreadPoolExecutor(1, 1,
         5, TimeUnit.SECONDS,
@@ -201,7 +203,7 @@ public class TestHCM {
    * Naive test to check that HConnection#getAdmin returns a properly constructed HBaseAdmin object
    * @throws IOException Unable to construct admin
    */
-  @Test
+  @Test (timeout=120000)
   public void testAdminFactory() throws IOException {
     Connection con1 = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     Admin admin = con1.getAdmin();
@@ -211,7 +213,7 @@ public class TestHCM {
   }
 
   // Fails too often!  Needs work.  HBASE-12558
-  @Ignore @Test(expected = RegionServerStoppedException.class)
+  @Ignore @Test (expected = RegionServerStoppedException.class)
   public void testClusterStatus() throws Exception {
 
     TableName tn =
@@ -275,12 +277,12 @@ public class TestHCM {
    * Test that we can handle connection close: it will trigger a retry, but the calls will
    *  finish.
    */
-  @Test
+  @Test (timeout=120000)
   public void testConnectionCloseAllowsInterrupt() throws Exception {
     testConnectionClose(true);
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testConnectionNotAllowsInterrupt() throws Exception {
     testConnectionClose(false);
   }
@@ -293,7 +295,7 @@ public class TestHCM {
    * succeeds. But the client won't wait that much, because 20 + 20 > 30, so the client
    * timeouted when the server answers.
    */
-  @Test
+  @Test (timeout=120000)
   public void testOperationTimeout() throws Exception {
     HTableDescriptor hdt = TEST_UTIL.createTableDescriptor("HCM-testOperationTimeout");
     hdt.addCoprocessor(SleepAndFailFirstTime.class.getName());
@@ -411,7 +413,7 @@ public class TestHCM {
   /**
    * Test that connection can become idle without breaking everything.
    */
-  @Test
+  @Test (timeout=120000)
   public void testConnectionIdle() throws Exception {
     TableName tableName = TableName.valueOf("HCM-testConnectionIdle");
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
@@ -467,12 +469,12 @@ public class TestHCM {
     TEST_UTIL.getHBaseAdmin().setBalancerRunning(previousBalance, true);
   }
 
-  /**
-   * Test that the connection to the dead server is cut immediately when we receive the
-   *  notification.
-   * @throws Exception
-   */
-  @Test
+    /**
+     * Test that the connection to the dead server is cut immediately when we receive the
+     *  notification.
+     * @throws Exception
+     */
+  @Test (timeout=120000)
   public void testConnectionCut() throws Exception {
 
     TableName tableName = TableName.valueOf("HCM-testConnectionCut");
@@ -569,7 +571,7 @@ public class TestHCM {
    * that we really delete it.
    * @throws Exception
    */
-  @Test
+  @Test (timeout=120000)
   public void testRegionCaching() throws Exception{
     TEST_UTIL.createMultiRegionTable(TABLE_NAME, FAM_NAM).close();
     Configuration conf =  new Configuration(TEST_UTIL.getConfiguration());
@@ -756,7 +758,7 @@ public class TestHCM {
    * Test that Connection or Pool are not closed when managed externally
    * @throws Exception
    */
-  @Test
+  @Test (timeout=120000)
   public void testConnectionManagement() throws Exception{
     Table table0 = TEST_UTIL.createTable(TABLE_NAME1, FAM_NAM);
     Connection conn = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
@@ -818,7 +820,7 @@ public class TestHCM {
     table.close();
   }
 
-  @Test
+  @Test (timeout=120000)
   public void testClosing() throws Exception {
     Configuration configuration =
       new Configuration(TEST_UTIL.getConfiguration());
@@ -846,7 +848,7 @@ public class TestHCM {
    * Trivial test to verify that nobody messes with
    * {@link ConnectionFactory#createConnection(Configuration)}
    */
-  @Test
+  @Test (timeout=120000)
   public void testCreateConnection() throws Exception {
     Configuration configuration = TEST_UTIL.getConfiguration();
     Connection c1 = ConnectionFactory.createConnection(configuration);
