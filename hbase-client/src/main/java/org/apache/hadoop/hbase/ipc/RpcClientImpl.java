@@ -914,11 +914,17 @@ public class RpcClientImpl extends AbstractRpcClient {
           IPCUtil.write(this.out, header, call.param, cellBlock);
         } catch (IOException e) {
           // We set the value inside the synchronized block, this way the next in line
-          //  won't even try to write
-          markClosed(e);
-          close();
+          //  won't even try to write. Otherwise we might miss a call in the calls map?
+          shouldCloseConnection.set(true);
           writeException = e;
           interrupt();
+        }
+      }
+
+      // call close outside of the synchronized (outLock) to prevent deadlock - HBASE-14474
+      if (writeException != null) {
+        if (markClosed(writeException)) {
+          close();
         }
       }
 
@@ -1022,10 +1028,11 @@ public class RpcClientImpl extends AbstractRpcClient {
           e.getStackTrace(), doNotRetry);
     }
 
-    protected synchronized void markClosed(IOException e) {
+    protected synchronized boolean markClosed(IOException e) {
       if (e == null) throw new NullPointerException();
 
-      if (shouldCloseConnection.compareAndSet(false, true)) {
+      boolean ret = shouldCloseConnection.compareAndSet(false, true);
+      if (ret) {
         if (LOG.isTraceEnabled()) {
           LOG.trace(getName() + ": marking at should close, reason: " + e.getMessage());
         }
@@ -1034,6 +1041,7 @@ public class RpcClientImpl extends AbstractRpcClient {
         }
         notifyAll();
       }
+      return ret;
     }
 
 
@@ -1142,14 +1150,15 @@ public class RpcClientImpl extends AbstractRpcClient {
     }
     if (connsToClose != null) {
       for (Connection conn : connsToClose) {
-        conn.markClosed(new InterruptedIOException("RpcClient is closing"));
-        conn.close();
+        if (conn.markClosed(new InterruptedIOException("RpcClient is closing"))) {
+          conn.close();
+        }
       }
     }
     // wait until all connections are closed
     while (!connections.isEmpty()) {
       try {
-        Thread.sleep(100);
+        Thread.sleep(10);
       } catch (InterruptedException e) {
         LOG.info("Interrupted while stopping the client. We still have " + connections.size() +
             " connections.");
