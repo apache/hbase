@@ -570,7 +570,7 @@ public class TestMobCompactor {
 
     int largeFilesCount = countLargeFiles(5000, family1);
     // do the mob compaction
-    admin.compactMob(tableName, hcd1.getName());
+    admin.compact(tableName, hcd1.getName(), Admin.CompactType.MOB);
 
     waitUntilMobCompactionFinished(tableName);
     assertEquals("After compaction: mob rows count", regionNum * (rowNumPerRegion - delRowNum),
@@ -618,7 +618,7 @@ public class TestMobCompactor {
         countFiles(tableName, false, family2));
 
     // do the major mob compaction, it will force all files to compaction
-    admin.majorCompactMob(tableName, hcd1.getName());
+    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
 
     waitUntilMobCompactionFinished(tableName);
     assertEquals("After compaction: mob rows count", regionNum*(rowNumPerRegion-delRowNum),
@@ -657,7 +657,7 @@ public class TestMobCompactor {
     Cell cell = result.getColumnLatestCell(hcd1.getName(), Bytes.toBytes(qf1));
     assertEquals("Before compaction: mob value of k0", newValue0,
       Bytes.toString(CellUtil.cloneValue(cell)));
-    admin.majorCompactMob(tableName, hcd1.getName());
+    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
     waitUntilMobCompactionFinished(tableName);
     // read the latest cell of key0, the cell seqId in bulk loaded file is not reset in the
     // scanner. The cell that has "new" value is still visible.
@@ -705,7 +705,7 @@ public class TestMobCompactor {
     loadData(admin, bufMut, tableName, new Put[] { put1 }); // now two mob files
     admin.majorCompact(tableName);
     waitUntilCompactionFinished(tableName);
-    admin.majorCompactMob(tableName, hcd1.getName());
+    admin.majorCompact(tableName, hcd1.getName(), Admin.CompactType.MOB);
     waitUntilMobCompactionFinished(tableName);
     // read the latest cell of key1.
     Get get = new Get(key1);
@@ -731,12 +731,12 @@ public class TestMobCompactor {
   private void waitUntilMobCompactionFinished(TableName tableName) throws IOException,
     InterruptedException {
     long finished = EnvironmentEdgeManager.currentTime() + 60000;
-    CompactionState state = admin.getMobCompactionState(tableName);
+    CompactionState state = admin.getCompactionState(tableName, Admin.CompactType.MOB);
     while (EnvironmentEdgeManager.currentTime() < finished) {
       if (state == CompactionState.NONE) {
         break;
       }
-      state = admin.getMobCompactionState(tableName);
+      state = admin.getCompactionState(tableName, Admin.CompactType.MOB);
       Thread.sleep(10);
     }
     assertEquals(CompactionState.NONE, state);

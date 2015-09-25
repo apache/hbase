@@ -56,12 +56,25 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family compaction
-    def compact(table_or_region_name, family = nil)
-      if family == nil
-        @admin.compact(table_or_region_name)
+    def compact(table_or_region_name, family = nil, type = "NORMAL")
+      if type == "NORMAL"
+        if family == nil
+          @admin.compact(table_or_region_name)
+        else
+          # We are compacting a column family within a region.
+          @admin.compact(table_or_region_name, family)
+        end
+      elsif type == "MOB"
+        if family == nil
+          @admin.compact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
+          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
+        else
+          # We are compacting a mob column family within a table.
+          @admin.compact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name), family.to_java_bytes,
+          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
+        end
       else
-        # We are compacting a column family within a region.
-        @admin.compact(table_or_region_name, family)
+         raise ArgumentError, "only NORMAL or MOB accepted for type!"
       end
     end
 
@@ -72,12 +85,25 @@ module Hbase
 
     #----------------------------------------------------------------------------------------------
     # Requests a table or region or column family major compaction
-    def major_compact(table_or_region_name, family = nil)
-      if family == nil
-        @admin.majorCompact(table_or_region_name)
+    def major_compact(table_or_region_name, family = nil, type = "NORMAL")
+      if type == "NORMAL"
+        if family == nil
+          @admin.majorCompact(table_or_region_name)
+        else
+          # We are major compacting a column family within a region or table.
+          @admin.majorCompact(table_or_region_name, family)
+        end
+      elsif type == "MOB"
+        if family == nil
+          @admin.majorCompact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
+          org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
+        else
+          # We are major compacting a mob column family within a table.
+          @admin.majorCompact(org.apache.hadoop.hbase.TableName.valueOf(table_or_region_name),
+          family.to_java_bytes, org.apache.hadoop.hbase.client.Admin::CompactType::MOB)
+        end
       else
-        # We are major compacting a column family within a region or table.
-        @admin.majorCompact(table_or_region_name, family)
+        raise ArgumentError, "only NORMAL or MOB accepted for type!"
       end
     end
 
@@ -991,28 +1017,6 @@ module Hbase
     # Drops a table
     def drop_namespace(namespace_name)
       @admin.deleteNamespace(namespace_name)
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Requests a mob file compaction
-    def compact_mob(table_name, family = nil)
-      if family == nil
-        @admin.compactMobs(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-      else
-        # We are compacting a mob column family within a table.
-        @admin.compactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name), family.to_java_bytes)
-      end
-    end
-
-    #----------------------------------------------------------------------------------------------
-    # Requests a mob file major compaction
-    def major_compact_mob(table_name, family = nil)
-      if family == nil
-        @admin.majorCompactMobs(org.apache.hadoop.hbase.TableName.valueOf(table_name))
-      else
-        # We are major compacting a mob column family within a table.
-        @admin.majorCompactMob(org.apache.hadoop.hbase.TableName.valueOf(table_name), family.to_java_bytes)
-      end
     end
 
     #----------------------------------------------------------------------------------------------

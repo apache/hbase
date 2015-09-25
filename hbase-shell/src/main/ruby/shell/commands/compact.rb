@@ -25,6 +25,7 @@ module Shell
           Compact all regions in passed table or pass a region row
           to compact an individual region. You can also compact a single column
           family within a region.
+          You can also set compact type, "NORMAL" or "MOB", and default is "NORMAL"
           Examples:
           Compact all regions in a table:
           hbase> compact 'ns1:t1'
@@ -35,12 +36,16 @@ module Shell
           hbase> compact 'r1', 'c1'
           Compact a column family within a table:
           hbase> compact 't1', 'c1'
+          Compact table with type "MOB"
+          hbase> compact 't1', nil, 'MOB'
+          Compact a column family using "MOB" type within a table
+          hbase> compact 't1', 'c1', 'MOB'
         EOF
       end
 
-      def command(table_or_region_name, family = nil)
+      def command(table_or_region_name, family = nil, type = "NORMAL")
         format_simple_command do
-          admin.compact(table_or_region_name, family)
+          admin.compact(table_or_region_name, family, type)
         end
       end
     end
