@@ -1073,7 +1073,7 @@ public class TestWALSplit {
     REGIONS.add(regionName);
     generateWALs(-1);
 
-    wals.getWAL(Bytes.toBytes(regionName));
+    wals.getWAL(Bytes.toBytes(regionName), null);
     FileStatus[] logfiles = fs.listStatus(WALDIR);
     assertTrue("There should be some log file",
       logfiles != null && logfiles.length > 0);

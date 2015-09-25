@@ -158,8 +158,10 @@ public class TestHRegionReplayEvents {
       false, time, 1);
 
     wals = TestHRegion.createWALFactory(CONF, rootDir);
-    walPrimary = wals.getWAL(primaryHri.getEncodedNameAsBytes());
-    walSecondary = wals.getWAL(secondaryHri.getEncodedNameAsBytes());
+    walPrimary = wals.getWAL(primaryHri.getEncodedNameAsBytes(),
+        primaryHri.getTable().getNamespace());
+    walSecondary = wals.getWAL(secondaryHri.getEncodedNameAsBytes(),
+        secondaryHri.getTable().getNamespace());
 
     rss = mock(RegionServerServices.class);
     when(rss.getServerName()).thenReturn(ServerName.valueOf("foo", 1, 1));

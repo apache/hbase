@@ -18,50 +18,35 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider.RegionGroupingStrategy;
 
 /**
- * A WAL grouping strategy that limits the number of wal groups to
- * "hbase.wal.regiongrouping.numgroups".
+ * A WAL grouping strategy based on namespace.
+ * Notice: the wal-group mapping might change if we support dynamic namespace updating later,
+ * and special attention needed if we support feature like group-based replication.
  */
 @InterfaceAudience.Private
-public class BoundedGroupingStrategy implements RegionGroupingStrategy{
-
-  static final String NUM_REGION_GROUPS = "hbase.wal.regiongrouping.numgroups";
-  static final int DEFAULT_NUM_REGION_GROUPS = 2;
-
-  private ConcurrentHashMap<String, String> groupNameCache =
-      new ConcurrentHashMap<String, String>();
-  private AtomicInteger counter = new AtomicInteger(0);
-  private String[] groupNames;
+public class NamespaceGroupingStrategy implements RegionGroupingStrategy {
+  private String providerId;
 
   @Override
   public String group(byte[] identifier, byte[] namespace) {
-    String idStr = Bytes.toString(identifier);
-    String groupName = groupNameCache.get(idStr);
-    if (null == groupName) {
-      groupName = groupNames[counter.getAndIncrement() % groupNames.length];
-      String extantName = groupNameCache.putIfAbsent(idStr, groupName);
-      if (extantName != null) {
-        return extantName;
-      }
+    String namespaceString;
+    if (namespace == null || namespace.length == 0) {
+      namespaceString = NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
+    } else {
+      namespaceString = Bytes.toString(namespace);
     }
-    return groupName;
+    return providerId + GROUP_NAME_DELIMITER + namespaceString;
   }
 
   @Override
   public void init(Configuration config, String providerId) {
-    int regionGroupNumber = config.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
-    groupNames = new String[regionGroupNumber];
-    for (int i = 0; i < regionGroupNumber; i++) {
-      groupNames[i] = providerId + GROUP_NAME_DELIMITER + "regiongroup-" + i;
-    }
+    this.providerId = providerId;
   }
 
 }

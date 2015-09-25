@@ -192,7 +192,8 @@ public class TestLogRollAbort {
           TableName.valueOf(this.getClass().getName());
       HRegionInfo regioninfo = new HRegionInfo(tableName,
           HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW);
-      final WAL log = wals.getWAL(regioninfo.getEncodedNameAsBytes());
+      final WAL log = wals.getWAL(regioninfo.getEncodedNameAsBytes(),
+          regioninfo.getTable().getNamespace());
     
       final AtomicLong sequenceId = new AtomicLong(1);
 

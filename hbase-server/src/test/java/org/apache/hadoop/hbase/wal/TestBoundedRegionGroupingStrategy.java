@@ -171,7 +171,7 @@ public class TestBoundedRegionGroupingStrategy {
       int count = 0;
       // we know that this should see one of the wals more than once
       for (int i = 0; i < temp*8; i++) {
-        final WAL maybeNewWAL = wals.getWAL(Bytes.toBytes(random.nextInt()));
+        final WAL maybeNewWAL = wals.getWAL(Bytes.toBytes(random.nextInt()), null);
         LOG.info("Iteration " + i + ", checking wal " + maybeNewWAL);
         if (seen.add(maybeNewWAL)) {
           count++;

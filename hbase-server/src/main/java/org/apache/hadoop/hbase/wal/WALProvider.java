@@ -54,9 +54,10 @@ public interface WALProvider {
 
   /**
    * @param identifier may not be null. contents will not be altered.
+   * @param namespace could be null, and will use default namespace if null
    * @return a WAL for writing entries for the given region.
    */
-  WAL getWAL(final byte[] identifier) throws IOException;
+  WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException;
 
   /**
    * persist outstanding WALs to storage and stop accepting new appends.

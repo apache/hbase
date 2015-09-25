@@ -225,9 +225,10 @@ public class WALFactory {
 
   /**
    * @param identifier may not be null, contents will not be altered
+   * @param namespace could be null, and will use default namespace if null
    */
-  public WAL getWAL(final byte[] identifier) throws IOException {
-    return provider.getWAL(identifier);
+  public WAL getWAL(final byte[] identifier, final byte[] namespace) throws IOException {
+    return provider.getWAL(identifier, namespace);
   }
 
   /**
@@ -247,7 +248,7 @@ public class WALFactory {
         metaProvider = this.metaProvider.get();
       }
     }
-    return metaProvider.getWAL(identifier);
+    return metaProvider.getWAL(identifier, null);
   }
 
   public Reader createReader(final FileSystem fs, final Path path) throws IOException {

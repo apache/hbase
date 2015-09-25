@@ -65,12 +65,11 @@ class RegionGroupingProvider implements WALProvider {
    */
   public static interface RegionGroupingStrategy {
     String GROUP_NAME_DELIMITER = ".";
+
     /**
-     * Given an identifier, pick a group.
-     * the byte[] returned for a given group must always use the same instance, since we
-     * will be using it as a hash key.
+     * Given an identifier and a namespace, pick a group.
      */
-    String group(final byte[] identifier);
+    String group(final byte[] identifier, byte[] namespace);
     void init(Configuration config, String providerId);
   }
 
@@ -80,7 +79,8 @@ class RegionGroupingProvider implements WALProvider {
   static enum Strategies {
     defaultStrategy(BoundedGroupingStrategy.class),
     identity(IdentityGroupingStrategy.class),
-    bounded(BoundedGroupingStrategy.class);
+    bounded(BoundedGroupingStrategy.class),
+    namespace(NamespaceGroupingStrategy.class);
 
     final Class<? extends RegionGroupingStrategy> clazz;
     Strategies(Class<? extends RegionGroupingStrategy> clazz) {
@@ -200,12 +200,12 @@ class RegionGroupingProvider implements WALProvider {
   }
 
   @Override
-  public WAL getWAL(final byte[] identifier) throws IOException {
+  public WAL getWAL(final byte[] identifier, byte[] namespace) throws IOException {
     final String group;
     if (META_WAL_PROVIDER_ID.equals(this.providerId)) {
       group = META_WAL_GROUP_NAME;
     } else {
-      group = strategy.group(identifier);
+      group = strategy.group(identifier, namespace);
     }
     return getWAL(group);
   }
@@ -254,7 +254,7 @@ class RegionGroupingProvider implements WALProvider {
     @Override
     public void init(Configuration config, String providerId) {}
     @Override
-    public String group(final byte[] identifier) {
+    public String group(final byte[] identifier, final byte[] namespace) {
       return Bytes.toString(identifier);
     }
   }

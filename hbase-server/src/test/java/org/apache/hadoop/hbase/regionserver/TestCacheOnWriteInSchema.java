@@ -174,7 +174,7 @@ public class TestCacheOnWriteInSchema {
     walFactory = new WALFactory(conf, null, id);
 
     region = TEST_UTIL.createLocalHRegion(info, htd,
-        walFactory.getWAL(info.getEncodedNameAsBytes()));
+        walFactory.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()));
     store = new HStore(region, hcd, conf);
   }
 

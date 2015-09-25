@@ -95,7 +95,9 @@ public class MetaUtils {
       this.walFactory = new WALFactory(walConf, null, logName);
     }
     final byte[] region = info.getEncodedNameAsBytes();
-    return info.isMetaRegion() ? walFactory.getMetaWAL(region) : walFactory.getWAL(region);
+    final byte[] namespace = info.getTable().getNamespace();
+    return info.isMetaRegion() ? walFactory.getMetaWAL(region) : walFactory.getWAL(region,
+      namespace);
   }
 
   /**

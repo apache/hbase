@@ -378,7 +378,8 @@ public class TestSplitTransaction {
     HRegionInfo hri = new HRegionInfo(htd.getTableName(), STARTROW, ENDROW);
     HRegion r = HRegion.createHRegion(hri, testdir, TEST_UTIL.getConfiguration(), htd);
     HRegion.closeHRegion(r);
-    return HRegion.openHRegion(testdir, hri, htd, wals.getWAL(hri.getEncodedNameAsBytes()),
+    return HRegion.openHRegion(testdir, hri, htd,
+      wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()),
       TEST_UTIL.getConfiguration());
   }
   

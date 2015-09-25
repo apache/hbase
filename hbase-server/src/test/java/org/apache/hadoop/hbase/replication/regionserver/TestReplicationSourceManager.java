@@ -200,7 +200,7 @@ public class TestReplicationSourceManager {
     listeners.add(replication);
     final WALFactory wals = new WALFactory(utility.getConfiguration(), listeners,
         URLEncoder.encode("regionserver:60020", "UTF8"));
-    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes());
+    final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
     final AtomicLong sequenceId = new AtomicLong(1);
     manager.init();
     HTableDescriptor htd = new HTableDescriptor();

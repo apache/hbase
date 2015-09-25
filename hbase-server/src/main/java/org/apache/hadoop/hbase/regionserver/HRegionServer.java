@@ -1835,9 +1835,10 @@ public class HRegionServer extends HasThread implements
       roller = ensureMetaWALRoller();
       wal = walFactory.getMetaWAL(regionInfo.getEncodedNameAsBytes());
     } else if (regionInfo == null) {
-      wal = walFactory.getWAL(UNSPECIFIED_REGION);
+      wal = walFactory.getWAL(UNSPECIFIED_REGION, null);
     } else {
-      wal = walFactory.getWAL(regionInfo.getEncodedNameAsBytes());
+      byte[] namespace = regionInfo.getTable().getNamespace();
+      wal = walFactory.getWAL(regionInfo.getEncodedNameAsBytes(), namespace);
     }
     roller.addWAL(wal);
     return wal;
