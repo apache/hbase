@@ -212,9 +212,10 @@ public class RegionServerFlushTableProcedureManager extends RegionServerProcedur
         RegionServerFlushTableProcedureManager.FLUSH_TIMEOUT_MILLIS_DEFAULT);
       int threads = conf.getInt(CONCURENT_FLUSH_TASKS_KEY, DEFAULT_CONCURRENT_FLUSH_TASKS);
       this.name = name;
-      executor = new ThreadPoolExecutor(1, threads, keepAlive, TimeUnit.MILLISECONDS,
+      executor = new ThreadPoolExecutor(threads, threads, keepAlive, TimeUnit.MILLISECONDS,
           new LinkedBlockingQueue<Runnable>(), new DaemonThreadFactory("rs("
               + name + ")-flush-proc-pool"));
+      executor.allowCoreThreadTimeOut(true);
       taskPool = new ExecutorCompletionService<Void>(executor);
     }
 
