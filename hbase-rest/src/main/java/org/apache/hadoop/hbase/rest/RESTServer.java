@@ -202,7 +202,7 @@ public class RESTServer implements Constants {
     }
     connector.setPort(servlet.getConfiguration().getInt("hbase.rest.port", 8080));
     connector.setHost(servlet.getConfiguration().get("hbase.rest.host", "0.0.0.0"));
-    connector.setHeaderBufferSize(8192);
+    connector.setHeaderBufferSize(65536);
 
     server.addConnector(connector);
 
