@@ -400,6 +400,7 @@ public class ThriftServerRunner implements Runnable {
     String host = getBindAddress(conf).getHostAddress();
     connector.setPort(listenPort);
     connector.setHost(host);
+    connector.setHeaderBufferSize(1024 * 64);
     httpServer.addConnector(connector);
 
     if (doAsEnabled) {
