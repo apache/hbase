@@ -97,6 +97,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   protected static final int DEFAULT_NUM_REGIONS = 50; // number of regions in pre-split tables
 
+  private boolean keepTableAtTheEnd = false;
   protected HBaseCluster cluster;
 
   protected Connection connection;
@@ -134,9 +135,11 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   @Override
   public void cleanUpCluster() throws Exception {
-    Admin admin = util.getHBaseAdmin();
-    admin.disableTables("ittable-\\d+");
-    admin.deleteTables("ittable-\\d+");
+    if (!keepTableAtTheEnd) {
+      Admin admin = util.getHBaseAdmin();
+      admin.disableTables("ittable-\\d+");
+      admin.deleteTables("ittable-\\d+");
+    }
     Connection connection = getConnection();
     connection.close();
     super.cleanUpCluster();
@@ -239,16 +242,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         HTableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
         enabledTables.put(tableName, freshTableDesc);
         LOG.info("Created table:" + freshTableDesc);
-      } catch (Exception e){
+      } catch (Exception e) {
         LOG.warn("Caught exception in action: " + this.getClass());
-        // TODO workaround
-        // when master failover happens during CREATE_TABLE, client will do RPC retry and get TableExistsException
-        // ignore for now till better resolution
-        if (e instanceof TableExistsException) {
-          LOG.warn("Caught TableExistsException in action: " + this.getClass(), e);
-        } else {
-          throw e;
-        }
+        throw e;
       } finally {
         admin.close();
       }
@@ -379,17 +375,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
                 admin.tableExists(tableName));
         deletedTables.put(tableName, selected);
         LOG.info("Deleted table :" + selected);
-      } catch (Exception e){
+      } catch (Exception e) {
         LOG.warn("Caught exception in action: " + this.getClass());
-        // TODO workaround
-        // when master failover happens during DELETE_TABLE, client will do RPC retry and get
-        // TableNotFoundException ignore for now till better resolution
-        if (e instanceof TableNotFoundException) {
-          LOG.warn("Caught TableNotFoundException in action: " + this.getClass());
-          e.printStackTrace();
-        } else {
-          throw e;
-        }
+        throw e;
       } finally {
         admin.close();
       }
@@ -440,19 +428,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
             freshTableDesc.hasFamily(cfd.getName()));
         LOG.info("Added column family: " + cfd + " to table: " + tableName);
         disabledTables.put(tableName, freshTableDesc);
-      } catch (Exception e){
+      } catch (Exception e) {
         LOG.warn("Caught exception in action: " + this.getClass());
-        // TODO HBASE-13415
-        // loose restriction for InvalidFamilyOperationException thrown in async operations before
-        // HBASE-13415 completes when failover happens, multiple procids may be created from the
-        // same request when 1 procedure succeeds, the others would complain about family already
-        // exists
-        if (e instanceof InvalidFamilyOperationException) {
-          LOG.warn("Caught InvalidFamilyOperationException in action: " + this.getClass());
-          e.printStackTrace();
-        } else {
-          throw e;
-        }
+        throw e;
       } finally {
         admin.close();
       }
@@ -576,17 +554,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         disabledTables.put(tableName, freshTableDesc);
       } catch (Exception e) {
         LOG.warn("Caught exception in action: " + this.getClass());
-        // TODO HBASE-13415
-        // loose restriction for InvalidFamilyOperationException thrown in async operations before
-        // HBASE-13415 completes when failover happens, multiple procids may be created from the
-        //  same request when 1 procedure succeeds, the others would complain about family not
-        // exists
-        if (e instanceof InvalidFamilyOperationException) {
-          LOG.warn("Caught InvalidFamilyOperationException in action: " + this.getClass());
-          e.printStackTrace();
-        } else {
-          throw e;
-        }
+        throw e;
       } finally {
         admin.close();
       }
@@ -782,6 +750,11 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     try {
       LOG.info("Running hbck");
       hbck = HbckTestingUtil.doFsck(util.getConfiguration(), false);
+      if (HbckTestingUtil.inconsistencyFound(hbck)) {
+        // Find the inconsistency during HBCK. Leave table undropped so that
+        // we can check outside the test.
+        keepTableAtTheEnd = true;
+      }
       HbckTestingUtil.assertNoErrors(hbck);
       LOG.info("Finished hbck");
     } finally {

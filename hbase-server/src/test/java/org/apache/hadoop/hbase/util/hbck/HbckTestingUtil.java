@@ -89,6 +89,11 @@ public class HbckTestingUtil {
     return hbck;
   }
 
+  public static boolean inconsistencyFound(HBaseFsck fsck) throws Exception {
+    List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
+    return (errs != null && !errs.isEmpty());
+  }
+
   public static void assertNoErrors(HBaseFsck fsck) throws Exception {
     List<ERROR_CODE> errs = fsck.getErrors().getErrorList();
     assertEquals(new ArrayList<ERROR_CODE>(), errs);
