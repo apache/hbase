@@ -33,10 +33,15 @@ import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import org.junit.Rule;
+import org.junit.rules.ExpectedException;
 
 import com.google.common.base.Joiner;
 
@@ -97,8 +102,31 @@ public class TestThriftHttpServer {
     httpServerThread.start();
   }
 
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
+  @Test(timeout=600000)
+  public void testRunThriftServerWithHeaderBufferLength() throws Exception {
+
+    // Test thrift server with HTTP header length less than 64k
+    try {
+      runThriftServer(1024 * 63);
+    } catch (TTransportException tex) {
+      assertFalse(tex.getMessage().equals("HTTP Response code: 413"));
+    }
+
+    // Test thrift server with HTTP header length more than 64k, expect an exception
+    exception.expect(TTransportException.class);
+    exception.expectMessage("HTTP Response code: 413");
+    runThriftServer(1024 * 64);
+  }
+
   @Test(timeout=600000)
   public void testRunThriftServer() throws Exception {
+    runThriftServer(0);
+  }
+
+  private void runThriftServer(int customHeaderSize) throws Exception {
     List<String> args = new ArrayList<String>();
     port = HBaseTestingUtility.randomFreePort();
     args.add("-" + ThriftServer.PORT_OPTION);
@@ -116,7 +144,7 @@ public class TestThriftHttpServer {
     }
 
     try {
-      talkToThriftServer();
+      talkToThriftServer(customHeaderSize);
     } catch (Exception ex) {
       clientSideException = ex;
     } finally {
@@ -125,16 +153,29 @@ public class TestThriftHttpServer {
 
     if (clientSideException != null) {
       LOG.error("Thrift client threw an exception " + clientSideException);
-      throw new Exception(clientSideException);
+      if (clientSideException instanceof  TTransportException) {
+        throw clientSideException;
+      } else {
+        throw new Exception(clientSideException);
+      }
     }
   }
 
   private static volatile boolean tableCreated = false;
 
-  private void talkToThriftServer() throws Exception {
+  private void talkToThriftServer(int customHeaderSize) throws Exception {
     THttpClient httpClient = new THttpClient(
         "http://"+ HConstants.LOCALHOST + ":" + port);
     httpClient.open();
+
+    if (customHeaderSize > 0) {
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < customHeaderSize; i++) {
+        sb.append("a");
+      }
+      httpClient.setCustomHeader("User-Agent", sb.toString());
+    }
+
     try {
       TProtocol prot;
       prot = new TBinaryProtocol(httpClient);
