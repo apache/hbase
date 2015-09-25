@@ -434,7 +434,7 @@ public class TestTablePermissions {
     /* test a race condition causing TableAuthManager to sometimes fail global permissions checks
      * when the global cache is being updated
      */
-    TableAuthManager authManager = TableAuthManager.get(ZKW, conf);
+    TableAuthManager authManager = TableAuthManager.getOrCreate(ZKW, conf);
     // currently running user is the system user and should have global admin perms
     User currentUser = User.getCurrent();
     assertTrue(authManager.authorize(currentUser, Permission.Action.ADMIN));

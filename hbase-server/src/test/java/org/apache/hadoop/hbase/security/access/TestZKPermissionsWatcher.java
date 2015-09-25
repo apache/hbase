@@ -75,9 +75,9 @@ public class TestZKPermissionsWatcher {
 
     // start minicluster
     UTIL.startMiniCluster();
-    AUTH_A = TableAuthManager.get(new ZooKeeperWatcher(conf,
+    AUTH_A = TableAuthManager.getOrCreate(new ZooKeeperWatcher(conf,
       "TestZKPermissionsWatcher_1", ABORTABLE), conf);
-    AUTH_B = TableAuthManager.get(new ZooKeeperWatcher(conf,
+    AUTH_B = TableAuthManager.getOrCreate(new ZooKeeperWatcher(conf,
       "TestZKPermissionsWatcher_2", ABORTABLE), conf);
   }
 

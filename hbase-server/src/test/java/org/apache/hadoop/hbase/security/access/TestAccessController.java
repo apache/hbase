@@ -247,6 +247,8 @@ public class TestAccessController extends SecureTestUtil {
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
+    int total = TableAuthManager.getTotalRefCount();
+    assertTrue("Unexpected reference count: " + total, total == 0);
   }
 
   private static void setUpTableAndUserPermissions() throws Exception {
