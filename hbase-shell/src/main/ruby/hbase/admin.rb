@@ -1040,5 +1040,10 @@ module Hbase
     def get_security_capabilities
       @admin.getSecurityCapabilities
     end
+
+    # List all procedures
+    def list_procedures()
+      @admin.listProcedures()
+    end
   end
 end
