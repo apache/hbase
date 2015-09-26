@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.FilterAllFilter;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -370,6 +371,30 @@ public class TestRegionObserverInterface {
     );
     util.deleteTable(tableName);
     table.close();
+  }
+
+  @Test (timeout=300000)
+  public void testHBASE14489() throws IOException {
+    TableName tableName = TableName.valueOf("testHBASE14489");
+    HTable table = util.createTable(tableName, new byte[][] { A });
+    Put put = new Put(ROW);
+    put.addColumn(A, A, A);
+    table.put(put);
+
+    Scan s = new Scan();
+    s.setFilter(new FilterAllFilter());
+    ResultScanner scanner = table.getScanner(s);
+    try {
+      for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
+      }
+    } finally {
+      scanner.close();
+    }
+    verifyMethodResult(SimpleRegionObserver.class, new String[] { "wasScannerFilterRowCalled" },
+      tableName, new Boolean[] { true });
+    util.deleteTable(tableName);
+    table.close();
+
   }
 
   @Test (timeout=300000)
