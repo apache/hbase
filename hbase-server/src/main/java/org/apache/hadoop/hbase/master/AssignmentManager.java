@@ -2299,7 +2299,33 @@ public class AssignmentManager extends ZooKeeperListener {
     LOG.debug("ALREADY_OPENED " + region.getRegionNameAsString()
       + " to " + sn);
     String encodedName = region.getEncodedName();
-    deleteNodeInStates(encodedName, "offline", sn, EventType.M_ZK_REGION_OFFLINE);
+    
+    //If use ZkForAssignment, region already Opened event should not be handled, 
+    //leave it to zk event. See HBase-14407.
+    if(useZKForAssignment){
+      String node = ZKAssign.getNodeName(watcher, encodedName);
+      Stat stat = new Stat();
+      try {
+        byte[] existingBytes = ZKUtil.getDataNoWatch(watcher, node, stat);
+        if(existingBytes!=null){
+          RegionTransition rt= RegionTransition.parseFrom(existingBytes);
+          EventType et = rt.getEventType();
+          if (et.equals(EventType.RS_ZK_REGION_OPENED)) {
+            LOG.debug("ALREADY_OPENED " + region.getRegionNameAsString()
+              + " and node in "+et+" state");
+            return;
+          }
+        }
+      } catch (KeeperException ke) {
+        LOG.warn("Unexpected ZK exception getData " + node
+          + " node for the region " + encodedName, ke);
+      } catch (DeserializationException e) {
+        LOG.warn("Get RegionTransition from zk deserialization failed! ", e);
+      }
+      
+      deleteNodeInStates(encodedName, "offline", sn, EventType.M_ZK_REGION_OFFLINE);
+    }
+    
     regionStates.regionOnline(region, sn);
   }
 
