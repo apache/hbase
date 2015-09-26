@@ -118,6 +118,7 @@ public class SimpleRegionObserver extends BaseRegionObserver {
   final AtomicInteger ctPostCheckAndDelete = new AtomicInteger(0);
   final AtomicInteger ctPreScannerNext = new AtomicInteger(0);
   final AtomicInteger ctPostScannerNext = new AtomicInteger(0);
+  final AtomicInteger ctPostScannerFilterRow = new AtomicInteger(0);
   final AtomicInteger ctPreScannerClose = new AtomicInteger(0);
   final AtomicInteger ctPostScannerClose = new AtomicInteger(0);
   final AtomicInteger ctPreScannerOpen = new AtomicInteger(0);
@@ -312,6 +313,14 @@ public class SimpleRegionObserver extends BaseRegionObserver {
       final InternalScanner s, final List<Result> results, final int limit,
       final boolean hasMore) throws IOException {
     ctPostScannerNext.incrementAndGet();
+    return hasMore;
+  }
+
+  @Override
+  public boolean postScannerFilterRow(final ObserverContext<RegionCoprocessorEnvironment> e,
+      final InternalScanner s, final byte[] currentRow, final int offset, final short length,
+      final boolean hasMore) throws IOException {
+    ctPostScannerFilterRow.incrementAndGet();
     return hasMore;
   }
 
@@ -819,6 +828,9 @@ public class SimpleRegionObserver extends BaseRegionObserver {
 
   public boolean wasScannerNextCalled() {
     return ctPreScannerNext.get() > 0 && ctPostScannerNext.get() > 0;
+  }
+  public boolean wasScannerFilterRowCalled() {
+    return ctPostScannerFilterRow.get() > 0;
   }
   public boolean wasScannerCloseCalled() {
     return ctPreScannerClose.get() > 0 && ctPostScannerClose.get() > 0;
