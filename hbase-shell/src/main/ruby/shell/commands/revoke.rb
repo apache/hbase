@@ -22,7 +22,7 @@ module Shell
       def help
         return <<-EOF
 Revoke a user's access rights.
-Syntax : revoke <user> [<@namespace> [<table> [<column family> [<column qualifier>]]]]
+Syntax : revoke <user> [, <@namespace> [, <table> [, <column family> [, <column qualifier>]]]]
 
 Note: Groups and users access are revoked in the same way, but groups are prefixed with an '@' 
       character. In the same way, tables and namespaces are specified, but namespaces are 
