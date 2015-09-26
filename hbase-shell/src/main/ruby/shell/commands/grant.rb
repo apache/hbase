@@ -22,7 +22,7 @@ module Shell
       def help
         return <<-EOF
 Grant users specific rights.
-Syntax : grant <user> <permissions> [<@namespace> [<table> [<column family> [<column qualifier>]]]
+Syntax : grant <user>, <permissions> [, <@namespace> [, <table> [, <column family> [, <column qualifier>]]]
 
 permissions is either zero or more letters from the set "RWXCA".
 READ('R'), WRITE('W'), EXEC('X'), CREATE('C'), ADMIN('A')
