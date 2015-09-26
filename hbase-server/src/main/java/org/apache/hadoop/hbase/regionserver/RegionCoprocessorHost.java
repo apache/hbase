@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorService;
 import org.apache.hadoop.hbase.coprocessor.EndpointObserver;
@@ -96,6 +97,9 @@ public class RegionCoprocessorHost
   // The shared data map
   private static ReferenceMap sharedDataMap =
       new ReferenceMap(AbstractReferenceMap.HARD, AbstractReferenceMap.WEAK);
+
+  // optimization: no need to call postScannerFilterRow, if no coprocessor implements it
+  private final boolean hasCustomPostScannerFilterRow;
 
   /**
    * 
@@ -220,6 +224,35 @@ public class RegionCoprocessorHost
 
     // load Coprocessor From HDFS
     loadTableCoprocessors(conf);
+
+    // now check whether any coprocessor implements postScannerFilterRow
+    boolean hasCustomPostScannerFilterRow = false;
+    out: for (RegionEnvironment env: coprocessors) {
+      if (env.getInstance() instanceof RegionObserver) {
+        Class<?> clazz = env.getInstance().getClass();
+        for(;;) {
+          if (clazz == null) {
+            // we must have directly implemented RegionObserver
+            hasCustomPostScannerFilterRow = true;
+            break out;
+          }
+          if (clazz == BaseRegionObserver.class) {
+            // we reached BaseRegionObserver, try next coprocessor
+            break;
+          }
+          try {
+            clazz.getDeclaredMethod("postScannerFilterRow", ObserverContext.class,
+              InternalScanner.class, byte[].class, int.class, short.class, boolean.class);
+            // this coprocessor has a custom version of postScannerFilterRow
+            hasCustomPostScannerFilterRow = true;
+            break out;
+          } catch (NoSuchMethodException ignore) {
+          }
+          clazz = clazz.getSuperclass();
+        }
+      }
+    }
+    this.hasCustomPostScannerFilterRow = hasCustomPostScannerFilterRow;
   }
 
   static List<TableCoprocessorAttribute> getTableCoprocessorAttrsFromSchema(Configuration conf,
@@ -1356,6 +1389,8 @@ public class RegionCoprocessorHost
    */
   public boolean postScannerFilterRow(final InternalScanner s, final byte[] currentRow,
       final int offset, final short length) throws IOException {
+    // short circuit for performance
+    if (!hasCustomPostScannerFilterRow) return true;
     return execOperationWithResult(true,
         coprocessors.isEmpty() ? null : new RegionOperationWithResult<Boolean>() {
       @Override
