@@ -29,10 +29,10 @@ matching table name regular expression.
 Examples:
   hbase> delete_table_snapshots 'tableName'
   hbase> delete_table_snapshots 'tableName.*'
-  hbase> delete_table_snapshots 'tableName' 'snapshotName'
-  hbase> delete_table_snapshots 'tableName' 'snapshotName.*'
-  hbase> delete_table_snapshots 'tableName.*' 'snapshotName.*'
-  hbase> delete_table_snapshots 'ns:tableName.*' 'snapshotName.*'
+  hbase> delete_table_snapshots 'tableName', 'snapshotName'
+  hbase> delete_table_snapshots 'tableName', 'snapshotName.*'
+  hbase> delete_table_snapshots 'tableName.*', 'snapshotName.*'
+  hbase> delete_table_snapshots 'ns:tableName.*', 'snapshotName.*'
 
 EOF
       end

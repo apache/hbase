@@ -31,10 +31,10 @@ by snapshot name.
 Examples:
   hbase> list_table_snapshots 'tableName'
   hbase> list_table_snapshots 'tableName.*'
-  hbase> list_table_snapshots 'tableName' 'snapshotName'
-  hbase> list_table_snapshots 'tableName' 'snapshotName.*'
-  hbase> list_table_snapshots 'tableName.*' 'snapshotName.*'
-  hbase> list_table_snapshots 'ns:tableName.*' 'snapshotName.*'
+  hbase> list_table_snapshots 'tableName', 'snapshotName'
+  hbase> list_table_snapshots 'tableName', 'snapshotName.*'
+  hbase> list_table_snapshots 'tableName.*', 'snapshotName.*'
+  hbase> list_table_snapshots 'ns:tableName.*', 'snapshotName.*'
 EOF
       end
 
