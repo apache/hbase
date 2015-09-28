@@ -161,6 +161,9 @@ public class HBaseInterClusterReplicationEndpoint extends HBaseReplicationEndpoi
       peersSelected = true;
     }
 
+    if (replicationSinkMgr.getSinks().size() == 0) {
+      return false;
+    }
     // minimum of: configured threads, number of 100-waledit batches,
     //  and number of current sinks
     int n = Math.min(Math.min(this.maxThreads, entries.size()/100+1),
