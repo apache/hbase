@@ -70,6 +70,7 @@ public class HLogKey extends WALKey implements Writable {
     super(encodedRegionName, tablename);
   }
 
+  @VisibleForTesting
   public HLogKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
     super(encodedRegionName, tablename, now);
   }

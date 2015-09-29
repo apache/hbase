@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.mortbay.log.Log;
 
 /**
  * Manages the read/write consistency. This provides an interface for readers to determine what
@@ -40,7 +41,7 @@ public class MultiVersionConcurrencyControl {
   /**
    * Represents no value, or not set.
    */
-  private static final long NONE = -1;
+  public static final long NONE = -1;
 
   // This is the pending queue of writes.
   //
@@ -201,10 +202,15 @@ public class MultiVersionConcurrencyControl {
    */
   void waitForRead(WriteEntry e) {
     boolean interrupted = false;
+    int count = 0;
     synchronized (readWaiters) {
       while (readPoint.get() < e.getWriteNumber()) {
+        if (count % 100 == 0 && count > 0) {
+          Log.warn("STUCK: " + this);
+        }
+        count++;
         try {
-          readWaiters.wait(0);
+          readWaiters.wait(10);
         } catch (InterruptedException ie) {
           // We were interrupted... finish the loop -- i.e. cleanup --and then
           // on our way out, reset the interrupt flag.
@@ -215,6 +221,23 @@ public class MultiVersionConcurrencyControl {
     if (interrupted) {
       Thread.currentThread().interrupt();
     }
+  }
+
+  @VisibleForTesting
+  public String toString() {
+    StringBuffer sb = new StringBuffer(256);
+    sb.append("readPoint=");
+    sb.append(this.readPoint.get());
+    sb.append(", writePoint=");
+    sb.append(this.writePoint);
+    synchronized (this.writeQueue) {
+      for (WriteEntry we: this.writeQueue) {
+        sb.append(", [");
+        sb.append(we);
+        sb.append("]");
+      }
+    }
+    return sb.toString();
   }
 
   public long getReadPoint() {
@@ -249,6 +272,11 @@ public class MultiVersionConcurrencyControl {
 
     public long getWriteNumber() {
       return this.writeNumber;
+    }
+
+    @Override
+    public String toString() {
+      return this.writeNumber + ", " + this.completed;
     }
   }
 

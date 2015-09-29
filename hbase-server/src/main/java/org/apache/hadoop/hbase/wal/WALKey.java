@@ -97,11 +97,19 @@ public class WALKey implements SequenceId, Comparable<WALKey> {
     try {
       this.seqNumAssignedLatch.await();
     } catch (InterruptedException ie) {
+      // If interrupted... clear out our entry else we can block up mvcc.
+      MultiVersionConcurrencyControl mvcc = getMvcc();
+      LOG.debug("mvcc=" + mvcc + ", writeEntry=" + this.writeEntry);
+      if (mvcc != null) {
+        if (this.writeEntry != null) {
+          mvcc.complete(this.writeEntry);
+        }
+      }
       InterruptedIOException iie = new InterruptedIOException();
       iie.initCause(ie);
       throw iie;
     }
-    return writeEntry;
+    return this.writeEntry;
   }
 
   @InterfaceAudience.Private // For internal use only.

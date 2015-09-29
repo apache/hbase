@@ -269,7 +269,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
-  public final AtomicLong memstoreSize = new AtomicLong(0);
+  private final AtomicLong memstoreSize = new AtomicLong(0);
 
   // Debug possible data loss due to WAL off
   final Counter numMutationsWithoutWAL = new Counter();
@@ -972,7 +972,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     RegionEventDescriptor regionOpenDesc = ProtobufUtil.toRegionEventDescriptor(
       RegionEventDescriptor.EventType.REGION_OPEN, getRegionInfo(), openSeqId,
       getRegionServerServices().getServerName(), storeFiles);
-    WALUtil.writeRegionEventMarker(wal, getTableDesc(), getRegionInfo(), regionOpenDesc);
+    WALUtil.writeRegionEventMarker(wal, getTableDesc(), getRegionInfo(), regionOpenDesc, mvcc);
   }
 
   private void writeRegionCloseMarker(WAL wal) throws IOException {
@@ -988,7 +988,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     RegionEventDescriptor regionEventDesc = ProtobufUtil.toRegionEventDescriptor(
       RegionEventDescriptor.EventType.REGION_CLOSE, getRegionInfo(), mvcc.getReadPoint(),
       getRegionServerServices().getServerName(), storeFiles);
-    WALUtil.writeRegionEventMarker(wal, getTableDesc(), getRegionInfo(), regionEventDesc);
+    WALUtil.writeRegionEventMarker(wal, getTableDesc(), getRegionInfo(), regionEventDesc, mvcc);
 
     // Store SeqId in HDFS when a region closes
     // checking region folder exists is due to many tests which delete the table folder while a
@@ -1446,11 +1446,13 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         for (final Store store : stores.values()) {
           long flushableSize = store.getFlushableSize();
           if (!(abort || flushableSize == 0 || writestate.readOnly)) {
-            getRegionServerServices().abort("Assertion failed while closing store "
+            if (getRegionServerServices() != null) {
+              getRegionServerServices().abort("Assertion failed while closing store "
                 + getRegionInfo().getRegionNameAsString() + " " + store
                 + ". flushableSize expected=0, actual= " + flushableSize
                 + ". Current memstoreSize=" + getMemstoreSize() + ". Maybe a coprocessor "
                 + "operation failed and left the memstore in a partially updated state.", null);
+            }
           }
           completionService
               .submit(new Callable<Pair<byte[], Collection<StoreFile>>>() {
@@ -2138,7 +2140,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     // to do this for a moment.  It is quick. We also set the memstore size to zero here before we
     // allow updates again so its value will represent the size of the updates received
     // during flush
-    MultiVersionConcurrencyControl.WriteEntry writeEntry = null;
+
     // We have to take an update lock during snapshot, or else a write could end up in both snapshot
     // and memstore (makes it difficult to do atomic rows then)
     status.setStatus("Obtaining lock to block concurrent updates");
@@ -2169,9 +2171,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     byte[] encodedRegionName = getRegionInfo().getEncodedNameAsBytes();
 
     long trxId = 0;
+    MultiVersionConcurrencyControl.WriteEntry writeEntry = mvcc.begin();
     try {
       try {
-        writeEntry = mvcc.begin();
         if (wal != null) {
           Long earliestUnflushedSequenceIdForTheRegion =
             wal.startCacheFlush(encodedRegionName, flushedFamilyNames);
@@ -2374,8 +2376,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
             desc, false, mvcc);
         } catch (Throwable ex) {
           LOG.warn(getRegionInfo().getEncodedName() + " : "
-              + "Received unexpected exception trying to write ABORT_FLUSH marker to WAL:"
-              + StringUtils.stringifyException(ex));
+              + "failed writing ABORT_FLUSH marker to WAL", ex);
           // ignore this since we will be aborting the RS with DSE.
         }
         wal.abortCacheFlush(this.getRegionInfo().getEncodedNameAsBytes());
@@ -5355,7 +5356,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               this.getRegionInfo().getTable(),
               ByteStringer.wrap(this.getRegionInfo().getEncodedNameAsBytes()), storeFiles, seqId);
           WALUtil.writeBulkLoadMarkerAndSync(wal, this.htableDescriptor, getRegionInfo(),
-              loadDescriptor);
+              loadDescriptor, mvcc);
         } catch (IOException ioe) {
           if (this.rsServices != null) {
             // Have to abort region server because some hfiles has been loaded but we can't write
@@ -5526,7 +5527,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     @Override
-    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext) throws IOException {
+    public synchronized boolean next(List<Cell> outResults, ScannerContext scannerContext)
+    throws IOException {
       if (this.filterClosed) {
         throw new UnknownScannerException("Scanner was closed (timed out?) " +
             "after we renewed it. Could be caused by a very slow scanner " +
@@ -7809,7 +7811,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Update counters for numer of puts without wal and the size of possible data loss.
+   * Update counters for number of puts without wal and the size of possible data loss.
    * These information are exposed by the region server metrics.
    */
   private void recordMutationWithoutWal(final Map<byte [], List<Cell>> familyMap) {
@@ -8031,9 +8033,14 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       getRegionInfo().getTable(), WALKey.NO_SEQUENCE_ID, 0, null,
       HConstants.NO_NONCE, HConstants.NO_NONCE, getMVCC());
     
-    // Call append but with an empty WALEdit.  The returned seqeunce id will not be associated
+    // Call append but with an empty WALEdit.  The returned sequence id will not be associated
     // with any edit and we can be sure it went in after all outstanding appends.
-    wal.append(getTableDesc(), getRegionInfo(), key, WALEdit.EMPTY_WALEDIT, false);
+    try {
+      wal.append(getTableDesc(), getRegionInfo(), key, WALEdit.EMPTY_WALEDIT, false);
+    } catch (Throwable t) {
+      // If exception, our mvcc won't get cleaned up by client, so do it here.
+      getMVCC().complete(key.getWriteEntry());
+    }
     return key;
   }
 
