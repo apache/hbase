@@ -1330,7 +1330,6 @@ public class HTableDescriptor implements WritableComparable<HTableDescriptor> {
    * {@link HConstants#CP_HTD_ATTR_VALUE_PATTERN}
    * @throws IOException
    */
-  // Pity about ugly method name. addCoprocessor(String) already taken above.
   public HTableDescriptor addCoprocessorWithSpec(final String specStr) throws IOException {
     String className = getCoprocessorClassNameFromSpecStr(specStr);
     if (className == null) {
