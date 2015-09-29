@@ -74,7 +74,7 @@ public class TestBucketCache {
   final int CACHE_SIZE = 1000000;
   final int NUM_BLOCKS = 100;
   final int BLOCK_SIZE = CACHE_SIZE / NUM_BLOCKS;
-  final int NUM_THREADS = 1000;
+  final int NUM_THREADS = 100;
   final int NUM_QUERIES = 10000;
 
   final long capacitySize = 32 * 1024 * 1024;
