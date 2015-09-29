@@ -85,7 +85,7 @@ public class CallRunner {
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
       if (RpcServer.LOG.isTraceEnabled()) {
-        UserGroupInformation remoteUser = call.connection.user;
+        UserGroupInformation remoteUser = call.connection.ugi;
         RpcServer.LOG.trace(call.toShortString() + " executing as " +
             ((remoteUser == null) ? "NULL principal" : remoteUser.getUserName()));
       }
