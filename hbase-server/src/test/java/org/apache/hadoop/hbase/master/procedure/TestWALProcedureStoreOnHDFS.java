@@ -78,8 +78,8 @@ public class TestWALProcedureStoreOnHDFS {
 
     // increase the value for slow test-env
     conf.setInt("hbase.procedure.store.wal.wait.before.roll", 1000);
-    conf.setInt("hbase.procedure.store.wal.max.roll.retries", 5);
-    conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 5);
+    conf.setInt("hbase.procedure.store.wal.max.roll.retries", 10);
+    conf.setInt("hbase.procedure.store.wal.sync.failure.roll.max", 10);
   }
 
   @Before
