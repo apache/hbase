@@ -1041,6 +1041,15 @@ module Hbase
       @admin.getSecurityCapabilities
     end
 
+    # Abort a procedure
+    def abort_procedure?(proc_id, may_interrupt_if_running=nil)
+      if may_interrupt_if_running.nil?
+        @admin.abortProcedure(proc_id, true)
+      else
+        @admin.abortProcedure(proc_id, may_interrupt_if_running)
+      end
+    end
+
     # List all procedures
     def list_procedures()
       @admin.listProcedures()
