@@ -24,9 +24,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.concurrent.ExecutionException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import com.google.common.cache.LoadingCache;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -56,8 +57,6 @@ public abstract class User {
       "hbase.security.authentication";
   public static final String HBASE_SECURITY_AUTHORIZATION_CONF_KEY =
       "hbase.security.authorization";
-
-  private static Log LOG = LogFactory.getLog(User.class);
 
   protected UserGroupInformation ugi;
 
@@ -285,15 +284,25 @@ public abstract class User {
    * {@link org.apache.hadoop.security.UserGroupInformation} for secure Hadoop
    * 0.20 and versions 0.21 and above.
    */
-  private static class SecureHadoopUser extends User {
+  @InterfaceAudience.Private
+   public static final class SecureHadoopUser extends User {
     private String shortName;
+    private LoadingCache<UserGroupInformation, String[]> cache;
 
-    private SecureHadoopUser() throws IOException {
+    public SecureHadoopUser() throws IOException {
       ugi = UserGroupInformation.getCurrentUser();
+      this.cache = null;
     }
 
-    private SecureHadoopUser(UserGroupInformation ugi) {
+    public SecureHadoopUser(UserGroupInformation ugi) {
       this.ugi = ugi;
+      this.cache = null;
+    }
+
+    public SecureHadoopUser(UserGroupInformation ugi,
+                            LoadingCache<UserGroupInformation, String[]> cache) {
+      this.ugi = ugi;
+      this.cache = cache;
     }
 
     @Override
@@ -306,6 +315,18 @@ public abstract class User {
         throw new RuntimeException("Unexpected error getting user short name",
           e);
       }
+    }
+
+    @Override
+    public String[] getGroupNames() {
+      if (cache != null) {
+        try {
+          return this.cache.get(ugi);
+        } catch (ExecutionException e) {
+          return new String[0];
+        }
+      }
+      return ugi.getGroupNames();
     }
 
     @Override

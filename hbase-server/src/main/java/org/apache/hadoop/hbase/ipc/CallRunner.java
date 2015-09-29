@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
-import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -82,9 +81,9 @@ public class CallRunner {
       }
       this.status.setStatus("Setting up call");
       this.status.setConnection(call.connection.getHostAddress(), call.connection.getRemotePort());
-      if (RpcServer.LOG.isDebugEnabled()) {
-        UserGroupInformation remoteUser = call.connection.user;
-        RpcServer.LOG.debug(call.toShortString() + " executing as " +
+      if (RpcServer.LOG.isTraceEnabled()) {
+        UserGroupInformation remoteUser = call.connection.ugi;
+        RpcServer.LOG.trace(call.toShortString() + " executing as " +
             ((remoteUser == null) ? "NULL principal" : remoteUser.getUserName()));
       }
       Throwable errorThrowable = null;
