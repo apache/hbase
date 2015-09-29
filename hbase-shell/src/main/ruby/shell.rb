@@ -405,6 +405,7 @@ Shell.load_command_group(
   'procedures',
   :full_name => 'PROCEDURES MANAGEMENT',
   :commands => %w[
+    abort_procedure
     list_procedures
   ]
 )
