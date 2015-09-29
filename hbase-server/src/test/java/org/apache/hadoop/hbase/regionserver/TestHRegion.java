@@ -5774,6 +5774,64 @@ public class TestHRegion {
     }
   }
 
+  /**
+   * Test for HBASE-14497: Reverse Scan threw StackOverflow caused by readPt checking
+   */
+  @Test (timeout = 60000)
+  public void testReverseScanner_StackOverflow() throws IOException {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    byte[][] families = {cf1};
+    byte[] col = Bytes.toBytes("C");
+    String method = this.getName();
+    HBaseConfiguration conf = new HBaseConfiguration();
+    this.region = initHRegion(tableName, method, conf, families);
+    try {
+      // setup with one storefile and one memstore, to create scanner and get an earlier readPt
+      Put put = new Put(Bytes.toBytes("19998"));
+      put.add(cf1, col, Bytes.toBytes("val"));
+      region.put(put);
+      region.flushcache(true, true);
+      Put put2 = new Put(Bytes.toBytes("19997"));
+      put2.add(cf1, col, Bytes.toBytes("val"));
+      region.put(put2);
+
+      Scan scan = new Scan(Bytes.toBytes("19998"));
+      scan.setReversed(true);
+      InternalScanner scanner = region.getScanner(scan);
+
+      // create one storefile contains many rows will be skipped
+      // to check StoreFileScanner.seekToPreviousRow
+      for (int i = 10000; i < 20000; i++) {
+        Put p = new Put(Bytes.toBytes(""+i));
+        p.add(cf1, col, Bytes.toBytes(""+i));
+        region.put(p);
+      }
+      region.flushcache(true, true);
+
+      // create one memstore contains many rows will be skipped
+      // to check MemStoreScanner.seekToPreviousRow
+      for (int i = 10000; i < 20000; i++) {
+        Put p = new Put(Bytes.toBytes(""+i));
+        p.add(cf1, col, Bytes.toBytes(""+i));
+        region.put(p);
+      }
+
+      List<Cell> currRow = new ArrayList<>();
+      boolean hasNext;
+      do {
+        hasNext = scanner.next(currRow);
+      } while (hasNext);
+      assertEquals(2, currRow.size());
+      assertEquals("19998", Bytes.toString(currRow.get(0).getRowArray(),
+        currRow.get(0).getRowOffset(), currRow.get(0).getRowLength()));
+      assertEquals("19997", Bytes.toString(currRow.get(1).getRowArray(),
+        currRow.get(1).getRowOffset(), currRow.get(1).getRowLength()));
+    } finally {
+      HBaseTestingUtility.closeRegionAndWAL(this.region);
+      this.region = null;
+    }
+  }
+
   @Test (timeout=60000)
   public void testSplitRegionWithReverseScan() throws IOException {
     TableName tableName = TableName.valueOf("testSplitRegionWithReverseScan");

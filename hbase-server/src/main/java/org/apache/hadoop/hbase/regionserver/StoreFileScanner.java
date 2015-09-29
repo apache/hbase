@@ -428,37 +428,44 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean seekToPreviousRow(Cell key) throws IOException {
+  public boolean seekToPreviousRow(Cell originalKey) throws IOException {
     try {
       try {
-        Cell seekKey = CellUtil.createFirstOnRow(key);
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!hfs.seekBefore(seekKey)) {
-          this.cur = null;
-          return false;
-        }
-        Cell curCell = hfs.getCell();
-        Cell firstKeyOfPreviousRow = CellUtil.createFirstOnRow(curCell);
+        boolean keepSeeking = false;
+        Cell key = originalKey;
+        do {
+          Cell seekKey = CellUtil.createFirstOnRow(key);
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!hfs.seekBefore(seekKey)) {
+            this.cur = null;
+            return false;
+          }
+          Cell curCell = hfs.getCell();
+          Cell firstKeyOfPreviousRow = CellUtil.createFirstOnRow(curCell);
 
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
-          this.cur = null;
-          return false;
-        }
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+            this.cur = null;
+            return false;
+          }
 
-        setCurrentCell(hfs.getCell());
-        this.stopSkippingKVsIfNextRow = true;
-        boolean resultOfSkipKVs;
-        try {
-          resultOfSkipKVs = skipKVsNewerThanReadpoint();
-        } finally {
-          this.stopSkippingKVsIfNextRow = false;
-        }
-        if (!resultOfSkipKVs
-            || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
-          return seekToPreviousRow(firstKeyOfPreviousRow);
-        }
-
+          setCurrentCell(hfs.getCell());
+          this.stopSkippingKVsIfNextRow = true;
+          boolean resultOfSkipKVs;
+          try {
+            resultOfSkipKVs = skipKVsNewerThanReadpoint();
+          } finally {
+            this.stopSkippingKVsIfNextRow = false;
+          }
+          if (!resultOfSkipKVs
+              || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
+            keepSeeking = true;
+            key = firstKeyOfPreviousRow;
+            continue;
+          } else {
+            keepSeeking = false;
+          }
+        } while (keepSeeking);
         return true;
       } finally {
         realSeekDone = true;
@@ -467,7 +474,7 @@ public class StoreFileScanner implements KeyValueScanner {
       throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not seekToPreviousRow " + this + " to key "
-          + key, ioe);
+          + originalKey, ioe);
     }
   }
 
