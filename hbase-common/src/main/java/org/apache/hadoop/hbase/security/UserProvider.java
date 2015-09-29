@@ -18,8 +18,19 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.BaseConfigurable;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -32,6 +43,50 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class UserProvider extends BaseConfigurable {
 
   private static final String USER_PROVIDER_CONF_KEY = "hbase.client.userprovider.class";
+  private static final ListeningExecutorService executor = MoreExecutors.listeningDecorator(
+      Executors.newScheduledThreadPool(
+          1,
+          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
+
+  private LoadingCache<UserGroupInformation, String[]> groupCache = null;
+
+
+  @Override
+  public void setConf(Configuration conf) {
+    super.setConf(conf);
+    long cacheTimeout =
+        getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
+            CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
+
+    this.groupCache = CacheBuilder.newBuilder()
+        // This is the same timeout that hadoop uses. So we'll follow suit.
+        .refreshAfterWrite(cacheTimeout, TimeUnit.MILLISECONDS)
+        .expireAfterWrite(10 * cacheTimeout, TimeUnit.MILLISECONDS)
+            // Set concurrency level equal to the default number of handlers that
+            // the simple handler spins up.
+        .concurrencyLevel(20)
+            // create the loader
+            // This just delegates to UGI.
+        .build(new CacheLoader<UserGroupInformation, String[]>() {
+          @Override
+          public String[] load(UserGroupInformation ugi) throws Exception {
+            return ugi.getGroupNames();
+          }
+
+          // Provide the reload function that uses the executor thread.
+          public ListenableFuture<String[]> reload(final UserGroupInformation k,
+                                                   String[] oldValue) throws Exception {
+
+            return executor.submit(new Callable<String[]>() {
+              UserGroupInformation userGroupInformation = k;
+              @Override
+              public String[] call() throws Exception {
+                return userGroupInformation.getGroupNames();
+              }
+            });
+          }
+        });
+  }
 
   /**
    * Instantiate the {@link UserProvider} specified in the configuration and set the passed
@@ -94,7 +149,10 @@ public class UserProvider extends BaseConfigurable {
    * @return User
    */
   public User create(UserGroupInformation ugi) {
-    return User.create(ugi);
+    if (ugi == null) {
+      return null;
+    }
+    return new User.SecureHadoopUser(ugi, groupCache);
   }
 
   /**

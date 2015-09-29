@@ -325,7 +325,7 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
-      this.user = connection.user == null? null: userProvider.create(connection.user);
+      this.user = connection.user;
       this.remoteAddress = remoteAddress;
     }
 
@@ -541,7 +541,7 @@ public class RpcServer implements RpcServerInterface {
     }
 
     public UserGroupInformation getRemoteUser() {
-      return connection.user;
+      return connection.ugi;
     }
 
     @Override
@@ -1230,7 +1230,7 @@ public class RpcServer implements RpcServerInterface {
      */
     private CompressionCodec compressionCodec;
     BlockingService service;
-    protected UserGroupInformation user = null;
+
     private AuthMethod authMethod;
     private boolean saslContextEstablished;
     private boolean skipInitialSaslHandshake;
@@ -1253,6 +1253,8 @@ public class RpcServer implements RpcServerInterface {
       new Call(SASL_CALLID, this.service, null, null, null, null, this, null, 0, null, null);
 
     public UserGroupInformation attemptingUser = null; // user name before auth
+    protected User user = null;
+    protected UserGroupInformation ugi = null;
 
     public Connection(SocketChannel channel, long lastContact) {
       this.channel = channel;
@@ -1433,14 +1435,14 @@ public class RpcServer implements RpcServerInterface {
         if (saslServer.isComplete()) {
           String qop = (String) saslServer.getNegotiatedProperty(Sasl.QOP);
           useWrap = qop != null && !"auth".equalsIgnoreCase(qop);
-          user = getAuthorizedUgi(saslServer.getAuthorizationID());
+          ugi = getAuthorizedUgi(saslServer.getAuthorizationID());
           if (LOG.isDebugEnabled()) {
             LOG.debug("SASL server context established. Authenticated client: "
-              + user + ". Negotiated QoP is "
+              + ugi + ". Negotiated QoP is "
               + saslServer.getNegotiatedProperty(Sasl.QOP));
           }
           metrics.authenticationSuccess();
-          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + user);
+          AUDITLOG.info(AUTH_SUCCESSFUL_FOR + ugi);
           saslContextEstablished = true;
         }
       }
@@ -1663,32 +1665,32 @@ public class RpcServer implements RpcServerInterface {
       setupCellBlockCodecs(this.connectionHeader);
       UserGroupInformation protocolUser = createUser(connectionHeader);
       if (!useSasl) {
-        user = protocolUser;
-        if (user != null) {
-          user.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
+        ugi = protocolUser;
+        if (ugi != null) {
+          ugi.setAuthenticationMethod(AuthMethod.SIMPLE.authenticationMethod);
         }
       } else {
         // user is authenticated
-        user.setAuthenticationMethod(authMethod.authenticationMethod);
+        ugi.setAuthenticationMethod(authMethod.authenticationMethod);
         //Now we check if this is a proxy user case. If the protocol user is
         //different from the 'user', it is a proxy user scenario. However,
         //this is not allowed if user authenticated with DIGEST.
         if ((protocolUser != null)
-            && (!protocolUser.getUserName().equals(user.getUserName()))) {
+            && (!protocolUser.getUserName().equals(ugi.getUserName()))) {
           if (authMethod == AuthMethod.DIGEST) {
             // Not allowed to doAs if token authentication is used
-            throw new AccessDeniedException("Authenticated user (" + user
+            throw new AccessDeniedException("Authenticated user (" + ugi
                 + ") doesn't match what the client claims to be ("
                 + protocolUser + ")");
           } else {
             // Effective user can be different from authenticated user
             // for simple auth or kerberos auth
             // The user is the real user. Now we create a proxy user
-            UserGroupInformation realUser = user;
-            user = UserGroupInformation.createProxyUser(protocolUser
+            UserGroupInformation realUser = ugi;
+            ugi = UserGroupInformation.createProxyUser(protocolUser
                 .getUserName(), realUser);
             // Now the user is a proxy user, set Authentication method Proxy.
-            user.setAuthenticationMethod(AuthenticationMethod.PROXY);
+            ugi.setAuthenticationMethod(AuthenticationMethod.PROXY);
           }
         }
       }
@@ -1774,8 +1776,9 @@ public class RpcServer implements RpcServerInterface {
           // Throw FatalConnectionException wrapping ACE so client does right thing and closes
           // down the connection instead of trying to read non-existent retun.
           throw new AccessDeniedException("Connection from " + this + " for service " +
-            connectionHeader.getServiceName() + " is unauthorized for user: " + user);
+            connectionHeader.getServiceName() + " is unauthorized for user: " + ugi);
         }
+        this.user = userProvider.create(this.ugi);
       }
     }
 
@@ -1878,11 +1881,11 @@ public class RpcServer implements RpcServerInterface {
         // real user for the effective user, therefore not required to
         // authorize real user. doAs is allowed only for simple or kerberos
         // authentication
-        if (user != null && user.getRealUser() != null
+        if (ugi != null && ugi.getRealUser() != null
             && (authMethod != AuthMethod.DIGEST)) {
-          ProxyUsers.authorize(user, this.getHostAddress(), conf);
+          ProxyUsers.authorize(ugi, this.getHostAddress(), conf);
         }
-        authorize(user, connectionHeader, getHostInetAddress());
+        authorize(ugi, connectionHeader, getHostInetAddress());
         metrics.authorizationSuccess();
       } catch (AuthorizationException ae) {
         if (LOG.isDebugEnabled()) {
