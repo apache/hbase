@@ -1238,7 +1238,8 @@ public final class CellUtil {
   public static Cell createFirstOnRowCol(final Cell cell) {
     if (cell instanceof ByteBufferedCell) {
       return new FirstOnRowColByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
-        ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          HConstants.EMPTY_BYTE_BUFFER, 0, (byte) 0,
           ((ByteBufferedCell) cell).getQualifierByteBuffer(),
           ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength());
     }
@@ -1268,6 +1269,13 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's rk:cf and passed qualifier.
    */
   public static Cell createFirstOnRowCol(final Cell cell, byte[] qArray, int qoffest, int qlength) {
+    if(cell instanceof ByteBufferedCell) {
+      return new FirstOnRowColByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), cell.getFamilyLength(),
+          ByteBuffer.wrap(qArray), qoffest, qlength);
+    }
     return new FirstOnRowColCell(cell.getRowArray(), cell.getRowOffset(),
         cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         qArray, qoffest, qlength);
@@ -1282,6 +1290,15 @@ public final class CellUtil {
    * @param ts
    */
   public static Cell createFirstOnRowColTS(Cell cell, long ts) {
+    if(cell instanceof ByteBufferedCell) {
+      return new FirstOnRowColTSByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), cell.getFamilyLength(),
+          ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength(),
+          ts);
+    }
     return new FirstOnRowColTSCell(cell.getRowArray(), cell.getRowOffset(),
         cell.getRowLength(), cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength(), ts);
@@ -1294,6 +1311,10 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's row.
    */
   public static Cell createLastOnRow(final Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return new LastOnRowByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+        ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength());
+    }
     return new LastOnRowCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
 
@@ -1306,6 +1327,14 @@ public final class CellUtil {
    * @return Last possible Cell on passed Cell's rk:cf:q.
    */
   public static Cell createLastOnRowCol(final Cell cell) {
+    if (cell instanceof ByteBufferedCell) {
+      return new LastOnRowColByteBufferedCell(((ByteBufferedCell) cell).getRowByteBuffer(),
+          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength(),
+          ((ByteBufferedCell) cell).getFamilyByteBuffer(),
+          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), cell.getFamilyLength(),
+          ((ByteBufferedCell) cell).getQualifierByteBuffer(),
+          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength());
+    }
     return new LastOnRowColCell(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
         cell.getFamilyArray(), cell.getFamilyOffset(), cell.getFamilyLength(),
         cell.getQualifierArray(), cell.getQualifierOffset(), cell.getQualifierLength());
@@ -1627,17 +1656,77 @@ public final class CellUtil {
   }
 
   @InterfaceAudience.Private
+  private static class LastOnRowByteBufferedCell extends EmptyByteBufferedCell {
+    private final ByteBuffer rowBuff;
+    private final int roffset;
+    private final short rlength;
+
+    public LastOnRowByteBufferedCell(final ByteBuffer row, int roffset, short rlength) {
+      this.rowBuff = row;
+      this.roffset = roffset;
+      this.rlength = rlength;
+    }
+
+    @Override
+    public ByteBuffer getRowByteBuffer() {
+      return this.rowBuff;
+    }
+
+    @Override
+    public int getRowPositionInByteBuffer() {
+      return this.roffset;
+    }
+
+    @Override
+    public short getRowLength() {
+      return this.rlength;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return HConstants.OLDEST_TIMESTAMP;
+    }
+
+    @Override
+    public byte getTypeByte() {
+      return Type.Minimum.getCode();
+    }
+  }
+
+  @InterfaceAudience.Private
   private static class FirstOnRowColByteBufferedCell extends FirstOnRowByteBufferedCell {
+    private final ByteBuffer famBuff;
+    private final int famOffset;
+    private final byte famLength;
     private final ByteBuffer colBuff;
     private final int colOffset;
     private final int colLength;
 
     public FirstOnRowColByteBufferedCell(final ByteBuffer row, int roffset, short rlength,
-        final ByteBuffer col, final int colOffset, final int colLength) {
+        final ByteBuffer famBuff, final int famOffset, final byte famLength, final ByteBuffer col,
+        final int colOffset, final int colLength) {
       super(row, roffset, rlength);
+      this.famBuff = famBuff;
+      this.famOffset = famOffset;
+      this.famLength = famLength;
       this.colBuff = col;
       this.colOffset = colOffset;
       this.colLength = colLength;
+    }
+
+    @Override
+    public ByteBuffer getFamilyByteBuffer() {
+      return this.famBuff;
+    }
+
+    @Override
+    public int getFamilyPositionInByteBuffer() {
+      return this.famOffset;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return famLength;
     }
 
     @Override
@@ -1653,16 +1742,6 @@ public final class CellUtil {
     @Override
     public int getQualifierLength() {
       return this.colLength;
-    }
-
-    @Override
-    public long getTimestamp() {
-      return HConstants.LATEST_TIMESTAMP;
-    }
-
-    @Override
-    public byte getTypeByte() {
-      return Type.Maximum.getCode();
     }
   }
 
@@ -1725,6 +1804,24 @@ public final class CellUtil {
     public FirstOnRowColTSCell(byte[] rArray, int roffset, short rlength, byte[] fArray,
         int foffset, byte flength, byte[] qArray, int qoffset, int qlength, long ts) {
       super(rArray, roffset, rlength, fArray, foffset, flength, qArray, qoffset, qlength);
+      this.ts = ts;
+    }
+
+    @Override
+    public long getTimestamp() {
+      return this.ts;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class FirstOnRowColTSByteBufferedCell extends FirstOnRowColByteBufferedCell {
+
+    private long ts;
+
+    public FirstOnRowColTSByteBufferedCell(ByteBuffer rBuffer, int roffset, short rlength,
+        ByteBuffer fBuffer, int foffset, byte flength, ByteBuffer qBuffer, int qoffset, int qlength,
+        long ts) {
+      super(rBuffer, roffset, rlength, fBuffer, foffset, flength, qBuffer, qoffset, qlength);
       this.ts = ts;
     }
 
@@ -1814,6 +1911,58 @@ public final class CellUtil {
 
     @Override
     public int getQualifierOffset() {
+      return this.qoffset;
+    }
+
+    @Override
+    public int getQualifierLength() {
+      return this.qlength;
+    }
+  }
+
+  @InterfaceAudience.Private
+  private static class LastOnRowColByteBufferedCell extends LastOnRowByteBufferedCell {
+    private final ByteBuffer fBuffer;
+    private final int foffset;
+    private final byte flength;
+    private final ByteBuffer qBuffer;
+    private final int qoffset;
+    private final int qlength;
+
+    public LastOnRowColByteBufferedCell(ByteBuffer rBuffer, int roffset, short rlength,
+        ByteBuffer fBuffer, int foffset, byte flength, ByteBuffer qBuffer, int qoffset,
+        int qlength) {
+      super(rBuffer, roffset, rlength);
+      this.fBuffer = fBuffer;
+      this.foffset = foffset;
+      this.flength = flength;
+      this.qBuffer = qBuffer;
+      this.qoffset = qoffset;
+      this.qlength = qlength;
+    }
+
+    @Override
+    public ByteBuffer getFamilyByteBuffer() {
+      return this.fBuffer;
+    }
+
+    @Override
+    public int getFamilyPositionInByteBuffer() {
+      return this.foffset;
+    }
+
+    @Override
+    public byte getFamilyLength() {
+      return this.flength;
+    }
+
+    @Override
+    public ByteBuffer getQualifierByteBuffer() {
+      return this.qBuffer;
+    }
+
+    @Override
+    public int getQualifierPositionInByteBuffer() {
       return this.qoffset;
     }
 
