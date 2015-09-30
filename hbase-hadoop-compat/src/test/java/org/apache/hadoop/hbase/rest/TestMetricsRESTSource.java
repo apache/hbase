@@ -20,11 +20,15 @@ package org.apache.hadoop.hbase.rest;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.rest.MetricsRESTSource;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  *   Test of Rest Metrics Source interface.
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRESTSource {
 
 
