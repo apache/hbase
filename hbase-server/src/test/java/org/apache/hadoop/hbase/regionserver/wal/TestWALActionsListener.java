@@ -87,7 +87,6 @@ public class TestWALActionsListener {
     list.add(observer);
     final WALFactory wals = new WALFactory(conf, list, "testActionListener");
     DummyWALActionsListener laterobserver = new DummyWALActionsListener();
-    final AtomicLong sequenceId = new AtomicLong(1);
     HRegionInfo hri = new HRegionInfo(TableName.valueOf(SOME_BYTES),
              SOME_BYTES, SOME_BYTES, false);
     final WAL wal = wals.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace());
@@ -101,7 +100,7 @@ public class TestWALActionsListener {
       htd.addFamily(new HColumnDescriptor(b));
 
       final long txid = wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(),
-          TableName.valueOf(b), 0), edit, sequenceId, true, null);
+          TableName.valueOf(b), 0), edit, true);
       wal.sync(txid);
       if (i == 10) {
         wal.registerWALActionsListener(laterobserver);

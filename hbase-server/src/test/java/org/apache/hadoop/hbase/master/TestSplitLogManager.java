@@ -77,6 +77,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -638,7 +639,7 @@ public class TestSplitLogManager {
     assertTrue("Recovery regions isn't cleaned", recoveringRegions.isEmpty());
   }
 
-  @Test(timeout=60000)
+  @Ignore("DLR is broken by HBASE-12751") @Test(timeout=60000)
   public void testGetPreviousRecoveryMode() throws Exception {
     LOG.info("testGetPreviousRecoveryMode");
     SplitLogCounters.resetCounters();

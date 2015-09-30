@@ -90,7 +90,6 @@ public class TestSecureWAL {
     final byte[] value = Bytes.toBytes("Test value");
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final WALFactory wals = new WALFactory(TEST_UTIL.getConfiguration(), null, "TestSecureWAL");
-    final AtomicLong sequenceId = new AtomicLong(1);
 
     // Write the WAL
     final WAL wal =
@@ -100,7 +99,7 @@ public class TestSecureWAL {
       WALEdit kvs = new WALEdit();
       kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
       wal.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-          System.currentTimeMillis()), kvs, sequenceId, true, null);
+          System.currentTimeMillis()), kvs, true);
     }
     wal.sync();
     final Path walPath = DefaultWALProvider.getCurrentFileName(wal);

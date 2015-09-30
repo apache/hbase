@@ -383,7 +383,6 @@ public class TestReplicasClient {
     }
   }
 
-
   @Test
   public void testFlushTable() throws Exception {
     openRegion(hriSecondary);

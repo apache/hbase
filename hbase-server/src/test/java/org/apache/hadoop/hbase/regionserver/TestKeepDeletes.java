@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.COLUMNS;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -245,6 +246,14 @@ public class TestKeepDeletes {
     Put p = new Put(T1, ts);
     p.add(c0, c0, T1);
     region.put(p);
+
+    Get gOne = new Get(T1);
+    gOne.setMaxVersions();
+    gOne.setTimeRange(0L, ts + 1);
+    Result rOne = region.get(gOne);
+    assertFalse(rOne.isEmpty());
+
+
     Delete d = new Delete(T1, ts+2);
     d.deleteColumn(c0, c0, ts);
     region.delete(d);

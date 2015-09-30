@@ -27,6 +27,6 @@ import org.apache.hadoop.hbase.regionserver.wal.HLogKey;
 public class TestDefaultWALProviderWithHLogKey extends TestDefaultWALProvider {
   @Override
   WALKey getWalKey(final byte[] info, final TableName tableName, final long timestamp) {
-    return new HLogKey(info, tableName, timestamp);
+    return new HLogKey(info, tableName, timestamp, mvcc);
   }
 }

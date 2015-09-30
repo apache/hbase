@@ -2286,7 +2286,7 @@ public class WALSplitter {
       // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
       key = new HLogKey(walKeyProto.getEncodedRegionName().toByteArray(), TableName.valueOf(
               walKeyProto.getTableName().toByteArray()), replaySeqId, walKeyProto.getWriteTime(),
-              clusterIds, walKeyProto.getNonceGroup(), walKeyProto.getNonce());
+              clusterIds, walKeyProto.getNonceGroup(), walKeyProto.getNonce(), null);
       logEntry.setFirst(key);
       logEntry.setSecond(val);
     }

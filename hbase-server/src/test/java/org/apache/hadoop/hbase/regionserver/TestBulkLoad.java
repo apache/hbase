@@ -18,6 +18,20 @@
 
 package org.apache.hadoop.hbase.regionserver;
 
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -28,7 +42,6 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -36,6 +49,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.BulkLoadDescriptor;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.StoreDescriptor;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -44,6 +58,8 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
 import org.jmock.Expectations;
+import org.jmock.api.Action;
+import org.jmock.api.Invocation;
 import org.jmock.integration.junit4.JUnitRuleMockery;
 import org.jmock.lib.concurrent.Synchroniser;
 import org.junit.Before;
@@ -53,21 +69,6 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicLong;
-
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * This class attempts to unit test bulk HLog loading.
@@ -91,13 +92,35 @@ public class TestBulkLoad {
   @Rule
   public TestName name = new TestName();
 
+  private static class AppendAction implements Action {
+    @Override
+    public void describeTo(Description arg0) {
+      // TODO Auto-generated method stub
+    }
+
+    @Override
+    public Object invoke(Invocation invocation) throws Throwable {
+      WALKey walKey = (WALKey)invocation.getParameter(2);
+      MultiVersionConcurrencyControl mvcc = walKey.getMvcc();
+      if (mvcc != null) {
+        MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
+        walKey.setWriteEntry(we);
+      }
+      return 01L;
+    }
+
+    public static Action append(Object... args) {
+      return new AppendAction();
+    }
+  }
+
   public TestBulkLoad() throws IOException {
     callOnce = new Expectations() {
       {
         oneOf(log).append(with(any(HTableDescriptor.class)), with(any(HRegionInfo.class)),
                 with(any(WALKey.class)), with(bulkLogWalEditType(WALEdit.BULK_LOAD)),
-                with(any(AtomicLong.class)), with(any(boolean.class)), with(any(List.class)));
-        will(returnValue(0l));
+                with(any(boolean.class)));
+        will(AppendAction.append());
         oneOf(log).sync(with(any(long.class)));
       }
     };
@@ -106,6 +129,7 @@ public class TestBulkLoad {
   @Before
   public void before() throws IOException {
     random.nextBytes(randomBytes);
+    // Mockito.when(log.append(htd, info, key, edits, inMemstore));
   }
 
   @Test
@@ -122,9 +146,8 @@ public class TestBulkLoad {
     Expectations expection = new Expectations() {
       {
         oneOf(log).append(with(any(HTableDescriptor.class)), with(any(HRegionInfo.class)),
-                with(any(WALKey.class)), with(bulkEventMatcher),
-                with(any(AtomicLong.class)), with(any(boolean.class)), with(any(List.class)));
-        will(returnValue(0l));
+                with(any(WALKey.class)), with(bulkEventMatcher), with(any(boolean.class)));
+        will(new AppendAction());
         oneOf(log).sync(with(any(long.class)));
       }
     };

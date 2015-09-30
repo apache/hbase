@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -33,30 +32,13 @@ public class TestMultiVersionConcurrencyControlBasic {
   @Test
   public void testSimpleMvccOps() {
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    long readPoint = mvcc.memstoreReadPoint();
-    MultiVersionConcurrencyControl.WriteEntry writeEntry = mvcc.beginMemstoreInsert();
-    mvcc.completeMemstoreInsert(writeEntry);
-    long readPoint2 = mvcc.memstoreReadPoint();
-    assertEquals(readPoint, readPoint2);
-    long seqid = 238;
-    writeEntry = mvcc.beginMemstoreInsertWithSeqNum(seqid);
-    mvcc.completeMemstoreInsert(writeEntry);
-    assertEquals(seqid, mvcc.memstoreReadPoint());
-    writeEntry = mvcc.beginMemstoreInsertWithSeqNum(seqid + 1);
-    assertTrue(mvcc.advanceMemstore(writeEntry));
-    assertEquals(seqid + 1, mvcc.memstoreReadPoint());
-  }
-
-  @Test
-  public void testCancel() {
-    long seqid = 238;
-    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
-    MultiVersionConcurrencyControl.WriteEntry writeEntry =
-      mvcc.beginMemstoreInsertWithSeqNum(seqid);
-    assertTrue(mvcc.advanceMemstore(writeEntry));
-    assertEquals(seqid, mvcc.memstoreReadPoint());
-    writeEntry = mvcc.beginMemstoreInsertWithSeqNum(seqid + 1);
-    mvcc.cancelMemstoreInsert(writeEntry);
-    assertEquals(seqid, mvcc.memstoreReadPoint());
+    long readPoint = mvcc.getReadPoint();
+    MultiVersionConcurrencyControl.WriteEntry writeEntry = mvcc.begin();
+    mvcc.completeAndWait(writeEntry);
+    assertEquals(readPoint + 1, mvcc.getReadPoint());
+    writeEntry = mvcc.begin();
+    // The write point advances even though we may have 'failed'... call complete on fail.
+    mvcc.complete(writeEntry);
+    assertEquals(readPoint + 2, mvcc.getWritePoint());
   }
 }

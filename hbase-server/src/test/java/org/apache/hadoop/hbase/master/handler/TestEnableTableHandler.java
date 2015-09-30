@@ -101,14 +101,16 @@ public class TestEnableTableHandler {
 
     admin.enableTable(tableName);
     assertTrue(admin.isTableEnabled(tableName));
-
     JVMClusterUtil.RegionServerThread rs2 = cluster.startRegionServer();
+    LOG.info("Started new regionserver " + rs2.getRegionServer().getServerName());
     m.getAssignmentManager().assign(admin.getTableRegions(tableName));
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
     List<HRegionInfo> onlineRegions = admin.getOnlineRegions(
         rs2.getRegionServer().getServerName());
-    assertEquals(2, onlineRegions.size());
-    assertEquals(tableName, onlineRegions.get(1).getTable());
+    for (HRegionInfo hri: onlineRegions) LOG.info("Online " + hri);
+    assertTrue("Does not have at least one region " + onlineRegions.size(),
+      onlineRegions.size() >= 1);
+    assertEquals(tableName, onlineRegions.get(0).getTable());
   }
 
 
