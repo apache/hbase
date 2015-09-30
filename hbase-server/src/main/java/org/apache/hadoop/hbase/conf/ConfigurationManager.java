@@ -114,6 +114,7 @@ public class ConfigurationManager {
    * all the observers that are expressed interest to do that.
    */
   public void notifyAllObservers(Configuration conf) {
+    LOG.info("Starting to notify all observers that config changed.");
     synchronized (configurationObservers) {
       for (ConfigurationObserver observer : configurationObservers) {
         try {
