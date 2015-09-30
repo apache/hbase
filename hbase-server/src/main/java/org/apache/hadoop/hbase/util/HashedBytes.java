@@ -55,7 +55,7 @@ public class HashedBytes {
     if (obj == null || getClass() != obj.getClass())
       return false;
     HashedBytes other = (HashedBytes) obj;
-    return Arrays.equals(bytes, other.bytes);
+    return (hashCode == other.hashCode) && Arrays.equals(bytes, other.bytes);
   }
 
   @Override

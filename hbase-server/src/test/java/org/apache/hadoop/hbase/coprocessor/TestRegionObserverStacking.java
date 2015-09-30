@@ -139,6 +139,4 @@ public class TestRegionObserverStacking extends TestCase {
     assertTrue(idA < idB);
     assertTrue(idB < idC);
   }
-
 }
-

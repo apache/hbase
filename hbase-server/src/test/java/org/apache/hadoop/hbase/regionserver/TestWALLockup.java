@@ -23,8 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.apache.commons.logging.Log;
@@ -32,8 +30,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -213,21 +209,15 @@ public class TestWALLockup {
       put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("1"), bytes);
       WALKey key = new WALKey(region.getRegionInfo().getEncodedNameAsBytes(), htd.getTableName());
       WALEdit edit = new WALEdit();
-      List<Cell> cells = new ArrayList<Cell>();
-      for (CellScanner cs = put.cellScanner(); cs.advance();) {
-        edit.add(cs.current());
-        cells.add(cs.current());
-      }
       // Put something in memstore and out in the WAL. Do a big number of appends so we push
       // out other side of the ringbuffer. If small numbers, stuff doesn't make it to WAL
       for (int i = 0; i < 1000; i++) {
-        dodgyWAL.append(htd, region.getRegionInfo(), key, edit, region.getSequenceId(), true,
-          cells);
+        dodgyWAL.append(htd, region.getRegionInfo(), key, edit, true);
       }
       // Set it so we start throwing exceptions.
       dodgyWAL.throwException = true;
       // This append provokes a WAL roll.
-      dodgyWAL.append(htd, region.getRegionInfo(), key, edit, region.getSequenceId(), true, cells);
+      dodgyWAL.append(htd, region.getRegionInfo(), key, edit, true);
       boolean exception = false;
       try {
         dodgyWAL.sync();

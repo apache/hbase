@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -759,7 +758,7 @@ public class TestHRegionReplayEvents {
 
     // ensure all files are visible in secondary
     for (Store store : secondaryRegion.getStores()) {
-      assertTrue(store.getMaxSequenceId() <= secondaryRegion.getSequenceId().get());
+      assertTrue(store.getMaxSequenceId() <= secondaryRegion.getSequenceId());
     }
 
     LOG.info("-- Replaying flush commit in secondary" + commitFlushDesc);
@@ -1056,7 +1055,7 @@ public class TestHRegionReplayEvents {
 
     // TODO: what to do with this?
     // assert that the newly picked up flush file is visible
-    long readPoint = secondaryRegion.getMVCC().memstoreReadPoint();
+    long readPoint = secondaryRegion.getMVCC().getReadPoint();
     assertEquals(flushSeqId, readPoint);
 
     // after replay verify that everything is still visible
@@ -1074,7 +1073,7 @@ public class TestHRegionReplayEvents {
     HRegion region = initHRegion(tableName, method, family);
     try {
       // replay an entry that is bigger than current read point
-      long readPoint = region.getMVCC().memstoreReadPoint();
+      long readPoint = region.getMVCC().getReadPoint();
       long origSeqId = readPoint + 100;
 
       Put put = new Put(row).add(family, row, row);
@@ -1085,7 +1084,7 @@ public class TestHRegionReplayEvents {
       assertGet(region, family, row);
 
       // region seqId should have advanced at least to this seqId
-      assertEquals(origSeqId, region.getSequenceId().get());
+      assertEquals(origSeqId, region.getSequenceId());
 
       // replay an entry that is smaller than current read point
       // caution: adding an entry below current read point might cause partial dirty reads. Normal
@@ -1114,7 +1113,7 @@ public class TestHRegionReplayEvents {
     // test for region open and close
     secondaryRegion = HRegion.openHRegion(secondaryHri, htd, walSecondary, CONF, rss, null);
     verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(), (AtomicLong)any(), anyBoolean(), (List<Cell>) any());
+      (WALKey)any(), (WALEdit)any(),  anyBoolean());
 
     // test for replay prepare flush
     putDataByReplay(secondaryRegion, 0, 10, cq, families);
@@ -1128,11 +1127,11 @@ public class TestHRegionReplayEvents {
       .build());
 
     verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(), (AtomicLong)any(), anyBoolean(), (List<Cell>) any());
+      (WALKey)any(), (WALEdit)any(), anyBoolean());
 
     secondaryRegion.close();
     verify(walSecondary, times(0)).append((HTableDescriptor)any(), (HRegionInfo)any(),
-      (WALKey)any(), (WALEdit)any(), (AtomicLong)any(), anyBoolean(), (List<Cell>) any());
+      (WALKey)any(), (WALEdit)any(),  anyBoolean());
   }
 
   /**

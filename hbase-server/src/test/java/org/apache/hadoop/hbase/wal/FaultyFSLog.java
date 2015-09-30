@@ -66,11 +66,11 @@ public class FaultyFSLog extends FSHLog {
 
   @Override
   public long append(HTableDescriptor htd, HRegionInfo info, WALKey key, WALEdit edits,
-      AtomicLong sequenceId, boolean isInMemstore, List<Cell> cells) throws IOException {
+      boolean inMemstore) throws IOException {
     if (this.ft == FailureType.APPEND) {
       throw new IOException("append");
     }
-    return super.append(htd, info, key, edits, sequenceId, isInMemstore, cells);
+    return super.append(htd, info, key, edits, inMemstore);
   }
 }
 

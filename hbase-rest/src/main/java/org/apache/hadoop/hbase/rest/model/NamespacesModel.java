@@ -61,7 +61,7 @@ public class NamespacesModel implements Serializable, ProtobufMessageHandler {
 
   /**
    * Constructor
-   * @param admin: the administrative API
+   * @param admin the administrative API
    * @throws IOException
    */
   public NamespacesModel(Admin admin) throws IOException {

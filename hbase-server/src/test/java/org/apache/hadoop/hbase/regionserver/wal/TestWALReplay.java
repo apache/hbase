@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,17 +66,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
-import org.apache.hadoop.hbase.regionserver.DefaultStoreFlusher;
-import org.apache.hadoop.hbase.regionserver.FlushRequestListener;
-import org.apache.hadoop.hbase.regionserver.FlushRequester;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.MemStoreSnapshot;
-import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionScanner;
-import org.apache.hadoop.hbase.regionserver.RegionServerServices;
-import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.*;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
@@ -281,6 +270,8 @@ public class TestWALReplay {
     // Ensure edits are replayed properly.
     final TableName tableName =
         TableName.valueOf("test2727");
+
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
@@ -293,10 +284,10 @@ public class TestWALReplay {
     WAL wal1 = createWAL(this.conf);
     // Add 1k to each family.
     final int countPerFamily = 1000;
-    final AtomicLong sequenceId = new AtomicLong(1);
+
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily, ee,
-          wal1, htd, sequenceId);
+          wal1, htd, mvcc);
     }
     wal1.shutdown();
     runWALSplit(this.conf);
@@ -305,7 +296,7 @@ public class TestWALReplay {
     // Add 1k to each family.
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal2, htd, sequenceId);
+          ee, wal2, htd, mvcc);
     }
     wal2.shutdown();
     runWALSplit(this.conf);
@@ -316,10 +307,10 @@ public class TestWALReplay {
       long seqid = region.getOpenSeqNum();
       // The regions opens with sequenceId as 1. With 6k edits, its sequence number reaches 6k + 1.
       // When opened, this region would apply 6k edits, and increment the sequenceId by 1
-      assertTrue(seqid > sequenceId.get());
-      assertEquals(seqid - 1, sequenceId.get());
+      assertTrue(seqid > mvcc.getWritePoint());
+      assertEquals(seqid - 1, mvcc.getWritePoint());
       LOG.debug("region.getOpenSeqNum(): " + region.getOpenSeqNum() + ", wal3.id: "
-          + sequenceId.get());
+          + mvcc.getReadPoint());
 
       // TODO: Scan all.
       region.close();
@@ -775,6 +766,7 @@ public class TestWALReplay {
   public void testReplayEditsWrittenIntoWAL() throws Exception {
     final TableName tableName =
         TableName.valueOf("testReplayEditsWrittenIntoWAL");
+    final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     final HRegionInfo hri = createBasic3FamilyHRegionInfo(tableName);
     final Path basedir = FSUtils.getTableDir(hbaseRootDir, tableName);
     deleteDir(basedir);
@@ -786,14 +778,13 @@ public class TestWALReplay {
     final WAL wal = createWAL(this.conf);
     final byte[] rowName = tableName.getName();
     final byte[] regionName = hri.getEncodedNameAsBytes();
-    final AtomicLong sequenceId = new AtomicLong(1);
 
     // Add 1k to each family.
     final int countPerFamily = 1000;
     Set<byte[]> familyNames = new HashSet<byte[]>();
     for (HColumnDescriptor hcd: htd.getFamilies()) {
       addWALEdits(tableName, hri, rowName, hcd.getName(), countPerFamily,
-          ee, wal, htd, sequenceId);
+          ee, wal, htd, mvcc);
       familyNames.add(hcd.getName());
     }
 
@@ -806,16 +797,13 @@ public class TestWALReplay {
     long now = ee.currentTime();
     edit.add(new KeyValue(rowName, Bytes.toBytes("another family"), rowName,
       now, rowName));
-    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now), edit, sequenceId,
-        true, null);
+    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc), edit, true);
 
     // Delete the c family to verify deletes make it over.
     edit = new WALEdit();
     now = ee.currentTime();
-    edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now,
-      KeyValue.Type.DeleteFamily));
-    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now), edit, sequenceId,
-        true, null);
+    edit.add(new KeyValue(rowName, Bytes.toBytes("c"), null, now, KeyValue.Type.DeleteFamily));
+    wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, now, mvcc), edit, true);
 
     // Sync.
     wal.sync();
@@ -847,12 +835,17 @@ public class TestWALReplay {
                   Mockito.mock(MonitoredTask.class), writeFlushWalMarker);
               flushcount.incrementAndGet();
               return fs;
-            };
+            }
           };
+          // The seq id this region has opened up with
           long seqid = region.initialize();
+
+          // The mvcc readpoint of from inserting data.
+          long writePoint = mvcc.getWritePoint();
+
           // We flushed during init.
           assertTrue("Flushcount=" + flushcount.get(), flushcount.get() > 0);
-          assertTrue(seqid - 1 == sequenceId.get());
+          assertTrue((seqid - 1) == writePoint);
 
           Get get = new Get(rowName);
           Result result = region.get(get);
@@ -894,7 +887,7 @@ public class TestWALReplay {
     for (HColumnDescriptor hcd : htd.getFamilies()) {
       addRegionEdits(rowName, hcd.getName(), 5, this.ee, region, "x");
     }
-    long lastestSeqNumber = region.getSequenceId().get();
+    long lastestSeqNumber = region.getSequenceId();
     // get the current seq no
     wal.doCompleteCacheFlush = true;
     // allow complete cache flush with the previous seq number got after first
@@ -997,7 +990,7 @@ public class TestWALReplay {
 
   private void addWALEdits(final TableName tableName, final HRegionInfo hri, final byte[] rowName,
       final byte[] family, final int count, EnvironmentEdge ee, final WAL wal,
-      final HTableDescriptor htd, final AtomicLong sequenceId)
+      final HTableDescriptor htd, final MultiVersionConcurrencyControl mvcc)
   throws IOException {
     String familyStr = Bytes.toString(family);
     for (int j = 0; j < count; j++) {
@@ -1006,8 +999,8 @@ public class TestWALReplay {
       WALEdit edit = new WALEdit();
       edit.add(new KeyValue(rowName, family, qualifierBytes,
         ee.currentTime(), columnBytes));
-      wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName, ee.currentTime()),
-          edit, sequenceId, true, null);
+      wal.append(htd, hri, new WALKey(hri.getEncodedNameAsBytes(), tableName,999, mvcc),
+          edit, true);
     }
     wal.sync();
   }

@@ -21,10 +21,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
@@ -38,10 +36,19 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.RecoveryMode;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
+// imports for things that haven't moved from regionserver.wal yet.
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
+import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
+import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
+import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
+import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
@@ -52,21 +59,11 @@ import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestName;
 
-// imports for things that haven't moved from regionserver.wal yet.
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.ProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogReader;
-import org.apache.hadoop.hbase.regionserver.wal.SecureProtobufLogWriter;
-import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
-import org.apache.hadoop.hbase.regionserver.wal.WALCellCodec;
-import org.apache.hadoop.hbase.regionserver.wal.SecureWALCellCodec;
-
 /*
  * Test that verifies WAL written by SecureProtobufLogWriter is not readable by ProtobufLogReader
  */
 @Category(MediumTests.class)
 public class TestWALReaderOnSecureWAL {
-  private static final Log LOG = LogFactory.getLog(TestWALReaderOnSecureWAL.class);
   static {
     ((Log4JLogger)LogFactory.getLog("org.apache.hadoop.hbase.regionserver.wal"))
       .getLogger().setLevel(Level.ALL);
@@ -103,9 +100,7 @@ public class TestWALReaderOnSecureWAL {
       final int total = 10;
       final byte[] row = Bytes.toBytes("row");
       final byte[] family = Bytes.toBytes("family");
-      FileSystem fs = TEST_UTIL.getTestFileSystem();
-      Path logDir = TEST_UTIL.getDataTestDir(tblName);
-      final AtomicLong sequenceId = new AtomicLong(1);
+      final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl(1);
 
       // Write the WAL
       WAL wal = wals.getWAL(regioninfo.getEncodedNameAsBytes());
@@ -113,7 +108,7 @@ public class TestWALReaderOnSecureWAL {
         WALEdit kvs = new WALEdit();
         kvs.add(new KeyValue(row, family, Bytes.toBytes(i), value));
         wal.append(htd, regioninfo, new WALKey(regioninfo.getEncodedNameAsBytes(), tableName,
-            System.currentTimeMillis()), kvs, sequenceId, true, null);
+            System.currentTimeMillis(), mvcc), kvs, true);
       }
       wal.sync();
       final Path walPath = DefaultWALProvider.getCurrentFileName(wal);
@@ -148,7 +143,7 @@ public class TestWALReaderOnSecureWAL {
 
     // Confirm the WAL cannot be read back by ProtobufLogReader
     try {
-      WAL.Reader reader = wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
+      wals.createReader(TEST_UTIL.getTestFileSystem(), walPath);
       assertFalse(true);
     } catch (IOException ioe) {
       // expected IOE

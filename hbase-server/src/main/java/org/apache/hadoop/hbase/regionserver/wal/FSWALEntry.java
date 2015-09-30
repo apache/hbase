@@ -21,15 +21,14 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionUtils;
 
@@ -51,23 +50,18 @@ class FSWALEntry extends Entry {
   // The below data members are denoted 'transient' just to highlight these are not persisted;
   // they are only in memory and held here while passing over the ring buffer.
   private final transient long sequence;
-  private final transient AtomicLong regionSequenceIdReference;
   private final transient boolean inMemstore;
   private final transient HTableDescriptor htd;
   private final transient HRegionInfo hri;
-  private final transient List<Cell> memstoreCells;
   private final Set<byte[]> familyNames;
 
   FSWALEntry(final long sequence, final WALKey key, final WALEdit edit,
-      final AtomicLong referenceToRegionSequenceId, final boolean inMemstore,
-      final HTableDescriptor htd, final HRegionInfo hri, List<Cell> memstoreCells) {
+      final HTableDescriptor htd, final HRegionInfo hri, final boolean inMemstore) {
     super(key, edit);
-    this.regionSequenceIdReference = referenceToRegionSequenceId;
     this.inMemstore = inMemstore;
     this.htd = htd;
     this.hri = hri;
     this.sequence = sequence;
-    this.memstoreCells = memstoreCells;
     if (inMemstore) {
       // construct familyNames here to reduce the work of log sinker.
       ArrayList<Cell> cells = this.getEdit().getCells();
@@ -111,24 +105,30 @@ class FSWALEntry extends Entry {
   }
 
   /**
-   * Stamp this edit with a region edit/sequence id.
-   * Call when safe to do so: i.e. the context is such that the increment on the passed in
-   * {@link #regionSequenceIdReference} is guaranteed aligned w/ how appends are going into the
-   * WAL.  This method works with {@link #getRegionSequenceId()}.  It will block waiting on this
-   * method to be called.
-   * @return The region edit/sequence id we set for this edit.
+   * Here is where a WAL edit gets its sequenceid.
+   * @return The sequenceid we stamped on this edit.
    * @throws IOException
-   * @see #getRegionSequenceId()
    */
   long stampRegionSequenceId() throws IOException {
-    long regionSequenceId = this.regionSequenceIdReference.incrementAndGet();
-    if (!this.getEdit().isReplay() && !CollectionUtils.isEmpty(memstoreCells)) {
-      for (Cell cell : this.memstoreCells) {
-        CellUtil.setSequenceId(cell, regionSequenceId);
+    long regionSequenceId = WALKey.NO_SEQUENCE_ID;
+    MultiVersionConcurrencyControl mvcc = getKey().getMvcc();
+    MultiVersionConcurrencyControl.WriteEntry we = null;
+
+    if (mvcc != null) {
+      we = mvcc.begin();
+      regionSequenceId = we.getWriteNumber();
+    }
+
+    if (!this.getEdit().isReplay() && inMemstore) {
+      for (Cell c:getEdit().getCells()) {
+        CellUtil.setSequenceId(c, regionSequenceId);
       }
     }
+
+    // This has to stay in this order
     WALKey key = getKey();
     key.setLogSeqNum(regionSequenceId);
+    key.setWriteEntry(we);
     return regionSequenceId;
   }
 

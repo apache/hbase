@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -62,7 +61,6 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -112,7 +110,7 @@ import com.lmax.disruptor.dsl.ProducerType;
  *
  * <p>To read an WAL, call {@link WALFactory#createReader(org.apache.hadoop.fs.FileSystem,
  * org.apache.hadoop.fs.Path)}.
- * 
+ *
  * <h2>Failure Semantic</h2>
  * If an exception on append or sync, roll the WAL because the current WAL is now a lame duck;
  * any more appends or syncs will fail also with the same original exception. If we have made
@@ -142,7 +140,7 @@ public class FSHLog implements WAL {
   // Calls to append now also wait until the append has been done on the consumer side of the
   // disruptor.  We used to not wait but it makes the implemenation easier to grok if we have
   // the region edit/sequence id after the append returns.
-  // 
+  //
   // TODO: Handlers need to coordinate appending AND syncing.  Can we have the threads contend
   // once only?  Probably hard given syncs take way longer than an append.
   //
@@ -233,7 +231,7 @@ public class FSHLog implements WAL {
   private final String logFilePrefix;
 
   /**
-   * Suffix included on generated wal file names 
+   * Suffix included on generated wal file names
    */
   private final String logFileSuffix;
 
@@ -250,13 +248,14 @@ public class FSHLog implements WAL {
   protected final Configuration conf;
 
   /** Listeners that are called on WAL events. */
-  private final List<WALActionsListener> listeners = new CopyOnWriteArrayList<WALActionsListener>();
+  private final List<WALActionsListener> listeners =
+    new CopyOnWriteArrayList<WALActionsListener>();
 
   @Override
   public void registerWALActionsListener(final WALActionsListener listener) {
     this.listeners.add(listener);
   }
-  
+
   @Override
   public boolean unregisterWALActionsListener(final WALActionsListener listener) {
     return this.listeners.remove(listener);
@@ -612,7 +611,7 @@ public class FSHLog implements WAL {
 
   /**
    * Tell listeners about pre log roll.
-   * @throws IOException 
+   * @throws IOException
    */
   private void tellListenersAboutPreLogRoll(final Path oldPath, final Path newPath)
   throws IOException {
@@ -625,7 +624,7 @@ public class FSHLog implements WAL {
 
   /**
    * Tell listeners about post log roll.
-   * @throws IOException 
+   * @throws IOException
    */
   private void tellListenersAboutPostLogRoll(final Path oldPath, final Path newPath)
   throws IOException {
@@ -1053,27 +1052,11 @@ public class FSHLog implements WAL {
     }
   }
 
-  /**
-   * @param now
-   * @param encodedRegionName Encoded name of the region as returned by
-   * <code>HRegionInfo#getEncodedNameAsBytes()</code>.
-   * @param tableName
-   * @param clusterIds that have consumed the change
-   * @return New log key.
-   */
-  @SuppressWarnings("deprecation")
-  protected WALKey makeKey(byte[] encodedRegionName, TableName tableName, long seqnum,
-      long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    // we use HLogKey here instead of WALKey directly to support legacy coprocessors.
-    return new HLogKey(encodedRegionName, tableName, seqnum, now, clusterIds, nonceGroup, nonce);
-  }
-  
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="NP_NULL_ON_SOME_PATH_EXCEPTION",
       justification="Will never be null")
   @Override
   public long append(final HTableDescriptor htd, final HRegionInfo hri, final WALKey key,
-      final WALEdit edits, final AtomicLong sequenceId, final boolean inMemstore, 
-      final List<Cell> memstoreCells) throws IOException {
+      final WALEdit edits, final boolean inMemstore) throws IOException {
     if (this.closed) throw new IOException("Cannot append; log is closed");
     // Make a trace scope for the append.  It is closed on other side of the ring buffer by the
     // single consuming thread.  Don't have to worry about it.
@@ -1087,9 +1070,9 @@ public class FSHLog implements WAL {
     try {
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       // Construction of FSWALEntry sets a latch.  The latch is thrown just after we stamp the
-      // edit with its edit/sequence id.  The below entry.getRegionSequenceId will wait on the
-      // latch to be thrown.  TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
-      entry = new FSWALEntry(sequence, key, edits, sequenceId, inMemstore, htd, hri, memstoreCells);
+      // edit with its edit/sequence id.
+      // TODO: reuse FSWALEntry as we do SyncFuture rather create per append.
+      entry = new FSWALEntry(sequence, key, edits, htd, hri, inMemstore);
       truck.loadPayload(entry, scope.detach());
     } finally {
       this.disruptor.getRingBuffer().publish(sequence);
@@ -1116,9 +1099,9 @@ public class FSHLog implements WAL {
     private volatile long sequence;
     // Keep around last exception thrown. Clear on successful sync.
     private final BlockingQueue<SyncFuture> syncFutures;
- 
+
     /**
-     * UPDATE! 
+     * UPDATE!
      * @param syncs the batch of calls to sync that arrived as this thread was starting; when done,
      * we will put the result of the actual hdfs sync call as the result.
      * @param sequence The sequence number on the ring buffer when this thread was set running.
@@ -1166,7 +1149,7 @@ public class FSHLog implements WAL {
       // This function releases one sync future only.
       return 1;
     }
- 
+
     /**
      * Release all SyncFutures whose sequence is <= <code>currentSequence</code>.
      * @param currentSequence
@@ -1570,7 +1553,7 @@ public class FSHLog implements WAL {
    * 'safe point' while the orchestrating thread does some work that requires the first thread
    * paused: e.g. holding the WAL writer while its WAL is swapped out from under it by another
    * thread.
-   * 
+   *
    * <p>Thread A signals Thread B to hold when it gets to a 'safe point'.  Thread A wait until
    * Thread B gets there. When the 'safe point' has been attained, Thread B signals Thread A.
    * Thread B then holds at the 'safe point'.  Thread A on notification that Thread B is paused,
@@ -1578,7 +1561,7 @@ public class FSHLog implements WAL {
    * it flags B and then Thread A and Thread B continue along on their merry way.  Pause and
    * signalling 'zigzags' between the two participating threads.  We use two latches -- one the
    * inverse of the other -- pausing and signaling when states are achieved.
-   * 
+   *
    * <p>To start up the drama, Thread A creates an instance of this class each time it would do
    * this zigzag dance and passes it to Thread B (these classes use Latches so it is one shot
    * only). Thread B notices the new instance (via reading a volatile reference or how ever) and it
@@ -1600,7 +1583,7 @@ public class FSHLog implements WAL {
      * Latch to wait on.  Will be released when we can proceed.
      */
     private volatile CountDownLatch safePointReleasedLatch = new CountDownLatch(1);
- 
+
     /**
      * For Thread A to call when it is ready to wait on the 'safe point' to be attained.
      * Thread A will be held in here until Thread B calls {@link #safePointAttained()}
@@ -1609,7 +1592,7 @@ public class FSHLog implements WAL {
      * @throws InterruptedException
      * @throws ExecutionException
      * @return The passed <code>syncFuture</code>
-     * @throws FailedSyncBeforeLogCloseException 
+     * @throws FailedSyncBeforeLogCloseException
      */
     SyncFuture waitSafePoint(final SyncFuture syncFuture)
     throws InterruptedException, FailedSyncBeforeLogCloseException {
@@ -1621,7 +1604,7 @@ public class FSHLog implements WAL {
       }
       return syncFuture;
     }
- 
+
     /**
      * Called by Thread B when it attains the 'safe point'.  In this method, Thread B signals
      * Thread A it can proceed. Thread B will be held in here until {@link #releaseSafePoint()}
@@ -1859,9 +1842,8 @@ public class FSHLog implements WAL {
         // here inside this single appending/writing thread.  Events are ordered on the ringbuffer
         // so region sequenceids will also be in order.
         regionSequenceId = entry.stampRegionSequenceId();
-
-        // Edits are empty, there is nothing to append.  Maybe empty when we are looking for a 
-        // region sequence id only, a region edit/sequence id that is not associated with an actual 
+        // Edits are empty, there is nothing to append.  Maybe empty when we are looking for a
+        // region sequence id only, a region edit/sequence id that is not associated with an actual
         // edit. It has to go through all the rigmarole to be sure we have the right ordering.
         if (entry.getEdit().isEmpty()) {
           return;

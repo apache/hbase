@@ -155,7 +155,7 @@ public class TestStoreFileRefresherChore {
     }
   }
 
-  @Test (timeout = 60000)
+  @Test
   public void testIsStale() throws IOException {
     int period = 0;
     byte[][] families = new byte[][] {Bytes.toBytes("cf")};

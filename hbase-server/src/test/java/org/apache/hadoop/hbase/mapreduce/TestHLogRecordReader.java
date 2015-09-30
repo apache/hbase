@@ -31,8 +31,8 @@ import org.junit.experimental.categories.Category;
 public class TestHLogRecordReader extends TestWALRecordReader {
 
   @Override
-  protected WALKey getWalKey(final long sequenceid) {
-    return new HLogKey(info.getEncodedNameAsBytes(), tableName, sequenceid);
+  protected WALKey getWalKey(final long time) {
+    return new HLogKey(info.getEncodedNameAsBytes(), tableName, time, mvcc);
   }
 
   @Override

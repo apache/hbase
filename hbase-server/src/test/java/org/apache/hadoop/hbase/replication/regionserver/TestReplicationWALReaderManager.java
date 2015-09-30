@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -26,40 +37,33 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
-
-@Category(LargeTests.class)
+@Category({LargeTests.class})
 @RunWith(Parameterized.class)
 public class TestReplicationWALReaderManager {
 
   private static HBaseTestingUtility TEST_UTIL;
   private static Configuration conf;
-  private static Path hbaseDir;
   private static FileSystem fs;
   private static MiniDFSCluster cluster;
   private static final TableName tableName = TableName.valueOf("tablename");
@@ -74,7 +78,8 @@ public class TestReplicationWALReaderManager {
   private PathWatcher pathWatcher;
   private int nbRows;
   private int walEditKVs;
-  private final AtomicLong sequenceId = new AtomicLong(1);
+  @Rule public TestName tn = new TestName();
+  private final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
 
   @Parameters
   public static Collection<Object[]> parameters() {
@@ -103,6 +108,7 @@ public class TestReplicationWALReaderManager {
     this.walEditKVs = walEditKVs;
     TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION,
       enableCompression);
+    mvcc.advanceTo(1);
   }
   
   @BeforeClass
@@ -111,7 +117,6 @@ public class TestReplicationWALReaderManager {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniDFSCluster(3);
 
-    hbaseDir = TEST_UTIL.createRootDir();
     cluster = TEST_UTIL.getDFSCluster();
     fs = cluster.getFileSystem();
   }
@@ -195,8 +200,9 @@ public class TestReplicationWALReaderManager {
   }
 
   private void appendToLogPlus(int count) throws IOException {
-    final long txid = log.append(htd, info, new WALKey(info.getEncodedNameAsBytes(), tableName,
-        System.currentTimeMillis()), getWALEdits(count), sequenceId, true, null);
+    final long txid = log.append(htd, info,
+        new WALKey(info.getEncodedNameAsBytes(), tableName, System.currentTimeMillis(), mvcc),
+        getWALEdits(count), true);
     log.sync(txid);
   }
 

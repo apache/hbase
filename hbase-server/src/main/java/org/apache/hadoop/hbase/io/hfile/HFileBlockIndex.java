@@ -51,7 +51,7 @@ import org.apache.hadoop.util.StringUtils;
 
 /**
  * Provides functionality to write ({@link BlockIndexWriter}) and read
- * ({@link BlockIndexReader})
+ * BlockIndexReader
  * single-level and multi-level block indexes.
  *
  * Examples of how to use the block index writer can be found in

@@ -315,7 +315,6 @@ public class TestAtomicOperation {
    */
   @Test
   public void testRowMutationMultiThreads() throws IOException {
-
     LOG.info("Starting test testRowMutationMultiThreads");
     initHRegion(tableName, name.getMethodName(), fam1);
 
@@ -614,30 +613,33 @@ public class TestAtomicOperation {
     }
 
     @Override
-    public RowLock getRowLockInternal(final byte[] row, boolean waitForLock) throws IOException {
+    public RowLock getRowLock(final byte[] row, boolean readLock) throws IOException {
       if (testStep == TestStep.CHECKANDPUT_STARTED) {
         latch.countDown();
       }
-      return new WrappedRowLock(super.getRowLockInternal(row, waitForLock));
+      return new WrappedRowLock(super.getRowLock(row, readLock));
     }
     
-    public class WrappedRowLock extends RowLockImpl {
+    public class WrappedRowLock implements RowLock {
+
+      private final RowLock rowLock;
 
       private WrappedRowLock(RowLock rowLock) {
-        setContext(((RowLockImpl)rowLock).getContext());
+        this.rowLock = rowLock;
       }
+
 
       @Override
       public void release() {
         if (testStep == TestStep.INIT) {
-          super.release();
+          this.rowLock.release();
           return;
         }
 
         if (testStep == TestStep.PUT_STARTED) {
           try {
             testStep = TestStep.PUT_COMPLETED;
-            super.release();
+            this.rowLock.release();
             // put has been written to the memstore and the row lock has been released, but the
             // MVCC has not been advanced.  Prior to fixing HBASE-7051, the following order of
             // operations would cause the non-atomicity to show up:
@@ -655,7 +657,7 @@ public class TestAtomicOperation {
           }
         }
         else if (testStep == TestStep.CHECKANDPUT_STARTED) {
-          super.release();
+          this.rowLock.release();
         }
       }
     }

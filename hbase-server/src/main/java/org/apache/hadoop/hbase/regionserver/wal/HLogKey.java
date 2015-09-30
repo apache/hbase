@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.io.Writable;
@@ -69,8 +70,16 @@ public class HLogKey extends WALKey implements Writable {
     super(encodedRegionName, tablename);
   }
 
+  @VisibleForTesting
   public HLogKey(final byte[] encodedRegionName, final TableName tablename, final long now) {
     super(encodedRegionName, tablename, now);
+  }
+
+  public HLogKey(final byte[] encodedRegionName,
+                 final TableName tablename,
+                 final long now,
+                 final MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, now, mvcc);
   }
 
   /**
@@ -86,9 +95,16 @@ public class HLogKey extends WALKey implements Writable {
    * @param now Time at which this edit was written.
    * @param clusterIds the clusters that have consumed the change(used in Replication)
    */
-  public HLogKey(final byte [] encodedRegionName, final TableName tablename,
-      long logSeqNum, final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    super(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce);
+  public HLogKey(
+      final byte[] encodedRegionName,
+      final TableName tablename,
+      long logSeqNum,
+      final long now,
+      List<UUID> clusterIds,
+      long nonceGroup,
+      long nonce,
+      MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, logSeqNum, now, clusterIds, nonceGroup, nonce, mvcc);
   }
 
   /**
@@ -104,9 +120,14 @@ public class HLogKey extends WALKey implements Writable {
    * @param nonceGroup
    * @param nonce
    */
-  public HLogKey(final byte [] encodedRegionName, final TableName tablename,
-      final long now, List<UUID> clusterIds, long nonceGroup, long nonce) {
-    super(encodedRegionName, tablename, now, clusterIds, nonceGroup, nonce);
+  public HLogKey(final byte[] encodedRegionName,
+                 final TableName tablename,
+                 final long now,
+                 List<UUID> clusterIds,
+                 long nonceGroup,
+                 long nonce,
+                 final MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, now, clusterIds, nonceGroup, nonce, mvcc);
   }
 
   /**
@@ -122,8 +143,8 @@ public class HLogKey extends WALKey implements Writable {
    * @param nonce
    */
   public HLogKey(final byte [] encodedRegionName, final TableName tablename, long logSeqNum,
-      long nonceGroup, long nonce) {
-    super(encodedRegionName, tablename, logSeqNum, nonceGroup, nonce);
+      long nonceGroup, long nonce, MultiVersionConcurrencyControl mvcc) {
+    super(encodedRegionName, tablename, logSeqNum, nonceGroup, nonce, mvcc);
   }
 
   /**
@@ -141,7 +162,8 @@ public class HLogKey extends WALKey implements Writable {
       Compressor.writeCompressed(this.encodedRegionName, 0,
           this.encodedRegionName.length, out,
           compressionContext.regionDict);
-      Compressor.writeCompressed(this.tablename.getName(), 0, this.tablename.getName().length, out,
+      Compressor.writeCompressed(this.tablename.getName(), 0,
+          this.tablename.getName().length, out,
           compressionContext.tableDict);
     }
     out.writeLong(this.logSeqNum);
