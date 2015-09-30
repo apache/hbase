@@ -589,4 +589,19 @@
         </plugins>
     </build>
 
+  <profiles>
+    <!-- Skip the tests in this module -->
+    <profile>
+      <id>skipSparkTests</id>
+      <activation>
+        <property>
+          <name>skipSparkTests</name>
+        </property>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>true</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+      </properties>
+    </profile>
+  </profiles>
 </project>
