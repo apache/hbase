@@ -19,12 +19,16 @@
 package org.apache.hadoop.hbase.thrift;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.thrift.MetricsThriftServerSourceFactory;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Test for the interface of MetricsThriftServerSourceFactory
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsThriftServerSourceFactory {
 
 
