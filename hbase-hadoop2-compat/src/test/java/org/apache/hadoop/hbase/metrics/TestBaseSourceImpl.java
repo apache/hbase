@@ -18,10 +18,13 @@
 
 package org.apache.hadoop.hbase.metrics;
 
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -29,6 +32,7 @@ import static org.junit.Assert.assertNull;
 /**
  *  Test of default BaseSource for hadoop 2
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestBaseSourceImpl {
 
   private static BaseSourceImpl bmsi;

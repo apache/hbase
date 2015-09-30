@@ -21,10 +21,14 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSource;
 import org.apache.hadoop.hbase.replication.regionserver.MetricsReplicationSourceImpl;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertTrue;
 
+@Category({MetricsTests.class, SmallTests.class})
 /** Test for MetricsReplicationSourceImpl */
 public class TestMetricsReplicationSourceImpl {
 

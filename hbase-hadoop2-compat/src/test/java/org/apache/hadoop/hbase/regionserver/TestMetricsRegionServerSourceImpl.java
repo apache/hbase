@@ -19,7 +19,10 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -27,6 +30,7 @@ import static org.junit.Assert.assertTrue;
 /**
  *  Test for MetricsRegionServerSourceImpl
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRegionServerSourceImpl {
 
   @Test
