@@ -186,8 +186,9 @@ case $startStop in
     hbase_rotate_log $HBASE_LOGOUT
     hbase_rotate_log $HBASE_LOGGC
     echo starting $command, logging to $HBASE_LOGOUT
-    nohup $thiscmd --config "${HBASE_CONF_DIR}" \
+    $thiscmd --config "${HBASE_CONF_DIR}" \
         foreground_start $command $args < /dev/null > ${HBASE_LOGOUT} 2>&1  &
+    disown -h -r
     sleep 1; head "${HBASE_LOGOUT}"
   ;;
 
