@@ -21,7 +21,11 @@ package org.apache.hadoop.hbase.rest;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.rest.MetricsRESTSource;
 import org.apache.hadoop.hbase.rest.MetricsRESTSourceImpl;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
+
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -29,6 +33,7 @@ import static org.junit.Assert.assertTrue;
 /**
  *  Test for hadoop1's version of MetricsRESTSource
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestRESTMetricsSourceImpl {
 
   @Test
