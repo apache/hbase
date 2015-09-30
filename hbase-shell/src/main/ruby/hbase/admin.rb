@@ -562,7 +562,7 @@ module Hbase
             if (k =~ /coprocessor/i)
               v = String.new(value)
               v.strip!
-              htd.addCoprocessor(v)
+              htd.addCoprocessorWithSpec(v)
               valid_coproc_keys << key
             end
           end
