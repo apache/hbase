@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -92,29 +91,65 @@ public abstract class MultiTableInputFormatBase extends
           + " previous error. Please look at the previous logs lines from"
           + " the task's full log for more details.");
     }
-    Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
+    final Connection connection = ConnectionFactory.createConnection(context.getConfiguration());
     Table table = connection.getTable(tSplit.getTable());
 
-    TableRecordReader trr = this.tableRecordReader;
+    if (this.tableRecordReader == null) {
+      this.tableRecordReader = new TableRecordReader();
+    }
+    final TableRecordReader trr = this.tableRecordReader;
 
     try {
-      // if no table record reader was provided use default
-      if (trr == null) {
-        trr = new TableRecordReader();
-      }
       Scan sc = tSplit.getScan();
       sc.setStartRow(tSplit.getStartRow());
       sc.setStopRow(tSplit.getEndRow());
       trr.setScan(sc);
       trr.setTable(table);
-      trr.setConnection(connection);
+      return new RecordReader<ImmutableBytesWritable, Result>() {
+
+        @Override
+        public void close() throws IOException {
+          trr.close();
+          if (connection != null) {
+            connection.close();
+          }
+        }
+
+        @Override
+        public ImmutableBytesWritable getCurrentKey() throws IOException, InterruptedException {
+          return trr.getCurrentKey();
+        }
+
+        @Override
+        public Result getCurrentValue() throws IOException, InterruptedException {
+          return trr.getCurrentValue();
+        }
+
+        @Override
+        public float getProgress() throws IOException, InterruptedException {
+          return trr.getProgress();
+        }
+
+        @Override
+        public void initialize(InputSplit inputsplit, TaskAttemptContext context)
+            throws IOException, InterruptedException {
+          trr.initialize(inputsplit, context);
+        }
+
+        @Override
+        public boolean nextKeyValue() throws IOException, InterruptedException {
+          return trr.nextKeyValue();
+        }
+      };
     } catch (IOException ioe) {
       // If there is an exception make sure that all
       // resources are closed and released.
       trr.close();
+      if (connection != null) {
+        connection.close();
+      }
       throw ioe;
     }
-    return trr;
   }
 
   /**
