@@ -20,11 +20,15 @@ package org.apache.hadoop.hbase.regionserver;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServerSourceFactory;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  *  Test for the CompatibilitySingletonFactory and building MetricsRegionServerSource
  */
+@Category({MetricsTests.class, SmallTests.class})
 public class TestMetricsRegionServerSourceFactory {
 
   @Test(expected=RuntimeException.class)
