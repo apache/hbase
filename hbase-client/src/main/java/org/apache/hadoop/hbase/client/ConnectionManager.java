@@ -631,45 +631,10 @@ class ConnectionManager {
      */
     HConnectionImplementation(Configuration conf, boolean managed,
         ExecutorService pool, User user) throws IOException {
-      this(conf);
+      this.conf = conf;
       this.user = user;
       this.batchPool = pool;
       this.managed = managed;
-      this.registry = setupRegistry();
-      retrieveClusterId();
-
-      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
-      this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-
-      // Do we publish the status?
-      boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
-          HConstants.STATUS_PUBLISHED_DEFAULT);
-      Class<? extends ClusterStatusListener.Listener> listenerClass =
-          conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
-              ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
-              ClusterStatusListener.Listener.class);
-      if (shouldListen) {
-        if (listenerClass == null) {
-          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
-              ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
-        } else {
-          clusterStatusListener = new ClusterStatusListener(
-              new ClusterStatusListener.DeadServerHandler() {
-                @Override
-                public void newDead(ServerName sn) {
-                  clearCaches(sn);
-                  rpcClient.cancelConnections(sn);
-                }
-              }, conf, listenerClass);
-        }
-      }
-    }
-
-    /**
-     * For tests.
-     */
-    protected HConnectionImplementation(Configuration conf) {
-      this.conf = conf;
       this.tableConfig = new TableConfiguration(conf);
       this.closed = false;
       this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -690,11 +655,49 @@ class ConnectionManager {
       } else {
         this.nonceGenerator = new NoNonceGenerator();
       }
-      stats = ServerStatisticTracker.create(conf);
-      this.asyncProcess = createAsyncProcess(this.conf);
+
+      this.stats = ServerStatisticTracker.create(conf);
       this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
+      this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
       this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+      this.asyncProcess = createAsyncProcess(this.conf);
+
+      boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+          HConstants.STATUS_PUBLISHED_DEFAULT);
+      Class<? extends ClusterStatusListener.Listener> listenerClass =
+          conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+              ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
+              ClusterStatusListener.Listener.class);
+
+      try {
+        this.registry = setupRegistry();
+        retrieveClusterId();
+
+        this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
+
+        // Do we publish the status?
+        if (shouldListen) {
+          if (listenerClass == null) {
+            LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+                ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
+          } else {
+            clusterStatusListener = new ClusterStatusListener(
+                new ClusterStatusListener.DeadServerHandler() {
+                  @Override
+                  public void newDead(ServerName sn) {
+                    clearCaches(sn);
+                    rpcClient.cancelConnections(sn);
+                  }
+                }, conf, listenerClass);
+          }
+        }
+      } catch (Throwable e) {
+        // avoid leaks: registry, rpcClient, ...
+        LOG.debug("connection construction failed", e);
+        close();
+        throw e;
+      }
     }
 
     @Override
@@ -2262,9 +2265,7 @@ class ConnectionManager {
     // For tests to override.
     protected AsyncProcess createAsyncProcess(Configuration conf) {
       // No default pool available.
-      return new AsyncProcess(this, conf, this.batchPool,
-          RpcRetryingCallerFactory.instantiate(conf, this.getStatisticsTracker()), false,
-          RpcControllerFactory.instantiate(conf));
+      return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory);
     }
 
     @Override
