@@ -342,11 +342,35 @@ public class TestAsyncProcess {
    * Returns our async process.
    */
   static class MyConnectionImpl extends ConnectionImplementation {
+    public static class TestRegistry implements Registry {
+      @Override
+      public void init(Connection connection) {}
+
+      @Override
+      public RegionLocations getMetaRegionLocation() throws IOException {
+        return null;
+      }
+
+      @Override
+      public String getClusterId() {
+        return "testClusterId";
+      }
+
+      @Override
+      public int getCurrentNrHRS() throws IOException {
+        return 1;
+      }
+    }
+
     final AtomicInteger nbThreads = new AtomicInteger(0);
 
+    protected MyConnectionImpl(Configuration conf) throws IOException {
+      super(setupConf(conf), null, null);
+    }
 
-    protected MyConnectionImpl(Configuration conf) {
-      super(conf);
+    private static Configuration setupConf(Configuration conf) {
+      conf.setClass(RegistryFactory.REGISTRY_IMPL_CONF_KEY, TestRegistry.class, Registry.class);
+      return conf;
     }
 
     @Override
@@ -363,7 +387,7 @@ public class TestAsyncProcess {
     List<HRegionLocation> hrl;
     final boolean usedRegions[];
 
-    protected MyConnectionImpl2(List<HRegionLocation> hrl) {
+    protected MyConnectionImpl2(List<HRegionLocation> hrl) throws IOException {
       super(conf);
       this.hrl = hrl;
       this.usedRegions = new boolean[hrl.size()];
@@ -382,7 +406,6 @@ public class TestAsyncProcess {
       }
       return null;
     }
-
   }
 
   @Rule

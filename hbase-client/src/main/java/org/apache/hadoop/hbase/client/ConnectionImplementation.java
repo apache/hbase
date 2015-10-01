@@ -182,44 +182,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   ConnectionImplementation(Configuration conf,
                            ExecutorService pool, User user) throws IOException {
-    this(conf);
+    this.conf = conf;
     this.user = user;
     this.batchPool = pool;
-    this.registry = setupRegistry();
-    retrieveClusterId();
-
-    this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
-    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
-
-    // Do we publish the status?
-    boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
-        HConstants.STATUS_PUBLISHED_DEFAULT);
-    Class<? extends ClusterStatusListener.Listener> listenerClass =
-        conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
-            ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
-            ClusterStatusListener.Listener.class);
-    if (shouldListen) {
-      if (listenerClass == null) {
-        LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
-            ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
-      } else {
-        clusterStatusListener = new ClusterStatusListener(
-            new ClusterStatusListener.DeadServerHandler() {
-              @Override
-              public void newDead(ServerName sn) {
-                clearCaches(sn);
-                rpcClient.cancelConnections(sn);
-              }
-            }, conf, listenerClass);
-      }
-    }
-  }
-
-  /**
-   * For tests.
-   */
-  protected ConnectionImplementation(Configuration conf) {
-    this.conf = conf;
     this.tableConfig = new TableConfiguration(conf);
     this.closed = false;
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
@@ -239,11 +204,49 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     } else {
       nonceGenerator = new NoNonceGenerator();
     }
-    stats = ServerStatisticTracker.create(conf);
-    this.asyncProcess = createAsyncProcess(this.conf);
+
+    this.stats = ServerStatisticTracker.create(conf);
     this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
+    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+    this.asyncProcess = createAsyncProcess(this.conf);
+
+    boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+        HConstants.STATUS_PUBLISHED_DEFAULT);
+    Class<? extends ClusterStatusListener.Listener> listenerClass =
+        conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+            ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
+            ClusterStatusListener.Listener.class);
+
+    try {
+      this.registry = setupRegistry();
+      retrieveClusterId();
+
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId);
+
+      // Do we publish the status?
+      if (shouldListen) {
+        if (listenerClass == null) {
+          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+              ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
+        } else {
+          clusterStatusListener = new ClusterStatusListener(
+              new ClusterStatusListener.DeadServerHandler() {
+                @Override
+                public void newDead(ServerName sn) {
+                  clearCaches(sn);
+                  rpcClient.cancelConnections(sn);
+                }
+              }, conf, listenerClass);
+        }
+      }
+    } catch (Throwable e) {
+      // avoid leaks: registry, rpcClient, ...
+      LOG.debug("connection construction failed", e);
+      close();
+      throw e;
+    }
   }
 
   /**
@@ -370,7 +373,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       synchronized (this) {
         if (batchPool == null) {
           this.batchPool = getThreadPool(conf.getInt("hbase.hconnection.threads.max", 256),
-              conf.getInt("hbase.hconnection.threads.core", 256), "-shared-", null); 
+              conf.getInt("hbase.hconnection.threads.core", 256), "-shared-", null);
           this.cleanupPool = true;
         }
       }
@@ -478,7 +481,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
   protected String clusterId = null;
 
-  void retrieveClusterId() {
+  protected void retrieveClusterId() {
     if (clusterId != null) return;
     this.clusterId = this.registry.getClusterId();
     if (clusterId == null) {
@@ -1979,9 +1982,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   // For tests to override.
   protected AsyncProcess createAsyncProcess(Configuration conf) {
     // No default pool available.
-    return new AsyncProcess(this, conf, this.batchPool,
-        RpcRetryingCallerFactory.instantiate(conf, this.getStatisticsTracker()), false,
-        RpcControllerFactory.instantiate(conf));
+    return new AsyncProcess(this, conf, batchPool, rpcCallerFactory, false, rpcControllerFactory);
   }
 
   @Override
