@@ -98,6 +98,7 @@ import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslDigestCallbackHan
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer.SaslGssCallbackHandler;
 import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenSecretManager;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -292,6 +293,8 @@ public class RpcServer implements RpcServerInterface {
     protected boolean isError;
     protected TraceInfo tinfo;
 
+    private User user;
+
     Call(int id, final BlockingService service, final MethodDescriptor md, RequestHeader header,
          Message param, CellScanner cellScanner, Connection connection, Responder responder,
          long size, TraceInfo tinfo) {
@@ -309,6 +312,7 @@ public class RpcServer implements RpcServerInterface {
       this.isError = false;
       this.size = size;
       this.tinfo = tinfo;
+      this.user = connection.user == null? null: userProvider.create(connection.user);
     }
 
     @Override
@@ -494,6 +498,15 @@ public class RpcServer implements RpcServerInterface {
       if (!this.delayResponse) {
         this.responder.doRespond(this);
       }
+    }
+
+    public UserGroupInformation getRemoteUser() {
+      return connection.user;
+    }
+
+    @Override
+    public User getRequestUser() {
+      return user;
     }
   }
 
@@ -2303,6 +2316,16 @@ public class RpcServer implements RpcServerInterface {
    */
   public static RpcCallContext getCurrentCall() {
     return CurCall.get();
+  }
+
+  /**
+   * Returns the user credentials associated with the current RPC request or
+   * <code>null</code> if no credentials were provided.
+   * @return A User
+   */
+  public static User getRequestUser() {
+    RpcCallContext ctx = getCurrentCall();
+    return ctx == null? null: ctx.getRequestUser();
   }
 
   /**

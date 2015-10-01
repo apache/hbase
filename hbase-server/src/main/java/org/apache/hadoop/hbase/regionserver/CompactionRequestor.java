@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Pair;
 
 @InterfaceAudience.Private
@@ -72,12 +73,14 @@ public interface CompactionRequestor {
    * @param requests custom compaction requests. Each compaction must specify the store on which it
    *          is acting. Can be <tt>null</tt> in which case a compaction will be attempted on all
    *          stores for the region.
+   * @user  the effective user
    * @return The created {@link CompactionRequest CompactionRequests} or an empty list if no
    *         compactions were started.
    * @throws IOException
    */
   List<CompactionRequest> requestCompaction(
-    final HRegion r, final String why, int pri, List<Pair<CompactionRequest, Store>> requests
+    final HRegion r, final String why, int pri, List<Pair<CompactionRequest, Store>> requests,
+    User user
   ) throws IOException;
 
   /**
@@ -87,10 +90,11 @@ public interface CompactionRequestor {
    * @param pri Priority of this compaction. minHeap. <=0 is critical
    * @param request custom compaction request to run. {@link Store} and {@link HRegion} for the
    *          request must match the region and store specified here.
+   * @param user
    * @return The created {@link CompactionRequest} or <tt>null</tt> if no compaction was started
    * @throws IOException
    */
   CompactionRequest requestCompaction(
-    final HRegion r, final Store s, final String why, int pri, CompactionRequest request
+    final HRegion r, final Store s, final String why, int pri, CompactionRequest request, User user
   ) throws IOException;
 }

@@ -1465,7 +1465,7 @@ public class HRegionServer extends HasThread implements
               } else {
                 this.instance.compactSplitThread.requestCompaction(r, s, getName()
                     + " requests major compaction; use configured priority",
-                  this.majorCompactPriority, null);
+                  this.majorCompactPriority, null, null);
               }
             }
           } catch (IOException e) {

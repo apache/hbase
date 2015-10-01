@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.security.User;
+
 
 public interface RpcCallContext extends Delayable {
   /**
@@ -36,4 +38,11 @@ public interface RpcCallContext extends Delayable {
    * @return True if the client supports cellblocks, else return all content in pb
    */
   boolean isClientCellBlockSupport();
+
+  /**
+   * Returns the user credentials associated with the current RPC request or
+   * <code>null</code> if no credentials were provided.
+   * @return A User
+   */
+  User getRequestUser();
 }
