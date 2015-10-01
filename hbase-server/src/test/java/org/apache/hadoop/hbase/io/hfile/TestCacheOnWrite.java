@@ -88,8 +88,6 @@ public class TestCacheOnWrite {
 
   private final CacheOnWriteType cowType;
   private final Compression.Algorithm compress;
-  private final BlockEncoderTestType encoderType;
-  private final HFileDataBlockEncoder encoder;
   private final boolean cacheCompressedData;
 
   private static final int DATA_BLOCK_SIZE = 2048;
@@ -135,42 +133,16 @@ public class TestCacheOnWrite {
         conf.setBoolean(cowType.confKey, cowType == this);
       }
     }
-
-  }
-
-  private static final DataBlockEncoding ENCODING_ALGO =
-      DataBlockEncoding.PREFIX;
-
-  /** Provides fancy names for three combinations of two booleans */
-  private static enum BlockEncoderTestType {
-    NO_BLOCK_ENCODING_NOOP(true, false),
-    NO_BLOCK_ENCODING(false, false),
-    BLOCK_ENCODING_EVERYWHERE(false, true);
-
-    private final boolean noop;
-    private final boolean encode;
-
-    BlockEncoderTestType(boolean noop, boolean encode) {
-      this.encode = encode;
-      this.noop = noop;
-    }
-
-    public HFileDataBlockEncoder getEncoder() {
-      return noop ? NoOpDataBlockEncoder.INSTANCE : new HFileDataBlockEncoderImpl(
-        encode ? ENCODING_ALGO : DataBlockEncoding.NONE);
-    }
   }
 
   public TestCacheOnWrite(CacheOnWriteType cowType, Compression.Algorithm compress,
-      BlockEncoderTestType encoderType, boolean cacheCompressedData, BlockCache blockCache) {
+      boolean cacheCompressedData, BlockCache blockCache) {
     this.cowType = cowType;
     this.compress = compress;
-    this.encoderType = encoderType;
-    this.encoder = encoderType.getEncoder();
     this.cacheCompressedData = cacheCompressedData;
     this.blockCache = blockCache;
     testDescription = "[cacheOnWrite=" + cowType + ", compress=" + compress +
-        ", encoderType=" + encoderType + ", cacheCompressedData=" + cacheCompressedData + "]";
+        ", cacheCompressedData=" + cacheCompressedData + "]";
     LOG.info(testDescription);
   }
 
@@ -196,20 +168,17 @@ public class TestCacheOnWrite {
 
   @Parameters
   public static Collection<Object[]> getParameters() throws IOException {
-    List<Object[]> cowTypes = new ArrayList<Object[]>();
-    for (BlockCache blockache : getBlockCaches()) {
+    List<Object[]> params = new ArrayList<Object[]>();
+    for (BlockCache blockCache : getBlockCaches()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
         for (Compression.Algorithm compress : HBaseTestingUtility.COMPRESSION_ALGORITHMS) {
-          for (BlockEncoderTestType encoderType : BlockEncoderTestType.values()) {
-            for (boolean cacheCompressedData : new boolean[] { false, true }) {
-              cowTypes.add(new Object[] { cowType, compress, encoderType, cacheCompressedData,
-                  blockache });
-            }
+          for (boolean cacheCompressedData : new boolean[] { false, true }) {
+            params.add(new Object[] { cowType, compress, cacheCompressedData, blockCache });
           }
         }
       }
     }
-    return cowTypes;
+    return params;
   }
 
   private void clearBlockCache(BlockCache blockCache) throws InterruptedException {
@@ -280,7 +249,8 @@ public class TestCacheOnWrite {
     LOG.info("HFile information: " + reader);
     HFileContext meta = new HFileContextBuilder().withCompression(compress)
       .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
-      .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncoding(encoder.getDataBlockEncoding())
+      .withBlockSize(DATA_BLOCK_SIZE)
+      .withDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
       .withIncludesTags(useTags).build();
     final boolean cacheBlocks = false;
     final boolean pread = false;
@@ -292,8 +262,7 @@ public class TestCacheOnWrite {
     EnumMap<BlockType, Integer> blockCountByType =
         new EnumMap<BlockType, Integer>(BlockType.class);
 
-    DataBlockEncoding encodingInCache =
-        encoderType.getEncoder().getDataBlockEncoding();
+    DataBlockEncoding encodingInCache = NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding();
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
       long onDiskSize = -1;
       if (prevBlock != null) {
@@ -327,10 +296,7 @@ public class TestCacheOnWrite {
         // block we cached at write-time and block read from file should be identical
         assertEquals(block.getChecksumType(), fromCache.getChecksumType());
         assertEquals(block.getBlockType(), fromCache.getBlockType());
-        if (block.getBlockType() == BlockType.ENCODED_DATA) {
-          assertEquals(block.getDataBlockEncodingId(), fromCache.getDataBlockEncodingId());
-          assertEquals(block.getDataBlockEncoding(), fromCache.getDataBlockEncoding());
-        }
+        assertNotEquals(block.getBlockType(), BlockType.ENCODED_DATA);
         assertEquals(block.getOnDiskSizeWithHeader(), fromCache.getOnDiskSizeWithHeader());
         assertEquals(block.getOnDiskSizeWithoutHeader(), fromCache.getOnDiskSizeWithoutHeader());
         assertEquals(
@@ -345,13 +311,11 @@ public class TestCacheOnWrite {
 
     LOG.info("Block count by type: " + blockCountByType);
     String countByType = blockCountByType.toString();
-    BlockType cachedDataBlockType =
-        encoderType.encode ? BlockType.ENCODED_DATA : BlockType.DATA;
     if (useTags) {
-      assertEquals("{" + cachedDataBlockType
+      assertEquals("{" + BlockType.DATA
           + "=2663, LEAF_INDEX=297, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=34}", countByType);
     } else {
-      assertEquals("{" + cachedDataBlockType
+      assertEquals("{" + BlockType.DATA
           + "=2498, LEAF_INDEX=278, BLOOM_CHUNK=9, INTERMEDIATE_INDEX=31}", countByType);
     }
 
@@ -386,7 +350,8 @@ public class TestCacheOnWrite {
         "test_cache_on_write");
     HFileContext meta = new HFileContextBuilder().withCompression(compress)
         .withBytesPerCheckSum(CKBYTES).withChecksumType(ChecksumType.NULL)
-        .withBlockSize(DATA_BLOCK_SIZE).withDataBlockEncoding(encoder.getDataBlockEncoding())
+        .withBlockSize(DATA_BLOCK_SIZE)
+        .withDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
         .withIncludesTags(useTags).build();
     StoreFile.Writer sfw = new StoreFile.WriterBuilder(conf, cacheConf, fs)
         .withOutputDir(storeFileParentDir).withComparator(KeyValue.COMPARATOR)
@@ -438,7 +403,7 @@ public class TestCacheOnWrite {
             .setCompressionType(compress)
             .setBloomFilterType(BLOOM_TYPE)
             .setMaxVersions(maxVersions)
-            .setDataBlockEncoding(encoder.getDataBlockEncoding())
+            .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding())
     );
     int rowIdx = 0;
     long ts = EnvironmentEdgeManager.currentTime();
