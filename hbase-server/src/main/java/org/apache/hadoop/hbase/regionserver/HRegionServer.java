@@ -1534,7 +1534,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
               } else {
                 this.instance.compactSplitThread.requestCompaction(r, s, getName()
                     + " requests major compaction; use configured priority",
-                  this.majorCompactPriority, null);
+                  this.majorCompactPriority, null, null);
               }
             }
           } catch (IOException e) {
@@ -4161,7 +4161,7 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         splitPoint = request.getSplitPoint().toByteArray();
       }
       region.forceSplit(splitPoint);
-      compactSplitThread.requestSplit(region, region.checkSplit());
+      compactSplitThread.requestSplit(region, region.checkSplit(), RpcServer.getRequestUser());
       return SplitRegionResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       abort("Replay of WAL required. Forcing server shutdown", ex);
@@ -4261,10 +4261,10 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
       String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
       if(family != null) {
         compactSplitThread.requestCompaction(region, store, log,
-          Store.PRIORITY_USER, null);
+          Store.PRIORITY_USER, null, RpcServer.getRequestUser());
       } else {
         compactSplitThread.requestCompaction(region, log,
-          Store.PRIORITY_USER, null);
+          Store.PRIORITY_USER, null, RpcServer.getRequestUser());
       }
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {
