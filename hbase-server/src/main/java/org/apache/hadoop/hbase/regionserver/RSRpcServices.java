@@ -1155,10 +1155,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       String log = "User-triggered " + (major ? "major " : "") + "compaction" + familyLogMsg;
       if(family != null) {
         regionServer.compactSplitThread.requestCompaction(region, store, log,
-          Store.PRIORITY_USER, null);
+          Store.PRIORITY_USER, null, RpcServer.getRequestUser());
       } else {
         regionServer.compactSplitThread.requestCompaction(region, log,
-          Store.PRIORITY_USER, null);
+          Store.PRIORITY_USER, null, RpcServer.getRequestUser());
       }
       return CompactRegionResponse.newBuilder().build();
     } catch (IOException ie) {
@@ -1790,7 +1790,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         splitPoint = request.getSplitPoint().toByteArray();
       }
       ((HRegion)region).forceSplit(splitPoint);
-      regionServer.compactSplitThread.requestSplit(region, ((HRegion)region).checkSplit());
+      regionServer.compactSplitThread.requestSplit(region, ((HRegion)region).checkSplit(),
+        RpcServer.getRequestUser());
       return SplitRegionResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       regionServer.abort("Replay of WAL required. Forcing server shutdown", ex);
