@@ -213,6 +213,7 @@ public class Procedure implements Callable<Void>, ForeignExceptionListener {
       sendGlobalBarrierReached();
 
       // wait for all members to report barrier release
+      LOG.debug("Waiting for all members to 'release'");
       waitForLatch(releasedBarrierLatch, monitor, wakeFrequency, "released");
 
       // make sure we didn't get an error during in barrier execution and release

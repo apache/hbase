@@ -174,6 +174,7 @@ public class ProcedureCoordinator {
     // kick off the procedure's execution in a separate thread
     try {
       if (this.procedures.putIfAbsent(procName, proc) == null) {
+        LOG.debug("Submitting procedure " + procName);
         this.pool.submit(proc);
         return true;
       } else {
@@ -200,11 +201,16 @@ public class ProcedureCoordinator {
   void rpcConnectionFailure(final String message, final IOException cause) {
     Collection<Procedure> toNotify = procedures.values();
 
+    boolean isTraceEnabled = LOG.isTraceEnabled();
+    LOG.debug("received connection failure: " + message, cause);
     for (Procedure proc : toNotify) {
       if (proc == null) {
         continue;
       }
       // notify the elements, if they aren't null
+      if (isTraceEnabled) {
+        LOG.trace("connection failure - notify procedure: " + proc.getName());
+      }
       proc.receive(new ForeignException(proc.getName(), cause));
     }
   }
@@ -215,6 +221,7 @@ public class ProcedureCoordinator {
    * @param reason serialized information about the abort
    */
   public void abortProcedure(String procName, ForeignException reason) {
+    LOG.debug("abort procedure " + procName, reason);
     // if we know about the Procedure, notify it
     Procedure proc = procedures.get(procName);
     if (proc == null) {
@@ -272,7 +279,9 @@ public class ProcedureCoordinator {
       LOG.warn("Member '"+ member +"' is trying to acquire an unknown procedure '"+ procName +"'");
       return;
     }
-
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Member '"+ member +"' acquired procedure '"+ procName +"'");
+    }
     proc.barrierAcquiredByMember(member);
   }
 
@@ -288,6 +297,9 @@ public class ProcedureCoordinator {
     if (proc == null) {
       LOG.warn("Member '"+ member +"' is trying to release an unknown procedure '"+ procName +"'");
       return;
+    }
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Member '"+ member +"' released procedure '"+ procName +"'");
     }
     proc.barrierReleasedByMember(member, dataFromMember);
   }
