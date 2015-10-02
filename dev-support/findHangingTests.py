@@ -25,15 +25,43 @@ import string
 if len(sys.argv) != 2 :
   print "ERROR : Provide the jenkins job console URL as the only argument."
   exit(1)
-print "Fetching the console output from the URL"
+print "Fetching " + sys.argv[1]
 response = urllib2.urlopen(sys.argv[1])
 i = 0;
 tests = {}
 failed_tests = {}
+summary = 0
+host = False
+patch = False
+branch = False
 while True:
   n = response.readline()
   if n == "" :
     break
+  if not host and n.find("Building remotely on") >= 0:
+    host = True
+    print n.strip()    
+    continue
+  if not patch and n.find("Testing patch for ") >= 0:
+    patch = True
+    print n.strip()    
+    continue
+  if not branch and n.find("Testing patch on branch ") >= 0:
+    branch = True
+    print n.strip()    
+    continue
+  if n.find("PATCH APPLICATION FAILED") >= 0:
+    print "PATCH APPLICATION FAILED"
+    sys.exit(1) 
+  if summary == 0 and n.find("Running tests.") >= 0:
+    summary = summary + 1
+    continue
+  if summary == 1 and n.find("[INFO] Reactor Summary:") >= 0:
+    summary = summary + 1
+    continue
+  if summary == 2 and n.find("[INFO] Apache HBase ") >= 0:
+    sys.stdout.write(n)
+    continue
   if n.find("org.apache.hadoop.hbase") < 0:
     continue 
   test_name = string.strip(n[n.find("org.apache.hadoop.hbase"):len(n)])
