@@ -175,7 +175,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
     // will hang and fail.
 
     LOG.debug("Launching subprocedure for snapshot " + snapshot.getName() + " from table "
-        + snapshot.getTable());
+        + snapshot.getTable() + " type " + snapshot.getType());
     ForeignExceptionDispatcher exnDispatcher = new ForeignExceptionDispatcher(snapshot.getName());
     Configuration conf = rss.getConfiguration();
     long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY,

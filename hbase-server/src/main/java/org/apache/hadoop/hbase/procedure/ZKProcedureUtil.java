@@ -275,6 +275,10 @@ public abstract class ZKProcedureUtil
     // harder to figure out how to keep an procedure going and the subject of HBASE-5487.
     ZKUtil.deleteChildrenRecursivelyMultiOrSequential(watcher, true, acquiredZnode, reachedZnode,
       abortZnode);
+
+    if (LOG.isTraceEnabled()) {
+      logZKTree(this.baseZNode);
+    }
   }
 
   public void clearZNodes(String procedureName) throws KeeperException {
@@ -291,5 +295,9 @@ public abstract class ZKProcedureUtil
 
     ZKUtil.deleteNodeRecursivelyMultiOrSequential(watcher, true, acquiredBarrierNode,
       reachedBarrierNode, abortZNode);
+
+    if (LOG.isTraceEnabled()) {
+      logZKTree(this.baseZNode);
+    }
   }
 }

@@ -84,8 +84,9 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
       // If we get an abort node watch triggered here, we'll go complete creating the acquired
       // znode but then handle the acquire znode and bail out
     } catch (KeeperException e) {
-      LOG.error("Failed to watch abort", e);
-      throw new IOException("Failed while watching abort node:" + abortNode, e);
+      String msg = "Failed while watching abort node:" + abortNode;
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
     }
 
     // create the acquire barrier
@@ -104,7 +105,9 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
         }
       }
     } catch (KeeperException e) {
-      throw new IOException("Failed while creating acquire node:" + acquire, e);
+      String msg = "Failed while creating acquire node:" + acquire;
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
     }
   }
 
@@ -124,9 +127,10 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
           // ProtobufUtil.isPBMagicPrefix will check null
           if (dataFromMember != null && dataFromMember.length > 0) {
             if (!ProtobufUtil.isPBMagicPrefix(dataFromMember)) {
-              throw new IOException(
-                "Failed to get data from finished node or data is illegally formatted: "
-                    + znode);
+              String msg =
+                "Failed to get data from finished node or data is illegally formatted: " + znode;
+              LOG.error(msg);
+              throw new IOException(msg);
             } else {
               dataFromMember = Arrays.copyOfRange(dataFromMember, ProtobufUtil.lengthOfPBMagic(),
                 dataFromMember.length);
@@ -138,9 +142,13 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
         }
       }
     } catch (KeeperException e) {
-      throw new IOException("Failed while creating reached node:" + reachedNode, e);
+      String msg = "Failed while creating reached node:" + reachedNode;
+      LOG.error(msg, e);
+      throw new IOException(msg, e);
     } catch (InterruptedException e) {
-      throw new InterruptedIOException("Interrupted while creating reached node:" + reachedNode);
+      String msg = "Interrupted while creating reached node:" + reachedNode;
+      LOG.error(msg, e);
+      throw new InterruptedIOException(msg);
     }
   }
 
@@ -162,7 +170,9 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
         // children trickling in
         stillGettingNotifications = true;
       } catch (KeeperException e) {
-        throw new IOException("Failed to complete reset procedure " + procName, e);
+        String msg = "Failed to complete reset procedure " + procName;
+        LOG.error(msg, e);
+        throw new IOException(msg, e);
       }
     } while (stillGettingNotifications);
   }
@@ -282,7 +292,8 @@ public class ZKProcedureCoordinatorRpcs implements ProcedureCoordinatorRpcs {
         LOG.warn("Got an error notification for op:" + abortNode
             + " but we can't read the information. Killing the procedure.");
         // we got a remote exception, but we can't describe it
-        ee = new ForeignException(coordName, "Data in abort node is illegally formatted.  ignoring content.");
+        ee = new ForeignException(coordName,
+          "Data in abort node is illegally formatted.  ignoring content.");
       } else {
 
         data = Arrays.copyOfRange(data, ProtobufUtil.lengthOfPBMagic(), data.length);
