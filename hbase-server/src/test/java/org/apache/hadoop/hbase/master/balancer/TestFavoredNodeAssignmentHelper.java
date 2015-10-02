@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Triple;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
 
@@ -97,7 +98,7 @@ public class TestFavoredNodeAssignmentHelper {
     return chosenServers;
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSmallCluster() {
     // Test the case where we cannot assign favored nodes (because the number
     // of nodes in the cluster is too less)
@@ -109,7 +110,7 @@ public class TestFavoredNodeAssignmentHelper {
     assertFalse(helper.canPlaceFavoredNodes());
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testPlacePrimaryRSAsRoundRobin() {
     // Test the regular case where there are many servers in different racks
     // Test once for few regions and once for many regions
@@ -118,7 +119,7 @@ public class TestFavoredNodeAssignmentHelper {
     primaryRSPlacement(600, null, 10, 10, 10);
   }
   
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testRoundRobinAssignmentsWithUnevenSizedRacks() {
     //In the case of uneven racks, the regions should be distributed 
     //proportionately to the rack sizes
@@ -135,7 +136,7 @@ public class TestFavoredNodeAssignmentHelper {
     primaryRSPlacement(459, null, 7, 9, 8);
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSecondaryAndTertiaryPlacementWithSingleRack() {
     // Test the case where there is a single rack and we need to choose
     // Primary/Secondary/Tertiary from a single rack.
@@ -159,7 +160,7 @@ public class TestFavoredNodeAssignmentHelper {
     }
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSecondaryAndTertiaryPlacementWithSingleServer() {
     // Test the case where we have a single node in the cluster. In this case
     // the primary can be assigned but the secondary/tertiary would be null
@@ -177,7 +178,7 @@ public class TestFavoredNodeAssignmentHelper {
     assertTrue(secondaryAndTertiaryMap.get(regions.get(0)) == null);
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSecondaryAndTertiaryPlacementWithMultipleRacks() {
     // Test the case where we have multiple racks and the region servers
     // belong to multiple racks
@@ -206,7 +207,7 @@ public class TestFavoredNodeAssignmentHelper {
     }
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSecondaryAndTertiaryPlacementWithLessThanTwoServersInRacks() {
     // Test the case where we have two racks but with less than two servers in each
     // We will not have enough machines to select secondary/tertiary
@@ -227,7 +228,7 @@ public class TestFavoredNodeAssignmentHelper {
     }
   }
 
-  @Test
+  @Ignore("Disabled for now until FavoredNodes gets finished as a feature") @Test
   public void testSecondaryAndTertiaryPlacementWithMoreThanOneServerInPrimaryRack() {
     // Test the case where there is only one server in one rack and another rack
     // has more servers. We try to choose secondary/tertiary on different
