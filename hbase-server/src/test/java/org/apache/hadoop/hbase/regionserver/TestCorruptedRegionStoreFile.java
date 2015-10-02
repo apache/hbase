@@ -44,18 +44,14 @@ import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 @Category(LargeTests.class)
-@Ignore("See HBASE-13744")
 public class TestCorruptedRegionStoreFile {
   private static final Log LOG = LogFactory.getLog(TestCorruptedRegionStoreFile.class);
 
@@ -64,7 +60,7 @@ public class TestCorruptedRegionStoreFile {
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
 
-  private static final int NUM_FILES = 25;
+  private static final int NUM_FILES = 10;
   private static final int ROW_PER_FILE = 2000;
   private static final int NUM_ROWS = NUM_FILES * ROW_PER_FILE;
 
@@ -75,9 +71,9 @@ public class TestCorruptedRegionStoreFile {
   private int rowCount;
 
   private static void setupConf(Configuration conf) {
-    conf.setLong("hbase.hstore.compaction.min", 20);
-    conf.setLong("hbase.hstore.compaction.max", 39);
-    conf.setLong("hbase.hstore.blockingStoreFiles", 40);
+    // Disable compaction so the store file count stays constant
+    conf.setLong("hbase.hstore.compactionThreshold", NUM_FILES + 1);
+    conf.setLong("hbase.hstore.blockingStoreFiles", NUM_FILES * 2);
   }
 
   private void setupTable(final TableName tableName) throws Exception {
@@ -96,6 +92,7 @@ public class TestCorruptedRegionStoreFile {
 
         if ((rowCount++ % ROW_PER_FILE) == 0) {
           // flush it
+          table.flushCommits();
           UTIL.getHBaseAdmin().flush(tableNameStr);
         }
       }
@@ -117,8 +114,8 @@ public class TestCorruptedRegionStoreFile {
         storeFiles.add(link.getOriginPath());
       }
     });
-    assertTrue("expected at least 1 store file", storeFiles.size() > 0);
-    LOG.info("store-files: " + storeFiles);
+    assertTrue("Expected at least " + NUM_FILES + " store files", storeFiles.size() >= NUM_FILES);
+    LOG.info("Store files: " + storeFiles);
   }
 
   @Before
