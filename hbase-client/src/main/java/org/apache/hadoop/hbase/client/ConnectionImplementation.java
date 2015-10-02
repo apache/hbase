@@ -110,7 +110,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final Log LOG = LogFactory.getLog(ConnectionImplementation.class);
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
+  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
+  private final boolean hostnamesCanChange;
   private final long pause;
   private final boolean useMetaReplicas;
   private final int numTries;
@@ -220,6 +222,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
 
     boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
+    this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
     Class<? extends ClusterStatusListener.Listener> listenerClass =
         conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
             ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
@@ -1194,7 +1197,8 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
           throw new MasterNotRunningException(sn + " is dead.");
         }
         // Use the security info interface name as our stub key
-        String key = getStubKey(getServiceName(), sn.getHostname(), sn.getPort());
+        String key = getStubKey(getServiceName(),
+            sn.getHostname(), sn.getPort(), hostnamesCanChange);
         connectionLock.putIfAbsent(key, key);
         Object stub = null;
         synchronized (connectionLock.get(key)) {
@@ -1283,7 +1287,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       throw new RegionServerStoppedException(serverName + " is dead.");
     }
     String key = getStubKey(AdminProtos.AdminService.BlockingInterface.class.getName(),
-        serverName.getHostname(), serverName.getPort());
+        serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
     this.connectionLock.putIfAbsent(key, key);
     AdminProtos.AdminService.BlockingInterface stub = null;
     synchronized (this.connectionLock.get(key)) {
@@ -1306,7 +1310,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     String key = getStubKey(
       ClientProtos.ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-      sn.getPort());
+      sn.getPort(), this.hostnamesCanChange);
     this.connectionLock.putIfAbsent(key, key);
     ClientProtos.ClientService.BlockingInterface stub = null;
     synchronized (this.connectionLock.get(key)) {
@@ -1323,16 +1327,21 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     return stub;
   }
 
-  static String getStubKey(final String serviceName, final String rsHostname, int port) {
+  static String getStubKey(final String serviceName,
+                           final String rsHostname,
+                           int port,
+                           boolean resolveHostnames) {
     // Sometimes, servers go down and they come back up with the same hostname but a different
     // IP address. Force a resolution of the rsHostname by trying to instantiate an
     // InetSocketAddress, and this way we will rightfully get a new stubKey.
     // Also, include the hostname in the key so as to take care of those cases where the
     // DNS name is different but IP address remains the same.
-    InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
     String address = rsHostname;
-    if (i != null) {
-      address = i.getHostAddress() + "-" + rsHostname;
+    if (resolveHostnames) {
+      InetAddress i = new InetSocketAddress(rsHostname, port).getAddress();
+      if (i != null) {
+        address = i.getHostAddress() + "-" + rsHostname;
+      }
     }
     return serviceName + "@" + address + ":" + port;
   }
