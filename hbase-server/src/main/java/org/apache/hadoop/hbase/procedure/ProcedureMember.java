@@ -176,8 +176,11 @@ public class ProcedureMember implements Closeable {
    public void receivedReachedGlobalBarrier(String procName) {
      Subprocedure subproc = subprocs.get(procName);
      if (subproc == null) {
-       LOG.warn("Unexpected reached glabal barrier message for Sub-Procedure '" + procName + "'");
+       LOG.warn("Unexpected reached globa barrier message for Sub-Procedure '" + procName + "'");
        return;
+     }
+     if (LOG.isTraceEnabled()) {
+      LOG.trace("reached global barrier message for Sub-Procedure '" + procName + "'");
      }
      subproc.receiveReachedGlobalBarrier();
    }
