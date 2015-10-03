@@ -109,7 +109,7 @@ The link:http://en.wikipedia.org/wiki/CAP_theorem[CAP Theorem] states that a dis
 
 HBase favors consistency and partition tolerance, where a decision has to be made. Coda Hale explains why partition tolerance is so important, in http://codahale.com/you-cant-sacrifice-partition-tolerance/. 
 
-Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:http://eng.yammer.com/call-me-maybe-hbase/[blog post] and an link:http://eng.yammer.com/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
+Robert Yokota used an automated testing framework called link:https://aphyr.com/tags/jepsen[Jepson] to test HBase's partition tolerance in the face of network partitions, using techniques modeled after Aphyr's link:https://aphyr.com/posts/281-call-me-maybe-carly-rae-jepsen-and-the-perils-of-network-partitions[Call Me Maybe] series. The results, available as a link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase/[blog post] and an link:https://rayokota.wordpress.com/2015/09/30/call-me-maybe-hbase-addendum/[addendum], show that HBase performs correctly.
 
 [[jvm]]
 == Java

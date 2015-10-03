@@ -222,9 +222,25 @@ Use the following legend to interpret this table:
 |Hadoop-2.3.x | NT | S | NT | NT | NT
 |Hadoop-2.4.x | NT | S | S | S | S
 |Hadoop-2.5.x | NT | S | S | S | S
-|Hadoop-2.6.x | NT | NT | S | S | S
-|Hadoop-2.7.x | NT | NT | NT | NT | NT
+|Hadoop-2.6.x | X | X | X | X | X
+|Hadoop-2.7.0 | X | X | X | X | X
+|Hadoop-2.7.1+ | NT | NT | NT | NT | S
 |===
+
+.Hadoop 2.6.x
+[TIP]
+====
+Hadoop distributions based on the 2.6.x line *must* have
+link:https://issues.apache.org/jira/browse/HADOOP-11710[HADOOP-11710] applied if you plan to run
+HBase on top of an HDFS Encryption Zone. Failure to do so will result in cluster failure and
+data loss.
+====
+
+.Hadoop 2.7.x
+[TIP]
+====
+Hadoop version 2.7.0 is not tested or supported as the Hadoop PMC has explicitly labeled that release as not being stable.
+====
 
 .Replace the Hadoop Bundled With HBase!
 [NOTE]
