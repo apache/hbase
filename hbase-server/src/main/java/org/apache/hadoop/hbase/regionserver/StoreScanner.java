@@ -580,16 +580,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * (See HBASE-13109)
    */
   private ScanQueryMatcher.MatchCode optimize(ScanQueryMatcher.MatchCode qcode, Cell cell) {
-    byte[] nextIndexedKey = getNextIndexedKey();
-    if (nextIndexedKey == null || nextIndexedKey == HConstants.NO_NEXT_INDEXED_KEY ||
-        store == null) {
-      return qcode;
-    }
     switch(qcode) {
     case INCLUDE_AND_SEEK_NEXT_COL:
     case SEEK_NEXT_COL:
     {
-      if (matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
+      byte[] nextIndexedKey = getNextIndexedKey();
+      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+          && matcher.compareKeyForNextColumn(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_COL ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
       break;
@@ -597,7 +594,9 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     case INCLUDE_AND_SEEK_NEXT_ROW:
     case SEEK_NEXT_ROW:
     {
-      if (matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
+      byte[] nextIndexedKey = getNextIndexedKey();
+      if (nextIndexedKey != null && nextIndexedKey != HConstants.NO_NEXT_INDEXED_KEY
+          && matcher.compareKeyForNextRow(nextIndexedKey, cell) >= 0) {
         return qcode == MatchCode.SEEK_NEXT_ROW ? MatchCode.SKIP : MatchCode.INCLUDE;
       }
       break;
