@@ -160,10 +160,10 @@ public class RegionStates {
   }
 
   /**
-   * @return an unmodifiable the region assignment map
+   * @return a copy of the region assignment map
    */
   public synchronized Map<HRegionInfo, ServerName> getRegionAssignments() {
-    return Collections.unmodifiableMap(regionAssignments);
+    return new TreeMap<HRegionInfo, ServerName>(regionAssignments);
   }
 
   /**
