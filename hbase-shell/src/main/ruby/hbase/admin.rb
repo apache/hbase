@@ -122,6 +122,27 @@ module Hbase
     end
 
     #----------------------------------------------------------------------------------------------
+    # Requests region normalization for all configured tables in the cluster
+    # Returns true if normalizer ran successfully
+    def normalize()
+      @admin.normalize()
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Enable/disable region normalizer
+    # Returns previous normalizer switch setting.
+    def normalizer_switch(enableDisable)
+      @admin.setNormalizerRunning(java.lang.Boolean::valueOf(enableDisable))
+    end
+
+    #----------------------------------------------------------------------------------------------
+    # Query the current state of region normalizer.
+    # Returns the state of region normalizer (true is enabled).
+    def normalizer_enabled?()
+      @admin.isNormalizerEnabled()
+    end
+
+    #----------------------------------------------------------------------------------------------
     # Request a scan of the catalog table (for garbage collection)
     # Returns an int signifying the number of entries cleaned
     def catalogjanitor_run()
@@ -559,6 +580,8 @@ module Hbase
         htd.setMaxFileSize(JLong.valueOf(arg.delete(MAX_FILESIZE))) if arg[MAX_FILESIZE]
         htd.setReadOnly(JBoolean.valueOf(arg.delete(READONLY))) if arg[READONLY]
         htd.setCompactionEnabled(JBoolean.valueOf(arg[COMPACTION_ENABLED])) if arg[COMPACTION_ENABLED]
+        htd.setNormalizationEnabled(
+          JBoolean.valueOf(arg[NORMALIZATION_ENABLED])) if arg[NORMALIZATION_ENABLED]
         htd.setMemStoreFlushSize(JLong.valueOf(arg.delete(MEMSTORE_FLUSHSIZE))) if arg[MEMSTORE_FLUSHSIZE]
         # DEFERRED_LOG_FLUSH is deprecated and was replaced by DURABILITY.  To keep backward compatible, it still exists.
         # However, it has to be set before DURABILITY so that DURABILITY could overwrite if both args are set

@@ -142,6 +142,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse;
@@ -2333,6 +2334,53 @@ public class HBaseAdmin implements Admin {
       public Boolean call(int callTimeout) throws ServiceException {
         return master.isBalancerEnabled(null, RequestConverter.buildIsBalancerEnabledRequest())
             .getEnabled();
+      }
+    });
+  }
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   *
+   * @return True if region normalizer ran, false otherwise.
+   */
+  @Override
+  public boolean normalize() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.normalize(null,
+          RequestConverter.buildNormalizeRequest()).getNormalizerRan();
+      }
+    });
+  }
+
+  /**
+   * Query the current state of the region normalizer
+   *
+   * @return true if region normalizer is enabled, false otherwise.
+   */
+  public boolean isNormalizerEnabled() throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        return master.isNormalizerEnabled(null,
+          RequestConverter.buildIsNormalizerEnabledRequest()).getEnabled();
+      }
+    });
+  }
+
+  /**
+   * Turn region normalizer on or off.
+   *
+   * @return Previous normalizer value
+   */
+  public boolean setNormalizerRunning(final boolean on) throws IOException {
+    return executeCallable(new MasterCallable<Boolean>(getConnection()) {
+      @Override
+      public Boolean call(int callTimeout) throws ServiceException {
+        SetNormalizerRunningRequest req =
+          RequestConverter.buildSetNormalizerRunningRequest(on);
+        return master.setNormalizerRunning(null, req).getPrevNormalizerValue();
       }
     });
   }
