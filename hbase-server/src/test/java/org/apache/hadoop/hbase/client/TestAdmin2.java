@@ -752,4 +752,26 @@ public class TestAdmin2 {
     // Current state should be the original state again
     assertEquals(initialState, admin.isBalancerEnabled());
   }
+
+  @Test(timeout = 30000)
+  public void testRegionNormalizer() throws Exception {
+    boolean initialState = admin.isNormalizerEnabled();
+
+    // flip state
+    boolean prevState = admin.setNormalizerRunning(!initialState);
+
+    // The previous state should be the original state we observed
+    assertEquals(initialState, prevState);
+
+    // Current state should be opposite of the original
+    assertEquals(!initialState, admin.isNormalizerEnabled());
+
+    // Reset it back to what it was
+    prevState = admin.setNormalizerRunning(initialState);
+
+    // The previous state should be the opposite of the initial state
+    assertEquals(!initialState, prevState);
+    // Current state should be the original state again
+    assertEquals(initialState, admin.isNormalizerEnabled());
+  }
 }

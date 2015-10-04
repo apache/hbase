@@ -111,6 +111,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
   public String splitLogZNode;
   // znode containing the state of the load balancer
   public String balancerZNode;
+  // znode containing the state of region normalizer
+  private String regionNormalizerZNode;
   // znode containing the lock for the tables
   public String tableLockZNode;
   // znode containing the state of recovering regions
@@ -351,6 +353,8 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
         conf.get("zookeeper.znode.splitlog", HConstants.SPLIT_LOGDIR_NAME));
     balancerZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.balancer", "balancer"));
+    regionNormalizerZNode = ZKUtil.joinZNode(baseZNode,
+      conf.get("zookeeper.znode.regionNormalizer", "normalizer"));
     tableLockZNode = ZKUtil.joinZNode(baseZNode,
         conf.get("zookeeper.znode.tableLock", "table-lock"));
     recoveringRegionsZNode = ZKUtil.joinZNode(baseZNode,
@@ -704,4 +708,10 @@ public class ZooKeeperWatcher implements Watcher, Abortable, Closeable {
     return this.masterAddressZNode;
   }
 
+  /**
+   * @return ZooKeeper znode for region normalizer state
+   */
+  public String getRegionNormalizerZNode() {
+    return regionNormalizerZNode;
+  }
 }

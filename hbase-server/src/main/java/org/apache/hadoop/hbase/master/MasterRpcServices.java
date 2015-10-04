@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -106,6 +107,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorE
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest;
@@ -130,6 +133,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableReques
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
@@ -141,6 +146,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilit
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.Capability;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ShutdownRequest;
@@ -266,6 +273,25 @@ public class MasterRpcServices extends RSRpcServices
 
   boolean synchronousBalanceSwitch(final boolean b) throws IOException {
     return switchBalancer(b, BalanceSwitchMode.SYNC);
+  }
+
+  /**
+   * Sets normalizer on/off flag in ZK.
+   */
+  public boolean normalizerSwitch(boolean on) {
+    boolean oldValue = master.getRegionNormalizerTracker().isNormalizerOn();
+    boolean newValue = on;
+    try {
+      try {
+        master.getRegionNormalizerTracker().setNormalizerOn(newValue);
+      } catch (KeeperException ke) {
+        throw new IOException(ke);
+      }
+      LOG.info(master.getClientIdAuditPrefix() + " set normalizerSwitch=" + newValue);
+    } catch (IOException ioe) {
+      LOG.warn("Error flipping normalizer switch", ioe);
+    }
+    return oldValue;
   }
 
   /**
@@ -1386,6 +1412,36 @@ public class MasterRpcServices extends RSRpcServices
       IsBalancerEnabledRequest request) throws ServiceException {
     IsBalancerEnabledResponse.Builder response = IsBalancerEnabledResponse.newBuilder();
     response.setEnabled(master.isBalancerOn());
+    return response.build();
+  }
+
+  @Override
+  public NormalizeResponse normalize(RpcController controller,
+      NormalizeRequest request) throws ServiceException {
+    try {
+      return NormalizeResponse.newBuilder().setNormalizerRan(master.normalizeRegions()).build();
+    } catch (IOException | CoordinatedStateException ex) {
+      throw new ServiceException(ex);
+    }
+  }
+
+  @Override
+  public SetNormalizerRunningResponse setNormalizerRunning(RpcController controller,
+      SetNormalizerRunningRequest request) throws ServiceException {
+    try {
+      master.checkInitialized();
+      boolean prevValue = normalizerSwitch(request.getOn());
+      return SetNormalizerRunningResponse.newBuilder().setPrevNormalizerValue(prevValue).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
+      IsNormalizerEnabledRequest request) throws ServiceException {
+    IsNormalizerEnabledResponse.Builder response = IsNormalizerEnabledResponse.newBuilder();
+    response.setEnabled(master.isNormalizerOn());
     return response.build();
   }
 

@@ -27360,6 +27360,2442 @@ public final class MasterProtos {
     // @@protoc_insertion_point(class_scope:IsBalancerEnabledResponse)
   }
 
+  public interface NormalizeRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code NormalizeRequest}
+   */
+  public static final class NormalizeRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements NormalizeRequestOrBuilder {
+    // Use NormalizeRequest.newBuilder() to construct.
+    private NormalizeRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private NormalizeRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final NormalizeRequest defaultInstance;
+    public static NormalizeRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public NormalizeRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private NormalizeRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<NormalizeRequest> PARSER =
+        new com.google.protobuf.AbstractParser<NormalizeRequest>() {
+      public NormalizeRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new NormalizeRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<NormalizeRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code NormalizeRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:NormalizeRequest)
+    }
+
+    static {
+      defaultInstance = new NormalizeRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:NormalizeRequest)
+  }
+
+  public interface NormalizeResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool normalizer_ran = 1;
+    /**
+     * <code>required bool normalizer_ran = 1;</code>
+     */
+    boolean hasNormalizerRan();
+    /**
+     * <code>required bool normalizer_ran = 1;</code>
+     */
+    boolean getNormalizerRan();
+  }
+  /**
+   * Protobuf type {@code NormalizeResponse}
+   */
+  public static final class NormalizeResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements NormalizeResponseOrBuilder {
+    // Use NormalizeResponse.newBuilder() to construct.
+    private NormalizeResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private NormalizeResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final NormalizeResponse defaultInstance;
+    public static NormalizeResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public NormalizeResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private NormalizeResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              normalizerRan_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<NormalizeResponse> PARSER =
+        new com.google.protobuf.AbstractParser<NormalizeResponse>() {
+      public NormalizeResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new NormalizeResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<NormalizeResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool normalizer_ran = 1;
+    public static final int NORMALIZER_RAN_FIELD_NUMBER = 1;
+    private boolean normalizerRan_;
+    /**
+     * <code>required bool normalizer_ran = 1;</code>
+     */
+    public boolean hasNormalizerRan() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool normalizer_ran = 1;</code>
+     */
+    public boolean getNormalizerRan() {
+      return normalizerRan_;
+    }
+
+    private void initFields() {
+      normalizerRan_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasNormalizerRan()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, normalizerRan_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, normalizerRan_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse) obj;
+
+      boolean result = true;
+      result = result && (hasNormalizerRan() == other.hasNormalizerRan());
+      if (hasNormalizerRan()) {
+        result = result && (getNormalizerRan()
+            == other.getNormalizerRan());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasNormalizerRan()) {
+        hash = (37 * hash) + NORMALIZER_RAN_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getNormalizerRan());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code NormalizeResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        normalizerRan_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_NormalizeResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.normalizerRan_ = normalizerRan_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance()) return this;
+        if (other.hasNormalizerRan()) {
+          setNormalizerRan(other.getNormalizerRan());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasNormalizerRan()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool normalizer_ran = 1;
+      private boolean normalizerRan_ ;
+      /**
+       * <code>required bool normalizer_ran = 1;</code>
+       */
+      public boolean hasNormalizerRan() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool normalizer_ran = 1;</code>
+       */
+      public boolean getNormalizerRan() {
+        return normalizerRan_;
+      }
+      /**
+       * <code>required bool normalizer_ran = 1;</code>
+       */
+      public Builder setNormalizerRan(boolean value) {
+        bitField0_ |= 0x00000001;
+        normalizerRan_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool normalizer_ran = 1;</code>
+       */
+      public Builder clearNormalizerRan() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        normalizerRan_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:NormalizeResponse)
+    }
+
+    static {
+      defaultInstance = new NormalizeResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:NormalizeResponse)
+  }
+
+  public interface SetNormalizerRunningRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool on = 1;
+    /**
+     * <code>required bool on = 1;</code>
+     */
+    boolean hasOn();
+    /**
+     * <code>required bool on = 1;</code>
+     */
+    boolean getOn();
+  }
+  /**
+   * Protobuf type {@code SetNormalizerRunningRequest}
+   */
+  public static final class SetNormalizerRunningRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements SetNormalizerRunningRequestOrBuilder {
+    // Use SetNormalizerRunningRequest.newBuilder() to construct.
+    private SetNormalizerRunningRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SetNormalizerRunningRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SetNormalizerRunningRequest defaultInstance;
+    public static SetNormalizerRunningRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SetNormalizerRunningRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SetNormalizerRunningRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              on_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SetNormalizerRunningRequest> PARSER =
+        new com.google.protobuf.AbstractParser<SetNormalizerRunningRequest>() {
+      public SetNormalizerRunningRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SetNormalizerRunningRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SetNormalizerRunningRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool on = 1;
+    public static final int ON_FIELD_NUMBER = 1;
+    private boolean on_;
+    /**
+     * <code>required bool on = 1;</code>
+     */
+    public boolean hasOn() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool on = 1;</code>
+     */
+    public boolean getOn() {
+      return on_;
+    }
+
+    private void initFields() {
+      on_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasOn()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, on_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, on_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest) obj;
+
+      boolean result = true;
+      result = result && (hasOn() == other.hasOn());
+      if (hasOn()) {
+        result = result && (getOn()
+            == other.getOn());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasOn()) {
+        hash = (37 * hash) + ON_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getOn());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code SetNormalizerRunningRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        on_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.on_ = on_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.getDefaultInstance()) return this;
+        if (other.hasOn()) {
+          setOn(other.getOn());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasOn()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool on = 1;
+      private boolean on_ ;
+      /**
+       * <code>required bool on = 1;</code>
+       */
+      public boolean hasOn() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool on = 1;</code>
+       */
+      public boolean getOn() {
+        return on_;
+      }
+      /**
+       * <code>required bool on = 1;</code>
+       */
+      public Builder setOn(boolean value) {
+        bitField0_ |= 0x00000001;
+        on_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool on = 1;</code>
+       */
+      public Builder clearOn() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        on_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:SetNormalizerRunningRequest)
+    }
+
+    static {
+      defaultInstance = new SetNormalizerRunningRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:SetNormalizerRunningRequest)
+  }
+
+  public interface SetNormalizerRunningResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // optional bool prev_normalizer_value = 1;
+    /**
+     * <code>optional bool prev_normalizer_value = 1;</code>
+     */
+    boolean hasPrevNormalizerValue();
+    /**
+     * <code>optional bool prev_normalizer_value = 1;</code>
+     */
+    boolean getPrevNormalizerValue();
+  }
+  /**
+   * Protobuf type {@code SetNormalizerRunningResponse}
+   */
+  public static final class SetNormalizerRunningResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements SetNormalizerRunningResponseOrBuilder {
+    // Use SetNormalizerRunningResponse.newBuilder() to construct.
+    private SetNormalizerRunningResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private SetNormalizerRunningResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final SetNormalizerRunningResponse defaultInstance;
+    public static SetNormalizerRunningResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public SetNormalizerRunningResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private SetNormalizerRunningResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              prevNormalizerValue_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<SetNormalizerRunningResponse> PARSER =
+        new com.google.protobuf.AbstractParser<SetNormalizerRunningResponse>() {
+      public SetNormalizerRunningResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new SetNormalizerRunningResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<SetNormalizerRunningResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // optional bool prev_normalizer_value = 1;
+    public static final int PREV_NORMALIZER_VALUE_FIELD_NUMBER = 1;
+    private boolean prevNormalizerValue_;
+    /**
+     * <code>optional bool prev_normalizer_value = 1;</code>
+     */
+    public boolean hasPrevNormalizerValue() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>optional bool prev_normalizer_value = 1;</code>
+     */
+    public boolean getPrevNormalizerValue() {
+      return prevNormalizerValue_;
+    }
+
+    private void initFields() {
+      prevNormalizerValue_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, prevNormalizerValue_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, prevNormalizerValue_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse) obj;
+
+      boolean result = true;
+      result = result && (hasPrevNormalizerValue() == other.hasPrevNormalizerValue());
+      if (hasPrevNormalizerValue()) {
+        result = result && (getPrevNormalizerValue()
+            == other.getPrevNormalizerValue());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasPrevNormalizerValue()) {
+        hash = (37 * hash) + PREV_NORMALIZER_VALUE_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getPrevNormalizerValue());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code SetNormalizerRunningResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        prevNormalizerValue_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_SetNormalizerRunningResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.prevNormalizerValue_ = prevNormalizerValue_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance()) return this;
+        if (other.hasPrevNormalizerValue()) {
+          setPrevNormalizerValue(other.getPrevNormalizerValue());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // optional bool prev_normalizer_value = 1;
+      private boolean prevNormalizerValue_ ;
+      /**
+       * <code>optional bool prev_normalizer_value = 1;</code>
+       */
+      public boolean hasPrevNormalizerValue() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>optional bool prev_normalizer_value = 1;</code>
+       */
+      public boolean getPrevNormalizerValue() {
+        return prevNormalizerValue_;
+      }
+      /**
+       * <code>optional bool prev_normalizer_value = 1;</code>
+       */
+      public Builder setPrevNormalizerValue(boolean value) {
+        bitField0_ |= 0x00000001;
+        prevNormalizerValue_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool prev_normalizer_value = 1;</code>
+       */
+      public Builder clearPrevNormalizerValue() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        prevNormalizerValue_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:SetNormalizerRunningResponse)
+    }
+
+    static {
+      defaultInstance = new SetNormalizerRunningResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:SetNormalizerRunningResponse)
+  }
+
+  public interface IsNormalizerEnabledRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  /**
+   * Protobuf type {@code IsNormalizerEnabledRequest}
+   */
+  public static final class IsNormalizerEnabledRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements IsNormalizerEnabledRequestOrBuilder {
+    // Use IsNormalizerEnabledRequest.newBuilder() to construct.
+    private IsNormalizerEnabledRequest(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private IsNormalizerEnabledRequest(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final IsNormalizerEnabledRequest defaultInstance;
+    public static IsNormalizerEnabledRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public IsNormalizerEnabledRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private IsNormalizerEnabledRequest(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledRequest_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledRequest_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<IsNormalizerEnabledRequest> PARSER =
+        new com.google.protobuf.AbstractParser<IsNormalizerEnabledRequest>() {
+      public IsNormalizerEnabledRequest parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new IsNormalizerEnabledRequest(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<IsNormalizerEnabledRequest> getParserForType() {
+      return PARSER;
+    }
+
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest) obj;
+
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code IsNormalizerEnabledRequest}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledRequest_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledRequest_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledRequest_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest(this);
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:IsNormalizerEnabledRequest)
+    }
+
+    static {
+      defaultInstance = new IsNormalizerEnabledRequest(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:IsNormalizerEnabledRequest)
+  }
+
+  public interface IsNormalizerEnabledResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required bool enabled = 1;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean hasEnabled();
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    boolean getEnabled();
+  }
+  /**
+   * Protobuf type {@code IsNormalizerEnabledResponse}
+   */
+  public static final class IsNormalizerEnabledResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements IsNormalizerEnabledResponseOrBuilder {
+    // Use IsNormalizerEnabledResponse.newBuilder() to construct.
+    private IsNormalizerEnabledResponse(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private IsNormalizerEnabledResponse(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final IsNormalizerEnabledResponse defaultInstance;
+    public static IsNormalizerEnabledResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public IsNormalizerEnabledResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private IsNormalizerEnabledResponse(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              bitField0_ |= 0x00000001;
+              enabled_ = input.readBool();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledResponse_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledResponse_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<IsNormalizerEnabledResponse> PARSER =
+        new com.google.protobuf.AbstractParser<IsNormalizerEnabledResponse>() {
+      public IsNormalizerEnabledResponse parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new IsNormalizerEnabledResponse(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<IsNormalizerEnabledResponse> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required bool enabled = 1;
+    public static final int ENABLED_FIELD_NUMBER = 1;
+    private boolean enabled_;
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean hasEnabled() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required bool enabled = 1;</code>
+     */
+    public boolean getEnabled() {
+      return enabled_;
+    }
+
+    private void initFields() {
+      enabled_ = false;
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasEnabled()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBool(1, enabled_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, enabled_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse) obj;
+
+      boolean result = true;
+      result = result && (hasEnabled() == other.hasEnabled());
+      if (hasEnabled()) {
+        result = result && (getEnabled()
+            == other.getEnabled());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasEnabled()) {
+        hash = (37 * hash) + ENABLED_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getEnabled());
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code IsNormalizerEnabledResponse}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledResponse_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledResponse_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.class, org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        enabled_ = false;
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.internal_static_IsNormalizerEnabledResponse_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.enabled_ = enabled_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance()) return this;
+        if (other.hasEnabled()) {
+          setEnabled(other.getEnabled());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasEnabled()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required bool enabled = 1;
+      private boolean enabled_ ;
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean hasEnabled() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public boolean getEnabled() {
+        return enabled_;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder setEnabled(boolean value) {
+        bitField0_ |= 0x00000001;
+        enabled_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required bool enabled = 1;</code>
+       */
+      public Builder clearEnabled() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        enabled_ = false;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:IsNormalizerEnabledResponse)
+    }
+
+    static {
+      defaultInstance = new IsNormalizerEnabledResponse(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:IsNormalizerEnabledResponse)
+  }
+
   public interface RunCatalogScanRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
   }
@@ -50343,6 +52779,46 @@ public final class MasterProtos {
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse> done);
 
       /**
+       * <code>rpc Normalize(.NormalizeRequest) returns (.NormalizeResponse);</code>
+       *
+       * <pre>
+       **
+       * Run region normalizer. Can NOT run for various reasons. Check logs.
+       * </pre>
+       */
+      public abstract void normalize(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse> done);
+
+      /**
+       * <code>rpc SetNormalizerRunning(.SetNormalizerRunningRequest) returns (.SetNormalizerRunningResponse);</code>
+       *
+       * <pre>
+       **
+       * Turn region normalizer on or off.
+       * If synchronous is true, it waits until current balance() call, if outstanding, to return.
+       * </pre>
+       */
+      public abstract void setNormalizerRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse> done);
+
+      /**
+       * <code>rpc IsNormalizerEnabled(.IsNormalizerEnabledRequest) returns (.IsNormalizerEnabledResponse);</code>
+       *
+       * <pre>
+       **
+       * Query whether region normalizer is enabled.
+       * </pre>
+       */
+      public abstract void isNormalizerEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse> done);
+
+      /**
        * <code>rpc RunCatalogScan(.RunCatalogScanRequest) returns (.RunCatalogScanResponse);</code>
        *
        * <pre>
@@ -50849,6 +53325,30 @@ public final class MasterProtos {
         }
 
         @java.lang.Override
+        public  void normalize(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse> done) {
+          impl.normalize(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void setNormalizerRunning(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse> done) {
+          impl.setNormalizerRunning(controller, request, done);
+        }
+
+        @java.lang.Override
+        public  void isNormalizerEnabled(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse> done) {
+          impl.isNormalizerEnabled(controller, request, done);
+        }
+
+        @java.lang.Override
         public  void runCatalogScan(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest request,
@@ -51119,54 +53619,60 @@ public final class MasterProtos {
             case 23:
               return impl.isBalancerEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest)request);
             case 24:
-              return impl.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest)request);
+              return impl.normalize(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest)request);
             case 25:
-              return impl.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest)request);
+              return impl.setNormalizerRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest)request);
             case 26:
-              return impl.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest)request);
+              return impl.isNormalizerEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest)request);
             case 27:
-              return impl.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
+              return impl.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest)request);
             case 28:
-              return impl.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest)request);
+              return impl.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest)request);
             case 29:
-              return impl.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest)request);
+              return impl.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest)request);
             case 30:
-              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest)request);
+              return impl.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request);
             case 31:
-              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest)request);
+              return impl.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest)request);
             case 32:
-              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest)request);
+              return impl.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest)request);
             case 33:
-              return impl.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest)request);
+              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest)request);
             case 34:
-              return impl.execProcedure(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request);
+              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest)request);
             case 35:
-              return impl.execProcedureWithRet(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request);
+              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest)request);
             case 36:
-              return impl.isProcedureDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest)request);
+              return impl.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest)request);
             case 37:
-              return impl.modifyNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest)request);
+              return impl.execProcedure(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request);
             case 38:
-              return impl.createNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest)request);
+              return impl.execProcedureWithRet(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request);
             case 39:
-              return impl.deleteNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest)request);
+              return impl.isProcedureDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest)request);
             case 40:
-              return impl.getNamespaceDescriptor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest)request);
+              return impl.modifyNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest)request);
             case 41:
-              return impl.listNamespaceDescriptors(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest)request);
+              return impl.createNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest)request);
             case 42:
-              return impl.listTableDescriptorsByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest)request);
+              return impl.deleteNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest)request);
             case 43:
-              return impl.listTableNamesByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest)request);
+              return impl.getNamespaceDescriptor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest)request);
             case 44:
-              return impl.setQuota(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest)request);
+              return impl.listNamespaceDescriptors(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest)request);
             case 45:
-              return impl.getLastMajorCompactionTimestamp(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest)request);
+              return impl.listTableDescriptorsByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest)request);
             case 46:
-              return impl.getLastMajorCompactionTimestampForRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest)request);
+              return impl.listTableNamesByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest)request);
             case 47:
-              return impl.getProcedureResult(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest)request);
+              return impl.setQuota(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest)request);
             case 48:
+              return impl.getLastMajorCompactionTimestamp(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest)request);
+            case 49:
+              return impl.getLastMajorCompactionTimestampForRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest)request);
+            case 50:
+              return impl.getProcedureResult(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest)request);
+            case 51:
               return impl.getSecurityCapabilities(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -51231,54 +53737,60 @@ public final class MasterProtos {
             case 23:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.getDefaultInstance();
             case 25:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.getDefaultInstance();
             case 26:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.getDefaultInstance();
             case 27:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest.getDefaultInstance();
             case 28:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest.getDefaultInstance();
             case 29:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
             case 30:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
             case 31:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest.getDefaultInstance();
             case 32:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest.getDefaultInstance();
             case 33:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest.getDefaultInstance();
             case 34:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest.getDefaultInstance();
             case 35:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest.getDefaultInstance();
             case 36:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
             case 37:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
             case 38:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
             case 39:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest.getDefaultInstance();
             case 40:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest.getDefaultInstance();
             case 41:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest.getDefaultInstance();
             case 42:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest.getDefaultInstance();
             case 43:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest.getDefaultInstance();
             case 44:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest.getDefaultInstance();
             case 45:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest.getDefaultInstance();
             case 46:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest.getDefaultInstance();
             case 47:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
             case 48:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest.getDefaultInstance();
+            case 49:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
+            case 50:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+            case 51:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -51343,54 +53855,60 @@ public final class MasterProtos {
             case 23:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance();
             case 25:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance();
             case 26:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance();
             case 27:
-              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance();
             case 28:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance();
             case 29:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
             case 30:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
             case 31:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance();
             case 32:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance();
             case 33:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance();
             case 34:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance();
             case 35:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance();
             case 36:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
             case 37:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
             case 38:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
             case 39:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance();
             case 40:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance();
             case 41:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance();
             case 42:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance();
             case 43:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance();
             case 44:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance();
             case 45:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance();
             case 46:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance();
             case 47:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
             case 48:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+            case 49:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+            case 50:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+            case 51:
               return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -51701,6 +54219,46 @@ public final class MasterProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse> done);
+
+    /**
+     * <code>rpc Normalize(.NormalizeRequest) returns (.NormalizeResponse);</code>
+     *
+     * <pre>
+     **
+     * Run region normalizer. Can NOT run for various reasons. Check logs.
+     * </pre>
+     */
+    public abstract void normalize(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse> done);
+
+    /**
+     * <code>rpc SetNormalizerRunning(.SetNormalizerRunningRequest) returns (.SetNormalizerRunningResponse);</code>
+     *
+     * <pre>
+     **
+     * Turn region normalizer on or off.
+     * If synchronous is true, it waits until current balance() call, if outstanding, to return.
+     * </pre>
+     */
+    public abstract void setNormalizerRunning(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse> done);
+
+    /**
+     * <code>rpc IsNormalizerEnabled(.IsNormalizerEnabledRequest) returns (.IsNormalizerEnabledResponse);</code>
+     *
+     * <pre>
+     **
+     * Query whether region normalizer is enabled.
+     * </pre>
+     */
+    public abstract void isNormalizerEnabled(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse> done);
 
     /**
      * <code>rpc RunCatalogScan(.RunCatalogScanRequest) returns (.RunCatalogScanResponse);</code>
@@ -52154,126 +54712,141 @@ public final class MasterProtos {
               done));
           return;
         case 24:
+          this.normalize(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse>specializeCallback(
+              done));
+          return;
+        case 25:
+          this.setNormalizerRunning(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse>specializeCallback(
+              done));
+          return;
+        case 26:
+          this.isNormalizerEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse>specializeCallback(
+              done));
+          return;
+        case 27:
           this.runCatalogScan(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse>specializeCallback(
               done));
           return;
-        case 25:
+        case 28:
           this.enableCatalogJanitor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse>specializeCallback(
               done));
           return;
-        case 26:
+        case 29:
           this.isCatalogJanitorEnabled(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse>specializeCallback(
               done));
           return;
-        case 27:
+        case 30:
           this.execMasterService(controller, (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse>specializeCallback(
               done));
           return;
-        case 28:
+        case 31:
           this.snapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse>specializeCallback(
               done));
           return;
-        case 29:
+        case 32:
           this.getCompletedSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse>specializeCallback(
               done));
           return;
-        case 30:
+        case 33:
           this.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse>specializeCallback(
               done));
           return;
-        case 31:
+        case 34:
           this.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse>specializeCallback(
               done));
           return;
-        case 32:
+        case 35:
           this.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse>specializeCallback(
               done));
           return;
-        case 33:
+        case 36:
           this.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse>specializeCallback(
               done));
           return;
-        case 34:
+        case 37:
           this.execProcedure(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse>specializeCallback(
               done));
           return;
-        case 35:
+        case 38:
           this.execProcedureWithRet(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse>specializeCallback(
               done));
           return;
-        case 36:
+        case 39:
           this.isProcedureDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse>specializeCallback(
               done));
           return;
-        case 37:
+        case 40:
           this.modifyNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse>specializeCallback(
               done));
           return;
-        case 38:
+        case 41:
           this.createNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse>specializeCallback(
               done));
           return;
-        case 39:
+        case 42:
           this.deleteNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse>specializeCallback(
               done));
           return;
-        case 40:
+        case 43:
           this.getNamespaceDescriptor(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse>specializeCallback(
               done));
           return;
-        case 41:
+        case 44:
           this.listNamespaceDescriptors(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse>specializeCallback(
               done));
           return;
-        case 42:
+        case 45:
           this.listTableDescriptorsByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse>specializeCallback(
               done));
           return;
-        case 43:
+        case 46:
           this.listTableNamesByNamespace(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse>specializeCallback(
               done));
           return;
-        case 44:
+        case 47:
           this.setQuota(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse>specializeCallback(
               done));
           return;
-        case 45:
+        case 48:
           this.getLastMajorCompactionTimestamp(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse>specializeCallback(
               done));
           return;
-        case 46:
+        case 49:
           this.getLastMajorCompactionTimestampForRegion(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse>specializeCallback(
               done));
           return;
-        case 47:
+        case 50:
           this.getProcedureResult(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse>specializeCallback(
               done));
           return;
-        case 48:
+        case 51:
           this.getSecurityCapabilities(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse>specializeCallback(
               done));
@@ -52341,54 +54914,60 @@ public final class MasterProtos {
         case 23:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest.getDefaultInstance();
         case 25:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest.getDefaultInstance();
         case 26:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest.getDefaultInstance();
         case 27:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest.getDefaultInstance();
         case 28:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest.getDefaultInstance();
         case 29:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest.getDefaultInstance();
         case 30:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest.getDefaultInstance();
         case 31:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest.getDefaultInstance();
         case 32:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest.getDefaultInstance();
         case 33:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest.getDefaultInstance();
         case 34:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest.getDefaultInstance();
         case 35:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest.getDefaultInstance();
         case 36:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
         case 37:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
         case 38:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest.getDefaultInstance();
         case 39:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest.getDefaultInstance();
         case 40:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest.getDefaultInstance();
         case 41:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest.getDefaultInstance();
         case 42:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest.getDefaultInstance();
         case 43:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest.getDefaultInstance();
         case 44:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest.getDefaultInstance();
         case 45:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest.getDefaultInstance();
         case 46:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest.getDefaultInstance();
         case 47:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest.getDefaultInstance();
         case 48:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest.getDefaultInstance();
+        case 49:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest.getDefaultInstance();
+        case 50:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest.getDefaultInstance();
+        case 51:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -52453,54 +55032,60 @@ public final class MasterProtos {
         case 23:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance();
         case 25:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance();
         case 26:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance();
         case 27:
-          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance();
         case 28:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance();
         case 29:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance();
         case 30:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance();
         case 31:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance();
         case 32:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance();
         case 33:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance();
         case 34:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance();
         case 35:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance();
         case 36:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
         case 37:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
         case 38:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance();
         case 39:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance();
         case 40:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance();
         case 41:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance();
         case 42:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance();
         case 43:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance();
         case 44:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance();
         case 45:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance();
         case 46:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance();
         case 47:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance();
         case 48:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+        case 49:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance();
+        case 50:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance();
+        case 51:
           return org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -52883,12 +55468,57 @@ public final class MasterProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse.getDefaultInstance()));
       }
 
+      public  void normalize(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(24),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance()));
+      }
+
+      public  void setNormalizerRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(25),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance()));
+      }
+
+      public  void isNormalizerEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(26),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance()));
+      }
+
       public  void runCatalogScan(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(27),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance(),
@@ -52903,7 +55533,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(28),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance(),
@@ -52918,7 +55548,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(26),
+          getDescriptor().getMethods().get(29),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance(),
@@ -52933,7 +55563,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(27),
+          getDescriptor().getMethods().get(30),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance(),
@@ -52948,7 +55578,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(28),
+          getDescriptor().getMethods().get(31),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance(),
@@ -52963,7 +55593,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(29),
+          getDescriptor().getMethods().get(32),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance(),
@@ -52978,7 +55608,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(30),
+          getDescriptor().getMethods().get(33),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance(),
@@ -52993,7 +55623,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(31),
+          getDescriptor().getMethods().get(34),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance(),
@@ -53008,7 +55638,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(32),
+          getDescriptor().getMethods().get(35),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance(),
@@ -53023,7 +55653,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(33),
+          getDescriptor().getMethods().get(36),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance(),
@@ -53038,7 +55668,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(34),
+          getDescriptor().getMethods().get(37),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance(),
@@ -53053,7 +55683,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(35),
+          getDescriptor().getMethods().get(38),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance(),
@@ -53068,7 +55698,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(36),
+          getDescriptor().getMethods().get(39),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance(),
@@ -53083,7 +55713,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(37),
+          getDescriptor().getMethods().get(40),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance(),
@@ -53098,7 +55728,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(38),
+          getDescriptor().getMethods().get(41),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance(),
@@ -53113,7 +55743,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(39),
+          getDescriptor().getMethods().get(42),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance(),
@@ -53128,7 +55758,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(40),
+          getDescriptor().getMethods().get(43),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance(),
@@ -53143,7 +55773,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(41),
+          getDescriptor().getMethods().get(44),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance(),
@@ -53158,7 +55788,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(42),
+          getDescriptor().getMethods().get(45),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance(),
@@ -53173,7 +55803,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(43),
+          getDescriptor().getMethods().get(46),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance(),
@@ -53188,7 +55818,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(44),
+          getDescriptor().getMethods().get(47),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance(),
@@ -53203,7 +55833,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(45),
+          getDescriptor().getMethods().get(48),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance(),
@@ -53218,7 +55848,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(46),
+          getDescriptor().getMethods().get(49),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance(),
@@ -53233,7 +55863,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(47),
+          getDescriptor().getMethods().get(50),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance(),
@@ -53248,7 +55878,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(48),
+          getDescriptor().getMethods().get(51),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance(),
@@ -53383,6 +56013,21 @@ public final class MasterProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse isBalancerEnabled(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse normalize(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse setNormalizerRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request)
+          throws com.google.protobuf.ServiceException;
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse isNormalizerEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request)
           throws com.google.protobuf.ServiceException;
 
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse runCatalogScan(
@@ -53806,12 +56451,48 @@ public final class MasterProtos {
       }
 
 
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse normalize(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(24),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse setNormalizerRunning(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(25),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse.getDefaultInstance());
+      }
+
+
+      public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse isNormalizerEnabled(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(26),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse.getDefaultInstance());
+      }
+
+
       public org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse runCatalogScan(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(27),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanResponse.getDefaultInstance());
@@ -53823,7 +56504,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(28),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.EnableCatalogJanitorResponse.getDefaultInstance());
@@ -53835,7 +56516,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(26),
+          getDescriptor().getMethods().get(29),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledResponse.getDefaultInstance());
@@ -53847,7 +56528,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(27),
+          getDescriptor().getMethods().get(30),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.ClientProtos.CoprocessorServiceResponse.getDefaultInstance());
@@ -53859,7 +56540,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(28),
+          getDescriptor().getMethods().get(31),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SnapshotResponse.getDefaultInstance());
@@ -53871,7 +56552,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(29),
+          getDescriptor().getMethods().get(32),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetCompletedSnapshotsResponse.getDefaultInstance());
@@ -53883,7 +56564,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(30),
+          getDescriptor().getMethods().get(33),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotResponse.getDefaultInstance());
@@ -53895,7 +56576,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(31),
+          getDescriptor().getMethods().get(34),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse.getDefaultInstance());
@@ -53907,7 +56588,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(32),
+          getDescriptor().getMethods().get(35),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RestoreSnapshotResponse.getDefaultInstance());
@@ -53919,7 +56600,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(33),
+          getDescriptor().getMethods().get(36),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance());
@@ -53931,7 +56612,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(34),
+          getDescriptor().getMethods().get(37),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance());
@@ -53943,7 +56624,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(35),
+          getDescriptor().getMethods().get(38),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ExecProcedureResponse.getDefaultInstance());
@@ -53955,7 +56636,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(36),
+          getDescriptor().getMethods().get(39),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsProcedureDoneResponse.getDefaultInstance());
@@ -53967,7 +56648,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(37),
+          getDescriptor().getMethods().get(40),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceResponse.getDefaultInstance());
@@ -53979,7 +56660,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(38),
+          getDescriptor().getMethods().get(41),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceResponse.getDefaultInstance());
@@ -53991,7 +56672,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(39),
+          getDescriptor().getMethods().get(42),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceResponse.getDefaultInstance());
@@ -54003,7 +56684,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(40),
+          getDescriptor().getMethods().get(43),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetNamespaceDescriptorResponse.getDefaultInstance());
@@ -54015,7 +56696,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(41),
+          getDescriptor().getMethods().get(44),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListNamespaceDescriptorsResponse.getDefaultInstance());
@@ -54027,7 +56708,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(42),
+          getDescriptor().getMethods().get(45),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableDescriptorsByNamespaceResponse.getDefaultInstance());
@@ -54039,7 +56720,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(43),
+          getDescriptor().getMethods().get(46),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByNamespaceResponse.getDefaultInstance());
@@ -54051,7 +56732,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(44),
+          getDescriptor().getMethods().get(47),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetQuotaResponse.getDefaultInstance());
@@ -54063,7 +56744,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(45),
+          getDescriptor().getMethods().get(48),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance());
@@ -54075,7 +56756,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(46),
+          getDescriptor().getMethods().get(49),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampResponse.getDefaultInstance());
@@ -54087,7 +56768,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(47),
+          getDescriptor().getMethods().get(50),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetProcedureResultResponse.getDefaultInstance());
@@ -54099,7 +56780,7 @@ public final class MasterProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(48),
+          getDescriptor().getMethods().get(51),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse.getDefaultInstance());
@@ -54370,6 +57051,36 @@ public final class MasterProtos {
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_IsBalancerEnabledResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_NormalizeRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_NormalizeRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_NormalizeResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_NormalizeResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_SetNormalizerRunningRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_SetNormalizerRunningRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_SetNormalizerRunningResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_SetNormalizerRunningResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_IsNormalizerEnabledRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_IsNormalizerEnabledRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_IsNormalizerEnabledResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_IsNormalizerEnabledResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RunCatalogScanRequest_descriptor;
   private static
@@ -54662,170 +57373,182 @@ public final class MasterProtos {
       "\n\013synchronous\030\002 \001(\010\"8\n\032SetBalancerRunnin" +
       "gResponse\022\032\n\022prev_balance_value\030\001 \001(\010\"\032\n" +
       "\030IsBalancerEnabledRequest\",\n\031IsBalancerE" +
-      "nabledResponse\022\017\n\007enabled\030\001 \002(\010\"\027\n\025RunCa" +
-      "talogScanRequest\"-\n\026RunCatalogScanRespon",
-      "se\022\023\n\013scan_result\030\001 \001(\005\"-\n\033EnableCatalog" +
-      "JanitorRequest\022\016\n\006enable\030\001 \002(\010\"2\n\034Enable" +
-      "CatalogJanitorResponse\022\022\n\nprev_value\030\001 \001" +
-      "(\010\" \n\036IsCatalogJanitorEnabledRequest\"0\n\037" +
-      "IsCatalogJanitorEnabledResponse\022\r\n\005value" +
-      "\030\001 \002(\010\"9\n\017SnapshotRequest\022&\n\010snapshot\030\001 " +
-      "\002(\0132\024.SnapshotDescription\",\n\020SnapshotRes" +
-      "ponse\022\030\n\020expected_timeout\030\001 \002(\003\"\036\n\034GetCo" +
-      "mpletedSnapshotsRequest\"H\n\035GetCompletedS" +
-      "napshotsResponse\022\'\n\tsnapshots\030\001 \003(\0132\024.Sn",
-      "apshotDescription\"?\n\025DeleteSnapshotReque" +
-      "st\022&\n\010snapshot\030\001 \002(\0132\024.SnapshotDescripti" +
-      "on\"\030\n\026DeleteSnapshotResponse\"@\n\026RestoreS" +
-      "napshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snaps" +
-      "hotDescription\"\031\n\027RestoreSnapshotRespons" +
-      "e\"?\n\025IsSnapshotDoneRequest\022&\n\010snapshot\030\001" +
-      " \001(\0132\024.SnapshotDescription\"U\n\026IsSnapshot" +
-      "DoneResponse\022\023\n\004done\030\001 \001(\010:\005false\022&\n\010sna" +
-      "pshot\030\002 \001(\0132\024.SnapshotDescription\"F\n\034IsR" +
-      "estoreSnapshotDoneRequest\022&\n\010snapshot\030\001 ",
-      "\001(\0132\024.SnapshotDescription\"4\n\035IsRestoreSn" +
-      "apshotDoneResponse\022\023\n\004done\030\001 \001(\010:\005false\"" +
-      "=\n\033GetSchemaAlterStatusRequest\022\036\n\ntable_" +
-      "name\030\001 \002(\0132\n.TableName\"T\n\034GetSchemaAlter" +
-      "StatusResponse\022\035\n\025yet_to_update_regions\030" +
-      "\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\202\001\n\032GetTabl" +
-      "eDescriptorsRequest\022\037\n\013table_names\030\001 \003(\013" +
-      "2\n.TableName\022\r\n\005regex\030\002 \001(\t\022!\n\022include_s" +
-      "ys_tables\030\003 \001(\010:\005false\022\021\n\tnamespace\030\004 \001(" +
-      "\t\"A\n\033GetTableDescriptorsResponse\022\"\n\014tabl",
-      "e_schema\030\001 \003(\0132\014.TableSchema\"[\n\024GetTable" +
-      "NamesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022include_s" +
-      "ys_tables\030\002 \001(\010:\005false\022\021\n\tnamespace\030\003 \001(" +
-      "\t\"8\n\025GetTableNamesResponse\022\037\n\013table_name" +
-      "s\030\001 \003(\0132\n.TableName\"\031\n\027GetClusterStatusR" +
-      "equest\"B\n\030GetClusterStatusResponse\022&\n\016cl" +
-      "uster_status\030\001 \002(\0132\016.ClusterStatus\"\030\n\026Is" +
-      "MasterRunningRequest\"4\n\027IsMasterRunningR" +
-      "esponse\022\031\n\021is_master_running\030\001 \002(\010\"@\n\024Ex" +
-      "ecProcedureRequest\022(\n\tprocedure\030\001 \002(\0132\025.",
-      "ProcedureDescription\"F\n\025ExecProcedureRes" +
-      "ponse\022\030\n\020expected_timeout\030\001 \001(\003\022\023\n\013retur" +
-      "n_data\030\002 \001(\014\"B\n\026IsProcedureDoneRequest\022(" +
-      "\n\tprocedure\030\001 \001(\0132\025.ProcedureDescription" +
-      "\"W\n\027IsProcedureDoneResponse\022\023\n\004done\030\001 \001(" +
-      "\010:\005false\022\'\n\010snapshot\030\002 \001(\0132\025.ProcedureDe" +
-      "scription\",\n\031GetProcedureResultRequest\022\017" +
-      "\n\007proc_id\030\001 \002(\004\"\347\001\n\032GetProcedureResultRe" +
-      "sponse\0220\n\005state\030\001 \002(\0162!.GetProcedureResu" +
-      "ltResponse.State\022\022\n\nstart_time\030\002 \001(\004\022\023\n\013",
-      "last_update\030\003 \001(\004\022\016\n\006result\030\004 \001(\014\022+\n\texc" +
-      "eption\030\005 \001(\0132\030.ForeignExceptionMessage\"1" +
-      "\n\005State\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNING\020\001\022\014\n\010F" +
-      "INISHED\020\002\"\273\001\n\017SetQuotaRequest\022\021\n\tuser_na" +
-      "me\030\001 \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n\tnamespac" +
-      "e\030\003 \001(\t\022\036\n\ntable_name\030\004 \001(\0132\n.TableName\022" +
-      "\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass_globals\030\006 " +
-      "\001(\010\022\"\n\010throttle\030\007 \001(\0132\020.ThrottleRequest\"" +
-      "\022\n\020SetQuotaResponse\"A\n\037MajorCompactionTi" +
-      "mestampRequest\022\036\n\ntable_name\030\001 \002(\0132\n.Tab",
-      "leName\"L\n(MajorCompactionTimestampForReg" +
-      "ionRequest\022 \n\006region\030\001 \002(\0132\020.RegionSpeci" +
-      "fier\"@\n MajorCompactionTimestampResponse" +
-      "\022\034\n\024compaction_timestamp\030\001 \002(\003\"\035\n\033Securi" +
-      "tyCapabilitiesRequest\"\343\001\n\034SecurityCapabi" +
-      "litiesResponse\022>\n\014capabilities\030\001 \003(\0162(.S" +
-      "ecurityCapabilitiesResponse.Capability\"\202" +
-      "\001\n\nCapability\022\031\n\025SIMPLE_AUTHENTICATION\020\000" +
-      "\022\031\n\025SECURE_AUTHENTICATION\020\001\022\021\n\rAUTHORIZA" +
-      "TION\020\002\022\026\n\022CELL_AUTHORIZATION\020\003\022\023\n\017CELL_V",
-      "ISIBILITY\020\0042\373\033\n\rMasterService\022S\n\024GetSche" +
-      "maAlterStatus\022\034.GetSchemaAlterStatusRequ" +
-      "est\032\035.GetSchemaAlterStatusResponse\022P\n\023Ge" +
-      "tTableDescriptors\022\033.GetTableDescriptorsR" +
-      "equest\032\034.GetTableDescriptorsResponse\022>\n\r" +
-      "GetTableNames\022\025.GetTableNamesRequest\032\026.G" +
-      "etTableNamesResponse\022G\n\020GetClusterStatus" +
-      "\022\030.GetClusterStatusRequest\032\031.GetClusterS" +
-      "tatusResponse\022D\n\017IsMasterRunning\022\027.IsMas" +
-      "terRunningRequest\032\030.IsMasterRunningRespo",
-      "nse\0222\n\tAddColumn\022\021.AddColumnRequest\032\022.Ad" +
-      "dColumnResponse\022;\n\014DeleteColumn\022\024.Delete" +
-      "ColumnRequest\032\025.DeleteColumnResponse\022;\n\014" +
-      "ModifyColumn\022\024.ModifyColumnRequest\032\025.Mod" +
-      "ifyColumnResponse\0225\n\nMoveRegion\022\022.MoveRe" +
-      "gionRequest\032\023.MoveRegionResponse\022Y\n\026Disp" +
-      "atchMergingRegions\022\036.DispatchMergingRegi" +
-      "onsRequest\032\037.DispatchMergingRegionsRespo" +
-      "nse\022;\n\014AssignRegion\022\024.AssignRegionReques" +
-      "t\032\025.AssignRegionResponse\022A\n\016UnassignRegi",
-      "on\022\026.UnassignRegionRequest\032\027.UnassignReg" +
-      "ionResponse\022>\n\rOfflineRegion\022\025.OfflineRe" +
-      "gionRequest\032\026.OfflineRegionResponse\0228\n\013D" +
-      "eleteTable\022\023.DeleteTableRequest\032\024.Delete" +
-      "TableResponse\022>\n\rtruncateTable\022\025.Truncat" +
-      "eTableRequest\032\026.TruncateTableResponse\0228\n" +
-      "\013EnableTable\022\023.EnableTableRequest\032\024.Enab" +
-      "leTableResponse\022;\n\014DisableTable\022\024.Disabl" +
-      "eTableRequest\032\025.DisableTableResponse\0228\n\013" +
-      "ModifyTable\022\023.ModifyTableRequest\032\024.Modif",
-      "yTableResponse\0228\n\013CreateTable\022\023.CreateTa" +
-      "bleRequest\032\024.CreateTableResponse\022/\n\010Shut" +
-      "down\022\020.ShutdownRequest\032\021.ShutdownRespons" +
-      "e\0225\n\nStopMaster\022\022.StopMasterRequest\032\023.St" +
-      "opMasterResponse\022,\n\007Balance\022\017.BalanceReq" +
-      "uest\032\020.BalanceResponse\022M\n\022SetBalancerRun" +
-      "ning\022\032.SetBalancerRunningRequest\032\033.SetBa" +
-      "lancerRunningResponse\022J\n\021IsBalancerEnabl" +
-      "ed\022\031.IsBalancerEnabledRequest\032\032.IsBalanc" +
-      "erEnabledResponse\022A\n\016RunCatalogScan\022\026.Ru",
-      "nCatalogScanRequest\032\027.RunCatalogScanResp" +
-      "onse\022S\n\024EnableCatalogJanitor\022\034.EnableCat" +
-      "alogJanitorRequest\032\035.EnableCatalogJanito" +
-      "rResponse\022\\\n\027IsCatalogJanitorEnabled\022\037.I" +
-      "sCatalogJanitorEnabledRequest\032 .IsCatalo" +
-      "gJanitorEnabledResponse\022L\n\021ExecMasterSer" +
-      "vice\022\032.CoprocessorServiceRequest\032\033.Copro" +
-      "cessorServiceResponse\022/\n\010Snapshot\022\020.Snap" +
-      "shotRequest\032\021.SnapshotResponse\022V\n\025GetCom" +
-      "pletedSnapshots\022\035.GetCompletedSnapshotsR",
-      "equest\032\036.GetCompletedSnapshotsResponse\022A" +
-      "\n\016DeleteSnapshot\022\026.DeleteSnapshotRequest" +
-      "\032\027.DeleteSnapshotResponse\022A\n\016IsSnapshotD" +
-      "one\022\026.IsSnapshotDoneRequest\032\027.IsSnapshot" +
-      "DoneResponse\022D\n\017RestoreSnapshot\022\027.Restor" +
-      "eSnapshotRequest\032\030.RestoreSnapshotRespon" +
-      "se\022V\n\025IsRestoreSnapshotDone\022\035.IsRestoreS" +
-      "napshotDoneRequest\032\036.IsRestoreSnapshotDo" +
-      "neResponse\022>\n\rExecProcedure\022\025.ExecProced" +
-      "ureRequest\032\026.ExecProcedureResponse\022E\n\024Ex",
-      "ecProcedureWithRet\022\025.ExecProcedureReques" +
-      "t\032\026.ExecProcedureResponse\022D\n\017IsProcedure" +
-      "Done\022\027.IsProcedureDoneRequest\032\030.IsProced" +
-      "ureDoneResponse\022D\n\017ModifyNamespace\022\027.Mod" +
-      "ifyNamespaceRequest\032\030.ModifyNamespaceRes" +
-      "ponse\022D\n\017CreateNamespace\022\027.CreateNamespa" +
-      "ceRequest\032\030.CreateNamespaceResponse\022D\n\017D" +
-      "eleteNamespace\022\027.DeleteNamespaceRequest\032" +
-      "\030.DeleteNamespaceResponse\022Y\n\026GetNamespac" +
-      "eDescriptor\022\036.GetNamespaceDescriptorRequ",
-      "est\032\037.GetNamespaceDescriptorResponse\022_\n\030" +
-      "ListNamespaceDescriptors\022 .ListNamespace" +
-      "DescriptorsRequest\032!.ListNamespaceDescri" +
-      "ptorsResponse\022t\n\037ListTableDescriptorsByN" +
-      "amespace\022\'.ListTableDescriptorsByNamespa" +
-      "ceRequest\032(.ListTableDescriptorsByNamesp" +
-      "aceResponse\022b\n\031ListTableNamesByNamespace" +
-      "\022!.ListTableNamesByNamespaceRequest\032\".Li" +
-      "stTableNamesByNamespaceResponse\022/\n\010SetQu" +
-      "ota\022\020.SetQuotaRequest\032\021.SetQuotaResponse",
-      "\022f\n\037getLastMajorCompactionTimestamp\022 .Ma" +
-      "jorCompactionTimestampRequest\032!.MajorCom" +
-      "pactionTimestampResponse\022x\n(getLastMajor" +
-      "CompactionTimestampForRegion\022).MajorComp" +
-      "actionTimestampForRegionRequest\032!.MajorC" +
-      "ompactionTimestampResponse\022M\n\022getProcedu" +
-      "reResult\022\032.GetProcedureResultRequest\032\033.G" +
-      "etProcedureResultResponse\022V\n\027getSecurity" +
-      "Capabilities\022\034.SecurityCapabilitiesReque" +
-      "st\032\035.SecurityCapabilitiesResponseBB\n*org",
-      ".apache.hadoop.hbase.protobuf.generatedB" +
-      "\014MasterProtosH\001\210\001\001\240\001\001"
+      "nabledResponse\022\017\n\007enabled\030\001 \002(\010\"\022\n\020Norma" +
+      "lizeRequest\"+\n\021NormalizeResponse\022\026\n\016norm",
+      "alizer_ran\030\001 \002(\010\")\n\033SetNormalizerRunning" +
+      "Request\022\n\n\002on\030\001 \002(\010\"=\n\034SetNormalizerRunn" +
+      "ingResponse\022\035\n\025prev_normalizer_value\030\001 \001" +
+      "(\010\"\034\n\032IsNormalizerEnabledRequest\".\n\033IsNo" +
+      "rmalizerEnabledResponse\022\017\n\007enabled\030\001 \002(\010" +
+      "\"\027\n\025RunCatalogScanRequest\"-\n\026RunCatalogS" +
+      "canResponse\022\023\n\013scan_result\030\001 \001(\005\"-\n\033Enab" +
+      "leCatalogJanitorRequest\022\016\n\006enable\030\001 \002(\010\"" +
+      "2\n\034EnableCatalogJanitorResponse\022\022\n\nprev_" +
+      "value\030\001 \001(\010\" \n\036IsCatalogJanitorEnabledRe",
+      "quest\"0\n\037IsCatalogJanitorEnabledResponse" +
+      "\022\r\n\005value\030\001 \002(\010\"9\n\017SnapshotRequest\022&\n\010sn" +
+      "apshot\030\001 \002(\0132\024.SnapshotDescription\",\n\020Sn" +
+      "apshotResponse\022\030\n\020expected_timeout\030\001 \002(\003" +
+      "\"\036\n\034GetCompletedSnapshotsRequest\"H\n\035GetC" +
+      "ompletedSnapshotsResponse\022\'\n\tsnapshots\030\001" +
+      " \003(\0132\024.SnapshotDescription\"?\n\025DeleteSnap" +
+      "shotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snapshot" +
+      "Description\"\030\n\026DeleteSnapshotResponse\"@\n" +
+      "\026RestoreSnapshotRequest\022&\n\010snapshot\030\001 \002(",
+      "\0132\024.SnapshotDescription\"\031\n\027RestoreSnapsh" +
+      "otResponse\"?\n\025IsSnapshotDoneRequest\022&\n\010s" +
+      "napshot\030\001 \001(\0132\024.SnapshotDescription\"U\n\026I" +
+      "sSnapshotDoneResponse\022\023\n\004done\030\001 \001(\010:\005fal" +
+      "se\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDescripti" +
+      "on\"F\n\034IsRestoreSnapshotDoneRequest\022&\n\010sn" +
+      "apshot\030\001 \001(\0132\024.SnapshotDescription\"4\n\035Is" +
+      "RestoreSnapshotDoneResponse\022\023\n\004done\030\001 \001(" +
+      "\010:\005false\"=\n\033GetSchemaAlterStatusRequest\022" +
+      "\036\n\ntable_name\030\001 \002(\0132\n.TableName\"T\n\034GetSc",
+      "hemaAlterStatusResponse\022\035\n\025yet_to_update" +
+      "_regions\030\001 \001(\r\022\025\n\rtotal_regions\030\002 \001(\r\"\202\001" +
+      "\n\032GetTableDescriptorsRequest\022\037\n\013table_na" +
+      "mes\030\001 \003(\0132\n.TableName\022\r\n\005regex\030\002 \001(\t\022!\n\022" +
+      "include_sys_tables\030\003 \001(\010:\005false\022\021\n\tnames" +
+      "pace\030\004 \001(\t\"A\n\033GetTableDescriptorsRespons" +
+      "e\022\"\n\014table_schema\030\001 \003(\0132\014.TableSchema\"[\n" +
+      "\024GetTableNamesRequest\022\r\n\005regex\030\001 \001(\t\022!\n\022" +
+      "include_sys_tables\030\002 \001(\010:\005false\022\021\n\tnames" +
+      "pace\030\003 \001(\t\"8\n\025GetTableNamesResponse\022\037\n\013t",
+      "able_names\030\001 \003(\0132\n.TableName\"\031\n\027GetClust" +
+      "erStatusRequest\"B\n\030GetClusterStatusRespo" +
+      "nse\022&\n\016cluster_status\030\001 \002(\0132\016.ClusterSta" +
+      "tus\"\030\n\026IsMasterRunningRequest\"4\n\027IsMaste" +
+      "rRunningResponse\022\031\n\021is_master_running\030\001 " +
+      "\002(\010\"@\n\024ExecProcedureRequest\022(\n\tprocedure" +
+      "\030\001 \002(\0132\025.ProcedureDescription\"F\n\025ExecPro" +
+      "cedureResponse\022\030\n\020expected_timeout\030\001 \001(\003" +
+      "\022\023\n\013return_data\030\002 \001(\014\"B\n\026IsProcedureDone" +
+      "Request\022(\n\tprocedure\030\001 \001(\0132\025.ProcedureDe",
+      "scription\"W\n\027IsProcedureDoneResponse\022\023\n\004" +
+      "done\030\001 \001(\010:\005false\022\'\n\010snapshot\030\002 \001(\0132\025.Pr" +
+      "ocedureDescription\",\n\031GetProcedureResult" +
+      "Request\022\017\n\007proc_id\030\001 \002(\004\"\347\001\n\032GetProcedur" +
+      "eResultResponse\0220\n\005state\030\001 \002(\0162!.GetProc" +
+      "edureResultResponse.State\022\022\n\nstart_time\030" +
+      "\002 \001(\004\022\023\n\013last_update\030\003 \001(\004\022\016\n\006result\030\004 \001" +
+      "(\014\022+\n\texception\030\005 \001(\0132\030.ForeignException" +
+      "Message\"1\n\005State\022\r\n\tNOT_FOUND\020\000\022\013\n\007RUNNI" +
+      "NG\020\001\022\014\n\010FINISHED\020\002\"\273\001\n\017SetQuotaRequest\022\021",
+      "\n\tuser_name\030\001 \001(\t\022\022\n\nuser_group\030\002 \001(\t\022\021\n" +
+      "\tnamespace\030\003 \001(\t\022\036\n\ntable_name\030\004 \001(\0132\n.T" +
+      "ableName\022\022\n\nremove_all\030\005 \001(\010\022\026\n\016bypass_g" +
+      "lobals\030\006 \001(\010\022\"\n\010throttle\030\007 \001(\0132\020.Throttl" +
+      "eRequest\"\022\n\020SetQuotaResponse\"A\n\037MajorCom" +
+      "pactionTimestampRequest\022\036\n\ntable_name\030\001 " +
+      "\002(\0132\n.TableName\"L\n(MajorCompactionTimest" +
+      "ampForRegionRequest\022 \n\006region\030\001 \002(\0132\020.Re" +
+      "gionSpecifier\"@\n MajorCompactionTimestam" +
+      "pResponse\022\034\n\024compaction_timestamp\030\001 \002(\003\"",
+      "\035\n\033SecurityCapabilitiesRequest\"\343\001\n\034Secur" +
+      "ityCapabilitiesResponse\022>\n\014capabilities\030" +
+      "\001 \003(\0162(.SecurityCapabilitiesResponse.Cap" +
+      "ability\"\202\001\n\nCapability\022\031\n\025SIMPLE_AUTHENT" +
+      "ICATION\020\000\022\031\n\025SECURE_AUTHENTICATION\020\001\022\021\n\r" +
+      "AUTHORIZATION\020\002\022\026\n\022CELL_AUTHORIZATION\020\003\022" +
+      "\023\n\017CELL_VISIBILITY\020\0042\326\035\n\rMasterService\022S" +
+      "\n\024GetSchemaAlterStatus\022\034.GetSchemaAlterS" +
+      "tatusRequest\032\035.GetSchemaAlterStatusRespo" +
+      "nse\022P\n\023GetTableDescriptors\022\033.GetTableDes",
+      "criptorsRequest\032\034.GetTableDescriptorsRes" +
+      "ponse\022>\n\rGetTableNames\022\025.GetTableNamesRe" +
+      "quest\032\026.GetTableNamesResponse\022G\n\020GetClus" +
+      "terStatus\022\030.GetClusterStatusRequest\032\031.Ge" +
+      "tClusterStatusResponse\022D\n\017IsMasterRunnin" +
+      "g\022\027.IsMasterRunningRequest\032\030.IsMasterRun" +
+      "ningResponse\0222\n\tAddColumn\022\021.AddColumnReq" +
+      "uest\032\022.AddColumnResponse\022;\n\014DeleteColumn" +
+      "\022\024.DeleteColumnRequest\032\025.DeleteColumnRes" +
+      "ponse\022;\n\014ModifyColumn\022\024.ModifyColumnRequ",
+      "est\032\025.ModifyColumnResponse\0225\n\nMoveRegion" +
+      "\022\022.MoveRegionRequest\032\023.MoveRegionRespons" +
+      "e\022Y\n\026DispatchMergingRegions\022\036.DispatchMe" +
+      "rgingRegionsRequest\032\037.DispatchMergingReg" +
+      "ionsResponse\022;\n\014AssignRegion\022\024.AssignReg" +
+      "ionRequest\032\025.AssignRegionResponse\022A\n\016Una" +
+      "ssignRegion\022\026.UnassignRegionRequest\032\027.Un" +
+      "assignRegionResponse\022>\n\rOfflineRegion\022\025." +
+      "OfflineRegionRequest\032\026.OfflineRegionResp" +
+      "onse\0228\n\013DeleteTable\022\023.DeleteTableRequest",
+      "\032\024.DeleteTableResponse\022>\n\rtruncateTable\022" +
+      "\025.TruncateTableRequest\032\026.TruncateTableRe" +
+      "sponse\0228\n\013EnableTable\022\023.EnableTableReque" +
+      "st\032\024.EnableTableResponse\022;\n\014DisableTable" +
+      "\022\024.DisableTableRequest\032\025.DisableTableRes" +
+      "ponse\0228\n\013ModifyTable\022\023.ModifyTableReques" +
+      "t\032\024.ModifyTableResponse\0228\n\013CreateTable\022\023" +
+      ".CreateTableRequest\032\024.CreateTableRespons" +
+      "e\022/\n\010Shutdown\022\020.ShutdownRequest\032\021.Shutdo" +
+      "wnResponse\0225\n\nStopMaster\022\022.StopMasterReq",
+      "uest\032\023.StopMasterResponse\022,\n\007Balance\022\017.B" +
+      "alanceRequest\032\020.BalanceResponse\022M\n\022SetBa" +
+      "lancerRunning\022\032.SetBalancerRunningReques" +
+      "t\032\033.SetBalancerRunningResponse\022J\n\021IsBala" +
+      "ncerEnabled\022\031.IsBalancerEnabledRequest\032\032" +
+      ".IsBalancerEnabledResponse\0222\n\tNormalize\022" +
+      "\021.NormalizeRequest\032\022.NormalizeResponse\022S" +
+      "\n\024SetNormalizerRunning\022\034.SetNormalizerRu" +
+      "nningRequest\032\035.SetNormalizerRunningRespo" +
+      "nse\022P\n\023IsNormalizerEnabled\022\033.IsNormalize",
+      "rEnabledRequest\032\034.IsNormalizerEnabledRes" +
+      "ponse\022A\n\016RunCatalogScan\022\026.RunCatalogScan" +
+      "Request\032\027.RunCatalogScanResponse\022S\n\024Enab" +
+      "leCatalogJanitor\022\034.EnableCatalogJanitorR" +
+      "equest\032\035.EnableCatalogJanitorResponse\022\\\n" +
+      "\027IsCatalogJanitorEnabled\022\037.IsCatalogJani" +
+      "torEnabledRequest\032 .IsCatalogJanitorEnab" +
+      "ledResponse\022L\n\021ExecMasterService\022\032.Copro" +
+      "cessorServiceRequest\032\033.CoprocessorServic" +
+      "eResponse\022/\n\010Snapshot\022\020.SnapshotRequest\032",
+      "\021.SnapshotResponse\022V\n\025GetCompletedSnapsh" +
+      "ots\022\035.GetCompletedSnapshotsRequest\032\036.Get" +
+      "CompletedSnapshotsResponse\022A\n\016DeleteSnap" +
+      "shot\022\026.DeleteSnapshotRequest\032\027.DeleteSna" +
+      "pshotResponse\022A\n\016IsSnapshotDone\022\026.IsSnap" +
+      "shotDoneRequest\032\027.IsSnapshotDoneResponse" +
+      "\022D\n\017RestoreSnapshot\022\027.RestoreSnapshotReq" +
+      "uest\032\030.RestoreSnapshotResponse\022V\n\025IsRest" +
+      "oreSnapshotDone\022\035.IsRestoreSnapshotDoneR" +
+      "equest\032\036.IsRestoreSnapshotDoneResponse\022>",
+      "\n\rExecProcedure\022\025.ExecProcedureRequest\032\026" +
+      ".ExecProcedureResponse\022E\n\024ExecProcedureW" +
+      "ithRet\022\025.ExecProcedureRequest\032\026.ExecProc" +
+      "edureResponse\022D\n\017IsProcedureDone\022\027.IsPro" +
+      "cedureDoneRequest\032\030.IsProcedureDoneRespo" +
+      "nse\022D\n\017ModifyNamespace\022\027.ModifyNamespace" +
+      "Request\032\030.ModifyNamespaceResponse\022D\n\017Cre" +
+      "ateNamespace\022\027.CreateNamespaceRequest\032\030." +
+      "CreateNamespaceResponse\022D\n\017DeleteNamespa" +
+      "ce\022\027.DeleteNamespaceRequest\032\030.DeleteName",
+      "spaceResponse\022Y\n\026GetNamespaceDescriptor\022" +
+      "\036.GetNamespaceDescriptorRequest\032\037.GetNam" +
+      "espaceDescriptorResponse\022_\n\030ListNamespac" +
+      "eDescriptors\022 .ListNamespaceDescriptorsR" +
+      "equest\032!.ListNamespaceDescriptorsRespons" +
+      "e\022t\n\037ListTableDescriptorsByNamespace\022\'.L" +
+      "istTableDescriptorsByNamespaceRequest\032(." +
+      "ListTableDescriptorsByNamespaceResponse\022" +
+      "b\n\031ListTableNamesByNamespace\022!.ListTable" +
+      "NamesByNamespaceRequest\032\".ListTableNames",
+      "ByNamespaceResponse\022/\n\010SetQuota\022\020.SetQuo" +
+      "taRequest\032\021.SetQuotaResponse\022f\n\037getLastM" +
+      "ajorCompactionTimestamp\022 .MajorCompactio" +
+      "nTimestampRequest\032!.MajorCompactionTimes" +
+      "tampResponse\022x\n(getLastMajorCompactionTi" +
+      "mestampForRegion\022).MajorCompactionTimest" +
+      "ampForRegionRequest\032!.MajorCompactionTim" +
+      "estampResponse\022M\n\022getProcedureResult\022\032.G" +
+      "etProcedureResultRequest\032\033.GetProcedureR" +
+      "esultResponse\022V\n\027getSecurityCapabilities",
+      "\022\034.SecurityCapabilitiesRequest\032\035.Securit" +
+      "yCapabilitiesResponseBB\n*org.apache.hado" +
+      "op.hbase.protobuf.generatedB\014MasterProto" +
+      "sH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -55144,248 +57867,284 @@ public final class MasterProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsBalancerEnabledResponse_descriptor,
               new java.lang.String[] { "Enabled", });
-          internal_static_RunCatalogScanRequest_descriptor =
+          internal_static_NormalizeRequest_descriptor =
             getDescriptor().getMessageTypes().get(52);
+          internal_static_NormalizeRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_NormalizeRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_NormalizeResponse_descriptor =
+            getDescriptor().getMessageTypes().get(53);
+          internal_static_NormalizeResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_NormalizeResponse_descriptor,
+              new java.lang.String[] { "NormalizerRan", });
+          internal_static_SetNormalizerRunningRequest_descriptor =
+            getDescriptor().getMessageTypes().get(54);
+          internal_static_SetNormalizerRunningRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_SetNormalizerRunningRequest_descriptor,
+              new java.lang.String[] { "On", });
+          internal_static_SetNormalizerRunningResponse_descriptor =
+            getDescriptor().getMessageTypes().get(55);
+          internal_static_SetNormalizerRunningResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_SetNormalizerRunningResponse_descriptor,
+              new java.lang.String[] { "PrevNormalizerValue", });
+          internal_static_IsNormalizerEnabledRequest_descriptor =
+            getDescriptor().getMessageTypes().get(56);
+          internal_static_IsNormalizerEnabledRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_IsNormalizerEnabledRequest_descriptor,
+              new java.lang.String[] { });
+          internal_static_IsNormalizerEnabledResponse_descriptor =
+            getDescriptor().getMessageTypes().get(57);
+          internal_static_IsNormalizerEnabledResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_IsNormalizerEnabledResponse_descriptor,
+              new java.lang.String[] { "Enabled", });
+          internal_static_RunCatalogScanRequest_descriptor =
+            getDescriptor().getMessageTypes().get(58);
           internal_static_RunCatalogScanRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RunCatalogScanRequest_descriptor,
               new java.lang.String[] { });
           internal_static_RunCatalogScanResponse_descriptor =
-            getDescriptor().getMessageTypes().get(53);
+            getDescriptor().getMessageTypes().get(59);
           internal_static_RunCatalogScanResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RunCatalogScanResponse_descriptor,
               new java.lang.String[] { "ScanResult", });
           internal_static_EnableCatalogJanitorRequest_descriptor =
-            getDescriptor().getMessageTypes().get(54);
+            getDescriptor().getMessageTypes().get(60);
           internal_static_EnableCatalogJanitorRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableCatalogJanitorRequest_descriptor,
               new java.lang.String[] { "Enable", });
           internal_static_EnableCatalogJanitorResponse_descriptor =
-            getDescriptor().getMessageTypes().get(55);
+            getDescriptor().getMessageTypes().get(61);
           internal_static_EnableCatalogJanitorResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_EnableCatalogJanitorResponse_descriptor,
               new java.lang.String[] { "PrevValue", });
           internal_static_IsCatalogJanitorEnabledRequest_descriptor =
-            getDescriptor().getMessageTypes().get(56);
+            getDescriptor().getMessageTypes().get(62);
           internal_static_IsCatalogJanitorEnabledRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsCatalogJanitorEnabledRequest_descriptor,
               new java.lang.String[] { });
           internal_static_IsCatalogJanitorEnabledResponse_descriptor =
-            getDescriptor().getMessageTypes().get(57);
+            getDescriptor().getMessageTypes().get(63);
           internal_static_IsCatalogJanitorEnabledResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsCatalogJanitorEnabledResponse_descriptor,
               new java.lang.String[] { "Value", });
           internal_static_SnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(58);
+            getDescriptor().getMessageTypes().get(64);
           internal_static_SnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SnapshotRequest_descriptor,
               new java.lang.String[] { "Snapshot", });
           internal_static_SnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(59);
+            getDescriptor().getMessageTypes().get(65);
           internal_static_SnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SnapshotResponse_descriptor,
               new java.lang.String[] { "ExpectedTimeout", });
           internal_static_GetCompletedSnapshotsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(60);
+            getDescriptor().getMessageTypes().get(66);
           internal_static_GetCompletedSnapshotsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetCompletedSnapshotsRequest_descriptor,
               new java.lang.String[] { });
           internal_static_GetCompletedSnapshotsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(61);
+            getDescriptor().getMessageTypes().get(67);
           internal_static_GetCompletedSnapshotsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetCompletedSnapshotsResponse_descriptor,
               new java.lang.String[] { "Snapshots", });
           internal_static_DeleteSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(62);
+            getDescriptor().getMessageTypes().get(68);
           internal_static_DeleteSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteSnapshotRequest_descriptor,
               new java.lang.String[] { "Snapshot", });
           internal_static_DeleteSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(63);
+            getDescriptor().getMessageTypes().get(69);
           internal_static_DeleteSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_DeleteSnapshotResponse_descriptor,
               new java.lang.String[] { });
           internal_static_RestoreSnapshotRequest_descriptor =
-            getDescriptor().getMessageTypes().get(64);
+            getDescriptor().getMessageTypes().get(70);
           internal_static_RestoreSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotRequest_descriptor,
               new java.lang.String[] { "Snapshot", });
           internal_static_RestoreSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(65);
+            getDescriptor().getMessageTypes().get(71);
           internal_static_RestoreSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotResponse_descriptor,
               new java.lang.String[] { });
           internal_static_IsSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(66);
+            getDescriptor().getMessageTypes().get(72);
           internal_static_IsSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneRequest_descriptor,
               new java.lang.String[] { "Snapshot", });
           internal_static_IsSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(67);
+            getDescriptor().getMessageTypes().get(73);
           internal_static_IsSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneResponse_descriptor,
               new java.lang.String[] { "Done", "Snapshot", });
           internal_static_IsRestoreSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(68);
+            getDescriptor().getMessageTypes().get(74);
           internal_static_IsRestoreSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneRequest_descriptor,
               new java.lang.String[] { "Snapshot", });
           internal_static_IsRestoreSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(69);
+            getDescriptor().getMessageTypes().get(75);
           internal_static_IsRestoreSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneResponse_descriptor,
               new java.lang.String[] { "Done", });
           internal_static_GetSchemaAlterStatusRequest_descriptor =
-            getDescriptor().getMessageTypes().get(70);
+            getDescriptor().getMessageTypes().get(76);
           internal_static_GetSchemaAlterStatusRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetSchemaAlterStatusRequest_descriptor,
               new java.lang.String[] { "TableName", });
           internal_static_GetSchemaAlterStatusResponse_descriptor =
-            getDescriptor().getMessageTypes().get(71);
+            getDescriptor().getMessageTypes().get(77);
           internal_static_GetSchemaAlterStatusResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetSchemaAlterStatusResponse_descriptor,
               new java.lang.String[] { "YetToUpdateRegions", "TotalRegions", });
           internal_static_GetTableDescriptorsRequest_descriptor =
-            getDescriptor().getMessageTypes().get(72);
+            getDescriptor().getMessageTypes().get(78);
           internal_static_GetTableDescriptorsRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableDescriptorsRequest_descriptor,
               new java.lang.String[] { "TableNames", "Regex", "IncludeSysTables", "Namespace", });
           internal_static_GetTableDescriptorsResponse_descriptor =
-            getDescriptor().getMessageTypes().get(73);
+            getDescriptor().getMessageTypes().get(79);
           internal_static_GetTableDescriptorsResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableDescriptorsResponse_descriptor,
               new java.lang.String[] { "TableSchema", });
           internal_static_GetTableNamesRequest_descriptor =
-            getDescriptor().getMessageTypes().get(74);
+            getDescriptor().getMessageTypes().get(80);
           internal_static_GetTableNamesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableNamesRequest_descriptor,
               new java.lang.String[] { "Regex", "IncludeSysTables", "Namespace", });
           internal_static_GetTableNamesResponse_descriptor =
-            getDescriptor().getMessageTypes().get(75);
+            getDescriptor().getMessageTypes().get(81);
           internal_static_GetTableNamesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetTableNamesResponse_descriptor,
               new java.lang.String[] { "TableNames", });
           internal_static_GetClusterStatusRequest_descriptor =
-            getDescriptor().getMessageTypes().get(76);
+            getDescriptor().getMessageTypes().get(82);
           internal_static_GetClusterStatusRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetClusterStatusRequest_descriptor,
               new java.lang.String[] { });
           internal_static_GetClusterStatusResponse_descriptor =
-            getDescriptor().getMessageTypes().get(77);
+            getDescriptor().getMessageTypes().get(83);
           internal_static_GetClusterStatusResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetClusterStatusResponse_descriptor,
               new java.lang.String[] { "ClusterStatus", });
           internal_static_IsMasterRunningRequest_descriptor =
-            getDescriptor().getMessageTypes().get(78);
+            getDescriptor().getMessageTypes().get(84);
           internal_static_IsMasterRunningRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsMasterRunningRequest_descriptor,
               new java.lang.String[] { });
           internal_static_IsMasterRunningResponse_descriptor =
-            getDescriptor().getMessageTypes().get(79);
+            getDescriptor().getMessageTypes().get(85);
           internal_static_IsMasterRunningResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsMasterRunningResponse_descriptor,
               new java.lang.String[] { "IsMasterRunning", });
           internal_static_ExecProcedureRequest_descriptor =
-            getDescriptor().getMessageTypes().get(80);
+            getDescriptor().getMessageTypes().get(86);
           internal_static_ExecProcedureRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ExecProcedureRequest_descriptor,
               new java.lang.String[] { "Procedure", });
           internal_static_ExecProcedureResponse_descriptor =
-            getDescriptor().getMessageTypes().get(81);
+            getDescriptor().getMessageTypes().get(87);
           internal_static_ExecProcedureResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_ExecProcedureResponse_descriptor,
               new java.lang.String[] { "ExpectedTimeout", "ReturnData", });
           internal_static_IsProcedureDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(82);
+            getDescriptor().getMessageTypes().get(88);
           internal_static_IsProcedureDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsProcedureDoneRequest_descriptor,
               new java.lang.String[] { "Procedure", });
           internal_static_IsProcedureDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(83);
+            getDescriptor().getMessageTypes().get(89);
           internal_static_IsProcedureDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsProcedureDoneResponse_descriptor,
               new java.lang.String[] { "Done", "Snapshot", });
           internal_static_GetProcedureResultRequest_descriptor =
-            getDescriptor().getMessageTypes().get(84);
+            getDescriptor().getMessageTypes().get(90);
           internal_static_GetProcedureResultRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetProcedureResultRequest_descriptor,
               new java.lang.String[] { "ProcId", });
           internal_static_GetProcedureResultResponse_descriptor =
-            getDescriptor().getMessageTypes().get(85);
+            getDescriptor().getMessageTypes().get(91);
           internal_static_GetProcedureResultResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_GetProcedureResultResponse_descriptor,
               new java.lang.String[] { "State", "StartTime", "LastUpdate", "Result", "Exception", });
           internal_static_SetQuotaRequest_descriptor =
-            getDescriptor().getMessageTypes().get(86);
+            getDescriptor().getMessageTypes().get(92);
           internal_static_SetQuotaRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SetQuotaRequest_descriptor,
               new java.lang.String[] { "UserName", "UserGroup", "Namespace", "TableName", "RemoveAll", "BypassGlobals", "Throttle", });
           internal_static_SetQuotaResponse_descriptor =
-            getDescriptor().getMessageTypes().get(87);
+            getDescriptor().getMessageTypes().get(93);
           internal_static_SetQuotaResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SetQuotaResponse_descriptor,
               new java.lang.String[] { });
           internal_static_MajorCompactionTimestampRequest_descriptor =
-            getDescriptor().getMessageTypes().get(88);
+            getDescriptor().getMessageTypes().get(94);
           internal_static_MajorCompactionTimestampRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MajorCompactionTimestampRequest_descriptor,
               new java.lang.String[] { "TableName", });
           internal_static_MajorCompactionTimestampForRegionRequest_descriptor =
-            getDescriptor().getMessageTypes().get(89);
+            getDescriptor().getMessageTypes().get(95);
           internal_static_MajorCompactionTimestampForRegionRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MajorCompactionTimestampForRegionRequest_descriptor,
               new java.lang.String[] { "Region", });
           internal_static_MajorCompactionTimestampResponse_descriptor =
-            getDescriptor().getMessageTypes().get(90);
+            getDescriptor().getMessageTypes().get(96);
           internal_static_MajorCompactionTimestampResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_MajorCompactionTimestampResponse_descriptor,
               new java.lang.String[] { "CompactionTimestamp", });
           internal_static_SecurityCapabilitiesRequest_descriptor =
-            getDescriptor().getMessageTypes().get(91);
+            getDescriptor().getMessageTypes().get(97);
           internal_static_SecurityCapabilitiesRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SecurityCapabilitiesRequest_descriptor,
               new java.lang.String[] { });
           internal_static_SecurityCapabilitiesResponse_descriptor =
-            getDescriptor().getMessageTypes().get(92);
+            getDescriptor().getMessageTypes().get(98);
           internal_static_SecurityCapabilitiesResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_SecurityCapabilitiesResponse_descriptor,
