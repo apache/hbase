@@ -56,8 +56,14 @@ import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SecurityCapabilitiesResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningResponse;
 import org.apache.hadoop.hbase.quotas.ThrottlingException;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.security.User;
@@ -1542,6 +1548,19 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public NormalizeResponse normalize(RpcController controller,
+          NormalizeRequest request) throws ServiceException {
+        return stub.normalize(controller, request);
+      }
+
+      @Override
+      public SetNormalizerRunningResponse setNormalizerRunning(
+          RpcController controller, SetNormalizerRunningRequest request)
+          throws ServiceException {
+        return stub.setNormalizerRunning(controller, request);
+      }
+
+      @Override
       public MasterProtos.RunCatalogScanResponse runCatalogScan(RpcController controller,
           MasterProtos.RunCatalogScanRequest request) throws ServiceException {
         return stub.runCatalogScan(controller, request);
@@ -1754,6 +1773,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       public IsBalancerEnabledResponse isBalancerEnabled(RpcController controller,
           IsBalancerEnabledRequest request) throws ServiceException {
         return stub.isBalancerEnabled(controller, request);
+      }
+
+      @Override
+      public IsNormalizerEnabledResponse isNormalizerEnabled(RpcController controller,
+          IsNormalizerEnabledRequest request) throws ServiceException {
+        return stub.isNormalizerEnabled(controller, request);
       }
 
       @Override

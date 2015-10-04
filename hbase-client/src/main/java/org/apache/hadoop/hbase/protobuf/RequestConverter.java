@@ -94,12 +94,15 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.GetTableStateRequ
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsBalancerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsMasterRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsNormalizerEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MoveRegionRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.NormalizeRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.RunCatalogScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetBalancerRunningRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.SetNormalizerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
@@ -1650,5 +1653,33 @@ public final class RequestConverter {
       builder.setOpenForDistributedLogReplay(openForReplay);
     }
     return builder.build();
+  }
+
+  /**
+   * Creates a protocol buffer NormalizeRequest
+   *
+   * @return a NormalizeRequest
+   */
+  public static NormalizeRequest buildNormalizeRequest() {
+    return NormalizeRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a protocol buffer IsNormalizerEnabledRequest
+   *
+   * @return a IsNormalizerEnabledRequest
+   */
+  public static IsNormalizerEnabledRequest buildIsNormalizerEnabledRequest() {
+    return IsNormalizerEnabledRequest.newBuilder().build();
+  }
+
+  /**
+   * Creates a protocol buffer SetNormalizerRunningRequest
+   *
+   * @param on
+   * @return a SetNormalizerRunningRequest
+   */
+  public static SetNormalizerRunningRequest buildSetNormalizerRunningRequest(boolean on) {
+    return SetNormalizerRunningRequest.newBuilder().setOn(on).build();
   }
 }

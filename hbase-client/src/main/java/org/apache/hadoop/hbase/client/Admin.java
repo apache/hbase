@@ -791,13 +791,35 @@ public interface Admin extends Abortable, Closeable {
    * @return True if balancer ran, false otherwise.
    */
   boolean balancer(boolean force) throws IOException;
-  
+
   /**
    * Query the current state of the balancer
    *
    * @return true if the balancer is enabled, false otherwise.
    */
   boolean isBalancerEnabled() throws IOException;
+
+  /**
+   * Invoke region normalizer. Can NOT run for various reasons.  Check logs.
+   *
+   * @return True if region normalizer ran, false otherwise.
+   */
+  boolean normalize() throws IOException;
+
+  /**
+   * Query the current state of the region normalizer
+   *
+   * @return true if region normalizer is enabled, false otherwise.
+   */
+  boolean isNormalizerEnabled() throws IOException;
+
+  /**
+   * Turn region normalizer on or off.
+   *
+   * @return Previous normalizer value
+   */
+  boolean setNormalizerRunning(final boolean on)
+    throws IOException;
 
   /**
    * Enable/Disable the catalog janitor

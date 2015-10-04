@@ -273,6 +273,28 @@ message IsBalancerEnabledResponse {
   required bool enabled = 1;
 }
 
+message NormalizeRequest {
+}
+
+message NormalizeResponse {
+  required bool normalizer_ran = 1;
+}
+
+message SetNormalizerRunningRequest {
+  required bool on = 1;
+}
+
+message SetNormalizerRunningResponse {
+  optional bool prev_normalizer_value = 1;
+}
+
+message IsNormalizerEnabledRequest {
+}
+
+message IsNormalizerEnabledResponse {
+  required bool enabled = 1;
+}
+
 message RunCatalogScanRequest {
 }
 
@@ -603,6 +625,24 @@ service MasterService {
    */
   rpc IsBalancerEnabled(IsBalancerEnabledRequest)
     returns(IsBalancerEnabledResponse);
+
+  /**
+   * Run region normalizer. Can NOT run for various reasons. Check logs.
+   */
+  rpc Normalize(NormalizeRequest)
+    returns(NormalizeResponse);
+
+  /**
+   * Turn region normalizer on or off.
+   */
+  rpc SetNormalizerRunning(SetNormalizerRunningRequest)
+    returns(SetNormalizerRunningResponse);
+
+  /**
+   * Query whether region normalizer is enabled.
+   */
+  rpc IsNormalizerEnabled(IsNormalizerEnabledRequest)
+    returns(IsNormalizerEnabledResponse);
 
   /** Get a run of the catalog janitor */
   rpc RunCatalogScan(RunCatalogScanRequest)

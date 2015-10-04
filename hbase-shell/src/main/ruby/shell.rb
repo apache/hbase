@@ -314,6 +314,9 @@ Shell.load_command_group(
     balancer
     balance_switch
     balancer_enabled
+    normalize
+    normalizer_switch
+    normalizer_enabled
     close_region
     compact
     flush
