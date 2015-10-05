@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -180,7 +181,7 @@ public class TestRpcHandlerException {
           new PayloadCarryingRpcController(CellUtil.createCellScanner(ImmutableList.of(CELL)));
       
       client.call(controller, md, param, md.getOutputType().toProto(), User.getCurrent(),
-          rpcServer.getListenerAddress());
+          rpcServer.getListenerAddress(), new MetricsConnection.CallStats());
     } catch (Throwable e) {
       assert(abortable.isAborted() == true);
     } finally {

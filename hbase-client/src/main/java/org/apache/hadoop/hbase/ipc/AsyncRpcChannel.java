@@ -49,6 +49,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
@@ -310,10 +311,10 @@ public class AsyncRpcChannel {
    */
   public Promise<Message> callMethod(final Descriptors.MethodDescriptor method,
       final PayloadCarryingRpcController controller, final Message request,
-      final Message responsePrototype) {
+      final Message responsePrototype, MetricsConnection.CallStats callStats) {
     final AsyncCall call =
         new AsyncCall(channel.eventLoop(), client.callIdCnt.getAndIncrement(), method, request,
-            controller, responsePrototype);
+            controller, responsePrototype, callStats);
     controller.notifyOnCancel(new RpcCallback<Object>() {
       @Override
       public void run(Object parameter) {
@@ -433,7 +434,7 @@ public class AsyncRpcChannel {
 
       ByteBuf b = channel.alloc().directBuffer(4 + totalSize);
       try(ByteBufOutputStream out = new ByteBufOutputStream(b)) {
-        IPCUtil.write(out, rh, call.param, cellBlock);
+        call.callStats.setRequestSizeBytes(IPCUtil.write(out, rh, call.param, cellBlock));
       }
 
       channel.writeAndFlush(b).addListener(new CallWriteListener(this, call.id));
@@ -579,8 +580,6 @@ public class AsyncRpcChannel {
 
   /**
    * Clean up calls.
-   *
-   * @param cleanAll true if all calls should be cleaned, false for only the timed out calls
    */
   private void cleanupCalls() {
     List<AsyncCall> toCleanup = new ArrayList<AsyncCall>();

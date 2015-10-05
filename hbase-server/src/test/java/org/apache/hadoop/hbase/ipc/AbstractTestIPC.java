@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoRequestProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EchoResponseProto;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos.EmptyRequestProto;
@@ -163,7 +164,8 @@ public abstract class AbstractTestIPC {
       final String message = "hello";
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
       Pair<Message, CellScanner> r =
-          client.call(null, md, param, md.getOutputType().toProto(), User.getCurrent(), address);
+          client.call(null, md, param, md.getOutputType().toProto(), User.getCurrent(), address,
+              new MetricsConnection.CallStats());
       assertTrue(r.getSecond() == null);
       // Silly assertion that the message is in the returned pb.
       assertTrue(r.getFirst().toString().contains(message));
@@ -205,7 +207,8 @@ public abstract class AbstractTestIPC {
       PayloadCarryingRpcController pcrc =
           new PayloadCarryingRpcController(CellUtil.createCellScanner(cells));
       Pair<Message, CellScanner> r =
-          client.call(pcrc, md, param, md.getOutputType().toProto(), User.getCurrent(), address);
+          client.call(pcrc, md, param, md.getOutputType().toProto(), User.getCurrent(), address,
+              new MetricsConnection.CallStats());
       int index = 0;
       while (r.getSecond().advance()) {
         assertTrue(CELL.equals(r.getSecond().current()));
@@ -231,7 +234,8 @@ public abstract class AbstractTestIPC {
       InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-      client.call(null, md, param, null, User.getCurrent(), address);
+      client.call(null, md, param, null, User.getCurrent(), address,
+          new MetricsConnection.CallStats());
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
       LOG.info("Caught expected exception: " + e.toString());
@@ -255,10 +259,10 @@ public abstract class AbstractTestIPC {
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
       for (int i = 0; i < 10; i++) {
-        client.call(
-          new PayloadCarryingRpcController(
-              CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param, md
-              .getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress());
+        client.call(new PayloadCarryingRpcController(
+            CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param,
+            md.getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress(),
+            new MetricsConnection.CallStats());
       }
       verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
     } finally {

@@ -842,7 +842,7 @@ public class HRegionServer extends HasThread implements
     
     // Setup RPC client for master communication
     rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
-        rpcServices.isa.getAddress(), 0));
+        rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
 
     boolean onlyMetaRefresh = false;
     int storefileRefreshPeriod = conf.getInt(

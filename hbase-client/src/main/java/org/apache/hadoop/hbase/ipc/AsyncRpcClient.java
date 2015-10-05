@@ -52,7 +52,9 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PoolMap;
@@ -146,12 +148,13 @@ public class AsyncRpcClient extends AbstractRpcClient {
    * @param configuration      to HBase
    * @param clusterId          for the cluster
    * @param localAddress       local address to connect to
+   * @param metrics            the connection metrics
    * @param channelInitializer for custom channel handlers
    */
-  @VisibleForTesting
-  AsyncRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
+  protected AsyncRpcClient(Configuration configuration, String clusterId,
+      SocketAddress localAddress, MetricsConnection metrics,
       ChannelInitializer<SocketChannel> channelInitializer) {
-    super(configuration, clusterId, localAddress);
+    super(configuration, clusterId, localAddress, metrics);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Starting async Hbase RPC client");
@@ -191,15 +194,28 @@ public class AsyncRpcClient extends AbstractRpcClient {
     }
   }
 
+  /** Used in test only. */
+  AsyncRpcClient(Configuration configuration) {
+    this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null);
+  }
+
+  /** Used in test only. */
+  AsyncRpcClient(Configuration configuration,
+      ChannelInitializer<SocketChannel> channelInitializer) {
+    this(configuration, HConstants.CLUSTER_ID_DEFAULT, null, null, channelInitializer);
+  }
+
   /**
    * Constructor
    *
    * @param configuration to HBase
    * @param clusterId     for the cluster
    * @param localAddress  local address to connect to
+   * @param metrics       the connection metrics
    */
-  public AsyncRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress) {
-    this(configuration, clusterId, localAddress, null);
+  public AsyncRpcClient(Configuration configuration, String clusterId, SocketAddress localAddress,
+      MetricsConnection metrics) {
+    this(configuration, clusterId, localAddress, metrics, null);
   }
 
   /**
@@ -219,13 +235,14 @@ public class AsyncRpcClient extends AbstractRpcClient {
   @Override
   protected Pair<Message, CellScanner> call(PayloadCarryingRpcController pcrc,
       Descriptors.MethodDescriptor md, Message param, Message returnType, User ticket,
-      InetSocketAddress addr) throws IOException, InterruptedException {
+      InetSocketAddress addr, MetricsConnection.CallStats callStats)
+      throws IOException, InterruptedException {
     if (pcrc == null) {
       pcrc = new PayloadCarryingRpcController();
     }
     final AsyncRpcChannel connection = createRpcChannel(md.getService().getName(), addr, ticket);
 
-    Promise<Message> promise = connection.callMethod(md, pcrc, param, returnType);
+    Promise<Message> promise = connection.callMethod(md, pcrc, param, returnType, callStats);
     long timeout = pcrc.hasCallTimeout() ? pcrc.getCallTimeout() : 0;
     try {
       Message response = timeout > 0 ? promise.get(timeout, TimeUnit.MILLISECONDS) : promise.get();
@@ -244,40 +261,49 @@ public class AsyncRpcClient extends AbstractRpcClient {
   /**
    * Call method async
    */
-  private void callMethod(Descriptors.MethodDescriptor md, final PayloadCarryingRpcController pcrc,
-      Message param, Message returnType, User ticket, InetSocketAddress addr,
-      final RpcCallback<Message> done) {
+  private void callMethod(final Descriptors.MethodDescriptor md,
+      final PayloadCarryingRpcController pcrc, final Message param, Message returnType, User ticket,
+      InetSocketAddress addr, final RpcCallback<Message> done) {
     final AsyncRpcChannel connection;
     try {
       connection = createRpcChannel(md.getService().getName(), addr, ticket);
-
-      connection.callMethod(md, pcrc, param, returnType).addListener(
+      final MetricsConnection.CallStats cs = MetricsConnection.newCallStats();
+      GenericFutureListener<Future<Message>> listener =
           new GenericFutureListener<Future<Message>>() {
-        @Override
-        public void operationComplete(Future<Message> future) throws Exception {
-          if(!future.isSuccess()){
-            Throwable cause = future.cause();
-            if (cause instanceof IOException) {
-              pcrc.setFailed((IOException) cause);
-            }else{
-              pcrc.setFailed(new IOException(cause));
-            }
-          }else{
-            try {
-              done.run(future.get());
-            }catch (ExecutionException e){
-              Throwable cause = e.getCause();
-              if (cause instanceof IOException) {
-                pcrc.setFailed((IOException) cause);
-              }else{
-                pcrc.setFailed(new IOException(cause));
+            @Override
+            public void operationComplete(Future<Message> future) throws Exception {
+              cs.setCallTimeMs(EnvironmentEdgeManager.currentTime() - cs.getStartTime());
+              if (metrics != null) {
+                metrics.updateRpc(md, param, cs);
               }
-            }catch (InterruptedException e){
-              pcrc.setFailed(new IOException(e));
+              if (LOG.isTraceEnabled()) {
+                LOG.trace("Call: " + md.getName() + ", callTime: " + cs.getCallTimeMs() + "ms");
+              }
+              if (!future.isSuccess()) {
+                Throwable cause = future.cause();
+                if (cause instanceof IOException) {
+                  pcrc.setFailed((IOException) cause);
+                } else {
+                  pcrc.setFailed(new IOException(cause));
+                }
+              } else {
+                try {
+                  done.run(future.get());
+                } catch (ExecutionException e) {
+                  Throwable cause = e.getCause();
+                  if (cause instanceof IOException) {
+                    pcrc.setFailed((IOException) cause);
+                  } else {
+                    pcrc.setFailed(new IOException(cause));
+                  }
+                } catch (InterruptedException e) {
+                  pcrc.setFailed(new IOException(e));
+                }
+              }
             }
-          }
-        }
-      });
+          };
+      cs.setStartTime(EnvironmentEdgeManager.currentTime());
+      connection.callMethod(md, pcrc, param, returnType, cs).addListener(listener);
     } catch (StoppedRpcClientException|FailedServerException e) {
       pcrc.setFailed(e);
     }

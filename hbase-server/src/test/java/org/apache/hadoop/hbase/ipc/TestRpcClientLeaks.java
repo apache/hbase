@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -58,8 +59,9 @@ public class TestRpcClientLeaks {
       super(conf, clusterId);
     }
 
-    public MyRpcClientImpl(Configuration conf, String clusterId, SocketAddress address) {
-      super(conf, clusterId, address);
+    public MyRpcClientImpl(Configuration conf, String clusterId, SocketAddress address,
+        MetricsConnection metrics) {
+      super(conf, clusterId, address, metrics);
     }
 
     @Override

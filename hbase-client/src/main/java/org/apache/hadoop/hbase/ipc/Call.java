@@ -21,6 +21,7 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Message;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
@@ -41,16 +42,18 @@ public class Call {
   Message responseDefaultType;
   IOException error;                            // exception, null if value
   volatile boolean done;                                 // true when call is done
-  long startTime;
   final Descriptors.MethodDescriptor md;
   final int timeout; // timeout in millisecond for this call; 0 means infinite.
+  final MetricsConnection.CallStats callStats;
 
   protected Call(int id, final Descriptors.MethodDescriptor md, Message param,
-      final CellScanner cells, final Message responseDefaultType, int timeout) {
+      final CellScanner cells, final Message responseDefaultType, int timeout,
+      MetricsConnection.CallStats callStats) {
     this.param = param;
     this.md = md;
     this.cells = cells;
-    this.startTime = EnvironmentEdgeManager.currentTime();
+    this.callStats = callStats;
+    this.callStats.setStartTime(EnvironmentEdgeManager.currentTime());
     this.responseDefaultType = responseDefaultType;
     this.id = id;
     this.timeout = timeout;
@@ -122,6 +125,6 @@ public class Call {
   }
 
   public long getStartTime() {
-    return this.startTime;
+    return this.callStats.getStartTime();
   }
 }
