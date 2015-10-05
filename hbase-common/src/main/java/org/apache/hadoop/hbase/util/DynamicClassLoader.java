@@ -66,6 +66,11 @@ public class DynamicClassLoader extends ClassLoaderBase {
 
   private static final String DYNAMIC_JARS_DIR_KEY = "hbase.dynamic.jars.dir";
 
+  private static final String DYNAMIC_JARS_OPTIONAL_CONF_KEY = "hbase.use.dynamic.jars";
+  private static final boolean DYNAMIC_JARS_OPTIONAL_DEFAULT = true;
+
+  private boolean useDynamicJars;
+
   private File localDir;
 
   // FileSystem of the remote path, set only if remoteDir != null
@@ -86,6 +91,15 @@ public class DynamicClassLoader extends ClassLoaderBase {
       final Configuration conf, final ClassLoader parent) {
     super(parent);
 
+    useDynamicJars = conf.getBoolean(
+        DYNAMIC_JARS_OPTIONAL_CONF_KEY, DYNAMIC_JARS_OPTIONAL_DEFAULT);
+
+    if (useDynamicJars) {
+      initTempDir(conf);
+    }
+  }
+
+  private void initTempDir(final Configuration conf) {
     jarModifiedTime = new HashMap<String, Long>();
     String localDirPath = conf.get(
       LOCAL_DIR_KEY, DEFAULT_LOCAL_DIR) + DYNAMIC_JARS_DIR;
@@ -120,7 +134,17 @@ public class DynamicClassLoader extends ClassLoaderBase {
         LOG.debug("Class " + name + " not found - using dynamical class loader");
       }
 
-      synchronized (getClassLoadingLock(name)) {
+      if (useDynamicJars) {
+        return tryRefreshClass(name);
+      }
+      throw e;
+    }
+  }
+
+
+  private Class<?> tryRefreshClass(String name)
+      throws ClassNotFoundException {
+    synchronized (getClassLoadingLock(name)) {
         // Check whether the class has already been loaded:
         Class<?> clasz = findLoadedClass(name);
         if (clasz != null) {
@@ -149,7 +173,6 @@ public class DynamicClassLoader extends ClassLoaderBase {
         }
         return clasz;
       }
-    }
   }
 
   private synchronized void loadNewJars() {
