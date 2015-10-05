@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
+import org.junit.Before;
 import org.junit.experimental.categories.Category;
 
 /**
@@ -40,10 +41,16 @@ public class TestDynamicClassLoader {
   private static final Log LOG = LogFactory.getLog(TestDynamicClassLoader.class);
 
   private static final HBaseCommonTestingUtility TEST_UTIL = new HBaseCommonTestingUtility();
-  private static final Configuration conf = TEST_UTIL.getConfiguration();
+  private Configuration conf;
 
   static {
-    conf.set("hbase.dynamic.jars.dir", TEST_UTIL.getDataTestDir().toString());
+    TEST_UTIL.getConfiguration().set(
+        "hbase.dynamic.jars.dir", TEST_UTIL.getDataTestDir().toString());
+  }
+
+  @Before
+  public void initializeConfiguration() {
+    conf = new Configuration(TEST_UTIL.getConfiguration());
   }
 
   @Test
@@ -92,6 +99,26 @@ public class TestDynamicClassLoader {
     } catch (ClassNotFoundException cnfe) {
       LOG.error("Should be able to load class " + className, cnfe);
       fail(cnfe.getMessage());
+    }
+  }
+
+  @Test
+  public void testLoadClassFromLocalPathWithDynamicDirOff() throws Exception {
+    conf.setBoolean("hbase.use.dynamic.jars", false);
+    ClassLoader parent = TestDynamicClassLoader.class.getClassLoader();
+    DynamicClassLoader classLoader = new DynamicClassLoader(conf, parent);
+
+    String className = "TestLoadClassFromLocalPath";
+    deleteClass(className);
+
+    try {
+      String folder = TEST_UTIL.getDataTestDir().toString();
+      ClassLoaderTestHelper.buildJar(
+          folder, className, null, ClassLoaderTestHelper.localDirPath(conf));
+      classLoader.loadClass(className);
+      fail("Should not be able to load class " + className);
+    } catch (ClassNotFoundException cnfe) {
+      // expected, move on
     }
   }
 
