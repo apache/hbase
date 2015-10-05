@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -642,6 +644,8 @@ public class HConnectionManager {
     // Client rpc instance.
     private RpcClient rpcClient;
 
+    private final MetricsConnection metrics;
+
     /**
       * Map of table to table {@link HRegionLocation}s.
       */
@@ -666,7 +670,7 @@ public class HConnectionManager {
     // indicates whether this connection's life cycle is managed (by us)
     private boolean managed;
 
-    private User user;
+    protected User user;
 
     private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -706,7 +710,7 @@ public class HConnectionManager {
       this.registry = setupRegistry();
       retrieveClusterId();
 
-      this.rpcClient = new RpcClient(this.conf, this.clusterId);
+      this.rpcClient = new RpcClient(this.conf, this.clusterId, this.metrics);
 
       // Do we publish the status?
       boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
@@ -782,7 +786,11 @@ public class HConnectionManager {
       this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, this.stats);
       this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
-      
+      if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+        this.metrics = new MetricsConnection(this);
+      } else {
+        this.metrics = null;
+      }
     }
 
     @Override
@@ -817,6 +825,11 @@ public class HConnectionManager {
       }
       return new HTable(tableName, this, tableConfig, rpcCallerFactory, rpcControllerFactory,
         pool);
+    }
+
+    @Override
+    public MetricsConnection getConnectionMetrics() {
+      return this.metrics;
     }
 
     private ExecutorService getBatchPool() {
@@ -1426,6 +1439,7 @@ public class HConnectionManager {
 
       Entry<byte[], HRegionLocation> e = tableLocations.floorEntry(row);
       if (e == null) {
+        if (metrics != null) metrics.incrMetaCacheMiss();
         return null;
       }
       HRegionLocation possibleRegion = e.getValue();
@@ -1439,10 +1453,12 @@ public class HConnectionManager {
       if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
           tableName.getRowComparator().compareRows(
               endKey, 0, endKey.length, row, 0, row.length) > 0) {
+        if (metrics != null) metrics.incrMetaCacheHit();
         return possibleRegion;
       }
 
       // Passed all the way through, so we got nothing - complete cache miss
+      if (metrics != null) metrics.incrMetaCacheMiss();
       return null;
     }
 
@@ -2657,6 +2673,9 @@ public class HConnectionManager {
       delayedClosing.stop("Closing connection");
       closeMaster();
       shutdownBatchPool();
+      if (this.metrics != null) {
+        this.metrics.shutdown();
+      }
       this.closed = true;
       closeZooKeeperWatcher();
       this.stubs.clear();

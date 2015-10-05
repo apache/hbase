@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -342,7 +343,8 @@ public class TestIPC {
         }
         CellScanner cellScanner = CellUtil.createCellScanner(cells);
         Pair<Message, CellScanner> response =
-          client.call(md, builder.build(), cellScanner, param, user, address, 0);
+          client.call(md, builder.build(), cellScanner, param, user, address, 0,
+              HConstants.NORMAL_QOS, new MetricsConnection.CallStats());
         /*
         int count = 0;
         while (p.getSecond().advance()) {

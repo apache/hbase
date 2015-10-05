@@ -555,4 +555,9 @@ public interface HConnection extends Abortable, Closeable {
    * @return the configured client backoff policy
    */
   ClientBackoffPolicy getBackoffPolicy();
+
+  /**
+   * @return the MetricsConnection instance associated with this connection.
+   */
+  public MetricsConnection getConnectionMetrics();
 }

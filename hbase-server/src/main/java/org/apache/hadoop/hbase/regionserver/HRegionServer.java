@@ -873,8 +873,9 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
     }
 
     // Setup RPC client for master communication
+    // TODO: no single connection managed anywhere, so no central metrics object to obtain.
     rpcClient = new RpcClient(conf, clusterId, new InetSocketAddress(
-        this.isa.getAddress(), 0));
+        this.isa.getAddress(), 0), null);
     this.pauseMonitor = new JvmPauseMonitor(conf);
     pauseMonitor.start();
   }
