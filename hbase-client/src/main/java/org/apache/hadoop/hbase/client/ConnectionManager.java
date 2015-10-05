@@ -211,6 +211,7 @@ class ConnectionManager {
 
   public static final String RETRIES_BY_SERVER_KEY = "hbase.client.retries.by.server";
   private static final String CLIENT_NONCES_ENABLED_KEY = "hbase.client.nonces.enabled";
+  private static final String RESOLVE_HOSTNAME_ON_FAIL_KEY = "hbase.resolve.hostnames.on.failure";
 
   // An LRU Map of HConnectionKey -> HConnection (TableServer).  All
   // access must be synchronized.  This map is not private because tests
@@ -555,6 +556,7 @@ class ConnectionManager {
       justification="Access to the conncurrent hash map is under a lock so should be fine.")
   static class HConnectionImplementation implements ClusterConnection, Closeable {
     static final Log LOG = LogFactory.getLog(HConnectionImplementation.class);
+    private final boolean hostnamesCanChange;
     private final long pause;
     private final boolean useMetaReplicas;
     private final int numTries;
@@ -708,6 +710,8 @@ class ConnectionManager {
       } else {
         this.metrics = null;
       }
+      
+      this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
       this.metaCache = new MetaCache(this.metrics);
     }
 
@@ -1514,7 +1518,8 @@ class ConnectionManager {
             throw new MasterNotRunningException(sn + " is dead.");
           }
           // Use the security info interface name as our stub key
-          String key = getStubKey(getServiceName(), sn.getHostname(), sn.getPort());
+          String key = getStubKey(getServiceName(),
+              sn.getHostname(), sn.getPort(), hostnamesCanChange);
           connectionLock.putIfAbsent(key, key);
           Object stub = null;
           synchronized (connectionLock.get(key)) {
@@ -1603,7 +1608,7 @@ class ConnectionManager {
         throw new RegionServerStoppedException(serverName + " is dead.");
       }
       String key = getStubKey(AdminService.BlockingInterface.class.getName(),
-          serverName.getHostname(), serverName.getPort());
+          serverName.getHostname(), serverName.getPort(), this.hostnamesCanChange);
       this.connectionLock.putIfAbsent(key, key);
       AdminService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1625,7 +1630,7 @@ class ConnectionManager {
         throw new RegionServerStoppedException(sn + " is dead.");
       }
       String key = getStubKey(ClientService.BlockingInterface.class.getName(), sn.getHostname(),
-          sn.getPort());
+          sn.getPort(), this.hostnamesCanChange);
       this.connectionLock.putIfAbsent(key, key);
       ClientService.BlockingInterface stub = null;
       synchronized (this.connectionLock.get(key)) {
@@ -1642,16 +1647,22 @@ class ConnectionManager {
       return stub;
     }
 
-    static String getStubKey(final String serviceName, final String rsHostname, int port) {
+    static String getStubKey(final String serviceName,
+                             final String rsHostname,
+                             int port,
+                             boolean resolveHostnames) {
+
       // Sometimes, servers go down and they come back up with the same hostname but a different
       // IP address. Force a resolution of the rsHostname by trying to instantiate an
       // InetSocketAddress, and this way we will rightfully get a new stubKey.
       // Also, include the hostname in the key so as to take care of those cases where the
       // DNS name is different but IP address remains the same.
-      InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
       String address = rsHostname;
-      if (i != null) {
-        address = i.getHostAddress() + "-" + rsHostname;
+      if (resolveHostnames) {
+        InetAddress i =  new InetSocketAddress(rsHostname, port).getAddress();
+        if (i != null) {
+          address = i.getHostAddress() + "-" + rsHostname;
+        }
       }
       return serviceName + "@" + address + ":" + port;
     }
