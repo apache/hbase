@@ -60,6 +60,12 @@ public class MetaCache {
   // The access to this attribute must be protected by a lock on cachedRegionLocations
   private final Set<ServerName> cachedServers = new ConcurrentSkipListSet<ServerName>();
 
+  private final MetricsConnection metrics;
+
+  public MetaCache(MetricsConnection metrics) {
+    this.metrics = metrics;
+  }
+
   /**
    * Search the cache for a location that fits our table and row key.
    * Return null if no suitable region is located.
@@ -75,6 +81,7 @@ public class MetaCache {
 
     Entry<byte[], RegionLocations> e = tableLocations.floorEntry(row);
     if (e == null) {
+      if (metrics!= null) metrics.incrMetaCacheMiss();
       return null;
     }
     RegionLocations possibleRegion = e.getValue();
@@ -88,10 +95,12 @@ public class MetaCache {
     if (Bytes.equals(endKey, HConstants.EMPTY_END_ROW) ||
         getRowComparator(tableName).compareRows(
             endKey, 0, endKey.length, row, 0, row.length) > 0) {
+      if (metrics != null) metrics.incrMetaCacheHit();
       return possibleRegion;
     }
 
     // Passed all the way through, so we got nothing - complete cache miss
+    if (metrics != null) metrics.incrMetaCacheMiss();
     return null;
   }
 

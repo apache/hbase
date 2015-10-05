@@ -174,5 +174,4 @@ public interface Connection extends Abortable, Closeable {
    * @return true if this connection is closed
    */
   boolean isClosed();
-
 }

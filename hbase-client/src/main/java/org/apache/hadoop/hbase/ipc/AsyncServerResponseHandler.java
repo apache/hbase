@@ -24,8 +24,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -39,8 +37,6 @@ import com.google.protobuf.Message;
  */
 @InterfaceAudience.Private
 public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
-  private static final Log LOG = LogFactory.getLog(AsyncServerResponseHandler.class.getName());
-
   private final AsyncRpcChannel channel;
 
   /**
@@ -102,6 +98,7 @@ public class AsyncServerResponseHandler extends ChannelInboundHandlerAdapter {
           cellBlockScanner = channel.client.createCellScanner(cellBlock);
         }
         call.setSuccess(value, cellBlockScanner);
+        call.callStats.setResponseSizeBytes(totalSize);
       }
     } catch (IOException e) {
       // Treat this as a fatal condition and close this connection

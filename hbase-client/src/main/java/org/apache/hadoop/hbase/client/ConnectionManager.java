@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -600,14 +602,15 @@ class ConnectionManager {
     // Client rpc instance.
     private RpcClient rpcClient;
 
-    private MetaCache metaCache = new MetaCache();
+    private final MetaCache metaCache;
+    private final MetricsConnection metrics;
 
     private int refCount;
 
     // indicates whether this connection's life cycle is managed (by us)
     private boolean managed;
 
-    private User user;
+    protected User user;
 
     private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -670,6 +673,12 @@ class ConnectionManager {
       this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
       this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
       this.asyncProcess = createAsyncProcess(this.conf);
+      if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+        this.metrics = new MetricsConnection(this);
+      } else {
+        this.metrics = null;
+      }
+      this.metaCache = new MetaCache(this.metrics);
 
       this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
       boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
@@ -775,6 +784,11 @@ class ConnectionManager {
         throw new NeedUnmanagedConnectionException();
       }
       return new HBaseAdmin(this);
+    }
+
+    @Override
+    public MetricsConnection getConnectionMetrics() {
+      return this.metrics;
     }
 
     private ExecutorService getBatchPool() {
@@ -2420,6 +2434,9 @@ class ConnectionManager {
       }
       closeMaster();
       shutdownPools();
+      if (this.metrics != null) {
+        this.metrics.shutdown();
+      }
       this.closed = true;
       closeZooKeeperWatcher();
       this.stubs.clear();

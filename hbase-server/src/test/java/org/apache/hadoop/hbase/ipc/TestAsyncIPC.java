@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.codec.Codec;
@@ -115,7 +116,7 @@ public class TestAsyncIPC extends AbstractTestIPC {
   @Override
   protected AsyncRpcClient createRpcClientNoCodec(Configuration conf) {
     setConf(conf);
-    return new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null) {
+    return new AsyncRpcClient(conf) {
 
       @Override
       Codec getCodec() {
@@ -128,15 +129,13 @@ public class TestAsyncIPC extends AbstractTestIPC {
   @Override
   protected AsyncRpcClient createRpcClient(Configuration conf) {
     setConf(conf);
-    return new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null);
+    return new AsyncRpcClient(conf);
   }
 
   @Override
   protected AsyncRpcClient createRpcClientRTEDuringConnectionSetup(Configuration conf) {
     setConf(conf);
-    return new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null,
-        new ChannelInitializer<SocketChannel>() {
-
+    return new AsyncRpcClient(conf, new ChannelInitializer<SocketChannel>() {
           @Override
           protected void initChannel(SocketChannel ch) throws Exception {
             ch.pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
@@ -247,7 +246,7 @@ public class TestAsyncIPC extends AbstractTestIPC {
     TestRpcServer rpcServer = new TestRpcServer();
     MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
     EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-    AsyncRpcClient client = new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null);
+    AsyncRpcClient client = new AsyncRpcClient(conf);
     KeyValue kv = BIG_CELL;
     Put p = new Put(CellUtil.cloneRow(kv));
     for (int i = 0; i < cellcount; i++) {
@@ -281,7 +280,8 @@ public class TestAsyncIPC extends AbstractTestIPC {
         PayloadCarryingRpcController pcrc =
             new PayloadCarryingRpcController(CellUtil.createCellScanner(cells));
         // Pair<Message, CellScanner> response =
-        client.call(pcrc, md, builder.build(), param, user, address);
+        client.call(pcrc, md, builder.build(), param, user, address,
+            new MetricsConnection.CallStats());
         /*
          * int count = 0; while (p.getSecond().advance()) { count++; } assertEquals(cells.size(),
          * count);
