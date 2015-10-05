@@ -40,7 +40,7 @@ public final class UnsafeAccess {
   static final Unsafe theUnsafe;
 
   /** The offset to the first element in a byte array. */
-  static final long BYTE_ARRAY_BASE_OFFSET;
+  public static final long BYTE_ARRAY_BASE_OFFSET;
 
   static final boolean littleEndian = ByteOrder.nativeOrder()
       .equals(ByteOrder.LITTLE_ENDIAN);
@@ -182,6 +182,20 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Reads a short value at the given Object's offset considering it was written in big-endian
+   * format.
+   * @param ref
+   * @param offset
+   * @return short value at offset
+   */
+  public static short toShort(Object ref, long offset) {
+    if (littleEndian) {
+      return Short.reverseBytes(theUnsafe.getShort(ref, offset));
+    }
+    return theUnsafe.getShort(ref, offset);
+  }
+
+  /**
    * Reads bytes at the given offset as a short value.
    * @param buf
    * @param offset
@@ -210,6 +224,20 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Reads a int value at the given Object's offset considering it was written in big-endian
+   * format.
+   * @param ref
+   * @param offset
+   * @return int value at offset
+   */
+  public static int toInt(Object ref, long offset) {
+    if (littleEndian) {
+      return Integer.reverseBytes(theUnsafe.getInt(ref, offset));
+    }
+    return theUnsafe.getInt(ref, offset);
+  }
+
+  /**
    * Reads bytes at the given offset as an int value.
    * @param buf
    * @param offset
@@ -235,6 +263,20 @@ public final class UnsafeAccess {
       return Long.reverseBytes(getAsLong(buf, offset));
     }
     return getAsLong(buf, offset);
+  }
+
+  /**
+   * Reads a long value at the given Object's offset considering it was written in big-endian
+   * format.
+   * @param ref
+   * @param offset
+   * @return long value at offset
+   */
+  public static long toLong(Object ref, long offset) {
+    if (littleEndian) {
+      return Long.reverseBytes(theUnsafe.getLong(ref, offset));
+    }
+    return theUnsafe.getLong(ref, offset);
   }
 
   /**
@@ -410,5 +452,15 @@ public final class UnsafeAccess {
     } else {
       return theUnsafe.getByte(buf.array(), BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset() + offset);
     }
+  }
+
+  /**
+   * Returns the byte at the given offset of the object
+   * @param ref
+   * @param offset
+   * @return the byte at the given offset
+   */
+  public static byte toByte(Object ref, long offset) {
+    return theUnsafe.getByte(ref, offset);
   }
 }

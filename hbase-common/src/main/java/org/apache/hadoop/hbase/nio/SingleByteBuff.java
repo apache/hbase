@@ -22,6 +22,9 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
+import org.apache.hadoop.hbase.util.UnsafeAccess;
+
+import sun.nio.ch.DirectBuffer;
 
 /**
  * An implementation of ByteBuff where a single BB backs the BBI. This just acts
@@ -30,11 +33,23 @@ import org.apache.hadoop.hbase.util.ObjectIntPair;
 @InterfaceAudience.Private
 public class SingleByteBuff extends ByteBuff {
 
+  private static final boolean UNSAFE_AVAIL = UnsafeAccess.isAvailable();
+
   // Underlying BB
   private final ByteBuffer buf;
 
+  // To access primitive values from underlying ByteBuffer using Unsafe
+  private long unsafeOffset;
+  private Object unsafeRef = null;
+
   public SingleByteBuff(ByteBuffer buf) {
     this.buf = buf;
+    if (buf.hasArray()) {
+      this.unsafeOffset = UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset();
+      this.unsafeRef = buf.array();
+    } else {
+      this.unsafeOffset = ((DirectBuffer) buf).address();
+    }
   }
 
   @Override
@@ -134,12 +149,15 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public byte get(int index) {
-    return ByteBufferUtils.toByte(this.buf, index);
+    if (UNSAFE_AVAIL) {
+      return UnsafeAccess.toByte(this.unsafeRef, this.unsafeOffset + index);
+    }
+    return this.buf.get(index);
   }
 
   @Override
   public byte getByteAfterPosition(int offset) {
-    return ByteBufferUtils.toByte(this.buf, this.buf.position() + offset);
+    return get(this.buf.position() + offset);
   }
 
   @Override
@@ -219,12 +237,15 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public short getShort(int index) {
-    return ByteBufferUtils.toShort(this.buf, index);
+    if (UNSAFE_AVAIL) {
+      return UnsafeAccess.toShort(unsafeRef, unsafeOffset + index);
+    }
+    return this.buf.getShort(index);
   }
 
   @Override
   public short getShortAfterPosition(int offset) {
-    return ByteBufferUtils.toShort(this.buf, this.buf.position() + offset);
+    return getShort(this.buf.position() + offset);
   }
 
   @Override
@@ -240,12 +261,15 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public int getInt(int index) {
-    return ByteBufferUtils.toInt(this.buf, index);
+    if (UNSAFE_AVAIL) {
+      return UnsafeAccess.toInt(unsafeRef, unsafeOffset + index);
+    }
+    return this.buf.getInt(index);
   }
 
   @Override
   public int getIntAfterPosition(int offset) {
-    return ByteBufferUtils.toInt(this.buf, this.buf.position() + offset);
+    return getInt(this.buf.position() + offset);
   }
 
   @Override
@@ -261,12 +285,15 @@ public class SingleByteBuff extends ByteBuff {
 
   @Override
   public long getLong(int index) {
-    return ByteBufferUtils.toLong(this.buf, index);
+    if (UNSAFE_AVAIL) {
+      return UnsafeAccess.toLong(unsafeRef, unsafeOffset + index);
+    }
+    return this.buf.getLong(index);
   }
 
   @Override
   public long getLongAfterPosition(int offset) {
-    return ByteBufferUtils.toLong(this.buf, this.buf.position() + offset);
+    return getLong(this.buf.position() + offset);
   }
 
   @Override
