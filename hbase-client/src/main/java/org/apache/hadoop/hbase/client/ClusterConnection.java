@@ -297,4 +297,9 @@ public interface ClusterConnection extends HConnection {
    */
   ClientBackoffPolicy getBackoffPolicy();
 
+  /**
+   * @return the MetricsConnection instance associated with this connection.
+   */
+  public MetricsConnection getConnectionMetrics();
+
 }

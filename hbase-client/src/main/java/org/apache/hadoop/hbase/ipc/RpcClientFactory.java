@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 import java.net.SocketAddress;
@@ -37,13 +39,8 @@ public final class RpcClientFactory {
   private RpcClientFactory() {
   }
 
-  /**
-   * Creates a new RpcClient by the class defined in the configuration or falls back to
-   * RpcClientImpl
-   * @param conf configuration
-   * @param clusterId the cluster id
-   * @return newly created RpcClient
-   */
+  /** Helper method for tests only. Creates an {@code RpcClient} without metrics. */
+  @VisibleForTesting
   public static RpcClient createClient(Configuration conf, String clusterId) {
     return createClient(conf, clusterId, null);
   }
@@ -53,17 +50,32 @@ public final class RpcClientFactory {
    * RpcClientImpl
    * @param conf configuration
    * @param clusterId the cluster id
-   * @param localAddr client socket bind address.
+   * @param metrics the connection metrics
    * @return newly created RpcClient
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
-      SocketAddress localAddr) {
+      MetricsConnection metrics) {
+    return createClient(conf, clusterId, null, metrics);
+  }
+
+  /**
+   * Creates a new RpcClient by the class defined in the configuration or falls back to
+   * RpcClientImpl
+   * @param conf configuration
+   * @param clusterId the cluster id
+   * @param localAddr client socket bind address.
+   * @param metrics the connection metrics
+   * @return newly created RpcClient
+   */
+  public static RpcClient createClient(Configuration conf, String clusterId,
+      SocketAddress localAddr, MetricsConnection metrics) {
     String rpcClientClass =
         conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, AsyncRpcClient.class.getName());
     return ReflectionUtils.instantiateWithCustomCtor(
         rpcClientClass,
-        new Class[] { Configuration.class, String.class, SocketAddress.class },
-        new Object[] { conf, clusterId, localAddr }
+        new Class[] { Configuration.class, String.class, SocketAddress.class,
+            MetricsConnection.class },
+        new Object[] { conf, clusterId, localAddr, metrics }
     );
   }
 }

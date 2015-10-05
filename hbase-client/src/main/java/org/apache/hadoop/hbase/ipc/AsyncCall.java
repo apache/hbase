@@ -25,6 +25,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ExceptionUtil;
@@ -49,6 +50,7 @@ public class AsyncCall extends DefaultPromise<Message> {
   final Message responseDefaultType;
   final long startTime;
   final long rpcTimeout;
+  final MetricsConnection.CallStats callStats;
 
   /**
    * Constructor
@@ -61,7 +63,8 @@ public class AsyncCall extends DefaultPromise<Message> {
    * @param responseDefaultType the default response type
    */
   public AsyncCall(EventLoop eventLoop, int connectId, Descriptors.MethodDescriptor md, Message
-      param, PayloadCarryingRpcController controller, Message responseDefaultType) {
+      param, PayloadCarryingRpcController controller, Message responseDefaultType,
+      MetricsConnection.CallStats callStats) {
     super(eventLoop);
 
     this.id = connectId;
@@ -73,6 +76,7 @@ public class AsyncCall extends DefaultPromise<Message> {
 
     this.startTime = EnvironmentEdgeManager.currentTime();
     this.rpcTimeout = controller.hasCallTimeout() ? controller.getCallTimeout() : 0;
+    this.callStats = callStats;
   }
 
   /**

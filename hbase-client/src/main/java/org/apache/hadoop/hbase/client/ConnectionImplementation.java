@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.BlockingRpcChannel;
 import com.google.protobuf.RpcController;
@@ -165,11 +167,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   // Client rpc instance.
   private RpcClient rpcClient;
 
-  private MetaCache metaCache = new MetaCache();
+  private final MetaCache metaCache;
+  private final MetricsConnection metrics;
 
   private int refCount;
 
-  private User user;
+  protected User user;
 
   private RpcRetryingCallerFactory rpcCallerFactory;
 
@@ -198,11 +201,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
-      HConstants.DEFAULT_USE_META_REPLICAS);
+        HConstants.DEFAULT_USE_META_REPLICAS);
     this.numTries = tableConfig.getRetriesNumber();
     this.rpcTimeout = conf.getInt(
-      HConstants.HBASE_RPC_TIMEOUT_KEY,
-      HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+        HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
     if (conf.getBoolean(CLIENT_NONCES_ENABLED_KEY, true)) {
       synchronized (nonceGeneratorCreateLock) {
         if (nonceGenerator == null) {
@@ -219,6 +222,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     this.asyncProcess = createAsyncProcess(this.conf);
+    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+      this.metrics = new MetricsConnection(this);
+    } else {
+      this.metrics = null;
+    }
+    this.metaCache = new MetaCache(this.metrics);
 
     boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
         HConstants.STATUS_PUBLISHED_DEFAULT);
@@ -375,6 +384,11 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   @Override
   public Admin getAdmin() throws IOException {
     return new HBaseAdmin(this);
+  }
+
+  @Override
+  public MetricsConnection getConnectionMetrics() {
+    return this.metrics;
   }
 
   private ExecutorService getBatchPool() {
@@ -2140,6 +2154,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
     closeMaster();
     shutdownPools();
+    if (this.metrics != null) {
+      this.metrics.shutdown();
+    }
     this.closed = true;
     closeZooKeeperWatcher();
     this.stubs.clear();

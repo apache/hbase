@@ -37,15 +37,15 @@ public class TestGlobalEventLoopGroup {
   public void test() {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(AsyncRpcClient.USE_GLOBAL_EVENT_LOOP_GROUP, true);
-    AsyncRpcClient client = new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null);
+    AsyncRpcClient client = new AsyncRpcClient(conf);
     assertNotNull(AsyncRpcClient.GLOBAL_EVENT_LOOP_GROUP);
-    AsyncRpcClient client1 = new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null);
+    AsyncRpcClient client1 = new AsyncRpcClient(conf);
     assertSame(client.bootstrap.group(), client1.bootstrap.group());
     client1.close();
     assertFalse(client.bootstrap.group().isShuttingDown());
 
     conf.setBoolean(AsyncRpcClient.USE_GLOBAL_EVENT_LOOP_GROUP, false);
-    AsyncRpcClient client2 = new AsyncRpcClient(conf, HConstants.CLUSTER_ID_DEFAULT, null);
+    AsyncRpcClient client2 = new AsyncRpcClient(conf);
     assertNotSame(client.bootstrap.group(), client2.bootstrap.group());
     client2.close();
 
