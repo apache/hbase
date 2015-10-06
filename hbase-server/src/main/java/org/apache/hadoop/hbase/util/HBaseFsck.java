@@ -110,9 +110,10 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
@@ -123,6 +124,7 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.util.MetaUtils;
 import org.apache.hadoop.hbase.util.Bytes.ByteArrayComparator;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
@@ -1248,7 +1250,7 @@ public class HBaseFsck extends Configured implements Closeable {
         tablesInfo.put(tableName, modTInfo);
         try {
           HTableDescriptor htd =
-              FSTableDescriptors.getTableDescriptorFromFs(fs, hbaseRoot, tableName);
+              LegacyTableDescriptor.getTableDescriptorFromFs(fs, hbaseRoot, tableName);
           modTInfo.htds.add(htd);
         } catch (IOException ioe) {
           if (!orphanTableDirs.containsKey(tableName)) {
@@ -1396,7 +1398,7 @@ public class HBaseFsck extends Configured implements Closeable {
     Configuration c = getConf();
     HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
     HTableDescriptor metaDescriptor = new FSTableDescriptors(c).get(TableName.META_TABLE_NAME);
-    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, false);
+    MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, false);
     // The WAL subsystem will use the default rootDir rather than the passed in rootDir
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(c);
@@ -1406,7 +1408,7 @@ public class HBaseFsck extends Configured implements Closeable {
         "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
         getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
     HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
-    MasterFileSystem.setInfoFamilyCachingForMeta(metaDescriptor, true);
+    MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
   }
 

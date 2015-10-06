@@ -826,11 +826,10 @@ public class TestStoreFile extends HBaseTestCase {
 
     // Make up a directory hierarchy that has a regiondir ("7e0102") and familyname.
     Path storedir = new Path(new Path(testDir, "7e0102"), Bytes.toString(family));
-    Path dir = new Path(storedir, "1234567890");
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
-            .withOutputDir(dir)
+            .withOutputDir(storedir)
             .withFileContext(meta)
             .build();
 

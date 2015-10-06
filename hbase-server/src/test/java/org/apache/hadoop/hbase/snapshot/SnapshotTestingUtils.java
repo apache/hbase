@@ -55,9 +55,10 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
@@ -69,7 +70,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.MD5Hash;
@@ -497,8 +497,8 @@ public final class SnapshotTestingUtils {
         this.desc = desc;
         this.tableRegions = tableRegions;
         this.snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
-        new FSTableDescriptors(conf)
-          .createTableDescriptorForTableDirectory(snapshotDir, htd, false);
+        LegacyTableDescriptor.createTableDescriptor(
+            fs, snapshotDir, htd, false);
       }
 
       public HTableDescriptor getTableDescriptor() {
@@ -690,7 +690,7 @@ public final class SnapshotTestingUtils {
     private RegionData[] createTable(final HTableDescriptor htd, final int nregions)
         throws IOException {
       Path tableDir = FSUtils.getTableDir(rootDir, htd.getTableName());
-      new FSTableDescriptors(conf).createTableDescriptorForTableDirectory(tableDir, htd, false);
+      LegacyTableDescriptor.createTableDescriptor(fs, tableDir, htd, false);
 
       assertTrue(nregions % 2 == 0);
       RegionData[] regions = new RegionData[nregions];

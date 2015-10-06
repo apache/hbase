@@ -42,11 +42,11 @@ import com.google.common.annotations.VisibleForTesting;
  * <P>
  * Methods required for task life circle: <BR>
  * {@link #markRegionsRecovering(ServerName, Set)} mark regions for log replaying. Used by
- * {@link org.apache.hadoop.hbase.master.MasterFileSystem} <BR>
+ * {@link org.apache.hadoop.hbase.fs.MasterFileSystem} <BR>
  * {@link #removeRecoveringRegions(Set, Boolean)} make regions cleanup that previous were marked as
  * recovering. Called after all tasks processed <BR>
  * {@link #removeStaleRecoveringRegions(Set)} remove stale recovering. called by
- * {@link org.apache.hadoop.hbase.master.MasterFileSystem} after Active Master is initialized <BR>
+ * {@link org.apache.hadoop.hbase.fs.MasterFileSystem} after Active Master is initialized <BR>
  * {@link #getLastRecoveryTime()} required for garbage collector and should indicate when the last
  * recovery has been made<BR>
  * {@link #checkTaskStillAvailable(String)} Check that task is still there <BR>

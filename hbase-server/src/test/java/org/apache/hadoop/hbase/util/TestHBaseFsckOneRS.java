@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableDescriptor;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -230,7 +232,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       Path hbaseTableDir = FSUtils.getTableDir(
           FSUtils.getRootDir(conf), table);
       fs = hbaseTableDir.getFileSystem(conf);
-      FileStatus status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
+      FileStatus status = LegacyTableDescriptor.getTableInfoPath(fs, hbaseTableDir);
       tableinfo = status.getPath();
       fs.rename(tableinfo, new Path("/.tableinfo"));
 
@@ -242,7 +244,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       hbck = doFsck(conf, true);
       assertNoErrors(hbck);
       status = null;
-      status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
+      status = LegacyTableDescriptor.getTableInfoPath(fs, hbaseTableDir);
       assertNotNull(status);
 
       HTableDescriptor htd = admin.getTableDescriptor(table);
@@ -256,7 +258,7 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       htd = admin.getTableDescriptor(table); // warms up cached htd on master
       hbck = doFsck(conf, true);
       assertNoErrors(hbck);
-      status = FSTableDescriptors.getTableInfoPath(fs, hbaseTableDir);
+      status = LegacyTableDescriptor.getTableInfoPath(fs, hbaseTableDir);
       assertNotNull(status);
       htd = admin.getTableDescriptor(table);
       assertEquals(htd.getValue("NOT_DEFAULT"), "true");
@@ -420,8 +422,8 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       htdDisabled.addFamily(new HColumnDescriptor(FAM));
 
       // Write the .tableinfo
-      FSTableDescriptors fstd = new FSTableDescriptors(conf);
-      fstd.createTableDescriptor(htdDisabled);
+      cluster.getMaster().getMasterFileSystem().createTableDescriptor(
+        new TableDescriptor(htdDisabled), true);
       List<HRegionInfo> disabledRegions =
           TEST_UTIL.createMultiRegionsInMeta(conf, htdDisabled, SPLIT_KEYS);
 

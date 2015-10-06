@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -135,7 +136,7 @@ public class Merge extends Configured implements Tool {
     if (info2 == null) {
       throw new NullPointerException("info2 is null using key " + meta);
     }
-    HTableDescriptor htd = FSTableDescriptors.getTableDescriptorFromFs(FileSystem.get(getConf()),
+    HTableDescriptor htd = LegacyTableDescriptor.getTableDescriptorFromFs(FileSystem.get(getConf()),
       this.rootdir, this.tableName);
     HRegion merged = merge(htd, meta, info1, info2);
 

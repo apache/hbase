@@ -27,7 +27,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
@@ -203,9 +202,7 @@ public class CreateNamespaceProcedure
   protected static void createDirectory(
       final MasterProcedureEnv env,
       final NamespaceDescriptor nsDescriptor) throws IOException {
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    mfs.getFileSystem().mkdirs(
-      FSUtils.getNamespaceDir(mfs.getRootDir(), nsDescriptor.getName()));
+    env.getMasterServices().getMasterFileSystem().createNamespace(nsDescriptor);
   }
 
   /**

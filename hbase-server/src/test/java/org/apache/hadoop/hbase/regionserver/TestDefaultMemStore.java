@@ -989,7 +989,7 @@ public class TestDefaultMemStore {
     edge.setCurrentTimeMillis(1234);
     WALFactory wFactory = new WALFactory(conf, null, "1234");
     HRegion meta = HRegion.createHRegion(HRegionInfo.FIRST_META_REGIONINFO, testDir,
-        conf, FSTableDescriptors.createMetaTableDescriptor(conf),
+        conf, HTableDescriptor.metaTableDescriptor(conf),
         wFactory.getMetaWAL(HRegionInfo.FIRST_META_REGIONINFO.
             getEncodedNameAsBytes()));
     HRegionInfo hri = new HRegionInfo(TableName.valueOf("testShouldFlushMeta"),

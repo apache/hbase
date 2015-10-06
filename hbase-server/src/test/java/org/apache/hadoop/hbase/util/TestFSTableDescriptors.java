@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.Test;
@@ -62,12 +63,12 @@ public class TestFSTableDescriptors {
 
   @Test (expected=IllegalArgumentException.class)
   public void testRegexAgainstOldStyleTableInfo() {
-    Path p = new Path("/tmp", FSTableDescriptors.TABLEINFO_FILE_PREFIX);
-    int i = FSTableDescriptors.getTableInfoSequenceId(p);
+    Path p = new Path("/tmp", LegacyTableDescriptor.TABLEINFO_FILE_PREFIX);
+    int i = LegacyTableDescriptor.getTableInfoSequenceId(p);
     assertEquals(0, i);
     // Assert it won't eat garbage -- that it fails
     p = new Path("/tmp", "abc");
-    FSTableDescriptors.getTableInfoSequenceId(p);
+    LegacyTableDescriptor.getTableInfoSequenceId(p);
   }
 
   @Test
@@ -96,23 +97,28 @@ public class TestFSTableDescriptors {
     HTableDescriptor htd = new HTableDescriptor(
         TableName.valueOf("testSequenceidAdvancesOnTableInfo"));
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    Path tableDir = FSUtils.getTableDir(testdir, htd.getTableName());
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, testdir);
-    Path p0 = fstd.updateTableDescriptor(htd);
-    int i0 = FSTableDescriptors.getTableInfoSequenceId(p0);
-    Path p1 = fstd.updateTableDescriptor(htd);
+    fstd.updateTableDescriptor(htd);
+    Path p0 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
+    int i0 = LegacyTableDescriptor.getTableInfoSequenceId(p0);
+    fstd.updateTableDescriptor(htd);
+    Path p1 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p0));
-    int i1 = FSTableDescriptors.getTableInfoSequenceId(p1);
+    int i1 = LegacyTableDescriptor.getTableInfoSequenceId(p1);
     assertTrue(i1 == i0 + 1);
-    Path p2 = fstd.updateTableDescriptor(htd);
+    fstd.updateTableDescriptor(htd);
+    Path p2 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p1));
-    int i2 = FSTableDescriptors.getTableInfoSequenceId(p2);
+    int i2 = LegacyTableDescriptor.getTableInfoSequenceId(p2);
     assertTrue(i2 == i1 + 1);
-    Path p3 = fstd.updateTableDescriptor(htd);
+    fstd.updateTableDescriptor(htd);
+    Path p3 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
     // Assert we cleaned up the old file.
     assertTrue(!fs.exists(p2));
-    int i3 = FSTableDescriptors.getTableInfoSequenceId(p3);
+    int i3 = LegacyTableDescriptor.getTableInfoSequenceId(p3);
     assertTrue(i3 == i2 + 1);
     HTableDescriptor descriptor = fstd.get(htd.getTableName());
     assertEquals(descriptor, htd);
@@ -123,29 +129,29 @@ public class TestFSTableDescriptors {
     Path p0 = assertWriteAndReadSequenceId(0);
     // Assert p0 has format we expect.
     StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < FSTableDescriptors.WIDTH_OF_SEQUENCE_ID; i++) {
+    for (int i = 0; i < LegacyTableDescriptor.WIDTH_OF_SEQUENCE_ID; i++) {
       sb.append("0");
     }
-    assertEquals(FSTableDescriptors.TABLEINFO_FILE_PREFIX + "." + sb.toString(),
+    assertEquals(LegacyTableDescriptor.TABLEINFO_FILE_PREFIX + "." + sb.toString(),
       p0.getName());
     // Check a few more.
     Path p2 = assertWriteAndReadSequenceId(2);
     Path p10000 = assertWriteAndReadSequenceId(10000);
     // Get a .tablinfo that has no sequenceid suffix.
-    Path p = new Path(p0.getParent(), FSTableDescriptors.TABLEINFO_FILE_PREFIX);
+    Path p = new Path(p0.getParent(), LegacyTableDescriptor.TABLEINFO_FILE_PREFIX);
     FileStatus fs = new FileStatus(0, false, 0, 0, 0, p);
     FileStatus fs0 = new FileStatus(0, false, 0, 0, 0, p0);
     FileStatus fs2 = new FileStatus(0, false, 0, 0, 0, p2);
     FileStatus fs10000 = new FileStatus(0, false, 0, 0, 0, p10000);
-    Comparator<FileStatus> comparator = FSTableDescriptors.TABLEINFO_FILESTATUS_COMPARATOR;
+    Comparator<FileStatus> comparator = LegacyTableDescriptor.TABLEINFO_FILESTATUS_COMPARATOR;
     assertTrue(comparator.compare(fs, fs0) > 0);
     assertTrue(comparator.compare(fs0, fs2) > 0);
     assertTrue(comparator.compare(fs2, fs10000) > 0);
   }
 
   private Path assertWriteAndReadSequenceId(final int i) {
-    Path p = new Path("/tmp", FSTableDescriptors.getTableInfoFileName(i));
-    int ii = FSTableDescriptors.getTableInfoSequenceId(p);
+    Path p = new Path("/tmp", LegacyTableDescriptor.getTableInfoFileName(i));
+    int ii = LegacyTableDescriptor.getTableInfoSequenceId(p);
     assertEquals(i, ii);
     return p;
   }
@@ -171,7 +177,7 @@ public class TestFSTableDescriptors {
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     fstd.createTableDescriptor(htd);
     HTableDescriptor td2 =
-      FSTableDescriptors.getTableDescriptorFromFs(fs, rootdir, htd.getTableName());
+      LegacyTableDescriptor.getTableDescriptorFromFs(fs, rootdir, htd.getTableName());
     assertTrue(htd.equals(td2));
   }
 
@@ -181,20 +187,17 @@ public class TestFSTableDescriptors {
     Path rootdir = UTIL.getDataTestDir(name);
     FSTableDescriptors fstd = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name));
-    Path descriptorFile = fstd.updateTableDescriptor(htd);
-    try (FSDataOutputStream out = fs.create(descriptorFile, true)) {
-      out.write(htd.toByteArray());
-    }
+    Path tableDir = FSUtils.getTableDir(rootdir, htd.getTableName());
+    fstd.updateTableDescriptor(htd);
+    Path descriptorFile = LegacyTableDescriptor.getTableInfoPath(fs, tableDir).getPath();
+    FSUtils.writeFully(fs, descriptorFile, htd.toByteArray(), true);
     FSTableDescriptors fstd2 = new FSTableDescriptors(UTIL.getConfiguration(), fs, rootdir);
-    HTableDescriptor td2 = fstd2.get(htd.getTableName());
+    HTableDescriptor td2 = fstd2.getDescriptor(htd.getTableName());
     assertEquals(htd, td2);
-    FileStatus descriptorFile2 =
-        FSTableDescriptors.getTableInfoPath(fs, fstd2.getTableDir(htd.getTableName()));
+    FileStatus descriptorFile2 = LegacyTableDescriptor.getTableInfoPath(fs, tableDir);
     byte[] buffer = htd.toByteArray();
-    try (FSDataInputStream in = fs.open(descriptorFile2.getPath())) {
-      in.readFully(buffer);
-    }
-    HTableDescriptor td3 = HTableDescriptor.parseFrom(buffer);
+    FSUtils.readFully(fs, descriptorFile2.getPath(), buffer);
+    TableDescriptor td3 = TableDescriptor.parseFrom(buffer);
     assertEquals(htd, td3);
   }
 
@@ -372,7 +375,7 @@ public class TestFSTableDescriptors {
   public void testTableInfoFileStatusComparator() {
     FileStatus bare =
       new FileStatus(0, false, 0, 0, -1,
-        new Path("/tmp", FSTableDescriptors.TABLEINFO_FILE_PREFIX));
+        new Path("/tmp", LegacyTableDescriptor.TABLEINFO_FILE_PREFIX));
     FileStatus future =
       new FileStatus(0, false, 0, 0, -1,
         new Path("/tmp/tablinfo." + System.currentTimeMillis()));
@@ -382,7 +385,7 @@ public class TestFSTableDescriptors {
     FileStatus [] alist = {bare, future, farFuture};
     FileStatus [] blist = {bare, farFuture, future};
     FileStatus [] clist = {farFuture, bare, future};
-    Comparator<FileStatus> c = FSTableDescriptors.TABLEINFO_FILESTATUS_COMPARATOR;
+    Comparator<FileStatus> c = LegacyTableDescriptor.TABLEINFO_FILESTATUS_COMPARATOR;
     Arrays.sort(alist, c);
     Arrays.sort(blist, c);
     Arrays.sort(clist, c);
@@ -419,12 +422,12 @@ public class TestFSTableDescriptors {
     assertFalse(fstd.createTableDescriptor(htd));
     htd.setValue(Bytes.toBytes("mykey"), Bytes.toBytes("myValue"));
     assertTrue(fstd.createTableDescriptor(htd)); //this will re-create
-    Path tableDir = fstd.getTableDir(htd.getTableName());
-    Path tmpTableDir = new Path(tableDir, FSTableDescriptors.TMP_DIR);
+    Path tableDir = FSUtils.getTableDir(testdir, htd.getTableName());
+    Path tmpTableDir = new Path(tableDir, LegacyTableDescriptor.TMP_DIR);
     FileStatus[] statuses = fs.listStatus(tmpTableDir);
     assertTrue(statuses.length == 0);
 
-    assertEquals(htd, FSTableDescriptors.getTableDescriptorFromFs(fs, tableDir));
+    assertEquals(htd, LegacyTableDescriptor.getTableDescriptorFromFs(fs, tableDir));
   }
 
   private static class FSTableDescriptorsTest extends FSTableDescriptors {

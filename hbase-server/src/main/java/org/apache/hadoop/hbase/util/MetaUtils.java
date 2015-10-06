@@ -30,7 +30,9 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -88,7 +90,7 @@ public class MetaUtils {
    */
   public synchronized WAL getLog(HRegionInfo info) throws IOException {
     if (this.walFactory == null) {
-      String logName = 
+      String logName =
           HConstants.HREGION_LOGDIR_NAME + "_" + System.currentTimeMillis();
       final Configuration walConf = new Configuration(this.conf);
       FSUtils.setRootDir(walConf, fs.getHomeDirectory());
@@ -151,5 +153,17 @@ public class MetaUtils {
       this.conf);
     this.metaRegion.compactStores();
     return this.metaRegion;
+  }
+
+  /**
+   * Enable in memory caching for hbase:meta
+   */
+  public static void setInfoFamilyCachingForMeta(HTableDescriptor metaDescriptor, final boolean b) {
+    for (HColumnDescriptor hcd: metaDescriptor.getColumnFamilies()) {
+      if (Bytes.equals(hcd.getName(), HConstants.CATALOG_FAMILY)) {
+        hcd.setBlockCacheEnabled(b);
+        hcd.setInMemory(b);
+      }
+    }
   }
 }

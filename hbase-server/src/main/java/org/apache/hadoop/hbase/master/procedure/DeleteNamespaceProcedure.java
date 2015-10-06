@@ -33,7 +33,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.master.TableNamespaceManager;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProcedureProtos;
@@ -275,23 +275,7 @@ public class DeleteNamespaceProcedure
   protected static void deleteDirectory(
       final MasterProcedureEnv env,
       final String namespaceName) throws IOException {
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    FileSystem fs = mfs.getFileSystem();
-    Path p = FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName);
-
-    try {
-      for(FileStatus status : fs.listStatus(p)) {
-        if (!HConstants.HBASE_NON_TABLE_DIRS.contains(status.getPath().getName())) {
-          throw new IOException("Namespace directory contains table dir: " + status.getPath());
-        }
-      }
-      if (!fs.delete(FSUtils.getNamespaceDir(mfs.getRootDir(), namespaceName), true)) {
-        throw new IOException("Failed to remove namespace: " + namespaceName);
-      }
-    } catch (FileNotFoundException e) {
-      // File already deleted, continue
-      LOG.debug("deleteDirectory throws exception: " + e);
-    }
+    env.getMasterServices().getMasterFileSystem().deleteNamespace(namespaceName);
   }
 
   /**

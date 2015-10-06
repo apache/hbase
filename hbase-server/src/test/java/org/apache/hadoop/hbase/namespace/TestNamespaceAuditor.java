@@ -35,8 +35,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
@@ -65,6 +63,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormatBase;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -190,8 +189,7 @@ public class TestNamespaceAuditor {
   @Test
   public void testValidQuotas() throws Exception {
     boolean exceptionCaught = false;
-    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
-    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+    MasterFileSystem mfs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem();
     NamespaceDescriptor nspDesc =
         NamespaceDescriptor.create(prefix + "vq1")
             .addConfiguration(TableNamespaceManager.KEY_MAX_REGIONS, "hihdufh")
@@ -203,7 +201,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(mfs.getNamespaces().contains(nspDesc.getName()));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq2")
@@ -216,7 +214,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(mfs.getNamespaces().contains(nspDesc.getName()));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq3")
@@ -229,7 +227,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(mfs.getNamespaces().contains(nspDesc.getName()));
     }
     nspDesc =
         NamespaceDescriptor.create(prefix + "vq4")
@@ -242,7 +240,7 @@ public class TestNamespaceAuditor {
       exceptionCaught = true;
     } finally {
       assertTrue(exceptionCaught);
-      assertFalse(fs.exists(FSUtils.getNamespaceDir(rootDir, nspDesc.getName())));
+      assertFalse(mfs.getNamespaces().contains(nspDesc.getName()));
     }
   }
 
@@ -716,8 +714,8 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescOne);
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
-  
-  @Test(expected = QuotaExceededException.class)
+
+  @Test(expected = QuotaExceededException.class, timeout = 30000)
   public void testCloneSnapshotQuotaExceed() throws Exception {
     String nsp = prefix + "_testTableQuotaExceedWithCloneSnapshot";
     NamespaceDescriptor nspDesc =

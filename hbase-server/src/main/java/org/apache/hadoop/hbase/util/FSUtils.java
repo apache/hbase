@@ -266,8 +266,12 @@ public abstract class FSUtils {
    * @throws IOException e
    */
   public static boolean deleteDirectory(final FileSystem fs, final Path dir)
-  throws IOException {
-    return fs.exists(dir) && fs.delete(dir, true);
+      throws IOException {
+    try {
+      return !fs.delete(dir, true) ? !fs.exists(dir) : true;
+    } catch (FileNotFoundException e) {
+      return true;
+    }
   }
 
   /**
@@ -1180,7 +1184,7 @@ public abstract class FSUtils {
    * @param namespace namespace name
    * @return {@link org.apache.hadoop.fs.Path} for table
    */
-  public static Path getNamespaceDir(Path rootdir, final String namespace) {
+  private static Path getNamespaceDir(Path rootdir, final String namespace) {
     return new Path(rootdir, new Path(HConstants.BASE_NAMESPACE_DIR,
         new Path(namespace)));
   }
@@ -1322,7 +1326,7 @@ public abstract class FSUtils {
    * .logs, .oldlogs, .corrupt folders.
    * @throws IOException
    */
-  public static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
+  private static List<Path> getLocalTableDirs(final FileSystem fs, final Path rootdir)
       throws IOException {
     // presumes any directory under hbase.rootdir is a table
     FileStatus[] dirs = fs.listStatus(rootdir, new UserTableDirFilter(fs));
@@ -1927,7 +1931,7 @@ public abstract class FSUtils {
    */
   public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
       throws IOException {
-    LOG.debug("Current file system:");
+    LOG.debug("Current file system: " + root);
     logFSTree(LOG, fs, root, "|-");
   }
 
@@ -2206,6 +2210,25 @@ public abstract class FSUtils {
       LOG.warn("Failed invoking method " + name + " on dfsclient; no hedged read metrics: " +
           e.getMessage());
       return null;
+    }
+  }
+
+  public static void readFully(FileSystem fs, Path path, byte[] content) throws IOException {
+    FSDataInputStream in = fs.open(path);
+    try {
+      in.readFully(content);
+    } finally {
+      in.close();
+    }
+  }
+
+  public static void writeFully(FileSystem fs, Path path, byte[] content, boolean overwrite)
+      throws IOException {
+    FSDataOutputStream out = fs.create(path, overwrite);
+    try {
+      out.write(content);
+    } finally {
+      out.close();
     }
   }
 }
