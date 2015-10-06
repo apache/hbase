@@ -1202,16 +1202,19 @@ _/etc/init.d/_ scripts are not supported for now, but it can be easily added.
 For other deployment options, a ClusterManager can be implemented and plugged in.
 
 [[maven.build.commands.integration.tests.destructive]]
-==== Destructive integration / system tests
+==== Destructive integration / system tests (ChaosMonkey)
 
-In 0.96, a tool named `ChaosMonkey` has been introduced.
-It is modeled after the link:http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html[same-named tool by Netflix].
-Some of the tests use ChaosMonkey to simulate faults in the running cluster in the way of killing random servers, disconnecting servers, etc.
-ChaosMonkey can also be used as a stand-alone tool to run a (misbehaving) policy while you are running other tests.
+HBase 0.96 introduced a tool named `ChaosMonkey`, modeled after link:http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html
+[same-named tool by Netflix's Chaos Monkey tool]. ChaosMonkey simulates real-world
+faults in a running cluster by killing or disconnecting random servers, or injecting
+other failures into the environment. You can use ChaosMonkey as a stand-alone tool
+to run a policy while other tests are running. In some environments, ChaosMonkey is
+always running, in order to constantly check that high availability and fault tolerance
+are working as expected.
 
-ChaosMonkey defines Action's and Policy's.
-Actions are sequences of events.
-We have at least the following actions:
+ChaosMonkey defines *Actions* and *Policies*.
+
+Actions:: Actions are predefined sequences of events, such as the following:
 
 * Restart active master (sleep 5 sec)
 * Restart random regionserver (sleep 5 sec)
@@ -1221,23 +1224,17 @@ We have at least the following actions:
 * Batch restart of 50% of regionservers (sleep 5 sec)
 * Rolling restart of 100% of regionservers (sleep 5 sec)
 
-Policies on the other hand are responsible for executing the actions based on a strategy.
-The default policy is to execute a random action every minute based on predefined action weights.
-ChaosMonkey executes predefined named policies until it is stopped.
-More than one policy can be active at any time.
+Policies:: A policy is a strategy for executing one or more actions. The default policy
+executes a random action every minute based on predefined action weights.
+A given policy will be executed until ChaosMonkey is interrupted.
 
-To run ChaosMonkey as a standalone tool deploy your HBase cluster as usual.
-ChaosMonkey uses the configuration from the bin/hbase script, thus no extra configuration needs to be done.
-You can invoke the ChaosMonkey by running:
+Most ChaosMonkey actions are configured to have reasonable defaults, so you can run
+ChaosMonkey against an existing cluster without any additional configuration. The
+following example runs ChaosMonkey with the default configuration:
 
-[source,bourne]
+[source,bash]
 ----
-bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
-----
-
-This will output something like:
-
-----
+$ bin/hbase org.apache.hadoop.hbase.util.ChaosMonkey
 
 12/11/19 23:21:57 INFO util.ChaosMonkey: Using ChaosMonkey Policy: class org.apache.hadoop.hbase.util.ChaosMonkey$PeriodicRandomActionPolicy, period:60000
 12/11/19 23:21:57 INFO util.ChaosMonkey: Sleeping for 26953 to add jitter
@@ -1276,37 +1273,73 @@ This will output something like:
 12/11/19 23:24:27 INFO util.ChaosMonkey: Started region server:rs3.example.com,60020,1353367027826. Reported num of rs:6
 ----
 
-As you can see from the log, ChaosMonkey started the default PeriodicRandomActionPolicy, which is configured with all the available actions, and ran RestartActiveMaster and RestartRandomRs actions.
-ChaosMonkey tool, if run from command line, will keep on running until the process is killed.
+The output indicates that ChaosMonkey started the default `PeriodicRandomActionPolicy`
+policy, which is configured with all the available actions. It chose to run `RestartActiveMaster` and `RestartRandomRs` actions.
+
+==== Available Policies
+HBase ships with several ChaosMonkey policies, available in the
+`hbase/hbase-it/src/test/java/org/apache/hadoop/hbase/chaos/policies/` directory.
 
 [[chaos.monkey.properties]]
-==== Passing individual Chaos Monkey per-test Settings/Properties
+==== Configuring Individual ChaosMonkey Actions
 
-Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348[HBASE-11348]), the chaos monkeys is used to run integration tests can be configured per test run.
-Users can create a java properties file and and pass this to the chaos monkey with timing configurations.
-The properties file needs to be in the HBase classpath.
-The various properties that can be configured and their default values can be found listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`                    class.
-If any chaos monkey configuration is missing from the property file, then the default values are assumed.
-For example:
+Since HBase version 1.0.0 (link:https://issues.apache.org/jira/browse/HBASE-11348
+[HBASE-11348]), ChaosMonkey integration tests can be configured per test run.
+Create a Java properties file in the HBase classpath and pass it to ChaosMonkey using
+the `-monkeyProps` configuration flag. Configurable properties, along with their default
+values if applicable, are listed in the `org.apache.hadoop.hbase.chaos.factories.MonkeyConstants`
+class. For properties that have defaults, you can override them by including them
+in your properties file.
+
+The following example uses a properties file called <<monkey.properties,monkey.properties>>.
 
 [source,bourne]
 ----
-
-$bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
+$ bin/hbase org.apache.hadoop.hbase.IntegrationTestIngest -m slowDeterministic -monkeyProps monkey.properties
 ----
 
 The above command will start the integration tests and chaos monkey passing the properties file _monkey.properties_.
 Here is an example chaos monkey file:
 
+[[monkey.properties]]
+.Example ChaosMonkey Properties File
 [source]
 ----
-
 sdm.action1.period=120000
 sdm.action2.period=40000
 move.regions.sleep.time=80000
 move.regions.max.time=1000000
 move.regions.sleep.time=80000
 batch.restart.rs.ratio=0.4f
+----
+
+HBase 1.0.2 and newer adds the ability to restart HBase's underlying ZooKeeper quorum or
+HDFS nodes. To use these actions, you need to configure some new properties, which
+have no reasonable defaults because they are deployment-specific, in your ChaosMonkey
+properties file, which may be `hbase-site.xml` or a different properties file.
+
+[source,xml]
+----
+<property>
+  <name>hbase.it.clustermanager.hadoop.home</name>
+  <value>$HADOOP_HOME</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.zookeeper.home</name>
+  <value>$ZOOKEEPER_HOME</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.hbase.user</name>
+  <value>hbase</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.hadoop.hdfs.user</name>
+  <value>hdfs</value>
+</property>
+<property>
+  <name>hbase.it.clustermanager.zookeeper.user</name>
+  <value>zookeeper</value>
+</property>
 ----
 
 [[developing]]
