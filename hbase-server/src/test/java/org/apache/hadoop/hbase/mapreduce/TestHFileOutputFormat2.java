@@ -181,7 +181,7 @@ public class TestHFileOutputFormat2  {
    * passed a keyvalue whose timestamp is {@link HConstants#LATEST_TIMESTAMP}.
    * @see <a href="https://issues.apache.org/jira/browse/HBASE-2615">HBASE-2615</a>
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void test_LATEST_TIMESTAMP_isReplaced()
   throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
@@ -233,7 +233,7 @@ public class TestHFileOutputFormat2  {
    * Test that {@link HFileOutputFormat2} creates an HFile with TIMERANGE
    * metadata used by time-restricted scans.
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void test_TIMERANGE() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, Cell> writer = null;
@@ -299,7 +299,7 @@ public class TestHFileOutputFormat2  {
   /**
    * Run small MR job.
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testWritingPEData() throws Exception {
     Configuration conf = util.getConfiguration();
     Path testDir = util.getDataTestDirOnTestFS("testWritingPEData");
@@ -337,7 +337,7 @@ public class TestHFileOutputFormat2  {
     assertTrue(files.length > 0);
   }
 
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testJobConfiguration() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     conf.set("hbase.fs.tmp.dir", util.getDataTestDir("testJobConfiguration").toString());
@@ -373,13 +373,13 @@ public class TestHFileOutputFormat2  {
     return ret;
   }
 
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoad() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoad\n");
     doIncrementalLoadTest(false, false);
   }
 
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoadWithSplit() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithSplit\n");
     doIncrementalLoadTest(true, false);
@@ -393,7 +393,7 @@ public class TestHFileOutputFormat2  {
    * When MiniHBaseCluster supports explicit hostnames parameter (just like MiniDFSCluster does),
    * we could test region locality features more easily.
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testMRIncrementalLoadWithLocality() throws Exception {
     LOG.info("\nStarting test testMRIncrementalLoadWithLocality\n");
     doIncrementalLoadTest(false, true);
@@ -544,7 +544,7 @@ public class TestHFileOutputFormat2  {
    *
    * @throws IOException
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testSerializeDeserializeFamilyCompressionMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
       Configuration conf = new Configuration(this.util.getConfiguration());
@@ -615,7 +615,7 @@ public class TestHFileOutputFormat2  {
    *
    * @throws IOException
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testSerializeDeserializeFamilyBloomTypeMap() throws IOException {
     for (int numCfs = 0; numCfs <= 2; numCfs++) {
       Configuration conf = new Configuration(this.util.getConfiguration());
@@ -686,7 +686,7 @@ public class TestHFileOutputFormat2  {
    *
    * @throws IOException
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testSerializeDeserializeFamilyBlockSizeMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
       Configuration conf = new Configuration(this.util.getConfiguration());
@@ -761,7 +761,7 @@ public class TestHFileOutputFormat2  {
    *
    * @throws IOException
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testSerializeDeserializeFamilyDataBlockEncodingMap() throws IOException {
     for (int numCfs = 0; numCfs <= 3; numCfs++) {
       Configuration conf = new Configuration(this.util.getConfiguration());
@@ -847,7 +847,7 @@ public class TestHFileOutputFormat2  {
    * Test that {@link HFileOutputFormat2} RecordWriter uses compression and
    * bloom filter settings from the column family descriptor
    */
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testColumnFamilySettings() throws Exception {
     Configuration conf = new Configuration(this.util.getConfiguration());
     RecordWriter<ImmutableBytesWritable, Cell> writer = null;
@@ -1023,7 +1023,7 @@ public class TestHFileOutputFormat2  {
     }
   }
 
-  @Test
+  @Ignore("Goes zombie too frequently; needs work. See HBASE-14563") @Test
   public void testExcludeMinorCompaction() throws Exception {
     Configuration conf = util.getConfiguration();
     conf.setInt("hbase.hstore.compaction.min", 2);
