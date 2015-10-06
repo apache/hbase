@@ -158,7 +158,18 @@ public class TextSortReducer extends
           ts = parsed.getTimestamp(ts);
           cellVisibilityExpr = parsed.getCellVisibility();
           ttl = parsed.getCellTTL();
-
+          
+          // create tags for the parsed line
+          List<Tag> tags = new ArrayList<Tag>();
+          if (cellVisibilityExpr != null) {
+            tags.addAll(kvCreator.getVisibilityExpressionResolver().createVisibilityExpTags(
+              cellVisibilityExpr));
+          }
+          // Add TTL directly to the KV so we can vary them when packing more than one KV
+          // into puts
+          if (ttl > 0) {
+            tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
+          }
           for (int i = 0; i < parsed.getColumnCount(); i++) {
             if (i == parser.getRowKeyColumnIndex() || i == parser.getTimestampKeyColumnIndex()
                 || i == parser.getAttributesKeyColumnIndex() || i == parser.getCellVisibilityColumnIndex()
@@ -167,16 +178,6 @@ public class TextSortReducer extends
             }
             // Creating the KV which needs to be directly written to HFiles. Using the Facade
             // KVCreator for creation of kvs.
-            List<Tag> tags = new ArrayList<Tag>();
-            if (cellVisibilityExpr != null) {
-              tags.addAll(kvCreator.getVisibilityExpressionResolver()
-                .createVisibilityExpTags(cellVisibilityExpr));
-            }
-            // Add TTL directly to the KV so we can vary them when packing more than one KV
-            // into puts
-            if (ttl > 0) {
-              tags.add(new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(ttl)));
-            }
             Cell cell = this.kvCreator.create(lineBytes, parsed.getRowKeyOffset(),
                 parsed.getRowKeyLength(), parser.getFamily(i), 0, parser.getFamily(i).length,
                 parser.getQualifier(i), 0, parser.getQualifier(i).length, ts, lineBytes,
