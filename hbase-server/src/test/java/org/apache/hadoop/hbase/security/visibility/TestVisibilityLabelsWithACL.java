@@ -80,6 +80,7 @@ public class TestVisibilityLabelsWithACL {
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     SecureTestUtil.enableSecurity(conf);
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName() + ","
         + VisibilityController.class.getName());
