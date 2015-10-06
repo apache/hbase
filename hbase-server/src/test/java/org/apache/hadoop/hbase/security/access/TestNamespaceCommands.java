@@ -108,6 +108,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
   @BeforeClass
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     enableSecurity(conf);
 
     SUPERUSER = User.createUserForTesting(conf, "admin", new String[] { "supergroup" });
