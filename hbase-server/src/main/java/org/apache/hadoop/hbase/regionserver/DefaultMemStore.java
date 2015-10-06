@@ -969,29 +969,37 @@ public class DefaultMemStore implements MemStore {
      * specified key, then seek to the first KeyValue of previous row
      */
     @Override
-    public synchronized boolean seekToPreviousRow(Cell key) {
-      Cell firstKeyOnRow = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
-          key.getRowLength());
-      SortedSet<Cell> cellHead = cellSetAtCreation.headSet(firstKeyOnRow);
-      Cell cellSetBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
-      SortedSet<Cell> snapshotHead = snapshotAtCreation
-          .headSet(firstKeyOnRow);
-      Cell snapshotBeforeRow = snapshotHead.isEmpty() ? null : snapshotHead
-          .last();
-      Cell lastCellBeforeRow = getHighest(cellSetBeforeRow, snapshotBeforeRow);
-      if (lastCellBeforeRow == null) {
-        theNext = null;
-        return false;
-      }
-      Cell firstKeyOnPreviousRow = KeyValueUtil.createFirstOnRow(lastCellBeforeRow.getRowArray(),
-          lastCellBeforeRow.getRowOffset(), lastCellBeforeRow.getRowLength());
-      this.stopSkippingCellsIfNextRow = true;
-      seek(firstKeyOnPreviousRow);
-      this.stopSkippingCellsIfNextRow = false;
-      if (peek() == null
-          || comparator.compareRows(peek(), firstKeyOnPreviousRow) > 0) {
-        return seekToPreviousRow(lastCellBeforeRow);
-      }
+    public synchronized boolean seekToPreviousRow(Cell originalKey) {
+      boolean keepSeeking = false;
+      Cell key = originalKey;
+      do {
+        Cell firstKeyOnRow = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
+            key.getRowLength());
+        SortedSet<Cell> cellHead = cellSetAtCreation.headSet(firstKeyOnRow);
+        Cell cellSetBeforeRow = cellHead.isEmpty() ? null : cellHead.last();
+        SortedSet<Cell> snapshotHead = snapshotAtCreation
+            .headSet(firstKeyOnRow);
+        Cell snapshotBeforeRow = snapshotHead.isEmpty() ? null : snapshotHead
+            .last();
+        Cell lastCellBeforeRow = getHighest(cellSetBeforeRow, snapshotBeforeRow);
+        if (lastCellBeforeRow == null) {
+          theNext = null;
+          return false;
+        }
+        Cell firstKeyOnPreviousRow = KeyValueUtil.createFirstOnRow(lastCellBeforeRow.getRowArray(),
+            lastCellBeforeRow.getRowOffset(), lastCellBeforeRow.getRowLength());
+        this.stopSkippingCellsIfNextRow = true;
+        seek(firstKeyOnPreviousRow);
+        this.stopSkippingCellsIfNextRow = false;
+        if (peek() == null
+            || comparator.compareRows(peek(), firstKeyOnPreviousRow) > 0) {
+          keepSeeking = true;
+          key = firstKeyOnPreviousRow;
+          continue;
+        } else {
+          keepSeeking = false;
+        }
+      } while (keepSeeking);
       return true;
     }
 

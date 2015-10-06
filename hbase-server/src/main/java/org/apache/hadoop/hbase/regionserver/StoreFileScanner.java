@@ -437,39 +437,46 @@ public class StoreFileScanner implements KeyValueScanner {
 
   @Override
   @SuppressWarnings("deprecation")
-  public boolean seekToPreviousRow(Cell key) throws IOException {
+  public boolean seekToPreviousRow(Cell originalKey) throws IOException {
     try {
       try {
-        KeyValue seekKey = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
-            key.getRowLength());
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
-            seekKey.getKeyLength())) {
-          close();
-          return false;
-        }
-        KeyValue firstKeyOfPreviousRow = KeyValueUtil.createFirstOnRow(hfs.getKeyValue()
-            .getRowArray(), hfs.getKeyValue().getRowOffset(), hfs.getKeyValue().getRowLength());
+        boolean keepSeeking = false;
+        Cell key = originalKey;
+        do {
+          KeyValue seekKey = KeyValueUtil.createFirstOnRow(key.getRowArray(), key.getRowOffset(),
+              key.getRowLength());
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
+              seekKey.getKeyLength())) {
+            close();
+            return false;
+          }
+          KeyValue firstKeyOfPreviousRow = KeyValueUtil.createFirstOnRow(hfs.getKeyValue()
+              .getRowArray(), hfs.getKeyValue().getRowOffset(), hfs.getKeyValue().getRowLength());
 
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
-          close();
-          return false;
-        }
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+            close();
+            return false;
+          }
 
-        setCurrentCell(hfs.getKeyValue());
-        this.stopSkippingKVsIfNextRow = true;
-        boolean resultOfSkipKVs;
-        try {
-          resultOfSkipKVs = skipKVsNewerThanReadpoint();
-        } finally {
-          this.stopSkippingKVsIfNextRow = false;
-        }
-        if (!resultOfSkipKVs
-            || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
-          return seekToPreviousRow(firstKeyOfPreviousRow);
-        }
-
+          setCurrentCell(hfs.getKeyValue());
+          this.stopSkippingKVsIfNextRow = true;
+          boolean resultOfSkipKVs;
+          try {
+            resultOfSkipKVs = skipKVsNewerThanReadpoint();
+          } finally {
+            this.stopSkippingKVsIfNextRow = false;
+          }
+          if (!resultOfSkipKVs
+              || getComparator().compareRows(cur, firstKeyOfPreviousRow) > 0) {
+            keepSeeking = true;
+            key = firstKeyOfPreviousRow;
+            continue;
+          } else {
+            keepSeeking = false;
+          }
+        } while (keepSeeking);
         return true;
       } finally {
         realSeekDone = true;
@@ -478,7 +485,7 @@ public class StoreFileScanner implements KeyValueScanner {
       throw e;
     } catch (IOException ioe) {
       throw new IOException("Could not seekToPreviousRow " + this + " to key "
-          + key, ioe);
+          + originalKey, ioe);
     }
   }
 
