@@ -301,7 +301,7 @@ public class RegionCoprocessorHost
               // ignore
             }
             Configuration ourConf;
-            if (cfgSpec != null) {
+            if (cfgSpec != null && !cfgSpec.trim().equals("|")) {
               cfgSpec = cfgSpec.substring(cfgSpec.indexOf('|') + 1);
               // do an explicit deep copy of the passed configuration
               ourConf = new Configuration(false);
