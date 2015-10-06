@@ -74,6 +74,7 @@ public class AddColumnFamilyProcedure
     this.tableName = tableName;
     this.cfDescriptor = cfDescriptor;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
@@ -236,8 +237,7 @@ public class AddColumnFamilyProcedure
     } else {
       sb.append("Unknown");
     }
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

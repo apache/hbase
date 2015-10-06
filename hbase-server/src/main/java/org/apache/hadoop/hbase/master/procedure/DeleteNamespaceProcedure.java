@@ -69,6 +69,7 @@ public class DeleteNamespaceProcedure
     this.namespaceName = namespaceName;
     this.nsDescriptor = null;
     this.traceEnabled = null;
+    this.setOwner(env.getRequestUser().getUGI().getShortUserName());
   }
 
   @Override

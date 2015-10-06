@@ -28,11 +28,14 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
@@ -665,6 +668,40 @@ public interface MasterObserver extends Coprocessor {
   void postDisableTableHandler(
       final ObserverContext<MasterCoprocessorEnvironment> ctx,
       final TableName tableName) throws IOException;
+
+  /**
+   * Called before a abortProcedure request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @throws IOException
+   */
+  public void preAbortProcedure(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final ProcedureExecutor<MasterProcedureEnv> procEnv,
+      final long procId) throws IOException;
+
+  /**
+   * Called after a abortProcedure request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   */
+  public void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
+
+  /**
+   * Called before a listProcedures request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @throws IOException
+   */
+  void preListProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException;
+
+  /**
+   * Called after a listProcedures request has been processed.
+   * @param ctx the environment to interact with the framework and master
+   * @param procInfoList the list of procedures about to be returned
+   */
+  void postListProcedures(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ProcedureInfo> procInfoList) throws IOException;
 
   /**
    * Called prior to moving a given region from one region server to another.

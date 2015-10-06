@@ -86,6 +86,7 @@ public class DeleteTableProcedure
       final ProcedurePrepareLatch syncLatch) throws IOException {
     this.tableName = tableName;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
 
     // used for compatibility with clients without procedures
     // they need a sync TableNotFoundException, TableNotDisabledException, ...
@@ -214,8 +215,7 @@ public class DeleteTableProcedure
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
     sb.append(getTableName());
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

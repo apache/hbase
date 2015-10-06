@@ -65,6 +65,7 @@ public class TruncateTableProcedure
     this.tableName = tableName;
     this.preserveSplits = preserveSplits;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
   }
 
   @Override
@@ -197,8 +198,7 @@ public class TruncateTableProcedure
     sb.append(getTableName());
     sb.append(" preserveSplits=");
     sb.append(preserveSplits);
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

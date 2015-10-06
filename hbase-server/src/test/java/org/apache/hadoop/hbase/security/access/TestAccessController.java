@@ -25,6 +25,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +51,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -59,7 +62,6 @@ import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
@@ -90,13 +92,20 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProcedureProtos;
 import org.apache.hadoop.hbase.mapreduce.LoadIncrementalHFiles;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface;
+import org.apache.hadoop.hbase.procedure2.Procedure;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.AccessControlService;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos.CheckPermissionsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -498,6 +507,116 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(enableTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
       USER_GROUP_ADMIN);
     verifyDenied(enableTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+  }
+
+  public static class TestTableDDLProcedure extends Procedure<MasterProcedureEnv>
+  implements TableProcedureInterface {
+    private TableName tableName;
+
+    public TestTableDDLProcedure() {
+    }
+
+    public TestTableDDLProcedure(final MasterProcedureEnv env, final TableName tableName)
+        throws IOException {
+      this.tableName = tableName;
+      this.setTimeout(180000); // Timeout in 3 minutes
+      this.setOwner(env.getRequestUser().getUGI().getShortUserName());
+    }
+
+    @Override
+    public TableName getTableName() {
+      return tableName;
+    }
+
+    @Override
+    public TableOperationType getTableOperationType() {
+      return null;
+    }
+
+    @Override
+    protected boolean abort(MasterProcedureEnv env) {
+      return true;
+    }
+
+    @Override
+    protected void serializeStateData(OutputStream stream) throws IOException {
+      TestProcedureProtos.TestTableDDLStateData.Builder testTableDDLMsg =
+          TestProcedureProtos.TestTableDDLStateData.newBuilder()
+          .setTableName(tableName.getNameAsString());
+      testTableDDLMsg.build().writeDelimitedTo(stream);
+    }
+
+    @Override
+    protected void deserializeStateData(InputStream stream) throws IOException {
+      TestProcedureProtos.TestTableDDLStateData testTableDDLMsg =
+          TestProcedureProtos.TestTableDDLStateData.parseDelimitedFrom(stream);
+      tableName = TableName.valueOf(testTableDDLMsg.getTableName());
+    }
+
+    @Override
+    protected Procedure[] execute(MasterProcedureEnv env) throws ProcedureYieldException,
+        InterruptedException {
+      // Not letting the procedure to complete until timed out
+      setState(ProcedureState.WAITING_TIMEOUT);
+      return null;
+    }
+
+    @Override
+    protected void rollback(MasterProcedureEnv env) throws IOException, InterruptedException {
+    }
+  }
+
+  @Test
+  public void testAbortProcedure() throws Exception {
+    final TableName tableName = TableName.valueOf("testAbortProcedure");
+    final ProcedureExecutor<MasterProcedureEnv> procExec =
+        TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+    Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
+    proc.setOwner(USER_OWNER.getShortName());
+    final long procId = procExec.submitProcedure(proc);
+
+    AccessTestAction abortProcedureAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER
+        .preAbortProcedure(ObserverContext.createAndPrepare(CP_ENV, null), procExec, procId);
+       return null;
+      }
+    };
+
+    verifyAllowed(abortProcedureAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(abortProcedureAction, USER_OWNER);
+    verifyDenied(
+      abortProcedureAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+  }
+
+  @Test
+  public void testListProcedures() throws Exception {
+    final TableName tableName = TableName.valueOf("testAbortProcedure");
+    final ProcedureExecutor<MasterProcedureEnv> procExec =
+        TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+    Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
+    proc.setOwner(USER_OWNER.getShortName());
+    final long procId = procExec.submitProcedure(proc);
+    final List<ProcedureInfo> procInfoList = procExec.listProcedures();
+
+    AccessTestAction listProceduresAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        List<ProcedureInfo> procInfoListClone = new ArrayList<ProcedureInfo>(procInfoList.size());
+        for(ProcedureInfo pi : procInfoList) {
+          procInfoListClone.add(pi.clone());
+        }
+        ACCESS_CONTROLLER
+        .postListProcedures(ObserverContext.createAndPrepare(CP_ENV, null), procInfoListClone);
+       return null;
+      }
+    };
+
+    verifyAllowed(listProceduresAction, SUPERUSER, USER_ADMIN, USER_GROUP_ADMIN);
+    verifyAllowed(listProceduresAction, USER_OWNER);
+    verifyIfNull(
+      listProceduresAction, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
   @Test (timeout=180000)

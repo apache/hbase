@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.protobuf.generated.ErrorHandlingProtos.ForeignExceptionMessage;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.ForeignExceptionUtil;
 import org.apache.hadoop.hbase.util.NonceKey;
@@ -69,6 +70,11 @@ public class ProcedureInfo {
     // If the procedure is completed, we should treat exception and result differently
     this.exception = exception;
     this.result = result;
+  }
+
+  public ProcedureInfo clone() {
+    return new ProcedureInfo(
+      procId, procName, procOwner, procState, parentId, exception, lastUpdate, startTime, result);
   }
 
   public long getProcId() {
@@ -220,5 +226,24 @@ public class ProcedureInfo {
       procProto.getLastUpdate(),
       procProto.getStartTime(),
       procProto.getState() == ProcedureState.FINISHED ? procProto.getResult().toByteArray() : null);
+  }
+
+  /**
+   * Check if the user is this procedure's owner
+   * @param owner the owner field of the procedure
+   * @param user the user
+   * @return true if the user is the owner of the procedure,
+   *   false otherwise or the owner is unknown.
+   */
+  @InterfaceAudience.Private
+  public static boolean isProcedureOwner(final ProcedureInfo procInfo, final User user) {
+    if (user == null) {
+      return false;
+    }
+    String procOwner = procInfo.getProcOwner();
+    if (procOwner == null) {
+      return false;
+    }
+    return procOwner.equals(user.getShortName());
   }
 }

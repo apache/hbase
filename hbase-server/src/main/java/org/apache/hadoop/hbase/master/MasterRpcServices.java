@@ -1092,12 +1092,16 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public AbortProcedureResponse abortProcedure(
       RpcController rpcController,
-      AbortProcedureRequest request) {
-    AbortProcedureResponse.Builder response = AbortProcedureResponse.newBuilder();
-    boolean abortResult =
-        master.abortProcedure(request.getProcId(), request.getMayInterruptIfRunning());
-    response.setIsProcedureAborted(abortResult);
-    return response.build();
+      AbortProcedureRequest request) throws ServiceException {
+    try {
+      AbortProcedureResponse.Builder response = AbortProcedureResponse.newBuilder();
+      boolean abortResult =
+          master.abortProcedure(request.getProcId(), request.getMayInterruptIfRunning());
+      response.setIsProcedureAborted(abortResult);
+      return response.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
