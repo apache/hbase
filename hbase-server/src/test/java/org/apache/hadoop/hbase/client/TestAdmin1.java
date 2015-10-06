@@ -1242,8 +1242,8 @@ public class TestAdmin1 {
         store = r.getStore(Bytes.toBytes(fn1));
         for (StoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn1));
-          assertTrue("Column family " + fn1 + " should have only 1 copy", 1 == sf.getFileInfo()
-              .getFileStatus().getReplication());
+          short rep = sf.getFileInfo().getFileStatus().getReplication();
+          assertTrue("Column family " + fn1 + " should have only 1 copy. But: " + rep, 1 == rep);
         }
       }
     } finally {

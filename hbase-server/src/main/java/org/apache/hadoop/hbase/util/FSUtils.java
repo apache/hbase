@@ -302,11 +302,11 @@ public abstract class FSUtils {
       FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
     if (fs instanceof HFileSystem) {
       FileSystem backingFs = ((HFileSystem)fs).getBackingFs();
+      short replication = Short.parseShort(conf.get(HColumnDescriptor.DFS_REPLICATION,
+        String.valueOf(HColumnDescriptor.DEFAULT_DFS_REPLICATION)));
       if (backingFs instanceof DistributedFileSystem) {
         // Try to use the favoredNodes version via reflection to allow backwards-
         // compatibility.
-        short replication = Short.parseShort(conf.get(HColumnDescriptor.DFS_REPLICATION,
-          String.valueOf(HColumnDescriptor.DEFAULT_DFS_REPLICATION)));
         try {
           return (FSDataOutputStream) (DistributedFileSystem.class.getDeclaredMethod("create",
             Path.class, FsPermission.class, boolean.class, int.class, short.class, long.class,
@@ -328,6 +328,8 @@ public abstract class FSUtils {
           LOG.debug("Ignoring (most likely Reflection related exception) " + e);
         }
       }
+      return fs.create(path, perm, true, getDefaultBufferSize(fs), replication > 0 ? replication
+          : getDefaultReplication(backingFs, path), getDefaultBlockSize(fs, path), null);
     }
     return create(fs, path, perm, true);
   }
