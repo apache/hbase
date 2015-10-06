@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue;
 import org.apache.hadoop.hbase.procedure2.util.TimeoutBlockingQueue.TimeoutRetriever;
 import org.apache.hadoop.hbase.protobuf.generated.ProcedureProtos.ProcedureState;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Pair;
@@ -738,6 +739,31 @@ public class ProcedureExecutor<TEnvironment> {
       }
     }
     return false;
+  }
+
+  /**
+   * Check if the user is this procedure's owner
+   * @param procId the target procedure
+   * @param user the user
+   * @return true if the user is the owner of the procedure,
+   *   false otherwise or the owner is unknown.
+   */
+  public boolean isProcedureOwner(final long procId, final User user) {
+    if (user == null) {
+      return false;
+    }
+
+    Procedure proc = procedures.get(procId);
+    if (proc != null) {
+      return proc.getOwner().equals(user.getShortName());
+    }
+    ProcedureInfo procInfo = completed.get(procId);
+    if (procInfo == null) {
+      // Procedure either does not exist or has already completed and got cleaned up.
+      // At this time, we cannot check the owner of the procedure
+      return false;
+    }
+    return ProcedureInfo.isProcedureOwner(procInfo, user);
   }
 
   public Map<Long, ProcedureInfo> getResults() {

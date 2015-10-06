@@ -60,6 +60,7 @@ public class CreateNamespaceProcedure
       final NamespaceDescriptor nsDescriptor) throws IOException {
     this.nsDescriptor = nsDescriptor;
     this.traceEnabled = null;
+    this.setOwner(env.getRequestUser().getUGI().getShortUserName());
   }
 
   @Override

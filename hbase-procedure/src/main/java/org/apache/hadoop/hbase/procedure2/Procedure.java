@@ -360,7 +360,9 @@ public abstract class Procedure<TEnvironment> implements Comparable<Procedure> {
     return Math.max(0, timeout - (EnvironmentEdgeManager.currentTime() - startTime));
   }
 
-  protected void setOwner(final String owner) {
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  public void setOwner(final String owner) {
     this.owner = StringUtils.isEmpty(owner) ? null : owner;
   }
 

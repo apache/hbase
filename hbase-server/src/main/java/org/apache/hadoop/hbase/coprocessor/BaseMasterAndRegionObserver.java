@@ -22,6 +22,7 @@ package org.apache.hadoop.hbase.coprocessor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -30,6 +31,8 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.RegionPlan;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.QuotaProtos.Quotas;
 
@@ -287,6 +290,29 @@ public abstract class BaseMasterAndRegionObserver extends BaseRegionObserver
   public void postDisableTableHandler(
       ObserverContext<MasterCoprocessorEnvironment> ctx, TableName tableName)
       throws IOException {
+  }
+
+  @Override
+  public void preAbortProcedure(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final ProcedureExecutor<MasterProcedureEnv> procEnv,
+      final long procId) throws IOException {
+  }
+
+  @Override
+  public void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+  }
+
+  @Override
+  public void preListProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+  }
+
+  @Override
+  public void postListProcedures(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ProcedureInfo> procInfoList) throws IOException {
   }
 
   @Override

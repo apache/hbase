@@ -61,6 +61,7 @@ public class ModifyNamespaceProcedure
     this.oldNsDescriptor = null;
     this.newNsDescriptor = newNsDescriptor;
     this.traceEnabled = null;
+    this.setOwner(env.getRequestUser().getUGI().getShortUserName());
   }
 
   @Override
