@@ -2471,13 +2471,34 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
-    return this.procedureExecutor.abort(procId, mayInterruptIfRunning);
+  public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
+      throws IOException {
+    if (cpHost != null) {
+      cpHost.preAbortProcedure(this.procedureExecutor, procId);
+    }
+
+    final boolean result = this.procedureExecutor.abort(procId, mayInterruptIfRunning);
+
+    if (cpHost != null) {
+      cpHost.postAbortProcedure();
+    }
+
+    return result;
   }
 
   @Override
   public List<ProcedureInfo> listProcedures() throws IOException {
-    return this.procedureExecutor.listProcedures();
+    if (cpHost != null) {
+      cpHost.preListProcedures();
+    }
+
+    final List<ProcedureInfo> procInfoList = this.procedureExecutor.listProcedures();
+
+    if (cpHost != null) {
+      cpHost.postListProcedures(procInfoList);
+    }
+
+    return procInfoList;
   }
 
   @Override

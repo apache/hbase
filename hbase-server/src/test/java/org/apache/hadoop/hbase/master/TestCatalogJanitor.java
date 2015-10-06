@@ -408,7 +408,8 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning) {
+    public boolean abortProcedure(final long procId, final boolean mayInterruptIfRunning)
+        throws IOException {
       return false;  //To change body of implemented methods use File | Settings | File Templates.
     }
 

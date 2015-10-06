@@ -106,6 +106,7 @@ public class EnableTableProcedure
     this.tableName = tableName;
     this.skipTableStateCheck = skipTableStateCheck;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
 
     // Compatible with 1.0: We use latch to make sure that this procedure implementation is
     // compatible with 1.0 asynchronized operations. We need to lock the table and check
@@ -277,8 +278,7 @@ public class EnableTableProcedure
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
     sb.append(tableName);
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

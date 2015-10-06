@@ -75,6 +75,7 @@ public class DeleteColumnFamilyProcedure
     this.tableName = tableName;
     this.familyName = familyName;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
     this.unmodifiedHTableDescriptor = null;
     this.regionInfoList = null;
     this.traceEnabled = null;
@@ -251,8 +252,7 @@ public class DeleteColumnFamilyProcedure
     } else {
       sb.append("Unknown");
     }
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

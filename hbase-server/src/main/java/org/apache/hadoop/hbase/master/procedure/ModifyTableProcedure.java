@@ -77,6 +77,7 @@ public class ModifyTableProcedure
     initilize();
     this.modifiedHTableDescriptor = htd;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
   }
 
   private void initilize() {
@@ -262,8 +263,7 @@ public class ModifyTableProcedure
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
     sb.append(getTableName());
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override
