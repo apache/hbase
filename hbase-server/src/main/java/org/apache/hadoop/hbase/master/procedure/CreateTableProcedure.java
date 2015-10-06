@@ -88,6 +88,7 @@ public class CreateTableProcedure
     this.hTableDescriptor = hTableDescriptor;
     this.newRegions = newRegions != null ? Lists.newArrayList(newRegions) : null;
     this.user = env.getRequestUser().getUGI();
+    this.setOwner(this.user.getShortUserName());
 
     // used for compatibility with clients without procedures
     // they need a sync TableExistsException
@@ -230,8 +231,7 @@ public class CreateTableProcedure
     sb.append(getClass().getSimpleName());
     sb.append(" (table=");
     sb.append(getTableName());
-    sb.append(") user=");
-    sb.append(user);
+    sb.append(")");
   }
 
   @Override

@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
@@ -81,6 +82,8 @@ import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.AccessControlProtos;
@@ -1177,6 +1180,57 @@ public class AccessController extends BaseMasterAndRegionObserver
           + AccessControlLists.ACL_TABLE_NAME + " table with AccessController installed");
     }
     requirePermission("disableTable", tableName, null, null, Action.ADMIN, Action.CREATE);
+  }
+
+  @Override
+  public void preAbortProcedure(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      final ProcedureExecutor<MasterProcedureEnv> procEnv,
+      final long procId) throws IOException {
+    if (!procEnv.isProcedureOwner(procId, getActiveUser())) {
+      // If the user is not the procedure owner, then we should further probe whether
+      // he can abort the procedure.
+      requirePermission("abortProcedure", Action.ADMIN);
+    }
+  }
+
+  @Override
+  public void postAbortProcedure(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    // There is nothing to do at this time after the procedure abort request was sent.
+  }
+
+  @Override
+  public void preListProcedures(ObserverContext<MasterCoprocessorEnvironment> ctx)
+      throws IOException {
+    // We are delegating the authorization check to postListProcedures as we don't have
+    // any concrete set of procedures to work with
+  }
+
+  @Override
+  public void postListProcedures(
+      ObserverContext<MasterCoprocessorEnvironment> ctx,
+      List<ProcedureInfo> procInfoList) throws IOException {
+    if (procInfoList.isEmpty()) {
+      return;
+    }
+
+    // Retains only those which passes authorization checks, as the checks weren't done as part
+    // of preListProcedures.
+    Iterator<ProcedureInfo> itr = procInfoList.iterator();
+    User user = getActiveUser();
+    while (itr.hasNext()) {
+      ProcedureInfo procInfo = itr.next();
+      try {
+        if (!ProcedureInfo.isProcedureOwner(procInfo, user)) {
+          // If the user is not the procedure owner, then we should further probe whether
+          // he can see the procedure.
+          requirePermission("listProcedures", Action.ADMIN);
+        }
+      } catch (AccessDeniedException e) {
+        itr.remove();
+      }
+    }
   }
 
   @Override
