@@ -22,17 +22,30 @@ import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 
 /**
- * This class is a server side extension to the Cell interface. This is used when the actual Cell
- * implementation is backed by {@link ByteBuffer}. This class contain ByteBuffer backed getters for
- * row, cf, qualifier, value and tags. Also getters of the position where these field bytes begin. A
- * cell object can be of this type only in server side. When the object is of this type, use the
- * getXXXByteBuffer() method along with getXXXPositionInByteBuffer(). If cell is backed by off heap
- * ByteBuffer the call to getXXXArray() will result is temporary byte array creation and bytes copy
- * resulting in lot of garbage.
+ * This class is a server side extension to the {@link Cell} interface. It is used when the
+ * Cell is backed by a {@link ByteBuffer}: i.e. <code>cell instanceof ByteBufferedCell</code>.
+ *
+ * <p>This class has getters for the row, column family, column qualifier, value and tags hosting
+ * ByteBuffers. It also has getters of the *position* within a ByteBuffer where these
+ * field bytes begin. These are needed because a single ByteBuffer may back one or many Cell
+ * instances -- it depends on the implementation -- so the ByteBuffer position as returned by
+ * {@link ByteBuffer#arrayOffset()} cannot be relied upon. Also, do not confuse these position
+ * methods with the getXXXOffset methods from the super Interface, {@link Cell}; dependent up on
+ * implementation, the Cell getXXXOffset methods can return the same value as a call to its
+ * equivalent position method from below BUT they can also stray; if a ByteBufferedCell, use the
+ * below position methods to find where a field begins.
+ *
+ * <p>Use the getXXXLength methods from Cell to find a fields length.
+ *
+ * <p>A Cell object can be of this type only on the server side.
+ *
+ * <p>WARNING: If a Cell is backed by an offheap ByteBuffer, any call to getXXXArray() will result
+ * in a temporary byte array creation and a bytes copy. Avoid these allocations by using the
+ * appropriate Cell access server-side: i.e. ByteBufferedCell when backed by a ByteBuffer and Cell
+ * when it is not.
  */
 @InterfaceAudience.Private
 public abstract class ByteBufferedCell implements Cell {
-
   /**
    * @return The {@link ByteBuffer} containing the row bytes.
    */
