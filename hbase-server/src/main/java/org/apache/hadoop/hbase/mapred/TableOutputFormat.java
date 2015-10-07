@@ -71,6 +71,21 @@ public class TableOutputFormat extends FileOutputFormat<ImmutableBytesWritable, 
     }
   }
 
+  /**
+   * Creates a new record writer.
+   * 
+   * Be aware that the baseline javadoc gives the impression that there is a single
+   * {@link RecordWriter} per job but in HBase, it is more natural if we give you a new
+   * RecordWriter per call of this method. You must close the returned RecordWriter when done.
+   * Failure to do so will drop writes.
+   *
+   * @param ignored Ignored filesystem
+   * @param job Current JobConf
+   * @param name Name of the job
+   * @param progress
+   * @return The newly created writer instance.
+   * @throws IOException When creating the writer fails.
+   */
   @Override
   public RecordWriter getRecordWriter(FileSystem ignored, JobConf job, String name,
       Progressable progress)

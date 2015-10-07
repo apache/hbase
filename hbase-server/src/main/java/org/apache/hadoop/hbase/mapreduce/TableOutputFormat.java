@@ -131,6 +131,11 @@ implements Configurable {
 
   /**
    * Creates a new record writer.
+   * 
+   * Be aware that the baseline javadoc gives the impression that there is a single
+   * {@link RecordWriter} per job but in HBase, it is more natural if we give you a new
+   * RecordWriter per call of this method. You must close the returned RecordWriter when done.
+   * Failure to do so will drop writes.
    *
    * @param context  The current task context.
    * @return The newly created writer instance.
