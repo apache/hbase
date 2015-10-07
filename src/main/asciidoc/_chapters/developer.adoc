@@ -655,16 +655,17 @@ We do not release HBase tarball to the Apache Maven repository. To avoid deployi
 +
 The artifacts are in the maven repository in the staging area in the 'open' state.
 While in this 'open' state you can check out what you've published to make sure all is good.
-To do this, login at link:http://repository.apache.org[repository.apache.org]                        using your Apache ID.
-Find your artifacts in the staging repository.
-Browse the content.
-Make sure all artifacts made it up and that the poms look generally good.
-If it checks out, 'close' the repo.
-This will make the artifacts publically available.
-You will receive an email with the URL to give out for the temporary staging repository for others to use trying out this new release candidate.
-Include it in the email that announces the release candidate.
-Folks will need to add this repo URL to their local poms or to their local _settings.xml_ file to pull the published release candidate artifacts.
-If the published artifacts are incomplete or have problems, just delete the 'open' staged artifacts.
+To do this, log in to Apache's Nexus at link:http://repository.apache.org[repository.apache.org]                        using your Apache ID.
+Find your artifacts in the staging repository. Click on 'Staging Repositories' and look for a new one ending in "hbase" with a status of 'Open', select it.
+Use the tree view to expand the list of repository contents and inspect if the artifacts you expect are present. Check the POMs.
+As long as the staging repo is open you can re-upload if something is missing or built incorrectly.
++
+If something is seriously wrong and you would like to back out the upload, you can use the 'Drop' button to drop and delete the staging repository.
++
+If it checks out, close the repo using the 'Close' button. The repository must be closed before a public URL to it becomes available. It may take a few minutes for the repository to close. Once complete you'll see a public URL to the repository in the Nexus UI. You may also receive an email with the URL. Provide the URL to the temporary staging repository in the email that announces the release candidate.
+(Folks will need to add this repo URL to their local poms or to their local _settings.xml_ file to pull the published release candidate artifacts.)
++
+When the release vote concludes successfully, return here and click the 'Release' button to release the artifacts to central. The release process will automatically drop and delete the staging repository.
 +
 .hbase-downstreamer
 [NOTE]
