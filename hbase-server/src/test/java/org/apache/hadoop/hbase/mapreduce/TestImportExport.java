@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URL;
@@ -111,7 +112,8 @@ public class TestImportExport {
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
     UTIL.startMiniCluster();
     UTIL.startMiniMapReduceCluster();
-    FQ_OUTPUT_DIR =  new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
+    FQ_OUTPUT_DIR =
+      new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
   }
 
   @AfterClass
@@ -226,13 +228,19 @@ public class TestImportExport {
    */
   @Test
   public void testImport94Table() throws Exception {
-    URL url = TestImportExport.class.getResource(
-        "exportedTableIn94Format");
-    Path importPath = new Path(url.getPath());
+    final String name = "exportedTableIn94Format";
+    URL url = TestImportExport.class.getResource(name);
+    File f = new File(url.toURI());
+    if (!f.exists()) {
+      LOG.warn("FAILED TO FIND " + f + "; skipping out on test");
+      return;
+    }
+    assertTrue(f.exists());
+    LOG.info("FILE=" + f);
+    Path importPath = new Path(f.toURI());
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
-    fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR
-        + "exportedTableIn94Format"));
-    String IMPORT_TABLE = "importTableExportedFrom94";
+    fs.copyFromLocalFile(importPath, new Path(FQ_OUTPUT_DIR + Path.SEPARATOR + name));
+    String IMPORT_TABLE = name;
     Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), Bytes.toBytes("f1"), 3);
     String[] args = new String[] {
         "-Dhbase.import.version=0.94" ,
