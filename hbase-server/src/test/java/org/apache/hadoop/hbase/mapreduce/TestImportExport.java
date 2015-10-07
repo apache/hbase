@@ -35,6 +35,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -86,6 +88,7 @@ import org.mockito.stubbing.Answer;
  */
 @Category(MediumTests.class)
 public class TestImportExport {
+  private static final Log LOG = LogFactory.getLog(TestImportExport.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
