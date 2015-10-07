@@ -58,11 +58,6 @@
       <artifactId>mockito-all</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>org.jmock</groupId>
-      <artifactId>jmock-junit4</artifactId>
-      <scope>provided</scope>
-    </dependency>
   </dependencies>
   <build>
     <plugins>
