@@ -1292,7 +1292,9 @@
     <!-- default Xmx value is 2800m. Use -Dsurefire.Xmx=xxg to run tests with different JVM Xmx value -->
     <surefire.Xmx>2800m</surefire.Xmx>
     <surefire.cygwinXmx>2800m</surefire.cygwinXmx>
-    <hbase-surefire.argLine>-enableassertions -XX:MaxDirectMemorySize=1G -Xmx${surefire.Xmx}
+    <!--Mark our test runs with '-Dhbase.test' so we can identify a surefire test as ours in a process listing
+     -->
+    <hbase-surefire.argLine>-enableassertions -Dhbase.test -Xmx${surefire.Xmx}
       -XX:MaxPermSize=256m -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true
       -Djava.awt.headless=true
     </hbase-surefire.argLine>
