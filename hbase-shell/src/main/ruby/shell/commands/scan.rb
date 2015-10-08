@@ -29,7 +29,7 @@ or COLUMNS, CACHE or RAW, VERSIONS
 
 If no columns are specified, all columns will be scanned.
 To scan all members of a column family, leave the qualifier empty as in
-'col_family:'.
+'col_family'.
 
 The filter can be specified in two ways:
 1. Using a filterString - more information on this is available in the
