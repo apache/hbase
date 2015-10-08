@@ -356,7 +356,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     return c;
   }
 
-  private static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
+  public static int compareTimestamps(final long ltimestamp, final long rtimestamp) {
     // The below older timestamps sorting ahead of newer timestamps looks
     // wrong but it is intentional. This way, newer timestamps are first
     // found when we iterate over a memstore and newer versions are the
