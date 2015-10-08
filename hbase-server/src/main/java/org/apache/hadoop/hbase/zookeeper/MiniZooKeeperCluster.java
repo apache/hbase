@@ -55,7 +55,8 @@ public class MiniZooKeeperCluster {
   private static final Log LOG = LogFactory.getLog(MiniZooKeeperCluster.class);
 
   private static final int TICK_TIME = 2000;
-  private static final int CONNECTION_TIMEOUT = 30000;
+  private static final int DEFAULT_CONNECTION_TIMEOUT = 30000;
+  private int connectionTimeout;
 
   private boolean started;
 
@@ -82,6 +83,8 @@ public class MiniZooKeeperCluster {
     zooKeeperServers = new ArrayList<ZooKeeperServer>();
     clientPortList = new ArrayList<Integer>();
     standaloneServerFactoryList = new ArrayList<NIOServerCnxnFactory>();
+    connectionTimeout = configuration.getInt(HConstants.ZK_SESSION_TIMEOUT + ".localHBaseCluster",
+      DEFAULT_CONNECTION_TIMEOUT);
   }
 
   /**
@@ -249,7 +252,7 @@ public class MiniZooKeeperCluster {
       // Start up this ZK server
       standaloneServerFactory.startup(server);
       // Runs a 'stat' against the servers.
-      if (!waitForServerUp(currentClientPort, CONNECTION_TIMEOUT)) {
+      if (!waitForServerUp(currentClientPort, connectionTimeout)) {
         throw new IOException("Waiting for startup of standalone server");
       }
 
@@ -296,7 +299,7 @@ public class MiniZooKeeperCluster {
       int clientPort = clientPortList.get(i);
 
       standaloneServerFactory.shutdown();
-      if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
+      if (!waitForServerDown(clientPort, connectionTimeout)) {
         throw new IOException("Waiting for shutdown of standalone server");
       }
     }
@@ -334,7 +337,7 @@ public class MiniZooKeeperCluster {
     int clientPort = clientPortList.get(activeZKServerIndex);
 
     standaloneServerFactory.shutdown();
-    if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
+    if (!waitForServerDown(clientPort, connectionTimeout)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
 
@@ -377,7 +380,7 @@ public class MiniZooKeeperCluster {
     int clientPort = clientPortList.get(backupZKServerIndex);
 
     standaloneServerFactory.shutdown();
-    if (!waitForServerDown(clientPort, CONNECTION_TIMEOUT)) {
+    if (!waitForServerDown(clientPort, connectionTimeout)) {
       throw new IOException("Waiting for shutdown of standalone server");
     }
 
