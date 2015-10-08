@@ -932,4 +932,15 @@ public final class CellUtil {
 
     return builder.toString();
   }
+
+  /**************** equals ****************************/
+
+  public static boolean equals(Cell a, Cell b) {
+    return matchingRow(a, b) && matchingFamily(a, b) && matchingQualifier(a, b)
+        && matchingTimestamp(a, b) && matchingType(a, b);
+  }
+
+  public static boolean matchingType(Cell a, Cell b) {
+    return a.getTypeByte() == b.getTypeByte();
+  }
 }
