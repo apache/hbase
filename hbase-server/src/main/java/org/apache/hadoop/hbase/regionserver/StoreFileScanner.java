@@ -435,48 +435,55 @@ public class StoreFileScanner implements KeyValueScanner {
   }
 
   @Override
-  public boolean seekToPreviousRow(KeyValue key) throws IOException {
+  public boolean seekToPreviousRow(KeyValue originalKey) throws IOException {
     try {
       try {
-        KeyValue seekKey = KeyValue.createFirstOnRow(key.getRow());
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
-            seekKey.getKeyLength())) {
-          close();
-          return false;
-        }
-        KeyValue firstKeyOfPreviousRow = KeyValue.createFirstOnRow(hfs
-            .getKeyValue().getRow());
+        boolean keepSeeking = false;
+        KeyValue key = originalKey;
+        do {
+          KeyValue seekKey = KeyValue.createFirstOnRow(key.getRow());
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!hfs.seekBefore(seekKey.getBuffer(), seekKey.getKeyOffset(),
+              seekKey.getKeyLength())) {
+            close();
+            return false;
+          }
+          KeyValue firstKeyOfPreviousRow = KeyValue.createFirstOnRow(hfs
+              .getKeyValue().getRow());
 
-        if (seekCount != null) seekCount.incrementAndGet();
-        if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
-          close();
-          return false;
-        }
+          if (seekCount != null) seekCount.incrementAndGet();
+          if (!seekAtOrAfter(hfs, firstKeyOfPreviousRow)) {
+            close();
+            return false;
+          }
 
-        cur = hfs.getKeyValue();
-        this.stopSkippingKVsIfNextRow = true;
-        boolean resultOfSkipKVs;
-        try {
-          resultOfSkipKVs = skipKVsNewerThanReadpoint();
-        } finally {
-          this.stopSkippingKVsIfNextRow = false;
-        }
-        if (!resultOfSkipKVs
-            || getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
-                cur.getRowLength(), firstKeyOfPreviousRow.getBuffer(),
-                firstKeyOfPreviousRow.getRowOffset(),
-                firstKeyOfPreviousRow.getRowLength()) > 0) {
-          return seekToPreviousRow(firstKeyOfPreviousRow);
-        }
-
+          cur = hfs.getKeyValue();
+          this.stopSkippingKVsIfNextRow = true;
+          boolean resultOfSkipKVs;
+          try {
+            resultOfSkipKVs = skipKVsNewerThanReadpoint();
+          } finally {
+            this.stopSkippingKVsIfNextRow = false;
+          }
+          if (!resultOfSkipKVs
+              || getComparator().compareRows(cur.getBuffer(), cur.getRowOffset(),
+              cur.getRowLength(), firstKeyOfPreviousRow.getBuffer(),
+              firstKeyOfPreviousRow.getRowOffset(),
+              firstKeyOfPreviousRow.getRowLength()) > 0) {
+            keepSeeking = true;
+            key = firstKeyOfPreviousRow;
+            continue;
+          } else {
+            keepSeeking = false;
+          }
+        } while (keepSeeking);
         return true;
       } finally {
         realSeekDone = true;
       }
     } catch (IOException ioe) {
       throw new IOException("Could not seekToPreviousRow " + this + " to key "
-          + key, ioe);
+          + originalKey, ioe);
     }
   }
 

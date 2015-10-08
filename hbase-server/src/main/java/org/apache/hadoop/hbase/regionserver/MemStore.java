@@ -959,28 +959,36 @@ public class MemStore implements HeapSize {
      * specified key, then seek to the first KeyValue of previous row
      */
     @Override
-    public synchronized boolean seekToPreviousRow(KeyValue key) {
-      KeyValue firstKeyOnRow = KeyValue.createFirstOnRow(key.getRow());
-      SortedSet<KeyValue> kvHead = kvsetAtCreation.headSet(firstKeyOnRow);
-      KeyValue kvsetBeforeRow = kvHead.isEmpty() ? null : kvHead.last();
-      SortedSet<KeyValue> snapshotHead = snapshotAtCreation
-          .headSet(firstKeyOnRow);
-      KeyValue snapshotBeforeRow = snapshotHead.isEmpty() ? null : snapshotHead
-          .last();
-      KeyValue lastKVBeforeRow = getHighest(kvsetBeforeRow, snapshotBeforeRow);
-      if (lastKVBeforeRow == null) {
-        theNext = null;
-        return false;
-      }
-      KeyValue firstKeyOnPreviousRow = KeyValue
-          .createFirstOnRow(lastKVBeforeRow.getRow());
-      this.stopSkippingKVsIfNextRow = true;
-      seek(firstKeyOnPreviousRow);
-      this.stopSkippingKVsIfNextRow = false;
-      if (peek() == null
-          || comparator.compareRows(peek(), firstKeyOnPreviousRow) > 0) {
-        return seekToPreviousRow(lastKVBeforeRow);
-      }
+    public synchronized boolean seekToPreviousRow(KeyValue originalKey) {
+      boolean keepSeeking = false;
+      KeyValue key = originalKey;
+      do {
+        KeyValue firstKeyOnRow = KeyValue.createFirstOnRow(key.getRow());
+        SortedSet<KeyValue> kvHead = kvsetAtCreation.headSet(firstKeyOnRow);
+        KeyValue kvsetBeforeRow = kvHead.isEmpty() ? null : kvHead.last();
+        SortedSet<KeyValue> snapshotHead = snapshotAtCreation
+            .headSet(firstKeyOnRow);
+        KeyValue snapshotBeforeRow = snapshotHead.isEmpty() ? null : snapshotHead
+            .last();
+        KeyValue lastKVBeforeRow = getHighest(kvsetBeforeRow, snapshotBeforeRow);
+        if (lastKVBeforeRow == null) {
+          theNext = null;
+          return false;
+        }
+        KeyValue firstKeyOnPreviousRow = KeyValue
+            .createFirstOnRow(lastKVBeforeRow.getRow());
+        this.stopSkippingKVsIfNextRow = true;
+        seek(firstKeyOnPreviousRow);
+        this.stopSkippingKVsIfNextRow = false;
+        if (peek() == null
+            || comparator.compareRows(peek(), firstKeyOnPreviousRow) > 0) {
+          keepSeeking = true;
+          key = firstKeyOnPreviousRow;
+          continue;
+        } else {
+          keepSeeking = false;
+        }
+      } while (keepSeeking);
       return true;
     }
 
