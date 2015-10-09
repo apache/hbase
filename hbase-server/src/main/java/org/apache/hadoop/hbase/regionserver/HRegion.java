@@ -7066,6 +7066,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Operation op = Operation.APPEND;
     byte[] row = mutate.getRow();
     checkRow(row, op.toString());
+    checkFamilies(mutate.getFamilyCellMap().keySet());
     boolean flush = false;
     Durability durability = getEffectiveDurability(mutate.getDurability());
     boolean writeToWAL = durability != Durability.SKIP_WAL;
@@ -7318,6 +7319,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     Operation op = Operation.INCREMENT;
     byte [] row = mutation.getRow();
     checkRow(row, op.toString());
+    checkFamilies(mutation.getFamilyCellMap().keySet());
     boolean flush = false;
     Durability durability = getEffectiveDurability(mutation.getDurability());
     boolean writeToWAL = durability != Durability.SKIP_WAL;
