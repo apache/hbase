@@ -79,6 +79,7 @@ public class MasterDumpServlet extends StateDumpServlet {
 
     out.println("\n\nStacks:");
     out.println(LINE);
+    out.flush();
     PrintStream ps = new PrintStream(response.getOutputStream(), false, "UTF-8");
     Threads.printThreadInfo(ps, "");
     ps.flush();
