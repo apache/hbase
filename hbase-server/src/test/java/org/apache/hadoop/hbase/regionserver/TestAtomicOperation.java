@@ -134,6 +134,43 @@ public class TestAtomicOperation {
     assertEquals(0, Bytes.compareTo(Bytes.toBytes(v2+v1), result.getValue(fam1, qual2)));
   }
 
+  @Test
+  public void testAppendWithNonExistingFamily() throws IOException {
+    initHRegion(tableName, name.getMethodName(), fam1);
+    final String v1 = "Value";
+    final Append a = new Append(row);
+    a.add(fam1, qual1, Bytes.toBytes(v1));
+    a.add(fam2, qual2, Bytes.toBytes(v1));
+    Result result = null;
+    try {
+      result = region.append(a, HConstants.NO_NONCE, HConstants.NO_NONCE);
+      fail("Append operation should fail with NoSuchColumnFamilyException.");
+    } catch (NoSuchColumnFamilyException e) {
+      assertEquals(null, result);
+    } catch (Exception e) {
+      fail("Append operation should fail with NoSuchColumnFamilyException.");
+    }
+  }
+
+  @Test
+  public void testIncrementWithNonExistingFamily() throws IOException {
+    initHRegion(tableName, name.getMethodName(), fam1);
+    final Increment inc = new Increment(row);
+    inc.addColumn(fam1, qual1, 1);
+    inc.addColumn(fam2, qual2, 1);
+    inc.setDurability(Durability.ASYNC_WAL);
+    try {
+      region.increment(inc, HConstants.NO_NONCE, HConstants.NO_NONCE);
+    } catch (NoSuchColumnFamilyException e) {
+      final Get g = new Get(row);
+      final Result result = region.get(g);
+      assertEquals(null, result.getValue(fam1, qual1));
+      assertEquals(null, result.getValue(fam2, qual2));
+    } catch (Exception e) {
+      fail("Increment operation should fail with NoSuchColumnFamilyException.");
+    }
+  }
+
   /**
    * Test multi-threaded increments.
    */
