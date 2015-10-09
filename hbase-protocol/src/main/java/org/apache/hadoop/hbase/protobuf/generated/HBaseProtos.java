@@ -16044,6 +16044,1396 @@ public final class HBaseProtos {
     // @@protoc_insertion_point(class_scope:hbase.pb.NamespaceDescriptor)
   }
 
+  public interface VersionInfoOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+
+    // required string version = 1;
+    /**
+     * <code>required string version = 1;</code>
+     */
+    boolean hasVersion();
+    /**
+     * <code>required string version = 1;</code>
+     */
+    java.lang.String getVersion();
+    /**
+     * <code>required string version = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getVersionBytes();
+
+    // required string url = 2;
+    /**
+     * <code>required string url = 2;</code>
+     */
+    boolean hasUrl();
+    /**
+     * <code>required string url = 2;</code>
+     */
+    java.lang.String getUrl();
+    /**
+     * <code>required string url = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getUrlBytes();
+
+    // required string revision = 3;
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    boolean hasRevision();
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    java.lang.String getRevision();
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getRevisionBytes();
+
+    // required string user = 4;
+    /**
+     * <code>required string user = 4;</code>
+     */
+    boolean hasUser();
+    /**
+     * <code>required string user = 4;</code>
+     */
+    java.lang.String getUser();
+    /**
+     * <code>required string user = 4;</code>
+     */
+    com.google.protobuf.ByteString
+        getUserBytes();
+
+    // required string date = 5;
+    /**
+     * <code>required string date = 5;</code>
+     */
+    boolean hasDate();
+    /**
+     * <code>required string date = 5;</code>
+     */
+    java.lang.String getDate();
+    /**
+     * <code>required string date = 5;</code>
+     */
+    com.google.protobuf.ByteString
+        getDateBytes();
+
+    // required string src_checksum = 6;
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    boolean hasSrcChecksum();
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    java.lang.String getSrcChecksum();
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    com.google.protobuf.ByteString
+        getSrcChecksumBytes();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.VersionInfo}
+   *
+   * <pre>
+   * Rpc client version info proto. Included in ConnectionHeader on connection setup
+   * </pre>
+   */
+  public static final class VersionInfo extends
+      com.google.protobuf.GeneratedMessage
+      implements VersionInfoOrBuilder {
+    // Use VersionInfo.newBuilder() to construct.
+    private VersionInfo(com.google.protobuf.GeneratedMessage.Builder<?> builder) {
+      super(builder);
+      this.unknownFields = builder.getUnknownFields();
+    }
+    private VersionInfo(boolean noInit) { this.unknownFields = com.google.protobuf.UnknownFieldSet.getDefaultInstance(); }
+
+    private static final VersionInfo defaultInstance;
+    public static VersionInfo getDefaultInstance() {
+      return defaultInstance;
+    }
+
+    public VersionInfo getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+
+    private final com.google.protobuf.UnknownFieldSet unknownFields;
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+      return this.unknownFields;
+    }
+    private VersionInfo(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      initFields();
+      int mutable_bitField0_ = 0;
+      com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              version_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              url_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              bitField0_ |= 0x00000004;
+              revision_ = input.readBytes();
+              break;
+            }
+            case 34: {
+              bitField0_ |= 0x00000008;
+              user_ = input.readBytes();
+              break;
+            }
+            case 42: {
+              bitField0_ |= 0x00000010;
+              date_ = input.readBytes();
+              break;
+            }
+            case 50: {
+              bitField0_ |= 0x00000020;
+              srcChecksum_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e.getMessage()).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_VersionInfo_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_VersionInfo_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder.class);
+    }
+
+    public static com.google.protobuf.Parser<VersionInfo> PARSER =
+        new com.google.protobuf.AbstractParser<VersionInfo>() {
+      public VersionInfo parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        return new VersionInfo(input, extensionRegistry);
+      }
+    };
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<VersionInfo> getParserForType() {
+      return PARSER;
+    }
+
+    private int bitField0_;
+    // required string version = 1;
+    public static final int VERSION_FIELD_NUMBER = 1;
+    private java.lang.Object version_;
+    /**
+     * <code>required string version = 1;</code>
+     */
+    public boolean hasVersion() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required string version = 1;</code>
+     */
+    public java.lang.String getVersion() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          version_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string version = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getVersionBytes() {
+      java.lang.Object ref = version_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        version_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string url = 2;
+    public static final int URL_FIELD_NUMBER = 2;
+    private java.lang.Object url_;
+    /**
+     * <code>required string url = 2;</code>
+     */
+    public boolean hasUrl() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required string url = 2;</code>
+     */
+    public java.lang.String getUrl() {
+      java.lang.Object ref = url_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          url_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string url = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getUrlBytes() {
+      java.lang.Object ref = url_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        url_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string revision = 3;
+    public static final int REVISION_FIELD_NUMBER = 3;
+    private java.lang.Object revision_;
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    public boolean hasRevision() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    public java.lang.String getRevision() {
+      java.lang.Object ref = revision_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          revision_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string revision = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRevisionBytes() {
+      java.lang.Object ref = revision_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        revision_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string user = 4;
+    public static final int USER_FIELD_NUMBER = 4;
+    private java.lang.Object user_;
+    /**
+     * <code>required string user = 4;</code>
+     */
+    public boolean hasUser() {
+      return ((bitField0_ & 0x00000008) == 0x00000008);
+    }
+    /**
+     * <code>required string user = 4;</code>
+     */
+    public java.lang.String getUser() {
+      java.lang.Object ref = user_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          user_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string user = 4;</code>
+     */
+    public com.google.protobuf.ByteString
+        getUserBytes() {
+      java.lang.Object ref = user_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        user_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string date = 5;
+    public static final int DATE_FIELD_NUMBER = 5;
+    private java.lang.Object date_;
+    /**
+     * <code>required string date = 5;</code>
+     */
+    public boolean hasDate() {
+      return ((bitField0_ & 0x00000010) == 0x00000010);
+    }
+    /**
+     * <code>required string date = 5;</code>
+     */
+    public java.lang.String getDate() {
+      java.lang.Object ref = date_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          date_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string date = 5;</code>
+     */
+    public com.google.protobuf.ByteString
+        getDateBytes() {
+      java.lang.Object ref = date_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        date_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    // required string src_checksum = 6;
+    public static final int SRC_CHECKSUM_FIELD_NUMBER = 6;
+    private java.lang.Object srcChecksum_;
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    public boolean hasSrcChecksum() {
+      return ((bitField0_ & 0x00000020) == 0x00000020);
+    }
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    public java.lang.String getSrcChecksum() {
+      java.lang.Object ref = srcChecksum_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          srcChecksum_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>required string src_checksum = 6;</code>
+     */
+    public com.google.protobuf.ByteString
+        getSrcChecksumBytes() {
+      java.lang.Object ref = srcChecksum_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        srcChecksum_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private void initFields() {
+      version_ = "";
+      url_ = "";
+      revision_ = "";
+      user_ = "";
+      date_ = "";
+      srcChecksum_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+
+      if (!hasVersion()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasUrl()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasRevision()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasUser()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasDate()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSrcChecksum()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getVersionBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getUrlBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBytes(3, getRevisionBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        output.writeBytes(4, getUserBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        output.writeBytes(5, getDateBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        output.writeBytes(6, getSrcChecksumBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getVersionBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getUrlBytes());
+      }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, getRevisionBytes());
+      }
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(4, getUserBytes());
+      }
+      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(5, getDateBytes());
+      }
+      if (((bitField0_ & 0x00000020) == 0x00000020)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(6, getSrcChecksumBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo other = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo) obj;
+
+      boolean result = true;
+      result = result && (hasVersion() == other.hasVersion());
+      if (hasVersion()) {
+        result = result && getVersion()
+            .equals(other.getVersion());
+      }
+      result = result && (hasUrl() == other.hasUrl());
+      if (hasUrl()) {
+        result = result && getUrl()
+            .equals(other.getUrl());
+      }
+      result = result && (hasRevision() == other.hasRevision());
+      if (hasRevision()) {
+        result = result && getRevision()
+            .equals(other.getRevision());
+      }
+      result = result && (hasUser() == other.hasUser());
+      if (hasUser()) {
+        result = result && getUser()
+            .equals(other.getUser());
+      }
+      result = result && (hasDate() == other.hasDate());
+      if (hasDate()) {
+        result = result && getDate()
+            .equals(other.getDate());
+      }
+      result = result && (hasSrcChecksum() == other.hasSrcChecksum());
+      if (hasSrcChecksum()) {
+        result = result && getSrcChecksum()
+            .equals(other.getSrcChecksum());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+
+    private int memoizedHashCode = 0;
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasVersion()) {
+        hash = (37 * hash) + VERSION_FIELD_NUMBER;
+        hash = (53 * hash) + getVersion().hashCode();
+      }
+      if (hasUrl()) {
+        hash = (37 * hash) + URL_FIELD_NUMBER;
+        hash = (53 * hash) + getUrl().hashCode();
+      }
+      if (hasRevision()) {
+        hash = (37 * hash) + REVISION_FIELD_NUMBER;
+        hash = (53 * hash) + getRevision().hashCode();
+      }
+      if (hasUser()) {
+        hash = (37 * hash) + USER_FIELD_NUMBER;
+        hash = (53 * hash) + getUser().hashCode();
+      }
+      if (hasDate()) {
+        hash = (37 * hash) + DATE_FIELD_NUMBER;
+        hash = (53 * hash) + getDate().hashCode();
+      }
+      if (hasSrcChecksum()) {
+        hash = (37 * hash) + SRC_CHECKSUM_FIELD_NUMBER;
+        hash = (53 * hash) + getSrcChecksum().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseDelimitedFrom(input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input);
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return PARSER.parseFrom(input, extensionRegistry);
+    }
+
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.VersionInfo}
+     *
+     * <pre>
+     * Rpc client version info proto. Included in ConnectionHeader on connection setup
+     * </pre>
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_VersionInfo_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_VersionInfo_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.class, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+
+      public Builder clear() {
+        super.clear();
+        version_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        url_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        revision_ = "";
+        bitField0_ = (bitField0_ & ~0x00000004);
+        user_ = "";
+        bitField0_ = (bitField0_ & ~0x00000008);
+        date_ = "";
+        bitField0_ = (bitField0_ & ~0x00000010);
+        srcChecksum_ = "";
+        bitField0_ = (bitField0_ & ~0x00000020);
+        return this;
+      }
+
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.internal_static_hbase_pb_VersionInfo_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo build() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo result = new org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.version_ = version_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.url_ = url_;
+        if (((from_bitField0_ & 0x00000004) == 0x00000004)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.revision_ = revision_;
+        if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
+          to_bitField0_ |= 0x00000008;
+        }
+        result.user_ = user_;
+        if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00000010;
+        }
+        result.date_ = date_;
+        if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
+          to_bitField0_ |= 0x00000020;
+        }
+        result.srcChecksum_ = srcChecksum_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance()) return this;
+        if (other.hasVersion()) {
+          bitField0_ |= 0x00000001;
+          version_ = other.version_;
+          onChanged();
+        }
+        if (other.hasUrl()) {
+          bitField0_ |= 0x00000002;
+          url_ = other.url_;
+          onChanged();
+        }
+        if (other.hasRevision()) {
+          bitField0_ |= 0x00000004;
+          revision_ = other.revision_;
+          onChanged();
+        }
+        if (other.hasUser()) {
+          bitField0_ |= 0x00000008;
+          user_ = other.user_;
+          onChanged();
+        }
+        if (other.hasDate()) {
+          bitField0_ |= 0x00000010;
+          date_ = other.date_;
+          onChanged();
+        }
+        if (other.hasSrcChecksum()) {
+          bitField0_ |= 0x00000020;
+          srcChecksum_ = other.srcChecksum_;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasVersion()) {
+          
+          return false;
+        }
+        if (!hasUrl()) {
+          
+          return false;
+        }
+        if (!hasRevision()) {
+          
+          return false;
+        }
+        if (!hasUser()) {
+          
+          return false;
+        }
+        if (!hasDate()) {
+          
+          return false;
+        }
+        if (!hasSrcChecksum()) {
+          
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo) e.getUnfinishedMessage();
+          throw e;
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      // required string version = 1;
+      private java.lang.Object version_ = "";
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public boolean hasVersion() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public java.lang.String getVersion() {
+        java.lang.Object ref = version_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          version_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getVersionBytes() {
+        java.lang.Object ref = version_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          version_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public Builder setVersion(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public Builder clearVersion() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        version_ = getDefaultInstance().getVersion();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string version = 1;</code>
+       */
+      public Builder setVersionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        version_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string url = 2;
+      private java.lang.Object url_ = "";
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public boolean hasUrl() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public java.lang.String getUrl() {
+        java.lang.Object ref = url_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          url_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getUrlBytes() {
+        java.lang.Object ref = url_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          url_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public Builder setUrl(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        url_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public Builder clearUrl() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        url_ = getDefaultInstance().getUrl();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string url = 2;</code>
+       */
+      public Builder setUrlBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        url_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string revision = 3;
+      private java.lang.Object revision_ = "";
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public boolean hasRevision() {
+        return ((bitField0_ & 0x00000004) == 0x00000004);
+      }
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public java.lang.String getRevision() {
+        java.lang.Object ref = revision_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          revision_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRevisionBytes() {
+        java.lang.Object ref = revision_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          revision_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public Builder setRevision(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        revision_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public Builder clearRevision() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        revision_ = getDefaultInstance().getRevision();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string revision = 3;</code>
+       */
+      public Builder setRevisionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000004;
+        revision_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string user = 4;
+      private java.lang.Object user_ = "";
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public boolean hasUser() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public java.lang.String getUser() {
+        java.lang.Object ref = user_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          user_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public com.google.protobuf.ByteString
+          getUserBytes() {
+        java.lang.Object ref = user_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          user_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public Builder setUser(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        user_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public Builder clearUser() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        user_ = getDefaultInstance().getUser();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string user = 4;</code>
+       */
+      public Builder setUserBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000008;
+        user_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string date = 5;
+      private java.lang.Object date_ = "";
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public boolean hasDate() {
+        return ((bitField0_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public java.lang.String getDate() {
+        java.lang.Object ref = date_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          date_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public com.google.protobuf.ByteString
+          getDateBytes() {
+        java.lang.Object ref = date_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          date_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public Builder setDate(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        date_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public Builder clearDate() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        date_ = getDefaultInstance().getDate();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string date = 5;</code>
+       */
+      public Builder setDateBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000010;
+        date_ = value;
+        onChanged();
+        return this;
+      }
+
+      // required string src_checksum = 6;
+      private java.lang.Object srcChecksum_ = "";
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public boolean hasSrcChecksum() {
+        return ((bitField0_ & 0x00000020) == 0x00000020);
+      }
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public java.lang.String getSrcChecksum() {
+        java.lang.Object ref = srcChecksum_;
+        if (!(ref instanceof java.lang.String)) {
+          java.lang.String s = ((com.google.protobuf.ByteString) ref)
+              .toStringUtf8();
+          srcChecksum_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public com.google.protobuf.ByteString
+          getSrcChecksumBytes() {
+        java.lang.Object ref = srcChecksum_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          srcChecksum_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public Builder setSrcChecksum(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        srcChecksum_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public Builder clearSrcChecksum() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        srcChecksum_ = getDefaultInstance().getSrcChecksum();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>required string src_checksum = 6;</code>
+       */
+      public Builder setSrcChecksumBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000020;
+        srcChecksum_ = value;
+        onChanged();
+        return this;
+      }
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.VersionInfo)
+    }
+
+    static {
+      defaultInstance = new VersionInfo(true);
+      defaultInstance.initFields();
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.VersionInfo)
+  }
+
   public interface RegionServerInfoOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
 
@@ -16056,6 +17446,20 @@ public final class HBaseProtos {
      * <code>optional int32 infoPort = 1;</code>
      */
     int getInfoPort();
+
+    // optional .hbase.pb.VersionInfo version_info = 2;
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    boolean hasVersionInfo();
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo getVersionInfo();
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder getVersionInfoOrBuilder();
   }
   /**
    * Protobuf type {@code hbase.pb.RegionServerInfo}
@@ -16118,6 +17522,19 @@ public final class HBaseProtos {
               infoPort_ = input.readInt32();
               break;
             }
+            case 18: {
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = versionInfo_.toBuilder();
+              }
+              versionInfo_ = input.readMessage(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(versionInfo_);
+                versionInfo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
           }
         }
       } catch (com.google.protobuf.InvalidProtocolBufferException e) {
@@ -16174,14 +17591,43 @@ public final class HBaseProtos {
       return infoPort_;
     }
 
+    // optional .hbase.pb.VersionInfo version_info = 2;
+    public static final int VERSION_INFO_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo versionInfo_;
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    public boolean hasVersionInfo() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo getVersionInfo() {
+      return versionInfo_;
+    }
+    /**
+     * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+     */
+    public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder getVersionInfoOrBuilder() {
+      return versionInfo_;
+    }
+
     private void initFields() {
       infoPort_ = 0;
+      versionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance();
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
       if (isInitialized != -1) return isInitialized == 1;
 
+      if (hasVersionInfo()) {
+        if (!getVersionInfo().isInitialized()) {
+          memoizedIsInitialized = 0;
+          return false;
+        }
+      }
       memoizedIsInitialized = 1;
       return true;
     }
@@ -16191,6 +17637,9 @@ public final class HBaseProtos {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         output.writeInt32(1, infoPort_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, versionInfo_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -16204,6 +17653,10 @@ public final class HBaseProtos {
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(1, infoPort_);
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, versionInfo_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -16233,6 +17686,11 @@ public final class HBaseProtos {
         result = result && (getInfoPort()
             == other.getInfoPort());
       }
+      result = result && (hasVersionInfo() == other.hasVersionInfo());
+      if (hasVersionInfo()) {
+        result = result && getVersionInfo()
+            .equals(other.getVersionInfo());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -16249,6 +17707,10 @@ public final class HBaseProtos {
       if (hasInfoPort()) {
         hash = (37 * hash) + INFOPORT_FIELD_NUMBER;
         hash = (53 * hash) + getInfoPort();
+      }
+      if (hasVersionInfo()) {
+        hash = (37 * hash) + VERSION_INFO_FIELD_NUMBER;
+        hash = (53 * hash) + getVersionInfo().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -16356,6 +17818,7 @@ public final class HBaseProtos {
       }
       private void maybeForceBuilderInitialization() {
         if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+          getVersionInfoFieldBuilder();
         }
       }
       private static Builder create() {
@@ -16366,6 +17829,12 @@ public final class HBaseProtos {
         super.clear();
         infoPort_ = 0;
         bitField0_ = (bitField0_ & ~0x00000001);
+        if (versionInfoBuilder_ == null) {
+          versionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance();
+        } else {
+          versionInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
         return this;
       }
 
@@ -16398,6 +17867,14 @@ public final class HBaseProtos {
           to_bitField0_ |= 0x00000001;
         }
         result.infoPort_ = infoPort_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (versionInfoBuilder_ == null) {
+          result.versionInfo_ = versionInfo_;
+        } else {
+          result.versionInfo_ = versionInfoBuilder_.build();
+        }
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -16417,11 +17894,20 @@ public final class HBaseProtos {
         if (other.hasInfoPort()) {
           setInfoPort(other.getInfoPort());
         }
+        if (other.hasVersionInfo()) {
+          mergeVersionInfo(other.getVersionInfo());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
       }
 
       public final boolean isInitialized() {
+        if (hasVersionInfo()) {
+          if (!getVersionInfo().isInitialized()) {
+            
+            return false;
+          }
+        }
         return true;
       }
 
@@ -16475,6 +17961,123 @@ public final class HBaseProtos {
         infoPort_ = 0;
         onChanged();
         return this;
+      }
+
+      // optional .hbase.pb.VersionInfo version_info = 2;
+      private org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo versionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance();
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder> versionInfoBuilder_;
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public boolean hasVersionInfo() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo getVersionInfo() {
+        if (versionInfoBuilder_ == null) {
+          return versionInfo_;
+        } else {
+          return versionInfoBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public Builder setVersionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo value) {
+        if (versionInfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          versionInfo_ = value;
+          onChanged();
+        } else {
+          versionInfoBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public Builder setVersionInfo(
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder builderForValue) {
+        if (versionInfoBuilder_ == null) {
+          versionInfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          versionInfoBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public Builder mergeVersionInfo(org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo value) {
+        if (versionInfoBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              versionInfo_ != org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance()) {
+            versionInfo_ =
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.newBuilder(versionInfo_).mergeFrom(value).buildPartial();
+          } else {
+            versionInfo_ = value;
+          }
+          onChanged();
+        } else {
+          versionInfoBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public Builder clearVersionInfo() {
+        if (versionInfoBuilder_ == null) {
+          versionInfo_ = org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.getDefaultInstance();
+          onChanged();
+        } else {
+          versionInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder getVersionInfoBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getVersionInfoFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      public org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder getVersionInfoOrBuilder() {
+        if (versionInfoBuilder_ != null) {
+          return versionInfoBuilder_.getMessageOrBuilder();
+        } else {
+          return versionInfo_;
+        }
+      }
+      /**
+       * <code>optional .hbase.pb.VersionInfo version_info = 2;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilder<
+          org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder> 
+          getVersionInfoFieldBuilder() {
+        if (versionInfoBuilder_ == null) {
+          versionInfoBuilder_ = new com.google.protobuf.SingleFieldBuilder<
+              org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo.Builder, org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfoOrBuilder>(
+                  versionInfo_,
+                  getParentForChildren(),
+                  isClean());
+          versionInfo_ = null;
+        }
+        return versionInfoBuilder_;
       }
 
       // @@protoc_insertion_point(builder_scope:hbase.pb.RegionServerInfo)
@@ -16594,6 +18197,11 @@ public final class HBaseProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_hbase_pb_NamespaceDescriptor_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_VersionInfo_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_hbase_pb_VersionInfo_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_RegionServerInfo_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -16650,15 +18258,19 @@ public final class HBaseProtos {
       "\002(\014\"5\n\004UUID\022\026\n\016least_sig_bits\030\001 \002(\004\022\025\n\rm" +
       "ost_sig_bits\030\002 \002(\004\"T\n\023NamespaceDescripto" +
       "r\022\014\n\004name\030\001 \002(\014\022/\n\rconfiguration\030\002 \003(\0132\030" +
-      ".hbase.pb.NameStringPair\"$\n\020RegionServer" +
-      "Info\022\020\n\010infoPort\030\001 \001(\005*r\n\013CompareType\022\010\n" +
-      "\004LESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n" +
-      "\tNOT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GR" +
-      "EATER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSE" +
-      "CONDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECOND" +
-      "S\020\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006",
-      "\022\010\n\004DAYS\020\007B>\n*org.apache.hadoop.hbase.pr" +
-      "otobuf.generatedB\013HBaseProtosH\001\240\001\001"
+      ".hbase.pb.NameStringPair\"o\n\013VersionInfo\022" +
+      "\017\n\007version\030\001 \002(\t\022\013\n\003url\030\002 \002(\t\022\020\n\010revisio" +
+      "n\030\003 \002(\t\022\014\n\004user\030\004 \002(\t\022\014\n\004date\030\005 \002(\t\022\024\n\014s" +
+      "rc_checksum\030\006 \002(\t\"Q\n\020RegionServerInfo\022\020\n" +
+      "\010infoPort\030\001 \001(\005\022+\n\014version_info\030\002 \001(\0132\025." +
+      "hbase.pb.VersionInfo*r\n\013CompareType\022\010\n\004L" +
+      "ESS\020\000\022\021\n\rLESS_OR_EQUAL\020\001\022\t\n\005EQUAL\020\002\022\r\n\tN",
+      "OT_EQUAL\020\003\022\024\n\020GREATER_OR_EQUAL\020\004\022\013\n\007GREA" +
+      "TER\020\005\022\t\n\005NO_OP\020\006*n\n\010TimeUnit\022\017\n\013NANOSECO" +
+      "NDS\020\001\022\020\n\014MICROSECONDS\020\002\022\020\n\014MILLISECONDS\020" +
+      "\003\022\013\n\007SECONDS\020\004\022\013\n\007MINUTES\020\005\022\t\n\005HOURS\020\006\022\010" +
+      "\n\004DAYS\020\007B>\n*org.apache.hadoop.hbase.prot" +
+      "obuf.generatedB\013HBaseProtosH\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -16791,12 +18403,18 @@ public final class HBaseProtos {
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_NamespaceDescriptor_descriptor,
               new java.lang.String[] { "Name", "Configuration", });
-          internal_static_hbase_pb_RegionServerInfo_descriptor =
+          internal_static_hbase_pb_VersionInfo_descriptor =
             getDescriptor().getMessageTypes().get(21);
+          internal_static_hbase_pb_VersionInfo_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_hbase_pb_VersionInfo_descriptor,
+              new java.lang.String[] { "Version", "Url", "Revision", "User", "Date", "SrcChecksum", });
+          internal_static_hbase_pb_RegionServerInfo_descriptor =
+            getDescriptor().getMessageTypes().get(22);
           internal_static_hbase_pb_RegionServerInfo_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_RegionServerInfo_descriptor,
-              new java.lang.String[] { "InfoPort", });
+              new java.lang.String[] { "InfoPort", "VersionInfo", });
           return null;
         }
       };

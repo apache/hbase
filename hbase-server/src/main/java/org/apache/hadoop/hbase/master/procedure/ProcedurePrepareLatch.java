@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcCallContext;
 import org.apache.hadoop.hbase.procedure2.Procedure;
-import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.VersionInfo;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.VersionInfo;
 
 /**
  * Latch used by the Master to have the prepare() sync behaviour for old
