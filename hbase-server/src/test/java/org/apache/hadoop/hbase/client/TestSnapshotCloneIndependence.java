@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hbase.client;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -41,6 +42,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -56,13 +58,13 @@ public class TestSnapshotCloneIndependence {
   private static final int NUM_RS = 2;
   private static final String STRING_TABLE_NAME = "test";
   private static final String TEST_FAM_STR = "fam";
-  private static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
-  private static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
-  private static final int CLEANER_INTERVAL = 10;
+  protected static final byte[] TEST_FAM = Bytes.toBytes(TEST_FAM_STR);
+  protected static final TableName TABLE_NAME = TableName.valueOf(STRING_TABLE_NAME);
+  private static final int CLEANER_INTERVAL = 100;
 
   /**
    * Setup the config for the cluster and start it
-   * @throws Exception on failure
+   * @throws Exception on fOailure
    */
   @BeforeClass
   public static void setupCluster() throws Exception {
@@ -72,11 +74,12 @@ public class TestSnapshotCloneIndependence {
  
   private static void setupConf(Configuration conf) {
     // Up the handlers; this test needs more than usual.
-    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
+    conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 15);
     // enable snapshot support
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     // disable the ui
     conf.setInt("hbase.regionsever.info.port", -1);
+    conf.setInt("hbase.master.info.port", -1);
     // change the flush size to a small amount, regulating number of store files
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // so make sure we get a compaction when doing a load, but keep around
@@ -89,7 +92,7 @@ public class TestSnapshotCloneIndependence {
     conf.setBoolean("hbase.master.enabletable.roundrobin", true);
     // Avoid potentially aggressive splitting which would cause snapshot to fail
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
-      ConstantSizeRegionSplitPolicy.class.getName());
+        ConstantSizeRegionSplitPolicy.class.getName());
     // Execute cleaner frequently to induce failures
     conf.setInt("hbase.master.cleaner.interval", CLEANER_INTERVAL);
     conf.setInt("hbase.master.hfilecleaner.plugins.snapshot.period", CLEANER_INTERVAL);
@@ -134,6 +137,7 @@ public class TestSnapshotCloneIndependence {
    * it is taken as an offline snapshot.
    */
   @Test (timeout=300000)
+  @Ignore
   public void testOfflineSnapshotAppendIndependent() throws Exception {
     runTestSnapshotAppendIndependent(false);
   }
@@ -152,6 +156,7 @@ public class TestSnapshotCloneIndependence {
    * when is taken as an online snapshot.
    */
   @Test (timeout=300000)
+  @Ignore
   public void testOfflineSnapshotMetadataChangesIndependent() throws Exception {
     runTestSnapshotMetadataChangesIndependent(false);
   }
@@ -161,6 +166,7 @@ public class TestSnapshotCloneIndependence {
    * cloned table and the original.
    */
   @Test (timeout=300000)
+  @Ignore
   public void testOfflineSnapshotRegionOperationsIndependent() throws Exception {
     runTestRegionOperationsIndependent(false);
   }
@@ -175,6 +181,7 @@ public class TestSnapshotCloneIndependence {
   }
 
   @Test (timeout=300000)
+  @Ignore
   public void testOfflineSnapshotDeleteIndependent() throws Exception {
     runTestSnapshotDeleteIndependent(false);
   }
@@ -187,7 +194,7 @@ public class TestSnapshotCloneIndependence {
   private static void waitOnSplit(final HTable t, int originalCount) throws Exception {
     for (int i = 0; i < 200; i++) {
       try {
-        Thread.sleep(50);
+        Thread.sleep(500);
       } catch (InterruptedException e) {
         // Restore the interrupted status
         Thread.currentThread().interrupt();
@@ -225,13 +232,19 @@ public class TestSnapshotCloneIndependence {
         snapshotNameAsString, rootDir, fs, online);
 
       if (!online) {
-        admin.enableTable(localTableName);
+        tryDisable(admin, localTableName);
       }
       TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
       admin.cloneSnapshot(snapshotName, cloneTableName);
 
-      try (Table clonedTable = new HTable(UTIL.getConfiguration(), cloneTableName)){
-        final int clonedTableRowCount = UTIL.countRows(clonedTable);
+
+      try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
+
+        // Make sure that all the regions are available before starting
+        UTIL.waitUntilAllRegionsAssigned(cloneTableName);
+
+        final int clonedTableRowCount = countRows(clonedTable);
+
 
         Assert.assertEquals(
           "The line counts of original and cloned tables do not match after clone. ",
@@ -290,7 +303,7 @@ public class TestSnapshotCloneIndependence {
       snapshotNameAsString, rootDir, fs, online);
 
     if (!online) {
-      admin.enableTable(localTableName);
+      tryDisable(admin, localTableName);
     }
 
     TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
@@ -344,8 +357,9 @@ public class TestSnapshotCloneIndependence {
       snapshotNameAsString, rootDir, fs, online);
 
     if (!online) {
-      admin.enableTable(localTableName);
+      tryDisable(admin, localTableName);
     }
+
     TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
 
     // Clone the snapshot
@@ -356,11 +370,12 @@ public class TestSnapshotCloneIndependence {
     byte[] TEST_FAM_2 = Bytes.toBytes("fam2");
     HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM_2);
 
-    admin.disableTable(localTableName);
+    tryDisable(admin, localTableName);
     admin.addColumn(localTableName, hcd);
 
     // Verify that it is not in the snapshot
     admin.enableTable(localTableName);
+    UTIL.waitTableAvailable(localTableName);
 
     // get a description of the cloned table
     // get a list of its families
@@ -377,6 +392,18 @@ public class TestSnapshotCloneIndependence {
       originalTableDescriptor.hasFamily(TEST_FAM_2));
     Assert.assertTrue("The new family was not found. ",
       !clonedTableDescriptor.hasFamily(TEST_FAM_2));
+  }
+
+  private void tryDisable(Admin admin, TableName localTableName) throws IOException {
+    int offlineRetry = 0;
+    while ( offlineRetry < 5 && admin.isTableEnabled(localTableName)) {
+      try {
+        admin.disableTable(localTableName);
+      } catch (IOException ioe) {
+        LOG.warn("Error disabling the table", ioe);
+      }
+      offlineRetry ++;
+    }
   }
 
   /*
@@ -405,10 +432,13 @@ public class TestSnapshotCloneIndependence {
         snapshotNameAsString, rootDir, fs, online);
 
     if (!online) {
-      admin.enableTable(localTableName);
+      tryDisable(admin, localTableName);
     }
+
     TableName cloneTableName = TableName.valueOf("test-clone-" + localTableName);
     admin.cloneSnapshot(snapshotName, cloneTableName);
+
+    UTIL.waitUntilAllRegionsAssigned(cloneTableName);
 
     // Ensure the original table does not reference the HFiles anymore
     admin.majorCompact(localTableName);
@@ -417,7 +447,9 @@ public class TestSnapshotCloneIndependence {
     admin.deleteSnapshot(snapshotName);
 
     // Wait for cleaner run and DFS heartbeats so that anything that is deletable is fully deleted
-    Thread.sleep(10000);
+    do {
+      Thread.sleep(5000);
+    } while (!admin.listSnapshots(snapshotNameAsString).isEmpty());
 
     try (Table original = UTIL.getConnection().getTable(localTableName)) {
       try (Table clonedTable = UTIL.getConnection().getTable(cloneTableName)) {
@@ -427,5 +459,22 @@ public class TestSnapshotCloneIndependence {
         Assert.assertEquals(origTableRowCount, clonedTableRowCount);
       }
     }
+  }
+
+  protected Table createTable(final TableName table, byte[] family) throws Exception {
+   Table t = UTIL.createTable(table, family);
+    // Wait for everything to be ready with the table
+    UTIL.waitUntilAllRegionsAssigned(table);
+
+    // At this point the table should be good to go.
+    return t;
+  }
+
+  protected void loadData(final Table table, byte[]... families) throws Exception {
+    UTIL.loadTable(table, families);
+  }
+
+  protected int countRows(final Table table, final byte[]... families) throws Exception {
+    return UTIL.countRows(table, families);
   }
 }

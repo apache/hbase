@@ -1062,7 +1062,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (storeFiles == null) continue;
 
       for (StoreFileInfo storeFileInfo : storeFiles) {
-        hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
+        try {
+          hdfsBlocksDistribution.add(storeFileInfo.computeHDFSBlocksDistribution(fs));
+        } catch (IOException ioe) {
+          LOG.warn("Error getting hdfs block distribution for " + storeFileInfo);
+        }
       }
     }
     return hdfsBlocksDistribution;
