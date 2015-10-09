@@ -1412,6 +1412,7 @@ public class HRegionServer extends HasThread implements
   private void createMyEphemeralNode() throws KeeperException, IOException {
     RegionServerInfo.Builder rsInfo = RegionServerInfo.newBuilder();
     rsInfo.setInfoPort(infoServer != null ? infoServer.getPort() : -1);
+    rsInfo.setVersionInfo(ProtobufUtil.getVersionInfo());
     byte[] data = ProtobufUtil.prependPBMagic(rsInfo.build().toByteArray());
     ZKUtil.createEphemeralNodeAndWatch(this.zooKeeper,
       getMyEphemeralNodePath(), data);

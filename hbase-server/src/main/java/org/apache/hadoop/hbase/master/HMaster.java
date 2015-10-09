@@ -2107,6 +2107,14 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     return info.getInfoPort();
   }
 
+  public String getRegionServerVersion(final ServerName sn) {
+    RegionServerInfo info = this.regionServerTracker.getRegionServerInfo(sn);
+    if (info != null && info.hasVersionInfo()) {
+      return info.getVersionInfo().getVersion();
+    }
+    return "Unknown";
+  }
+
   /**
    * @return array of coprocessor SimpleNames.
    */

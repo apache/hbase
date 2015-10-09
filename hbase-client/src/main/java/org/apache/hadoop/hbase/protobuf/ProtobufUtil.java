@@ -3128,8 +3128,8 @@ public final class ProtobufUtil {
    *
    * @return the converted protocol buffer VersionInfo
    */
-  public static RPCProtos.VersionInfo getVersionInfo() {
-    RPCProtos.VersionInfo.Builder builder = RPCProtos.VersionInfo.newBuilder();
+  public static HBaseProtos.VersionInfo getVersionInfo() {
+    HBaseProtos.VersionInfo.Builder builder = HBaseProtos.VersionInfo.newBuilder();
     builder.setVersion(VersionInfo.getVersion());
     builder.setUrl(VersionInfo.getUrl());
     builder.setRevision(VersionInfo.getRevision());
