@@ -25,18 +25,14 @@ HMaster master;
 
 <%import>
         java.util.*;
-        org.apache.hadoop.util.StringUtils;
-        org.apache.hadoop.hbase.util.Bytes;
-        org.apache.hadoop.hbase.util.JvmVersion;
-        org.apache.hadoop.hbase.util.FSUtils;
         org.apache.hadoop.hbase.master.HMaster;
-        org.apache.hadoop.hbase.HConstants;
         org.apache.hadoop.hbase.ServerLoad;
         org.apache.hadoop.hbase.ServerName;
         org.apache.hadoop.hbase.client.HBaseAdmin;
         org.apache.hadoop.hbase.client.HConnectionManager;
         org.apache.hadoop.hbase.HTableDescriptor;
         org.apache.hadoop.hbase.HBaseConfiguration;
+        org.apache.hadoop.hbase.util.VersionInfo;
 </%import>
 
 
@@ -84,15 +80,23 @@ Arrays.sort(serverNames);
 <tr>
     <th>ServerName</th>
     <th>Start time</th>
+    <th>Version</th>
     <th>Requests Per Second</th>
     <th>Num. Regions</th>
 </tr>
 <%java>
     int totalRegions = 0;
     int totalRequests = 0;
+    int inconsistentNodeNum = 0;
+    String masterVersion = VersionInfo.getVersion();
     for (ServerName serverName: serverNames) {
 
     ServerLoad sl = master.getServerManager().getLoad(serverName);
+    String version = master.getRegionServerVersion(serverName);
+    if (!masterVersion.equals(version)) {
+        inconsistentNodeNum ++;
+    }
+    
     double requestsPerSecond = 0.0;
     int numRegionsOnline = 0;
 
@@ -108,6 +112,7 @@ Arrays.sort(serverNames);
 <tr>
     <td><& serverNameLink; serverName=serverName; serverLoad = sl; &></td>
     <td><% new Date(startcode) %></td>
+    <td><% version %></td>
     <td><% String.format("%.0f", requestsPerSecond) %></td>
     <td><% numRegionsOnline %></td>
 </tr>
@@ -116,6 +121,11 @@ Arrays.sort(serverNames);
 </%java>
 <tr><td>Total:<% servers.size() %></td>
 <td></td>
+<%if inconsistentNodeNum > 0%>
+  <td style="color:red;"><% inconsistentNodeNum %> nodes with inconsistent version</td>
+<%else>
+   <td></td>
+</%if>
 <td><% totalRequests %></td>
 <td><% totalRegions %></td>
 </tr>
@@ -286,7 +296,7 @@ if  (sl.getTotalCompactingKVs() > 0) {
         String url = "//" + serverName.getHostname() + ":" + infoPort + "/rs-status";
         </%java>
 
-        <%if (infoPort > 0) %>
+        <%if infoPort > 0%>
             <a href="<% url %>"><% serverName.getServerName() %></a>
         <%else>
             <% serverName.getServerName() %>

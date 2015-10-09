@@ -76,16 +76,6 @@ message UserInformation {
   optional string real_user = 2;
 }
 
-// Rpc client version info proto. Included in ConnectionHeader on connection setup
-message VersionInfo {
-  required string version = 1;
-  required string url = 2;
-  required string revision = 3;
-  required string user = 4;
-  required string date = 5;
-  required string src_checksum = 6;
-}
-
 // This is sent on connection setup after the connection preamble is sent.
 message ConnectionHeader {
   optional UserInformation user_info = 1;
