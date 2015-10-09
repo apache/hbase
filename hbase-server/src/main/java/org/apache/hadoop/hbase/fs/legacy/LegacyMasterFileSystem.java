@@ -28,6 +28,7 @@ import java.util.Collections;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -183,6 +184,32 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
       tables.add(TableName.valueOf(namespace, stats[i].getPath().getName()));
     }
     return tables;
+  }
+
+  // ==========================================================================
+  //  PUBLIC Methods - Table Regions related
+  // ==========================================================================
+  @Override
+  public Collection<HRegionInfo> getRegions(FsContext ctx, TableName tableName)
+      throws IOException {
+    FileStatus[] stats = FSUtils.listStatus(getFileSystem(),
+        getTableDir(ctx, tableName), new FSUtils.RegionDirFilter(getFileSystem()));
+    if (stats == null) return Collections.emptyList();
+
+    ArrayList<HRegionInfo> regions = new ArrayList<HRegionInfo>(stats.length);
+    for (int i = 0; i < stats.length; ++i) {
+      regions.add(loadRegionInfo(stats[i].getPath()));
+    }
+    return regions;
+  }
+
+  protected HRegionInfo loadRegionInfo(Path regionDir) throws IOException {
+    FSDataInputStream in = getFileSystem().open(LegacyLayout.getRegionInfoFile(regionDir));
+    try {
+      return HRegionInfo.parseFrom(in);
+    } finally {
+      in.close();
+    }
   }
 
   // ==========================================================================
@@ -365,7 +392,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
   }
 
   protected Path getRegionDir(FsContext ctx, TableName table, HRegionInfo hri) {
-    return LegacyLayout.getRegionDir(getBaseDirFromContext(ctx), table, hri);
+    return LegacyLayout.getRegionDir(getTableDir(ctx, table), hri);
   }
 
   public Path getTempDir() {

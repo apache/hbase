@@ -23,10 +23,20 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.mob.MobConstants;
 
 public final class LegacyLayout {
   /** Name of the region info file that resides just under the region directory. */
-  public final static String REGION_INFO_FILE = ".regioninfo";
+  private final static String REGION_INFO_FILE = ".regioninfo";
+
+  /** Temporary subdirectory of the region directory used for merges. */
+  public static final String REGION_MERGES_DIR = ".merges";
+
+  /** Temporary subdirectory of the region directory used for splits. */
+  public static final String REGION_SPLITS_DIR = ".splits";
+
+  /** Temporary subdirectory of the region directory used for compaction output. */
+  private static final String REGION_TEMP_DIR = ".tmp";
 
   private LegacyLayout() {}
 
@@ -63,8 +73,44 @@ public final class LegacyLayout {
     return new Path(nsDir, table.getQualifierAsString());
   }
 
-  public static Path getRegionDir(Path baseDataDir, TableName table, HRegionInfo hri) {
-    return new Path(getTableDir(baseDataDir, table), hri.getEncodedName());
+  public static Path getRegionDir(Path tableDir, HRegionInfo hri) {
+    return new Path(tableDir, hri.getEncodedName());
+  }
+
+  public static Path getFamilyDir(Path regionDir, String familyName) {
+    return new Path(regionDir, familyName);
+  }
+
+  public static Path getStoreFile(Path familyDir, String fileName) {
+    return new Path(familyDir, fileName);
+  }
+
+  public static Path getRegionInfoFile(Path regionDir) {
+    return new Path(regionDir, REGION_INFO_FILE);
+  }
+
+  public static Path getRegionTempDir(Path regionDir) {
+    return new Path(regionDir, REGION_TEMP_DIR);
+  }
+
+  public static Path getRegionMergesDir(Path regionDir) {
+    return new Path(regionDir, REGION_MERGES_DIR);
+  }
+
+  public static Path getRegionMergesDir(Path mergeDir, HRegionInfo hri) {
+    return new Path(mergeDir, hri.getEncodedName());
+  }
+
+  public static Path getRegionSplitsDir(Path regionDir) {
+    return new Path(regionDir, REGION_SPLITS_DIR);
+  }
+
+  public static Path getRegionSplitsDir(Path splitDir, HRegionInfo hri) {
+    return new Path(splitDir, hri.getEncodedName());
+  }
+
+  public static Path getMobDir(Path rootDir) {
+    return new Path(rootDir, MobConstants.MOB_DIR_NAME);
   }
 
   public static Path getBulkDir(Path rootDir) {

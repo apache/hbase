@@ -110,6 +110,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -1070,51 +1072,54 @@ public class HBaseFsck extends Configured implements Closeable {
    * Lingering reference file prevents a region from opening. It has to
    * be fixed before a cluster can start properly.
    */
-  private void offlineReferenceFileRepair() throws IOException, InterruptedException {
+  private void offlineReferenceFileRepair() throws IOException {
     clearState();
-    Configuration conf = getConf();
-    Path hbaseRoot = FSUtils.getRootDir(conf);
-    FileSystem fs = hbaseRoot.getFileSystem(conf);
-    LOG.info("Computing mapping of all store files");
-    Map<String, Path> allFiles = FSUtils.getTableStoreFilePathMap(fs, hbaseRoot,
-      new FSUtils.ReferenceFileFilter(fs), executor, errors);
-    errors.print("");
     LOG.info("Validating mapping using HDFS state");
-    for (Path path: allFiles.values()) {
-      Path referredToFile = StoreFileInfo.getReferredToFile(path);
-      if (fs.exists(referredToFile)) continue;  // good, expected
+    final MasterFileSystem mfs = MasterFileSystem.open(getConf(), false);
+    mfs.visitStoreFiles(new StoreFileVisitor() {
+      @Override
+      public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
+          throws IOException {
+        if (errors != null) errors.progress();
+        if (!storeFile.isReference()) return;
 
-      // Found a lingering reference file
-      errors.reportError(ERROR_CODE.LINGERING_REFERENCE_HFILE,
-        "Found lingering reference file " + path);
-      if (!shouldFixReferenceFiles()) continue;
+        FileSystem fs = mfs.getFileSystem();
+        Path path = storeFile.getPath();
+        Path referredToFile = StoreFileInfo.getReferredToFile(path);
+        if (fs.exists(referredToFile)) return;  // good, expected
 
-      // Now, trying to fix it since requested
-      boolean success = false;
-      String pathStr = path.toString();
+        // Found a lingering reference file
+        errors.reportError(ERROR_CODE.LINGERING_REFERENCE_HFILE,
+          "Found lingering reference file " + path);
+        if (!shouldFixReferenceFiles()) return;
 
-      // A reference file path should be like
-      // ${hbase.rootdir}/data/namespace/table_name/region_id/family_name/referred_file.region_name
-      // Up 5 directories to get the root folder.
-      // So the file will be sidelined to a similar folder structure.
-      int index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR);
-      for (int i = 0; index > 0 && i < 5; i++) {
-        index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR, index - 1);
+        // Now, trying to fix it since requested
+        boolean success = false;
+        String pathStr = path.toString();
+
+        // A reference file path should be like
+        // ${hbase.rootdir}/data/namespace/table_name/region_id/family_name/referred_file.region_name
+        // Up 5 directories to get the root folder.
+        // So the file will be sidelined to a similar folder structure.
+        int index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR);
+        for (int i = 0; index > 0 && i < 5; i++) {
+          index = pathStr.lastIndexOf(Path.SEPARATOR_CHAR, index - 1);
+        }
+        if (index > 0) {
+          Path rootDir = getSidelineDir();
+          Path dst = new Path(rootDir, pathStr.substring(index + 1));
+          fs.mkdirs(dst.getParent());
+          LOG.info("Trying to sildeline reference file "
+            + path + " to " + dst);
+          setShouldRerun();
+
+          success = fs.rename(path, dst);
+        }
+        if (!success) {
+          LOG.error("Failed to sideline reference file " + path);
+        }
       }
-      if (index > 0) {
-        Path rootDir = getSidelineDir();
-        Path dst = new Path(rootDir, pathStr.substring(index + 1));
-        fs.mkdirs(dst.getParent());
-        LOG.info("Trying to sildeline reference file "
-          + path + " to " + dst);
-        setShouldRerun();
-
-        success = fs.rename(path, dst);
-      }
-      if (!success) {
-        LOG.error("Failed to sideline reference file " + path);
-      }
-    }
+    });
   }
 
   /**

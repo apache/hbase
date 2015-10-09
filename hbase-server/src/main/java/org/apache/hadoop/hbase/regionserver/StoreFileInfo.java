@@ -28,6 +28,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -277,19 +278,48 @@ public class StoreFileInfo {
     return reader;
   }
 
+  private interface ComputeFileInfo<T> {
+    T compute(FileSystem fs, FileStatus status, long offset, long length)
+      throws IOException;
+  }
+
   /**
    * Compute the HDFS Block Distribution for this StoreFile
    */
   public HDFSBlocksDistribution computeHDFSBlocksDistribution(final FileSystem fs)
       throws IOException {
+    return computeFileInfo(fs, new ComputeFileInfo<HDFSBlocksDistribution>() {
+      @Override
+      public HDFSBlocksDistribution compute(FileSystem fs, FileStatus status,
+          long offset, long length) throws IOException {
+        return FSUtils.computeHDFSBlocksDistribution(fs, status, offset, length);
+      }
+    });
+  }
 
+  public BlockLocation[] getFileBlockLocations(final FileSystem fs)
+      throws IOException {
+    return computeFileInfo(fs, new ComputeFileInfo<BlockLocation[]>() {
+      @Override
+      public BlockLocation[] compute(FileSystem fs, FileStatus status,
+          long offset, long length) throws IOException {
+        return fs.getFileBlockLocations(status, offset, length);
+      }
+    });
+  }
+
+  /**
+   * Compute the HDFS Block Distribution for this StoreFile
+   */
+  private <T> T computeFileInfo(final FileSystem fs,
+      final ComputeFileInfo<T> computeObj) throws IOException {
     // guard against the case where we get the FileStatus from link, but by the time we
     // call compute the file is moved again
     if (this.link != null) {
       FileNotFoundException exToThrow = null;
       for (int i = 0; i < this.link.getLocations().length; i++) {
         try {
-          return computeHDFSBlocksDistributionInternal(fs);
+          return computeFileInfoInternal(fs, computeObj);
         } catch (FileNotFoundException ex) {
           // try the other location
           exToThrow = ex;
@@ -297,18 +327,49 @@ public class StoreFileInfo {
       }
       throw exToThrow;
     } else {
-      return computeHDFSBlocksDistributionInternal(fs);
+      return computeFileInfoInternal(fs, computeObj);
     }
   }
 
-  private HDFSBlocksDistribution computeHDFSBlocksDistributionInternal(final FileSystem fs)
+  private <T> T computeFileInfoInternal(final FileSystem fs, final ComputeFileInfo<T> computeObj)
       throws IOException {
     FileStatus status = getReferencedFileStatus(fs);
     if (this.reference != null) {
-      return computeRefFileHDFSBlockDistribution(fs, reference, status);
+      return computeRefFileInfo(fs, reference, status, computeObj);
     } else {
-      return FSUtils.computeHDFSBlocksDistribution(fs, status, 0, status.getLen());
+      return computeObj.compute(fs, status, 0, status.getLen());
     }
+  }
+
+  /**
+   * helper function to compute HDFS blocks distribution of a given reference
+   * file.For reference file, we don't compute the exact value. We use some
+   * estimate instead given it might be good enough. we assume bottom part
+   * takes the first half of reference file, top part takes the second half
+   * of the reference file. This is just estimate, given
+   * midkey ofregion != midkey of HFile, also the number and size of keys vary.
+   * If this estimate isn't good enough, we can improve it later.
+   * @param fs  The FileSystem
+   * @param reference  The reference
+   * @param status  The reference FileStatus
+   * @return HDFS blocks distribution
+   */
+  private static <T> T computeRefFileInfo(final FileSystem fs, final Reference reference,
+      final FileStatus status, final ComputeFileInfo<T> computeObj) throws IOException {
+    if (status == null) {
+      return null;
+    }
+
+    long start = 0;
+    long length = 0;
+    if (Reference.isTopFileRegion(reference.getFileRegion())) {
+      start = status.getLen()/2;
+      length = status.getLen() - status.getLen()/2;
+    } else {
+      start = 0;
+      length = status.getLen()/2;
+    }
+    return computeObj.compute(fs, status, start, length);
   }
 
   /**
@@ -494,39 +555,6 @@ public class StoreFileInfo {
     }
 
     return validateStoreFileName(p.getName());
-  }
-
-  /**
-   * helper function to compute HDFS blocks distribution of a given reference
-   * file.For reference file, we don't compute the exact value. We use some
-   * estimate instead given it might be good enough. we assume bottom part
-   * takes the first half of reference file, top part takes the second half
-   * of the reference file. This is just estimate, given
-   * midkey ofregion != midkey of HFile, also the number and size of keys vary.
-   * If this estimate isn't good enough, we can improve it later.
-   * @param fs  The FileSystem
-   * @param reference  The reference
-   * @param status  The reference FileStatus
-   * @return HDFS blocks distribution
-   */
-  private static HDFSBlocksDistribution computeRefFileHDFSBlockDistribution(
-      final FileSystem fs, final Reference reference, final FileStatus status)
-      throws IOException {
-    if (status == null) {
-      return null;
-    }
-
-    long start = 0;
-    long length = 0;
-
-    if (Reference.isTopFileRegion(reference.getFileRegion())) {
-      start = status.getLen()/2;
-      length = status.getLen() - status.getLen()/2;
-    } else {
-      start = 0;
-      length = status.getLen()/2;
-    }
-    return FSUtils.computeHDFSBlocksDistribution(fs, status, start, length);
   }
 
   @Override

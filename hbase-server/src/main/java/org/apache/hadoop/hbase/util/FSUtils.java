@@ -32,6 +32,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -72,6 +73,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
@@ -272,21 +276,6 @@ public abstract class FSUtils {
     } catch (FileNotFoundException e) {
       return true;
     }
-  }
-
-  /**
-   * Delete the region directory if exists.
-   * @param conf
-   * @param hri
-   * @return True if deleted the region directory.
-   * @throws IOException
-   */
-  public static boolean deleteRegionDir(final Configuration conf, final HRegionInfo hri)
-  throws IOException {
-    Path rootDir = getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
-    return deleteDirectory(fs,
-      new Path(getTableDir(rootDir, hri.getTable()), hri.getEncodedName()));
   }
 
   /**
@@ -1078,7 +1067,7 @@ public abstract class FSUtils {
    * @throws IOException When scanning the directory fails.
    */
   public static int getTotalTableFragmentation(final HMaster master)
-  throws IOException {
+      throws IOException {
     Map<String, Integer> map = getTableFragmentation(master);
     return map != null && map.size() > 0 ? map.get("-TOTAL-") : -1;
   }
@@ -1093,56 +1082,29 @@ public abstract class FSUtils {
    *
    * @throws IOException When scanning the directory fails.
    */
-  public static Map<String, Integer> getTableFragmentation(
-    final HMaster master)
-  throws IOException {
-    Path path = getRootDir(master.getConfiguration());
-    // since HMaster.getFileSystem() is package private
-    FileSystem fs = path.getFileSystem(master.getConfiguration());
-    return getTableFragmentation(fs, path);
-  }
-
-  /**
-   * Runs through the HBase rootdir and checks how many stores for each table
-   * have more than one file in them. Checks -ROOT- and hbase:meta too. The total
-   * percentage across all tables is stored under the special key "-TOTAL-".
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @return A map for each table and its percentage.
-   * @throws IOException When scanning the directory fails.
-   */
-  public static Map<String, Integer> getTableFragmentation(
-    final FileSystem fs, final Path hbaseRootDir)
-  throws IOException {
-    Map<String, Integer> frags = new HashMap<String, Integer>();
+  public static Map<String, Integer> getTableFragmentation(final HMaster master)
+      throws IOException {
+    final Map<String, Integer> frags = new HashMap<String, Integer>();
     int cfCountTotal = 0;
     int cfFragTotal = 0;
-    PathFilter regionFilter = new RegionDirFilter(fs);
-    PathFilter familyFilter = new FamilyDirFilter(fs);
-    List<Path> tableDirs = getTableDirs(fs, hbaseRootDir);
-    for (Path d : tableDirs) {
+
+    MasterFileSystem mfs = master.getMasterFileSystem();
+    for (TableName table: mfs.getTables()) {
       int cfCount = 0;
       int cfFrag = 0;
-      FileStatus[] regionDirs = fs.listStatus(d, regionFilter);
-      for (FileStatus regionDir : regionDirs) {
-        Path dd = regionDir.getPath();
-        // else its a region name, now look in region for families
-        FileStatus[] familyDirs = fs.listStatus(dd, familyFilter);
-        for (FileStatus familyDir : familyDirs) {
+      for (HRegionInfo hri: mfs.getRegions(table)) {
+        RegionFileSystem rfs = mfs.getRegionFileSystem(hri);
+        for (String family: rfs.getFamilies()) {
           cfCount++;
           cfCountTotal++;
-          Path family = familyDir.getPath();
-          // now in family make sure only one file
-          FileStatus[] familyStatus = fs.listStatus(family);
-          if (familyStatus.length > 1) {
+          if (rfs.getStoreFiles(family).size() > 1) {
             cfFrag++;
             cfFragTotal++;
           }
         }
       }
       // compute percentage per table and store in result list
-      frags.put(FSUtils.getTableName(d).getNameAsString(),
+      frags.put(table.getNameAsString(),
         cfCount == 0? 0: Math.round((float) cfFrag / cfCount * 100));
     }
     // set overall percentage for all tables
@@ -1459,6 +1421,18 @@ public abstract class FSUtils {
     return referenceFiles;
   }
 
+  public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
+    int result = 0;
+    try {
+      for (Path familyDir:getFamilyDirs(fs, p)){
+        result += getReferenceFilePaths(fs, familyDir).size();
+      }
+    } catch (IOException e) {
+      LOG.warn("Error Counting reference files.", e);
+    }
+    return result;
+  }
+
   /**
    * Filter for HFiles that excludes reference files.
    */
@@ -1519,232 +1493,6 @@ public abstract class FSUtils {
   public static FileSystem getCurrentFileSystem(Configuration conf)
   throws IOException {
     return getRootDir(conf).getFileSystem(conf);
-  }
-
-
-  /**
-   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
-   * Example...<br>
-   * Key = 3944417774205889744  <br>
-   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param map map to add values.  If null, this method will create and populate one to return
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @param tableName name of the table to scan.
-   * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
-   */
-  public static Map<String, Path> getTableStoreFilePathMap(Map<String, Path> map,
-  final FileSystem fs, final Path hbaseRootDir, TableName tableName)
-  throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(map, fs, hbaseRootDir, tableName, null, null, null);
-  }
-
-  /**
-   * Runs through the HBase rootdir/tablename and creates a reverse lookup map for
-   * table StoreFile names to the full Path.  Note that because this method can be called
-   * on a 'live' HBase system that we will skip files that no longer exist by the time
-   * we traverse them and similarly the user of the result needs to consider that some
-   * entries in this map may not exist by the time this call completes.
-   * <br>
-   * Example...<br>
-   * Key = 3944417774205889744  <br>
-   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param resultMap map to add values.  If null, this method will create and populate one to return
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @param tableName name of the table to scan.
-   * @param sfFilter optional path filter to apply to store files
-   * @param executor optional executor service to parallelize this operation
-   * @param errors ErrorReporter instance or null
-   * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
-   */
-  public static Map<String, Path> getTableStoreFilePathMap(
-      Map<String, Path> resultMap,
-      final FileSystem fs, final Path hbaseRootDir, TableName tableName, final PathFilter sfFilter,
-      ExecutorService executor, final ErrorReporter errors) throws IOException, InterruptedException {
-
-    final Map<String, Path> finalResultMap =
-        resultMap == null ? new ConcurrentHashMap<String, Path>(128, 0.75f, 32) : resultMap;
-
-    // only include the directory paths to tables
-    Path tableDir = FSUtils.getTableDir(hbaseRootDir, tableName);
-    // Inside a table, there are compaction.dir directories to skip.  Otherwise, all else
-    // should be regions.
-    final FamilyDirFilter familyFilter = new FamilyDirFilter(fs);
-    final Vector<Exception> exceptions = new Vector<Exception>();
-
-    try {
-      List<FileStatus> regionDirs = FSUtils.listStatusWithStatusFilter(fs, tableDir, new RegionDirFilter(fs));
-      if (regionDirs == null) {
-        return finalResultMap;
-      }
-
-      final List<Future<?>> futures = new ArrayList<Future<?>>(regionDirs.size());
-
-      for (FileStatus regionDir : regionDirs) {
-        if (null != errors) {
-          errors.progress();
-        }
-        final Path dd = regionDir.getPath();
-
-        if (!exceptions.isEmpty()) {
-          break;
-        }
-
-        Runnable getRegionStoreFileMapCall = new Runnable() {
-          @Override
-          public void run() {
-            try {
-              HashMap<String,Path> regionStoreFileMap = new HashMap<String, Path>();
-              List<FileStatus> familyDirs = FSUtils.listStatusWithStatusFilter(fs, dd, familyFilter);
-              if (familyDirs == null) {
-                if (!fs.exists(dd)) {
-                  LOG.warn("Skipping region because it no longer exists: " + dd);
-                } else {
-                  LOG.warn("Skipping region because it has no family dirs: " + dd);
-                }
-                return;
-              }
-              for (FileStatus familyDir : familyDirs) {
-                if (null != errors) {
-                  errors.progress();
-                }
-                Path family = familyDir.getPath();
-                if (family.getName().equals(HConstants.RECOVERED_EDITS_DIR)) {
-                  continue;
-                }
-                // now in family, iterate over the StoreFiles and
-                // put in map
-                FileStatus[] familyStatus = fs.listStatus(family);
-                for (FileStatus sfStatus : familyStatus) {
-                  if (null != errors) {
-                    errors.progress();
-                  }
-                  Path sf = sfStatus.getPath();
-                  if (sfFilter == null || sfFilter.accept(sf)) {
-                    regionStoreFileMap.put( sf.getName(), sf);
-                  }
-                }
-              }
-              finalResultMap.putAll(regionStoreFileMap);
-            } catch (Exception e) {
-              LOG.error("Could not get region store file map for region: " + dd, e);
-              exceptions.add(e);
-            }
-          }
-        };
-
-        // If executor is available, submit async tasks to exec concurrently, otherwise
-        // just do serial sync execution
-        if (executor != null) {
-          Future<?> future = executor.submit(getRegionStoreFileMapCall);
-          futures.add(future);
-        } else {
-          FutureTask<?> future = new FutureTask<Object>(getRegionStoreFileMapCall, null);
-          future.run();
-          futures.add(future);
-        }
-      }
-
-      // Ensure all pending tasks are complete (or that we run into an exception)
-      for (Future<?> f : futures) {
-        if (!exceptions.isEmpty()) {
-          break;
-        }
-        try {
-          f.get();
-        } catch (ExecutionException e) {
-          LOG.error("Unexpected exec exception!  Should've been caught already.  (Bug?)", e);
-          // Shouldn't happen, we already logged/caught any exceptions in the Runnable
-        }
-      }
-    } catch (IOException e) {
-      LOG.error("Cannot execute getTableStoreFilePathMap for " + tableName, e);
-      exceptions.add(e);
-    } finally {
-      if (!exceptions.isEmpty()) {
-        // Just throw the first exception as an indication something bad happened
-        // Don't need to propagate all the exceptions, we already logged them all anyway
-        Throwables.propagateIfInstanceOf(exceptions.firstElement(), IOException.class);
-        throw Throwables.propagate(exceptions.firstElement());
-      }
-    }
-
-    return finalResultMap;
-  }
-
-  public static int getRegionReferenceFileCount(final FileSystem fs, final Path p) {
-    int result = 0;
-    try {
-      for (Path familyDir:getFamilyDirs(fs, p)){
-        result += getReferenceFilePaths(fs, familyDir).size();
-      }
-    } catch (IOException e) {
-      LOG.warn("Error Counting reference files.", e);
-    }
-    return result;
-  }
-
-  /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
-   * Example...<br>
-   * Key = 3944417774205889744  <br>
-   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
-   */
-  public static Map<String, Path> getTableStoreFilePathMap(
-    final FileSystem fs, final Path hbaseRootDir)
-  throws IOException, InterruptedException {
-    return getTableStoreFilePathMap(fs, hbaseRootDir, null, null, null);
-  }
-
-  /**
-   * Runs through the HBase rootdir and creates a reverse lookup map for
-   * table StoreFile names to the full Path.
-   * <br>
-   * Example...<br>
-   * Key = 3944417774205889744  <br>
-   * Value = hdfs://localhost:51169/user/userid/-ROOT-/70236052/info/3944417774205889744
-   *
-   * @param fs  The file system to use.
-   * @param hbaseRootDir  The root directory to scan.
-   * @param sfFilter optional path filter to apply to store files
-   * @param executor optional executor service to parallelize this operation
-   * @param errors ErrorReporter instance or null
-   * @return Map keyed by StoreFile name with a value of the full Path.
-   * @throws IOException When scanning the directory fails.
-   * @throws InterruptedException
-   */
-  public static Map<String, Path> getTableStoreFilePathMap(
-    final FileSystem fs, final Path hbaseRootDir, PathFilter sfFilter,
-    ExecutorService executor, ErrorReporter errors)
-  throws IOException, InterruptedException {
-    ConcurrentHashMap<String, Path> map = new ConcurrentHashMap<String, Path>(1024, 0.75f, 32);
-
-    // if this method looks similar to 'getTableFragmentation' that is because
-    // it was borrowed from it.
-
-    // only include the directory paths to tables
-    for (Path tableDir : FSUtils.getTableDirs(fs, hbaseRootDir)) {
-      getTableStoreFilePathMap(map, fs, hbaseRootDir,
-          FSUtils.getTableName(tableDir), sfFilter, executor, errors);
-    }
-    return map;
   }
 
   /**
@@ -1999,13 +1747,12 @@ public abstract class FSUtils {
    * @throws IOException
    *           in case of file system errors or interrupts
    */
-  public static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
+  private static Map<String, Map<String, Float>> getRegionDegreeLocalityMappingFromFS(
       final Configuration conf, final String desiredTable, int threadPoolSize)
       throws IOException {
     Map<String, Map<String, Float>> regionDegreeLocalityMapping =
         new ConcurrentHashMap<String, Map<String, Float>>();
-    getRegionLocalityMappingFromFS(conf, desiredTable, threadPoolSize, null,
-        regionDegreeLocalityMapping);
+    getRegionLocalityMappingFromFS(conf, desiredTable, threadPoolSize, regionDegreeLocalityMapping);
     return regionDegreeLocalityMapping;
   }
 
@@ -2021,8 +1768,6 @@ public abstract class FSUtils {
    *          the table you wish to scan locality for
    * @param threadPoolSize
    *          the thread pool size to use
-   * @param regionToBestLocalityRSMapping
-   *          the map into which to put the best locality mapping or null
    * @param regionDegreeLocalityMapping
    *          the map into which to put the locality degree mapping or null,
    *          must be a thread-safe implementation
@@ -2032,81 +1777,36 @@ public abstract class FSUtils {
   private static void getRegionLocalityMappingFromFS(
       final Configuration conf, final String desiredTable,
       int threadPoolSize,
-      Map<String, String> regionToBestLocalityRSMapping,
       Map<String, Map<String, Float>> regionDegreeLocalityMapping)
       throws IOException {
-    FileSystem fs =  FileSystem.get(conf);
-    Path rootPath = FSUtils.getRootDir(conf);
     long startTime = EnvironmentEdgeManager.currentTime();
-    Path queryPath;
-    // The table files are in ${hbase.rootdir}/data/<namespace>/<table>/*
-    if (null == desiredTable) {
-      queryPath = new Path(new Path(rootPath, HConstants.BASE_NAMESPACE_DIR).toString() + "/*/*/*/");
+
+    MasterFileSystem mfs = MasterFileSystem.open(conf, false);
+    Collection<HRegionInfo> hris;
+    if (desiredTable != null) {
+      hris = mfs.getRegions(TableName.valueOf(desiredTable));
     } else {
-      queryPath = new Path(FSUtils.getTableDir(rootPath, TableName.valueOf(desiredTable)).toString() + "/*/");
+      hris = new ArrayList<HRegionInfo>();
+      for (TableName tableName: mfs.getTables()) {
+        hris.addAll(mfs.getRegions(tableName));
+      }
     }
 
-    // reject all paths that are not appropriate
-    PathFilter pathFilter = new PathFilter() {
-      @Override
-      public boolean accept(Path path) {
-        // this is the region name; it may get some noise data
-        if (null == path) {
-          return false;
-        }
-
-        // no parent?
-        Path parent = path.getParent();
-        if (null == parent) {
-          return false;
-        }
-
-        String regionName = path.getName();
-        if (null == regionName) {
-          return false;
-        }
-
-        if (!regionName.toLowerCase(Locale.ROOT).matches("[0-9a-f]+")) {
-          return false;
-        }
-        return true;
-      }
-    };
-
-    FileStatus[] statusList = fs.globStatus(queryPath, pathFilter);
-
-    if (null == statusList) {
+    if (hris.isEmpty()) {
       return;
-    } else {
-      LOG.debug("Query Path: " + queryPath + " ; # list of files: " +
-          statusList.length);
     }
 
     // lower the number of threads in case we have very few expected regions
-    threadPoolSize = Math.min(threadPoolSize, statusList.length);
+    threadPoolSize = Math.min(threadPoolSize, hris.size());
 
     // run in multiple threads
     ThreadPoolExecutor tpe = new ThreadPoolExecutor(threadPoolSize,
         threadPoolSize, 60, TimeUnit.SECONDS,
-        new ArrayBlockingQueue<Runnable>(statusList.length));
+        new ArrayBlockingQueue<Runnable>(hris.size()));
     try {
       // ignore all file status items that are not of interest
-      for (FileStatus regionStatus : statusList) {
-        if (null == regionStatus) {
-          continue;
-        }
-
-        if (!regionStatus.isDirectory()) {
-          continue;
-        }
-
-        Path regionPath = regionStatus.getPath();
-        if (null == regionPath) {
-          continue;
-        }
-
-        tpe.execute(new FSRegionScanner(fs, regionPath,
-            regionToBestLocalityRSMapping, regionDegreeLocalityMapping));
+      for (HRegionInfo hri: hris) {
+        tpe.execute(new FSRegionScanner(conf, hri, regionDegreeLocalityMapping));
       }
     } finally {
       tpe.shutdown();

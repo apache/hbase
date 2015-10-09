@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -75,6 +76,7 @@ import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.coprocessor.BaseRegionObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
@@ -767,12 +769,8 @@ public class TestSplitTransactionOnCluster {
     try {
       // Precondition: we created a table with no data, no store files.
       printOutRegions(regionServer, "Initial regions: ");
-      Configuration conf = cluster.getConfiguration();
-      HBaseFsck.debugLsr(conf, new Path("/"));
-      Path rootDir = FSUtils.getRootDir(conf);
-      FileSystem fs = TESTING_UTIL.getDFSCluster().getFileSystem();
-      Map<String, Path> storefiles =
-          FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
+      cluster.getMaster().getMasterFileSystem().logFSTree(LOG);
+      List<StoreFileInfo> storefiles = getStoreFiles(tableName);
       assertEquals("Expected nothing but found " + storefiles.toString(), storefiles.size(), 0);
 
       // find a splittable region.  Refresh the regions list
@@ -795,9 +793,8 @@ public class TestSplitTransactionOnCluster {
       assertTrue(daughters.size() == 2);
 
       // check dirs
-      HBaseFsck.debugLsr(conf, new Path("/"));
-      Map<String, Path> storefilesAfter =
-          FSUtils.getTableStoreFilePathMap(null, fs, rootDir, tableName);
+      cluster.getMaster().getMasterFileSystem().logFSTree(LOG);
+      List<StoreFileInfo> storefilesAfter = getStoreFiles(tableName);
       assertEquals("Expected nothing but found " + storefilesAfter.toString(),
           storefilesAfter.size(), 0);
 
@@ -1369,6 +1366,18 @@ public class TestSplitTransactionOnCluster {
         return false;
       }
     }
+  }
+
+  private List<StoreFileInfo> getStoreFiles(TableName table) throws IOException {
+    final ArrayList<StoreFileInfo> storeFiles = new ArrayList<StoreFileInfo>();
+    cluster.getMaster().getMasterFileSystem().visitStoreFiles(table, new StoreFileVisitor() {
+      @Override
+      public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
+          throws IOException {
+        storeFiles.add(storeFile);
+      }
+    });
+    return storeFiles;
   }
 }
 

@@ -28,19 +28,22 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.FsContext;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.apache.hadoop.hbase.util.FSVisitor;
 import org.apache.hadoop.hbase.util.TestTableName;
 
 import org.junit.After;
@@ -103,13 +106,11 @@ public class TestCorruptedRegionStoreFile {
 
     // get the store file paths
     storeFiles.clear();
-    tableDir = FSUtils.getTableDir(getRootDir(), tableName);
-    FSVisitor.visitTableStoreFiles(getFileSystem(), tableDir, new FSVisitor.StoreFileVisitor() {
-      @Override
-      public void storeFile(final String region, final String family, final String hfile)
+    UTIL.getHBaseCluster().getMaster().getMasterFileSystem().visitStoreFiles(
+        FsContext.DATA, tableName, new StoreFileVisitor() {
+      public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
           throws IOException {
-        HFileLink link = HFileLink.build(UTIL.getConfiguration(), tableName, region, family, hfile);
-        storeFiles.add(link.getOriginPath());
+        storeFiles.add(storeFile.getPath());
       }
     });
     assertTrue("Expected at least " + NUM_FILES + " store files", storeFiles.size() >= NUM_FILES);

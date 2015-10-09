@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.legacy.LegacyMasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 
@@ -143,6 +144,69 @@ public abstract class MasterFileSystem {
   }
 
   // ==========================================================================
+  //  PUBLIC Methods - Table Region related
+  // ==========================================================================
+  public void deleteRegion(HRegionInfo regionInfo) throws IOException {
+    RegionFileSystem.destroy(conf, fs, rootDir, regionInfo);
+  }
+
+  public Collection<HRegionInfo> getRegions(TableName tableName) throws IOException {
+    return getRegions(FsContext.DATA, tableName);
+  }
+
+  public abstract Collection<HRegionInfo> getRegions(FsContext ctx, TableName tableName)
+    throws IOException;
+
+  // TODO: Move in HRegionFileSystem
+  public void deleteFamilyFromFS(HRegionInfo regionInfo, byte[] familyName, boolean hasMob)
+      throws IOException {
+    getRegionFileSystem(regionInfo).deleteFamily(Bytes.toString(familyName), hasMob);
+  }
+
+  public RegionFileSystem getRegionFileSystem(HRegionInfo regionInfo) throws IOException {
+    return RegionFileSystem.open(conf, fs, rootDir, regionInfo, false);
+  }
+
+  // ==========================================================================
+  //  PUBLIC Methods - visitors
+  // ==========================================================================
+  public void visitStoreFiles(StoreFileVisitor visitor)
+      throws IOException {
+    visitStoreFiles(FsContext.DATA, visitor);
+  }
+
+  public void visitStoreFiles(String namespace, StoreFileVisitor visitor)
+      throws IOException {
+    visitStoreFiles(FsContext.DATA, namespace, visitor);
+  }
+
+  public void visitStoreFiles(TableName table, StoreFileVisitor visitor)
+      throws IOException {
+    visitStoreFiles(FsContext.DATA, table, visitor);
+  }
+
+  public void visitStoreFiles(FsContext ctx, StoreFileVisitor visitor)
+      throws IOException {
+    for (String namespace: getNamespaces()) {
+      visitStoreFiles(ctx, namespace, visitor);
+    }
+  }
+
+  public void visitStoreFiles(FsContext ctx, String namespace, StoreFileVisitor visitor)
+      throws IOException {
+    for (TableName tableName: getTables(namespace)) {
+      visitStoreFiles(ctx, tableName, visitor);
+    }
+  }
+
+  public void visitStoreFiles(FsContext ctx, TableName table, StoreFileVisitor visitor)
+      throws IOException {
+    for (HRegionInfo hri: getRegions(ctx, table)) {
+      RegionFileSystem.open(conf, fs, rootDir, hri, false).visitStoreFiles(visitor);
+    }
+  }
+
+  // ==========================================================================
   //  PUBLIC Methods - bootstrap
   // ==========================================================================
   public abstract Path getTempDir();
@@ -226,44 +290,6 @@ public abstract class MasterFileSystem {
 
     // Make sure the meta region exists!
     bootstrapMeta();
-  }
-
-  // TODO: Move in HRegionFileSystem
-  public void deleteFamilyFromFS(HRegionInfo region, byte[] familyName, boolean hasMob)
-      throws IOException {
-    // archive family store files
-    Path tableDir = FSUtils.getTableDir(getRootDir(), region.getTable());
-    HFileArchiver.archiveFamily(fs, conf, region, tableDir, familyName);
-
-    // delete the family folder
-    Path familyDir = new Path(tableDir,
-      new Path(region.getEncodedName(), Bytes.toString(familyName)));
-    if (fs.delete(familyDir, true) == false) {
-      if (fs.exists(familyDir)) {
-        throw new IOException("Could not delete family "
-            + Bytes.toString(familyName) + " from FileSystem for region "
-            + region.getRegionNameAsString() + "(" + region.getEncodedName()
-            + ")");
-      }
-    }
-
-    // archive and delete mob files
-    if (hasMob) {
-      Path mobTableDir =
-          FSUtils.getTableDir(new Path(getRootDir(), MobConstants.MOB_DIR_NAME), region.getTable());
-      HRegionInfo mobRegionInfo = MobUtils.getMobRegionInfo(region.getTable());
-      Path mobFamilyDir =
-          new Path(mobTableDir,
-              new Path(mobRegionInfo.getEncodedName(), Bytes.toString(familyName)));
-      // archive mob family store files
-      MobUtils.archiveMobStoreFiles(conf, fs, mobRegionInfo, mobFamilyDir, familyName);
-
-      if (!fs.delete(mobFamilyDir, true)) {
-        throw new IOException("Could not delete mob store files for family "
-            + Bytes.toString(familyName) + " from FileSystem region "
-            + mobRegionInfo.getRegionNameAsString() + "(" + mobRegionInfo.getEncodedName() + ")");
-      }
-    }
   }
 
   // ==========================================================================
