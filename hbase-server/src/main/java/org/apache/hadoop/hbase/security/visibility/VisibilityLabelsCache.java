@@ -49,7 +49,6 @@ import org.apache.zookeeper.KeeperException;
 public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
 
   private static final Log LOG = LogFactory.getLog(VisibilityLabelsCache.class);
-  private static final int NON_EXIST_LABEL_ORDINAL = 0;
   private static final List<String> EMPTY_LIST = Collections.emptyList();
   private static final Set<Integer> EMPTY_SET = Collections.emptySet();
   private static VisibilityLabelsCache instance;
@@ -175,7 +174,7 @@ public class VisibilityLabelsCache implements VisibilityLabelOrdinalProvider {
       return ordinal.intValue();
     }
     // 0 denotes not available
-    return NON_EXIST_LABEL_ORDINAL;
+    return VisibilityConstants.NON_EXIST_LABEL_ORDINAL;
   }
 
   /**
