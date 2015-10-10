@@ -207,7 +207,7 @@ public class TestSnapshotFileCache {
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
       final String name, final boolean tmp, final boolean removeOnExit) throws IOException {
     SnapshotMock snapshotMock = new SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1(name);
+    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV1(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit);
     return builder;
   }
@@ -215,7 +215,7 @@ public class TestSnapshotFileCache {
   private void createAndTestSnapshotV2(final SnapshotFileCache cache, final String name,
       final boolean tmp, final boolean removeOnExit) throws IOException {
     SnapshotMock snapshotMock = new SnapshotMock(UTIL.getConfiguration(), fs, rootDir);
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(name);
+    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2(name, name);
     createAndTestSnapshot(cache, builder, tmp, removeOnExit);
   }
 
