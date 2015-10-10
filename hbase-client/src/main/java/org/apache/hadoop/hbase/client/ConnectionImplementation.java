@@ -222,7 +222,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
     this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
     this.asyncProcess = createAsyncProcess(this.conf);
-    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, true)) {
+    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
       this.metrics = new MetricsConnection(this);
     } else {
       this.metrics = null;
