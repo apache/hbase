@@ -85,10 +85,19 @@ public class TestRestoreSnapshotHelper {
 
   @Test
   public void testRestore() throws IOException {
+    restoreAndVerify("snapshot", "testRestore");
+  }
+
+  @Test
+  public void testRestoreWithNamespace() throws IOException {
+    restoreAndVerify("snapshot", "namespace1:testRestoreWithNamespace");
+  }
+
+  private void restoreAndVerify(final String snapshotName, final String tableName) throws IOException {
     // Test Rolling-Upgrade like Snapshot.
     // half machines writing using v1 and the others using v2 format.
     SnapshotMock snapshotMock = createSnapshotMock();
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("snapshot");
+    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("snapshot", tableName);
     builder.addRegionV1();
     builder.addRegionV2();
     builder.addRegionV2();

@@ -550,18 +550,19 @@ public class SnapshotTestingUtils {
       this.rootDir = rootDir;
     }
 
-    public SnapshotBuilder createSnapshotV1(final String snapshotName) throws IOException {
-      return createSnapshot(snapshotName, SnapshotManifestV1.DESCRIPTOR_VERSION);
-    }
-
-    public SnapshotBuilder createSnapshotV2(final String snapshotName) throws IOException {
-      return createSnapshot(snapshotName, SnapshotManifestV2.DESCRIPTOR_VERSION);
-    }
-
-    private SnapshotBuilder createSnapshot(final String snapshotName, final int version)
+    public SnapshotBuilder createSnapshotV1(final String snapshotName, final String tableName)
         throws IOException {
-      HTableDescriptor htd = createHtd(snapshotName);
+      return createSnapshot(snapshotName, tableName, SnapshotManifestV1.DESCRIPTOR_VERSION);
+    }
 
+    public SnapshotBuilder createSnapshotV2(final String snapshotName, final String tableName)
+        throws IOException {
+      return createSnapshot(snapshotName, tableName, SnapshotManifestV2.DESCRIPTOR_VERSION);
+    }
+
+    private SnapshotBuilder createSnapshot(final String snapshotName, final String tableName,
+        final int version) throws IOException {
+      HTableDescriptor htd = createHtd(tableName);
       RegionData[] regions = createTable(htd, TEST_NUM_REGIONS);
 
       SnapshotDescription desc = SnapshotDescription.newBuilder()

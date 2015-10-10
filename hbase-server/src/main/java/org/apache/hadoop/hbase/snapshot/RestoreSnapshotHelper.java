@@ -682,9 +682,10 @@ public class RestoreSnapshotHelper {
     String hfileName = storeFile.getName();
 
     // Extract the referred information (hfile name and parent region)
-    Path refPath = StoreFileInfo.getReferredToFile(new Path(new Path(new Path(
-        snapshotTable.getNameAsString(), regionInfo.getEncodedName()), familyDir.getName()),
-        hfileName));
+    Path refPath =
+        StoreFileInfo.getReferredToFile(new Path(new Path(new Path(new Path(snapshotTable
+            .getNamespaceAsString(), snapshotTable.getQualifierAsString()), regionInfo
+            .getEncodedName()), familyDir.getName()), hfileName));    
     String snapshotRegionName = refPath.getParent().getParent().getName();
     String fileName = refPath.getName();
 

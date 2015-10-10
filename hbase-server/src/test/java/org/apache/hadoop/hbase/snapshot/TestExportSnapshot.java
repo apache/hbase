@@ -235,11 +235,12 @@ public class TestExportSnapshot {
     FileSystem fs = TEST_UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
 
     SnapshotMock snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV1");
+    SnapshotMock.SnapshotBuilder builder = snapshotMock.createSnapshotV2("tableWithRefsV1",
+      "tableWithRefsV1");
     testSnapshotWithRefsExportFileSystemState(builder);
 
     snapshotMock = new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-    builder = snapshotMock.createSnapshotV2("tableWithRefsV2");
+    builder = snapshotMock.createSnapshotV2("tableWithRefsV2", "tableWithRefsV2");
     testSnapshotWithRefsExportFileSystemState(builder);
   }
 
