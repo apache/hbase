@@ -112,7 +112,8 @@ public abstract class TestModelBase<T> extends TestCase {
   }
 
   public void testToXML() throws Exception {
-    assertEquals(AS_XML, toXML(buildTestModel()));
+    // Uses fromXML to check model because XML element ordering can be random.
+    checkModel(fromXML(toXML(buildTestModel())));
   }
 
   public void testToJSON() throws Exception {
