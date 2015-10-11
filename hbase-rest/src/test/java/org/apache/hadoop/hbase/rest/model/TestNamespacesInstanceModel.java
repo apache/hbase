@@ -85,7 +85,7 @@ public class TestNamespacesInstanceModel extends TestModelBase<NamespacesInstanc
     checkModel(buildTestModel());
   }
 
-  @Ignore("Marshalling and unmarshalling differ in jdk7 and jdk8") @Test
+  @Test
   public void testFromXML() throws Exception {
     checkModel(fromXML(AS_XML));
   }
