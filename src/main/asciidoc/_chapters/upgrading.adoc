@@ -92,7 +92,7 @@ In addition to the usual API versioning considerations HBase has other compatibi
 .Operational Compatibility
 * Metric changes
 * Behavioral changes of services
-* Web page APIs
+* JMX APIs exposed via the `/jmx/` endpoint
 
 .Summary
 * A patch upgrade is a drop-in replacement. Any change that is not Java binary compatible would not be allowed.footnote:[See http://docs.oracle.com/javase/specs/jls/se7/html/jls-13.html.]. Downgrading versions within patch releases may not be compatible.
