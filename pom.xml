@@ -2746,6 +2746,11 @@
       <plugin>
         <artifactId>maven-project-info-reports-plugin</artifactId>
         <version>2.7</version>
+        <reportSets>
+          <reportSet>
+            <report>index</report>
+          </reportSet>
+        </reportSets>
         <!-- see src/main/site/site.xml for selected reports -->
         <configuration>
           <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
