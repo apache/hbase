@@ -23,7 +23,7 @@
   <parent>
     <artifactId>hbase</artifactId>
     <groupId>org.apache.hbase</groupId>
-    <version>0.98.15-SNAPSHOT</version>
+    <version>0.98.16-SNAPSHOT</version>
     <relativePath>..</relativePath>
   </parent>
   <artifactId>hbase-server</artifactId>
