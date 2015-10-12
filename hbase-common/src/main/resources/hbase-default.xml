@@ -1290,6 +1290,26 @@ possible configurations would overwhelm and obscure the important.
       to keep.</description>
   </property>
   <property>
+    <name>dfs.client.read.shortcircuit</name>
+    <value>false</value>
+    <description>
+      If set to true, this configuration parameter enables short-circuit local
+      reads.
+    </description>
+  </property>
+  <property>
+    <name>dfs.domain.socket.path</name>
+    <value>none</value>
+    <description>
+      This is a path to a UNIX domain socket that will be used for
+      communication between the DataNode and local HDFS clients, if
+      dfs.client.read.shortcircuit is set to true. If the string "_PORT" is
+      present in this path, it will be replaced by the TCP port of the DataNode.
+      Be careful about permissions for the directory that hosts the shared
+      domain socket; dfsclient will complain if open to other users than the HBase user.
+    </description>
+  </property>
+  <property>
     <name>hbase.dfs.client.read.shortcircuit.buffer.size</name>
     <value>131072</value>
     <description>If the DFSClient configuration

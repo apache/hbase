@@ -1606,6 +1606,7 @@ Key portion for Put #2:
 It is critical to understand that the rowkey, ColumnFamily, and column (aka columnqualifier) are embedded within the KeyValue instance.
 The longer these identifiers are, the bigger the KeyValue is.
 
+[[compaction]]
 ==== Compaction
 
 .Ambiguous Terminology
