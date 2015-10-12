@@ -134,6 +134,9 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
       batchRestartRSSleepTime = Long.parseLong(this.properties.getProperty(
         MonkeyConstants.BATCH_RESTART_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME + ""));
+      batchRestartRSRatio = Float.parseFloat(this.properties.getProperty(
+        MonkeyConstants.BATCH_RESTART_RS_RATIO,
+        MonkeyConstants.DEFAULT_BATCH_RESTART_RS_RATIO + ""));
       restartActiveMasterSleepTime = Long.parseLong(this.properties.getProperty(
         MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
         MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
