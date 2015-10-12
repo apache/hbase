@@ -888,6 +888,7 @@ runTests () {
       # HBase tests have been flagged with an innocuous '-Dhbase.test' just so they can
       # be identified as hbase in a process listing.
       ZB_STACK=`jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack | grep ".test" | grep "\.java"`
+      jps -v | grep surefirebooter | grep '-Dhbase.test'
       jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs -n 1 jstack
       echo "************ END  zombies jstack extract"
       JIRA_COMMENT="$JIRA_COMMENT
