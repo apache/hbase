@@ -736,7 +736,8 @@ possible configurations would overwhelm and obscure the important.
   <property>
     <name>hbase.hstore.compaction.min.size</name>
     <value>134217728</value>
-    <description>A StoreFile smaller than this size will always be eligible for minor compaction.
+    <description>A StoreFile (or a selection of StoreFiles, when using ExploringCompactionPolicy)
+      smaller than this size will always be eligible for minor compaction.
       HFiles this size or larger are evaluated by hbase.hstore.compaction.ratio to determine if
       they are eligible. Because this limit represents the "automatic include"limit for all
       StoreFiles smaller than this value, this value may need to be reduced in write-heavy
@@ -750,7 +751,8 @@ possible configurations would overwhelm and obscure the important.
     <property>
     <name>hbase.hstore.compaction.max.size</name>
     <value>9223372036854775807</value>
-    <description>A StoreFile larger than this size will be excluded from compaction. The effect of
+    <description>A StoreFile (or a selection of StoreFiles, when using ExploringCompactionPolicy)
+      larger than this size will be excluded from compaction. The effect of
       raising hbase.hstore.compaction.max.size is fewer, larger StoreFiles that do not get
       compacted often. If you feel that compaction is happening too often without much benefit, you
       can try raising this value. Default: the value of LONG.MAX_VALUE, expressed in bytes.</description>
