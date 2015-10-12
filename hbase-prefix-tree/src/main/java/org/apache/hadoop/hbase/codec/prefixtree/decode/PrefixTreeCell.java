@@ -264,7 +264,7 @@ public class PrefixTreeCell extends ByteBufferedCell implements SettableSequence
   }
 
   @Override
-  public int getRowPositionInByteBuffer() {
+  public int getRowPosition() {
     return 0;
   }
 
@@ -274,7 +274,7 @@ public class PrefixTreeCell extends ByteBufferedCell implements SettableSequence
   }
 
   @Override
-  public int getFamilyPositionInByteBuffer() {
+  public int getFamilyPosition() {
     return getFamilyOffset();
   }
 
@@ -284,7 +284,7 @@ public class PrefixTreeCell extends ByteBufferedCell implements SettableSequence
   }
 
   @Override
-  public int getQualifierPositionInByteBuffer() {
+  public int getQualifierPosition() {
     return getQualifierOffset();
   }
 
@@ -294,7 +294,7 @@ public class PrefixTreeCell extends ByteBufferedCell implements SettableSequence
   }
 
   @Override
-  public int getValuePositionInByteBuffer() {
+  public int getValuePosition() {
     return pair.getSecond();
   }
 
@@ -304,7 +304,7 @@ public class PrefixTreeCell extends ByteBufferedCell implements SettableSequence
   }
 
   @Override
-  public int getTagsPositionInByteBuffer() {
+  public int getTagsPosition() {
     return getTagsOffset();
   }
 }

@@ -63,7 +63,7 @@ public class PrefixFilter extends FilterBase {
     int cmp;
     if (firstRowCell instanceof ByteBufferedCell) {
       cmp = ByteBufferUtils.compareTo(((ByteBufferedCell) firstRowCell).getRowByteBuffer(),
-          ((ByteBufferedCell) firstRowCell).getRowPositionInByteBuffer(), this.prefix.length,
+          ((ByteBufferedCell) firstRowCell).getRowPosition(), this.prefix.length,
           this.prefix, 0, this.prefix.length);
     } else {
       cmp = Bytes.compareTo(firstRowCell.getRowArray(), firstRowCell.getRowOffset(),

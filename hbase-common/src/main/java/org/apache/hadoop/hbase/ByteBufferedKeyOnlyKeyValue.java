@@ -73,7 +73,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   @Override
   public int getRowOffset() {
     if (this.buf.hasArray()) {
-      return getRowPositionInByteBuffer() + this.buf.arrayOffset();
+      return getRowPosition() + this.buf.arrayOffset();
     }
     return 0;
   }
@@ -94,7 +94,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   @Override
   public int getFamilyOffset() {
     if (this.buf.hasArray()) {
-      return getFamilyPositionInByteBuffer() + this.buf.arrayOffset();
+      return getFamilyPosition() + this.buf.arrayOffset();
     }
     return 0;
   }
@@ -119,7 +119,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   @Override
   public int getQualifierOffset() {
     if (this.buf.hasArray()) {
-      return getQualifierPositionInByteBuffer() + this.buf.arrayOffset();
+      return getQualifierPosition() + this.buf.arrayOffset();
     }
     return 0;
   }
@@ -188,7 +188,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   }
 
   @Override
-  public int getRowPositionInByteBuffer() {
+  public int getRowPosition() {
     return this.offset + Bytes.SIZEOF_SHORT;
   }
 
@@ -198,7 +198,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   }
 
   @Override
-  public int getFamilyPositionInByteBuffer() {
+  public int getFamilyPosition() {
     return getFamilyLengthPosition() + Bytes.SIZEOF_BYTE;
   }
 
@@ -213,7 +213,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   }
 
   @Override
-  public int getQualifierPositionInByteBuffer() {
+  public int getQualifierPosition() {
     int famLenPos = getFamilyLengthPosition();
     return famLenPos + Bytes.SIZEOF_BYTE + getFamilyLength(famLenPos);
   }
@@ -224,7 +224,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   }
 
   @Override
-  public int getValuePositionInByteBuffer() {
+  public int getValuePosition() {
     return 0;
   }
 
@@ -234,7 +234,7 @@ public class ByteBufferedKeyOnlyKeyValue extends ByteBufferedCell {
   }
 
   @Override
-  public int getTagsPositionInByteBuffer() {
+  public int getTagsPosition() {
     return 0;
   }
 

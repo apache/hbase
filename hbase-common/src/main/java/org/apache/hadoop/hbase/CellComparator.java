@@ -161,18 +161,18 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public final static int compareFamilies(Cell left, Cell right) {
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
-          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(),
+          ((ByteBufferedCell) left).getFamilyPosition(), left.getFamilyLength(),
           ((ByteBufferedCell) right).getFamilyByteBuffer(),
-          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), right.getFamilyLength());
+          ((ByteBufferedCell) right).getFamilyPosition(), right.getFamilyLength());
     }
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
-          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(),
+          ((ByteBufferedCell) left).getFamilyPosition(), left.getFamilyLength(),
           right.getFamilyArray(), right.getFamilyOffset(), right.getFamilyLength());
     }
     if (right instanceof ByteBufferedCell) {
       return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getFamilyByteBuffer(),
-          ((ByteBufferedCell) right).getFamilyPositionInByteBuffer(), right.getFamilyLength(),
+          ((ByteBufferedCell) right).getFamilyPosition(), right.getFamilyLength(),
           left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength()));
     }
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
@@ -182,7 +182,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   private final static int compareFamilies(Cell left, byte[] right, int roffset, int rlength) {
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getFamilyByteBuffer(),
-          ((ByteBufferedCell) left).getFamilyPositionInByteBuffer(), left.getFamilyLength(), right,
+          ((ByteBufferedCell) left).getFamilyPosition(), left.getFamilyLength(), right,
           roffset, rlength);
     }
     return Bytes.compareTo(left.getFamilyArray(), left.getFamilyOffset(), left.getFamilyLength(),
@@ -199,19 +199,19 @@ public class CellComparator implements Comparator<Cell>, Serializable {
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
       return ByteBufferUtils
           .compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
-              ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(),
+              ((ByteBufferedCell) left).getQualifierPosition(),
               left.getQualifierLength(), ((ByteBufferedCell) right).getQualifierByteBuffer(),
-              ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(),
+              ((ByteBufferedCell) right).getQualifierPosition(),
               right.getQualifierLength());
     }
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
-          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
+          ((ByteBufferedCell) left).getQualifierPosition(), left.getQualifierLength(),
           right.getQualifierArray(), right.getQualifierOffset(), right.getQualifierLength());
     }
     if (right instanceof ByteBufferedCell) {
       return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getQualifierByteBuffer(),
-          ((ByteBufferedCell) right).getQualifierPositionInByteBuffer(),
+          ((ByteBufferedCell) right).getQualifierPosition(),
           right.getQualifierLength(), left.getQualifierArray(), left.getQualifierOffset(),
           left.getQualifierLength()));
     }
@@ -223,7 +223,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public final static int compareQualifiers(Cell left, byte[] right, int rOffset, int rLength) {
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getQualifierByteBuffer(),
-          ((ByteBufferedCell) left).getQualifierPositionInByteBuffer(), left.getQualifierLength(),
+          ((ByteBufferedCell) left).getQualifierPosition(), left.getQualifierLength(),
           right, rOffset, rLength);
     }
     return Bytes.compareTo(left.getQualifierArray(), left.getQualifierOffset(),
@@ -317,18 +317,18 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public int compareRows(final Cell left, final Cell right) {
     if (left instanceof ByteBufferedCell && right instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
-          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(),
+          ((ByteBufferedCell) left).getRowPosition(), left.getRowLength(),
           ((ByteBufferedCell) right).getRowByteBuffer(),
-          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), right.getRowLength());
+          ((ByteBufferedCell) right).getRowPosition(), right.getRowLength());
     }
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
-          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(),
+          ((ByteBufferedCell) left).getRowPosition(), left.getRowLength(),
           right.getRowArray(), right.getRowOffset(), right.getRowLength());
     }
     if (right instanceof ByteBufferedCell) {
       return -(ByteBufferUtils.compareTo(((ByteBufferedCell) right).getRowByteBuffer(),
-          ((ByteBufferedCell) right).getRowPositionInByteBuffer(), right.getRowLength(),
+          ((ByteBufferedCell) right).getRowPosition(), right.getRowLength(),
           left.getRowArray(), left.getRowOffset(), left.getRowLength()));
     }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(),
@@ -354,7 +354,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public int compareRows(Cell left, byte[] right, int roffset, int rlength) {
     if (left instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) left).getRowByteBuffer(),
-          ((ByteBufferedCell) left).getRowPositionInByteBuffer(), left.getRowLength(), right,
+          ((ByteBufferedCell) left).getRowPosition(), left.getRowLength(), right,
           roffset, rlength);
     }
     return Bytes.compareTo(left.getRowArray(), left.getRowOffset(), left.getRowLength(), right,
@@ -506,7 +506,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public static int compareRow(Cell cell, ByteArrayComparable comparator) {
     if (cell instanceof ByteBufferedCell) {
       return comparator.compareTo(((ByteBufferedCell) cell).getRowByteBuffer(),
-          ((ByteBufferedCell) cell).getRowPositionInByteBuffer(), cell.getRowLength());
+          ((ByteBufferedCell) cell).getRowPosition(), cell.getRowLength());
     }
     return comparator.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength());
   }
@@ -520,7 +520,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public static int compareFamily(Cell cell, ByteArrayComparable comparator) {
     if (cell instanceof ByteBufferedCell) {
       return comparator.compareTo(((ByteBufferedCell) cell).getFamilyByteBuffer(),
-          ((ByteBufferedCell) cell).getFamilyPositionInByteBuffer(), cell.getFamilyLength());
+          ((ByteBufferedCell) cell).getFamilyPosition(), cell.getFamilyLength());
     }
     return comparator.compareTo(cell.getFamilyArray(), cell.getFamilyOffset(),
         cell.getFamilyLength());
@@ -535,7 +535,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public static int compareQualifier(Cell cell, ByteArrayComparable comparator) {
     if (cell instanceof ByteBufferedCell) {
       return comparator.compareTo(((ByteBufferedCell) cell).getQualifierByteBuffer(),
-          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), cell.getQualifierLength());
+          ((ByteBufferedCell) cell).getQualifierPosition(), cell.getQualifierLength());
     }
     return comparator.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(),
         cell.getQualifierLength());
@@ -550,7 +550,7 @@ public class CellComparator implements Comparator<Cell>, Serializable {
   public static int compareValue(Cell cell, ByteArrayComparable comparator) {
     if (cell instanceof ByteBufferedCell) {
       return comparator.compareTo(((ByteBufferedCell) cell).getValueByteBuffer(),
-          ((ByteBufferedCell) cell).getValuePositionInByteBuffer(), cell.getValueLength());
+          ((ByteBufferedCell) cell).getValuePosition(), cell.getValueLength());
     }
     return comparator.compareTo(cell.getValueArray(), cell.getValueOffset(), cell.getValueLength());
   }

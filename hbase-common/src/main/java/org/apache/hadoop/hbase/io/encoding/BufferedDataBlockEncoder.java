@@ -515,7 +515,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public int getRowOffset() {
-      return getRowPositionInByteBuffer();
+      return getRowPosition();
     }
 
     @Override
@@ -530,7 +530,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public int getFamilyOffset() {
-      return getFamilyPositionInByteBuffer();
+      return getFamilyPosition();
     }
 
     @Override
@@ -545,7 +545,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
 
     @Override
     public int getQualifierOffset() {
-      return getQualifierPositionInByteBuffer();
+      return getQualifierPosition();
     }
 
     @Override
@@ -604,7 +604,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int getRowPositionInByteBuffer() {
+    public int getRowPosition() {
       return Bytes.SIZEOF_SHORT;
     }
 
@@ -614,7 +614,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int getFamilyPositionInByteBuffer() {
+    public int getFamilyPosition() {
       return this.familyOffset;
     }
 
@@ -624,7 +624,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int getQualifierPositionInByteBuffer() {
+    public int getQualifierPosition() {
       return this.qualifierOffset;
     }
 
@@ -634,7 +634,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int getValuePositionInByteBuffer() {
+    public int getValuePosition() {
       return this.valueOffset;
     }
 
@@ -644,7 +644,7 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public int getTagsPositionInByteBuffer() {
+    public int getTagsPosition() {
       return this.tagsOffset;
     }
 

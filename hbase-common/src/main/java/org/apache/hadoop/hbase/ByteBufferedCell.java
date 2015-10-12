@@ -54,7 +54,7 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return Position in the {@link ByteBuffer} where row bytes start
    */
-  public abstract int getRowPositionInByteBuffer();
+  public abstract int getRowPosition();
 
   /**
    * @return The {@link ByteBuffer} containing the column family bytes.
@@ -64,7 +64,7 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return Position in the {@link ByteBuffer} where column family bytes start
    */
-  public abstract int getFamilyPositionInByteBuffer();
+  public abstract int getFamilyPosition();
 
   /**
    * @return The {@link ByteBuffer} containing the column qualifier bytes.
@@ -74,7 +74,7 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return Position in the {@link ByteBuffer} where column qualifier bytes start
    */
-  public abstract int getQualifierPositionInByteBuffer();
+  public abstract int getQualifierPosition();
 
   /**
    * @return The {@link ByteBuffer} containing the value bytes.
@@ -84,7 +84,7 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return Position in the {@link ByteBuffer} where value bytes start
    */
-  public abstract int getValuePositionInByteBuffer();
+  public abstract int getValuePosition();
 
   /**
    * @return The {@link ByteBuffer} containing the tag bytes.
@@ -94,5 +94,5 @@ public abstract class ByteBufferedCell implements Cell {
   /**
    * @return Position in the {@link ByteBuffer} where tag bytes start
    */
-  public abstract int getTagsPositionInByteBuffer();
+  public abstract int getTagsPosition();
 }

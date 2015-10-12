@@ -93,7 +93,7 @@ public class ColumnPrefixFilter extends FilterBase {
   private static int compareQualifierPart(Cell cell, int length, byte[] prefix) {
     if (cell instanceof ByteBufferedCell) {
       return ByteBufferUtils.compareTo(((ByteBufferedCell) cell).getQualifierByteBuffer(),
-          ((ByteBufferedCell) cell).getQualifierPositionInByteBuffer(), length, prefix, 0, length);
+          ((ByteBufferedCell) cell).getQualifierPosition(), length, prefix, 0, length);
     }
     return Bytes.compareTo(cell.getQualifierArray(), cell.getQualifierOffset(), length, prefix, 0,
         length);

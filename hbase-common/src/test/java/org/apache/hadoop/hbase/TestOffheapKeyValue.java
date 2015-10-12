@@ -60,19 +60,19 @@ public class TestOffheapKeyValue {
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
-        offheapKV.getRowPositionInByteBuffer(), offheapKV.getRowLength()));
+        offheapKV.getRowPosition(), offheapKV.getRowLength()));
     assertEquals(
       FAM1,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
-        offheapKV.getFamilyPositionInByteBuffer(), offheapKV.getFamilyLength()));
+        offheapKV.getFamilyPosition(), offheapKV.getFamilyLength()));
     assertEquals(
       QUAL1,
       ByteBufferUtils.toStringBinary(offheapKV.getQualifierByteBuffer(),
-        offheapKV.getQualifierPositionInByteBuffer(), offheapKV.getQualifierLength()));
+        offheapKV.getQualifierPosition(), offheapKV.getQualifierLength()));
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getValueByteBuffer(),
-        offheapKV.getValuePositionInByteBuffer(), offheapKV.getValueLength()));
+        offheapKV.getValuePosition(), offheapKV.getValueLength()));
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
 
@@ -103,11 +103,11 @@ public class TestOffheapKeyValue {
     assertEquals(
       FAM2,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
-        offheapKV.getFamilyPositionInByteBuffer(), offheapKV.getFamilyLength()));
+        offheapKV.getFamilyPosition(), offheapKV.getFamilyLength()));
     assertEquals(
       QUAL2,
       ByteBufferUtils.toStringBinary(offheapKV.getQualifierByteBuffer(),
-        offheapKV.getQualifierPositionInByteBuffer(), offheapKV.getQualifierLength()));
+        offheapKV.getQualifierPosition(), offheapKV.getQualifierLength()));
     byte[] nullQualifier = new byte[0];
     kvCell = new KeyValue(row1, fam1, nullQualifier, 0L, Type.Put, row1);
     buf = ByteBuffer.allocateDirect(kvCell.getBuffer().length);
@@ -116,19 +116,19 @@ public class TestOffheapKeyValue {
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
-        offheapKV.getRowPositionInByteBuffer(), offheapKV.getRowLength()));
+        offheapKV.getRowPosition(), offheapKV.getRowLength()));
     assertEquals(
       FAM1,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
-        offheapKV.getFamilyPositionInByteBuffer(), offheapKV.getFamilyLength()));
+        offheapKV.getFamilyPosition(), offheapKV.getFamilyLength()));
     assertEquals(
       "",
       ByteBufferUtils.toStringBinary(offheapKV.getQualifierByteBuffer(),
-        offheapKV.getQualifierPositionInByteBuffer(), offheapKV.getQualifierLength()));
+        offheapKV.getQualifierPosition(), offheapKV.getQualifierLength()));
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getValueByteBuffer(),
-        offheapKV.getValuePositionInByteBuffer(), offheapKV.getValueLength()));
+        offheapKV.getValuePosition(), offheapKV.getValueLength()));
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
   }
@@ -142,19 +142,19 @@ public class TestOffheapKeyValue {
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getRowByteBuffer(),
-        offheapKV.getRowPositionInByteBuffer(), offheapKV.getRowLength()));
+        offheapKV.getRowPosition(), offheapKV.getRowLength()));
     assertEquals(
       FAM1,
       ByteBufferUtils.toStringBinary(offheapKV.getFamilyByteBuffer(),
-        offheapKV.getFamilyPositionInByteBuffer(), offheapKV.getFamilyLength()));
+        offheapKV.getFamilyPosition(), offheapKV.getFamilyLength()));
     assertEquals(
       QUAL1,
       ByteBufferUtils.toStringBinary(offheapKV.getQualifierByteBuffer(),
-        offheapKV.getQualifierPositionInByteBuffer(), offheapKV.getQualifierLength()));
+        offheapKV.getQualifierPosition(), offheapKV.getQualifierLength()));
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKV.getValueByteBuffer(),
-        offheapKV.getValuePositionInByteBuffer(), offheapKV.getValueLength()));
+        offheapKV.getValuePosition(), offheapKV.getValueLength()));
     assertEquals(0L, offheapKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKV.getTypeByte());
     // change tags to handle both onheap and offheap stuff
@@ -182,15 +182,15 @@ public class TestOffheapKeyValue {
     assertEquals(
       ROW1,
       ByteBufferUtils.toStringBinary(offheapKeyOnlyKV.getRowByteBuffer(),
-        offheapKeyOnlyKV.getRowPositionInByteBuffer(), offheapKeyOnlyKV.getRowLength()));
+        offheapKeyOnlyKV.getRowPosition(), offheapKeyOnlyKV.getRowLength()));
     assertEquals(
       FAM1,
       ByteBufferUtils.toStringBinary(offheapKeyOnlyKV.getFamilyByteBuffer(),
-        offheapKeyOnlyKV.getFamilyPositionInByteBuffer(), offheapKeyOnlyKV.getFamilyLength()));
+        offheapKeyOnlyKV.getFamilyPosition(), offheapKeyOnlyKV.getFamilyLength()));
     assertEquals(
       QUAL1,
       ByteBufferUtils.toStringBinary(offheapKeyOnlyKV.getQualifierByteBuffer(),
-        offheapKeyOnlyKV.getQualifierPositionInByteBuffer(),
+        offheapKeyOnlyKV.getQualifierPosition(),
         offheapKeyOnlyKV.getQualifierLength()));
     assertEquals(0L, offheapKeyOnlyKV.getTimestamp());
     assertEquals(Type.Put.getCode(), offheapKeyOnlyKV.getTypeByte());
