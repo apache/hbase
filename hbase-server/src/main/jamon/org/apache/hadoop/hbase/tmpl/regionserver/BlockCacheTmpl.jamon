@@ -304,12 +304,10 @@ are combined counts. Request count is sum of hits and misses.</p>
   boolean bucketCache = bc.getClass().getSimpleName().equals("BucketCache");
   BucketCacheStats bucketCacheStats = null;
   BucketAllocator bucketAllocator = null;
-  Bucket [] buckets = null;
 
   if (bucketCache) {
     bucketCacheStats = (BucketCacheStats)bc.getStats();
     bucketAllocator = ((BucketCache)bc).getAllocator();
-    buckets = bucketAllocator.getBuckets();
   }
 </%java>
 <%if cbsbf.isFull() %>
@@ -375,26 +373,6 @@ are combined counts. Request count is sum of hits and misses.</p>
 </table>
 <%doc>Call through to block cache Detail rendering template</%doc>
 <p>View block cache <a href="?format=json&bcn=<% name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<% name %>&bcv=file">as JSON by file</a></p>
-<%if bucketCache %>
-<p>BucketCache does not discern between DATA and META blocks so we do not show DATA counts (If deploy is using CombinedBlockCache, BucketCache is only DATA blocks</p>
-<h3>BucketCache Buckets</h3>
-<table class="table table-striped">
-    <tr>
-        <th>Bucket Offset</th>
-        <th>Allocation Size</th>
-        <th>Free Bytes</th>
-        <th>Used Bytes</th>
-    </tr>
-<%for Bucket bucket: buckets %>
-    <tr>
-        <td><% bucket.getBaseOffset() %></td>
-        <td><% bucket.getItemAllocationSize() %></td>
-        <td><% bucket.getFreeBytes() %></td>
-        <td><% bucket.getUsedBytes() %></td>
-    </tr>
-</%for>
-</table>
-</%if>
 <%java>
 cbsbf = null;
 </%java>
