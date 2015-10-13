@@ -20,6 +20,9 @@ package org.apache.hadoop.hbase.codec;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PushbackInputStream;
+
+import javax.annotation.Nonnull;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,27 +35,41 @@ import org.apache.hadoop.hbase.Cell;
 @InterfaceAudience.Private
 public abstract class BaseDecoder implements Codec.Decoder {
   protected static final Log LOG = LogFactory.getLog(BaseDecoder.class);
-  protected final InputStream in;
-  private boolean hasNext = true;
+
+  protected final PBIS in;
   private Cell current = null;
 
+  protected static class PBIS extends PushbackInputStream {
+    public PBIS(InputStream in, int size) {
+      super(in, size);
+    }
+
+    public void resetBuf(int size) {
+      this.buf = new byte[size];
+      this.pos = size;
+    }
+  }
+
   public BaseDecoder(final InputStream in) {
-    this.in = in;
+    this.in = new PBIS(in, 1);
   }
 
   @Override
   public boolean advance() throws IOException {
-    if (!this.hasNext) return this.hasNext;
-    if (this.in.available() == 0) {
-      this.hasNext = false;
-      return this.hasNext;
+    int firstByte = in.read();
+    if (firstByte == -1) {
+      return false;
+    } else {
+      in.unread(firstByte);
     }
+
     try {
       this.current = parseCell();
     } catch (IOException ioEx) {
+      in.resetBuf(1); // reset the buffer in case the underlying stream is read from upper layers
       rethrowEofException(ioEx);
     }
-    return this.hasNext;
+    return true;
   }
 
   private void rethrowEofException(IOException ioEx) throws IOException {
@@ -72,9 +89,12 @@ public abstract class BaseDecoder implements Codec.Decoder {
   }
 
   /**
-   * @return extract a Cell
+   * Extract a Cell.
+   * @return a parsed Cell or throws an Exception. EOFException or a generic IOException maybe
+   * thrown if EOF is reached prematurely. Does not return null.
    * @throws IOException
    */
+  @Nonnull
   protected abstract Cell parseCell() throws IOException;
 
   @Override
