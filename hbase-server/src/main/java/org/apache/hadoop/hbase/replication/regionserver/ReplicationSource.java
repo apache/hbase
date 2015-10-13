@@ -639,6 +639,7 @@ public class ReplicationSource extends Thread
       if (!kvs.get(i).matchingRow(lastKV)) {
         distinctRowKeys++;
       }
+      lastKV = kvs.get(i);
     }
     return distinctRowKeys;
   }

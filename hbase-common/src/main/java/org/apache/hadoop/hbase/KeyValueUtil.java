@@ -148,7 +148,7 @@ public class KeyValueUtil {
    * position to the start of the next KeyValue. Does not allocate a new array or copy data.
    * @param bb
    * @param includesMvccVersion
-   * @param includesTags 
+   * @param includesTags
    */
   public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion,
       boolean includesTags) {
@@ -226,6 +226,7 @@ public class KeyValueUtil {
 
   public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
     List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+      @Override
       public KeyValue apply(Cell arg0) {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
