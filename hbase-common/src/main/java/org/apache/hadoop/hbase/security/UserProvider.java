@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -33,6 +35,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.BaseConfigurable;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ReflectionUtils;
 
@@ -48,12 +51,20 @@ public class UserProvider extends BaseConfigurable {
           1,
           new ThreadFactoryBuilder().setDaemon(true).setNameFormat("group-cache-%d").build()));
 
-  private LoadingCache<UserGroupInformation, String[]> groupCache = null;
+  private LoadingCache<String, String[]> groupCache = null;
 
+  static Groups groups = Groups.getUserToGroupsMappingService();
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(final Configuration conf) {
     super.setConf(conf);
+
+    synchronized (UserProvider.class) {
+      if (!(groups instanceof User.TestingGroups)) {
+        groups = Groups.getUserToGroupsMappingService(conf);
+      }
+    }
+
     long cacheTimeout =
         getConf().getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS,
             CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
@@ -67,21 +78,34 @@ public class UserProvider extends BaseConfigurable {
         .concurrencyLevel(20)
             // create the loader
             // This just delegates to UGI.
-        .build(new CacheLoader<UserGroupInformation, String[]>() {
+        .build(new CacheLoader<String, String[]>() {
+
+          // Since UGI's don't hash based on the user id
+          // The cache needs to be keyed on the same thing that Hadoop's Groups class
+          // uses. So this cache uses shortname.
           @Override
-          public String[] load(UserGroupInformation ugi) throws Exception {
-            return ugi.getGroupNames();
+          public String[] load(String ugi) throws Exception {
+            return getGroupStrings(ugi);
+          }
+
+          private String[] getGroupStrings(String ugi) {
+            try {
+              Set<String> result = new LinkedHashSet<String>(groups.getGroups(ugi));
+              return result.toArray(new String[result.size()]);
+            } catch (Exception e) {
+              return new String[0];
+            }
           }
 
           // Provide the reload function that uses the executor thread.
-          public ListenableFuture<String[]> reload(final UserGroupInformation k,
+          public ListenableFuture<String[]> reload(final String k,
                                                    String[] oldValue) throws Exception {
 
             return executor.submit(new Callable<String[]>() {
-              UserGroupInformation userGroupInformation = k;
+
               @Override
               public String[] call() throws Exception {
-                return userGroupInformation.getGroupNames();
+                return getGroupStrings(k);
               }
             });
           }
