@@ -855,9 +855,10 @@ public class ReplicationSource extends Thread
       int distinctRowKeys = 1;
       Cell lastCell = cells.get(0);
       for (int i = 0; i < edit.size(); i++) {
-        if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
+        if (!CellUtil.matchingRows(cells.get(i), lastCell)) {
           distinctRowKeys++;
         }
+        lastCell = cells.get(i);
       }
       return distinctRowKeys;
     }

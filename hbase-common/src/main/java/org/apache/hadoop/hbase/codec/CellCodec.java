@@ -79,6 +79,7 @@ public class CellCodec implements Codec {
       super(in);
     }
 
+    @Override
     protected Cell parseCell() throws IOException {
       byte [] row = readByteArray(this.in);
       byte [] family = readByteArray(in);

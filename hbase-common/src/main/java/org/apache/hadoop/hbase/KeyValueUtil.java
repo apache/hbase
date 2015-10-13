@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -187,7 +188,7 @@ public class KeyValueUtil {
    * position to the start of the next KeyValue. Does not allocate a new array or copy data.
    * @param bb
    * @param includesMvccVersion
-   * @param includesTags 
+   * @param includesTags
    */
   public static KeyValue nextShallowCopy(final ByteBuffer bb, final boolean includesMvccVersion,
       boolean includesTags) {
@@ -231,7 +232,7 @@ public class KeyValueUtil {
     return createFirstOnRow(CellUtil.cloneRow(in), CellUtil.cloneFamily(in),
       CellUtil.cloneQualifier(in), in.getTimestamp() - 1);
   }
-  
+
 
   /**
    * Create a KeyValue for the specified row, family and qualifier that would be
@@ -449,6 +450,7 @@ public class KeyValueUtil {
   @Deprecated
   public static List<KeyValue> ensureKeyValues(List<Cell> cells) {
     List<KeyValue> lazyList = Lists.transform(cells, new Function<Cell, KeyValue>() {
+      @Override
       public KeyValue apply(Cell arg0) {
         return KeyValueUtil.ensureKeyValue(arg0);
       }
@@ -491,8 +493,9 @@ public class KeyValueUtil {
     while (bytesRead < intBytes.length) {
       int n = in.read(intBytes, bytesRead, intBytes.length - bytesRead);
       if (n < 0) {
-        if (bytesRead == 0)
-          return null; // EOF at start is ok
+        if (bytesRead == 0) {
+          throw new EOFException();
+        }
         throw new IOException("Failed read of int, read " + bytesRead + " bytes");
       }
       bytesRead += n;
@@ -555,7 +558,7 @@ public class KeyValueUtil {
 
   /**
    * Create a KeyValue reading <code>length</code> from <code>in</code>
-   * 
+   *
    * @param length
    * @param in
    * @return Created KeyValue OR if we find a length of zero, we will return
