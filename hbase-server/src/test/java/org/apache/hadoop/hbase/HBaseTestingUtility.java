@@ -3289,7 +3289,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * This method clones the passed <code>c</code> configuration setting a new
    * user into the clone.  Use it getting new instances of FileSystem.  Only
-   * works for DistributedFileSystem.
+   * works for DistributedFileSystem w/o Kerberos.
    * @param c Initial configuration
    * @param differentiatingSuffix Suffix to differentiate this user from others.
    * @return A new configuration instance with a different user set into it.
@@ -3299,7 +3299,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     final String differentiatingSuffix)
   throws IOException {
     FileSystem currentfs = FileSystem.get(c);
-    if (!(currentfs instanceof DistributedFileSystem)) {
+    if (!(currentfs instanceof DistributedFileSystem) || User.isHBaseSecurityEnabled(c)) {
       return User.getCurrent();
     }
     // Else distributed filesystem.  Make a new instance per daemon.  Below
