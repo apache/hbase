@@ -858,6 +858,7 @@ public class ReplicationSource extends Thread
         if (!CellUtil.matchingRow(cells.get(i), lastCell)) {
           distinctRowKeys++;
         }
+        lastCell = cells.get(i);
       }
       return distinctRowKeys;
     }
