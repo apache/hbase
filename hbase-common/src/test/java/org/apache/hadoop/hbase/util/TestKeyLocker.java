@@ -30,7 +30,7 @@ import org.junit.experimental.categories.Category;
 public class TestKeyLocker {
   @Test
   public void testLocker(){
-    KeyLocker<String> locker = new KeyLocker();
+    KeyLocker<String> locker = new KeyLocker<String>();
     ReentrantLock lock1 = locker.acquireLock("l1");
     Assert.assertTrue(lock1.isHeldByCurrentThread());
 
@@ -51,9 +51,19 @@ public class TestKeyLocker {
     lock2.unlock();
     Assert.assertFalse(lock20.isHeldByCurrentThread());
 
-    // The lock object was freed once useless, so we're recreating a new one
+    // The lock object will be garbage-collected
+    // if you free its reference for a long time,
+    // and you will get a new one at the next time.
+    int lock2Hash = System.identityHashCode(lock2);
+    lock2 = null;
+    lock20 = null;
+
+    System.gc();
+    System.gc();
+    System.gc();
+
     ReentrantLock lock200 = locker.acquireLock("l2");
-    Assert.assertTrue(lock2 != lock200);
+    Assert.assertNotEquals(lock2Hash, System.identityHashCode(lock200));
     lock200.unlock();
     Assert.assertFalse(lock200.isHeldByCurrentThread());
 
