@@ -67,16 +67,20 @@ public class BoundedByteBufferPool {
 
   private ReentrantLock lock =  new ReentrantLock();
 
+  private boolean createDirectByteBuffer;
+
   /**
    * @param maxByteBufferSizeToCache
    * @param initialByteBufferSize
    * @param maxToCache
+   * @param createDirectByteBuffer whether the buffers created by this pool to be off heap
    */
   public BoundedByteBufferPool(final int maxByteBufferSizeToCache, final int initialByteBufferSize,
-      final int maxToCache) {
+      final int maxToCache, final boolean createDirectByteBuffer) {
     this.maxByteBufferSizeToCache = maxByteBufferSizeToCache;
     this.runningAverage = initialByteBufferSize;
     this.buffers = new BoundedArrayQueue<ByteBuffer>(maxToCache);
+    this.createDirectByteBuffer = createDirectByteBuffer;
   }
 
   public ByteBuffer getBuffer() {
@@ -94,7 +98,8 @@ public class BoundedByteBufferPool {
       // Clear sets limit == capacity. Postion == 0.
       bb.clear();
     } else {
-      bb = ByteBuffer.allocate(this.runningAverage);
+      bb = this.createDirectByteBuffer ? ByteBuffer.allocateDirect(this.runningAverage)
+          : ByteBuffer.allocate(this.runningAverage);
       this.allocations.incrementAndGet();
     }
     if (LOG.isTraceEnabled()) {

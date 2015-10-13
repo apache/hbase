@@ -1967,7 +1967,9 @@ public class RpcServer implements RpcServerInterface {
       // Make the max twice the number of handlers to be safe.
       conf.getInt("hbase.ipc.server.reservoir.initial.max",
         conf.getInt(HConstants.REGION_SERVER_HANDLER_COUNT,
-          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2));
+          HConstants.DEFAULT_REGION_SERVER_HANDLER_COUNT) * 2),
+      // By default make direct byte buffers from the buffer pool.
+      conf.getBoolean("hbase.ipc.server.reservoir.direct.buffer", true));
     this.server = server;
     this.services = services;
     this.bindAddress = bindAddress;

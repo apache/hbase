@@ -37,8 +37,8 @@ public class TestBoundedByteBufferPool {
 
   @Before
   public void before() {
-    this.reservoir =
-      new BoundedByteBufferPool(maxByteBufferSizeToCache, initialByteBufferSize, maxToCache);
+    this.reservoir = new BoundedByteBufferPool(maxByteBufferSizeToCache, initialByteBufferSize,
+        maxToCache, false);
   }
 
   @After
