@@ -18,15 +18,11 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.commons.lang.SystemUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,14 +30,82 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import com.google.common.collect.ImmutableSet;
 
+import static org.junit.Assert.*;
+
 @Category({SecurityTests.class, SmallTests.class})
 public class TestUser {
   private static final Log LOG = LogFactory.getLog(TestUser.class);
+
+  @Test
+  public void testCreateUserForTestingGroupCache() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    User uCreated = User.createUserForTesting(conf, "group_user", new String[] { "MYGROUP" });
+    UserProvider up = UserProvider.instantiate(conf);
+    User uProvided = up.create(UserGroupInformation.createRemoteUser("group_user"));
+    assertArrayEquals(uCreated.getGroupNames(), uProvided.getGroupNames());
+
+  }
+
+  @Test
+  public void testCacheGetGroups() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    UserProvider up = UserProvider.instantiate(conf);
+
+    // VERY unlikely that this user will exist on the box.
+    // This should mean the user has no groups.
+    String nonUser = "kklvfnvhdhcenfnniilggljhdecjhidkle";
+
+    // Create two UGI's for this username
+    UserGroupInformation ugiOne = UserGroupInformation.createRemoteUser(nonUser);
+    UserGroupInformation ugiTwo = UserGroupInformation.createRemoteUser(nonUser);
+
+    // Now try and get the user twice.
+    User uOne = up.create(ugiOne);
+    User uTwo = up.create(ugiTwo);
+
+    // Make sure that we didn't break groups and everything worked well.
+    assertArrayEquals(uOne.getGroupNames(),uTwo.getGroupNames());
+
+    // Check that they are referentially equal.
+    // Since getting a group for a users that doesn't exist creates a new string array
+    // the only way that they should be referentially equal is if the cache worked and
+    // made sure we didn't go to hadoop's script twice.
+    assertTrue(uOne.getGroupNames() == uTwo.getGroupNames());
+    assertEquals(0, ugiOne.getGroupNames().length);
+  }
+
+  @Test
+  public void testCacheGetGroupsRoot() throws Exception {
+    // Windows users don't have a root user.
+    // However pretty much every other *NIX os will have root.
+    if (!SystemUtils.IS_OS_WINDOWS) {
+      Configuration conf = HBaseConfiguration.create();
+      UserProvider up = UserProvider.instantiate(conf);
+
+
+      String rootUserName = "root";
+
+      // Create two UGI's for this username
+      UserGroupInformation ugiOne = UserGroupInformation.createRemoteUser(rootUserName);
+      UserGroupInformation ugiTwo = UserGroupInformation.createRemoteUser(rootUserName);
+
+      // Now try and get the user twice.
+      User uOne = up.create(ugiOne);
+      User uTwo = up.create(ugiTwo);
+
+      // Make sure that we didn't break groups and everything worked well.
+      assertArrayEquals(uOne.getGroupNames(),uTwo.getGroupNames());
+      String[] groupNames = ugiOne.getGroupNames();
+      assertTrue(groupNames.length > 0);
+    }
+  }
+
 
   @Test
   public void testBasicAttributes() throws Exception {
