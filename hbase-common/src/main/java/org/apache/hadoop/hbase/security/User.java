@@ -23,7 +23,11 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import com.google.common.cache.LoadingCache;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +36,7 @@ import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.util.Methods;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -282,7 +287,7 @@ public abstract class User {
   @InterfaceAudience.Private
    public static final class SecureHadoopUser extends User {
     private String shortName;
-    private LoadingCache<UserGroupInformation, String[]> cache;
+    private LoadingCache<String, String[]> cache;
 
     public SecureHadoopUser() throws IOException {
       ugi = UserGroupInformation.getCurrentUser();
@@ -295,7 +300,7 @@ public abstract class User {
     }
 
     public SecureHadoopUser(UserGroupInformation ugi,
-                            LoadingCache<UserGroupInformation, String[]> cache) {
+                            LoadingCache<String, String[]> cache) {
       this.ugi = ugi;
       this.cache = cache;
     }
@@ -316,7 +321,7 @@ public abstract class User {
     public String[] getGroupNames() {
       if (cache != null) {
         try {
-          return this.cache.get(ugi);
+          return this.cache.get(getShortName());
         } catch (ExecutionException e) {
           return new String[0];
         }
@@ -387,6 +392,13 @@ public abstract class User {
     /** @see User#createUserForTesting(org.apache.hadoop.conf.Configuration, String, String[]) */
     public static User createUserForTesting(Configuration conf,
         String name, String[] groups) {
+      synchronized (UserProvider.class) {
+        if (!(UserProvider.groups instanceof TestingGroups)) {
+          UserProvider.groups = new TestingGroups(UserProvider.groups);
+        }
+      }
+
+      ((TestingGroups)UserProvider.groups).setUserGroups(name, groups);
       return new SecureHadoopUser(UserGroupInformation.createUserForTesting(name, groups));
     }
 
@@ -414,6 +426,32 @@ public abstract class User {
      */
     public static boolean isSecurityEnabled() {
       return UserGroupInformation.isSecurityEnabled();
+    }
+  }
+
+  static class TestingGroups extends Groups {
+    private final Map<String, List<String>> userToGroupsMapping =
+        new HashMap<String,List<String>>();
+    private Groups underlyingImplementation;
+
+    TestingGroups(Groups underlyingImplementation) {
+      super(new Configuration());
+      this.underlyingImplementation = underlyingImplementation;
+    }
+
+    @Override
+    public List<String> getGroups(String user) throws IOException {
+      List<String> result = userToGroupsMapping.get(user);
+
+      if (result == null) {
+        result = underlyingImplementation.getGroups(user);
+      }
+
+      return result;
+    }
+
+    private void setUserGroups(String user, String[] groups) {
+      userToGroupsMapping.put(user, Arrays.asList(groups));
     }
   }
 }
