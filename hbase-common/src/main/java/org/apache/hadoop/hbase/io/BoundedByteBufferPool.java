@@ -43,6 +43,8 @@ import com.google.common.annotations.VisibleForTesting;
  * achieve a particular 'run' size over time give or take a few extremes. Set TRACE level on this
  * class for a couple of seconds to get reporting on how it is running when deployed.
  *
+ * <p>This pool returns off heap ByteBuffers.
+ *
  * <p>This class is thread safe.
  */
 @InterfaceAudience.Private
@@ -94,7 +96,7 @@ public class BoundedByteBufferPool {
       // Clear sets limit == capacity. Postion == 0.
       bb.clear();
     } else {
-      bb = ByteBuffer.allocate(this.runningAverage);
+      bb = ByteBuffer.allocateDirect(this.runningAverage);
       this.allocations.incrementAndGet();
     }
     if (LOG.isTraceEnabled()) {
