@@ -242,7 +242,7 @@ public class SecureTestUtil {
       try {
         Object obj = user.runAs(action);
         if (obj != null) {
-          fail("Non null results from action for user '" + user.getShortName() + "'");
+          fail("Non null results from action for user '" + user.getShortName() + "' : " + obj);
         }
       } catch (AccessDeniedException ade) {
         fail("Expected action to pass for user '" + user.getShortName() + "' but was denied");
