@@ -35,6 +35,7 @@
         <column>^Documentation</column>
         <column>0.94 Documentation|ASF</column>
       </bottomNav>
+      <protocolRelativeURLs>true</protocolRelativeURLs>
     </reflowSkin>
   </custom>
   <bannerLeft>
