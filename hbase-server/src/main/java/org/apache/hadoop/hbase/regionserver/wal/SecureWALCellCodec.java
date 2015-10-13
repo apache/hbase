@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -84,12 +83,8 @@ public class SecureWALCellCodec extends WALCellCodec {
         return super.parseCell();
       }
       int ivLength = 0;
-      try {
-        ivLength = StreamUtils.readRawVarint32(in);
-      } catch (EOFException e) {
-        // EOF at start is OK
-        return null;
-      }
+
+      ivLength = StreamUtils.readRawVarint32(in);
 
       // TODO: An IV length of 0 could signify an unwrapped cell, when the
       // encoder supports that just read the remainder in directly
