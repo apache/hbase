@@ -23,6 +23,7 @@ import static org.apache.hadoop.hbase.util.Bytes.len;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -2497,8 +2498,7 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
    * Create a KeyValue reading from the raw InputStream.
    * Named <code>iscreate</code> so doesn't clash with {@link #create(DataInput)}
    * @param in
-   * @return Created KeyValue OR if we find a length of zero, we will return null which
-   * can be useful marking a stream as done.
+   * @return Created KeyValue or throws an exception
    * @throws IOException
    * @deprecated Use {@link KeyValueUtil#iscreate(InputStream, boolean)}
    */
