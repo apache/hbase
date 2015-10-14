@@ -77,7 +77,7 @@ public class KeyLocker<K> {
    * Acquire locks for a set of keys. The keys will be
    * sorted internally to avoid possible deadlock.
    *
-   * @throw ClassCastException if the given {@code keys}
+   * @throws ClassCastException if the given {@code keys}
    *    contains elements that are not mutually comparable
    */
   public Map<K, Lock> acquireLocks(Set<? extends K> keys) {
