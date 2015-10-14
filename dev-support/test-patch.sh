@@ -872,6 +872,9 @@ runTests () {
     {color:green}+1 core tests{color}.  The patch passed unit tests in $modules."
     BAD=0
   fi
+  # NOTE!!!! The below code has been copied and pasted up into jenkins as an after-task
+  # for trunk builds. Make sure to update it too if you change the below (or refactor)
+  # all this so can be called by test-patch and from jenkins as a script.
   ZOMBIE_TESTS_COUNT=`zombieCount`
   if [[ $ZOMBIE_TESTS_COUNT != 0 ]] ; then
     #It seems sometimes the tests are not dying immediately. Let's give them 30s
