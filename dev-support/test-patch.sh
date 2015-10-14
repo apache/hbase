@@ -853,10 +853,6 @@ runTests () {
   echo ""
 
   failed_tests=""
-  ### Kill any rogue build processes from the last attempt
-  condemnedCount=`$PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | $AWK 'BEGIN {total = 0} {total += 1} END {print total}'`
-  echo "WARNING: $condemnedCount rogue build processes detected, terminating."
-  $PS auxwww | $GREP ${PROJECT_NAME}PatchProcess | $AWK '{print $2}' | /usr/bin/xargs -t -I {} /bin/kill -9 {} > /dev/null
   echo "$MVN clean test -Dsurefire.rerunFailingTestsCount=2 -P runAllTests -D${PROJECT_NAME}PatchProcess"
   export MAVEN_OPTS="${MAVEN_OPTS}"
   ulimit -a
@@ -897,6 +893,9 @@ runTests () {
 
      {color:red}-1 core zombie tests{color}.  There are ${ZOMBIE_TESTS_COUNT} zombie test(s): ${ZB_STACK}"
       BAD=1
+      # Killing these zombies
+      echo 'Killing ZOMBIES!!!'
+      jps -v
       jps -v | grep surefirebooter | grep '-Dhbase.test' | cut -d ' ' -f 1 | xargs kill -9
     else
       echo "We're ok: there is no zombie test, but some tests took some time to stop"
@@ -1043,7 +1042,7 @@ This message is automatically generated."
 parseArgs $@
 cd $BASEDIR
 
-echo "Version of this script: Tue Oct 13 20:44:46 PDT 2015"
+echo "Version of this script: Wed Oct 14 00:29:04 PDT 2015"
 checkout
 RESULT=$?
 if [[ $JENKINS == "true" ]] ; then
