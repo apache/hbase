@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 
 import org.apache.commons.io.IOUtils;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
@@ -126,6 +128,8 @@ public class IPCUtil {
       // If no cells, don't mess around.  Just return null (could be a bunch of existence checking
       // gets or something -- stuff that does not return a cell).
       if (count == 0) return null;
+    } catch (BufferOverflowException e) {
+      throw new DoNotRetryIOException(e);
     } finally {
       os.close();
       if (poolCompressor != null) CodecPool.returnCompressor(poolCompressor);
