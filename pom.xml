@@ -1247,7 +1247,7 @@
     <slf4j.version>1.7.7</slf4j.version>
     <hadoop-snappy.version>0.0.1-SNAPSHOT</hadoop-snappy.version>
     <clover.version>4.0.3</clover.version>
-    <jamon-runtime.version>2.3.1</jamon-runtime.version>
+    <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.3.3</jettison.version>
     <netty.version>4.0.30.Final</netty.version>
     <netty.hadoop.version>3.6.2.Final</netty.hadoop.version>
@@ -1258,7 +1258,7 @@
     <!-- Plugin Dependencies -->
     <maven.assembly.version>2.4</maven.assembly.version>
     <maven.antrun.version>1.8</maven.antrun.version>
-    <jamon.plugin.version>2.3.4</jamon.plugin.version>
+    <jamon.plugin.version>2.4.1</jamon.plugin.version>
     <findbugs-annotations>1.3.9-1</findbugs-annotations>
     <javadoc.version>2.10.3</javadoc.version>
     <asciidoctor.plugin.version>1.5.2.1</asciidoctor.plugin.version>
