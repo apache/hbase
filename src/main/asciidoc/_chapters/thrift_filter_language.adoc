@@ -250,7 +250,7 @@ RowFilter::
 
 Family Filter::
   This filter takes a compare operator and a comparator.
-  It compares each column family name with the comparator using the compare operator and if the comparison returns true, it returns all the Cells in that column family.
+  It compares each qualifier name with the comparator using the compare operator and if the comparison returns true, it returns all the key-values in that column.
 
 QualifierFilter::
   This filter takes a compare operator and a comparator.
