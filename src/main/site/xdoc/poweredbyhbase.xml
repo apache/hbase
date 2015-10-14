@@ -25,10 +25,10 @@ under the License.
   </properties>
 
 <body>
-<section name="PoweredBy">
+<section name="Powered By Apache HBase&#153;">
   <p>This page lists some institutions and projects which are using HBase. To
     have your organization added, file a documentation JIRA or email
-    <a href="mailto:hbase-dev@listsapache.org">hbase-dev</a> with the relevant
+    <a href="mailto:dev@hbase.apache.org">hbase-dev</a> with the relevant
     information. If you notice out-of-date information, use the same avenues to
     report it.
   </p>
