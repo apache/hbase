@@ -61,6 +61,34 @@ public class TestRegionSplitPolicy {
   }
 
   @Test
+  public void testForceSplitRegionWithReference() throws IOException {
+    htd.setMaxFileSize(1024L);
+    // Add a store above the requisite size. Should split.
+    HStore mockStore = Mockito.mock(HStore.class);
+    Mockito.doReturn(2000L).when(mockStore).getSize();
+    // Act as if there's a reference file or some other reason it can't split.
+    // This should prevent splitting even though it's big enough.
+    Mockito.doReturn(false).when(mockStore).canSplit();
+    stores.add(mockStore);
+
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      ConstantSizeRegionSplitPolicy.class.getName());
+    ConstantSizeRegionSplitPolicy policy =
+        (ConstantSizeRegionSplitPolicy)RegionSplitPolicy.create(mockRegion, conf);
+    assertFalse(policy.shouldSplit());
+    Mockito.doReturn(true).when(mockRegion).shouldForceSplit();
+    assertFalse(policy.shouldSplit());
+
+    Mockito.doReturn(false).when(mockRegion).shouldForceSplit();
+    conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
+      IncreasingToUpperBoundRegionSplitPolicy.class.getName());
+    policy = (IncreasingToUpperBoundRegionSplitPolicy) RegionSplitPolicy.create(mockRegion, conf);
+    assertFalse(policy.shouldSplit());
+    Mockito.doReturn(true).when(mockRegion).shouldForceSplit();
+    assertFalse(policy.shouldSplit());
+  }
+
+  @Test
   public void testIncreasingToUpperBoundRegionSplitPolicy() throws IOException {
     // Configure IncreasingToUpperBoundRegionSplitPolicy as our split policy
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
