@@ -132,6 +132,13 @@ under the License.
     and Pig on a 20-node cluster for our crawling, analysis and events
     processing.</dd>
 
+  <dt><a href="http://www.leanxcale.com/">LeanXcale</a></dt>
+  <dd>LeanXcale provides an ultra-scalable transactional &amp; SQL database that
+  stores its data on HBase and it is able to scale to 1000s of nodes. It
+  also provides a standalone full ACID HBase with transactions across
+  arbitrary sets of rows and tables.</dd>
+
+
   <dt><a href="http://www.mahalo.com">Mahalo</a></dt>
   <dd>Mahalo, "...the world's first human-powered search engine". All the markup
     that powers the wiki is stored in HBase. It's been in use for a few months now.
