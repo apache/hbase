@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Powered By Apache HBase&#153;</title>
+  </properties>
+
+<body>
+<section name="PoweredBy">
+  <p>This page lists some institutions and projects which are using HBase. To
+    have your organization added, file a documentation JIRA or email
+    <a href="mailto:hbase-dev@listsapache.org">hbase-dev</a> with the relevant
+    information. If you notice out-of-date information, use the same avenues to
+    report it.
+  </p>
+  <p><b>These items are user-submitted and the HBase team assumes no responsibility for their accuracy.</b></p>
+  <dl>
+  <dt><a href="http://www.adobe.com">Adobe</a></dt>
+  <dd>We currently have about 30 nodes running HDFS, Hadoop and HBase  in clusters
+    ranging from 5 to 14 nodes on both production and development. We plan a
+    deployment on an 80 nodes cluster. We are using HBase in several areas from
+    social services to structured data and processing for internal use. We constantly
+    write data to HBase and run mapreduce jobs to process then store it back to
+    HBase or external systems. Our production cluster has been running since Oct 2008.</dd>
+
+  <dt><a href="http://axibase.com/products/axibase-time-series-database/">Axibase
+    Time Series Database (ATSD)</a></dt>
+  <dd>ATSD runs on top of HBase to collect, analyze and visualize time series
+    data at scale. ATSD capabilities include optimized storage schema, built-in
+    rule engine, forecasting algorithms (Holt-Winters and ARIMA) and next-generation
+    graphics designed for high-frequency data. Primary use cases: IT infrastructure
+    monitoring, data consolidation, operational historian in OPC environments.</dd>
+
+  <dt><a href="http://www.benipaltechnologies.com">Benipal Technologies</a></dt>
+  <dd>We have a 35 node cluster used for HBase and Mapreduce with Lucene / SOLR
+    and katta integration to create and finetune our search databases. Currently,
+    our HBase installation has over 10 Billion rows with 100s of datapoints per row.
+    We compute over 10<sup>18</sup> calculations daily using MapReduce directly on HBase. We
+    heart HBase.</dd>
+
+  <dt><a href="https://github.com/ermanpattuk/BigSecret">BigSecret</a></dt>
+  <dd>BigSecret is a security framework that is designed to secure Key-Value data,
+    while preserving efficient processing capabilities. It achieves cell-level
+    security, using combinations of different cryptographic techniques, in an
+    efficient and secure manner. It provides a wrapper library around HBase.</dd>
+
+  <dt><a href="http://caree.rs">Caree.rs</a></dt>
+  <dd>Accelerated hiring platform for HiTech companies. We use HBase and Hadoop
+    for all aspects of our backend - job and company data storage, analytics
+    processing, machine learning algorithms for our hire recommendation engine.
+    Our live production site is directly served from HBase. We use cascading for
+    running offline data processing jobs.</dd>
+
+  <dt><a href="http://www.celer-tech.com/">Celer Technologies</a></dt>
+  <dd>Celer Technologies is a global financial software company that creates
+    modular-based systems that have the flexibility to meet tomorrow's business
+    environment, today.  The Celer framework uses Hadoop/HBase for storing all
+    financial data for trading, risk, clearing in a single data store. With our
+    flexible framework and all the data in Hadoop/HBase, clients can build new
+    features to quickly extract data based on their trading, risk and clearing
+    activities from one single location.</dd>
+
+  <dt><a href="http://www.explorys.net">Explorys</a></dt>
+  <dd>Explorys uses an HBase cluster containing over a billion anonymized clinical
+    records, to enable subscribers to search and analyze patient populations,
+    treatment protocols, and clinical outcomes.</dd>
+
+  <dt><a href="http://www.facebook.com/notes/facebook-engineering/the-underlying-technology-of-messages/454991608919">Facebook</a></dt>
+  <dd>Facebook uses HBase to power their Messages infrastructure.</dd>
+
+  <dt><a href="http://www.filmweb.pl">Filmweb</a></dt>
+  <dd>Filmweb is a film web portal with a large dataset of films, persons and
+    movie-related entities. We have just started a small cluster of 3 HBase nodes
+    to handle our web cache persistency layer. We plan to increase the cluster
+    size, and also to start migrating some of the data from our databases which
+    have some demanding scalability requirements.</dd>
+
+  <dt><a href="http://www.flurry.com">Flurry</a></dt>
+  <dd>Flurry provides mobile application analytics. We use HBase and Hadoop for
+    all of our analytics processing, and serve all of our live requests directly
+    out of HBase on our 50 node production cluster with tens of billions of rows
+    over several tables.</dd>
+
+  <dt><a href="http://gumgum.com">GumGum</a></dt>
+  <dd>GumGum is an In-Image Advertising Platform. We use HBase on an 15-node
+    Amazon EC2 High-CPU Extra Large (c1.xlarge) cluster for both real-time data
+    and analytics. Our production cluster has been running since June 2010.</dd>
+
+  <dt><a href="http://helprace.com/help-desk/">Helprace</a></dt>
+  <dd>Helprace is a customer service platform which uses Hadoop for analytics
+    and internal searching and filtering. Being on HBase we can share our HBase
+    and Hadoop cluster with other Hadoop processes - this particularly helps in
+    keeping community speeds up. We use Hadoop and HBase on small cluster with 4
+    cores and 32 GB RAM each.</dd>
+
+  <dt><a href="http://hubspot.com">HubSpot</a></dt>
+  <dd>HubSpot is an online marketing platform, providing analytics, email, and
+    segmentation of leads/contacts.  HBase is our primary datastore for our customers'
+    customer data, with multiple HBase clusters powering the majority of our
+    product.  We have nearly 200 regionservers across the various clusters, and
+    2 hadoop clusters also with nearly 200 tasktrackers.  We use c1.xlarge in EC2
+    for both, but are starting to move some of that to baremetal hardware.  We've
+    been running HBase for over 2 years.</dd>
+
+  <dt><a href="http://www.infolinks.com/">Infolinks</a></dt>
+  <dd>Infolinks is an In-Text ad provider. We use HBase to process advertisement
+    selection and user events for our In-Text ad network. The reports generated
+    from HBase are used as feedback for our production system to optimize ad
+    selection.</dd>
+
+  <dt><a href="http://www.kalooga.com">Kalooga</a></dt>
+  <dd>Kalooga is a discovery service for image galleries. We use Hadoop, HBase
+    and Pig on a 20-node cluster for our crawling, analysis and events
+    processing.</dd>
+
+  <dt><a href="http://www.mahalo.com">Mahalo</a></dt>
+  <dd>Mahalo, "...the world's first human-powered search engine". All the markup
+    that powers the wiki is stored in HBase. It's been in use for a few months now.
+    MediaWiki - the same software that power Wikipedia - has version/revision control.
+    Mahalo's in-house editors produce a lot of revisions per day, which was not
+    working well in a RDBMS. An hbase-based solution for this was built and tested,
+    and the data migrated out of MySQL and into HBase. Right now it's at something
+    like 6 million items in HBase. The upload tool runs every hour from a shell
+    script to back up that data, and on 6 nodes takes about 5-10 minutes to run -
+    and does not slow down production at all.</dd>
+
+  <dt><a href="http://www.meetup.com">Meetup</a></dt>
+  <dd>Meetup is on a mission to help the world’s people self-organize into local
+    groups.  We use Hadoop and HBase to power a site-wide, real-time activity
+    feed system for all of our members and groups.  Group activity is written
+    directly to HBase, and indexed per member, with the member's custom feed
+    served directly from HBase for incoming requests.  We're running HBase
+    0.20.0 on a 11 node cluster.</dd>
+
+  <dt><a href="http://www.mendeley.com">Mendeley</a></dt>
+  <dd>Mendeley is creating a platform for researchers to collaborate and share
+    their research online. HBase is helping us to create the world's largest
+    research paper collection and is being used to store all our raw imported data.
+    We use a lot of map reduce jobs to process these papers into pages displayed
+    on the site. We also use HBase with Pig to do analytics and produce the article
+    statistics shown on the web site. You can find out more about how we use HBase
+    in the <a href="http://www.slideshare.net/danharvey/hbase-at-mendeley">HBase
+    At Mendeley</a> slide presentation.</dd>
+
+  <dt><a href="http://www.ngdata.com">NGDATA</a></dt>
+  <dd>NGDATA delivers <a href="http://www.ngdata.com/site/products/lily.html">Lily</a>,
+    the consumer intelligence solution that delivers a unique combination of Big
+    Data management, machine learning technologies and consumer intelligence
+    applications in one integrated solution to allow better, and more dynamic,
+    consumer insights. Lily allows companies to process and analyze massive structured
+    and unstructured data, scale storage elastically and locate actionable data
+    quickly from large data sources in near real time.</dd>
+
+  <dt><a href="http://ning.com">Ning</a></dt>
+  <dd>Ning uses HBase to store and serve the results of processing user events
+    and log files, which allows us to provide near-real time analytics and
+    reporting. We use a small cluster of commodity machines with 4 cores and 16GB
+    of RAM per machine to handle all our analytics and reporting needs.</dd>
+
+  <dt><a href="http://www.worldcat.org">OCLC</a></dt>
+  <dd>OCLC uses HBase as the main data store for WorldCat, a union catalog which
+    aggregates the collections of 72,000 libraries in 112 countries and territories.
+    WorldCat is currently comprised of nearly 1 billion records with nearly 2
+    billion library ownership indications. We're running a 50 Node HBase cluster
+    and a separate offline map-reduce cluster.</dd>
+
+  <dt><a href="http://olex.openlogic.com">OpenLogic</a></dt>
+  <dd>OpenLogic stores all the world's Open Source packages, versions, files,
+    and lines of code in HBase for both near-real-time access and analytical
+    purposes. The production cluster has well over 100TB of disk spread across
+    nodes with 32GB+ RAM and dual-quad or dual-hex core CPU's.</dd>
+
+  <dt><a href="http://www.openplaces.org">Openplaces</a></dt>
+  <dd>Openplaces is a search engine for travel that uses HBase to store terabytes
+    of web pages and travel-related entity records (countries, cities, hotels,
+    etc.). We have dozens of MapReduce jobs that crunch data on a daily basis.
+    We use a 20-node cluster for development, a 40-node cluster for offline
+    production processing and an EC2 cluster for the live web site.</dd>
+
+  <dt><a href="http://www.pnl.gov">Pacific Northwest National Laboratory</a></dt>
+  <dd>Hadoop and HBase (Cloudera distribution) are being used within PNNL's
+    Computational Biology &amp; Bioinformatics Group for a systems biology data
+    warehouse project that integrates high throughput proteomics and transcriptomics
+    data sets coming from instruments in the Environmental  Molecular Sciences
+    Laboratory, a US Department of Energy national user facility located at PNNL.
+    The data sets are being merged and annotated with other public genomics
+    information in the data warehouse environment, with Hadoop analysis programs
+    operating on the annotated data in the HBase tables. This work is hosted by
+    <a href="http://www.pnl.gov/news/release.aspx?id=908">olympus</a>, a large PNNL
+    institutional computing cluster, with the HBase tables being stored in olympus's
+    Lustre file system.</dd>
+
+  <dt><a href="http://www.readpath.com/">ReadPath</a></dt>
+  <dd>|ReadPath uses HBase to store several hundred million RSS items and dictionary
+    for its RSS newsreader. Readpath is currently running on an 8 node cluster.</dd>
+
+  <dt><a href="http://resu.me/">resu.me</a></dt>
+  <dd>Career network for the net generation. We use HBase and Hadoop for all
+    aspects of our backend - user and resume data storage, analytics processing,
+    machine learning algorithms for our job recommendation engine. Our live
+    production site is directly served from HBase. We use cascading for running
+    offline data processing jobs.</dd>
+
+  <dt><a href="http://www.runa.com/">Runa Inc.</a></dt>
+  <dd>Runa Inc. offers a SaaS that enables online merchants to offer dynamic
+    per-consumer, per-product promotions embedded in their website. To implement
+    this we collect the click streams of all their visitors to determine along
+    with the rules of the merchant what promotion to offer the visitor at different
+    points of their browsing the Merchant website. So we have lots of data and have
+    to do lots of off-line and real-time analytics. HBase is the core for us.
+    We also use Clojure and our own open sourced distributed processing framework,
+    Swarmiji. The HBase Community has been key to our forward movement with HBase.
+    We're looking for experienced developers to join us to help make things go even
+    faster!</dd>
+
+  <dt><a href="http://www.sematext.com/">Sematext</a></dt>
+  <dd>Sematext runs
+    <a href="http://www.sematext.com/search-analytics/index.html">Search Analytics</a>,
+    a service that uses HBase to store search activity and MapReduce to produce
+    reports showing user search behaviour and experience. Sematext runs
+    <a href="http://www.sematext.com/spm/index.html">Scalable Performance Monitoring (SPM)</a>,
+    a service that uses HBase to store performance data over time, crunch it with
+    the help of MapReduce, and display it in a visually rich browser-based UI.
+    Interestingly, SPM features
+    <a href="http://www.sematext.com/spm/hbase-performance-monitoring/index.html">SPM for HBase</a>,
+    which is specifically designed to monitor all HBase performance metrics.</dd>
+
+  <dt><a href="http://www.socialmedia.com/">SocialMedia</a></dt>
+  <dd>SocialMedia uses HBase to store and process user events which allows us to
+    provide near-realtime user metrics and reporting. HBase forms the heart of
+    our Advertising Network data storage and management system. We use HBase as
+    a data source and sink for both realtime request cycle queries and as a
+    backend for mapreduce analysis.</dd>
+
+  <dt><a href="http://www.splicemachine.com/">Splice Machine</a></dt>
+  <dd>Splice Machine is built on top of HBase.  Splice Machine is a full-featured
+    ANSI SQL database that provides real-time updates, secondary indices, ACID
+    transactions, optimized joins, triggers, and UDFs.</dd>
+
+  <dt><a href="http://www.streamy.com/">Streamy</a></dt>
+  <dd>Streamy is a recently launched realtime social news site.  We use HBase
+    for all of our data storage, query, and analysis needs, replacing an existing
+    SQL-based system.  This includes hundreds of millions of documents, sparse
+    matrices, logs, and everything else once done in the relational system. We
+    perform significant in-memory caching of query results similar to a traditional
+    Memcached/SQL setup as well as other external components to perform joining
+    and sorting.  We also run thousands of daily MapReduce jobs using HBase tables
+    for log analysis, attention data processing, and feed crawling.  HBase has
+    helped us scale and distribute in ways we could not otherwise, and the
+    community has provided consistent and invaluable assistance.</dd>
+
+  <dt><a href="http://www.stumbleupon.com/">Stumbleupon</a></dt>
+  <dd>Stumbleupon and <a href="http://su.pr">Su.pr</a> use HBase as a real time
+    data storage and analytics platform. Serving directly out of HBase, various site
+    features and statistics are kept up to date in a real time fashion. We also
+    use HBase a map-reduce data source to overcome traditional query speed limits
+    in MySQL.</dd>
+
+  <dt><a href=">http://www.tokenizer.org">Shopping Engine at Tokenizer</a></dt>
+  <dd>Shopping Engine at Tokenizer is a web crawler; it uses HBase to store URLs
+    and Outlinks (AnchorText + LinkedURL): more than a billion. It was initially
+    designed as Nutch-Hadoop extension, then (due to very specific 'shopping'
+    scenario) moved to SOLR + MySQL(InnoDB) (ten thousands queries per second),
+    and now - to HBase. HBase is significantly faster due to: no need for huge
+    transaction logs, column-oriented design exactly matches 'lazy' business logic,
+    data compression, !MapReduce support. Number of mutable 'indexes' (term from
+    RDBMS) significantly reduced due to the fact that each 'row::column' structure
+    is physically sorted by 'row'. MySQL InnoDB engine is best DB choice for
+    highly-concurrent updates. However, necessity to flash a block of data to
+    harddrive even if we changed only few bytes is obvious bottleneck. HBase
+    greatly helps: not-so-popular in modern DBMS 'delete-insert', 'mutable primary
+    key', and 'natural primary key' patterns become a big advantage with HBase.</dd>
+
+  <dt><a href="http://traackr.com/">Traackr</a></dt>
+  <dd>Traackr uses HBase to store and serve online influencer data in real-time.
+    We use MapReduce to frequently re-score our entire data set as we keep updating
+    influencer metrics on a daily basis.</dd>
+
+  <dt><a href="http://trendmicro.com/">Trend Micro</a></dt>
+  <dd>Trend Micro uses HBase as a foundation for cloud scale storage for a variety
+    of applications. We have been developing with HBase since version 0.1 and
+    production since version 0.20.0.</dd>
+
+  <dt><a href="http://www.twitter.com">Twitter</a></dt>
+  <dd>Twitter runs HBase across its entire Hadoop cluster. HBase provides a
+    distributed, read/write backup of all  mysql tables in Twitter's production
+    backend, allowing engineers to run MapReduce jobs over the data while maintaining
+    the ability to apply periodic row updates (something that is more difficult
+    to do with vanilla HDFS).  A number of applications including people search
+    rely on HBase internally for data generation. Additionally, the operations
+    team uses HBase as a timeseries database for cluster-wide monitoring/performance
+    data.</dd>
+
+  <dt><a href="http://www.udanax.org">Udanax.org</a></dt>
+  <dd>Udanax.org is a URL shortener which use 10 nodes HBase cluster to store URLs,
+    Web Log data and response the real-time request on its Web Server. This
+    application is now used for some twitter clients and a number of web sites.
+    Currently API requests are almost 30 per second and web redirection requests
+    are about 300 per second.</dd>
+
+  <dt><a href="http://www.veoh.com/">Veoh Networks</a></dt>
+  <dd>Veoh Networks uses HBase to store and process visitor (human) and entity
+    (non-human) profiles which are used for behavioral targeting, demographic
+    detection, and personalization services.  Our site reads this data in
+    real-time (heavily cached) and submits updates via various batch map/reduce
+    jobs. With 25 million unique visitors a month storing this data in a traditional
+    RDBMS is not an option. We currently have a 24 node Hadoop/HBase cluster and
+    our profiling system is sharing this cluster with our other Hadoop data
+    pipeline processes.</dd>
+
+  <dt><a href="http://www.videosurf.com/">VideoSurf</a></dt>
+  <dd>VideoSurf - "The video search engine that has taught computers to see".
+    We're using HBase to persist various large graphs of data and other statistics.
+    HBase was a real win for us because it let us store substantially larger
+    datasets without the need for manually partitioning the data and its
+    column-oriented nature allowed us to create schemas that were substantially
+    more efficient for storing and retrieving data.</dd>
+
+  <dt><a href="http://www.visibletechnologies.com/">Visible Technologies</a></dt>
+  <dd>Visible Technologies uses Hadoop, HBase, Katta, and more to collect, parse,
+    store, and search hundreds of millions of Social Media content. We get incredibly
+    fast throughput and very low latency on commodity hardware. HBase enables our
+    business to exist.</dd>
+
+  <dt><a href="http://www.worldlingo.com/">WorldLingo</a></dt>
+  <dd>The WorldLingo Multilingual Archive. We use HBase to store millions of
+    documents that we scan using Map/Reduce jobs to machine translate them into
+    all or selected target languages from our set of available machine translation
+    languages. We currently store 12 million documents but plan to eventually
+    reach the 450 million mark. HBase allows us to scale out as we need to grow
+    our storage capacities. Combined with Hadoop to keep the data replicated and
+    therefore fail-safe we have the backbone our service can rely on now and in
+    the future. !WorldLingo is using HBase since December 2007 and is along with
+    a few others one of the longest running HBase installation. Currently we are
+    running the latest HBase 0.20 and serving directly from it at
+    <a href="http://www.worldlingo.com/ma/enwiki/en/HBase">MultilingualArchive</a>.</dd>
+
+  <dt><a href="http://www.yahoo.com/">Yahoo!</a></dt>
+  <dd>Yahoo! uses HBase to store document fingerprint for detecting near-duplications.
+    We have a cluster of few nodes that runs HDFS, mapreduce, and HBase. The table
+    contains millions of rows. We use this for querying duplicated documents with
+    realtime traffic.</dd>
+
+  <dt><a href="http://h50146.www5.hp.com/products/software/security/icewall/eng/">HP IceWall SSO</a></dt>
+  <dd>HP IceWall SSO is a web-based single sign-on solution and uses HBase to store
+    user data to authenticate users. We have supported RDB and LDAP previously but
+    have newly supported HBase with a view to authenticate over tens of millions
+    of users and devices.</dd>
+
+  <dt><a href="http://www.ymc.ch/en/big-data-analytics-en?utm_source=hadoopwiki&amp;utm_medium=poweredbypage&amp;utm_campaign=ymc.ch">YMC AG</a></dt>
+  <dd><ul>
+    <li>operating a Cloudera Hadoop/HBase cluster for media monitoring purpose</li>
+    <li>offering technical and operative consulting for the Hadoop stack + ecosystem</li>
+    <li>editor of <a href="http://www.ymc.ch/en/hbase-split-visualisation-introducing-hannibal?utm_source=hadoopwiki&amp;utm_medium=poweredbypageamp;utm_campaign=ymc.ch">Hannibal</a>, a open-source tool
+    to visualize HBase regions sizes and splits that helps running HBase in production</li>
+  </ul></dd>
+  </dl>
+</section>
+</body>
+</document>
