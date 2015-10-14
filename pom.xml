@@ -540,6 +540,7 @@
                 <reuseForks>false</reuseForks>
                 <forkCount>${surefire.secondPartForkCount}</forkCount>
                 <groups>${surefire.secondPartGroups}</groups>
+                <forkedProcessTimeoutInSeconds>600</forkedProcessTimeoutInSeconds>
               </configuration>
             </execution>
           </executions>
