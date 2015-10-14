@@ -77,6 +77,7 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -421,7 +422,7 @@ public class TestNamespaceAuditor {
     });
   }
 
-  @Test
+  @Ignore("Hangs on occasion waiting on countdown latch") @Test
   public void testRegionOperations() throws Exception {
     String nsp1 = prefix + "_regiontest";
     NamespaceDescriptor nspDesc =
