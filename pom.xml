@@ -2701,7 +2701,6 @@
             <artifactId>maven-clover2-plugin</artifactId>
             <version>${clover.version}</version>
             <configuration>
-              <notimestamp>true</notimestamp>
               <includesAllSourceRoots>true</includesAllSourceRoots>
               <includesTestSourceRoots>true</includesTestSourceRoots>
               <targetPercentage>50%</targetPercentage>
