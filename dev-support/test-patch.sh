@@ -1043,6 +1043,7 @@ This message is automatically generated."
 parseArgs $@
 cd $BASEDIR
 
+echo "Version of this script: Tue Oct 13 20:44:46 PDT 2015"
 checkout
 RESULT=$?
 if [[ $JENKINS == "true" ]] ; then
