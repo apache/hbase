@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.io;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
@@ -37,6 +38,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class ByteBufferOutputStream extends OutputStream {
+  
+  // Borrowed from openJDK:
+  // http://grepcode.com/file/repository.grepcode.com/java/root/jdk/openjdk/8-b132/java/util/ArrayList.java#221
+  private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
   protected ByteBuffer buf;
 
@@ -69,6 +74,9 @@ public class ByteBufferOutputStream extends OutputStream {
   }
 
   private static ByteBuffer allocate(final int capacity, final boolean useDirectByteBuffer) {
+    if (capacity > MAX_ARRAY_SIZE) { // avoid OutOfMemoryError
+      throw new BufferOverflowException();
+    }
     return useDirectByteBuffer? ByteBuffer.allocateDirect(capacity): ByteBuffer.allocate(capacity);
   }
 
@@ -82,13 +90,17 @@ public class ByteBufferOutputStream extends OutputStream {
   }
 
   private void checkSizeAndGrow(int extra) {
-    if ( (buf.position() + extra) > buf.limit()) {
-      // size calculation is complex, because we could overflow negative,
-      // and/or not allocate enough space. this fixes that.
-      int newSize = (int)Math.min((((long)buf.capacity()) * 2),
-          (long)(Integer.MAX_VALUE));
-      newSize = Math.max(newSize, buf.position() + extra);
-      ByteBuffer newBuf = allocate(newSize, buf.isDirect());
+    long capacityNeeded = buf.position() + (long) extra;
+    if (capacityNeeded > buf.limit()) {
+      // guarantee it's possible to fit
+      if (capacityNeeded > MAX_ARRAY_SIZE) {
+        throw new BufferOverflowException();
+      }
+      // double until hit the cap
+      long nextCapacity = Math.min(buf.capacity() * 2L, MAX_ARRAY_SIZE);
+      // but make sure there is enough if twice the existing capacity is still too small
+      nextCapacity = Math.max(nextCapacity, capacityNeeded);
+      ByteBuffer newBuf = allocate((int) nextCapacity, buf.isDirect());
       buf.flip();
       ByteBufferUtils.copyFromBufferToBuffer(buf, newBuf);
       buf = newBuf;
