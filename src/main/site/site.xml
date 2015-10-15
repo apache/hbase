@@ -63,6 +63,7 @@
       <item name="Thanks" href="sponsors.html" />
       <item name="Blog" href="http://blogs.apache.org/hbase/" />
       <item name="Powered by HBase" href="poweredbyhbase.html" />
+      <item name="Supporting Projects" href="supportingprojects.html" />
       <item name="Other resources" href="resources.html" />
     </menu>
     <menu name="Documentation">
