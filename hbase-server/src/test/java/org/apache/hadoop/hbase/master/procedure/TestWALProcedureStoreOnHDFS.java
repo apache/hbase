@@ -72,6 +72,17 @@ public class TestWALProcedureStoreOnHDFS {
 
   private WALProcedureStore store;
 
+  private ProcedureStore.ProcedureStoreListener stopProcedureListener = new ProcedureStore.ProcedureStoreListener() {
+    @Override
+    public void postSync() {}
+
+    @Override
+    public void abortProcess() {
+      LOG.fatal("Abort the Procedure Store");
+      store.stop(true);
+    }
+  };
+
   private static void setupConf(Configuration conf) {
     conf.setInt("dfs.replication", 3);
     conf.setInt("dfs.namenode.replication.min", 3);
@@ -90,16 +101,7 @@ public class TestWALProcedureStoreOnHDFS {
     Path logDir = new Path(new Path(dfs.getFileSystem().getUri()), "/test-logs");
     store = ProcedureTestingUtility.createWalStore(
       UTIL.getConfiguration(), dfs.getFileSystem(), logDir);
-    store.registerListener(new ProcedureStore.ProcedureStoreListener() {
-      @Override
-      public void postSync() {}
-
-      @Override
-      public void abortProcess() {
-        LOG.fatal("Abort the Procedure Store");
-        store.stop(true);
-      }
-    });
+    store.registerListener(stopProcedureListener);
     store.start(8);
     store.recoverLease();
   }
@@ -137,7 +139,6 @@ public class TestWALProcedureStoreOnHDFS {
   @Test(timeout=60000)
   public void testWalAbortOnLowReplicationWithQueuedWriters() throws Exception {
     assertEquals(3, UTIL.getDFSCluster().getDataNodes().size());
-
     store.registerListener(new ProcedureStore.ProcedureStoreListener() {
       @Override
       public void postSync() {
@@ -183,6 +184,15 @@ public class TestWALProcedureStoreOnHDFS {
 
   @Test(timeout=60000)
   public void testWalRollOnLowReplication() throws Exception {
+    store.unregisterListener(stopProcedureListener);
+    store.registerListener(new ProcedureStore.ProcedureStoreListener() {
+      @Override
+      public void postSync() {}
+
+      @Override
+      public void abortProcess() {
+      }
+    });
     int dnCount = 0;
     store.insert(new TestProcedure(1, -1), null);
     UTIL.getDFSCluster().restartDataNode(dnCount);
