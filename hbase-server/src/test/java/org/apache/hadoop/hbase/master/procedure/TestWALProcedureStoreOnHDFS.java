@@ -193,8 +193,10 @@ public class TestWALProcedureStoreOnHDFS {
         // We could get a sync failed here...if the test cluster is crawling such that DN recovery
         // is taking a long time. If we've done enough passes, just finish up the test as a 'pass'
         if (msg != null && msg.toLowerCase().contains("sync aborted") && i > 50) {
+          LOG.info("Returning early... We ran enough of this test", re);
           return;
         }
+        throw re;
       }
       waitForNumReplicas(3);
       Thread.sleep(100);
