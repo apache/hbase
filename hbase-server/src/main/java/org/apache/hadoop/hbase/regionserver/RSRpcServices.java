@@ -159,11 +159,11 @@ import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Counter;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 
 import com.google.protobuf.ByteString;
