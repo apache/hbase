@@ -137,7 +137,6 @@ public class TestAsyncProcess {
       AsyncRequestFutureImpl<Res> r = super.createAsyncRequestFuture(
           DUMMY_TABLE, actions, nonceGroup, pool, callback, results, needResults);
       allReqs.add(r);
-      callsCt.incrementAndGet();
       return r;
     }
 
@@ -571,7 +570,7 @@ public class TestAsyncProcess {
     ars = ap.submit(DUMMY_TABLE, puts, false, null, true);
     Assert.assertEquals(0, puts.size());
     ars.waitUntilDone();
-    Assert.assertEquals(2, ap.callsCt.get());
+    Assert.assertEquals(1, ap.callsCt.get());
     verifyResult(ars, true);
   }
 
@@ -954,7 +953,7 @@ public class TestAsyncProcess {
     // Main calls fail before replica calls can start - this is currently not handled.
     // It would probably never happen if we can get location (due to retries),
     // and it would require additional synchronization.
-    MyAsyncProcessWithReplicas ap = createReplicaAp(1000, 0, 0, 1);
+    MyAsyncProcessWithReplicas ap = createReplicaAp(1000, 0, 0, 0);
     ap.addFailures(hri1, hri2);
     List<Get> rows = makeTimelineGets(DUMMY_BYTES_1, DUMMY_BYTES_2);
     AsyncRequestFuture ars = ap.submitAll(DUMMY_TABLE, rows, null, new Object[2]);
@@ -966,7 +965,7 @@ public class TestAsyncProcess {
   public void testReplicaReplicaSuccessWithParallelFailures() throws Exception {
     // Main calls fails after replica calls start. For two-replica region, one replica call
     // also fails. Regardless, we get replica results for both regions.
-    MyAsyncProcessWithReplicas ap = createReplicaAp(0, 1000, 1000, 1);
+    MyAsyncProcessWithReplicas ap = createReplicaAp(0, 1000, 1000, 0);
     ap.addFailures(hri1, hri1r2, hri2);
     List<Get> rows = makeTimelineGets(DUMMY_BYTES_1, DUMMY_BYTES_2);
     AsyncRequestFuture ars = ap.submitAll(DUMMY_TABLE, rows, null, new Object[2]);
@@ -978,7 +977,7 @@ public class TestAsyncProcess {
   public void testReplicaAllCallsFailForOneRegion() throws Exception {
     // For one of the region, all 3, main and replica, calls fail. For the other, replica
     // call fails but its exception should not be visible as it did succeed.
-    MyAsyncProcessWithReplicas ap = createReplicaAp(500, 1000, 0, 1);
+    MyAsyncProcessWithReplicas ap = createReplicaAp(500, 1000, 0, 0);
     ap.addFailures(hri1, hri1r1, hri1r2, hri2r1);
     List<Get> rows = makeTimelineGets(DUMMY_BYTES_1, DUMMY_BYTES_2);
     AsyncRequestFuture ars = ap.submitAll(DUMMY_TABLE, rows, null, new Object[2]);
@@ -1002,7 +1001,7 @@ public class TestAsyncProcess {
     Configuration conf = new Configuration();
     ClusterConnection conn = createHConnectionWithReplicas();
     conf.setInt(AsyncProcess.PRIMARY_CALL_TIMEOUT_KEY, replicaAfterMs * 1000);
-    if (retries > 0) {
+    if (retries >= 0) {
       conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, retries);
     }
     MyAsyncProcessWithReplicas ap = new MyAsyncProcessWithReplicas(conn, conf);

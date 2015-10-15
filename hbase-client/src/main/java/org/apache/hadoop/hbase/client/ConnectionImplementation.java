@@ -201,8 +201,9 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
         HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
     this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
-        HConstants.DEFAULT_USE_META_REPLICAS);
-    this.numTries = tableConfig.getRetriesNumber();
+      HConstants.DEFAULT_USE_META_REPLICAS);
+    // how many times to try, one more than max *retry* time
+    this.numTries = tableConfig.getRetriesNumber() + 1;
     this.rpcTimeout = conf.getInt(
         HConstants.HBASE_RPC_TIMEOUT_KEY,
         HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
@@ -847,13 +848,13 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       s.setConsistency(Consistency.TIMELINE);
     }
 
-    int localNumRetries = (retry ? numTries : 1);
+    int maxAttempts = (retry ? numTries : 1);
 
     for (int tries = 0; true; tries++) {
-      if (tries >= localNumRetries) {
+      if (tries >= maxAttempts) {
         throw new NoServerForRegionException("Unable to find region for "
             + Bytes.toStringBinary(row) + " in " + tableName +
-            " after " + localNumRetries + " tries.");
+            " after " + tries + " tries.");
       }
       if (useCache) {
         RegionLocations locations = getCachedLocation(tableName, row);
@@ -941,12 +942,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
         if (e instanceof RemoteException) {
           e = ((RemoteException)e).unwrapRemoteException();
         }
-        if (tries < localNumRetries - 1) {
+        if (tries < maxAttempts - 1) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("locateRegionInMeta parentTable=" +
                 TableName.META_TABLE_NAME + ", metaLocation=" +
               ", attempt=" + tries + " of " +
-              localNumRetries + " failed; retrying after sleep of " +
+              maxAttempts + " failed; retrying after sleep of " +
               ConnectionUtils.getPauseTime(this.pause, tries) + " because: " + e.getMessage());
           }
         } else {
@@ -1087,21 +1088,27 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     private final ConcurrentMap<ServerName, ServerErrors> errorsByServer =
         new ConcurrentHashMap<ServerName, ServerErrors>();
     private final long canRetryUntil;
-    private final int maxRetries;
+    private final int maxTries;// max number to try
     private final long startTrackingTime;
 
-    public ServerErrorTracker(long timeout, int maxRetries) {
-      this.maxRetries = maxRetries;
+    /**
+     * Constructor
+     * @param timeout how long to wait before timeout, in unit of millisecond
+     * @param maxTries how many times to try
+     */
+    public ServerErrorTracker(long timeout, int maxTries) {
+      this.maxTries = maxTries;
       this.canRetryUntil = EnvironmentEdgeManager.currentTime() + timeout;
       this.startTrackingTime = new Date().getTime();
     }
 
     /**
-     * We stop to retry when we have exhausted BOTH the number of retries and the time allocated.
+     * We stop to retry when we have exhausted BOTH the number of tries and the time allocated.
+     * @param numAttempt how many times we have tried by now
      */
-    boolean canRetryMore(int numRetry) {
+    boolean canTryMore(int numAttempt) {
       // If there is a single try we must not take into account the time.
-      return numRetry < maxRetries || (maxRetries > 1 &&
+      return numAttempt < maxTries || (maxTries > 1 &&
           EnvironmentEdgeManager.currentTime() < this.canRetryUntil);
     }
 

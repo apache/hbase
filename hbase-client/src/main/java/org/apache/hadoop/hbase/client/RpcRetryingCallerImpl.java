@@ -60,7 +60,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   private final int startLogErrorsCnt;
 
   private final long pause;
-  private final int retries;
+  private final int maxAttempts;// how many times to try
   private final AtomicBoolean cancelled = new AtomicBoolean(false);
   private final RetryingCallerInterceptor interceptor;
   private final RetryingCallerInterceptorContext context;
@@ -72,7 +72,7 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   public RpcRetryingCallerImpl(long pause, int retries,
       RetryingCallerInterceptor interceptor, int startLogErrorsCnt) {
     this.pause = pause;
-    this.retries = retries;
+    this.maxAttempts = retries + 1;
     this.interceptor = interceptor;
     context = interceptor.createEmptyContext();
     this.startLogErrorsCnt = startLogErrorsCnt;
@@ -121,8 +121,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
       } catch (Throwable t) {
         ExceptionUtil.rethrowIfInterrupt(t);
         if (tries > startLogErrorsCnt) {
-          LOG.info("Call exception, tries=" + tries + ", retries=" + retries + ", started=" +
-              (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
+          LOG.info("Call exception, tries=" + tries + ", maxAttempts=" + maxAttempts + ", started="
+              + (EnvironmentEdgeManager.currentTime() - this.globalStartTime) + " ms ago, "
               + "cancelled=" + cancelled.get() + ", msg="
               + callable.getExceptionMessageAdditionalDetail());
         }
@@ -130,12 +130,12 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         // translateException throws exception when should not retry: i.e. when request is bad.
         interceptor.handleFailure(context, t);
         t = translateException(t);
-        callable.throwable(t, retries != 1);
+        callable.throwable(t, maxAttempts != 1);
         RetriesExhaustedException.ThrowableWithExtraContext qt =
             new RetriesExhaustedException.ThrowableWithExtraContext(t,
                 EnvironmentEdgeManager.currentTime(), toString());
         exceptions.add(qt);
-        if (tries >= retries - 1) {
+        if (tries >= maxAttempts - 1) {
           throw new RetriesExhaustedException(tries, exceptions);
         }
         // If the server is dead, we need to wait a little before retrying, to give
@@ -162,7 +162,8 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
         }
         if (cancelled.get()) return null;
       } catch (InterruptedException e) {
-        throw new InterruptedIOException("Interrupted after " + tries + " tries  on " + retries);
+        throw new InterruptedIOException("Interrupted after " + tries
+            + " tries while maxAttempts=" + maxAttempts);
       }
     }
   }
@@ -231,6 +232,6 @@ public class RpcRetryingCallerImpl<T> implements RpcRetryingCaller<T> {
   @Override
   public String toString() {
     return "RpcRetryingCaller{" + "globalStartTime=" + globalStartTime +
-        ", pause=" + pause + ", retries=" + retries + '}';
+        ", pause=" + pause + ", maxAttempts=" + maxAttempts + '}';
   }
 }

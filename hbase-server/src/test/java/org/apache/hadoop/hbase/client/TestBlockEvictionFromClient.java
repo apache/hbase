@@ -103,7 +103,7 @@ public class TestBlockEvictionFromClient {
     conf.setStrings("hbase.bucketcache.ioengine", "heap");
     conf.setFloat("hfile.block.cache.size", 0.2f);
     conf.setFloat("hbase.regionserver.global.memstore.size", 0.1f);
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);// do not retry
     conf.setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, 5000);
     FAMILIES_1[0] = FAMILY;
     TEST_UTIL.startMiniCluster(SLAVES);

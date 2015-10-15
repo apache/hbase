@@ -252,7 +252,7 @@ public class HMasterCommandLine extends ServerCommandLine {
   private int stopMaster() {
     Configuration conf = getConf();
     // Don't try more than once
-    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);
     try (Connection connection = ConnectionFactory.createConnection(conf)) {
       try (Admin admin = connection.getAdmin()) {
         admin.shutdown();

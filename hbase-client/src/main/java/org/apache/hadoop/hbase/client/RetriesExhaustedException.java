@@ -78,13 +78,13 @@ public class RetriesExhaustedException extends IOException {
 
   /**
    * Create a new RetriesExhaustedException from the list of prior failures.
-   * @param numTries
+   * @param numRetries How many times we have retried, one less than total attempts
    * @param exceptions List of exceptions that failed before giving up
    */
   @InterfaceAudience.Private
-  public RetriesExhaustedException(final int numTries,
+  public RetriesExhaustedException(final int numRetries,
                                    final List<ThrowableWithExtraContext> exceptions) {
-    super(getMessage(numTries, exceptions),
+    super(getMessage(numRetries, exceptions),
         (exceptions != null && !exceptions.isEmpty() ?
             exceptions.get(exceptions.size() - 1).t : null));
   }
@@ -94,7 +94,7 @@ public class RetriesExhaustedException extends IOException {
     StringBuilder buffer = new StringBuilder("Failed contacting ");
     buffer.append(callableVitals);
     buffer.append(" after ");
-    buffer.append(numTries + 1);
+    buffer.append(numTries);
     buffer.append(" attempts.\nExceptions:\n");
     for (Throwable t : exceptions) {
       buffer.append(t.toString());
@@ -103,10 +103,10 @@ public class RetriesExhaustedException extends IOException {
     return buffer.toString();
   }
 
-  private static String getMessage(final int numTries,
+  private static String getMessage(final int numRetries,
       final List<ThrowableWithExtraContext> exceptions) {
     StringBuilder buffer = new StringBuilder("Failed after attempts=");
-    buffer.append(numTries + 1);
+    buffer.append(numRetries + 1);
     buffer.append(", exceptions:\n");
     for (ThrowableWithExtraContext t : exceptions) {
       buffer.append(t.toString());
