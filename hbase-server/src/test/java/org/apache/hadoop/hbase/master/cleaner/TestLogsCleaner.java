@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master.cleaner;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.URLEncoder;
+import java.util.LinkedList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -37,6 +39,8 @@ import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.ReplicationFactory;
 import org.apache.hadoop.hbase.replication.ReplicationQueues;
+import org.apache.hadoop.hbase.replication.ReplicationQueuesClient;
+import org.apache.hadoop.hbase.replication.master.ReplicationLogCleaner;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
@@ -44,6 +48,7 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.mockito.Mockito;
 
 @Category(MediumTests.class)
 public class TestLogsCleaner {
@@ -125,6 +130,7 @@ public class TestLogsCleaner {
     assertEquals(34, fs.listStatus(oldLogDir).length);
 
     LogCleaner cleaner  = new LogCleaner(1000, server, conf, fs, oldLogDir);
+
     cleaner.chore();
 
     // We end up with the current log file, a newer one and the 3 old log
@@ -139,6 +145,24 @@ public class TestLogsCleaner {
     for (FileStatus file : fs.listStatus(oldLogDir)) {
       System.out.println("Kept log files: " + file.getPath().getName());
     }
+  }
+
+  @Test(timeout=5000)
+  public void testZnodeCversionChange() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    ReplicationLogCleaner cleaner = new ReplicationLogCleaner();
+    cleaner.setConf(conf);
+
+    ReplicationQueuesClient rqcMock = Mockito.mock(ReplicationQueuesClient.class);
+    Mockito.when(rqcMock.getQueuesZNodeCversion()).thenReturn(1, 2, 3, 4);
+
+    Field rqc = ReplicationLogCleaner.class.getDeclaredField("replicationQueues");
+    rqc.setAccessible(true);
+
+    rqc.set(cleaner, rqcMock);
+
+    // This should return eventually when cversion stabilizes
+    cleaner.getDeletableFiles(new LinkedList<FileStatus>());
   }
 
   static class DummyServer implements Server {

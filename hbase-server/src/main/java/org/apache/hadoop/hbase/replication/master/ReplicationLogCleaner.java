@@ -95,8 +95,8 @@ public class ReplicationLogCleaner extends BaseLogCleanerDelegate implements Abo
    * not be included.
    */
   private Set<String> loadWALsFromQueues() throws KeeperException {
-    int v0 = replicationQueues.getQueuesZNodeCversion();
     for (int retry = 0; ; retry++) {
+      int v0 = replicationQueues.getQueuesZNodeCversion();
       List<String> rss = replicationQueues.getListOfReplicators();
       if (rss == null) {
         LOG.debug("Didn't find any region server that replicates, won't prevent any deletions.");
