@@ -919,9 +919,8 @@ public class RpcClientImpl extends AbstractRpcClient {
 
       // call close outside of the synchronized (outLock) to prevent deadlock - HBASE-14474
       if (writeException != null) {
-        if (markClosed(writeException)) {
-          close();
-        }
+        markClosed(writeException);
+        close();
       }
 
       // We added a call, and may be started the connection close. In both cases, we
