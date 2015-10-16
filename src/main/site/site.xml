@@ -51,28 +51,29 @@
   <body>
     <menu name="Apache HBase Project">
       <item name="Overview" href="index.html"/>
-      <item name="License" href="license.html" />
-      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/" />
+      <item name="License" href="license.html"/>
+      <item name="Downloads" href="http://www.apache.org/dyn/closer.cgi/hbase/"/>
       <item name="Release Notes" href="https://issues.apache.org/jira/browse/HBASE?report=com.atlassian.jira.plugin.system.project:changelog-panel#selectedTab=com.atlassian.jira.plugin.system.project%3Achangelog-panel" />
-      <item name="Code Of Conduct" href="coc.html" />
-      <item name="Issue Tracking" href="issue-tracking.html" />
-      <item name="Mailing Lists" href="mail-lists.html" />
-      <item name="Source Repository" href="source-repository.html" />
+      <item name="Code Of Conduct" href="coc.html"/>
+      <item name="Issue Tracking" href="issue-tracking.html"/>
+      <item name="Mailing Lists" href="mail-lists.html"/>
+      <item name="Blog" href="http://blogs.apache.org/hbase/"/>
+      <item name="Team" href="team-list.html"/>
       <item name="ReviewBoard" href="https://reviews.apache.org"/>
-      <item name="Team" href="team-list.html" />
-      <item name="Thanks" href="sponsors.html" />
-      <item name="Blog" href="http://blogs.apache.org/hbase/" />
-      <item name="Powered by HBase" href="poweredbyhbase.html" />
-      <item name="Supporting Projects" href="supportingprojects.html" />
-      <item name="Other resources" href="resources.html" />
+      <item name="Thanks" href="sponsors.html"/>
+      <item name="Powered by HBase" href="poweredbyhbase.html"/>
+      <item name="Other resources" href="resources.html"/>
     </menu>
-    <menu name="Documentation">
+    <menu name="Documentation and API">
       <item name="Reference Guide" href="book.html" target="_blank" />
       <item name="Reference Guide (PDF)" href="apache_hbase_reference_guide.pdf" target="_blank" />
       <item name="Getting Started" href="book.html#quickstart" target="_blank" />
       <item name="User API" href="apidocs/index.html" target="_blank" />
+      <item name="User API (Test)" href="testapidocs/index.html" target="_blank" />
       <item name="Developer API" href="devapidocs/index.html" target="_blank" />
+      <item name="Developer API (Test)" href="testdevapidocs/index.html" target="_blank" />
       <item name="X-Ref" href="xref/index.html" />
+      <item name="X-Ref (Test)" href="xref-test/index.html" />
       <item name="中文参考指南(单页)" href="http://abloz.com/hbase/book.html" target="_blank" />
       <item name="FAQ" href="book.html#faq" target="_blank" />
       <item name="Videos/Presentations" href="book.html#other.info" target="_blank" />
@@ -87,6 +88,17 @@
       <item name="API" href="0.94/apidocs/index.html" target="_blank" />
       <item name="X-Ref" href="0.94/xref/index.html" target="_blank" />
       <item name="Ref Guide (single-page)" href="0.94/book.html" target="_blank" />
+    </menu>
+    <menu name="Project Reports">
+      <item name="Continuous Integration" href="integration.html"/>
+      <item name="Dependencies" href="dependency-info.html"/>
+      <item name="Dependency Convergence" href="dependency-convergence.html"/>
+      <item name="Dependency Management" href="dependency-management.html"/>
+      <item name="Distribution Management" href="distribution-management.html"/>
+      <item name="Modules" href="modules.html"/>
+      <item name="Plugin Management" href="plugin-management.html"/>
+      <item name="Plugins" href="plugins.html"/>
+      <item name="Source Repository" href="source-repository.html"/>
     </menu>
     <menu name="ASF">
       <item name="Apache Software Foundation" href="http://www.apache.org/foundation/" target="_blank" />
