@@ -43,6 +43,11 @@ public class FlushTableAction extends Action {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
+    // Don't try the flush if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     LOG.info("Performing action: Flush table " + tableName);
     try {
       admin.flush(tableName);

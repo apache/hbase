@@ -44,6 +44,11 @@ public class SnapshotTableAction extends Action {
     String snapshotName = tableName + "-it-" + System.currentTimeMillis();
     Admin admin = util.getHBaseAdmin();
 
+    // Don't try the snapshot if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     LOG.info("Performing action: Snapshot table " + tableName);
     admin.snapshot(snapshotName, tableName);
     if (sleepTime > 0) {

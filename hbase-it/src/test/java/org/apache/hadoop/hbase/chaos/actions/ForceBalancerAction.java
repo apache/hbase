@@ -24,6 +24,10 @@ package org.apache.hadoop.hbase.chaos.actions;
 public class ForceBalancerAction extends Action {
   @Override
   public void perform() throws Exception {
+    // Don't try the flush if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     LOG.info("Balancing regions");
     forceBalancer();
   }

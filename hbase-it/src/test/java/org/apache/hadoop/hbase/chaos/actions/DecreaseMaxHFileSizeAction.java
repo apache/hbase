@@ -68,6 +68,11 @@ public class DecreaseMaxHFileSizeAction extends Action {
     // Change the table descriptor.
     htd.setMaxFileSize(newValue);
 
+    // Don't try the modify if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     // modify the table.
     admin.modifyTable(tableName, htd);
 

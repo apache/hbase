@@ -210,6 +210,11 @@ public class Action {
         + " servers to " + toServers.size() + " different servers");
     Admin admin = this.context.getHBaseIntegrationTestingUtility().getHBaseAdmin();
     for (byte[] victimRegion : victimRegions) {
+      // Don't keep moving regions if we're
+      // trying to stop the monkey.
+      if (context.isStopping()) {
+        break;
+      }
       int targetIx = RandomUtils.nextInt(toServers.size());
       admin.move(victimRegion, Bytes.toBytes(toServers.get(targetIx).getServerName()));
     }
@@ -248,6 +253,10 @@ public class Action {
 
     public HBaseCluster getHBaseCluster() {
       return util.getHBaseClusterInterface();
+    }
+
+    public boolean isStopping() {
+      return false;
     }
   }
 }
