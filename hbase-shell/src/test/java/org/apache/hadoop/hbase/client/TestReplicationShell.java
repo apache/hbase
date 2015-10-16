@@ -22,12 +22,13 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.jruby.embed.PathType;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.experimental.categories.Category;
 
 @Category({ LargeTests.class })
 public class TestReplicationShell extends AbstractTestShell {
 
-  @Test
+  @Ignore ("Disabled because hangs on occasion.. about 10% of the time") @Test
   public void testRunShellTests() throws IOException {
     System.setProperty("shell.test.include", "replication_admin_test.rb");
     // Start all ruby tests
