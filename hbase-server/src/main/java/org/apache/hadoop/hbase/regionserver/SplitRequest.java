@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -59,7 +58,7 @@ class SplitRequest implements Runnable {
     return "regionName=" + parent + ", midKey=" + Bytes.toStringBinary(midKey);
   }
 
-  private void doSplitting() {
+  private void doSplitting(User user) {
     boolean success = false;
     server.metricsRegionServer.incrSplitRequest();
     long startTime = EnvironmentEdgeManager.currentTime();
@@ -80,7 +79,7 @@ class SplitRequest implements Runnable {
       // the prepare call -- we are not ready to split just now. Just return.
       if (!st.prepare()) return;
       try {
-        st.execute(this.server, this.server);
+        st.execute(this.server, this.server, user);
         success = true;
       } catch (Exception e) {
         if (this.server.isStopping() || this.server.isStopped()) {
@@ -153,22 +152,7 @@ class SplitRequest implements Runnable {
         this.server.isStopping() + " or stopped=" + this.server.isStopped());
       return;
     }
-    if (this.user == null) doSplitting();
-    else {
-      try {
-        user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            doSplitting();
-            return null;
-          }
-        });
-      } catch (InterruptedException ie) {
-        Thread.currentThread().interrupt();
-      } catch (IOException ioe) {
-        LOG.error("Encountered exception while splitting", ioe);
-      }
-    }
+    doSplitting(user);
   }
 
   protected void releaseTableLock() {

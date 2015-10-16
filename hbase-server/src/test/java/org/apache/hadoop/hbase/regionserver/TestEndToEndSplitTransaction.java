@@ -111,7 +111,7 @@ public class TestEndToEndSplitTransaction {
       split.prepare();
 
       // 1. phase I
-      PairOfSameType<Region> regions = split.createDaughters(server, server);
+      PairOfSameType<Region> regions = split.createDaughters(server, server, null);
       assertFalse(test(conn, tableName, firstRow, server));
       assertFalse(test(conn, tableName, lastRow, server));
 

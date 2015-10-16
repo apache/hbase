@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -652,7 +653,7 @@ public class TestSplitTransactionOnCluster {
       SplitTransactionImpl st = new SplitTransactionImpl(region, Bytes.toBytes("row2"));
       try {
         st.prepare();
-        st.createDaughters(regionServer, regionServer);
+        st.createDaughters(regionServer, regionServer, null);
       } catch (IOException e) {
 
       }
@@ -1374,7 +1375,7 @@ public class TestSplitTransactionOnCluster {
         throws IOException {
       RegionCoprocessorEnvironment environment = ctx.getEnvironment();
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
-      st.stepsAfterPONR(rs, rs, daughterRegions);
+      st.stepsAfterPONR(rs, rs, daughterRegions, null);
     }
   }
 

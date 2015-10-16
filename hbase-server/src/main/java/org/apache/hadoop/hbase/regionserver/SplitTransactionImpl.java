@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -43,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CancelableProgressable;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -206,13 +208,14 @@ public class SplitTransactionImpl implements SplitTransaction {
    * @param server Hosting server instance.  Can be null when testing (won't try
    * and update in zk if a null server)
    * @param services Used to online/offline regions.
+   * @param user
    * @throws IOException If thrown, transaction failed.
    *    Call {@link #rollback(Server, RegionServerServices)}
    * @return Regions created
    */
   @VisibleForTesting
   PairOfSameType<Region> createDaughters(final Server server,
-      final RegionServerServices services) throws IOException {
+      final RegionServerServices services, User user) throws IOException {
     LOG.info("Starting split of region " + this.parent);
     if ((server != null && server.isStopped()) ||
         (services != null && services.isStopping())) {
@@ -225,9 +228,26 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      // TODO: Remove one of these
-      this.parent.getCoprocessorHost().preSplit();
-      this.parent.getCoprocessorHost().preSplit(this.splitrow);
+      if (user == null) {
+        // TODO: Remove one of these
+        parent.getCoprocessorHost().preSplit();
+        parent.getCoprocessorHost().preSplit(splitrow);
+      } else {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              parent.getCoprocessorHost().preSplit();
+              parent.getCoprocessorHost().preSplit(splitrow);
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
     }
 
     transition(SplitTransactionPhase.AFTER_PRE_SPLIT_HOOK);
@@ -241,11 +261,27 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     PairOfSameType<Region> daughterRegions = stepsBeforePONR(server, services, testing);
 
-    List<Mutation> metaEntries = new ArrayList<Mutation>();
+    final List<Mutation> metaEntries = new ArrayList<Mutation>();
+    boolean ret = false;
     if (this.parent.getCoprocessorHost() != null) {
-      if (this.parent.getCoprocessorHost().
-          preSplitBeforePONR(this.splitrow, metaEntries)) {
-        throw new IOException("Coprocessor bypassing region "
+      if (user == null) {
+        ret = parent.getCoprocessorHost().preSplitBeforePONR(splitrow, metaEntries);
+      } else {
+        try {
+          ret = user.getUGI().doAs(new PrivilegedExceptionAction<Boolean>() {
+            @Override
+            public Boolean run() throws Exception {
+              return parent.getCoprocessorHost().preSplitBeforePONR(splitrow, metaEntries);
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
+      if (ret) {
+          throw new IOException("Coprocessor bypassing region "
             + parent.getRegionInfo().getRegionNameAsString() + " split.");
       }
       try {
@@ -449,22 +485,48 @@ public class SplitTransactionImpl implements SplitTransaction {
   }
 
   @Override
-  public PairOfSameType<Region> execute(final Server server, final RegionServerServices services)
-      throws IOException {
+  public PairOfSameType<Region> execute(final Server server,
+    final RegionServerServices services)
+        throws IOException {
+    if (User.isHBaseSecurityEnabled(parent.getBaseConf())) {
+      LOG.warn("Should use execute(Server, RegionServerServices, User)");
+    }
+    return execute(server, services, null);
+  }
+
+  @Override
+  public PairOfSameType<Region> execute(final Server server, final RegionServerServices services,
+    User user) throws IOException {
     this.server = server;
     this.rsServices = services;
-    PairOfSameType<Region> regions = createDaughters(server, services);
-    stepsAfterPONR(server, services, regions);
+    PairOfSameType<Region> regions = createDaughters(server, services, user);
+    stepsAfterPONR(server, services, regions, user);
     transition(SplitTransactionPhase.COMPLETED);
     return regions;
   }
 
   @VisibleForTesting
   void stepsAfterPONR(final Server server,
-      final RegionServerServices services, PairOfSameType<Region> regions)
+      final RegionServerServices services, final PairOfSameType<Region> regions, User user)
       throws IOException {
     if (this.parent.getCoprocessorHost() != null) {
-      this.parent.getCoprocessorHost().preSplitAfterPONR();
+      if (user == null) {
+        parent.getCoprocessorHost().preSplitAfterPONR();
+      } else {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              parent.getCoprocessorHost().preSplitAfterPONR();
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
     }
 
     openDaughters(server, services, regions.getFirst(), regions.getSecond());
@@ -473,7 +535,23 @@ public class SplitTransactionImpl implements SplitTransaction {
 
     // Coprocessor callback
     if (parent.getCoprocessorHost() != null) {
-      parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
+      if (user == null) {
+        this.parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
+      } else {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              parent.getCoprocessorHost().postSplit(regions.getFirst(), regions.getSecond());
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
     }
 
     transition(SplitTransactionPhase.AFTER_POST_SPLIT_HOOK);
@@ -689,11 +767,36 @@ public class SplitTransactionImpl implements SplitTransaction {
   @Override
   public boolean rollback(final Server server, final RegionServerServices services)
       throws IOException {
+    if (User.isHBaseSecurityEnabled(parent.getBaseConf())) {
+      LOG.warn("Should use rollback(Server, RegionServerServices, User)");
+    }
+    return rollback(server, services, null);
+  }
+
+  @Override
+  public boolean rollback(final Server server, final RegionServerServices services, User user)
+      throws IOException {
     this.server = server;
     this.rsServices = services;
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      this.parent.getCoprocessorHost().preRollBackSplit();
+      if (user == null) {
+        this.parent.getCoprocessorHost().preRollBackSplit();
+      } else {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              parent.getCoprocessorHost().preRollBackSplit();
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
     }
 
     boolean result = true;
@@ -772,7 +875,23 @@ public class SplitTransactionImpl implements SplitTransaction {
     }
     // Coprocessor callback
     if (this.parent.getCoprocessorHost() != null) {
-      this.parent.getCoprocessorHost().postRollBackSplit();
+      if (user == null) {
+        this.parent.getCoprocessorHost().postRollBackSplit();
+      } else {
+        try {
+          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              parent.getCoprocessorHost().postRollBackSplit();
+              return null;
+            }
+          });
+        } catch (InterruptedException ie) {
+          InterruptedIOException iioe = new InterruptedIOException();
+          iioe.initCause(ie);
+          throw iioe;
+        }
+      }
     }
     return result;
   }
