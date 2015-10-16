@@ -74,6 +74,11 @@ public class ChangeCompressionAction extends Action {
       }
     }
 
+    // Don't try the modify if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     admin.modifyTable(tableName, tableDescriptor);
   }
 }

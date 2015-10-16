@@ -53,6 +53,10 @@ public class SplitRandomRegionOfTableAction extends Action {
       LOG.info("Table " + tableName + " doesn't have regions to split");
       return;
     }
+    // Don't try the split if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
 
     HRegionInfo region = PolicyBasedChaosMonkey.selectRandomItem(
         regions.toArray(new HRegionInfo[regions.size()]));

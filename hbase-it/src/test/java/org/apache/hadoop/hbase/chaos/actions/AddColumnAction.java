@@ -53,6 +53,11 @@ public class AddColumnAction extends Action {
       columnDescriptor = new HColumnDescriptor(RandomStringUtils.randomAlphabetic(5));
     }
 
+    // Don't try the modify if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     LOG.debug("Performing action: Adding " + columnDescriptor + " to " + tableName);
 
     tableDescriptor.addFamily(columnDescriptor);
