@@ -119,7 +119,7 @@ public class TestEndToEndSplitTransaction {
     split.prepare();
 
     // 1. phase I
-    PairOfSameType<HRegion> regions = split.createDaughters(server, server);
+    PairOfSameType<HRegion> regions = split.createDaughters(server, server, null);
     assertFalse(test(con, tableName, firstRow, server));
     assertFalse(test(con, tableName, lastRow, server));
 
