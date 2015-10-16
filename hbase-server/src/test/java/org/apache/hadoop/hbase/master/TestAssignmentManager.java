@@ -862,34 +862,34 @@ public class TestAssignmentManager {
 
   /*
    * Tests the scenario
-   * - a regionserver (SERVERNAME_DEAD) owns a region (hence the meta would have
-   *   the SERVERNAME_DEAD as the host for the region),
-   * - SERVERNAME_DEAD goes down
-   * - one of the affected regions is assigned to a live regionserver (SERVERNAME_LIVE) but that
+   * - a regionserver (SERVERNAME_A) owns a region (hence the meta would have
+   *   the SERVERNAME_A as the host for the region),
+   * - SERVERNAME_A goes down
+   * - one of the affected regions is assigned to a live regionserver (SERVERNAME_B) but that
    *   assignment somehow fails. The region ends up in the FAILED_OPEN state on ZK
    * - [Issue that the patch on HBASE-13330 fixes] when the master is restarted,
-   *   the SSH for SERVERNAME_DEAD rightly thinks that the region is now on transition on
-   *   SERVERNAME_LIVE. But the owner for the region is still SERVERNAME_DEAD in the AM's states.
-   *   The AM thinks that the SSH for SERVERNAME_DEAD will assign the region. The region remains
+   *   the SSH for SERVERNAME_A rightly thinks that the region is now on transition on
+   *   SERVERNAME_B. But the owner for the region is still SERVERNAME_A in the AM's states.
+   *   The AM thinks that the SSH for SERVERNAME_A will assign the region. The region remains
    *   unassigned for ever.
    */
   @Test(timeout = 60000)
   public void testAssignmentOfRegionInSSHAndInFailedOpenState() throws IOException,
-  KeeperException, ServiceException, CoordinatedStateException, InterruptedException {
+  KeeperException, ServiceException, InterruptedException {
     AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
         this.server, this.serverManager);
-    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_LIVE);
+    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_B);
     int v = ZKAssign.getVersion(this.watcher, REGIONINFO);
-    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_LIVE,
+    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_B,
         EventType.M_ZK_REGION_OFFLINE, EventType.RS_ZK_REGION_FAILED_OPEN, v);
-    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_LIVE)).thenReturn(true);
-    Mockito.when(this.serverManager.isServerReachable(SERVERNAME_LIVE)).thenReturn(true);
-    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_DEAD)).thenReturn(false);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_B)).thenReturn(true);
+    Mockito.when(this.serverManager.isServerReachable(SERVERNAME_B)).thenReturn(true);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_A)).thenReturn(false);
     DeadServer deadServers = new DeadServer();
-    deadServers.add(SERVERNAME_DEAD);
+    deadServers.add(SERVERNAME_A);
     Mockito.when(this.serverManager.getDeadServers()).thenReturn(deadServers);
     final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
-    onlineServers.put(SERVERNAME_LIVE, ServerLoad.EMPTY_SERVERLOAD);
+    onlineServers.put(SERVERNAME_B, ServerLoad.EMPTY_SERVERLOAD);
     Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
         new ArrayList<ServerName>(onlineServers.keySet()));
     Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
