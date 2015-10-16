@@ -48,6 +48,11 @@ public class CompactMobAction extends Action {
     Admin admin = util.getHBaseAdmin();
     boolean major = RandomUtils.nextInt(100) < majorRatio;
 
+    // Don't try the modify if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     LOG.info("Performing action: Compact mob of table " + tableName + ", major=" + major);
     try {
       if (major) {

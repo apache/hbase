@@ -58,6 +58,12 @@ public class MergeRandomAdjacentRegionsOfTableAction extends Action {
     HRegionInfo a = regions.get(i++);
     HRegionInfo b = regions.get(i);
     LOG.debug("Merging " + a.getRegionNameAsString() + " and " + b.getRegionNameAsString());
+
+    // Don't try the merge if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     try {
       admin.mergeRegions(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
     } catch (Exception ex) {

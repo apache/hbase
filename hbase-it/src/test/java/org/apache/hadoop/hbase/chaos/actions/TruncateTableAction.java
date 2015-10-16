@@ -42,6 +42,11 @@ public class TruncateTableAction extends Action {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
 
+    // Don't try the truncate if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     boolean preserveSplits = random.nextBoolean();
     LOG.info("Performing action: Truncate table " + tableName.getNameAsString() +
              "preserve splits " + preserveSplits);

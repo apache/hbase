@@ -40,6 +40,11 @@ public class RestartActionBaseAction extends Action {
 
   void restartMaster(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
+
     killMaster(server);
     sleep(sleepTime);
     startMaster(server);
@@ -47,6 +52,10 @@ public class RestartActionBaseAction extends Action {
 
   void restartRs(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     killRs(server);
     sleep(sleepTime);
     startRs(server);
@@ -54,6 +63,10 @@ public class RestartActionBaseAction extends Action {
 
   void restartZKNode(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     killZKNode(server);
     sleep(sleepTime);
     startZKNode(server);
@@ -61,6 +74,10 @@ public class RestartActionBaseAction extends Action {
 
   void restartDataNode(ServerName server, long sleepTime) throws IOException {
     sleepTime = Math.max(sleepTime, 1000);
+    // Don't try the kill if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     killDataNode(server);
     sleep(sleepTime);
     startDataNode(server);

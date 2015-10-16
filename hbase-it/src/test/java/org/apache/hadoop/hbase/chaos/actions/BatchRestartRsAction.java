@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.chaos.monkies.PolicyBasedChaosMonkey;
@@ -41,29 +43,39 @@ public class BatchRestartRsAction extends RestartActionBaseAction {
     List<ServerName> selectedServers = PolicyBasedChaosMonkey.selectRandomItems(getCurrentServers(),
         ratio);
 
-    for (ServerName server : selectedServers) {
-      LOG.info("Killing region server:" + server);
-      cluster.killRegionServer(server);
-    }
+    Set<ServerName> killedServers = new HashSet<ServerName>();
 
     for (ServerName server : selectedServers) {
+      // Don't keep killing servers if we're
+      // trying to stop the monkey.
+      if (context.isStopping()) {
+        break;
+      }
+      LOG.info("Killing region server:" + server);
+      cluster.killRegionServer(server);
+      killedServers.add(server);
+    }
+
+    for (ServerName server : killedServers) {
       cluster.waitForRegionServerToStop(server, PolicyBasedChaosMonkey.TIMEOUT);
     }
 
-    LOG.info("Killed " + selectedServers.size() + " region servers. Reported num of rs:"
+    LOG.info("Killed " + killedServers.size() + " region servers. Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
 
     sleep(sleepTime);
 
-    for (ServerName server : selectedServers) {
+    for (ServerName server : killedServers) {
       LOG.info("Starting region server:" + server.getHostname());
       cluster.startRegionServer(server.getHostname(), server.getPort());
 
     }
-    for (ServerName server : selectedServers) {
-      cluster.waitForRegionServerToStart(server.getHostname(), server.getPort(), PolicyBasedChaosMonkey.TIMEOUT);
+    for (ServerName server : killedServers) {
+      cluster.waitForRegionServerToStart(server.getHostname(),
+          server.getPort(),
+          PolicyBasedChaosMonkey.TIMEOUT);
     }
-    LOG.info("Started " + selectedServers.size() +" region servers. Reported num of rs:"
+    LOG.info("Started " + killedServers.size() +" region servers. Reported num of rs:"
         + cluster.getClusterStatus().getServersSize());
   }
 }

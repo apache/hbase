@@ -19,8 +19,10 @@
 package org.apache.hadoop.hbase.chaos.actions;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.lang.math.RandomUtils;
 import org.apache.hadoop.hbase.ClusterStatus;
@@ -51,6 +53,8 @@ public class UnbalanceKillAndRebalanceAction extends Action {
   public void perform() throws Exception {
     ClusterStatus status = this.cluster.getClusterStatus();
     List<ServerName> victimServers = new LinkedList<ServerName>(status.getServers());
+    Set<ServerName> killedServers = new HashSet<ServerName>();
+
     int liveCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int)Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());
     Assert.assertTrue((liveCount + deadCount) < victimServers.size());
@@ -62,13 +66,20 @@ public class UnbalanceKillAndRebalanceAction extends Action {
     unbalanceRegions(status, victimServers, targetServers, HOARD_FRC_OF_REGIONS);
     Thread.sleep(waitForUnbalanceMilliSec);
     for (int i = 0; i < liveCount; ++i) {
+      // Don't keep killing servers if we're
+      // trying to stop the monkey.
+      if (context.isStopping()) {
+        break;
+      }
       killRs(targetServers.get(i));
+      killedServers.add(targetServers.get(i));
     }
+
     Thread.sleep(waitForKillsMilliSec);
     forceBalancer();
     Thread.sleep(waitAfterBalanceMilliSec);
-    for (int i = 0; i < liveCount; ++i) {
-      startRs(targetServers.get(i));
+    for (ServerName server:killedServers) {
+      startRs(server);
     }
   }
 }

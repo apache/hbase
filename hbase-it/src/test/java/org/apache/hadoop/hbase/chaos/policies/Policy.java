@@ -35,14 +35,29 @@ public abstract class Policy extends StoppableImplementation implements Runnable
 
   public void init(PolicyContext context) throws Exception {
     this.context = context;
+
+    // Used to wire up stopping.
+    context.setPolicy(this);
   }
 
   /**
    * A context for a Policy
    */
   public static class PolicyContext extends Action.ActionContext {
+
+    Policy policy = null;
+
     public PolicyContext(IntegrationTestingUtility util) {
       super(util);
+    }
+
+    @Override
+    public boolean isStopping() {
+      return policy.isStopped();
+    }
+
+    public void setPolicy(Policy policy) {
+      this.policy = policy;
     }
   }
 }

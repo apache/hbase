@@ -63,7 +63,7 @@ public class RollingBatchRestartRsAction extends BatchRestartRsAction {
     Queue<ServerName> deadServers = new LinkedList<ServerName>();
 
     // loop while there are servers to be killed or dead servers to be restarted
-    while (!serversToBeKilled.isEmpty() || !deadServers.isEmpty()) {
+    while ((!serversToBeKilled.isEmpty() || !deadServers.isEmpty())  && !context.isStopping()) {
       KillOrStart action = KillOrStart.KILL;
 
       if (serversToBeKilled.isEmpty()) { // no more servers to kill

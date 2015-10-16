@@ -61,6 +61,10 @@ public class ChangeVersionsAction extends Action {
     for(HColumnDescriptor descriptor:columnDescriptors) {
       descriptor.setVersions(versions, versions);
     }
+    // Don't try the modify if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     LOG.debug("Performing action: Changing versions on " + tableName.getNameAsString());
     admin.modifyTable(tableName, tableDescriptor);
   }

@@ -69,6 +69,12 @@ public class MoveRegionsOfTableAction extends Action {
 
     long start = System.currentTimeMillis();
     for (HRegionInfo regionInfo:regions) {
+
+      // Don't try the move if we're stopping
+      if (context.isStopping()) {
+        return;
+      }
+
       try {
         String destServerName =
           servers[RandomUtils.nextInt(servers.length)].getServerName();

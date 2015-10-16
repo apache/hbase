@@ -34,7 +34,10 @@ public class SplitAllRegionOfTableAction extends Action {
   public void perform() throws Exception {
     HBaseTestingUtility util = context.getHBaseIntegrationTestingUtility();
     Admin admin = util.getHBaseAdmin();
-
+    // Don't try the split if we're stopping
+    if (context.isStopping()) {
+      return;
+    }
     LOG.info("Performing action: Split all regions of  " + tableName);
     admin.split(tableName);
   }
