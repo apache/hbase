@@ -38,21 +38,447 @@ See also the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift
 
 == REST
 
-Currently most of the documentation on REST exists in the link:http://wiki.apache.org/hadoop/Hbase/Stargate[Apache HBase Wiki on REST] (The REST gateway used to be called 'Stargate').  There are also a nice set of blogs on link:http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/[How-to: Use the Apache HBase REST Interface] by Jesse Anderson.
+Representational State Transfer (REST) was introduced in 2000 in the doctoral
+dissertation of Roy Fielding, one of the principal authors of the HTTP specification.
 
-To run your REST server under SSL, set `hbase.rest.ssl.enabled` to `true` and also set the following configs when you launch the REST server: (See example commands in <<jmx_config,JMX config>>)
+REST itself is out of the scope of this documentation, but in general, REST allows
+client-server interactions via an API that is tied to the URL itself. This section
+discusses how to configure and run the REST server included with HBase, which exposes
+HBase tables, rows, cells, and metadata as URL specified resources.
+There is also a nice series of blogs on
+link:http://blog.cloudera.com/blog/2013/03/how-to-use-the-apache-hbase-rest-interface-part-1/[How-to: Use the Apache HBase REST Interface]
+by Jesse Anderson.
 
-[source]
+=== Starting and Stopping the REST Server
+
+The included REST server can run as a daemon which starts an embedded Jetty
+servlet container and deploys the servlet into it. Use one of the following commands
+to start the REST server in the foreground or background. The port is optional, and
+defaults to 8080.
+
+[source, bash]
 ----
-hbase.rest.ssl.keystore.store
-hbase.rest.ssl.keystore.password
-hbase.rest.ssl.keystore.keypassword
+# Foreground
+$ bin/hbase rest start -p <port>
+
+# Background, logging to a file in $HBASE_LOGS_DIR
+$ bin/hbase-daemon.sh start rest -p <port>
 ----
 
-HBase ships a simple REST client, see link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/rest/client/package-summary.html[REST client] package for details.
-To enable SSL support for it, please also import your certificate into local java cacerts keystore:
+To stop the REST server, use Ctrl-C if you were running it in the foreground, or the
+following command if you were running it in the background.
+
+[source, bash]
 ----
-keytool -import -trustcacerts -file /home/user/restserver.cert -keystore $JAVA_HOME/jre/lib/security/cacerts
+$ bin/hbase-daemon.sh stop rest
+----
+
+=== Configuring the REST Server and Client
+
+For information about configuring the REST server and client for SSL, as well as `doAs`
+impersonation for the REST server, see <<security.gateway.thrift>> and other portions
+of the <<security>> chapter.
+
+=== Using REST Endpoints
+
+The following examples use the placeholder server `http://example.com:8000`, and
+the following commands can all be run using `curl` or `wget` commands. You can request
+plain text (the default), XML , or JSON output by adding no header for plain text,
+or the header "Accept: text/xml" for XML or "Accept: application/json" for JSON.
+
+NOTE: Unless specified, use `GET` requests for queries, `PUT` or `POST` requests for
+creation or mutation, and `DELETE` for deletion.
+
+==== Cluster Information
+
+.HBase Version
+----
+http://example.com:8000/version/cluster
+----
+
+.Cluster Status
+----
+http://example.com:8000/status/cluster
+----
+
+.Table List
+----
+http://example.com:8000/
+----
+
+==== Table Information
+
+.Table Schema (GET)
+
+To retrieve the table schema, use a `GET` request with the `/schema` endpoint:
+----
+http://example.com:8000/<table>/schema
+----
+
+.Table Creation
+To create a table, use a `PUT` request with the `/schema` endpoint:
+----
+http://example.com:8000/<table>/schema
+----
+
+.Table Schema Update
+To update a table, use a `POST` request with the `/schema` endpoint:
+----
+http://example.com:8000/<table>/schema
+----
+
+.Table Deletion
+To delete a table, use a `DELETE` request with the `/schema` endpoint:
+----
+http://example.com:8000<table>/schema
+----
+
+.Table Regions
+----
+http://example.com:8000/<table>/regions
+----
+
+
+==== Gets
+
+.GET a Single Cell Value
+
+To get a single cell value, use a URL scheme like the following:
+
+----
+http://example.com:8000<table>/<row>/<column>:<qualifier>/<timestamp>/content:raw
+----
+
+The column qualifier and timestamp are optional. Without them, the whole row will
+be returned, or the newest version will be returned.
+
+.Multiple Single Values (Multi-Get)
+
+To get multiple single values, specify multiple column:qualifier tuples and/or a start-timestamp
+and end-timestamp. You can also limit the number of versions.
+
+----
+http://example.com:8000<table>/<row>/<column>:<qualifier>?v=<num-versions>
+----
+
+.Globbing Rows
+To scan a series of rows, you can use a `*` glob
+character on the <row> value to glob together multiple rows.
+
+----
+http://example.com:8000urls/https|ad.doubleclick.net|*
+----
+
+==== Puts
+
+For Puts, `PUT` and `POST` are equivalent.
+
+.Put a Single Value
+The column qualifier and the timestamp are optional.
+
+----
+http://example.com:8000put/<table>/<row>/<column>:<qualifier>/<timestamp>
+http://example.com:8000test/testrow/test:testcolumn
+----
+
+.Put Multiple Values
+To put multiple values, use a false row key. Row, column, and timestamp values in
+the supplied cells override the specifications on the path, allowing you to post
+multiple values to a table in batch. The HTTP response code indicates the status of
+the put. Set the `Content-Type` to `text/xml` for XML encoding or to `application/x-protobuf`
+for protobufs encoding. Supply the commit data in the `PUT` or `POST` body, using
+the <<xml_schema>> and <<protobufs_schema>> as guidelines.
+
+==== Scans
+
+`PUT` and `POST` are equivalent for scans.
+
+.Scanner Creation
+To create a scanner, use the `/scanner` endpoint. The HTTP response code indicates
+success (201) or failure (anything else), and on successful scanner creation, the
+URI is returned which should be used to address the scanner.
+
+----
+http://example.com:8000<table>/scanner
+----
+
+.Scanner Get Next
+To get the next batch of cells found by the scanner, use the `/scanner/<scanner-id>'
+endpoint, using the URI returned by the scanner creation endpoint. If the scanner
+is exhausted, HTTP status `204` is returned.
+----
+http://example.com:8000<table>/scanner/<scanner-id>
+----
+
+.Scanner Deletion
+To delete resources associated with a scanner, send a HTTP `DELETE` request to the
+`/scanner/<scanner-id>` endpoint.
+----
+http://example.com:8000<table>/scanner/<scanner-id>
+----
+
+[[xml_schema]]
+=== REST XML Schema
+
+[source,xml]
+----
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="RESTSchema">
+
+  <element name="Version" type="tns:Version"></element>
+
+  <complexType name="Version">
+    <attribute name="REST" type="string"></attribute>
+    <attribute name="JVM" type="string"></attribute>
+    <attribute name="OS" type="string"></attribute>
+    <attribute name="Server" type="string"></attribute>
+    <attribute name="Jersey" type="string"></attribute>
+  </complexType>
+
+  <element name="TableList" type="tns:TableList"></element>
+
+  <complexType name="TableList">
+    <sequence>
+      <element name="table" type="tns:Table" maxOccurs="unbounded" minOccurs="1"></element>
+    </sequence>
+  </complexType>
+
+  <complexType name="Table">
+    <sequence>
+      <element name="name" type="string"></element>
+    </sequence>
+  </complexType>
+
+  <element name="TableInfo" type="tns:TableInfo"></element>
+
+  <complexType name="TableInfo">
+    <sequence>
+      <element name="region" type="tns:TableRegion" maxOccurs="unbounded" minOccurs="1"></element>
+    </sequence>
+    <attribute name="name" type="string"></attribute>
+  </complexType>
+
+  <complexType name="TableRegion">
+    <attribute name="name" type="string"></attribute>
+    <attribute name="id" type="int"></attribute>
+    <attribute name="startKey" type="base64Binary"></attribute>
+    <attribute name="endKey" type="base64Binary"></attribute>
+    <attribute name="location" type="string"></attribute>
+  </complexType>
+
+  <element name="TableSchema" type="tns:TableSchema"></element>
+
+  <complexType name="TableSchema">
+    <sequence>
+      <element name="column" type="tns:ColumnSchema" maxOccurs="unbounded" minOccurs="1"></element>
+    </sequence>
+    <attribute name="name" type="string"></attribute>
+    <anyAttribute></anyAttribute>
+  </complexType>
+
+  <complexType name="ColumnSchema">
+    <attribute name="name" type="string"></attribute>
+    <anyAttribute></anyAttribute>
+  </complexType>
+
+  <element name="CellSet" type="tns:CellSet"></element>
+
+  <complexType name="CellSet">
+    <sequence>
+      <element name="row" type="tns:Row" maxOccurs="unbounded" minOccurs="1"></element>
+    </sequence>
+  </complexType>
+
+  <element name="Row" type="tns:Row"></element>
+
+  <complexType name="Row">
+    <sequence>
+      <element name="key" type="base64Binary"></element>
+      <element name="cell" type="tns:Cell" maxOccurs="unbounded" minOccurs="1"></element>
+    </sequence>
+  </complexType>
+
+  <element name="Cell" type="tns:Cell"></element>
+
+  <complexType name="Cell">
+    <sequence>
+      <element name="value" maxOccurs="1" minOccurs="1">
+        <simpleType><restriction base="base64Binary">
+        </simpleType>
+      </element>
+    </sequence>
+    <attribute name="column" type="base64Binary" />
+    <attribute name="timestamp" type="int" />
+  </complexType>
+
+  <element name="Scanner" type="tns:Scanner"></element>
+
+  <complexType name="Scanner">
+    <sequence>
+      <element name="column" type="base64Binary" minOccurs="0" maxOccurs="unbounded"></element>
+    </sequence>
+    <sequence>
+      <element name="filter" type="string" minOccurs="0" maxOccurs="1"></element>
+    </sequence>
+    <attribute name="startRow" type="base64Binary"></attribute>
+    <attribute name="endRow" type="base64Binary"></attribute>
+    <attribute name="batch" type="int"></attribute>
+    <attribute name="startTime" type="int"></attribute>
+    <attribute name="endTime" type="int"></attribute>
+  </complexType>
+
+  <element name="StorageClusterVersion" type="tns:StorageClusterVersion" />
+
+  <complexType name="StorageClusterVersion">
+    <attribute name="version" type="string"></attribute>
+  </complexType>
+
+  <element name="StorageClusterStatus"
+    type="tns:StorageClusterStatus">
+  </element>
+
+  <complexType name="StorageClusterStatus">
+    <sequence>
+      <element name="liveNode" type="tns:Node"
+        maxOccurs="unbounded" minOccurs="0">
+      </element>
+      <element name="deadNode" type="string" maxOccurs="unbounded"
+        minOccurs="0">
+      </element>
+    </sequence>
+    <attribute name="regions" type="int"></attribute>
+    <attribute name="requests" type="int"></attribute>
+    <attribute name="averageLoad" type="float"></attribute>
+  </complexType>
+
+  <complexType name="Node">
+    <sequence>
+      <element name="region" type="tns:Region"
+          maxOccurs="unbounded" minOccurs="0">
+      </element>
+    </sequence>
+    <attribute name="name" type="string"></attribute>
+    <attribute name="startCode" type="int"></attribute>
+    <attribute name="requests" type="int"></attribute>
+    <attribute name="heapSizeMB" type="int"></attribute>
+    <attribute name="maxHeapSizeMB" type="int"></attribute>
+  </complexType>
+
+  <complexType name="Region">
+    <attribute name="name" type="base64Binary"></attribute>
+    <attribute name="stores" type="int"></attribute>
+    <attribute name="storefiles" type="int"></attribute>
+    <attribute name="storefileSizeMB" type="int"></attribute>
+    <attribute name="memstoreSizeMB" type="int"></attribute>
+    <attribute name="storefileIndexSizeMB" type="int"></attribute>
+  </complexType>
+
+</schema>
+----
+
+[[protobufs_schema]]
+=== REST Protobufs Schema
+
+[source,json]
+----
+message Version {
+  optional string restVersion = 1;
+  optional string jvmVersion = 2;
+  optional string osVersion = 3;
+  optional string serverVersion = 4;
+  optional string jerseyVersion = 5;
+}
+
+message StorageClusterStatus {
+  message Region {
+    required bytes name = 1;
+    optional int32 stores = 2;
+    optional int32 storefiles = 3;
+    optional int32 storefileSizeMB = 4;
+    optional int32 memstoreSizeMB = 5;
+    optional int32 storefileIndexSizeMB = 6;
+  }
+  message Node {
+    required string name = 1;    // name:port
+    optional int64 startCode = 2;
+    optional int32 requests = 3;
+    optional int32 heapSizeMB = 4;
+    optional int32 maxHeapSizeMB = 5;
+    repeated Region regions = 6;
+  }
+  // node status
+  repeated Node liveNodes = 1;
+  repeated string deadNodes = 2;
+  // summary statistics
+  optional int32 regions = 3;
+  optional int32 requests = 4;
+  optional double averageLoad = 5;
+}
+
+message TableList {
+  repeated string name = 1;
+}
+
+message TableInfo {
+  required string name = 1;
+  message Region {
+    required string name = 1;
+    optional bytes startKey = 2;
+    optional bytes endKey = 3;
+    optional int64 id = 4;
+    optional string location = 5;
+  }
+  repeated Region regions = 2;
+}
+
+message TableSchema {
+  optional string name = 1;
+  message Attribute {
+    required string name = 1;
+    required string value = 2;
+  }
+  repeated Attribute attrs = 2;
+  repeated ColumnSchema columns = 3;
+  // optional helpful encodings of commonly used attributes
+  optional bool inMemory = 4;
+  optional bool readOnly = 5;
+}
+
+message ColumnSchema {
+  optional string name = 1;
+  message Attribute {
+    required string name = 1;
+    required string value = 2;
+  }
+  repeated Attribute attrs = 2;
+  // optional helpful encodings of commonly used attributes
+  optional int32 ttl = 3;
+  optional int32 maxVersions = 4;
+  optional string compression = 5;
+}
+
+message Cell {
+  optional bytes row = 1;       // unused if Cell is in a CellSet
+  optional bytes column = 2;
+  optional int64 timestamp = 3;
+  optional bytes data = 4;
+}
+
+message CellSet {
+  message Row {
+    required bytes key = 1;
+    repeated Cell values = 2;
+  }
+  repeated Row rows = 1;
+}
+
+message Scanner {
+  optional bytes startRow = 1;
+  optional bytes endRow = 2;
+  repeated bytes columns = 3;
+  optional int32 batch = 4;
+  optional int64 startTime = 5;
+  optional int64 endTime = 6;
+}
 ----
 
 == Thrift
