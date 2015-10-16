@@ -885,6 +885,50 @@ public class TestAssignmentManager {
     }
   }
 
+  /*
+   * Tests the scenario
+   * - a regionserver (SERVERNAME_DEAD) owns a region (hence the meta would have
+   *   the SERVERNAME_DEAD as the host for the region),
+   * - SERVERNAME_DEAD goes down
+   * - one of the affected regions is assigned to a live regionserver (SERVERNAME_LIVE) but that
+   *   assignment somehow fails. The region ends up in the FAILED_OPEN state on ZK
+   * - [Issue that the patch on HBASE-13330 fixes] when the master is restarted,
+   *   the SSH for SERVERNAME_DEAD rightly thinks that the region is now on transition on
+   *   SERVERNAME_LIVE. But the owner for the region is still SERVERNAME_DEAD in the AM's states.
+   *   The AM thinks that the SSH for SERVERNAME_DEAD will assign the region. The region remains
+   *   unassigned for ever.
+   */
+  @Test(timeout = 60000)
+  public void testAssignmentOfRegionInSSHAndInFailedOpenState() throws IOException,
+  KeeperException, ServiceException, CoordinatedStateException, InterruptedException {
+    AssignmentManagerWithExtrasForTesting am = setUpMockedAssignmentManager(
+        this.server, this.serverManager);
+    ZKAssign.createNodeOffline(this.watcher, REGIONINFO, SERVERNAME_LIVE);
+    int v = ZKAssign.getVersion(this.watcher, REGIONINFO);
+    ZKAssign.transitionNode(this.watcher, REGIONINFO, SERVERNAME_LIVE,
+        EventType.M_ZK_REGION_OFFLINE, EventType.RS_ZK_REGION_FAILED_OPEN, v);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_LIVE)).thenReturn(true);
+    Mockito.when(this.serverManager.isServerReachable(SERVERNAME_LIVE)).thenReturn(true);
+    Mockito.when(this.serverManager.isServerOnline(SERVERNAME_DEAD)).thenReturn(false);
+    DeadServer deadServers = new DeadServer();
+    deadServers.add(SERVERNAME_DEAD);
+    Mockito.when(this.serverManager.getDeadServers()).thenReturn(deadServers);
+    final Map<ServerName, ServerLoad> onlineServers = new HashMap<ServerName, ServerLoad>();
+    onlineServers.put(SERVERNAME_LIVE, ServerLoad.EMPTY_SERVERLOAD);
+    Mockito.when(this.serverManager.getOnlineServersList()).thenReturn(
+        new ArrayList<ServerName>(onlineServers.keySet()));
+    Mockito.when(this.serverManager.getOnlineServers()).thenReturn(onlineServers);
+    am.gate.set(false);
+    // join the cluster - that's when the AM is really kicking in after a restart
+    am.joinCluster();
+    while (!am.gate.get()) {
+      Thread.sleep(10);
+    }
+    assertTrue(am.getRegionStates().getRegionState(REGIONINFO).getState()
+        == RegionState.State.PENDING_OPEN);
+    am.shutdown();
+  }
+
   /**
    * Test the scenario when the master is in failover and trying to process a
    * region which is in Opening state on a dead RS. Master will force offline the
