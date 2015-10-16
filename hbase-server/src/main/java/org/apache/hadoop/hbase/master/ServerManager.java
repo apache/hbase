@@ -614,7 +614,8 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
+    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName) ==
+        AssignmentManager.ServerHostRegion.HOSTING_REGION;
     if (carryingMeta) {
       this.services.getExecutorService().submit(new MetaServerShutdownHandler(this.master,
         this.services, this.deadservers, serverName));

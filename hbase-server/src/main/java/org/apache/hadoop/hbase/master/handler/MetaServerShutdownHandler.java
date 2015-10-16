@@ -87,17 +87,27 @@ public class MetaServerShutdownHandler extends ServerShutdownHandler {
       // Assign meta if we were carrying it.
       // Check again: region may be assigned to other where because of RIT
       // timeout
-      if (am.isCarryingMeta(serverName)) {
-        LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
-        am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
-        verifyAndAssignMetaWithRetries();
-      } else if (!server.getMetaTableLocator().isLocationAvailable(this.server.getZooKeeper())) {
-        // the meta location as per master is null. This could happen in case when meta assignment
-        // in previous run failed, while meta znode has been updated to null. We should try to
-        // assign the meta again.
-        verifyAndAssignMetaWithRetries();
-      } else {
-        LOG.info("META has been assigned to otherwhere, skip assigning.");
+      AssignmentManager.ServerHostRegion rsCarryingMetaRegion = am.isCarryingMeta(serverName);
+      switch (rsCarryingMetaRegion) {
+        case HOSTING_REGION:
+          LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
+          am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+          verifyAndAssignMetaWithRetries();
+          break;
+        case UNKNOWN:
+          if (!server.getMetaTableLocator().isLocationAvailable(this.server.getZooKeeper())) {
+            // the meta location as per master is null. This could happen in case when meta
+            // assignment in previous run failed, while meta znode has been updated to null.
+            // We should try to assign the meta again.
+            verifyAndAssignMetaWithRetries();
+            break;
+          }
+          // fall through
+        case NOT_HOSTING_REGION:
+          LOG.info("META has been assigned to otherwhere, skip assigning.");
+          break;
+        default:
+          throw new IOException("Unsupported action in MetaServerShutdownHandler");
       }
 
       try {

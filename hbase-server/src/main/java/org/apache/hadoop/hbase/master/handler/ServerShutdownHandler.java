@@ -225,7 +225,8 @@ public class ServerShutdownHandler extends EventHandler {
       for (int i = 1; i < replicaCount; i++) {
         HRegionInfo metaHri =
             RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, i);
-        if (am.isCarryingMetaReplica(serverName, metaHri)) {
+        if (am.isCarryingMetaReplica(serverName, metaHri) ==
+            AssignmentManager.ServerHostRegion.HOSTING_REGION) {
           LOG.info("Reassigning meta replica" + metaHri + " that was on " + serverName);
           toAssignRegions.add(metaHri);
         }

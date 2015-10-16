@@ -260,6 +260,10 @@ public class AssignmentManager extends ZooKeeperListener {
 
   private RegionStateListener regionStateListener;
 
+  public enum ServerHostRegion {
+    NOT_HOSTING_REGION, HOSTING_REGION, UNKNOWN,
+  }
+
   /**
    * Constructs a new assignment manager.
    *
@@ -3382,16 +3386,16 @@ public class AssignmentManager extends ZooKeeperListener {
     threadPoolExecutorService.submit(new UnAssignCallable(this, regionInfo));
   }
 
-  public boolean isCarryingMeta(ServerName serverName) {
+  public ServerHostRegion isCarryingMeta(ServerName serverName) {
     return isCarryingRegion(serverName, HRegionInfo.FIRST_META_REGIONINFO);
   }
 
-  public boolean isCarryingMetaReplica(ServerName serverName, int replicaId) {
+  public ServerHostRegion isCarryingMetaReplica(ServerName serverName, int replicaId) {
     return isCarryingRegion(serverName,
         RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, replicaId));
   }
 
-  public boolean isCarryingMetaReplica(ServerName serverName, HRegionInfo metaHri) {
+  public ServerHostRegion isCarryingMetaReplica(ServerName serverName, HRegionInfo metaHri) {
     return isCarryingRegion(serverName, metaHri);
   }
 
@@ -3405,7 +3409,7 @@ public class AssignmentManager extends ZooKeeperListener {
    * processing hasn't finished yet when server shutdown occurs.
    * @return whether the serverName currently hosts the region
    */
-  private boolean isCarryingRegion(ServerName serverName, HRegionInfo hri) {
+  private ServerHostRegion isCarryingRegion(ServerName serverName, HRegionInfo hri) {
     RegionTransition rt = null;
     try {
       byte [] data = ZKAssign.getData(watcher, hri.getEncodedName());
@@ -3423,17 +3427,33 @@ public class AssignmentManager extends ZooKeeperListener {
       boolean matchZK = addressFromZK.equals(serverName);
       LOG.debug("Checking region=" + hri.getRegionNameAsString() + ", zk server=" + addressFromZK +
         " current=" + serverName + ", matches=" + matchZK);
-      return matchZK;
+      return matchZK ? ServerHostRegion.HOSTING_REGION : ServerHostRegion.NOT_HOSTING_REGION;
     }
 
     ServerName addressFromAM = regionStates.getRegionServerOfRegion(hri);
-    boolean matchAM = (addressFromAM != null &&
-      addressFromAM.equals(serverName));
-    LOG.debug("based on AM, current region=" + hri.getRegionNameAsString() +
-      " is on server=" + (addressFromAM != null ? addressFromAM : "null") +
-      " server being checked: " + serverName);
+    if (addressFromAM != null) {
+      boolean matchAM = addressFromAM.equals(serverName);
+      LOG.debug("based on AM, current region=" + hri.getRegionNameAsString() +
+        " is on server=" + (addressFromAM != null ? addressFromAM : "null") +
+        " server being checked: " + serverName);
+      return matchAM ? ServerHostRegion.HOSTING_REGION : ServerHostRegion.NOT_HOSTING_REGION;
+    }
 
-    return matchAM;
+    if (hri.isMetaRegion() && RegionReplicaUtil.isDefaultReplica(hri)) {
+      // For the Meta region (default replica), we can do one more check on MetaTableLocator
+      final ServerName serverNameInZK =
+          server.getMetaTableLocator().getMetaRegionLocation(this.server.getZooKeeper());
+      LOG.debug("Based on MetaTableLocator, the META region is on server="
+          + (serverNameInZK == null ? "null" : serverNameInZK)
+          + " server being checked: " + serverName);
+      if (serverNameInZK != null) {
+        return serverNameInZK.equals(serverName) ?
+            ServerHostRegion.HOSTING_REGION : ServerHostRegion.NOT_HOSTING_REGION;
+      }
+    }
+    // Checked everywhere, if reaching here, we are sure that the server is not
+    // carrying region.
+    return ServerHostRegion.UNKNOWN;
   }
 
   /**
