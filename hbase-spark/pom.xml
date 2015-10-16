@@ -512,6 +512,14 @@
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+        </dependency>
     </dependencies>
 
 
@@ -591,17 +599,55 @@
 
   <profiles>
     <!-- Skip the tests in this module -->
-    <profile>
-      <id>skipSparkTests</id>
-      <activation>
-        <property>
-          <name>skipSparkTests</name>
-        </property>
-      </activation>
-      <properties>
-        <surefire.skipFirstPart>true</surefire.skipFirstPart>
-        <surefire.skipSecondPart>true</surefire.skipSecondPart>
-      </properties>
-    </profile>
-  </profiles>
+      <profile>
+        <id>skipSparkTests</id>
+            <activation>
+                <property>
+                    <name>skipSparkTests</name>
+                </property>
+            </activation>
+            <properties>
+                <surefire.skipFirstPart>true</surefire.skipFirstPart>
+                <surefire.skipSecondPart>true</surefire.skipSecondPart>
+            </properties>
+        </profile>
+        <profile>
+            <id>compile-protobuf</id>
+            <activation>
+                <property>
+                    <name>compile-protobuf</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.hadoop</groupId>
+                        <artifactId>hadoop-maven-plugins</artifactId>
+                        <executions>
+                            <execution>
+                                <id>compile-protoc</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>protoc</goal>
+                                </goals>
+                                <configuration>
+                                    <imports>
+                                        <param>${basedir}/src/main/protobuf</param>
+                                    </imports>
+                                    <source>
+                                        <directory>${basedir}/src/main/protobuf</directory>
+                                        <includes>
+                                            <include>Filter.proto</include>
+                                        </includes>
+                                    </source>
+                                    <!--<output>${project.build.directory}/generated-sources/java</output>-->
+                                    <output>${basedir}/src/main/java/</output>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

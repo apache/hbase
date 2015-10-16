@@ -37,6 +37,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   val columnFamily = "c"
 
   override def beforeAll() {
+
     TEST_UTIL.startMiniCluster()
 
     logInfo(" - minicluster started")
@@ -75,6 +76,8 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
       (Bytes.toBytes("5"),
         Array((Bytes.toBytes(columnFamily), Bytes.toBytes("e"), Bytes.toBytes("bar"))))))
 
+    var isFinished = false
+
     val hbaseContext = new HBaseContext(sc, config)
     val ssc = new StreamingContext(sc, Milliseconds(200))
 
@@ -93,9 +96,19 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
         put
       })
 
+    dStream.foreachRDD(rdd => {
+      if (rdd.count() == 0) {
+        isFinished = true
+      }
+    })
+
     ssc.start()
 
-    ssc.awaitTerminationOrTimeout(1000)
+    while (!isFinished) {
+      Thread.sleep(100)
+    }
+
+    ssc.stop(true, true)
 
     val connection = ConnectionFactory.createConnection(config)
     val table = connection.getTable(TableName.valueOf("t1"))

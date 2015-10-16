@@ -168,16 +168,3 @@ message RowRange {
 message MultiRowRangeFilter {
   repeated RowRange row_range_list = 1;
 }
-
-
-message SQLPredicatePushDownColumnFilter {
-  required bytes column_family = 1;
-  required bytes qualifier = 2;
-  repeated bytes get_point_list = 3;
-  repeated RowRange range_list = 4;
-
-}
-
-message SQLPredicatePushDownFilter {
-  repeated SQLPredicatePushDownColumnFilter column_filter_list = 1;
-}

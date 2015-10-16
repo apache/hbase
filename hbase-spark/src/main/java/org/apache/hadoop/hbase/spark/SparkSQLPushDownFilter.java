@@ -24,8 +24,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.spark.protobuf.generated.FilterProtos;
 import org.apache.hadoop.hbase.util.ByteStringer;
+import org.apache.hadoop.hbase.util.Bytes;
 import scala.collection.mutable.MutableList;
 
 import java.io.IOException;
@@ -38,50 +39,132 @@ import java.util.Map;
  * by SparkSQL so that we have make the filters at the region server level
  * and avoid sending the data back to the client to be filtered.
  */
-public class SparkSQLPushDownFilter extends FilterBase {
+public class SparkSQLPushDownFilter extends FilterBase{
   protected static final Log log = LogFactory.getLog(SparkSQLPushDownFilter.class);
 
-  HashMap<ColumnFamilyQualifierMapKeyWrapper, ColumnFilter> columnFamilyQualifierFilterMap;
+  //The following values are populated with protobuffer
+  DynamicLogicExpression dynamicLogicExpression;
+  byte[][] valueFromQueryArray;
+  HashMap<ByteArrayComparable, HashMap<ByteArrayComparable, String>>
+          currentCellToColumnIndexMap;
 
-  public SparkSQLPushDownFilter(HashMap<ColumnFamilyQualifierMapKeyWrapper,
-          ColumnFilter> columnFamilyQualifierFilterMap) {
-    this.columnFamilyQualifierFilterMap = columnFamilyQualifierFilterMap;
+  //The following values are transient
+  HashMap<String, ByteArrayComparable> columnToCurrentRowValueMap = null;
+
+  static final byte[] rowKeyFamily = new byte[0];
+  static final byte[] rowKeyQualifier = Bytes.toBytes("key");
+
+  public SparkSQLPushDownFilter(DynamicLogicExpression dynamicLogicExpression,
+                                byte[][] valueFromQueryArray,
+                                HashMap<ByteArrayComparable,
+                                        HashMap<ByteArrayComparable, String>>
+                                        currentCellToColumnIndexMap) {
+    this.dynamicLogicExpression = dynamicLogicExpression;
+    this.valueFromQueryArray = valueFromQueryArray;
+    this.currentCellToColumnIndexMap = currentCellToColumnIndexMap;
   }
 
-  /**
-   * This method will find the related filter logic for the given
-   * column family and qualifier then execute it.  It will also
-   * not clone the in coming cell to avoid extra object creation
-   *
-   * @param c            The Cell to be validated
-   * @return             ReturnCode object to determine if skipping is required
-   * @throws IOException
-   */
+  public SparkSQLPushDownFilter(DynamicLogicExpression dynamicLogicExpression,
+                                byte[][] valueFromQueryArray,
+                                MutableList<SchemaQualifierDefinition> columnDefinitions) {
+    this.dynamicLogicExpression = dynamicLogicExpression;
+    this.valueFromQueryArray = valueFromQueryArray;
+
+    //generate family qualifier to index mapping
+    this.currentCellToColumnIndexMap =
+            new HashMap<>();
+
+    for (int i = 0; i < columnDefinitions.size(); i++) {
+      SchemaQualifierDefinition definition = columnDefinitions.get(i).get();
+
+      ByteArrayComparable familyByteComparable =
+              new ByteArrayComparable(definition.columnFamilyBytes(),
+                      0, definition.columnFamilyBytes().length);
+
+      HashMap<ByteArrayComparable, String> qualifierIndexMap =
+              currentCellToColumnIndexMap.get(familyByteComparable);
+
+      if (qualifierIndexMap == null) {
+        qualifierIndexMap = new HashMap<>();
+        currentCellToColumnIndexMap.put(familyByteComparable, qualifierIndexMap);
+      }
+      ByteArrayComparable qualifierByteComparable =
+              new ByteArrayComparable(definition.qualifierBytes(), 0,
+                      definition.qualifierBytes().length);
+
+      qualifierIndexMap.put(qualifierByteComparable, definition.columnName());
+    }
+  }
+
   @Override
   public ReturnCode filterKeyValue(Cell c) throws IOException {
 
-    //Get filter if one exist
-    ColumnFilter filter =
-            columnFamilyQualifierFilterMap.get(new ColumnFamilyQualifierMapKeyWrapper(
-            c.getFamilyArray(),
-            c.getFamilyOffset(),
-            c.getFamilyLength(),
-            c.getQualifierArray(),
-            c.getQualifierOffset(),
-            c.getQualifierLength()));
+    //If the map RowValueMap is empty then we need to populate
+    // the row key
+    if (columnToCurrentRowValueMap == null) {
+      columnToCurrentRowValueMap = new HashMap<>();
+      HashMap<ByteArrayComparable, String> qualifierColumnMap =
+              currentCellToColumnIndexMap.get(
+                      new ByteArrayComparable(rowKeyFamily, 0, rowKeyFamily.length));
 
-    if (filter == null) {
-      //If no filter then just include values
-      return ReturnCode.INCLUDE;
-    } else {
-      //If there is a filter then run validation
-      if (filter.validate(c.getValueArray(), c.getValueOffset(), c.getValueLength())) {
-        return ReturnCode.INCLUDE;
+      if (qualifierColumnMap != null) {
+        String rowKeyColumnName =
+                qualifierColumnMap.get(
+                        new ByteArrayComparable(rowKeyQualifier, 0,
+                                rowKeyQualifier.length));
+        //Make sure that the rowKey is part of the where clause
+        if (rowKeyColumnName != null) {
+          columnToCurrentRowValueMap.put(rowKeyColumnName,
+                  new ByteArrayComparable(c.getRowArray(),
+                          c.getRowOffset(), c.getRowLength()));
+        }
       }
     }
-    //If validation fails then skip whole row
-    return ReturnCode.NEXT_ROW;
+
+    //Always populate the column value into the RowValueMap
+    ByteArrayComparable currentFamilyByteComparable =
+            new ByteArrayComparable(c.getFamilyArray(),
+            c.getFamilyOffset(),
+            c.getFamilyLength());
+
+    HashMap<ByteArrayComparable, String> qualifierColumnMap =
+            currentCellToColumnIndexMap.get(
+                    currentFamilyByteComparable);
+
+    if (qualifierColumnMap != null) {
+
+      String columnName =
+              qualifierColumnMap.get(
+                      new ByteArrayComparable(c.getQualifierArray(),
+                              c.getQualifierOffset(),
+                              c.getQualifierLength()));
+
+      if (columnName != null) {
+        columnToCurrentRowValueMap.put(columnName,
+                new ByteArrayComparable(c.getValueArray(),
+                        c.getValueOffset(), c.getValueLength()));
+      }
+    }
+
+    return ReturnCode.INCLUDE;
   }
+
+
+  @Override
+  public boolean filterRow() throws IOException {
+
+    try {
+      boolean result =
+              dynamicLogicExpression.execute(columnToCurrentRowValueMap,
+                      valueFromQueryArray);
+      columnToCurrentRowValueMap = null;
+      return !result;
+    } catch (Throwable e) {
+      log.error("Error running dynamic logic on row", e);
+    }
+    return false;
+  }
+
 
   /**
    * @param pbBytes A pb serialized instance
@@ -92,47 +175,55 @@ public class SparkSQLPushDownFilter extends FilterBase {
   public static SparkSQLPushDownFilter parseFrom(final byte[] pbBytes)
           throws DeserializationException {
 
-    HashMap<ColumnFamilyQualifierMapKeyWrapper,
-            ColumnFilter> columnFamilyQualifierFilterMap = new HashMap<>();
-
     FilterProtos.SQLPredicatePushDownFilter proto;
     try {
       proto = FilterProtos.SQLPredicatePushDownFilter.parseFrom(pbBytes);
     } catch (InvalidProtocolBufferException e) {
       throw new DeserializationException(e);
     }
-    final List<FilterProtos.SQLPredicatePushDownColumnFilter> columnFilterListList =
-            proto.getColumnFilterListList();
 
-    for (FilterProtos.SQLPredicatePushDownColumnFilter columnFilter: columnFilterListList) {
+    //Load DynamicLogicExpression
+    DynamicLogicExpression dynamicLogicExpression =
+            DynamicLogicExpressionBuilder.build(proto.getDynamicLogicExpression());
 
-      byte[] columnFamily = columnFilter.getColumnFamily().toByteArray();
-      byte[] qualifier = columnFilter.getQualifier().toByteArray();
-      final ColumnFamilyQualifierMapKeyWrapper columnFamilyQualifierMapKeyWrapper =
-              new ColumnFamilyQualifierMapKeyWrapper(columnFamily, 0, columnFamily.length,
-              qualifier, 0, qualifier.length);
-
-      final MutableList<byte[]> points = new MutableList<>();
-      final MutableList<ScanRange> scanRanges = new MutableList<>();
-
-      for (ByteString byteString: columnFilter.getGetPointListList()) {
-        points.$plus$eq(byteString.toByteArray());
-      }
-
-      for (FilterProtos.RowRange rowRange: columnFilter.getRangeListList()) {
-        ScanRange scanRange = new ScanRange(rowRange.getStopRow().toByteArray(),
-                rowRange.getStopRowInclusive(),
-                rowRange.getStartRow().toByteArray(),
-                rowRange.getStartRowInclusive());
-        scanRanges.$plus$eq(scanRange);
-      }
-
-      final ColumnFilter columnFilterObj = new ColumnFilter(null, null, points, scanRanges);
-
-      columnFamilyQualifierFilterMap.put(columnFamilyQualifierMapKeyWrapper, columnFilterObj);
+    //Load valuesFromQuery
+    final List<ByteString> valueFromQueryArrayList = proto.getValueFromQueryArrayList();
+    byte[][] valueFromQueryArray = new byte[valueFromQueryArrayList.size()][];
+    for (int i = 0; i < valueFromQueryArrayList.size(); i++) {
+      valueFromQueryArray[i] = valueFromQueryArrayList.get(i).toByteArray();
     }
 
-    return new SparkSQLPushDownFilter(columnFamilyQualifierFilterMap);
+    //Load mapping from HBase family/qualifier to Spark SQL columnName
+    HashMap<ByteArrayComparable, HashMap<ByteArrayComparable, String>>
+            currentCellToColumnIndexMap = new HashMap<>();
+
+    for (FilterProtos.SQLPredicatePushDownCellToColumnMapping
+            sqlPredicatePushDownCellToColumnMapping :
+            proto.getCellToColumnMappingList()) {
+
+      byte[] familyArray =
+              sqlPredicatePushDownCellToColumnMapping.getColumnFamily().toByteArray();
+      ByteArrayComparable familyByteComparable =
+              new ByteArrayComparable(familyArray, 0, familyArray.length);
+      HashMap<ByteArrayComparable, String> qualifierMap =
+              currentCellToColumnIndexMap.get(familyByteComparable);
+
+      if (qualifierMap == null) {
+        qualifierMap = new HashMap<>();
+        currentCellToColumnIndexMap.put(familyByteComparable, qualifierMap);
+      }
+      byte[] qualifierArray =
+              sqlPredicatePushDownCellToColumnMapping.getQualifier().toByteArray();
+
+      ByteArrayComparable qualifierByteComparable =
+              new ByteArrayComparable(qualifierArray, 0 ,qualifierArray.length);
+
+      qualifierMap.put(qualifierByteComparable,
+              sqlPredicatePushDownCellToColumnMapping.getColumnName());
+    }
+
+    return new SparkSQLPushDownFilter(dynamicLogicExpression,
+            valueFromQueryArray, currentCellToColumnIndexMap);
   }
 
   /**
@@ -143,44 +234,27 @@ public class SparkSQLPushDownFilter extends FilterBase {
     FilterProtos.SQLPredicatePushDownFilter.Builder builder =
             FilterProtos.SQLPredicatePushDownFilter.newBuilder();
 
-    FilterProtos.SQLPredicatePushDownColumnFilter.Builder columnBuilder =
-            FilterProtos.SQLPredicatePushDownColumnFilter.newBuilder();
+    FilterProtos.SQLPredicatePushDownCellToColumnMapping.Builder columnMappingBuilder =
+            FilterProtos.SQLPredicatePushDownCellToColumnMapping.newBuilder();
 
-    FilterProtos.RowRange.Builder rowRangeBuilder = FilterProtos.RowRange.newBuilder();
-
-    for (Map.Entry<ColumnFamilyQualifierMapKeyWrapper, ColumnFilter> entry :
-            columnFamilyQualifierFilterMap.entrySet()) {
-
-      columnBuilder.setColumnFamily(
-              ByteStringer.wrap(entry.getKey().cloneColumnFamily()));
-      columnBuilder.setQualifier(
-              ByteStringer.wrap(entry.getKey().cloneQualifier()));
-
-      final MutableList<byte[]> points = entry.getValue().points();
-
-      int pointLength = points.length();
-      for (int i = 0; i < pointLength; i++) {
-        byte[] point = points.get(i).get();
-        columnBuilder.addGetPointList(ByteStringer.wrap(point));
-
-      }
-
-      final MutableList<ScanRange> ranges = entry.getValue().ranges();
-      int rangeLength = ranges.length();
-      for (int i = 0; i < rangeLength; i++) {
-        ScanRange scanRange = ranges.get(i).get();
-        rowRangeBuilder.clear();
-        rowRangeBuilder.setStartRow(ByteStringer.wrap(scanRange.lowerBound()));
-        rowRangeBuilder.setStopRow(ByteStringer.wrap(scanRange.upperBound()));
-        rowRangeBuilder.setStartRowInclusive(scanRange.isLowerBoundEqualTo());
-        rowRangeBuilder.setStopRowInclusive(scanRange.isUpperBoundEqualTo());
-
-        columnBuilder.addRangeList(rowRangeBuilder.build());
-      }
-
-      builder.addColumnFilterList(columnBuilder.build());
-      columnBuilder.clear();
+    builder.setDynamicLogicExpression(dynamicLogicExpression.toExpressionString());
+    for (byte[] valueFromQuery: valueFromQueryArray) {
+      builder.addValueFromQueryArray(ByteStringer.wrap(valueFromQuery));
     }
+
+    for (Map.Entry<ByteArrayComparable, HashMap<ByteArrayComparable, String>>
+            familyEntry : currentCellToColumnIndexMap.entrySet()) {
+      for (Map.Entry<ByteArrayComparable, String> qualifierEntry :
+              familyEntry.getValue().entrySet()) {
+        columnMappingBuilder.setColumnFamily(
+                ByteStringer.wrap(familyEntry.getKey().bytes()));
+        columnMappingBuilder.setQualifier(
+                ByteStringer.wrap(qualifierEntry.getKey().bytes()));
+        columnMappingBuilder.setColumnName(qualifierEntry.getValue());
+        builder.addCellToColumnMapping(columnMappingBuilder.build());
+      }
+    }
+
     return builder.build().toByteArray();
   }
 }

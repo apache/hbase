@@ -29,7 +29,8 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
   @transient var sc: SparkContext = null
   var TEST_UTIL: HBaseTestingUtility = new HBaseTestingUtility
 
-  val tableName = "t1"
+  val t1TableName = "t1"
+  val t2TableName = "t2"
   val columnFamily = "c"
 
   var sqlContext:SQLContext = null
@@ -41,50 +42,94 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     logInfo(" - minicluster started")
     try
-      TEST_UTIL.deleteTable(TableName.valueOf(tableName))
+      TEST_UTIL.deleteTable(TableName.valueOf(t1TableName))
     catch {
-      case e: Exception => logInfo(" - no table " + tableName + " found")
-
+      case e: Exception => logInfo(" - no table " + t1TableName + " found")
     }
-    logInfo(" - creating table " + tableName)
-    TEST_UTIL.createTable(TableName.valueOf(tableName), Bytes.toBytes(columnFamily))
+    try
+      TEST_UTIL.deleteTable(TableName.valueOf(t2TableName))
+    catch {
+      case e: Exception => logInfo(" - no table " + t2TableName + " found")
+    }
+    logInfo(" - creating table " + t1TableName)
+    TEST_UTIL.createTable(TableName.valueOf(t1TableName), Bytes.toBytes(columnFamily))
+    logInfo(" - created table")
+    logInfo(" - creating table " + t2TableName)
+    TEST_UTIL.createTable(TableName.valueOf(t2TableName), Bytes.toBytes(columnFamily))
     logInfo(" - created table")
 
     sc = new SparkContext("local", "test")
 
     val connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration)
-    val table = connection.getTable(TableName.valueOf("t1"))
-
     try {
-      var put = new Put(Bytes.toBytes("get1"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo1"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("1"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(1))
-      table.put(put)
-      put = new Put(Bytes.toBytes("get2"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo2"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("4"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(4))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("FOO"))
-      table.put(put)
-      put = new Put(Bytes.toBytes("get3"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo3"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
-      table.put(put)
-      put = new Put(Bytes.toBytes("get4"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo4"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("10"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(10))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("BAR"))
-      table.put(put)
-      put = new Put(Bytes.toBytes("get5"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo5"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
-      put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
-      table.put(put)
+      val t1Table = connection.getTable(TableName.valueOf("t1"))
+
+      try {
+        var put = new Put(Bytes.toBytes("get1"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo1"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("1"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(1))
+        t1Table.put(put)
+        put = new Put(Bytes.toBytes("get2"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo2"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("4"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(4))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("FOO"))
+        t1Table.put(put)
+        put = new Put(Bytes.toBytes("get3"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo3"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
+        t1Table.put(put)
+        put = new Put(Bytes.toBytes("get4"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo4"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("10"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(10))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("BAR"))
+        t1Table.put(put)
+        put = new Put(Bytes.toBytes("get5"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo5"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
+        t1Table.put(put)
+      } finally {
+        t1Table.close()
+      }
+
+      val t2Table = connection.getTable(TableName.valueOf("t2"))
+
+      try {
+        var put = new Put(Bytes.toBytes(1))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo1"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("1"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(1))
+        t2Table.put(put)
+        put = new Put(Bytes.toBytes(2))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo2"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("4"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(4))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("FOO"))
+        t2Table.put(put)
+        put = new Put(Bytes.toBytes(3))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo3"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
+        t2Table.put(put)
+        put = new Put(Bytes.toBytes(4))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo4"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("10"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(10))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("z"), Bytes.toBytes("BAR"))
+        t2Table.put(put)
+        put = new Put(Bytes.toBytes(5))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("a"), Bytes.toBytes("foo5"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("b"), Bytes.toBytes("8"))
+        put.addColumn(Bytes.toBytes(columnFamily), Bytes.toBytes("i"), Bytes.toBytes(8))
+        t2Table.put(put)
+      } finally {
+        t2Table.close()
+      }
     } finally {
-      table.close()
       connection.close()
     }
 
@@ -98,15 +143,28 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
         "hbase.batching.num" -> "100",
         "cachingNum" -> "100"))
 
-    df.registerTempTable("hbaseTmp")
+    df.registerTempTable("hbaseTable1")
+
+    df = sqlContext.load("org.apache.hadoop.hbase.spark",
+      Map("hbase.columns.mapping" ->
+        "KEY_FIELD INT :key, A_FIELD STRING c:a, B_FIELD STRING c:b,",
+        "hbase.table" -> "t2",
+        "hbase.batching.num" -> "100",
+        "cachingNum" -> "100"))
+
+    df.registerTempTable("hbaseTable2")
   }
 
   override def afterAll() {
-    TEST_UTIL.deleteTable(TableName.valueOf(tableName))
+    TEST_UTIL.deleteTable(TableName.valueOf(t1TableName))
     logInfo("shuting down minicluster")
     TEST_UTIL.shutdownMiniCluster()
 
     sc.stop()
+  }
+
+  override def beforeEach(): Unit = {
+    DefaultSourceStaticUtils.lastFiveExecutionRules.clear()
   }
 
 
@@ -114,7 +172,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
    * A example of query three fields and also only using rowkey points for the filter
    */
   test("Test rowKey point only rowKey query") {
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
       "WHERE " +
       "(KEY_FIELD = 'get1' or KEY_FIELD = 'get2' or KEY_FIELD = 'get3')").take(10)
 
@@ -122,23 +180,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     assert(results.length == 3)
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 1)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 0)
-    assert(keyFieldFilter.points.length == 3)
-    assert(Bytes.toString(keyFieldFilter.points.head).equals("get1"))
-    assert(Bytes.toString(keyFieldFilter.points(1)).equals("get2"))
-    assert(Bytes.toString(keyFieldFilter.points(2)).equals("get3"))
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( KEY_FIELD == 0 OR KEY_FIELD == 1 ) OR KEY_FIELD == 2 )"))
 
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    assert(executionRules.rowKeyFilter.points.size == 3)
+    assert(executionRules.rowKeyFilter.ranges.size == 0)
   }
 
   /**
    * A example of query three fields and also only using cell points for the filter
    */
   test("Test cell point only rowKey query") {
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
       "WHERE " +
       "(B_FIELD = '4' or B_FIELD = '10' or A_FIELD = 'foo1')").take(10)
 
@@ -146,17 +199,8 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     assert(results.length == 3)
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 2)
-    val bFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("B_FIELD").get
-    assert(bFieldFilter.ranges.length == 0)
-    assert(bFieldFilter.points.length == 2)
-    val aFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("A_FIELD").get
-    assert(aFieldFilter.ranges.length == 0)
-    assert(aFieldFilter.points.length == 1)
-
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( B_FIELD == 0 OR B_FIELD == 1 ) OR A_FIELD == 2 )"))
   }
 
   /**
@@ -164,7 +208,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
    * Also an example of less then and greater then
    */
   test("Test two range rowKey query") {
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
       "WHERE " +
       "( KEY_FIELD < 'get2' or KEY_FIELD > 'get3')").take(10)
 
@@ -172,13 +216,88 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     assert(results.length == 3)
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 1)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 2)
-    assert(keyFieldFilter.points.length == 0)
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( KEY_FIELD < 0 OR KEY_FIELD > 1 )"))
 
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 2)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(Bytes.equals(scanRange1.upperBound,Bytes.toBytes("get2")))
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(!scanRange1.isUpperBoundEqualTo)
+
+    val scanRange2 = executionRules.rowKeyFilter.ranges.get(1).get
+    assert(Bytes.equals(scanRange2.lowerBound,Bytes.toBytes("get3")))
+    assert(scanRange2.upperBound == null)
+    assert(!scanRange2.isLowerBoundEqualTo)
+    assert(scanRange2.isUpperBoundEqualTo)
+  }
+
+  /**
+   * A example of a OR merge between to ranges the result is one range
+   * Also an example of less then and greater then
+   *
+   * This example makes sure the code works for a int rowKey
+   */
+  test("Test two range rowKey query where the rowKey is Int and there is a range over lap") {
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable2 " +
+      "WHERE " +
+      "( KEY_FIELD < 4 or KEY_FIELD > 2)").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+
+
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( KEY_FIELD < 0 OR KEY_FIELD > 1 )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(scanRange1.upperBound == null)
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
+    assert(results.length == 5)
+  }
+
+  /**
+   * A example of a OR merge between to ranges the result is two ranges
+   * Also an example of less then and greater then
+   *
+   * This example makes sure the code works for a int rowKey
+   */
+  test("Test two range rowKey query where the rowKey is Int and the ranges don't over lap") {
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable2 " +
+      "WHERE " +
+      "( KEY_FIELD < 2 or KEY_FIELD > 4)").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( KEY_FIELD < 0 OR KEY_FIELD > 1 )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 0)
+
+    assert(executionRules.rowKeyFilter.ranges.size == 2)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(Bytes.equals(scanRange1.upperBound, Bytes.toBytes(2)))
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(!scanRange1.isUpperBoundEqualTo)
+
+    val scanRange2 = executionRules.rowKeyFilter.ranges.get(1).get
+    assert(Bytes.equals(scanRange2.lowerBound, Bytes.toBytes(4)))
+    assert(scanRange2.upperBound == null)
+    assert(!scanRange2.isLowerBoundEqualTo)
+    assert(scanRange2.isUpperBoundEqualTo)
+
+    assert(results.length == 2)
   }
 
   /**
@@ -186,7 +305,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
    * Also an example of less then and equal to and greater then and equal to
    */
   test("Test one combined range rowKey query") {
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
       "WHERE " +
       "(KEY_FIELD <= 'get3' and KEY_FIELD >= 'get2')").take(10)
 
@@ -194,13 +313,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     assert(results.length == 2)
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 1)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 1)
-    assert(keyFieldFilter.points.length == 0)
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( KEY_FIELD <= 0 AND KEY_FIELD >= 1 )"))
 
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("get2")))
+    assert(Bytes.equals(scanRange1.upperBound, Bytes.toBytes("get3")))
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
   }
 
   /**
@@ -211,10 +335,9 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     val results = df.select("KEY_FIELD").take(10)
     assert(results.length == 5)
 
-
     val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
-    assert(executionRules.columnFilterCollection == null)
-    assert(executionRules.requiredQualifierDefinitionArray.length == 0)
+
+    assert(executionRules.dynamicLogicExpression == null)
 
   }
 
@@ -223,38 +346,28 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
    * rowKey and the a column
    */
   test("Test SQL point and range combo") {
-    val results = sqlContext.sql("SELECT KEY_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD FROM hbaseTable1 " +
       "WHERE " +
       "(KEY_FIELD = 'get1' and B_FIELD < '3') or " +
       "(KEY_FIELD >= 'get3' and B_FIELD = '8')").take(5)
 
     val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
 
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( KEY_FIELD == 0 AND B_FIELD < 1 ) OR " +
+      "( KEY_FIELD >= 2 AND B_FIELD == 3 ) )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 1)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("get3")))
+    assert(scanRange1.upperBound == null)
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
+
     assert(results.length == 3)
-
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 2)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 1)
-    assert(keyFieldFilter.ranges.head.upperBound == null)
-    assert(Bytes.toString(keyFieldFilter.ranges.head.lowerBound).equals("get3"))
-    assert(keyFieldFilter.ranges.head.isLowerBoundEqualTo)
-    assert(keyFieldFilter.points.length == 1)
-    assert(Bytes.toString(keyFieldFilter.points.head).equals("get1"))
-
-    val bFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("B_FIELD").get
-    assert(bFieldFilter.ranges.length == 1)
-    assert(bFieldFilter.ranges.head.lowerBound.length == 0)
-    assert(Bytes.toString(bFieldFilter.ranges.head.upperBound).equals("3"))
-    assert(!bFieldFilter.ranges.head.isUpperBoundEqualTo)
-    assert(bFieldFilter.points.length == 1)
-    assert(Bytes.toString(bFieldFilter.points.head).equals("8"))
-
-    assert(executionRules.requiredQualifierDefinitionArray.length == 1)
-    assert(executionRules.requiredQualifierDefinitionArray.head.columnName.equals("B_FIELD"))
-    assert(executionRules.requiredQualifierDefinitionArray.head.columnFamily.equals("c"))
-    assert(executionRules.requiredQualifierDefinitionArray.head.qualifier.equals("b"))
   }
 
   /**
@@ -262,46 +375,145 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
    */
   test("Test two complete range non merge rowKey query") {
 
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable2 " +
       "WHERE " +
-      "( KEY_FIELD >= 'get1' and KEY_FIELD <= 'get2') or" +
-      "( KEY_FIELD > 'get3' and KEY_FIELD <= 'get5')").take(10)
+      "( KEY_FIELD >= 1 and KEY_FIELD <= 2) or" +
+      "( KEY_FIELD > 3 and KEY_FIELD <= 5)").take(10)
 
-    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
     assert(results.length == 4)
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( KEY_FIELD >= 0 AND KEY_FIELD <= 1 ) OR " +
+      "( KEY_FIELD > 2 AND KEY_FIELD <= 3 ) )"))
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 1)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 2)
-    assert(keyFieldFilter.points.length == 0)
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 2)
 
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes(1)))
+    assert(Bytes.equals(scanRange1.upperBound, Bytes.toBytes(2)))
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
+    val scanRange2 = executionRules.rowKeyFilter.ranges.get(1).get
+    assert(Bytes.equals(scanRange2.lowerBound,Bytes.toBytes(3)))
+    assert(Bytes.equals(scanRange2.upperBound, Bytes.toBytes(5)))
+    assert(!scanRange2.isLowerBoundEqualTo)
+    assert(scanRange2.isUpperBoundEqualTo)
+
   }
 
   /**
    * A complex query with two complex ranges that does merge into one
    */
   test("Test two complete range merge rowKey query") {
-    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTmp " +
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
       "WHERE " +
-      "( KEY_FIELD >= 'get1' and KEY_FIELD <= 'get3') or" +
+      "( KEY_FIELD >= 'get1' and KEY_FIELD <= 'get2') or" +
       "( KEY_FIELD > 'get3' and KEY_FIELD <= 'get5')").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+    assert(results.length == 4)
+
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( KEY_FIELD >= 0 AND KEY_FIELD <= 1 ) OR " +
+      "( KEY_FIELD > 2 AND KEY_FIELD <= 3 ) )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 2)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("get1")))
+    assert(Bytes.equals(scanRange1.upperBound, Bytes.toBytes("get2")))
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
+    val scanRange2 = executionRules.rowKeyFilter.ranges.get(1).get
+    assert(Bytes.equals(scanRange2.lowerBound, Bytes.toBytes("get3")))
+    assert(Bytes.equals(scanRange2.upperBound, Bytes.toBytes("get5")))
+    assert(!scanRange2.isLowerBoundEqualTo)
+    assert(scanRange2.isUpperBoundEqualTo)
+  }
+
+  test("Test OR logic with a one RowKey and One column") {
+
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
+      "WHERE " +
+      "( KEY_FIELD >= 'get1' or A_FIELD <= 'foo2') or" +
+      "( KEY_FIELD > 'get3' or B_FIELD <= '4')").take(10)
 
     val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
 
     assert(results.length == 5)
 
-    assert(executionRules.columnFilterCollection.columnFilterMap.size == 1)
-    val keyFieldFilter =
-      executionRules.columnFilterCollection.columnFilterMap.get("KEY_FIELD").get
-    assert(keyFieldFilter.ranges.length == 1)
-    assert(keyFieldFilter.points.length == 0)
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( KEY_FIELD >= 0 OR A_FIELD <= 1 ) OR " +
+      "( KEY_FIELD > 2 OR B_FIELD <= 3 ) )"))
 
-    assert(executionRules.requiredQualifierDefinitionArray.length == 2)
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    //This is the main test for 14406
+    //Because the key is joined through a or with a qualifier
+    //There is no filter on the rowKey
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(scanRange1.upperBound == null)
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
   }
 
-  test("test table that doesn't exist") {
+  test("Test OR logic with a two columns") {
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
+      "WHERE " +
+      "( B_FIELD > '4' or A_FIELD <= 'foo2') or" +
+      "( A_FIELD > 'foo2' or B_FIELD < '4')").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+    assert(results.length == 5)
+
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( ( B_FIELD > 0 OR A_FIELD <= 1 ) OR " +
+      "( A_FIELD > 2 OR B_FIELD < 3 ) )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(scanRange1.upperBound == null)
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+
+  }
+
+  test("Test single RowKey Or Column logic") {
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseTable1 " +
+      "WHERE " +
+      "( KEY_FIELD >= 'get4' or A_FIELD <= 'foo2' )").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+    assert(results.length == 4)
+
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( KEY_FIELD >= 0 OR A_FIELD <= 1 )"))
+
+    assert(executionRules.rowKeyFilter.points.size == 0)
+    assert(executionRules.rowKeyFilter.ranges.size == 1)
+
+    val scanRange1 = executionRules.rowKeyFilter.ranges.get(0).get
+    assert(Bytes.equals(scanRange1.lowerBound,Bytes.toBytes("")))
+    assert(scanRange1.upperBound == null)
+    assert(scanRange1.isLowerBoundEqualTo)
+    assert(scanRange1.isUpperBoundEqualTo)
+  }
+
+
+  test("Test table that doesn't exist") {
     intercept[TableNotFoundException] {
       df = sqlContext.load("org.apache.hadoop.hbase.spark",
         Map("hbase.columns.mapping" ->
@@ -315,6 +527,7 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
         "( KEY_FIELD >= 'get1' and KEY_FIELD <= 'get3') or" +
         "( KEY_FIELD > 'get3' and KEY_FIELD <= 'get5')").count()
     }
+    DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
   }
 
   test("Test table with column that doesn't exist") {
@@ -325,11 +538,14 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     df.registerTempTable("hbaseFactColumnTmp")
 
-    val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseFactColumnTmp")
+    val result = sqlContext.sql("SELECT KEY_FIELD, " +
+      "B_FIELD, A_FIELD FROM hbaseFactColumnTmp")
 
     assert(result.count() == 5)
 
-    val localResult = result.take(5)
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+    assert(executionRules.dynamicLogicExpression == null)
+
   }
 
   test("Test table with INT column") {
@@ -343,11 +559,15 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseIntTmp"+
     " where I_FIELD > 4 and I_FIELD < 10")
 
-    assert(result.count() == 2)
+    val localResult = result.take(5)
 
-    val localResult = result.take(3)
-
+    assert(localResult.length == 2)
     assert(localResult(0).getInt(2) == 8)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+    assert(executionRules.dynamicLogicExpression.toExpressionString.
+      equals("( I_FIELD > 0 AND I_FIELD < 1 )"))
+
   }
 
   test("Test table with INT column defined at wrong type") {
@@ -358,11 +578,14 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     df.registerTempTable("hbaseIntWrongTypeTmp")
 
-    val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
+    val result = sqlContext.sql("SELECT KEY_FIELD, " +
+      "B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
 
-    assert(result.count() == 5)
+    val localResult = result.take(10)
+    assert(localResult.length == 5)
 
-    val localResult = result.take(5)
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+    assert(executionRules.dynamicLogicExpression == null)
 
     assert(localResult(0).getString(2).length == 4)
     assert(localResult(0).getString(2).charAt(0).toByte == 0)
@@ -380,9 +603,13 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
       df.registerTempTable("hbaseBadTmp")
 
-      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseBadTmp")
+      val result = sqlContext.sql("SELECT KEY_FIELD, " +
+        "B_FIELD, I_FIELD FROM hbaseBadTmp")
 
-      val localResult = result.take(5)
+      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+      assert(executionRules.dynamicLogicExpression == null)
+
+      result.take(5)
     }
   }
 
@@ -396,11 +623,15 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
       df.registerTempTable("hbaseIntWrongTypeTmp")
 
-      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
+      val result = sqlContext.sql("SELECT KEY_FIELD, " +
+        "B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
 
-      assert(result.count() == 5)
+      val localResult = result.take(10)
+      assert(localResult.length == 5)
 
-      val localResult = result.take(5)
+      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+      assert(executionRules.dynamicLogicExpression == null)
+
     }
   }
 
@@ -413,11 +644,18 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
       df.registerTempTable("hbaseIntWrongTypeTmp")
 
-      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
+      val result = sqlContext.sql("SELECT KEY_FIELD, " +
+        "B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
 
       assert(result.count() == 5)
 
       val localResult = result.take(5)
+      localResult.length
+
+      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+      assert(executionRules.dynamicLogicExpression == null)
+
+
     }
   }
 
@@ -430,11 +668,16 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
       df.registerTempTable("hbaseIntWrongTypeTmp")
 
-      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, I_FIELD FROM hbaseIntWrongTypeTmp")
+      val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, " +
+        "I_FIELD FROM hbaseIntWrongTypeTmp")
 
-      assert(result.count() == 5)
+      val localResult = result.take(10)
+      assert(localResult.length == 5)
 
-      val localResult = result.take(5)
+      val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+      assert(executionRules.dynamicLogicExpression == null)
+
+
     }
   }
 
@@ -448,9 +691,8 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
 
     val result = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, Z_FIELD FROM hbaseZTmp")
 
-    assert(result.count() == 5)
-
-    val localResult = result.take(5)
+    val localResult = result.take(10)
+    assert(localResult.length == 5)
 
     assert(localResult(0).getString(2) == null)
     assert(localResult(1).getString(2) == "FOO")
@@ -458,5 +700,27 @@ BeforeAndAfterEach with BeforeAndAfterAll with Logging {
     assert(localResult(3).getString(2) == "BAR")
     assert(localResult(4).getString(2) == null)
 
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+    assert(executionRules.dynamicLogicExpression == null)
+  }
+
+  test("Test with column logic disabled") {
+    df = sqlContext.load("org.apache.hadoop.hbase.spark",
+      Map("hbase.columns.mapping" ->
+        "KEY_FIELD STRING :key, A_FIELD STRING c:a, B_FIELD STRING c:b, Z_FIELD STRING c:z,",
+        "hbase.table" -> "t1",
+        "hbase.push.down.column.filter" -> "false"))
+
+    df.registerTempTable("hbaseNoPushDownTmp")
+
+    val results = sqlContext.sql("SELECT KEY_FIELD, B_FIELD, A_FIELD FROM hbaseNoPushDownTmp " +
+      "WHERE " +
+      "(KEY_FIELD <= 'get3' and KEY_FIELD >= 'get2')").take(10)
+
+    val executionRules = DefaultSourceStaticUtils.lastFiveExecutionRules.poll()
+
+    assert(results.length == 2)
+
+    assert(executionRules.dynamicLogicExpression == null)
   }
 }
