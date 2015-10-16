@@ -814,6 +814,7 @@ public class AssignmentManager extends ZooKeeperListener {
       case RS_ZK_REGION_CLOSED:
       case RS_ZK_REGION_FAILED_OPEN:
         // Region is closed, insert into RIT and handle it
+        regionStates.setLastRegionServerOfRegion(sn, encodedName);
         regionStates.updateRegionState(regionInfo, State.CLOSED, sn);
         invokeAssign(regionInfo);
         break;
