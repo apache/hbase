@@ -17,8 +17,13 @@
  */
 
 /* General styling */
-body { padding-top: 60px; }
-.logo img { float: right; }
+body { padding-top: 50px; }
+html .content {
+  margin-left: 1.0em;
+}
+.navbar-brand img {
+  margin-top: -7px;
+}
 .inner_header { margin-bottom: 1em;}
 section { margin-bottom: 3em; }
 

@@ -45,7 +45,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
 
   <body>
   <div class="navbar  navbar-fixed-top navbar-default">
-      <div class="container">
+      <div class="container-fluid">
           <div class="navbar-header">
               <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                   <span class="icon-bar"></span>
@@ -68,7 +68,7 @@ String listenPort = conf.get("hbase.rest.port", "8080");
       </div>
   </div>
 
-<div class="container">
+<div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
             <h1>RESTServer <small><%= listenPort %></small></h1>

@@ -98,7 +98,7 @@
 </head>
 <body>
 <div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container">
+    <div class="container-fluid">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                 <span class="icon-bar"></span>
@@ -133,9 +133,7 @@ if ( fqtn != null ) {
   }
   if ( !readOnly && action != null ) {
 %>
-<div class="container">
-
-
+<div class="container-fluid content">
         <div class="row inner_header">
             <div class="page-header">
                 <h1>Table action request accepted</h1>
@@ -167,10 +165,7 @@ if ( fqtn != null ) {
 <%
   } else {
 %>
-<div class="container">
-
-
-
+<div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
             <h1>Table <small><%= fqtn %></small></h1>
@@ -429,7 +424,7 @@ Actions:
 <% }
 } else { // handle the case for fqtn is null with error message + redirect
 %>
-<div class="container">
+<div class="container-fluid content">
     <div class="row inner_header">
         <div class="page-header">
             <h1>Table not ready</h1>
