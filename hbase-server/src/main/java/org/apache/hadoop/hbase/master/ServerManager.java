@@ -617,7 +617,8 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName);
+    boolean carryingMeta = services.getAssignmentManager().isCarryingMeta(serverName) ==
+        AssignmentManager.ServerHostRegion.HOSTING_REGION;
     this.services.getMasterProcedureExecutor().
       submitProcedure(new ServerCrashProcedure(serverName, true, carryingMeta));
     LOG.debug("Added=" + serverName +

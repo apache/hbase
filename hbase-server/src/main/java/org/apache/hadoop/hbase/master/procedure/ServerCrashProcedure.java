@@ -313,8 +313,9 @@ implements ServerProcedureInterface {
   private boolean processMeta(final MasterProcedureEnv env)
   throws IOException {
     if (LOG.isDebugEnabled()) LOG.debug("Processing hbase:meta that was on " + this.serverName);
-    MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
-    AssignmentManager am = env.getMasterServices().getAssignmentManager();
+    MasterServices services = env.getMasterServices();
+    MasterFileSystem mfs = services.getMasterFileSystem();
+    AssignmentManager am = services.getAssignmentManager();
     HRegionInfo metaHRI = HRegionInfo.FIRST_META_REGIONINFO;
     if (this.shouldSplitWal) {
       if (this.distributedLogReplay) {
@@ -328,9 +329,31 @@ implements ServerProcedureInterface {
 
     // Assign meta if still carrying it. Check again: region may be assigned because of RIT timeout
     boolean processed = true;
-    if (am.isCarryingMeta(serverName)) {
+    boolean shouldAssignMeta = false;
+    AssignmentManager.ServerHostRegion rsCarryingMetaRegion = am.isCarryingMeta(serverName);
+      switch (rsCarryingMetaRegion) {
+        case HOSTING_REGION:
+          LOG.info("Server " + serverName + " was carrying META. Trying to assign.");
+          am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+          shouldAssignMeta = true;
+          break;
+        case UNKNOWN:
+          if (!services.getMetaTableLocator().isLocationAvailable(services.getZooKeeper())) {
+            // the meta location as per master is null. This could happen in case when meta
+            // assignment in previous run failed, while meta znode has been updated to null.
+            // We should try to assign the meta again.
+            shouldAssignMeta = true;
+            break;
+          }
+          // fall through
+        case NOT_HOSTING_REGION:
+          LOG.info("META has been assigned to otherwhere, skip assigning.");
+          break;
+        default:
+          throw new IOException("Unsupported action in MetaServerShutdownHandler");
+    }
+    if (shouldAssignMeta) {
       // TODO: May block here if hard time figuring state of meta.
-      am.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
       verifyAndAssignMetaWithRetries(env);
       if (this.shouldSplitWal && distributedLogReplay) {
         int timeout = env.getMasterConfiguration().getInt(KEY_WAIT_ON_RIT, DEFAULT_WAIT_ON_RIT);
@@ -409,7 +432,8 @@ implements ServerProcedureInterface {
     for (int i = 1; i < replicaCount; i++) {
       HRegionInfo metaHri =
           RegionReplicaUtil.getRegionInfoForReplica(HRegionInfo.FIRST_META_REGIONINFO, i);
-      if (am.isCarryingMetaReplica(this.serverName, metaHri)) {
+      if (am.isCarryingMetaReplica(this.serverName, metaHri) ==
+          AssignmentManager.ServerHostRegion.HOSTING_REGION) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Reassigning meta replica" + metaHri + " that was on " + this.serverName);
         }
