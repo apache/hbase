@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -103,7 +104,8 @@ public class TestServerCrashProcedure {
       master.setServerCrashProcessingEnabled(false);
       // Kill a server. Master will notice but do nothing other than add it to list of dead servers.
       HRegionServer hrs = this.util.getHBaseCluster().getRegionServer(0);
-      boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(hrs.getServerName());
+      boolean carryingMeta = (master.getAssignmentManager().isCarryingMeta(hrs.getServerName()) ==
+          AssignmentManager.ServerHostRegion.HOSTING_REGION);
       this.util.getHBaseCluster().killRegionServer(hrs.getServerName());
       hrs.join();
       // Wait until the expiration of the server has arrived at the master. We won't process it
