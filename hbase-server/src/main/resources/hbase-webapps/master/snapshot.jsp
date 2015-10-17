@@ -82,7 +82,7 @@
   </head>
 <body>
 <div class="navbar  navbar-fixed-top navbar-default">
-    <div class="container">
+    <div class="container-fluid">
         <div class="navbar-header">
             <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
                 <span class="icon-bar"></span>
@@ -107,7 +107,7 @@
     </div>
 </div>
 <% if (snapshot == null) { %>
-  <div class="container">
+  <div class="container-fluid content">
   <div class="row inner_header">
     <div class="page-header">
       <h1>Snapshot "<%= snapshotName %>" does not exists</h1>
@@ -115,7 +115,7 @@
   </div>
   <p>Go <a href="javascript:history.back()">Back</a>, or wait for the redirect.
 <% } else { %>
-  <div class="container">
+  <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
           <h1>Snapshot: <%= snapshotName %></h1>
