@@ -386,7 +386,11 @@ public class AsyncRpcClient extends AbstractRpcClient {
         throw new StoppedRpcClientException();
       }
       rpcChannel = connections.get(hashCode);
-      if (rpcChannel == null || !rpcChannel.isAlive()) {
+      if (rpcChannel != null && !rpcChannel.isAlive()) {
+        LOG.debug("Removing dead channel from server="+rpcChannel.address.toString());
+        connections.remove(hashCode);
+      }
+      if (rpcChannel == null) {
         rpcChannel = new AsyncRpcChannel(this.bootstrap, this, ticket, serviceName, location);
         connections.put(hashCode, rpcChannel);
       }
