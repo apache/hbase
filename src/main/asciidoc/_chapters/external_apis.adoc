@@ -630,3 +630,77 @@ public class HBaseExample {
 }
 ----
 ====
+
+[[scala]]
+== Scala
+
+=== Setting the Classpath
+
+To use Scala with HBase, your CLASSPATH must include HBase's classpath as well as
+the Scala JARs required by your code. First, use the following command on a server
+running the HBase RegionServer process, to get HBase's classpath.
+
+[source, bash]
+----
+$ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
+
+/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64
+----
+
+Set the `$CLASSPATH` environment variable to include the path you found in the previous
+step, plus the path of `scala-library.jar` and each additional Scala-related JAR needed for
+your project.
+
+[source, bash]
+----
+$ export CLASSPATH=$CLASSPATH:/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64:/path/to/scala-library.jar
+----
+
+=== Scala SBT File
+
+Your `build.sbt` file needs the following `resolvers` and `libraryDependencies` to work
+with HBase.
+
+----
+resolvers += "Apache HBase" at "https://repository.apache.org/content/repositories/releases"
+
+resolvers += "Thrift" at "http://people.apache.org/~rawson/repo/"
+
+libraryDependencies ++= Seq(
+    "org.apache.hadoop" % "hadoop-core" % "0.20.2",
+    "org.apache.hbase" % "hbase" % "0.90.4"
+)
+----
+
+=== Example Scala Code
+
+This example lists HBase tables, creates a new table, and adds a row to it.
+
+[source, scala]
+----
+import org.apache.hadoop.hbase.HBaseConfiguration
+import org.apache.hadoop.hbase.client.{HBaseAdmin,HTable,Put,Get}
+import org.apache.hadoop.hbase.util.Bytes
+
+
+val conf = new HBaseConfiguration()
+val admin = new HBaseAdmin(conf)
+
+// list the tables
+val listtables=admin.listTables()
+listtables.foreach(println)
+
+// let's insert some data in 'mytable' and get the row
+
+val table = new HTable(conf, "mytable")
+
+val theput= new Put(Bytes.toBytes("rowkey1"))
+
+theput.add(Bytes.toBytes("ids"),Bytes.toBytes("id1"),Bytes.toBytes("one"))
+table.put(theput)
+
+val theget= new Get(Bytes.toBytes("rowkey1"))
+val result=table.get(theget)
+val value=result.value()
+println(Bytes.toString(value))
+----
