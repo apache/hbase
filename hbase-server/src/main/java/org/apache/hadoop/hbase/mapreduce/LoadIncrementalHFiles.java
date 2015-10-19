@@ -428,6 +428,7 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
         }
 
         int maxRetries = getConf().getInt("hbase.bulkload.retries.number", 10);
+        maxRetries = Math.max(maxRetries, startEndKeys.getFirst().length + 1);
         if (maxRetries != 0 && count >= maxRetries) {
           throw new IOException("Retry attempted " + count +
             " times without completing, bailing out");
@@ -611,7 +612,11 @@ public class LoadIncrementalHFiles extends Configured implements Tool {
 
     // We use a '_' prefix which is ignored when walking directory trees
     // above.
-    final Path tmpDir = new Path(item.hfilePath.getParent(), "_tmp");
+    final String TMP_DIR = "_tmp";
+    Path tmpDir = item.hfilePath.getParent();
+    if (!tmpDir.getName().equals(TMP_DIR)) {
+      tmpDir = new Path(tmpDir, TMP_DIR);
+    }
 
     LOG.info("HFile at " + hfilePath + " no longer fits inside a single " +
     "region. Splitting...");
