@@ -21,12 +21,12 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.hbase.classification.InterfaceAudience;
-import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.regionserver.SplitTransaction.TransactionListener;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Executes region merge as a "transaction". It is similar with
@@ -171,8 +171,23 @@ public interface RegionMergeTransaction {
    * @return merged region
    * @throws IOException
    * @see #rollback(Server, RegionServerServices)
+   * @deprecated use #execute(Server, RegionServerServices, User)
    */
+  @Deprecated
   Region execute(Server server, RegionServerServices services) throws IOException;
+
+  /**
+   * Run the transaction.
+   * @param server Hosting server instance. Can be null when testing
+   * @param services Used to online/offline regions.
+   * @param user
+   * @throws IOException If thrown, transaction failed. Call
+   *           {@link #rollback(Server, RegionServerServices)}
+   * @return merged region
+   * @throws IOException
+   * @see #rollback(Server, RegionServerServices, User)
+   */
+  Region execute(Server server, RegionServerServices services, User user) throws IOException;
 
   /**
    * Roll back a failed transaction
@@ -182,8 +197,22 @@ public interface RegionMergeTransaction {
    * @return True if we successfully rolled back, false if we got to the point
    *         of no return and so now need to abort the server to minimize
    *         damage.
+   * @deprecated use #rollback(Server, RegionServerServices, User)
    */
+  @Deprecated
   boolean rollback(Server server, RegionServerServices services) throws IOException;
+
+  /**
+   * Roll back a failed transaction
+   * @param server Hosting server instance (May be null when testing).
+   * @param services Services of regionserver, used to online regions.
+   * @param user
+   * @throws IOException If thrown, rollback failed. Take drastic action.
+   * @return True if we successfully rolled back, false if we got to the point
+   *         of no return and so now need to abort the server to minimize
+   *         damage.
+   */
+  boolean rollback(Server server, RegionServerServices services, User user) throws IOException;
 
   /**
    * Register a listener for transaction preparation, execution, and possibly

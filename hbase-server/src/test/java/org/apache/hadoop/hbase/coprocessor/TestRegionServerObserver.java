@@ -165,7 +165,7 @@ public class TestRegionServerObserver {
       preMergeAfterPONRCalled = true;
       RegionServerCoprocessorEnvironment environment = ctx.getEnvironment();
       HRegionServer rs = (HRegionServer) environment.getRegionServerServices();
-      rmt.stepsAfterPONR(rs, rs, this.mergedRegion);
+      rmt.stepsAfterPONR(rs, rs, this.mergedRegion, null);
     }
 
     @Override
