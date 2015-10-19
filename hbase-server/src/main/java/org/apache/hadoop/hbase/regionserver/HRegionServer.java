@@ -4207,7 +4207,8 @@ public class HRegionServer implements ClientProtos.ClientService.BlockingInterfa
         long endTime = EnvironmentEdgeManager.currentTimeMillis();
         metricsRegionServer.updateFlushTime(endTime - startTime);
       }
-      compactSplitThread.requestRegionsMerge(regionA, regionB, forcible, masterSystemTime);
+      compactSplitThread.requestRegionsMerge(regionA, regionB, forcible, masterSystemTime,
+        RpcServer.getRequestUser());
       return MergeRegionsResponse.newBuilder().build();
     } catch (DroppedSnapshotException ex) {
       abort("Replay of WAL required. Forcing server shutdown", ex);
