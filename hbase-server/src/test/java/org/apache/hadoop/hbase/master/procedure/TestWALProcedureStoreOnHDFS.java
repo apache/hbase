@@ -55,6 +55,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.mockito.Mockito;
@@ -182,7 +183,7 @@ public class TestWALProcedureStoreOnHDFS {
                                    reCount.get() < thread.length);
   }
 
-  @Test(timeout=60000)
+  @Ignore ("Needs work") @Test(timeout=60000)
   public void testWalRollOnLowReplication() throws Exception {
     store.unregisterListener(stopProcedureListener);
     store.registerListener(new ProcedureStore.ProcedureStoreListener() {
@@ -191,6 +192,7 @@ public class TestWALProcedureStoreOnHDFS {
 
       @Override
       public void abortProcess() {
+        LOG.info("Aborted!!!!");
       }
     });
     int dnCount = 0;
@@ -203,9 +205,12 @@ public class TestWALProcedureStoreOnHDFS {
         String msg = re.getMessage();
         // We could get a sync failed here...if the test cluster is crawling such that DN recovery
         // is taking a long time. If we've done enough passes, just finish up the test as a 'pass'
-        if (msg != null && msg.toLowerCase().contains("sync aborted") && i > 50) {
-          LOG.info("Returning early... We ran enough of this test", re);
-          return;
+        if (msg != null && msg.toLowerCase().contains("sync aborted")) {
+          LOG.info("i=" + i, re);
+          if (i > 50) {
+            LOG.info("Returning early... i=" + i + "...We ran enough of this test", re);
+            return;
+          }
         }
         throw re;
       }
