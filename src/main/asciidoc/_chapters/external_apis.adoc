@@ -27,14 +27,10 @@
 :icons: font
 :experimental:
 
-This chapter will cover access to Apache HBase either through non-Java languages, or through custom protocols.
-For information on using the native HBase APIs, refer to link:http://hbase.apache.org/apidocs/index.html[User API Reference] and the new <<hbase_apis,HBase APIs>> chapter.
-
-[[nonjava.jvm]]
-== Non-Java Languages Talking to the JVM
-
-Currently the documentation on this topic is in the link:http://wiki.apache.org/hadoop/Hbase[Apache HBase Wiki].
-See also the link:http://hbase.apache.org/apidocs/org/apache/hadoop/hbase/thrift/package-summary.html#package_description[Thrift API Javadoc].
+This chapter will cover access to Apache HBase either through non-Java languages and
+through custom protocols. For information on using the native HBase APIs, refer to
+link:http://hbase.apache.org/apidocs/index.html[User API Reference] and the
+<<hbase_apis,HBase APIs>> chapter.
 
 == REST
 
@@ -640,6 +636,17 @@ To use Scala with HBase, your CLASSPATH must include HBase's classpath as well a
 the Scala JARs required by your code. First, use the following command on a server
 running the HBase RegionServer process, to get HBase's classpath.
 
+[[jython]]
+== Jython
+
+
+=== Setting the Classpath
+
+To use Jython with HBase, your CLASSPATH must include HBase's classpath as well as
+`jython.jar`. First, use the following command on a server running the HBase RegionServer
+process, to get HBase's classpath.
+>>>>>>> HBASE-14638 Move Jython info from the Wiki to the Ref Guide
+
 [source, bash]
 ----
 $ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'print $1'}
@@ -648,6 +655,7 @@ $ ps aux |grep regionserver| awk -F 'java.library.path=' {'print $2'} | awk {'pr
 ----
 
 Set the `$CLASSPATH` environment variable to include the path you found in the previous
+<<<<<<< 12a718d0ca507c911f589d2926cfc408e4155b0e
 step, plus the path of `scala-library.jar` and each additional Scala-related JAR needed for
 your project.
 
@@ -704,3 +712,97 @@ val result=table.get(theget)
 val value=result.value()
 println(Bytes.toString(value))
 ----
+=======
+step, plus the path to `jython.jar`.
+
+[source, bash]
+----
+$ export CLASSPATH=$CLASSPATH:/usr/lib/hadoop/lib/native:/usr/lib/hbase/lib/native/Linux-amd64-64:/path/to/jython.jar
+----
+
+Start a Jython shell with HBase and Hadoop JARs in the classpath:
+$ bin/hbase org.python.util.jython
+
+=== Jython Code Examples
+
+.Table Creation, Population, Get, and Delete with Jython
+====
+The following Jython code example creates a table, populates it with data, fetches
+the data, and deletes the table.
+
+[source,jython]
+----
+import java.lang
+from org.apache.hadoop.hbase import HBaseConfiguration, HTableDescriptor, HColumnDescriptor, HConstants
+from org.apache.hadoop.hbase.client import HBaseAdmin, HTable, Get
+from org.apache.hadoop.hbase.io import Cell, RowResult
+
+# First get a conf object.  This will read in the configuration
+# that is out in your hbase-*.xml files such as location of the
+# hbase master node.
+conf = HBaseConfiguration()
+
+# Create a table named 'test' that has two column families,
+# one named 'content, and the other 'anchor'.  The colons
+# are required for column family names.
+tablename = "test"
+
+desc = HTableDescriptor(tablename)
+desc.addFamily(HColumnDescriptor("content:"))
+desc.addFamily(HColumnDescriptor("anchor:"))
+admin = HBaseAdmin(conf)
+
+# Drop and recreate if it exists
+if admin.tableExists(tablename):
+    admin.disableTable(tablename)
+    admin.deleteTable(tablename)
+admin.createTable(desc)
+
+tables = admin.listTables()
+table = HTable(conf, tablename)
+
+# Add content to 'column:' on a row named 'row_x'
+row = 'row_x'
+update = Get(row)
+update.put('content:', 'some content')
+table.commit(update)
+
+# Now fetch the content just added, returns a byte[]
+data_row = table.get(row, "content:")
+data = java.lang.String(data_row.value, "UTF8")
+
+print "The fetched row contains the value '%s'" % data
+
+# Delete the table.
+admin.disableTable(desc.getName())
+admin.deleteTable(desc.getName())
+----
+====
+
+.Table Scan Using Jython
+====
+This example scans a table and returns the results that match a given family qualifier.
+
+[source, jython]
+----
+# Print all rows that are members of a particular column family
+# by passing a regex for family qualifier
+
+import java.lang
+
+from org.apache.hadoop.hbase import HBaseConfiguration
+from org.apache.hadoop.hbase.client import HTable
+
+conf = HBaseConfiguration()
+
+table = HTable(conf, "wiki")
+col = "title:.*$"
+
+scanner = table.getScanner([col], "")
+while 1:
+    result = scanner.next()
+    if not result:
+        break
+    print java.lang.String(result.row), java.lang.String(result.get('title:').value)
+----
+====
