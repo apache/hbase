@@ -1026,7 +1026,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         return 1000000;   // return a number much greater than any of the other cost
       }
 
-      return scale(0, cluster.numRegions, moveCost);
+      return scale(0, Math.min(cluster.numRegions, maxMoves), moveCost);
     }
   }
 
