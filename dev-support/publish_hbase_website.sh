@@ -32,8 +32,8 @@ if [ "$#" == "0" ]; then
 fi
 
 # Process args
-INTERACTIVE=
-AUTO=
+INTERACTIVE=0
+AUTO=0
 GIT_DIR=
 SVN_DIR=
 while getopts "hiag:s:" OPTION
@@ -44,41 +44,50 @@ do
       exit
       ;;
     i)
-      INTERACTIVE=1
+      if [ $AUTO -eq 1 ]; then
+        echo "Cannot specify both -i and -a."
+        echo -e "$USAGE"
+        exit 1
+      else
+        INTERACTIVE=1
+        AUTO=0
+      fi
       ;;
     a)
-      # We don't actually use this variable but require it to be 
+      # We don't actually use this variable but require it to be
       # set explicitly because it will commit changes without asking
-      AUTO=1
+      if [ $INTERACTIVE -eq 1 ]; then
+        echo "Cannot specify both -i and -a."
+        echo -e "$USAGE"
+        exit 1
+      else
+        AUTO=1
+        INTERACTIVE=0
+      fi
       ;;
     g)
       GIT_DIR=$OPTARG
+      if [ ! -d "$GIT_DIR/.git" ]; then
+        echo "Git directory $GIT_DIR does not exist or is not a Git repository."
+        exit 1
+      fi
       ;;
     s)
       SVN_DIR=$OPTARG
+      if [ ! -d "$SVN_DIR/.svn" ]; then
+        echo "SVN directory $SVN_DIR does not exist or is not a Subversion repository."
+        exit 1
+      fi
       ;;
   esac
 done
 
-if [ $INTERACTIVE ] && [ $AUTO ]; then
-    echo "Only one of -i or -a can be used."
-    echo -e $USAGE
-    exit 1
-fi
-
 # Set GIT_DIR and SVN_DIR to defaults if not given
-if [ ! $GIT_DIR ]; then
-  GIT_DIR=~/git/hbase
+if [ -z "$GIT_DIR" ]; then
+  GIT_DIR="$HOME/git/hbase"
 fi
-if [ ! $SVN_DIR ]; then
-  SVN_DIR=~/svn/hbase.apache.org/trunk
-fi
-
-# Check that GIT_DIR and SVN_DIR exist
-if [ ! -d $GIT_DIR -o ! -d $SVN_DIR ]; then
-  echo "Both the GIT and SVN directories must exist."
-  echo -e $USAGE
-  exit 1
+if [ -z "$SVN_DIR" ]; then
+  SVN_DIR="$HOME/svn/hbase.apache.org/trunk"
 fi
 
 export MAVEN_OPTS=${MAVEN_OPTS:-"-Xmx3g -XX:MaxPermSize=256m"}
@@ -87,73 +96,102 @@ cd $GIT_DIR
 
 # Get the latest
 echo "Updating Git"
-git checkout master
-git pull
+git checkout -q master
+git pull -q
+status=$?
+if [ $status -ne 0 ]; then
+  echo "git pull command failed."
+  echo " Please examine and run this script again after you have corrected the problem."
+fi
+
+GIT_SHA=$(git log --pretty=format:%H -n1)
 
 # Generate the site to ~/git/hbase/target/site
-if [ $INTERACTIVE ]; then
-    read -p "Build the site? (y/n)" yn
-    case $yn in
-        [Yy]* ) 
-          mvn clean package javadoc:aggregate post-site site:stage -DskipTests -Dcheckstyle.skip
-          status=$?
-          if [ $status -ne 0 ]; then
-            echo "The website does not build. Aborting."
-            exit $status
-          fi
-    			;;
-        [Nn]* ) 
-          echo "Not building the site."
-        ;;
-    esac
+if [ $INTERACTIVE -eq 1 ]; then
+  read -p "Build the site? (y/n)" yn
+  case $yn in
+    [Yy]* )
+      echo "Building $GIT_SHA"
+      mvn clean site post-site site:stage
+      status=$?
+      if [ $status -ne 0 ]; then
+        echo "The site does not build. Aborting."
+        exit $status
+      fi
+      ;;
+    [Nn]* )
+      echo "Not building the site."
+      if [ -d target/staging ]; then
+        echo "Using site in $GIT_DIR/target/staging directory."
+      else
+        echo "Not building the site but $GIT_DIR/target/staging does not exist. Giving up."
+        exit 1
+      fi
+      ;;
+  esac
 else
   echo "Building the site in auto mode."
-  mvn clean package javadoc:aggregate post-site site:stage -DskipTests -Dcheckstyle.skip
+  mvn clean site post-site site:stage
   status=$?
   if [ $status != 0 ]; then
-    echo "The website does not build. Aborting."
+    echo "The site does not build. Aborting."
     exit $status
   fi
 fi
 
 
 # Refresh the local copy of the live website
-echo "Updating Subversion..."
+echo "Updating Subversion."
 cd $SVN_DIR
-# Be aware that this will restore all the files deleted a few lines down 
-# if you are debugging this script 
+# Be aware that this will restore all the files deleted a few lines down
+# if you are debugging this script
 # and need to run it multiple times without svn committing
-svn update > /dev/null
+svn update -q
 
-# Get current size of svn directory and # files, for sanity checking before commit
-SVN_OLD_SIZE=`du -sm . |awk '{print $1}'`
-SVN_OLD_NUMFILES=`find . -type f |wc -l |awk '{print $1}'`
-
-# Make a list of things that are in SVN but not the generated site 
-# and not auto-generated 
+# Make a list of things that are in SVN but not the generated site
+# and not auto-generated
 # -- we might need to delete these
-echo "The following directories (if any) might be stale:" |tee /tmp/out.txt
-find . -type d  ! -path '*0.94*' ! -path '*apidocs*' \
- ! -path '*xref*' ! -path '*book*' \
- -exec ls $GIT_DIR/target/staging/{} \; |grep 'No such' |tee -a /tmp/out.txt
-echo "The following files (if any) might be stale:" |tee -a /tmp/out.txt
-find . -type f  ! -path '*0.94*' ! -path '*apidocs*' \
- ! -path '*xref*' ! -path '*book*' ! -name '*.svg' \
- -exec ls $GIT_DIR/target/staging/{} \; |grep 'No such' |tee -a /tmp/out.txt
+# But we never want to delete images or logos
 
-if [ $INTERACTIVE ]; then
-  read -p "Exit to take care of them? (y/n)" yn
-  case $yn in
-      [Yy]* ) 
+stale_dirs_exist=0
+echo "The following DIRECTORIES (if any) might be stale:" |tee /tmp/out.txt
+find . -type d  ! -path '*0.94*' ! -path '*apidocs*' ! -path '*xref*' ! -path '*book*' ! -path '*svn*' | \
+  sed 's/\.\///g' | grep -v images | grep -v logos | grep -v img | grep -v css | \
+  while read i; do
+  if [ ! -d "$GIT_DIR/target/staging/$i" ]; then
+    echo $i
+    stale_dirs_exist=1
+  fi
+done
+
+stale_files_exist=0
+echo "The following FILES (if any) might be stale:" |tee -a /tmp/out.txt
+find . -type f  ! -path '*0.94*' ! -path '*apidocs*' ! -path '*xref*' ! -path '*book*' ! -path '*svn*' | \
+  sed 's/\.\///g' | grep -v images | grep -v logos | grep -v img | grep -v css | grep -v hbase-default.xml | \
+  while read i; do
+  if [ ! -f "$GIT_DIR/target/staging/$i" ]; then
+    echo $i
+    stale_files_exist=1
+  fi
+done
+
+if [ $INTERACTIVE -eq 1 ]; then
+  if [ $stale_dirs_exist -eq 1 -o $stale_files_exist -eq 1 ]; then
+    read -p "Exit to take care of them? (y/n)" yn
+    case $yn in
+      [Yy]* )
         exit
         ;;
       [Nn]* )
         ;;
       * ) echo "Please answer yes or no.";;
-  esac
+    esac
+  fi
 else
-  echo "Not taking care of stale directories and files in auto mode." |tee -a /tmp/out.txt
-  echo "If necessary, handle them in a manual commit."|tee -a /tmp/out.txt
+  if [ $stale_dirs_exist -eq 1 -o $stale_files_exist -eq 1 ]; then
+    echo "Stale files or directories exist, but not taking care of stale directories and files in auto mode." |tee -a /tmp/out.txt
+    echo "If necessary, handle them in a manual commit."|tee -a /tmp/out.txt
+  fi
 fi
 
 # Delete known auto-generated  content from trunk
@@ -168,81 +206,55 @@ elif [ `uname` == "Linux" ]; then
   COPYOPTS='-au'
 fi
 
-cp $COPYOPTS $GIT_DIR/target/staging/* .
+cp $COPYOPTS $GIT_DIR/target/staging/. .
 
 # Look for things we need to fix up in svn
 
 echo "Untracked files: svn add"
 svn status |grep '?' |sed -e "s/[[:space:]]//g"|cut -d '?' -f 2|while read i; do
   svn add $i
-  echo "Added $i"
 done
 
 echo "Locally deleted files: svn del"
 svn status |grep '!' |sed -e "s/[[:space:]]//g"|cut -d '!' -f 2|while read i; do
   svn del $i
-  echo "Deleted $i"
 done
 
-# Display the proposed changes. I filtered out 
-# modified because there are so many.
-if [ $INTERACTIVE ]; then
-  svn status |grep -v '^M'|less -P "Enter 'q' to exit the list."
-else
-  echo "The following changes will be made to SVN."
-  svn status
-fi
+svn_added=$(svn status | grep ^A|wc -l|awk {'print $1'})
+svn_removed=$(svn status | grep ^D|wc -l|awk {'print $1'})
+svn_modified=$(svn status |grep ^M|wc -l|awk {'print $1'})
 
-# Get current size of svn directory, for sanity checking before commit
-SVN_NEW_SIZE=`du -sm . |awk '{print $1}'`
-SVN_NEW_NUMFILES=`find . -type f |wc -l |awk '{print $1}'`
+echo -e "Published site at $GIT_SHA. \n\
+\n\
+Added $svn_added files. \n\
+Removed $svn_removed files. \n\
+Modified $svn_modified files." |tee /tmp/commit.txt
 
-# Get difference between new and old size and number of files
-# We don't care about negatives so remove the sign
-SVN_SIZE_DIFF=`expr $SVN_NEW_SIZE - $SVN_OLD_SIZE|sed 's/-//g'`
-SVN_NUM_DIFF=`expr $SVN_NEW_NUMFILES - $SVN_OLD_NUMFILES|sed 's/-//g'`
-
-# The whole site is only 500 MB so a difference of 10 MB is huge
-# In this case, we should abort because something is wrong
-# Leaving this commented out for now until we get some benchmarks
-if [ $SVN_SIZE_DIFF > 10 -o $SVN_NUM_DIFF > 50 ]; then
-  echo "This commit would cause the website to change sizes by \
-  $SVN_DIFF MB and $SVN_NUM_DIFF files. There is likely a problem.
-  Aborting."
-  exit 1
-fi
-
-
-if [ $INTERACTIVE ]; then
+if [ $INTERACTIVE -eq 1 ]; then
   read -p "Commit changes? This will publish the website. (y/n)" yn
   case $yn in
-  [Yy]* ) 
-    echo "Published website using script in interactive mode. \
-This commit changed the size of the website by $SVN_SIZE_DIFF MB \
-and the number of files by $SVN_NUM_DIFF files." |tee commit.txt
-    cat /tmp/out.txt >> /tmp/commit.txt
+  [Yy]* )
+    echo "Commit message:"
+    cat /tmp/commit.txt
     svn commit -F /tmp/commit.txt
     exit
     ;;
-  [Nn]* ) 
+  [Nn]* )
     read -p "Revert SVN changes? (y/n)" revert
     case $revert in
-    [Yy]* ) 
+    [Yy]* )
       svn revert -R .
       svn update
       exit
       ;;
-    [Nn]* ) 
+    [Nn]* )
       exit
       ;;
     esac
     ;;
   esac
 else
-  echo "Published website using script in auto mode. This commit \
-changed the size of the website by $SVN_SIZE_DIFF MB and the number of files \
-by $SVN_NUM_DIFF files." |tee /tmp/commit.txt
-  cat /tmp/out.txt >> /tmp/commit.txt
+  echo "Commit message:"
+  cat /tmp/commit.txt
   svn commit -q -F /tmp/commit.txt
 fi
-
