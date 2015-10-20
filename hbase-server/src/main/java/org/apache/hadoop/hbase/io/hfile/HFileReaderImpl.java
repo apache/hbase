@@ -510,14 +510,16 @@ public class HFileReaderImpl implements HFile.Reader, Configurable {
           block.getOffset() == this.curBlock.getOffset()) {
         return;
       }
-      if (this.curBlock != null) {
+      // We don't have to keep ref to EXCLUSIVE type of block
+      if (this.curBlock != null && this.curBlock.usesSharedMemory()) {
         prevBlocks.add(this.curBlock);
       }
       this.curBlock = block;
     }
 
     void reset() {
-      if (this.curBlock != null) {
+      // We don't have to keep ref to EXCLUSIVE type of block
+      if (this.curBlock != null && this.curBlock.usesSharedMemory()) {
         this.prevBlocks.add(this.curBlock);
       }
       this.curBlock = null;

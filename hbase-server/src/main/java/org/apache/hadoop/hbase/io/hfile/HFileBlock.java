@@ -1938,6 +1938,13 @@ public class HFileBlock implements Cacheable {
   }
 
   /**
+   * @return true if this block is backed by a shared memory area(such as that of a BucketCache).
+   */
+  public boolean usesSharedMemory() {
+    return this.memType == MemoryType.SHARED;
+  }
+
+  /**
    * Convert the contents of the block header into a human readable string.
    * This is mostly helpful for debugging. This assumes that the block
    * has minor version > 0.
