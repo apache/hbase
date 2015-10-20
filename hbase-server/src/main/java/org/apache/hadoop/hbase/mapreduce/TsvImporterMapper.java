@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.ImportTsv.TsvParser.BadTsvLineException;
 import org.apache.hadoop.hbase.security.visibility.CellVisibility;
+import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
@@ -164,6 +165,16 @@ extends Mapper<LongWritable, Text, ImmutableBytesWritable, Put>
         populatePut(lineBytes, parsed, put, i);
       }
       context.write(rowKey, put);
+    } catch (InvalidLabelException badLine) {
+      if (skipBadLines) {
+        System.err.println(
+            "Bad line at offset: " + offset.get() + ":\n" +
+            badLine.getMessage());
+        incrementBadLineCount(1);
+        return;
+      } else {
+        throw new IOException(badLine);
+      }
     } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
       if (skipBadLines) {
         System.err.println(

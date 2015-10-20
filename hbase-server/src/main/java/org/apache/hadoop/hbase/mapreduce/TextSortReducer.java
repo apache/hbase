@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.security.visibility.InvalidLabelException;
 import org.apache.hadoop.hbase.util.Base64;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -184,6 +185,13 @@ public class TextSortReducer extends
             kvs.add(kv);
             curSize += kv.heapSize();
           }
+        } catch (InvalidLabelException badLine) {
+          if (skipBadLines) {
+            System.err.println("Bad line." + badLine.getMessage());
+            incrementBadLineCount(1);
+            continue;
+          }
+          throw new IOException(badLine);
         } catch (ImportTsv.TsvParser.BadTsvLineException badLine) {
           if (skipBadLines) {
             System.err.println("Bad line." + badLine.getMessage());

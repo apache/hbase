@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
+import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityLabelOrdinalProvider;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -111,7 +112,12 @@ public class DefaultVisibilityExpressionResolver implements VisibilityExpression
     VisibilityLabelOrdinalProvider provider = new VisibilityLabelOrdinalProvider() {
       @Override
       public int getLabelOrdinal(String label) {
-        return labels.get(label);
+        Integer ordinal = null;
+        ordinal = labels.get(label);
+        if (ordinal != null) {
+          return ordinal.intValue();
+        }
+        return VisibilityConstants.NON_EXIST_LABEL_ORDINAL;
       }
 
       @Override

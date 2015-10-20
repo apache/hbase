@@ -41,13 +41,15 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.visibility.Authorizations;
@@ -58,6 +60,7 @@ import org.apache.hadoop.hbase.security.visibility.VisibilityClient;
 import org.apache.hadoop.hbase.security.visibility.VisibilityConstants;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityUtils;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapred.Utils.OutputFileUtils.OutputFilesFilter;
 import org.apache.hadoop.util.Tool;
@@ -268,6 +271,50 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     util.deleteTable(tableName);
   }
 
+  @Test
+  public void testBulkOutputWithInvalidLabels() throws Exception {
+    String tableName = "test-" + UUID.randomUUID();
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName), "hfiles");
+    // Prepare the arguments required for the test.
+    String[] args =
+        new String[] { "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+            "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+
+    // 2 Data rows, one with valid label and one with invalid label
+    String data =
+        "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
+    util.createTable(tableName, FAMILY);
+    doMROnTableTest(util, FAMILY, data, args, 1, 2);
+    util.deleteTable(tableName);
+  }
+
+  @Test
+  public void testBulkOutputWithTsvImporterTextMapperWithInvalidLabels() throws Exception {
+    String tableName = "test-" + UUID.randomUUID();
+    Path hfiles = new Path(util.getDataTestDirOnTestFS(tableName), "hfiles");
+    // Prepare the arguments required for the test.
+    String[] args =
+        new String[] {
+            "-D" + ImportTsv.MAPPER_CONF_KEY
+                + "=org.apache.hadoop.hbase.mapreduce.TsvImporterTextMapper",
+            "-D" + ImportTsv.BULK_OUTPUT_CONF_KEY + "=" + hfiles.toString(),
+            "-D" + ImportTsv.COLUMNS_CONF_KEY + "=HBASE_ROW_KEY,FAM:A,FAM:B,HBASE_CELL_VISIBILITY",
+            "-D" + ImportTsv.SEPARATOR_CONF_KEY + "=\u001b", tableName };
+
+    // 2 Data rows, one with valid label and one with invalid label
+    String data =
+        "KEY\u001bVALUE1\u001bVALUE2\u001bprivate\nKEY1\u001bVALUE1\u001bVALUE2\u001binvalid\n";
+    util.createTable(tableName, FAMILY);
+    doMROnTableTest(util, FAMILY, data, args, 1, 2);
+    util.deleteTable(tableName);
+  }
+
+  protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
+      String[] args, int valueMultiplier) throws Exception {
+    return doMROnTableTest(util, family, data, args, valueMultiplier, -1);
+  }
+
   /**
    * Run an ImportTsv job and perform basic validation on the results. Returns
    * the ImportTsv <code>Tool</code> instance so that other tests can inspect it
@@ -276,10 +323,12 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
    *
    * @param args
    *          Any arguments to pass BEFORE inputFile path is appended.
+   * @param expectedKVCount Expected KV count. pass -1 to skip the kvcount check
+   *
    * @return The Tool instance used to run the test.
    */
   protected static Tool doMROnTableTest(HBaseTestingUtility util, String family, String data,
-      String[] args, int valueMultiplier) throws Exception {
+      String[] args, int valueMultiplier, int expectedKVCount) throws Exception {
     String table = args[args.length - 1];
     Configuration conf = new Configuration(util.getConfiguration());
 
@@ -321,7 +370,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     }
     LOG.debug("validating the table " + createdHFiles);
     if (createdHFiles)
-     validateHFiles(fs, outputPath, family);
+     validateHFiles(fs, outputPath, family,expectedKVCount);
     else
       validateTable(conf, table, family, valueMultiplier);
 
@@ -335,14 +384,15 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
   /**
    * Confirm ImportTsv via HFiles on fs.
    */
-  private static void validateHFiles(FileSystem fs, String outputPath, String family)
-      throws IOException {
+  private static void validateHFiles(FileSystem fs, String outputPath, String family,
+      int expectedKVCount) throws IOException {
 
     // validate number and content of output columns
     LOG.debug("Validating HFiles.");
     Set<String> configFamilies = new HashSet<String>();
     configFamilies.add(family);
     Set<String> foundFamilies = new HashSet<String>();
+    int actualKVCount = 0;
     for (FileStatus cfStatus : fs.listStatus(new Path(outputPath), new OutputFilesFilter())) {
       LOG.debug("The output path has files");
       String[] elements = cfStatus.getPath().toString().split(Path.SEPARATOR);
@@ -354,8 +404,37 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
       for (FileStatus hfile : fs.listStatus(cfStatus.getPath())) {
         assertTrue(String.format("HFile %s appears to contain no data.", hfile.getPath()),
             hfile.getLen() > 0);
+        if (expectedKVCount > -1) {
+          actualKVCount += getKVCountFromHfile(fs, hfile.getPath());
+        }
       }
     }
+    if (expectedKVCount > -1) {
+      assertTrue(String.format(
+        "KV count in output hfile=<%d> doesn't match with expected KV count=<%d>", actualKVCount,
+        expectedKVCount), actualKVCount == expectedKVCount);
+    }
+  }
+
+  /**
+   * Method returns the total KVs in given hfile
+   * @param fs File System
+   * @param p HFile path
+   * @return KV count in the given hfile
+   * @throws IOException
+   */
+  private static int getKVCountFromHfile(FileSystem fs, Path p) throws IOException {
+    Configuration conf = util.getConfiguration();
+    HFile.Reader reader = HFile.createReader(fs, p, new CacheConfig(conf), conf);
+    reader.loadFileInfo();
+    HFileScanner scanner = reader.getScanner(false, false);
+    scanner.seekTo();
+    int count = 0;
+    do {
+      count++;
+    } while (scanner.next());
+    reader.close();
+    return count;
   }
 
   /**
