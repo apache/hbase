@@ -58,4 +58,6 @@ public final class VisibilityConstants {
   public static final String OPEN_PARAN = "(";
   public static final String CLOSED_PARAN = ")";
 
+  /** Label ordinal value for invalid labels */
+  public static final int NON_EXIST_LABEL_ORDINAL = 0;
 }
