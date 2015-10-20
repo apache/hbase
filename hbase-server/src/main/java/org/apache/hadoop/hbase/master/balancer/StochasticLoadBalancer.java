@@ -704,7 +704,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
         moveCost += META_MOVE_COST_MULT * cluster.numMovedMetaRegions;
       }
 
-      return scale(0, cluster.numRegions + META_MOVE_COST_MULT, moveCost);
+      return scale(0, Math.min(cluster.numRegions, maxMoves) + META_MOVE_COST_MULT, moveCost);
     }
   }
 

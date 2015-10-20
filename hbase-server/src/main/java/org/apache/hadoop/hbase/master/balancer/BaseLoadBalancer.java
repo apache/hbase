@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Sets;
@@ -313,6 +314,21 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
         return Integer.valueOf(getNumRegions(integer)).compareTo(getNumRegions(integer2));
       }
     };
+
+    @VisibleForTesting
+    protected void setNumRegions(int numRegions) {
+      this.numRegions = numRegions;
+    }
+
+    @VisibleForTesting
+    protected void setNumMovedRegions(int numMovedRegions) {
+      this.numMovedRegions = numMovedRegions;
+    }
+
+    @VisibleForTesting
+    protected void setNumMovedMetaRegions(int numMovedMetaRegions) {
+      this.numMovedMetaRegions = numMovedMetaRegions;
+    }
 
     @Override
     public String toString() {
