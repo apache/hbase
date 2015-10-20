@@ -394,15 +394,20 @@ public class MasterRpcServices extends RSRpcServices
   public AddColumnResponse addColumn(RpcController controller,
       AddColumnRequest req) throws ServiceException {
     try {
-      master.addColumn(
+      long procId = master.addColumn(
           ProtobufUtil.toTableName(req.getTableName()),
           HColumnDescriptor.convert(req.getColumnFamilies()),
           req.getNonceGroup(),
           req.getNonce());
+      if (procId == -1) {
+        // This mean operation was not performed in server, so do not set any procId
+        return AddColumnResponse.newBuilder().build();
+      } else {
+        return AddColumnResponse.newBuilder().setProcId(procId).build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return AddColumnResponse.newBuilder().build();
   }
 
   @Override
@@ -481,15 +486,20 @@ public class MasterRpcServices extends RSRpcServices
   public DeleteColumnResponse deleteColumn(RpcController controller,
       DeleteColumnRequest req) throws ServiceException {
     try {
-      master.deleteColumn(
+      long procId = master.deleteColumn(
         ProtobufUtil.toTableName(req.getTableName()),
         req.getColumnName().toByteArray(),
         req.getNonceGroup(),
         req.getNonce());
+      if (procId == -1) {
+        // This mean operation was not performed in server, so do not set any procId
+        return DeleteColumnResponse.newBuilder().build();
+      } else {
+        return DeleteColumnResponse.newBuilder().setProcId(procId).build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return DeleteColumnResponse.newBuilder().build();
   }
 
   @Override
@@ -1170,15 +1180,20 @@ public class MasterRpcServices extends RSRpcServices
   public ModifyColumnResponse modifyColumn(RpcController controller,
       ModifyColumnRequest req) throws ServiceException {
     try {
-      master.modifyColumn(
+      long procId = master.modifyColumn(
         ProtobufUtil.toTableName(req.getTableName()),
         HColumnDescriptor.convert(req.getColumnFamilies()),
         req.getNonceGroup(),
         req.getNonce());
+      if (procId == -1) {
+        // This mean operation was not performed in server, so do not set any procId
+        return ModifyColumnResponse.newBuilder().build();
+      } else {
+        return ModifyColumnResponse.newBuilder().setProcId(procId).build();
+      }
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return ModifyColumnResponse.newBuilder().build();
   }
 
   @Override

@@ -1785,7 +1785,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
   }
 
   @Override
-  public void addColumn(
+  public long addColumn(
       final TableName tableName,
       final HColumnDescriptor columnDescriptor,
       final long nonceGroup,
@@ -1796,7 +1796,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkEncryption(conf, columnDescriptor);
     if (cpHost != null) {
       if (cpHost.preAddColumn(tableName, columnDescriptor)) {
-        return;
+        return -1;
       }
     }
     // Execute the operation synchronously - wait for the operation to complete before continuing.
@@ -1808,10 +1808,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postAddColumn(tableName, columnDescriptor);
     }
+    return procId;
   }
 
   @Override
-  public void modifyColumn(
+  public long modifyColumn(
       final TableName tableName,
       final HColumnDescriptor descriptor,
       final long nonceGroup,
@@ -1822,7 +1823,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkEncryption(conf, descriptor);
     if (cpHost != null) {
       if (cpHost.preModifyColumn(tableName, descriptor)) {
-        return;
+        return -1;
       }
     }
     LOG.info(getClientIdAuditPrefix() + " modify " + descriptor);
@@ -1837,10 +1838,11 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postModifyColumn(tableName, descriptor);
     }
+    return procId;
   }
 
   @Override
-  public void deleteColumn(
+  public long deleteColumn(
       final TableName tableName,
       final byte[] columnName,
       final long nonceGroup,
@@ -1849,7 +1851,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     checkInitialized();
     if (cpHost != null) {
       if (cpHost.preDeleteColumn(tableName, columnName)) {
-        return;
+        return -1;
       }
     }
     LOG.info(getClientIdAuditPrefix() + " delete " + Bytes.toString(columnName));
@@ -1864,6 +1866,7 @@ public class HMaster extends HRegionServer implements MasterServices, Server {
     if (cpHost != null) {
       cpHost.postDeleteColumn(tableName, columnName);
     }
+    return procId;
   }
 
   @Override

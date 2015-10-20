@@ -193,7 +193,7 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  void addColumn(
+  long addColumn(
       final TableName tableName,
       final HColumnDescriptor column,
       final long nonceGroup,
@@ -208,7 +208,7 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  void modifyColumn(
+  long modifyColumn(
       final TableName tableName,
       final HColumnDescriptor descriptor,
       final long nonceGroup,
@@ -223,7 +223,7 @@ public interface MasterServices extends Server {
    * @param nonce
    * @throws IOException
    */
-  void deleteColumn(
+  long deleteColumn(
       final TableName tableName,
       final byte[] columnName,
       final long nonceGroup,

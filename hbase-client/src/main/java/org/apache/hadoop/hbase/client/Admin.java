@@ -507,13 +507,19 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Add a column family to an existing table. Asynchronous operation.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
    * @param tableName name of the table to add column family to
    * @param columnFamily column family descriptor of column family to be added
    * @throws IOException if a remote or network exception occurs
+   * @return the result of the async add column family. You can use Future.get(long, TimeUnit) to
+   *         wait on the operation to complete.
    */
-  void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
-    throws IOException;
+  Future<Void> addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+      throws IOException;
 
   /**
    * Delete a column family from a table. Asynchronous operation.
@@ -531,15 +537,26 @@ public interface Admin extends Abortable, Closeable {
 
   /**
    * Delete a column family from a table. Asynchronous operation.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
    * @param tableName name of table
    * @param columnFamily name of column family to be deleted
    * @throws IOException if a remote or network exception occurs
+   * @return the result of the async delete column family. You can use Future.get(long, TimeUnit) to
+   *         wait on the operation to complete.
    */
-  void deleteColumnFamily(final TableName tableName, final byte[] columnFamily) throws IOException;
+  Future<Void> deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
+      throws IOException;
 
   /**
    * Modify an existing column family on a table. Asynchronous operation.
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
    *
    * @param tableName name of table
    * @param columnFamily new column family descriptor to use
@@ -559,8 +576,10 @@ public interface Admin extends Abortable, Closeable {
    * @param tableName name of table
    * @param columnFamily new column family descriptor to use
    * @throws IOException if a remote or network exception occurs
+   * @return the result of the async modify column family. You can use Future.get(long, TimeUnit) to
+   *         wait on the operation to complete.
    */
-  void modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
+  Future<Void> modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
       throws IOException;
 
 

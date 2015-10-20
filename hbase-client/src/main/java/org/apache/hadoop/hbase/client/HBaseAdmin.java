@@ -92,11 +92,13 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.TableSchema;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AbortProcedureResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.AssignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteSnapshotRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.DeleteTableRequest;
@@ -131,6 +133,7 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ListTableNamesByN
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampForRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.MajorCompactionTimestampRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyNamespaceRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.ModifyTableResponse;
@@ -1509,17 +1512,32 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void addColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        AddColumnRequest req = RequestConverter.buildAddColumnRequest(
-          tableName, columnFamily, ng.getNonceGroup(), ng.newNonce());
-        master.addColumn(null, req);
-        return null;
-      }
-    });
+  public Future<Void> addColumnFamily(final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
+    AddColumnResponse response =
+        executeCallable(new MasterCallable<AddColumnResponse>(getConnection()) {
+          @Override
+          public AddColumnResponse call(int callTimeout) throws ServiceException {
+            AddColumnRequest req =
+                RequestConverter.buildAddColumnRequest(tableName, columnFamily, ng.getNonceGroup(),
+                  ng.newNonce());
+            return master.addColumn(null, req);
+          }
+        });
+    return new AddColumnFamilyFuture(this, tableName, response);
+  }
+
+  private static class AddColumnFamilyFuture extends ModifyTableFuture {
+    public AddColumnFamilyFuture(final HBaseAdmin admin, final TableName tableName,
+        final AddColumnResponse response) {
+      super(admin, tableName, (response != null && response.hasProcId()) ? response.getProcId()
+          : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "ADD_COLUMN_FAMILY";
+    }
   }
 
   /**
@@ -1578,17 +1596,33 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
-  throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        DeleteColumnRequest req = RequestConverter.buildDeleteColumnRequest(
-          tableName, columnFamily, ng.getNonceGroup(), ng.newNonce());
-        master.deleteColumn(null, req);
-        return null;
-      }
-    });
+  public Future<Void> deleteColumnFamily(final TableName tableName, final byte[] columnFamily)
+      throws IOException {
+    DeleteColumnResponse response =
+        executeCallable(new MasterCallable<DeleteColumnResponse>(getConnection()) {
+          @Override
+          public DeleteColumnResponse call(int callTimeout) throws ServiceException {
+            DeleteColumnRequest req =
+                RequestConverter.buildDeleteColumnRequest(tableName, columnFamily,
+                  ng.getNonceGroup(), ng.newNonce());
+            master.deleteColumn(null, req);
+            return null;
+          }
+        });
+    return new DeleteColumnFamilyFuture(this, tableName, response);
+  }
+
+  private static class DeleteColumnFamilyFuture extends ModifyTableFuture {
+    public DeleteColumnFamilyFuture(final HBaseAdmin admin, final TableName tableName,
+        final DeleteColumnResponse response) {
+      super(admin, tableName, (response != null && response.hasProcId()) ? response.getProcId()
+          : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "DELETE_COLUMN_FAMILY";
+    }
   }
 
   /**
@@ -1647,17 +1681,33 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void modifyColumnFamily(final TableName tableName, final HColumnDescriptor columnFamily)
-  throws IOException {
-    executeCallable(new MasterCallable<Void>(getConnection()) {
-      @Override
-      public Void call(int callTimeout) throws ServiceException {
-        ModifyColumnRequest req = RequestConverter.buildModifyColumnRequest(
-          tableName, columnFamily, ng.getNonceGroup(), ng.newNonce());
-        master.modifyColumn(null,req);
-        return null;
-      }
-    });
+  public Future<Void> modifyColumnFamily(final TableName tableName,
+      final HColumnDescriptor columnFamily) throws IOException {
+    ModifyColumnResponse response =
+        executeCallable(new MasterCallable<ModifyColumnResponse>(getConnection()) {
+          @Override
+          public ModifyColumnResponse call(int callTimeout) throws ServiceException {
+            ModifyColumnRequest req =
+                RequestConverter.buildModifyColumnRequest(tableName, columnFamily,
+                  ng.getNonceGroup(), ng.newNonce());
+            master.modifyColumn(null, req);
+            return null;
+          }
+        });
+    return new ModifyColumnFamilyFuture(this, tableName, response);
+  }
+
+  private static class ModifyColumnFamilyFuture extends ModifyTableFuture {
+    public ModifyColumnFamilyFuture(final HBaseAdmin admin, final TableName tableName,
+        final ModifyColumnResponse response) {
+      super(admin, tableName, (response != null && response.hasProcId()) ? response.getProcId()
+          : null);
+    }
+
+    @Override
+    public String getOperationType() {
+      return "MODIFY_COLUMN_FAMILY";
+    }
   }
 
   /**
@@ -2581,6 +2631,10 @@ public class HBaseAdmin implements Admin {
         final ModifyTableResponse response) {
       super(admin, tableName,
           (response != null && response.hasProcId()) ? response.getProcId() : null);
+    }
+
+    public ModifyTableFuture(final HBaseAdmin admin, final TableName tableName, final Long procId) {
+      super(admin, tableName, procId);
     }
 
     @Override

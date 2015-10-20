@@ -43,6 +43,7 @@ message AddColumnRequest {
 }
 
 message AddColumnResponse {
+  optional uint64 proc_id = 1;
 }
 
 message DeleteColumnRequest {
@@ -53,6 +54,7 @@ message DeleteColumnRequest {
 }
 
 message DeleteColumnResponse {
+  optional uint64 proc_id = 1;
 }
 
 message ModifyColumnRequest {
@@ -63,6 +65,7 @@ message ModifyColumnRequest {
 }
 
 message ModifyColumnResponse {
+  optional uint64 proc_id = 1;
 }
 
 /* Region-level Protos */

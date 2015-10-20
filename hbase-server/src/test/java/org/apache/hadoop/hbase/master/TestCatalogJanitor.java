@@ -502,25 +502,22 @@ public class TestCatalogJanitor {
     }
 
     @Override
-    public void addColumn(
-        final TableName tableName,
-        final HColumnDescriptor columnDescriptor,
-        final long nonceGroup,
-        final long nonce) throws IOException { }
+    public long addColumn(final TableName tableName, final HColumnDescriptor columnDescriptor,
+        final long nonceGroup, final long nonce) throws IOException {
+      return -1;
+    }
 
     @Override
-    public void modifyColumn(
-        final TableName tableName,
-        final HColumnDescriptor descriptor,
-        final long nonceGroup,
-        final long nonce) throws IOException { }
+    public long modifyColumn(final TableName tableName, final HColumnDescriptor descriptor,
+        final long nonceGroup, final long nonce) throws IOException {
+      return -1;
+    }
 
     @Override
-    public void deleteColumn(
-        final TableName tableName,
-        final byte[] columnName,
-        final long nonceGroup,
-        final long nonce) throws IOException { }
+    public long deleteColumn(final TableName tableName, final byte[] columnName,
+        final long nonceGroup, final long nonce) throws IOException {
+      return -1;
+    }
 
     @Override
     public TableLockManager getTableLockManager() {
