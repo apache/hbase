@@ -80,7 +80,7 @@ import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.SplitLogTask.R
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.Table;
 import org.apache.hadoop.hbase.regionserver.RegionOpeningState;
 import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
@@ -114,7 +114,8 @@ import com.google.protobuf.ServiceException;
  * too brittle mocking up partial states in mockito trying to ensure we walk the right codepath
  * to obtain expected result. Redo.
  */
-@Category(MediumTests.class)
+@SuppressWarnings("deprecation")
+@Category(LargeTests.class)
 public class TestAssignmentManager {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   // Let this be the server that is 'dead' in the tests below.
