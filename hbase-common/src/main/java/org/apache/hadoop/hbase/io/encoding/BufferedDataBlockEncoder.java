@@ -222,50 +222,36 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public ByteBuffer getKeyValueBuffer() {
-      ByteBuffer kvBuffer = createKVBuffer();
-      kvBuffer.putInt(current.keyLength);
-      kvBuffer.putInt(current.valueLength);
-      kvBuffer.put(current.keyBuffer, 0, current.keyLength);
-      kvBuffer.put(currentBuffer.array(),
-          currentBuffer.arrayOffset() + current.valueOffset,
-          current.valueLength);
+    public KeyValue getKeyValue() {
+      byte[] kvBuf = new byte[(int)KeyValue.getKeyValueDataStructureSize(current.keyLength,
+          current.valueLength, current.tagsLength)];
+      int offset = Bytes.putInt(kvBuf, 0, current.keyLength);
+      offset = Bytes.putInt(kvBuf, offset, current.valueLength);
+      System.arraycopy(current.keyBuffer, 0, kvBuf, offset, current.keyLength);
+      offset += current.keyLength;
+      System.arraycopy(currentBuffer.array(),
+        currentBuffer.arrayOffset() + current.valueOffset, kvBuf, offset, current.valueLength);
+      offset += current.valueLength;
       if (current.tagsLength > 0) {
         // Put short as unsigned
-        kvBuffer.put((byte)(current.tagsLength >> 8 & 0xff));
-        kvBuffer.put((byte)(current.tagsLength & 0xff));
+        offset = Bytes.putByte(kvBuf, offset, (byte)(current.tagsLength >> 8 & 0xff));
+        offset = Bytes.putByte(kvBuf, offset, (byte)(current.tagsLength & 0xff));
         if (current.tagsOffset != -1) {
           // the offset of the tags bytes in the underlying buffer is marked. So the temp
           // buffer,tagsBuffer was not been used.
-          kvBuffer.put(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset,
-              current.tagsLength);
+          System.arraycopy(currentBuffer.array(), currentBuffer.arrayOffset() + current.tagsOffset, kvBuf, offset, current.tagsLength);
         } else {
           // When tagsOffset is marked as -1, tag compression was present and so the tags were
           // uncompressed into temp buffer, tagsBuffer. Let us copy it from there
-          kvBuffer.put(current.tagsBuffer, 0, current.tagsLength);
+          System.arraycopy(current.tagsBuffer, 0, kvBuf, offset, current.tagsLength);
         }
       }
-      kvBuffer.rewind();
-      return kvBuffer;
-    }
 
-    protected ByteBuffer createKVBuffer() {
-      int kvBufSize = (int) KeyValue.getKeyValueDataStructureSize(current.keyLength,
-          current.valueLength, current.tagsLength);
-      ByteBuffer kvBuffer = ByteBuffer.allocate(kvBufSize);
-      return kvBuffer;
-    }
-
-    @Override
-    public KeyValue getKeyValue() {
-      ByteBuffer kvBuf = getKeyValueBuffer();
       KeyValue kv;
       if (current.tagsLength == 0) {
-        kv = new NoTagsKeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
-            - kvBuf.arrayOffset());
+        kv = new NoTagsKeyValue(kvBuf, 0, kvBuf.length);
       } else {
-        kv = new KeyValue(kvBuf.array(), kvBuf.arrayOffset(), kvBuf.array().length
-            - kvBuf.arrayOffset());
+        kv = new KeyValue(kvBuf, 0, kvBuf.length);
       }
       kv.setMvccVersion(current.memstoreTS);
       return kv;

@@ -84,14 +84,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * currently must do deep copy into new array
    */
   @Override
-  public ByteBuffer getKeyValueBuffer() {
-    return KeyValueUtil.copyToNewByteBuffer(ptSearcher.current());
-  }
-
-  /**
-   * currently must do deep copy into new array
-   */
-  @Override
   public KeyValue getKeyValue() {
     if (ptSearcher.current() == null) {
       return null;

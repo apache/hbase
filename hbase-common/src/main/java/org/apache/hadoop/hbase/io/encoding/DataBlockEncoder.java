@@ -139,10 +139,6 @@ public interface DataBlockEncoder {
      */
     ByteBuffer getValueShallowCopy();
 
-    // TODO : To be removed - Used only in test cases.
-    /** @return key value buffer with the position set to the beginning*/
-    ByteBuffer getKeyValueBuffer();
-
     /**
      * @return the KeyValue object at the current position. Includes memstore
      *         timestamp.
