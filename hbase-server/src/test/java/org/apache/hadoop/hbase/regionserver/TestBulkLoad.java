@@ -244,12 +244,8 @@ public class TestBulkLoad {
     }
 
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo,
-        new Path(testFolder.newFolder().toURI()),
-        conf,
-        hTableDescriptor,
-        log);
-
+    return HRegion.createHRegion(conf, new Path(testFolder.newFolder().toURI()),
+        hTableDescriptor, hRegionInfo, log);
   }
 
   private HRegion testRegionWithFamilies(byte[]... families) throws IOException {

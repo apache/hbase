@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -153,7 +154,7 @@ public class TestRegionObserverScannerOpenHook {
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     Path path = new Path(DIR + callingMethod);
     WAL wal = HBaseTestingUtility.createWal(conf, path, info);
-    HRegion r = HRegion.createHRegion(info, path, conf, htd, wal);
+    HRegion r = HRegion.createHRegion(conf, path, htd, info, wal);
     // this following piece is a hack. currently a coprocessorHost
     // is secretly loaded at OpenRegionHandler. we don't really
     // start a region server here, so just manually create cphost
@@ -220,11 +221,9 @@ public class TestRegionObserverScannerOpenHook {
   public static class CompactionCompletionNotifyingRegion extends HRegion {
     private static volatile CountDownLatch compactionStateChangeLatch = null;
 
-    @SuppressWarnings("deprecation")
-    public CompactionCompletionNotifyingRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, log, fs, confParam, info, htd, rsServices);
+    public CompactionCompletionNotifyingRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+        final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
 
     public CountDownLatch getCompactionStateChangeLatch() {

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.WALProtos.CompactionDescriptor;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
@@ -93,11 +94,9 @@ public class TestIOFencing {
     volatile CountDownLatch compactionsBlocked = new CountDownLatch(0);
     volatile CountDownLatch compactionsWaiting = new CountDownLatch(0);
 
-    @SuppressWarnings("deprecation")
-    public CompactionBlockerRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, log, fs, confParam, info, htd, rsServices);
+    public CompactionBlockerRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+        final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
 
     public void stopCompactions() {
@@ -154,11 +153,11 @@ public class TestIOFencing {
    */
   public static class BlockCompactionsInPrepRegion extends CompactionBlockerRegion {
 
-    public BlockCompactionsInPrepRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, log, fs, confParam, info, htd, rsServices);
+    public BlockCompactionsInPrepRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+        final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
+
     @Override
     protected void doRegionCompactionPrep() throws IOException {
       compactionsWaiting.countDown();
@@ -177,11 +176,11 @@ public class TestIOFencing {
    * entry to go the WAL before blocking, but blocks afterwards
    */
   public static class BlockCompactionsInCompletionRegion extends CompactionBlockerRegion {
-    public BlockCompactionsInCompletionRegion(Path tableDir, WAL log,
-        FileSystem fs, Configuration confParam, HRegionInfo info,
-        HTableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, log, fs, confParam, info, htd, rsServices);
+    public BlockCompactionsInCompletionRegion(final RegionFileSystem rfs,
+        final HTableDescriptor htd, final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
+
     @Override
     protected HStore instantiateHStore(final HColumnDescriptor family) throws IOException {
       return new BlockCompactionsInCompletionHStore(this, family, this.conf);

@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -157,8 +158,10 @@ public class TestHMobStore {
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, null, methodName);
-    region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes(),
-            info.getTable().getNamespace()), fs, conf, info, htd, null);
+
+    RegionFileSystem rfs = RegionFileSystem.open(conf, fs, basedir, info, false);
+    region = new HRegion(rfs, htd,
+      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
     store = new HMobStore(region, hcd, conf);
     if(testStore) {
       init(conf, hcd);

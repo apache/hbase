@@ -42,7 +42,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -199,10 +199,10 @@ public class CatalogJanitor extends ScheduledChore {
     Path rootdir = this.services.getMasterFileSystem().getRootDir();
     Path tabledir = FSUtils.getTableDir(rootdir, mergedRegion.getTable());
     HTableDescriptor htd = getTableDescriptor(mergedRegion.getTable());
-    HRegionFileSystem regionFs = null;
+    RegionFileSystem regionFs = null;
     try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          this.services.getConfiguration(), fs, tabledir, mergedRegion, true);
+      regionFs = RegionFileSystem.open(
+          this.services.getConfiguration(), fs, tabledir, mergedRegion, false);
     } catch (IOException e) {
       LOG.warn("Merged region does not exist: " + mergedRegion.getEncodedName());
     }
@@ -397,8 +397,6 @@ public class CatalogJanitor extends ScheduledChore {
 
     Path daughterRegionDir = new Path(tabledir, daughter.getEncodedName());
 
-    HRegionFileSystem regionFs = null;
-
     try {
       if (!FSUtils.isExists(fs, daughterRegionDir)) {
         return new Pair<Boolean, Boolean>(Boolean.FALSE, Boolean.FALSE);
@@ -410,10 +408,10 @@ public class CatalogJanitor extends ScheduledChore {
     }
 
     boolean references = false;
-    HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
     try {
-      regionFs = HRegionFileSystem.openRegionFromFileSystem(
-          this.services.getConfiguration(), fs, tabledir, daughter, true);
+      final RegionFileSystem regionFs = RegionFileSystem.open(this.services.getConfiguration(),
+          fs, tabledir, daughter, false);
+      final HTableDescriptor parentDescriptor = getTableDescriptor(parent.getTable());
 
       for (HColumnDescriptor family: parentDescriptor.getFamilies()) {
         if ((references = regionFs.hasReferences(family.getNameAsString()))) {

@@ -27,7 +27,7 @@ import org.apache.hadoop.hbase.mob.MobConstants;
 
 public final class LegacyLayout {
   /** Name of the region info file that resides just under the region directory. */
-  private final static String REGION_INFO_FILE = ".regioninfo";
+  public final static String REGION_INFO_FILE = ".regioninfo";
 
   /** Temporary subdirectory of the region directory used for merges. */
   public static final String REGION_MERGES_DIR = ".merges";

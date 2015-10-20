@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.regionserver.SplitTransactionImpl.LoggingProgressable;
 import org.apache.hadoop.hbase.security.User;
@@ -200,7 +201,7 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
           region_a.getRegionInfo().getRegionName());
       if (regionAHasMergeQualifier ||
           hasMergeQualifierInMeta(services, region_b.getRegionInfo().getRegionName())) {
-        LOG.debug("Region " + (regionAHasMergeQualifier ? 
+        LOG.debug("Region " + (regionAHasMergeQualifier ?
             region_a.getRegionInfo().getRegionNameAsString()
                 : region_b.getRegionInfo().getRegionNameAsString())
             + " is not mergeable because it has merge qualifier in META");
@@ -556,23 +557,19 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
       Map<byte[], List<StoreFile>> hstoreFilesOfRegionB)
       throws IOException {
     // Create reference file(s) of region A in mergdir
-    HRegionFileSystem fs_a = this.region_a.getRegionFileSystem();
-    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionA
-        .entrySet()) {
+    RegionFileSystem fs_a = this.region_a.getRegionFileSystem();
+    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionA.entrySet()) {
       String familyName = Bytes.toString(entry.getKey());
       for (StoreFile storeFile : entry.getValue()) {
-        fs_a.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile,
-            this.mergesdir);
+        fs_a.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile, this.mergesdir);
       }
     }
     // Create reference file(s) of region B in mergedir
-    HRegionFileSystem fs_b = this.region_b.getRegionFileSystem();
-    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionB
-        .entrySet()) {
+    RegionFileSystem fs_b = this.region_b.getRegionFileSystem();
+    for (Map.Entry<byte[], List<StoreFile>> entry : hstoreFilesOfRegionB.entrySet()) {
       String familyName = Bytes.toString(entry.getKey());
       for (StoreFile storeFile : entry.getValue()) {
-        fs_b.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile,
-            this.mergesdir);
+        fs_b.mergeStoreFile(this.mergedRegionInfo, familyName, storeFile, this.mergesdir);
       }
     }
   }

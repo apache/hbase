@@ -191,7 +191,7 @@ public class HBaseFsckRepair {
       HRegionInfo hri, HTableDescriptor htd) throws IOException {
     // Create HRegion
     Path root = FSUtils.getRootDir(conf);
-    HRegion region = HRegion.createHRegion(hri, root, conf, htd, null);
+    HRegion region = HRegion.createHRegion(conf, root, htd, hri, null);
 
     // Close the new region to flush to disk. Close log file too.
     region.close();

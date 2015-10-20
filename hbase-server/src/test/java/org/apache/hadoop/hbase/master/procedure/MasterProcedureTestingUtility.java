@@ -43,11 +43,13 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -234,19 +236,20 @@ public class MasterProcedureTestingUtility {
   }
 
   public static void validateColumnFamilyDeletion(final HMaster master, final TableName tableName,
-      final String family) throws IOException {
+      final String deletedFamily) throws IOException {
     // verify htd
     HTableDescriptor htd = master.getTableDescriptors().get(tableName);
     assertTrue(htd != null);
-    assertFalse(htd.hasFamily(family.getBytes()));
+    assertFalse(htd.hasFamily(deletedFamily.getBytes()));
 
     // verify fs
-    final FileSystem fs = master.getMasterFileSystem().getFileSystem();
-    final Path tableDir = FSUtils.getTableDir(master.getMasterFileSystem().getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(fs, tableDir)) {
-      final Path familyDir = new Path(regionDir, family);
-      assertFalse(family + " family dir should not exist", fs.exists(familyDir));
-    }
+    master.getMasterFileSystem().visitStoreFiles(tableName, new StoreFileVisitor() {
+      @Override
+      public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
+          throws IOException {
+        assertFalse(family + " family dir should not exist", family.equals(deletedFamily));
+      }
+    });
   }
 
   public static void validateColumnFamilyModification(final HMaster master,

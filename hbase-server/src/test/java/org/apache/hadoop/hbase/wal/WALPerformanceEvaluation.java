@@ -349,7 +349,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         long putTime = runBenchmark(benchmarks, numThreads);
         logBenchmarkResult("Summary: threads=" + numThreads + ", iterations=" + numIterations +
           ", syncInterval=" + syncInterval, numIterations * numThreads, putTime);
-        
+
         for (int i = 0; i < numRegions; i++) {
           if (regions[i] != null) {
             closeRegion(regions[i]);
@@ -451,7 +451,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private static void logBenchmarkResult(String testName, long numTests, long totalTime) {
     float tsec = totalTime / 1000.0f;
     LOG.info(String.format("%s took %.3fs %.3fops/s", testName, tsec, numTests / tsec));
-    
+
   }
 
   private void printUsageAndExit() {
@@ -531,8 +531,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         }
       });
     }
-     
-    return HRegion.createHRegion(regionInfo, dir, getConf(), htd, wal);
+
+    return HRegion.createHRegion(getConf(), dir, htd, regionInfo, wal);
   }
 
   private void closeRegion(final HRegion region) throws IOException {

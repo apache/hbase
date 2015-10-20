@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
@@ -101,6 +102,7 @@ import org.apache.hadoop.hbase.filter.NullComparator;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
@@ -4471,7 +4473,7 @@ public class TestHRegion {
       info = new HRegionInfo(htd.getTableName(), HConstants.EMPTY_BYTE_ARRAY,
           HConstants.EMPTY_BYTE_ARRAY, false);
       Path path = new Path(dir + "testStatusSettingToAbortIfAnyExceptionDuringRegionInitilization");
-      region = HRegion.newHRegion(path, null, fs, CONF, info, htd, null);
+      region = HRegion.newHRegion(CONF, fs, path, htd, info, null, null);
       // region initialization throws IOException and set task state to ABORTED.
       region.initialize();
       fail("Region initialization should fail due to IOException");
@@ -4509,10 +4511,10 @@ public class TestHRegion {
     FileSystem fs = region.getRegionFileSystem().getFileSystem();
     HBaseTestingUtility.closeRegionAndWAL(region);
 
-    Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
+    Path regionInfoFile = LegacyLayout.getRegionInfoFile(regionDir);
 
     // Verify that the .regioninfo file is present
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
+    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
         fs.exists(regionInfoFile));
 
     // Try to open the region
@@ -4521,12 +4523,12 @@ public class TestHRegion {
     HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
+    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
         fs.exists(regionInfoFile));
 
     // Remove the .regioninfo file and verify is recreated on region open
     fs.delete(regionInfoFile, true);
-    assertFalse(HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir",
+    assertFalse(LegacyLayout.REGION_INFO_FILE + " should be removed from the region dir",
         fs.exists(regionInfoFile));
 
     region = HRegion.openHRegion(rootDir, hri, htd, null, CONF);
@@ -4535,8 +4537,8 @@ public class TestHRegion {
     HBaseTestingUtility.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
-        fs.exists(new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE)));
+    assertTrue(LegacyLayout.REGION_INFO_FILE + " should be present in the region dir",
+        fs.exists(new Path(regionDir, LegacyLayout.REGION_INFO_FILE)));
   }
 
   /**
@@ -6097,10 +6099,9 @@ public class TestHRegion {
 
   // Helper for test testOpenRegionWrittenToWALForLogReplay
   static class HRegionWithSeqId extends HRegion {
-    public HRegionWithSeqId(final Path tableDir, final WAL wal, final FileSystem fs,
-        final Configuration confParam, final HRegionInfo regionInfo,
-        final HTableDescriptor htd, final RegionServerServices rsServices) {
-      super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
+    public HRegionWithSeqId(final RegionFileSystem rfs, final HTableDescriptor htd,
+        final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
     @Override
     protected long getNextSequenceId(WAL wal) throws IOException {

@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.client.ScannerCallable;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.regionserver.HRegion.RegionScannerImpl;
@@ -444,14 +445,9 @@ public class TestScannerHeartbeatMessages {
     private static volatile int columnFamilySleepTime = DEFAULT_CF_SLEEP_TIME;
     private static volatile boolean sleepBetweenColumnFamilies = false;
 
-    public HeartbeatHRegion(Path tableDir, WAL wal, FileSystem fs, Configuration confParam,
-        HRegionInfo regionInfo, HTableDescriptor htd, RegionServerServices rsServices) {
-      super(tableDir, wal, fs, confParam, regionInfo, htd, rsServices);
-    }
-
-    public HeartbeatHRegion(HRegionFileSystem fs, WAL wal, Configuration confParam,
-        HTableDescriptor htd, RegionServerServices rsServices) {
-      super(fs, wal, confParam, htd, rsServices);
+    public HeartbeatHRegion(final RegionFileSystem rfs, final HTableDescriptor htd,
+        final WAL wal, final RegionServerServices rsServices) {
+      super(rfs, htd, wal, rsServices);
     }
 
     private static void columnFamilySleep() {

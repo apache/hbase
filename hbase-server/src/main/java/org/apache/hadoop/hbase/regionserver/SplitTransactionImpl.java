@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -662,7 +663,7 @@ public class SplitTransactionImpl implements SplitTransaction {
         LOG.debug("Splitting started for store file: " + sf.getPath() + " for region: " +
                   this.parent);
     }
-    HRegionFileSystem fs = this.parent.getRegionFileSystem();
+    RegionFileSystem fs = this.parent.getRegionFileSystem();
     String familyName = Bytes.toString(family);
     Path path_a =
         fs.splitStoreFile(this.hri_a, familyName, sf, this.splitrow, false,

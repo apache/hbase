@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -247,18 +248,11 @@ public class TestRegionMergeTransactionOnCluster {
       assertTrue(fs.exists(regionAdir));
       assertTrue(fs.exists(regionBdir));
 
-      HColumnDescriptor[] columnFamilies = tableDescriptor.getColumnFamilies();
-      HRegionFileSystem hrfs = new HRegionFileSystem(
-        TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo);
-      int count = 0;
-      for(HColumnDescriptor colFamily : columnFamilies) {
-        count += hrfs.getStoreFiles(colFamily.getName()).size();
-      }
-      ADMIN.compactRegion(mergedRegionInfo.getRegionName());
-      // clean up the merged region store files
-      // wait until merged region have reference file
+      admin.compactRegion(mergedRegionInfo.getRegionName());
+      // wait until merged region doesn't have reference file
       long timeout = System.currentTimeMillis() + waitTime;
-      int newcount = 0;
+      RegionFileSystem hrfs = RegionFileSystem.open(
+          TEST_UTIL.getConfiguration(), fs, tabledir, mergedRegionInfo, false);
       while (System.currentTimeMillis() < timeout) {
         for(HColumnDescriptor colFamily : columnFamilies) {
           newcount += hrfs.getStoreFiles(colFamily.getName()).size();

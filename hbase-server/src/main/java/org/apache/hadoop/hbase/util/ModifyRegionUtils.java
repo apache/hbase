@@ -170,7 +170,7 @@ public abstract class ModifyRegionUtils {
     // unless I pass along via the conf.
     Configuration confForWAL = new Configuration(conf);
     confForWAL.set(HConstants.HBASE_DIR, rootDir.toString());
-    HRegion region = HRegion.createHRegion(newRegion, rootDir, conf, hTableDescriptor, null, false);
+    HRegion region = HRegion.createHRegion(conf, rootDir, hTableDescriptor, newRegion, null, false);
     try {
       // 2. Custom user code to interact with the created region
       if (task != null) {

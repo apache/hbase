@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -170,11 +171,9 @@ public class TestStore {
       HColumnDescriptor hcd) throws IOException {
     //Setting up a Store
     Path basedir = new Path(DIR+methodName);
-    Path tableDir = FSUtils.getTableDir(basedir, htd.getTableName());
     final Path logdir = new Path(basedir, AbstractFSWALProvider.getWALDirectoryName(methodName));
 
     FileSystem fs = FileSystem.get(conf);
-
     fs.delete(logdir, true);
 
     if (htd.hasFamily(hcd.getName())) {
@@ -182,12 +181,14 @@ public class TestStore {
     } else {
       htd.addFamily(hcd);
     }
+
     HRegionInfo info = new HRegionInfo(htd.getTableName(), null, null, false);
     final Configuration walConf = new Configuration(conf);
     FSUtils.setRootDir(walConf, basedir);
     final WALFactory wals = new WALFactory(walConf, null, methodName);
-    HRegion region = new HRegion(tableDir, wals.getWAL(info.getEncodedNameAsBytes(),
-            info.getTable().getNamespace()), fs, conf, info, htd, null);
+    RegionFileSystem rfs = RegionFileSystem.open(conf, fs, basedir, info, false);
+    HRegion region = new HRegion(rfs, htd,
+      wals.getWAL(info.getEncodedNameAsBytes(), info.getTable().getNamespace()), null);
 
     store = new HStore(region, hcd, conf);
     return store;

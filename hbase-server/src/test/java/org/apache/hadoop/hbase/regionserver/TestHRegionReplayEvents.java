@@ -177,7 +177,8 @@ public class TestHRegionReplayEvents {
     es.startExecutorService(
       string+"-"+string, 1);
     when(rss.getExecutorService()).thenReturn(es);
-    primaryRegion = HRegion.createHRegion(primaryHri, rootDir, CONF, htd, walPrimary);
+
+    primaryRegion = HRegion.createHRegion(CONF, rootDir, htd, primaryHri, walPrimary);
     primaryRegion.close();
     List<Region> regions = new ArrayList<Region>();
     regions.add(primaryRegion);

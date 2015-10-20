@@ -31,11 +31,14 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -302,13 +305,14 @@ public class TestRestoreSnapshotFromClient {
 
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
-    Set<String> families = new HashSet<String>();
-    Path tableDir = FSUtils.getTableDir(mfs.getRootDir(), tableName);
-    for (Path regionDir: FSUtils.getRegionDirs(mfs.getFileSystem(), tableDir)) {
-      for (Path familyDir: FSUtils.getFamilyDirs(mfs.getFileSystem(), regionDir)) {
-        families.add(familyDir.getName());
+    final Set<String> families = new HashSet<String>();
+    mfs.visitStoreFiles(tableName, new StoreFileVisitor() {
+      @Override
+      public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
+          throws IOException {
+        families.add(family);
       }
-    }
+    });
     return families;
   }
 

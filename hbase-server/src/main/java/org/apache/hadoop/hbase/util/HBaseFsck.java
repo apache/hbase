@@ -111,7 +111,9 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -120,7 +122,6 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos.AdminService.BlockingInterface;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -236,6 +237,8 @@ public class HBaseFsck extends Configured implements Closeable {
   // successful
   private final AtomicBoolean hbckLockCleanup = new AtomicBoolean(false);
 
+  private final MasterFileSystem mfs;
+
   /***********
    * Options
    ***********/
@@ -348,8 +351,18 @@ public class HBaseFsck extends Configured implements Closeable {
   public HBaseFsck(Configuration conf, ExecutorService exec) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException, ClassNotFoundException {
     super(conf);
+    // make a copy, just to be sure we're not overriding someone else's config
+    setConf(HBaseConfiguration.create(getConf()));
+    // disable blockcache for tool invocation, see HBASE-10500
+    getConf().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
+    // Disable usage of meta replicas in hbck
+    getConf().setBoolean(HConstants.USE_META_REPLICAS, false);
+
+    mfs = MasterFileSystem.open(getConf(), false);
+
     errors = getErrorReporter(getConf());
     this.executor = exec;
+
     lockFileRetryCounterFactory = new RetryCounterFactory(
       getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
       getConf().getInt(
@@ -1075,7 +1088,6 @@ public class HBaseFsck extends Configured implements Closeable {
   private void offlineReferenceFileRepair() throws IOException {
     clearState();
     LOG.info("Validating mapping using HDFS state");
-    final MasterFileSystem mfs = MasterFileSystem.open(getConf(), false);
     mfs.visitStoreFiles(new StoreFileVisitor() {
       @Override
       public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
@@ -1179,7 +1191,7 @@ public class HBaseFsck extends Configured implements Closeable {
     }
 
     FileSystem fs = FileSystem.get(getConf());
-    HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+    HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
     LOG.debug("HRegionInfo read: " + hri.toString());
     hbi.hdfsEntry.hri = hri;
   }
@@ -1412,7 +1424,7 @@ public class HBaseFsck extends Configured implements Closeable {
         Collections.<WALActionsListener>singletonList(new MetricsWAL()),
         "hbck-meta-recovery-" + RandomStringUtils.randomNumeric(8))).
         getWAL(metaHRI.getEncodedNameAsBytes(), metaHRI.getTable().getNamespace());
-    HRegion meta = HRegion.createHRegion(metaHRI, rootdir, c, metaDescriptor, wal);
+    HRegion meta = HRegion.createHRegion(c, rootdir, metaDescriptor, metaHRI, wal);
     MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, true);
     return meta;
   }
@@ -2349,8 +2361,7 @@ public class HBaseFsck extends Configured implements Closeable {
                   LOG.warn(hri + " start and stop keys are in the range of " + region
                       + ". The region might not be cleaned up from hdfs when region " + region
                       + " split failed. Hence deleting from hdfs.");
-                  HRegionFileSystem.deleteRegionFromFileSystem(getConf(), fs,
-                    regionDir.getParent(), hri);
+                  RegionFileSystem.destroy(getConf(), fs, regionDir.getParent(), hri);
                   return;
                 }
               }
@@ -2612,7 +2623,7 @@ public class HBaseFsck extends Configured implements Closeable {
       Path src = cf.getPath();
       Path dst =  new Path(targetRegionDir, src.getName());
 
-      if (src.getName().equals(HRegionFileSystem.REGION_INFO_FILE)) {
+      if (src.getName().equals(LegacyLayout.REGION_INFO_FILE)) {
         // do not copy the old .regioninfo file.
         continue;
       }
@@ -4135,7 +4146,7 @@ public class HBaseFsck extends Configured implements Closeable {
               try {
                 LOG.debug("Loading region info from hdfs:"+ regionDir.getPath());
 
-                Path regioninfoFile = new Path(regionDir.getPath(), HRegionFileSystem.REGION_INFO_FILE);
+                Path regioninfoFile = new Path(he.hdfsRegionDir, LegacyLayout.REGION_INFO_FILE);
                 boolean regioninfoFileExists = fs.exists(regioninfoFile);
 
                 if (!regioninfoFileExists) {

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -100,13 +101,12 @@ public class TestRecoveredEdits {
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = FileSystem.get(TEST_UTIL.getConfiguration());
     Path tableDir = FSUtils.getTableDir(hbaseRootDir, htd.getTableName());
-    HRegionFileSystem hrfs =
-        new HRegionFileSystem(TEST_UTIL.getConfiguration(), fs, tableDir, hri);
+    RegionFileSystem hrfs = RegionFileSystem.open(TEST_UTIL.getConfiguration(), fs, hbaseRootDir, hri, false);
     if (fs.exists(hrfs.getRegionDir())) {
       LOG.info("Region directory already exists. Deleting.");
       fs.delete(hrfs.getRegionDir(), true);
     }
-    HRegion region = HRegion.createHRegion(hri, hbaseRootDir, conf, htd, null);
+    HRegion region = HRegion.createHRegion(conf, hbaseRootDir, htd, hri, null);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
     List<String> storeFiles = region.getStoreFileList(columnFamilyAsByteArray);
     // There should be no store files.

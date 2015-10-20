@@ -52,9 +52,9 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
@@ -112,7 +112,7 @@ public class CompactionTool extends Configured implements Tool {
         Path regionDir = path.getParent();
         Path tableDir = regionDir.getParent();
         HTableDescriptor htd = LegacyTableDescriptor.getTableDescriptorFromFs(fs, tableDir);
-        HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+        HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
         compactStoreFiles(tableDir, htd, hri,
             path.getName(), compactOnce, major);
       } else if (isRegionDir(fs, path)) {
@@ -138,7 +138,7 @@ public class CompactionTool extends Configured implements Tool {
     private void compactRegion(final Path tableDir, final HTableDescriptor htd,
         final Path regionDir, final boolean compactOnce, final boolean major)
         throws IOException {
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
+      HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
       for (Path familyDir: FSUtils.getFamilyDirs(fs, regionDir)) {
         compactStoreFiles(tableDir, htd, hri, familyDir.getName(), compactOnce, major);
       }
@@ -181,20 +181,14 @@ public class CompactionTool extends Configured implements Tool {
     private static HStore getStore(final Configuration conf, final FileSystem fs,
         final Path tableDir, final HTableDescriptor htd, final HRegionInfo hri,
         final String familyName, final Path tempDir) throws IOException {
-      HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tableDir, hri) {
-        @Override
-        public Path getTempDir() {
-          return tempDir;
-        }
-      };
-      HRegion region = new HRegion(regionFs, null, conf, htd, null);
+      RegionFileSystem regionFs = null;
+      HRegion region = new HRegion(regionFs, htd, null, null);
       return new HStore(region, htd.getFamily(Bytes.toBytes(familyName)), conf);
     }
   }
 
   private static boolean isRegionDir(final FileSystem fs, final Path path) throws IOException {
-    Path regionInfo = new Path(path, HRegionFileSystem.REGION_INFO_FILE);
-    return fs.exists(regionInfo);
+    return fs.exists(null);
   }
 
   private static boolean isTableDir(final FileSystem fs, final Path path) throws IOException {

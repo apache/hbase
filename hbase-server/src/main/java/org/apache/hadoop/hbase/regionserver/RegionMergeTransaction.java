@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.security.User;
  * transaction, {@link #execute(Server, RegionServerServices)} to run the
  * transaction and {@link #rollback(Server, RegionServerServices)} to cleanup if
  * execute fails.
- * 
+ *
  * <p>Here is an example of how you would use this interface:
  * <pre>
  *  RegionMergeTransactionFactory factory = new RegionMergeTransactionFactory(conf);
@@ -158,7 +158,7 @@ public interface RegionMergeTransaction {
    * @param services
    * @return <code>true</code> if the regions are mergeable else
    *         <code>false</code> if they are not (e.g. its already closed, etc.).
-   * @throws IOException 
+   * @throws IOException
    */
   boolean prepare(RegionServerServices services) throws IOException;
 
@@ -217,7 +217,7 @@ public interface RegionMergeTransaction {
   /**
    * Register a listener for transaction preparation, execution, and possibly
    * rollback phases.
-   * <p>A listener can abort a transaction by throwing an exception. 
+   * <p>A listener can abort a transaction by throwing an exception.
    * @param listener the listener
    * @return 'this' for chaining
    */

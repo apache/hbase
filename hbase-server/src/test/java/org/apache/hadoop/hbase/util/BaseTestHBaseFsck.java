@@ -61,12 +61,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.BaseMasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.mob.MobFileName;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.AdminProtos;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
@@ -200,7 +200,7 @@ public class BaseTestHBaseFsck {
           FileSystem fs = rootDir.getFileSystem(conf);
           Path p = new Path(FSUtils.getTableDir(rootDir, htd.getTableName()),
               hri.getEncodedName());
-          Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
+          Path hriPath = LegacyLayout.getRegionInfoFile(p);
           fs.delete(hriPath, true);
         }
 
@@ -582,7 +582,7 @@ public class BaseTestHBaseFsck {
       FileSystem fs = rootDir.getFileSystem(conf);
       Path p = new Path(rootDir + "/" + TableName.META_TABLE_NAME.getNameAsString(),
           hri.getEncodedName());
-      Path hriPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
+      Path hriPath = LegacyLayout.getRegionInfoFile(p);
       fs.delete(hriPath, true);
     }
 

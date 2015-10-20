@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionSnare;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescriptio
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotDataManifest;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
@@ -250,8 +250,8 @@ public final class SnapshotManifest {
     boolean isMobRegion = MobUtils.isMobRegionInfo(regionInfo);
     try {
       // Open the RegionFS
-      HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-            tableDir, regionInfo, true);
+      Path rootDir = null;
+      RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, rootDir, regionInfo, false);
       monitor.rethrowException();
 
       // 1. dump region meta info into the snapshot directory

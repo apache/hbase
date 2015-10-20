@@ -997,7 +997,7 @@ public class TestDefaultMemStore {
     HTableDescriptor desc = new HTableDescriptor(TableName.valueOf("testShouldFlushMeta"));
     desc.addFamily(new HColumnDescriptor("foo".getBytes()));
     HRegion r =
-        HRegion.createHRegion(hri, testDir, conf, desc,
+        HRegion.createHRegion(conf, testDir, desc, hri,
             wFactory.getWAL(hri.getEncodedNameAsBytes(), hri.getTable().getNamespace()));
     HRegion.addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);

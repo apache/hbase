@@ -218,7 +218,7 @@ public class TestDurability {
     assertEquals(3, Bytes.toLong(res.getValue(FAMILY, col3)));
     verifyWALCount(wals, wal, 2);
   }
-  
+
   /*
    * Test when returnResults set to false in increment it should not return the result instead it
    * resturn null.
@@ -275,7 +275,7 @@ public class TestDurability {
           throw new IOException("Failed delete of " + path);
         }
       }
-      return HRegion.createHRegion(info, path, CONF, htd, log);
+      return HRegion.createHRegion(CONF, path, htd, info, log);
     }
 
 }

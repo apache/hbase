@@ -36,9 +36,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -62,8 +62,7 @@ public final class SnapshotManifestV1 {
   private SnapshotManifestV1() {
   }
 
-  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<
-                                                          HRegionFileSystem, Path> {
+  static class ManifestBuilder implements SnapshotManifest.RegionVisitor<RegionFileSystem, Path> {
     private final Configuration conf;
     private final Path snapshotDir;
     private final FileSystem fs;
@@ -74,24 +73,24 @@ public final class SnapshotManifestV1 {
       this.fs = fs;
     }
 
-    public HRegionFileSystem regionOpen(final HRegionInfo regionInfo) throws IOException {
-      HRegionFileSystem snapshotRegionFs = HRegionFileSystem.createRegionOnFileSystem(conf,
-        fs, snapshotDir, regionInfo);
+    public RegionFileSystem regionOpen(final HRegionInfo regionInfo) throws IOException {
+      RegionFileSystem snapshotRegionFs = RegionFileSystem.open(conf, fs,
+          snapshotDir, regionInfo, true);
       return snapshotRegionFs;
     }
 
-    public void regionClose(final HRegionFileSystem region) {
+    public void regionClose(final RegionFileSystem region) {
     }
 
-    public Path familyOpen(final HRegionFileSystem snapshotRegionFs, final byte[] familyName) {
+    public Path familyOpen(final RegionFileSystem snapshotRegionFs, final byte[] familyName) {
       Path familyDir = snapshotRegionFs.getStoreDir(Bytes.toString(familyName));
       return familyDir;
     }
 
-    public void familyClose(final HRegionFileSystem region, final Path family) {
+    public void familyClose(final RegionFileSystem region, final Path family) {
     }
 
-    public void storeFile(final HRegionFileSystem region, final Path familyDir,
+    public void storeFile(final RegionFileSystem region, final Path familyDir,
         final StoreFileInfo storeFile) throws IOException {
       Path referenceFile = new Path(familyDir, storeFile.getPath().getName());
       boolean success = true;
@@ -126,7 +125,7 @@ public final class SnapshotManifestV1 {
       completionService.submit(new Callable<SnapshotRegionManifest>() {
         @Override
         public SnapshotRegionManifest call() throws IOException {
-          HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, region.getPath());
+          HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, region.getPath());
           return buildManifestFromDisk(conf, fs, snapshotDir, hri);
         }
       });
@@ -156,8 +155,7 @@ public final class SnapshotManifestV1 {
 
   static SnapshotRegionManifest buildManifestFromDisk(final Configuration conf,
       final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
-    HRegionFileSystem regionFs = HRegionFileSystem.openRegionFromFileSystem(conf, fs,
-          tableDir, regionInfo, true);
+    RegionFileSystem regionFs = RegionFileSystem.open(conf, fs, tableDir, regionInfo, true);
     SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
 
     // 1. dump region meta info into the snapshot directory

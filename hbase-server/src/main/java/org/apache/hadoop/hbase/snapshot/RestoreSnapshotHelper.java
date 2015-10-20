@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -55,7 +56,6 @@ import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -778,9 +778,9 @@ public class RestoreSnapshotHelper {
     FileStatus[] regionDirs = FSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regionDirs == null) return null;
 
-    List<HRegionInfo> regions = new ArrayList<HRegionInfo>(regionDirs.length);
-    for (int i = 0; i < regionDirs.length; ++i) {
-      HRegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDirs[i].getPath());
+    List<HRegionInfo> regions = new LinkedList<HRegionInfo>();
+    for (FileStatus regionDir: regionDirs) {
+      HRegionInfo hri = RegionFileSystem.loadRegionInfoFileContent(fs, regionDir.getPath());
       regions.add(hri);
     }
     LOG.debug("found " + regions.size() + " regions for table=" +

@@ -68,6 +68,7 @@ import org.apache.hadoop.hbase.TagUtil;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -127,7 +128,7 @@ public class HStore implements Store {
   // This stores directory in the filesystem.
   protected final HRegion region;
   private final HColumnDescriptor family;
-  private final HRegionFileSystem fs;
+  private final RegionFileSystem fs;
   protected Configuration conf;
   protected CacheConfig cacheConf;
   private long lastCompactSize = 0;
@@ -335,7 +336,7 @@ public class HStore implements Store {
     return this.fs.getFileSystem();
   }
 
-  public HRegionFileSystem getRegionFileSystem() {
+  public RegionFileSystem getRegionFileSystem() {
     return this.fs;
   }
 

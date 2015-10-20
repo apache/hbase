@@ -26,10 +26,12 @@ import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.fs.RegionFileSystem.StoreFileVisitor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -125,26 +127,24 @@ public abstract class TableSnapshotInputFormatTestBase {
 
       testRestoreSnapshotDoesNotCreateBackRefLinksInit(tableName, snapshotName,tmpTableDir);
 
-      Path rootDir = FSUtils.getRootDir(UTIL.getConfiguration());
-      for (Path regionDir : FSUtils.getRegionDirs(fs, FSUtils.getTableDir(rootDir, tableName))) {
-        for (Path storeDir : FSUtils.getFamilyDirs(fs, regionDir)) {
-          for (FileStatus status : fs.listStatus(storeDir)) {
-            System.out.println(status.getPath());
-            if (StoreFileInfo.isValid(status)) {
-              Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(UTIL.getConfiguration(),
-                tableName, regionDir.getName(), storeDir.getName());
+      UTIL.getHBaseCluster().getMaster().getMasterFileSystem().visitStoreFiles(tableName,
+          new StoreFileVisitor() {
+        @Override
+        public void storeFile(HRegionInfo region, String family, StoreFileInfo storeFile)
+            throws IOException {
+          Path archiveStoreDir = HFileArchiveUtil.getStoreArchivePath(UTIL.getConfiguration(),
+            region.getTable(), region.getEncodedName(), family);
 
-              Path path = HFileLink.getBackReferencesDir(storeDir, status.getPath().getName());
-              // assert back references directory is empty
-              assertFalse("There is a back reference in " + path, fs.exists(path));
+          // assert back references directory is empty
+          Path storeDir = storeFile.getPath().getParent();
+          Path path = HFileLink.getBackReferencesDir(storeDir, storeFile.getPath().getName());
+          assertFalse("There is a back reference in " + path, fs.exists(path));
 
-              path = HFileLink.getBackReferencesDir(archiveStoreDir, status.getPath().getName());
-              // assert back references directory is empty
-              assertFalse("There is a back reference in " + path, fs.exists(path));
-            }
-          }
+          // assert back references directory is empty
+          path = HFileLink.getBackReferencesDir(archiveStoreDir, storeFile.getPath().getName());
+          assertFalse("There is a back reference in " + path, fs.exists(path));
         }
-      }
+      });
     } finally {
       UTIL.getHBaseAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);

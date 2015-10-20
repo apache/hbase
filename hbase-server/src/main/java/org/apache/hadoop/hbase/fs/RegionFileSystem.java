@@ -34,7 +34,7 @@ import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.TableDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.fs.legacy.LegacyRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -45,6 +45,61 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.fs.FSUtilsWithRetries;
+import org.apache.hadoop.hbase.fs.FsContext;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MetaUtils;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.mob.MobUtils;
+
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.regionserver.*;
+import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSHDFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 
 @InterfaceAudience.Private
 public abstract class RegionFileSystem {
@@ -135,6 +190,78 @@ public abstract class RegionFileSystem {
   protected abstract void destroy() throws IOException;
 
   // ==========================================================================
+  //  NOOOOO
+  // ==========================================================================
+  public abstract void checkRegionInfoOnFilesystem() throws IOException;
+  public abstract Path getRegionDir();
+  public abstract Path getTableDir();
+
+  public abstract Path getTempDir();
+
+  public HRegionInfo getRegionInfoForFS() { return hri; }
+
+  public abstract Path getStoreDir(final String familyName);
+  public abstract Path createTempName();
+  public abstract Path createStoreDir(final String familyName) throws IOException;
+  public abstract Path bulkLoadStoreFile(final String familyName, Path srcPath, long seqNum)
+      throws IOException;
+
+  public abstract void cleanupTempDir() throws IOException;
+  public abstract void cleanupSplitsDir() throws IOException;
+  public abstract void cleanupMergesDir() throws IOException;
+  public abstract void cleanupAnySplitDetritus() throws IOException;
+
+  public abstract Path commitDaughterRegion(final HRegionInfo regionInfo)
+      throws IOException;
+  public abstract void commitMergedRegion(final HRegionInfo mergedRegionInfo) throws IOException;
+  public abstract StoreFileInfo getStoreFileInfo(final String familyName, final String fileName)
+      throws IOException;
+
+  public abstract Path commitStoreFile(final String familyName, final Path buildPath) throws IOException;
+  public abstract void commitStoreFiles(final Map<byte[], List<StoreFile>> storeFiles) throws IOException;
+
+  public abstract void removeStoreFile(final String familyName, final Path filePath)
+      throws IOException;
+  public abstract void removeStoreFiles(final String familyName, final Collection<StoreFile> storeFiles)
+      throws IOException;
+
+  public abstract boolean hasReferences(final String familyName) throws IOException;
+  public abstract boolean hasReferences(final HTableDescriptor htd) throws IOException;
+
+  public abstract Path getStoreFilePath(final String familyName, final String fileName);
+
+  public abstract void logFileSystemState(final Log LOG) throws IOException;
+
+  public abstract void createSplitsDir() throws IOException;
+  public abstract Path getSplitsDir();
+  public abstract Path getSplitsDir(final HRegionInfo hri);
+
+  public abstract Path getMergesDir();
+  public abstract void createMergesDir() throws IOException;
+
+  public abstract Path mergeStoreFile(final HRegionInfo mergedRegion, final String familyName,
+      final StoreFile f, final Path mergedDir)
+      throws IOException;
+
+  public abstract void cleanupMergedRegion(final HRegionInfo mergedRegion) throws IOException;
+
+  public abstract Path splitStoreFile(final HRegionInfo hri, final String familyName,
+      final StoreFile f, final byte[] splitRow, final boolean top, RegionSplitPolicy splitPolicy)
+          throws IOException;
+
+  public abstract void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException;
+
+  public static HRegionInfo loadRegionInfoFileContent(FileSystem fs, Path regionDir)
+      throws IOException {
+    FSDataInputStream in = fs.open(new Path(regionDir, ".regioninfo"));
+    try {
+      return HRegionInfo.parseFrom(in);
+    } finally {
+      in.close();
+    }
+  }
+
+  // ==========================================================================
   //  PUBLIC
   // ==========================================================================
   public static RegionFileSystem open(Configuration conf, HRegionInfo regionInfo, boolean bootstrap)
@@ -155,8 +282,9 @@ public abstract class RegionFileSystem {
     RegionFileSystem rfs = getInstance(conf, fs, rootDir, regionInfo);
     if (bootstrap) {
       // TODO: are bootstrap and create two different things?
-      // should switch to bootstrap & read-only 
+      // should switch to bootstrap & read-only
       // legacy region wants to recover the .regioninfo :(
+      rfs.bootstrap();
     }
     return rfs;
   }

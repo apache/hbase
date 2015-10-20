@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.fs.MasterFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.fs.legacy.LegacyTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -66,7 +67,6 @@ import org.apache.hadoop.hbase.client.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterProtos.IsSnapshotDoneResponse;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -357,6 +357,7 @@ public final class SnapshotTestingUtils {
   public static ArrayList<String> listHFileNames(final FileSystem fs, final Path tableDir)
       throws IOException {
     final ArrayList<String> hfiles = new ArrayList<String>();
+    /* TODO
     FSVisitor.visitTableStoreFiles(fs, tableDir, new FSVisitor.StoreFileVisitor() {
       @Override
       public void storeFile(final String region, final String family, final String hfileName)
@@ -364,6 +365,7 @@ public final class SnapshotTestingUtils {
         hfiles.add(hfileName);
       }
     });
+    */
     Collections.sort(hfiles);
     return hfiles;
   }
@@ -699,7 +701,7 @@ public final class SnapshotTestingUtils {
 
         // First region, simple with one plain hfile.
         HRegionInfo hri = new HRegionInfo(htd.getTableName(), startKey, endKey);
-        HRegionFileSystem rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
+        RegionFileSystem rfs = RegionFileSystem.open(conf, fs, tableDir, hri, true);
         regions[i] = new RegionData(tableDir, hri, 3);
         for (int j = 0; j < regions[i].files.length; ++j) {
           Path storeFile = createStoreFile(rfs.createTempName());
@@ -711,7 +713,7 @@ public final class SnapshotTestingUtils {
         startKey = Bytes.toBytes(2 + i * 2);
         endKey = Bytes.toBytes(3 + i * 2);
         hri = new HRegionInfo(htd.getTableName());
-        rfs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, hri);
+        rfs = RegionFileSystem.open(conf, fs, tableDir, hri, true);
         regions[i+1] = new RegionData(tableDir, hri, regions[i].files.length);
         for (int j = 0; j < regions[i].files.length; ++j) {
           String refName = regions[i].files[j].getName() + '.' + regions[i].hri.getEncodedName();

@@ -48,7 +48,7 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -206,15 +206,7 @@ public class OfflineMetaRebuildTestCore {
     HRegionInfo hri = new HRegionInfo(htbl.getName(), startKey, endKey);
 
     LOG.info("manually adding regioninfo and hdfs data: " + hri.toString());
-    Path rootDir = FSUtils.getRootDir(conf);
-    FileSystem fs = rootDir.getFileSystem(conf);
-    Path p = new Path(FSUtils.getTableDir(rootDir, htbl.getName()),
-        hri.getEncodedName());
-    fs.mkdirs(p);
-    Path riPath = new Path(p, HRegionFileSystem.REGION_INFO_FILE);
-    FSDataOutputStream out = fs.create(riPath);
-    out.write(hri.toDelimitedByteArray());
-    out.close();
+    RegionFileSystem rfs = RegionFileSystem.open(conf, hri, true);
 
     // add to meta.
     MetaTableAccessor.addRegionToMeta(meta, hri);

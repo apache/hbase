@@ -238,7 +238,7 @@ public class LegacyMasterFileSystem extends MasterFileSystem {
       HRegionInfo metaHRI = new HRegionInfo(HRegionInfo.FIRST_META_REGIONINFO);
       HTableDescriptor metaDescriptor = HTableDescriptor.metaTableDescriptor(c);
       MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, false);
-      HRegion meta = HRegion.createHRegion(metaHRI, rd, c, metaDescriptor, null);
+      HRegion meta = HRegion.createHRegion(c, rd, metaDescriptor, metaHRI, null);
       MetaUtils.setInfoFamilyCachingForMeta(metaDescriptor, true);
       meta.close();
     } catch (IOException e) {

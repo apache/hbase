@@ -36,6 +36,8 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.fs.RegionFileSystem;
+import org.apache.hadoop.hbase.fs.legacy.LegacyLayout;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionInfo;
@@ -77,7 +79,7 @@ public class TestHRegionInfo {
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    HRegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
+    HRegionInfo deserializedHri = RegionFileSystem.loadRegionInfoFileContent(
         r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
     assertTrue(hri.equals(deserializedHri));
     HBaseTestingUtility.closeRegionAndWAL(r);
@@ -85,7 +87,7 @@ public class TestHRegionInfo {
 
   long getModTime(final HRegion r) throws IOException {
     FileStatus[] statuses = r.getRegionFileSystem().getFileSystem().listStatus(
-      new Path(r.getRegionFileSystem().getRegionDir(), HRegionFileSystem.REGION_INFO_FILE));
+      LegacyLayout.getRegionInfoFile(r.getRegionFileSystem().getRegionDir()));
     assertTrue(statuses != null && statuses.length == 1);
     return statuses[0].getModificationTime();
   }
@@ -296,12 +298,12 @@ public class TestHRegionInfo {
     String firstPart = descriptiveNameForDisplay.substring(0,
         descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)));
     String secondPart = descriptiveNameForDisplay.substring(
-        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) + 
+        descriptiveNameForDisplay.indexOf(new String(HRegionInfo.HIDDEN_START_KEY)) +
         HRegionInfo.HIDDEN_START_KEY.length);
     String firstPartOrig = origDesc.substring(0,
         origDesc.indexOf(Bytes.toStringBinary(startKey)));
     String secondPartOrig = origDesc.substring(
-        origDesc.indexOf(Bytes.toStringBinary(startKey)) + 
+        origDesc.indexOf(Bytes.toStringBinary(startKey)) +
         Bytes.toStringBinary(startKey).length());
     assert(firstPart.equals(firstPartOrig));
     assert(secondPart.equals(secondPartOrig));
