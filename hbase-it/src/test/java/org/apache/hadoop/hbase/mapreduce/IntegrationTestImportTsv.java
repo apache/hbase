@@ -199,7 +199,7 @@ public class IntegrationTestImportTsv extends Configured implements Tool {
 
     // run the job, complete the load.
     util.createTable(table, new String[]{cf});
-    Tool t = TestImportTsv.doMROnTableTest(util, table.getNameAsString(), cf, simple_tsv, args);
+    Tool t = TestImportTsv.doMROnTableTest(util, table, cf, simple_tsv, args);
     doLoadIncrementalHFiles(hfiles, table);
 
     // validate post-conditions

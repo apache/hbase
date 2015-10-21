@@ -165,8 +165,7 @@ public class TestDeleteMobTable {
 
   @Test
   public void testMobFamilyDelete() throws Exception {
-    byte[] tableName = Bytes.toBytes("testMobFamilyDelete");
-    TableName tn = TableName.valueOf(tableName);
+    TableName tn = TableName.valueOf("testMobFamilyDelete");
     HTableDescriptor htd = new HTableDescriptor(tn);
     HColumnDescriptor hcd = new HColumnDescriptor(FAMILY);
     hcd.setMobEnabled(true);
@@ -201,7 +200,7 @@ public class TestDeleteMobTable {
       if (admin != null) {
         admin.close();
       }
-      TEST_UTIL.deleteTable(tableName);
+      TEST_UTIL.deleteTable(tn);
     }
   }
 

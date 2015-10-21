@@ -1677,26 +1677,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Drop an existing table
    * @param tableName existing table
-   * @deprecated use {@link #deleteTable(TableName)}
-   */
-  @Deprecated
-  public void deleteTable(String tableName) throws IOException {
-    deleteTable(TableName.valueOf(tableName));
-  }
-
-  /**
-   * Drop an existing table
-   * @param tableName existing table
-   * @deprecated use {@link #deleteTable(TableName)}
-   */
-  @Deprecated
-  public void deleteTable(byte[] tableName) throws IOException {
-    deleteTable(TableName.valueOf(tableName));
-  }
-
-  /**
-   * Drop an existing table
-   * @param tableName existing table
    */
   public void deleteTable(TableName tableName) throws IOException {
     try {
@@ -1865,20 +1845,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   //
   // ==========================================================================
-
-  /**
-   * Provide an existing table name to truncate.
-   * Scans the table and issues a delete for each row read.
-   * @param tableName existing table
-   * @return HTable to that new table
-   * @throws IOException
-   * @deprecated use {@link #deleteTableData(TableName)}
-   */
-  @Deprecated
-  public HTable deleteTableData(byte[] tableName) throws IOException {
-    return deleteTableData(TableName.valueOf(tableName));
-  }
-
+  
   /**
    * Provide an existing table name to truncate.
    * Scans the table and issues a delete for each row read.
