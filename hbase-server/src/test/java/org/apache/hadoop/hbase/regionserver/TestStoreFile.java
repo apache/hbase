@@ -175,6 +175,8 @@ public class TestStoreFile extends HBaseTestCase {
     byte [] midRow = CellUtil.cloneRow(kv);
     kv = reader.getLastKey();
     byte [] finalRow = CellUtil.cloneRow(kv);
+    hsf.closeReader(true);
+
     // Make a reference
     HRegionInfo splitHri = new HRegionInfo(hri.getTable(), null, midRow);
     Path refPath = splitStoreFile(regionFs, splitHri, TEST_FAMILY, hsf, midRow, true);
@@ -275,9 +277,10 @@ public class TestStoreFile extends HBaseTestCase {
     HRegionInfo splitHriA = new HRegionInfo(hri.getTable(), null, SPLITKEY);
     HRegionInfo splitHriB = new HRegionInfo(hri.getTable(), SPLITKEY, null);
     StoreFile f = new StoreFile(fs, linkFilePath, testConf, cacheConf, BloomType.NONE);
+    f.createReader();
     Path pathA = splitStoreFile(cloneRegionFs, splitHriA, TEST_FAMILY, f, SPLITKEY, true); // top
     Path pathB = splitStoreFile(cloneRegionFs, splitHriB, TEST_FAMILY, f, SPLITKEY, false);// bottom
-
+    f.closeReader(true);
     // OK test the thing
     FSUtils.logFileSystemState(fs, testDir, LOG);
 

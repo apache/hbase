@@ -129,6 +129,25 @@ public class StoreFile {
   // Set when we obtain a Reader.
   private long maxMemstoreTS = -1;
 
+  // firstKey, lastkey and cellComparator will be set when openReader.
+  private Cell firstKey;
+
+  private Cell lastKey;
+
+  private Comparator comparator;
+
+  public Cell getFirstKey() {
+    return firstKey;
+  }
+
+  public Cell getLastKey() {
+    return lastKey;
+  }
+
+  public Comparator getComparator() {
+    return comparator;
+  }
+
   public long getMaxMemstoreTS() {
     return maxMemstoreTS;
   }
@@ -475,6 +494,10 @@ public class StoreFile {
           "proceeding without", e);
       this.reader.timeRangeTracker = null;
     }
+    // initialize so we can reuse them after reader closed.
+    firstKey = reader.getFirstKey();
+    lastKey = reader.getLastKey();
+    comparator = reader.getComparator();
     return this.reader;
   }
 
