@@ -1388,7 +1388,7 @@ public class TestHRegion {
       else
         break;
       Delete delete = new Delete(CellUtil.cloneRow(results.get(0)));
-      delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
+      delete.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
       r.delete(delete);
       results.clear();
     } while (more);
@@ -1690,7 +1690,7 @@ public class TestHRegion {
       assertFalse(res);
 
       Delete delete = new Delete(row1);
-      delete.deleteColumn(fam1, qf1);
+      delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
           delete, true);
       assertFalse(res);
@@ -1704,8 +1704,8 @@ public class TestHRegion {
 
       // checkAndDelete with correct value
       delete = new Delete(row1);
-      delete.deleteColumn(fam1, qf1);
-      delete.deleteColumn(fam1, qf1);
+      delete.addColumn(fam1, qf1);
+      delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val2),
           delete, true);
       assertTrue(res);
@@ -1752,7 +1752,7 @@ public class TestHRegion {
 
       // checkAndDelete with wrong value
       Delete delete = new Delete(row1);
-      delete.deleteFamily(fam1);
+      delete.addFamily(fam1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val2),
           put, true);
       assertEquals(false, res);
@@ -1785,7 +1785,7 @@ public class TestHRegion {
 
       // checkAndDelete with correct value
       Delete delete = new Delete(row1);
-      delete.deleteColumn(fam1, qf1);
+      delete.addColumn(fam1, qf1);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
           delete, true);
       assertEquals(true, res);
@@ -1992,9 +1992,9 @@ public class TestHRegion {
 
       // Multi-column delete
       Delete delete = new Delete(row1);
-      delete.deleteColumn(fam1, qf1);
-      delete.deleteColumn(fam2, qf1);
-      delete.deleteColumn(fam1, qf3);
+      delete.addColumn(fam1, qf1);
+      delete.addColumn(fam2, qf1);
+      delete.addColumn(fam1, qf3);
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
           val2), delete, true);
       assertEquals(true, res);
@@ -2010,7 +2010,7 @@ public class TestHRegion {
 
       // Family delete
       delete = new Delete(row1);
-      delete.deleteFamily(fam2);
+      delete.addFamily(fam2);
       res = region.checkAndMutate(row1, fam2, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
           delete, true);
       assertEquals(true, res);
@@ -2055,8 +2055,8 @@ public class TestHRegion {
 
       // We do support deleting more than 1 'latest' version
       Delete delete = new Delete(row1);
-      delete.deleteColumn(fam1, qual);
-      delete.deleteColumn(fam1, qual);
+      delete.addColumn(fam1, qual);
+      delete.addColumn(fam1, qual);
       region.delete(delete);
 
       Get get = new Get(row1);
@@ -2143,7 +2143,7 @@ public class TestHRegion {
 
       // ok now delete a split:
       Delete delete = new Delete(row);
-      delete.deleteColumns(fam, splitA);
+      delete.addColumns(fam, splitA);
       region.delete(delete);
 
       // assert some things:
@@ -2317,7 +2317,7 @@ public class TestHRegion {
       byte[] value = Bytes.toBytes("value");
 
       Delete delete = new Delete(rowA);
-      delete.deleteFamily(fam1);
+      delete.addFamily(fam1);
 
       region.delete(delete);
 
@@ -2350,14 +2350,14 @@ public class TestHRegion {
   @Test
   public void testDeleteColumns_PostInsert() throws IOException, InterruptedException {
     Delete delete = new Delete(row);
-    delete.deleteColumns(fam1, qual1);
+    delete.addColumns(fam1, qual1);
     doTestDelete_AndPostInsert(delete);
   }
 
   @Test
-  public void testDeleteFamily_PostInsert() throws IOException, InterruptedException {
+  public void testaddFamily_PostInsert() throws IOException, InterruptedException {
     Delete delete = new Delete(row);
-    delete.deleteFamily(fam1);
+    delete.addFamily(fam1);
     doTestDelete_AndPostInsert(delete);
   }
 

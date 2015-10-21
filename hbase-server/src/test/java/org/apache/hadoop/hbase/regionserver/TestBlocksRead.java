@@ -181,9 +181,9 @@ public class TestBlocksRead  {
   private void deleteFamily(String family, String row, long version)
       throws IOException {
     Delete del = new Delete(Bytes.toBytes(row));
-    del.deleteFamily(Bytes.toBytes(family + "_ROWCOL"), version);
-    del.deleteFamily(Bytes.toBytes(family + "_ROW"), version);
-    del.deleteFamily(Bytes.toBytes(family + "_NONE"), version);
+    del.addFamily(Bytes.toBytes(family + "_ROWCOL"), version);
+    del.addFamily(Bytes.toBytes(family + "_ROW"), version);
+    del.addFamily(Bytes.toBytes(family + "_NONE"), version);
     region.delete(del);
   }
 

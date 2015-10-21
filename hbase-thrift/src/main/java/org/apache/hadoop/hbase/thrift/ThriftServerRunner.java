@@ -1136,9 +1136,9 @@ public class ThriftServerRunner implements Runnable {
         addAttributes(delete, attributes);
         byte [][] famAndQf = KeyValue.parseColumn(getBytes(column));
         if (famAndQf.length == 1) {
-          delete.deleteFamily(famAndQf[0], timestamp);
+          delete.addFamily(famAndQf[0], timestamp);
         } else {
-          delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+          delete.addColumns(famAndQf[0], famAndQf[1], timestamp);
         }
         table.delete(delete);
 
@@ -1250,9 +1250,9 @@ public class ThriftServerRunner implements Runnable {
           byte[][] famAndQf = KeyValue.parseColumn(getBytes(m.column));
           if (m.isDelete) {
             if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], timestamp);
+              delete.addFamily(famAndQf[0], timestamp);
             } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+              delete.addColumns(famAndQf[0], famAndQf[1], timestamp);
             }
             delete.setDurability(m.writeToWAL ? Durability.SYNC_WAL
                 : Durability.SKIP_WAL);
@@ -1310,9 +1310,9 @@ public class ThriftServerRunner implements Runnable {
           if (m.isDelete) {
             // no qualifier, family only.
             if (famAndQf.length == 1) {
-              delete.deleteFamily(famAndQf[0], timestamp);
+              delete.addFamily(famAndQf[0], timestamp);
             } else {
-              delete.deleteColumns(famAndQf[0], famAndQf[1], timestamp);
+              delete.addColumns(famAndQf[0], famAndQf[1], timestamp);
             }
             delete.setDurability(m.writeToWAL ? Durability.SYNC_WAL
                 : Durability.SKIP_WAL);

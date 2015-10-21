@@ -2012,8 +2012,8 @@ public class HBaseFsck extends Configured implements Closeable {
   private void resetSplitParent(HbckInfo hi) throws IOException {
     RowMutations mutations = new RowMutations(hi.metaEntry.getRegionName());
     Delete d = new Delete(hi.metaEntry.getRegionName());
-    d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
-    d.deleteColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
+    d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITA_QUALIFIER);
+    d.addColumn(HConstants.CATALOG_FAMILY, HConstants.SPLITB_QUALIFIER);
     mutations.add(d);
 
     HRegionInfo hri = new HRegionInfo(hi.metaEntry);

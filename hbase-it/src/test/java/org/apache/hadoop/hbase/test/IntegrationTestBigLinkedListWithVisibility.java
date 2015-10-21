@@ -345,7 +345,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
           delete = new Delete(key.get());
         }
         delete.setCellVisibility(new CellVisibility(visibilityExps));
-        delete.deleteFamily(CellUtil.cloneFamily(kv));
+        delete.addFamily(CellUtil.cloneFamily(kv));
       }
       if (delete != null) {
         context.write(key, delete);

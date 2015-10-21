@@ -157,7 +157,7 @@ public class QuotaUtil extends QuotaTableUtil {
       final byte[] qualifier) throws IOException {
     Delete delete = new Delete(rowKey);
     if (qualifier != null) {
-      delete.deleteColumns(QUOTA_FAMILY_INFO, qualifier);
+      delete.addColumns(QUOTA_FAMILY_INFO, qualifier);
     }
     doDelete(connection, delete);
   }

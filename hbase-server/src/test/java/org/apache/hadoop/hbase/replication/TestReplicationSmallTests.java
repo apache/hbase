@@ -153,7 +153,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     }
     // place a version delete marker (delete last version)
     Delete d = new Delete(row);
-    d.deleteColumn(famName, row, t);
+    d.addColumn(famName, row, t);
     htable1.delete(d);
 
     get = new Get(row);
@@ -175,7 +175,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     // place a column delete marker
     d = new Delete(row);
-    d.deleteColumns(famName, row, t+2);
+    d.addColumns(famName, row, t+2);
     htable1.delete(d);
 
     // now *both* of the remaining version should be deleted

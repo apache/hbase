@@ -312,7 +312,7 @@ public class TestImportExport {
     Delete d = new Delete(ROW1, now+3);
     t.delete(d);
     d = new Delete(ROW1);
-    d.deleteColumns(FAMILYA, QUAL, now+2);
+    d.addColumns(FAMILYA, QUAL, now+2);
     t.delete(d);
 
     String[] args = new String[] {

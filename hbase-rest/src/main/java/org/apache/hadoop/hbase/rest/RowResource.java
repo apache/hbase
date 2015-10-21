@@ -372,9 +372,9 @@ public class RowResource extends ResourceBase {
       byte[][] split = KeyValue.parseColumn(column);
       if (rowspec.hasTimestamp()) {
         if (split.length == 1) {
-          delete.deleteFamily(split[0], rowspec.getTimestamp());
+          delete.addFamily(split[0], rowspec.getTimestamp());
         } else if (split.length == 2) {
-          delete.deleteColumns(split[0], split[1], rowspec.getTimestamp());
+          delete.addColumns(split[0], split[1], rowspec.getTimestamp());
         } else {
           return Response.status(Response.Status.BAD_REQUEST)
             .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
@@ -382,9 +382,9 @@ public class RowResource extends ResourceBase {
         }
       } else {
         if (split.length == 1) {
-          delete.deleteFamily(split[0]);
+          delete.addFamily(split[0]);
         } else if (split.length == 2) {
-          delete.deleteColumns(split[0], split[1]);
+          delete.addColumns(split[0], split[1]);
         } else {
           return Response.status(Response.Status.BAD_REQUEST)
             .type(MIMETYPE_TEXT).entity("Bad request" + CRLF)
@@ -550,12 +550,12 @@ public class RowResource extends ResourceBase {
       byte[][] parts = KeyValue.parseColumn(valueToDeleteColumn);
       if (parts.length == 2) {
         if (parts[1].length != 0) {
-          delete.deleteColumns(parts[0], parts[1]);
+          delete.addColumns(parts[0], parts[1]);
           retValue = table.checkAndDelete(key, parts[0], parts[1],
             valueToDeleteCell.getValue(), delete);
         } else {
           // The case of empty qualifier.
-          delete.deleteColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
+          delete.addColumns(parts[0], Bytes.toBytes(StringUtils.EMPTY));
           retValue = table.checkAndDelete(key, parts[0], Bytes.toBytes(StringUtils.EMPTY),
             valueToDeleteCell.getValue(), delete);
         }
@@ -565,7 +565,7 @@ public class RowResource extends ResourceBase {
           .type(MIMETYPE_TEXT).entity("Bad request: Column incorrectly specified." + CRLF)
           .build();
       }
-      delete.deleteColumns(parts[0], parts[1]);
+      delete.addColumns(parts[0], parts[1]);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("CHECK-AND-DELETE " + delete.toString() + ", returns "

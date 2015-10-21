@@ -681,13 +681,13 @@ public final class ProtobufUtil {
             ts = qv.getTimestamp();
           }
           if (deleteType == DeleteType.DELETE_ONE_VERSION) {
-            delete.deleteColumn(family, qualifier, ts);
+            delete.addColumn(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_MULTIPLE_VERSIONS) {
-            delete.deleteColumns(family, qualifier, ts);
+            delete.addColumns(family, qualifier, ts);
           } else if (deleteType == DeleteType.DELETE_FAMILY_VERSION) {
-            delete.deleteFamilyVersion(family, ts);
+            delete.addFamilyVersion(family, ts);
           } else {
-            delete.deleteFamily(family, ts);
+            delete.addFamily(family, ts);
           }
         }
       }

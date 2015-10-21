@@ -376,7 +376,7 @@ public class TestTimestampsFilter {
     byte row[] = Bytes.toBytes("row:" + rowIdx);
     byte column[] = Bytes.toBytes("column:" + colIdx);
     Delete del = new Delete(row);
-    del.deleteColumn(cf, column, version);
+    del.addColumn(cf, column, version);
     ht.delete(del);
   }
 

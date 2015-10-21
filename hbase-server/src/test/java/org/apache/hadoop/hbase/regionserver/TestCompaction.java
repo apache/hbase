@@ -184,7 +184,7 @@ public class TestCompaction {
       for (int i = 0; i < compactionThreshold; i++) {
         Delete delete = new Delete(Bytes.add(STARTROW, Bytes.toBytes(i)));
         byte [][] famAndQf = {COLUMN_FAMILY, null};
-        delete.deleteFamily(famAndQf[0]);
+        delete.addFamily(famAndQf[0]);
         r.delete(delete);
       }
       r.flush(true);

@@ -409,7 +409,7 @@ public class TestPerTableCFReplication {
       Table source, Table... targets)
     throws Exception {
     Delete del = new Delete(row);
-    del.deleteFamily(fam);
+    del.addFamily(fam);
     source.delete(del);
 
     Get get = new Get(row);

@@ -157,9 +157,9 @@ public class TestRegionObserverInterface {
           new Boolean[] { true, true, true, true, false, false });
 
       Delete delete = new Delete(ROW);
-      delete.deleteColumn(A, A);
-      delete.deleteColumn(B, B);
-      delete.deleteColumn(C, C);
+      delete.addColumn(A, A);
+      delete.addColumn(B, B);
+      delete.addColumn(C, C);
       table.delete(delete);
 
       verifyMethodResult(SimpleRegionObserver.class,
@@ -194,9 +194,9 @@ public class TestRegionObserverInterface {
       put.addColumn(C, C, C);
 
       Delete delete = new Delete(ROW);
-      delete.deleteColumn(A, A);
-      delete.deleteColumn(B, B);
-      delete.deleteColumn(C, C);
+      delete.addColumn(A, A);
+      delete.addColumn(B, B);
+      delete.addColumn(C, C);
 
       RowMutations arm = new RowMutations(ROW);
       arm.add(put);

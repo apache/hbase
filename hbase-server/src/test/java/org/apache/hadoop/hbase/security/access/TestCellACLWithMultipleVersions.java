@@ -327,8 +327,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
-            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
-            d.deleteColumns(TEST_FAMILY1, TEST_Q2);
+            d.addColumns(TEST_FAMILY1, TEST_Q1);
+            d.addColumns(TEST_FAMILY1, TEST_Q2);
             t.delete(d);
           }
         }
@@ -350,7 +350,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW2);
-            d.deleteFamily(TEST_FAMILY1);
+            d.addFamily(TEST_FAMILY1);
             t.delete(d);
           }
         }
@@ -522,7 +522,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW, 124L);
-            d.deleteColumns(TEST_FAMILY1, TEST_Q1);
+            d.addColumns(TEST_FAMILY1, TEST_Q1);
             t.delete(d);
           }
         }
@@ -537,7 +537,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW);
-            d.deleteColumns(TEST_FAMILY1, TEST_Q2, 124L);
+            d.addColumns(TEST_FAMILY1, TEST_Q2, 124L);
             t.delete(d);
           }
         }
@@ -616,9 +616,9 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
-            d.deleteColumn(TEST_FAMILY1, TEST_Q1, 123);
-            d.deleteColumn(TEST_FAMILY1, TEST_Q2);
-            d.deleteFamilyVersion(TEST_FAMILY2, 125);
+            d.addColumn(TEST_FAMILY1, TEST_Q1, 123);
+            d.addColumn(TEST_FAMILY1, TEST_Q2);
+            d.addFamilyVersion(TEST_FAMILY2, 125);
             t.delete(d);
           }
         }
@@ -905,7 +905,7 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Delete d = new Delete(TEST_ROW1);
-            d.deleteColumns(TEST_FAMILY1, TEST_Q1, 120);
+            d.addColumns(TEST_FAMILY1, TEST_Q1, 120);
             t.checkAndDelete(TEST_ROW1, TEST_FAMILY1, TEST_Q1, ZERO, d);
           }
         }

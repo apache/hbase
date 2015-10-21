@@ -935,7 +935,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
-        d.deleteFamily(TEST_FAMILY);
+        d.addFamily(TEST_FAMILY);
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE)) {
           t.delete(d);
@@ -968,7 +968,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Delete d = new Delete(TEST_ROW);
-        d.deleteFamily(TEST_FAMILY);
+        d.addFamily(TEST_FAMILY);
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE);) {
           t.checkAndDelete(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
@@ -1333,8 +1333,8 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Delete d = new Delete(TEST_ROW);
-          d.deleteFamily(family1);
-          d.deleteFamily(family2);
+          d.addFamily(family1);
+          d.addFamily(family2);
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {
             t.delete(d);
@@ -1347,7 +1347,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Delete d = new Delete(TEST_ROW);
-          d.deleteFamily(family1);
+          d.addFamily(family1);
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {
             t.delete(d);
@@ -1360,7 +1360,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Delete d = new Delete(TEST_ROW);
-          d.deleteFamily(family2);
+          d.addFamily(family2);
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {
             t.delete(d);
@@ -1528,7 +1528,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Delete d = new Delete(TEST_ROW);
-          d.deleteColumn(family1, qualifier);
+          d.addColumn(family1, qualifier);
           // d.deleteFamily(family1);
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {

@@ -249,7 +249,7 @@ public class TestMajorCompaction {
     LOG.debug("Adding deletes to memstore and flushing");
     Delete delete = new Delete(secondRowBytes, System.currentTimeMillis());
     byte [][] famAndQf = {COLUMN_FAMILY, null};
-    delete.deleteFamily(famAndQf[0]);
+    delete.addFamily(famAndQf[0]);
     r.delete(delete);
 
     // Assert deleted.

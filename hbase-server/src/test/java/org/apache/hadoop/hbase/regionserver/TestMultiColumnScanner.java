@@ -209,7 +209,7 @@ public class TestMultiColumnScanner {
           boolean deletedSomething = false;
           for (long ts : TIMESTAMPS)
             if (rand.nextDouble() < DELETE_PROBABILITY) {
-              d.deleteColumns(FAMILY_BYTES, qualBytes, ts);
+              d.addColumns(FAMILY_BYTES, qualBytes, ts);
               String rowAndQual = row + "_" + qual;
               Long whenDeleted = lastDelTimeMap.get(rowAndQual);
               lastDelTimeMap.put(rowAndQual, whenDeleted == null ? ts

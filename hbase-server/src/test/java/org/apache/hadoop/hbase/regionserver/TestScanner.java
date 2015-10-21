@@ -526,7 +526,7 @@ public class TestScanner {
 
       Delete dc = new Delete(firstRowBytes);
       /* delete column1 of firstRow */
-      dc.deleteColumns(fam1, col1);
+      dc.addColumns(fam1, col1);
       region.delete(dc);
       region.flush(true);
 

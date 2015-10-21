@@ -204,7 +204,7 @@ public class TestKeepDeletes {
     region.put(p);
 
     Delete d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts);
+    d.addColumn(c0, c0, ts);
     region.delete(d);
 
     // scan still returns delete markers and deletes rows
@@ -256,7 +256,7 @@ public class TestKeepDeletes {
 
 
     Delete d = new Delete(T1, ts+2);
-    d.deleteColumn(c0, c0, ts);
+    d.addColumn(c0, c0, ts);
     region.delete(d);
 
     // "past" get does not see rows behind delete marker
@@ -335,11 +335,11 @@ public class TestKeepDeletes {
     region.delete(d);
 
     d = new Delete(T1, ts+2);
-    d.deleteColumn(c0, c0, ts+2);
+    d.addColumn(c0, c0, ts+2);
     region.delete(d);
 
     d = new Delete(T1, ts+3);
-    d.deleteColumns(c0, c0, ts+3);
+    d.addColumns(c0, c0, ts+3);
     region.delete(d);
 
     Scan s = new Scan();
@@ -413,19 +413,19 @@ public class TestKeepDeletes {
     long ts = EnvironmentEdgeManager.currentTime();
 
     Delete d = new Delete(T1, ts);
-    d.deleteColumns(c0, c0, ts);
+    d.addColumns(c0, c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteFamily(c0);
+    d.addFamily(c0);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+1);
+    d.addColumn(c0, c0, ts+1);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+2);
+    d.addColumn(c0, c0, ts+2);
     region.delete(d);
 
     // 1 family marker, 1 column marker, 2 version markers
@@ -466,19 +466,19 @@ public class TestKeepDeletes {
 
     // all the following deletes affect the put
     Delete d = new Delete(T1, ts);
-    d.deleteColumns(c0, c0, ts);
+    d.addColumns(c0, c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteFamily(c0, ts);
+    d.addFamily(c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+1);
+    d.addColumn(c0, c0, ts+1);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+2);
+    d.addColumn(c0, c0, ts+2);
     region.delete(d);
 
     // 1 family marker, 1 column marker, 2 version markers
@@ -529,19 +529,19 @@ public class TestKeepDeletes {
 
     // all the following deletes affect the put
     Delete d = new Delete(T1, ts);
-    d.deleteColumns(c0, c0, ts);
+    d.addColumns(c0, c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteFamily(c0, ts);
+    d.addFamily(c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+1);
+    d.addColumn(c0, c0, ts+1);
     region.delete(d);
 
     d = new Delete(T1, ts);
-    d.deleteColumn(c0, c0, ts+2);
+    d.addColumn(c0, c0, ts+2);
     region.delete(d);
 
     // 1 family marker, 1 column marker, 2 version markers
@@ -624,20 +624,20 @@ public class TestKeepDeletes {
     region.put(p);
 
     Delete d = new Delete(T1, ts+2);
-    d.deleteColumns(c0, c0, ts+2);
+    d.addColumns(c0, c0, ts+2);
     region.delete(d);
 
     d = new Delete(T1, ts+2);
-    d.deleteFamily(c1, ts+2);
+    d.addFamily(c1, ts+2);
     region.delete(d);
 
     d = new Delete(T2, ts+2);
-    d.deleteFamily(c0, ts+2);
+    d.addFamily(c0, ts+2);
     region.delete(d);
 
     // add an older delete, to make sure it is filtered
     d = new Delete(T1, ts-10);
-    d.deleteFamily(c1, ts-10);
+    d.addFamily(c1, ts-10);
     region.delete(d);
 
     // ts + 2 does NOT include the delete at ts+2
@@ -689,15 +689,15 @@ public class TestKeepDeletes {
 
     Delete d = new Delete(T1, ts);
     // test corner case (Put and Delete have same TS)
-    d.deleteColumns(c0, c0, ts);
+    d.addColumns(c0, c0, ts);
     region.delete(d);
 
     d = new Delete(T1, ts+1);
-    d.deleteColumn(c0, c0, ts+1);
+    d.addColumn(c0, c0, ts+1);
     region.delete(d);
 
     d = new Delete(T1, ts+3);
-    d.deleteColumn(c0, c0, ts+3);
+    d.addColumn(c0, c0, ts+3);
     region.delete(d);
 
     region.flush(true);
@@ -842,7 +842,7 @@ public class TestKeepDeletes {
     region.delete(d);
     // and a column delete marker
     d = new Delete(T1, ts-2);
-    d.deleteColumns(c0, c0, ts-1);
+    d.addColumns(c0, c0, ts-1);
     region.delete(d);
 
     Get g = new Get(T1);

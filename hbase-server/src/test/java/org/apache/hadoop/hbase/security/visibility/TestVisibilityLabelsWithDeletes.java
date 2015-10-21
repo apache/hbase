@@ -201,7 +201,7 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(TOPSECRET + "|" + CONFIDENTIAL));
-            d.deleteFamilyVersion(fam, 123l);
+            d.addFamilyVersion(fam, 123l);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1799,11 +1799,11 @@ public class TestVisibilityLabelsWithDeletes {
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(CONFIDENTIAL));
-            d.deleteFamilyVersion(fam, 123l);
+            d.addFamilyVersion(fam, 123l);
             table.delete(d);
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.deleteFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125l);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1856,7 +1856,7 @@ public class TestVisibilityLabelsWithDeletes {
             table.delete(d);
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.deleteFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125l);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -1957,7 +1957,7 @@ public class TestVisibilityLabelsWithDeletes {
 
             d = new Delete(row1);
             d.setCellVisibility(new CellVisibility(SECRET + "&" + TOPSECRET));
-            d.deleteFamilyVersion(fam, 125l);
+            d.addFamilyVersion(fam, 125l);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);
@@ -2715,7 +2715,7 @@ public class TestVisibilityLabelsWithDeletes {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Delete d = new Delete(row1);
-            d.deleteFamilyVersion(fam, 126l);
+            d.addFamilyVersion(fam, 126l);
             table.delete(d);
           } catch (Throwable t) {
             throw new IOException(t);

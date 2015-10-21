@@ -205,7 +205,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       Set<byte[]> families = new TreeSet<byte[]>(Bytes.BYTES_COMPARATOR);
       for (Cell kv : deleteRow) {
         if (families.add(CellUtil.cloneFamily(kv))) {
-          delete.deleteFamily(CellUtil.cloneFamily(kv), ts);
+          delete.addFamily(CellUtil.cloneFamily(kv), ts);
         }
       }
     } else if (deleteType == DeleteType.COLUMN) {
@@ -216,7 +216,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
           // Making deleteColumns() calls more than once for the same cf:qualifier is not correct
           // Every call to deleteColumns() will add a new KV to the familymap which will finally
           // get written to the memstore as part of delete().
-          delete.deleteColumns(column.family, column.qualifier, ts);
+          delete.addColumns(column.family, column.qualifier, ts);
         }
       }
     } else if (deleteType == DeleteType.VERSION) {
@@ -227,7 +227,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
       int noOfVersionsToDelete = 0;
       if (timestamp == null) {
         for (Cell kv : deleteRow) {
-          delete.deleteColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv.getTimestamp());
+          delete.addColumn(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv), kv.getTimestamp());
           noOfVersionsToDelete++;
         }
       } else {
@@ -236,7 +236,7 @@ public class BulkDeleteEndpoint extends BulkDeleteService implements Coprocessor
           Column column = new Column(CellUtil.cloneFamily(kv), CellUtil.cloneQualifier(kv));
           // Only one version of particular column getting deleted.
           if (columns.add(column)) {
-            delete.deleteColumn(column.family, column.qualifier, ts);
+            delete.addColumn(column.family, column.qualifier, ts);
             noOfVersionsToDelete++;
           }
         }

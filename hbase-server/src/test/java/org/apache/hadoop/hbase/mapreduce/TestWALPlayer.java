@@ -102,7 +102,7 @@ public class TestWALPlayer {
     t1.put(p);
     // delete one column
     Delete d = new Delete(ROW);
-    d.deleteColumns(FAMILY, COLUMN1);
+    d.addColumns(FAMILY, COLUMN1);
     t1.delete(d);
 
     // replay the WAL, map table 1 to table 2

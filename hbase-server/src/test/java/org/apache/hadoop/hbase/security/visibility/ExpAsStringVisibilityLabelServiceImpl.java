@@ -127,7 +127,7 @@ public class ExpAsStringVisibilityLabelServiceImpl implements VisibilityLabelSer
     for (byte[] authLabel : authLabels) {
       String authLabelStr = Bytes.toString(authLabel);
       if (currentAuths.contains(authLabelStr)) {
-        d.deleteColumns(LABELS_TABLE_FAMILY, authLabel);
+        d.addColumns(LABELS_TABLE_FAMILY, authLabel);
       } else {
         // This label is not set for the user.
         finalOpStatus[i] = new OperationStatus(OperationStatusCode.FAILURE,

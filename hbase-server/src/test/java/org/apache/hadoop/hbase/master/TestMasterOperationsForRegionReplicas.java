@@ -254,11 +254,11 @@ public class TestMasterOperationsForRegionReplicas {
       Table metaTable = ADMIN.getConnection().getTable(TableName.META_TABLE_NAME);
       for (byte[] row : tableRows) {
         Delete deleteOneReplicaLocation = new Delete(row);
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+        deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
           MetaTableAccessor.getServerColumn(1));
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+        deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
           MetaTableAccessor.getSeqNumColumn(1));
-        deleteOneReplicaLocation.deleteColumns(HConstants.CATALOG_FAMILY,
+        deleteOneReplicaLocation.addColumns(HConstants.CATALOG_FAMILY,
           MetaTableAccessor.getStartCodeColumn(1));
         metaTable.delete(deleteOneReplicaLocation);
       }

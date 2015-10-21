@@ -267,22 +267,22 @@ public class ThriftUtilities {
           if (column.isSetTimestamp()) {
             if (in.isSetDeleteType() &&
                 in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.deleteColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              out.addColumns(column.getFamily(), column.getQualifier(), column.getTimestamp());
             else
-              out.deleteColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
+              out.addColumn(column.getFamily(), column.getQualifier(), column.getTimestamp());
           } else {
             if (in.isSetDeleteType() &&
                 in.getDeleteType().equals(TDeleteType.DELETE_COLUMNS))
-              out.deleteColumns(column.getFamily(), column.getQualifier());
+              out.addColumns(column.getFamily(), column.getQualifier());
             else
-              out.deleteColumn(column.getFamily(), column.getQualifier());
+              out.addColumn(column.getFamily(), column.getQualifier());
           }
 
         } else {
           if (column.isSetTimestamp()) {
-            out.deleteFamily(column.getFamily(), column.getTimestamp());
+            out.addFamily(column.getFamily(), column.getTimestamp());
           } else {
-            out.deleteFamily(column.getFamily());
+            out.addFamily(column.getFamily());
           }
         }
       }

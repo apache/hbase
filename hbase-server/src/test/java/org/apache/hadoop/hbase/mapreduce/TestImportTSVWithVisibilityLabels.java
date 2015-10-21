@@ -191,7 +191,7 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
     for (int i = 0; i < numRetries; i++) {
       try {
         Delete d = new Delete(Bytes.toBytes("KEY"));
-        d.deleteFamily(Bytes.toBytes(FAMILY));
+        d.addFamily(Bytes.toBytes(FAMILY));
         d.setCellVisibility(new CellVisibility("private&secret"));
         table.delete(d);
 

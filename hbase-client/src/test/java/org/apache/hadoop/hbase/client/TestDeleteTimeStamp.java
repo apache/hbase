@@ -38,7 +38,7 @@ public class TestDeleteTimeStamp {
     long ts = 2014L;
     Delete delete = new Delete(ROW);
     delete.setTimestamp(ts);
-    delete.deleteColumn(FAMILY, QUALIFIER);
+    delete.addColumn(FAMILY, QUALIFIER);
     NavigableMap<byte[], List<Cell>> familyCellmap = delete.getFamilyCellMap();
     for (Entry<byte[], List<Cell>> entry : familyCellmap.entrySet()) {
       for (Cell cell : entry.getValue()) {

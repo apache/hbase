@@ -178,19 +178,6 @@ public class Delete extends Mutation implements Comparable<Row> {
     return this;
   }
 
-  /**
-   * Delete all versions of all columns of the specified family.
-   * <p>
-   * Overrides previous calls to deleteColumn and deleteColumns for the
-   * specified family.
-   * @param family family name
-   * @return this for invocation chaining
-   * @deprecated Since 1.0.0. Use {@link #addFamily(byte[])}
-   */
-  @Deprecated
-  public Delete deleteFamily(byte [] family) {
-    return addFamily(family);
-  }
 
   /**
    * Delete all versions of all columns of the specified family.
@@ -201,24 +188,8 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @return this for invocation chaining
    */
   public Delete addFamily(final byte [] family) {
-    this.deleteFamily(family, this.ts);
+    this.addFamily(family, this.ts);
     return this;
-  }
-
-  /**
-   * Delete all columns of the specified family with a timestamp less than
-   * or equal to the specified timestamp.
-   * <p>
-   * Overrides previous calls to deleteColumn and deleteColumns for the
-   * specified family.
-   * @param family family name
-   * @param timestamp maximum version timestamp
-   * @return this for invocation chaining
-   * @deprecated Since 1.0.0. Use {@link #addFamily(byte[], long)}
-   */
-  @Deprecated
-  public Delete deleteFamily(byte [] family, long timestamp) {
-    return addFamily(family, timestamp);
   }
 
   /**
@@ -253,19 +224,6 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param family family name
    * @param timestamp version timestamp
    * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addFamilyVersion(byte[], long)}
-   */
-  @Deprecated
-  public Delete deleteFamilyVersion(byte [] family, long timestamp) {
-    return addFamilyVersion(family, timestamp);
-  }
-
-  /**
-   * Delete all columns of the specified family with a timestamp equal to
-   * the specified timestamp.
-   * @param family family name
-   * @param timestamp version timestamp
-   * @return this for invocation chaining
    */
   public Delete addFamilyVersion(final byte [] family, final long timestamp) {
     List<Cell> list = familyMap.get(family);
@@ -283,36 +241,10 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param family family name
    * @param qualifier column qualifier
    * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addColumns(byte[], byte[])}
-   */
-  @Deprecated
-  public Delete deleteColumns(byte [] family, byte [] qualifier) {
-    return addColumns(family, qualifier);
-  }
-
-  /**
-   * Delete all versions of the specified column.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @return this for invocation chaining
    */
   public Delete addColumns(final byte [] family, final byte [] qualifier) {
     addColumns(family, qualifier, this.ts);
     return this;
-  }
-
-  /**
-   * Delete all versions of the specified column with a timestamp less than
-   * or equal to the specified timestamp.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param timestamp maximum version timestamp
-   * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addColumns(byte[], byte[], long)}
-   */
-  @Deprecated
-  public Delete deleteColumns(byte [] family, byte [] qualifier, long timestamp) {
-    return addColumns(family, qualifier, timestamp);
   }
 
   /**
@@ -345,38 +277,10 @@ public class Delete extends Mutation implements Comparable<Row> {
    * @param family family name
    * @param qualifier column qualifier
    * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addColumn(byte[], byte[])}
-   */
-  @Deprecated
-  public Delete deleteColumn(byte [] family, byte [] qualifier) {
-    return addColumn(family, qualifier);
-  }
-
-  /**
-   * Delete the latest version of the specified column.
-   * This is an expensive call in that on the server-side, it first does a
-   * get to find the latest versions timestamp.  Then it adds a delete using
-   * the fetched cells timestamp.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @return this for invocation chaining
    */
   public Delete addColumn(final byte [] family, final byte [] qualifier) {
-    this.deleteColumn(family, qualifier, this.ts);
+    this.addColumn(family, qualifier, this.ts);
     return this;
-  }
-
-  /**
-   * Delete the specified version of the specified column.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param timestamp version timestamp
-   * @return this for invocation chaining
-   * @deprecated Since hbase-1.0.0. Use {@link #addColumn(byte[], byte[], long)}
-   */
-  @Deprecated
-  public Delete deleteColumn(byte [] family, byte [] qualifier, long timestamp) {
-    return addColumn(family, qualifier, timestamp);
   }
 
   /**

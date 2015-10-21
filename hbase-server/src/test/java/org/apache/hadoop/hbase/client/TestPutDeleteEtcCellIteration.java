@@ -84,7 +84,7 @@ public class TestPutDeleteEtcCellIteration {
     Delete d = new Delete(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
-      d.deleteColumn(bytes, bytes, TIMESTAMP);
+      d.addColumn(bytes, bytes, TIMESTAMP);
     }
     int index = 0;
     for (CellScanner cellScanner = d.cellScanner(); cellScanner.advance();) {

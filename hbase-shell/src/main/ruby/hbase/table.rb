@@ -193,7 +193,7 @@ EOF
       end
       if column
         family, qualifier = parse_column_name(column)
-        d.deleteColumns(family, qualifier, timestamp)
+        d.addColumns(family, qualifier, timestamp)
       end
       @table.delete(d)
     end

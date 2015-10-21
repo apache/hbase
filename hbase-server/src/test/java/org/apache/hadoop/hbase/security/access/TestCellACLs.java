@@ -348,7 +348,7 @@ public class TestCellACLs extends SecureTestUtil {
     AccessTestAction deleteFamily = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        Delete delete = new Delete(TEST_ROW).deleteFamily(TEST_FAMILY);
+        Delete delete = new Delete(TEST_ROW).addFamily(TEST_FAMILY);
         try(Connection connection = ConnectionFactory.createConnection(conf);
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           t.delete(delete);

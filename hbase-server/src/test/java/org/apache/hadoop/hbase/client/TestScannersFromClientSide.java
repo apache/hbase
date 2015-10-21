@@ -135,7 +135,7 @@ public class TestScannersFromClientSide {
 
     // delete upto ts: 3
     delete = new Delete(ROW);
-    delete.deleteFamily(FAMILY, 3);
+    delete.addFamily(FAMILY, 3);
     ht.delete(delete);
 
     // without batch

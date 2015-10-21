@@ -399,7 +399,7 @@ public class TestMultiParallel {
     ArrayList<Delete> deletes = new ArrayList<Delete>();
     for (int i = 0; i < KEYS.length; i++) {
       Delete delete = new Delete(KEYS[i]);
-      delete.deleteFamily(BYTES_FAMILY);
+      delete.addFamily(BYTES_FAMILY);
       deletes.add(delete);
     }
     table.delete(deletes);
@@ -615,7 +615,7 @@ public class TestMultiParallel {
 
     // 3 delete
     Delete delete = new Delete(KEYS[20]);
-    delete.deleteFamily(BYTES_FAMILY);
+    delete.addFamily(BYTES_FAMILY);
     actions.add(delete);
 
     // 4 get

@@ -105,14 +105,14 @@ public class TestMinorCompaction {
   public void testMinorCompactionWithDeleteColumn1() throws Exception {
     Delete dc = new Delete(secondRowBytes);
     /* delete all timestamps in the column */
-    dc.deleteColumns(fam2, col2);
+    dc.addColumns(fam2, col2);
     testMinorCompactionWithDelete(dc);
   }
 
   @Test
   public void testMinorCompactionWithDeleteColumn2() throws Exception {
     Delete dc = new Delete(secondRowBytes);
-    dc.deleteColumn(fam2, col2);
+    dc.addColumn(fam2, col2);
     /* compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3.
      * we only delete the latest version. One might expect to see only
      * versions 1 and 2. HBase differs, and gives us 0, 1 and 2.
@@ -125,14 +125,14 @@ public class TestMinorCompaction {
   @Test
   public void testMinorCompactionWithDeleteColumnFamily() throws Exception {
     Delete deleteCF = new Delete(secondRowBytes);
-    deleteCF.deleteFamily(fam2);
+    deleteCF.addFamily(fam2);
     testMinorCompactionWithDelete(deleteCF);
   }
 
   @Test
   public void testMinorCompactionWithDeleteVersion1() throws Exception {
     Delete deleteVersion = new Delete(secondRowBytes);
-    deleteVersion.deleteColumns(fam2, col2, 2);
+    deleteVersion.addColumns(fam2, col2, 2);
     /* compactionThreshold is 3. The table has 4 versions: 0, 1, 2, and 3.
      * We delete versions 0 ... 2. So, we still have one remaining.
      */
@@ -142,7 +142,7 @@ public class TestMinorCompaction {
   @Test
   public void testMinorCompactionWithDeleteVersion2() throws Exception {
     Delete deleteVersion = new Delete(secondRowBytes);
-    deleteVersion.deleteColumn(fam2, col2, 1);
+    deleteVersion.addColumn(fam2, col2, 1);
     /*
      * the table has 4 versions: 0, 1, 2, and 3.
      * We delete 1.

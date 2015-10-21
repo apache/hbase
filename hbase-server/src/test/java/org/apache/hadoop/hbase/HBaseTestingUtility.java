@@ -2133,7 +2133,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Delete delete = new Delete(data);
-      delete.deleteFamily(f);
+      delete.addFamily(f);
       t.delete(delete);
     }
   }
@@ -3418,9 +3418,9 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
                 ts + "_random_" + rand.nextLong());
             put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
-            del.deleteColumn(cf, qual, ts);
+            del.addColumn(cf, qual, ts);
           } else {
-            del.deleteColumns(cf, qual, ts);
+            del.addColumns(cf, qual, ts);
           }
         }
 

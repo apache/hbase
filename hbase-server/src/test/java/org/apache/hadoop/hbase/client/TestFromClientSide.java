@@ -206,7 +206,7 @@ public class TestFromClientSide {
      h.delete(d);
 
      d = new Delete(T1, ts+3);
-     d.deleteColumns(FAMILY, C0, ts+3);
+     d.addColumns(FAMILY, C0, ts+3);
      h.delete(d);
 
      Get g = new Get(T1);
@@ -262,7 +262,7 @@ public class TestFromClientSide {
      assertArrayEquals(VALUE, result.getValue(FAMILY, COLUMN));
 
      Delete del = new Delete(ROW);
-     del.deleteColumn(FAMILY, COLUMN, ts);
+     del.addColumn(FAMILY, COLUMN, ts);
      table.delete(del);
 
      get = new Get(ROW);
@@ -360,7 +360,7 @@ public class TestFromClientSide {
     while (it.hasNext()) {
       Result result = it.next();
       Delete delete = new Delete(result.getRow());
-      delete.deleteColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
+      delete.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"));
       ht.delete(delete);
       count++;
     }
@@ -933,7 +933,7 @@ public class TestFromClientSide {
     // Delete a storefile column
     ////////////////////////////////////////////////////////////////////////////
     delete = new Delete(ROWS[0]);
-    delete.deleteColumns(FAMILIES[6], QUALIFIERS[7]);
+    delete.addColumns(FAMILIES[6], QUALIFIERS[7]);
     ht.delete(delete);
 
     // Try to get deleted column
@@ -974,7 +974,7 @@ public class TestFromClientSide {
     // Delete a memstore column
     ////////////////////////////////////////////////////////////////////////////
     delete = new Delete(ROWS[0]);
-    delete.deleteColumns(FAMILIES[6], QUALIFIERS[8]);
+    delete.addColumns(FAMILIES[6], QUALIFIERS[8]);
     ht.delete(delete);
 
     // Try to get deleted column
@@ -1016,7 +1016,7 @@ public class TestFromClientSide {
     ////////////////////////////////////////////////////////////////////////////
 
     delete = new Delete(ROWS[0]);
-    delete.deleteFamily(FAMILIES[4]);
+    delete.addFamily(FAMILIES[4]);
     ht.delete(delete);
 
     // Try to get storefile column in deleted family
@@ -1180,7 +1180,7 @@ public class TestFromClientSide {
       scanTestNull(ht, ROW, FAMILY, VALUE);
 
       Delete delete = new Delete(ROW);
-      delete.deleteColumns(FAMILY, null);
+      delete.addColumns(FAMILY, null);
       ht.delete(delete);
 
       Get get = new Get(ROW);
@@ -1211,7 +1211,7 @@ public class TestFromClientSide {
       scanTestNull(ht, ROW, FAMILY, VALUE);
 
       Delete delete = new Delete(ROW);
-      delete.deleteColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+      delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
       ht.delete(delete);
 
       Get get = new Get(ROW);
@@ -1239,7 +1239,7 @@ public class TestFromClientSide {
       assertSingleResult(result, ROW, FAMILY, QUALIFIER, null);
 
       Delete delete = new Delete(ROW);
-      delete.deleteColumns(FAMILY, QUALIFIER);
+      delete.addColumns(FAMILY, QUALIFIER);
       ht.delete(delete);
 
       get = new Get(ROW);
@@ -1440,8 +1440,8 @@ public class TestFromClientSide {
 
     // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
-    delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
-    delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);
+    delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
+    delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
     ht.delete(delete);
 
     // Test that it's gone
@@ -1678,8 +1678,8 @@ public class TestFromClientSide {
     admin.flush(TABLE);
 
     Delete delete = new Delete(ROW);
-    delete.deleteFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
-    delete.deleteFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
+    delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
+    delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
     ht.delete(delete);
     admin.flush(TABLE);
 
@@ -1733,24 +1733,24 @@ public class TestFromClientSide {
     // 3. delete on ROW
     delete = new Delete(ROW);
     // delete version <= 2000 of all columns
-    // note: deleteFamily must be the first since it will mask
+    // note: addFamily must be the first since it will mask
     // the subsequent other type deletes!
-    delete.deleteFamily(FAMILY, ts[1]);
+    delete.addFamily(FAMILY, ts[1]);
     // delete version '4000' of all columns
-    delete.deleteFamilyVersion(FAMILY, ts[3]);
+    delete.addFamilyVersion(FAMILY, ts[3]);
    // delete version <= 3000 of column 0
-    delete.deleteColumns(FAMILY, QUALIFIERS[0], ts[2]);
+    delete.addColumns(FAMILY, QUALIFIERS[0], ts[2]);
     // delete version <= 5000 of column 2
-    delete.deleteColumns(FAMILY, QUALIFIERS[2], ts[4]);
+    delete.addColumns(FAMILY, QUALIFIERS[2], ts[4]);
     // delete version 5000 of column 4
-    delete.deleteColumn(FAMILY, QUALIFIERS[4], ts[4]);
+    delete.addColumn(FAMILY, QUALIFIERS[4], ts[4]);
     ht.delete(delete);
     admin.flush(TABLE);
 
      // 4. delete on ROWS[0]
     delete = new Delete(ROW2);
-    delete.deleteFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
-    delete.deleteFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
+    delete.addFamilyVersion(FAMILY, ts[1]);  // delete version '2000'
+    delete.addFamilyVersion(FAMILY, ts[3]);  // delete version '4000'
     ht.delete(delete);
     admin.flush(TABLE);
 
@@ -1830,7 +1830,7 @@ public class TestFromClientSide {
     ht.put(put);
 
     Delete delete = new Delete(ROW);
-    delete.deleteFamily(FAMILIES[0], ts[0]);
+    delete.addFamily(FAMILIES[0], ts[0]);
     ht.delete(delete);
 
     Get get = new Get(ROW);
@@ -1862,7 +1862,7 @@ public class TestFromClientSide {
     ht.put(put);
 
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
+    delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
     ht.delete(delete);
 
     get = new Get(ROW);
@@ -1885,12 +1885,12 @@ public class TestFromClientSide {
 
     // Test for HBASE-1847
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], null);
+    delete.addColumn(FAMILIES[0], null);
     ht.delete(delete);
 
     // Cleanup null qualifier
     delete = new Delete(ROW);
-    delete.deleteColumns(FAMILIES[0], null);
+    delete.addColumns(FAMILIES[0], null);
     ht.delete(delete);
 
     // Expected client behavior might be that you can re-put deleted values
@@ -1958,17 +1958,17 @@ public class TestFromClientSide {
         result.size() == 4);
 
     delete = new Delete(ROWS[0]);
-    delete.deleteFamily(FAMILIES[2]);
+    delete.addFamily(FAMILIES[2]);
     ht.delete(delete);
 
     delete = new Delete(ROWS[1]);
-    delete.deleteColumns(FAMILIES[1], QUALIFIER);
+    delete.addColumns(FAMILIES[1], QUALIFIER);
     ht.delete(delete);
 
     delete = new Delete(ROWS[2]);
-    delete.deleteColumn(FAMILIES[1], QUALIFIER);
-    delete.deleteColumn(FAMILIES[1], QUALIFIER);
-    delete.deleteColumn(FAMILIES[2], QUALIFIER);
+    delete.addColumn(FAMILIES[1], QUALIFIER);
+    delete.addColumn(FAMILIES[1], QUALIFIER);
+    delete.addColumn(FAMILIES[2], QUALIFIER);
     ht.delete(delete);
 
     get = new Get(ROWS[0]);
@@ -2036,7 +2036,7 @@ public class TestFromClientSide {
     // Test if we delete the family first in one row (HBASE-1541)
 
     delete = new Delete(ROWS[3]);
-    delete.deleteFamily(FAMILIES[1]);
+    delete.addFamily(FAMILIES[1]);
     ht.delete(delete);
 
     put = new Put(ROWS[3]);
@@ -2102,7 +2102,7 @@ public class TestFromClientSide {
     for (int i = 0; i < 10; i++) {
       byte [] bytes = Bytes.toBytes(i);
       delete = new Delete(bytes);
-      delete.deleteFamily(FAMILIES[0]);
+      delete.addFamily(FAMILIES[0]);
       deletes.add(delete);
     }
     ht.delete(deletes);
@@ -3467,8 +3467,8 @@ public class TestFromClientSide {
 
     // Delete a version in the memstore and a version in a storefile
     Delete delete = new Delete(ROW);
-    delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[11]);
-    delete.deleteColumn(FAMILY, QUALIFIER, STAMPS[7]);
+    delete.addColumn(FAMILY, QUALIFIER, STAMPS[11]);
+    delete.addColumn(FAMILY, QUALIFIER, STAMPS[7]);
     ht.delete(delete);
 
     // Test that it's gone
@@ -4350,7 +4350,7 @@ public class TestFromClientSide {
     p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
     arm.add(p);
     Delete d = new Delete(ROW);
-    d.deleteColumns(FAMILY, QUALIFIERS[0]);
+    d.addColumns(FAMILY, QUALIFIERS[0]);
     arm.add(d);
     // TODO: Trying mutateRow again.  The batch was failing with a one try only.
     t.mutateRow(arm);
@@ -4897,7 +4897,7 @@ public class TestFromClientSide {
     put3.addColumn(FAMILY, QUALIFIER, value3);
 
     Delete delete = new Delete(ROW);
-    delete.deleteColumns(FAMILY, QUALIFIER);
+    delete.addColumns(FAMILY, QUALIFIER);
 
     // cell = "bbbb", using "aaaa" to compare only LESS/LESS_OR_EQUAL/NOT_EQUAL
     // turns out "match"
@@ -5427,7 +5427,7 @@ public class TestFromClientSide {
 
     try {
       Delete delete = new Delete(ROW);
-      delete.deleteFamily(FAMILY, -1);
+      delete.addFamily(FAMILY, -1);
       table.delete(delete);
       fail("Negative timestamps should not have been allowed");
     } catch (IllegalArgumentException ex) {
@@ -5909,7 +5909,7 @@ public class TestFromClientSide {
     ht.put(put);
     scanTestNull(ht, ROW, FAMILY, VALUE, true);
     Delete delete = new Delete(ROW);
-    delete.deleteColumns(FAMILY, null);
+    delete.addColumns(FAMILY, null);
     ht.delete(delete);
     // Use a new table
     byte[] TABLE2 = Bytes.toBytes("testNull2WithReverseScan");
@@ -5922,7 +5922,7 @@ public class TestFromClientSide {
     TEST_UTIL.flush();
     scanTestNull(ht, ROW, FAMILY, VALUE, true);
     delete = new Delete(ROW);
-    delete.deleteColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
+    delete.addColumns(FAMILY, HConstants.EMPTY_BYTE_ARRAY);
     ht.delete(delete);
     // Null value
     put = new Put(ROW);
@@ -5951,7 +5951,7 @@ public class TestFromClientSide {
     ht.put(put);
 
     Delete delete = new Delete(ROW);
-    delete.deleteFamily(FAMILIES[0], ts[0]);
+    delete.addFamily(FAMILIES[0], ts[0]);
     ht.delete(delete);
 
     Scan scan = new Scan(ROW);
@@ -5973,7 +5973,7 @@ public class TestFromClientSide {
     ht.put(put);
 
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], QUALIFIER); // ts[4]
+    delete.addColumn(FAMILIES[0], QUALIFIER); // ts[4]
     ht.delete(delete);
 
     scan = new Scan(ROW);
@@ -5986,12 +5986,12 @@ public class TestFromClientSide {
 
     // Test for HBASE-1847
     delete = new Delete(ROW);
-    delete.deleteColumn(FAMILIES[0], null);
+    delete.addColumn(FAMILIES[0], null);
     ht.delete(delete);
 
     // Cleanup null qualifier
     delete = new Delete(ROW);
-    delete.deleteColumns(FAMILIES[0], null);
+    delete.addColumns(FAMILIES[0], null);
     ht.delete(delete);
 
     // Expected client behavior might be that you can re-put deleted values
@@ -6038,17 +6038,17 @@ public class TestFromClientSide {
     ht.put(put);
 
     delete = new Delete(ROWS[0]);
-    delete.deleteFamily(FAMILIES[2]);
+    delete.addFamily(FAMILIES[2]);
     ht.delete(delete);
 
     delete = new Delete(ROWS[1]);
-    delete.deleteColumns(FAMILIES[1], QUALIFIER);
+    delete.addColumns(FAMILIES[1], QUALIFIER);
     ht.delete(delete);
 
     delete = new Delete(ROWS[2]);
-    delete.deleteColumn(FAMILIES[1], QUALIFIER);
-    delete.deleteColumn(FAMILIES[1], QUALIFIER);
-    delete.deleteColumn(FAMILIES[2], QUALIFIER);
+    delete.addColumn(FAMILIES[1], QUALIFIER);
+    delete.addColumn(FAMILIES[1], QUALIFIER);
+    delete.addColumn(FAMILIES[2], QUALIFIER);
     ht.delete(delete);
 
     scan = new Scan(ROWS[0]);
@@ -6084,7 +6084,7 @@ public class TestFromClientSide {
     // Test if we delete the family first in one row (HBASE-1541)
 
     delete = new Delete(ROWS[3]);
-    delete.deleteFamily(FAMILIES[1]);
+    delete.addFamily(FAMILIES[1]);
     ht.delete(delete);
 
     put = new Put(ROWS[3]);

@@ -390,12 +390,12 @@ public class TestAtomicOperation {
                 p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
                 Delete d = new Delete(row);
-                d.deleteColumns(fam1, qual2, ts);
+                d.addColumns(fam1, qual2, ts);
                 d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
               } else {
                 Delete d = new Delete(row);
-                d.deleteColumns(fam1, qual1, ts);
+                d.addColumns(fam1, qual1, ts);
                 d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
                 Put p = new Put(row, ts);
@@ -483,12 +483,12 @@ public class TestAtomicOperation {
                 p.setDurability(Durability.ASYNC_WAL);
                 mrm.add(p);
                 Delete d = new Delete(row);
-                d.deleteColumns(fam1, qual1, ts);
+                d.addColumns(fam1, qual1, ts);
                 d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
               } else {
                 Delete d = new Delete(row2);
-                d.deleteColumns(fam1, qual1, ts);
+                d.addColumns(fam1, qual1, ts);
                 d.setDurability(Durability.ASYNC_WAL);
                 mrm.add(d);
                 Put p = new Put(row, ts);
