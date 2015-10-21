@@ -60,7 +60,7 @@ public class TestFastFail {
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static final Random random = new Random();
-  private static int SLAVES = 3;
+  private static int SLAVES = 1;
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final int SLEEPTIME = 5000;
 
@@ -217,8 +217,6 @@ public class TestFastFail {
 
     doneHalfway.await();
 
-    ClusterStatus status = TEST_UTIL.getHBaseCluster().getClusterStatus();
-
     // Kill a regionserver
     TEST_UTIL.getHBaseCluster().getRegionServer(0).getRpcServer().stop();
     TEST_UTIL.getHBaseCluster().getRegionServer(0).stop("Testing");
@@ -227,8 +225,8 @@ public class TestFastFail {
     continueOtherHalf.countDown();
 
     Thread.sleep(2 * SLEEPTIME);
-    // Restore the cluster
-    TEST_UTIL.getHBaseCluster().restoreClusterStatus(status);
+    // Start a RS in the cluster
+    TEST_UTIL.getHBaseCluster().startRegionServer();
 
     int numThreadsReturnedFalse = 0;
     int numThreadsReturnedTrue = 0;
@@ -269,19 +267,16 @@ public class TestFastFail {
     assertEquals("The regionservers that returned true should equal to the"
         + " number of successful threads", numThreadsReturnedTrue,
         numSuccessfullThreads.get());
-    /* 'should' is not worthy of an assert. Disabling because randomly this seems to randomly
-     * not but true. St.Ack 20151012
-     *
     assertTrue(
-        "There should be atleast one thread that retried instead of failing",
+        "There will be atleast one thread that retried instead of failing",
         MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);
     assertTrue(
-        "There should be atleast one PreemptiveFastFail exception,"
+        "There will be atleast one PreemptiveFastFail exception,"
             + " otherwise, the test makes little sense."
             + "numPreemptiveFastFailExceptions: "
             + numPreemptiveFastFailExceptions.get(),
         numPreemptiveFastFailExceptions.get() > 0);
-    */
+    
     assertTrue(
         "Only few thread should ideally be waiting for the dead "
             + "regionserver to be coming back. numBlockedWorkers:"
