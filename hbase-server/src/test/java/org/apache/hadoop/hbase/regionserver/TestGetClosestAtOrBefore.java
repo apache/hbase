@@ -24,11 +24,11 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,15 +44,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * TestGet is a medley of tests of get all done up as a single test.
  * This class
  */
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestGetClosestAtOrBefore extends HBaseTestCase {
+public class TestGetClosestAtOrBefore  {
+  @Rule public TestName testName = new TestName();
   private static final Log LOG = LogFactory.getLog(TestGetClosestAtOrBefore.class);
 
   private static final byte[] T00 = Bytes.toBytes("000");
@@ -66,18 +72,17 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   private static final byte[] T40 = Bytes.toBytes("040");
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-
-
+  private static Configuration conf = UTIL.getConfiguration();
 
   @Test
   public void testUsingMetaAndBinary() throws IOException {
     FileSystem filesystem = FileSystem.get(conf);
-    Path rootdir = testDir;
+    Path rootdir = UTIL.getDataTestDirOnTestFS();
     // Up flush size else we bind up when we use default catalog flush of 16k.
-    fsTableDescriptors.get(TableName.META_TABLE_NAME).setMemStoreFlushSize(64 * 1024 * 1024);
+    UTIL.getMetaTableDescriptor().setMemStoreFlushSize(64 * 1024 * 1024);
 
     Region mr = HBaseTestingUtility.createRegionAndWAL(HRegionInfo.FIRST_META_REGIONINFO,
-        rootdir, this.conf, fsTableDescriptors.get(TableName.META_TABLE_NAME));
+        rootdir, this.conf, UTIL.getMetaTableDescriptor());
     try {
     // Write rows for three tables 'A', 'B', and 'C'.
     for (char c = 'A'; c < 'D'; c++) {
@@ -189,43 +194,44 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   @Test
   public void testGetClosestRowBefore3() throws IOException{
     Region region = null;
-    byte [] c0 = COLUMNS[0];
-    byte [] c1 = COLUMNS[1];
+    byte [] c0 = UTIL.COLUMNS[0];
+    byte [] c1 = UTIL.COLUMNS[1];
     try {
-      HTableDescriptor htd = createTableDescriptor(getName());
-      region = createNewHRegion(htd, null, null);
+      TableName tn = TableName.valueOf(testName.getMethodName());
+      HTableDescriptor htd = UTIL.createTableDescriptor(tn);
+      region = UTIL.createLocalHRegion(htd, null, null);
 
       Put p = new Put(T00);
-      p.add(c0, c0, T00);
+      p.addColumn(c0, c0, T00);
       region.put(p);
 
       p = new Put(T10);
-      p.add(c0, c0, T10);
+      p.addColumn(c0, c0, T10);
       region.put(p);
 
       p = new Put(T20);
-      p.add(c0, c0, T20);
+      p.addColumn(c0, c0, T20);
       region.put(p);
 
       Result r = UTIL.getClosestRowBefore(region, T20, c0);
       assertTrue(Bytes.equals(T20, r.getRow()));
 
       Delete d = new Delete(T20);
-      d.deleteColumn(c0, c0);
+      d.addColumn(c0, c0);
       region.delete(d);
 
       r = UTIL.getClosestRowBefore(region, T20, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
 
       p = new Put(T30);
-      p.add(c0, c0, T30);
+      p.addColumn(c0, c0, T30);
       region.put(p);
 
       r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       d = new Delete(T30);
-      d.deleteColumn(c0, c0);
+      d.addColumn(c0, c0);
       region.delete(d);
 
       r = UTIL.getClosestRowBefore(region, T30, c0);
@@ -243,7 +249,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
 
       // Put into a different column family.  Should make it so I still get t10
       p = new Put(T20);
-      p.add(c1, c1, T20);
+      p.addColumn(c1, c1, T20);
       region.put(p);
 
       r = UTIL.getClosestRowBefore(region, T30, c0);
@@ -261,7 +267,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       // Now try combo of memcache and mapfiles.  Delete the t20 COLUMS[1]
       // in memory; make sure we get back t10 again.
       d = new Delete(T20);
-      d.deleteColumn(c1, c1);
+      d.addColumn(c1, c1);
       region.delete(d);
       r = UTIL.getClosestRowBefore(region, T30, c0);
       assertTrue(Bytes.equals(T10, r.getRow()));
@@ -276,10 +282,10 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       // Ok.  Let the candidate come out of hfile but have delete of
       // the candidate be in memory.
       p = new Put(T11);
-      p.add(c0, c0, T11);
+      p.addColumn(c0, c0, T11);
       region.put(p);
       d = new Delete(T10);
-      d.deleteColumn(c1, c1);
+      d.addColumn(c1, c1);
       r = UTIL.getClosestRowBefore(region, T12, c0);
       assertTrue(Bytes.equals(T11, r.getRow()));
     } finally {
@@ -299,21 +305,22 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
   @Test
   public void testGetClosestRowBefore2() throws IOException{
     Region region = null;
-    byte [] c0 = COLUMNS[0];
+    byte [] c0 = UTIL.COLUMNS[0];
     try {
-      HTableDescriptor htd = createTableDescriptor(getName());
-      region = createNewHRegion(htd, null, null);
+      TableName tn = TableName.valueOf(testName.getMethodName());
+      HTableDescriptor htd = UTIL.createTableDescriptor(tn);
+      region = UTIL.createLocalHRegion(htd, null, null);
 
       Put p = new Put(T10);
-      p.add(c0, c0, T10);
+      p.addColumn(c0, c0, T10);
       region.put(p);
 
       p = new Put(T30);
-      p.add(c0, c0, T30);
+      p.addColumn(c0, c0, T30);
       region.put(p);
 
       p = new Put(T40);
-      p.add(c0, c0, T40);
+      p.addColumn(c0, c0, T40);
       region.put(p);
 
       // try finding "035"
@@ -327,7 +334,7 @@ public class TestGetClosestAtOrBefore extends HBaseTestCase {
       assertTrue(Bytes.equals(T30, r.getRow()));
 
       p = new Put(T20);
-      p.add(c0, c0, T20);
+      p.addColumn(c0, c0, T20);
       region.put(p);
 
       // try finding "035"
