@@ -22,16 +22,20 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
  * Base class of the factory that will create a ChaosMonkey.
  */
 public abstract class MonkeyFactory {
+  private static final Log LOG = LogFactory.getLog(MonkeyFactory.class);
 
   protected TableName tableName;
   protected Set<String> columnFamilies;
@@ -84,6 +88,16 @@ public abstract class MonkeyFactory {
     .build();
 
   public static MonkeyFactory getFactory(String factoryName) {
-    return FACTORIES.get(factoryName);
+    MonkeyFactory fact = FACTORIES.get(factoryName);
+    if (fact == null) {
+      Class klass = null;
+      try {
+        klass = Class.forName(factoryName);
+        fact = (MonkeyFactory) ReflectionUtils.newInstance(klass);
+      } catch (ClassNotFoundException e) {
+        LOG.error("Error trying to create " + factoryName + " could not load it by class name");
+      }
+    }
+    return fact;
   }
 }
