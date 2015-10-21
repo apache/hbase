@@ -585,24 +585,24 @@ public class HRegionFileSystem {
         if (top) {
           //check if larger than last key.
           KeyValue splitKey = KeyValueUtil.createFirstOnRow(splitRow);
-          byte[] lastKey = f.createReader().getLastKey();
+          byte[] lastKey = f.getLastKey();
           // If lastKey is null means storefile is empty.
           if (lastKey == null) {
             return null;
           }
-          if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
+          if (f.getComparator().compareFlatKey(splitKey.getBuffer(),
             splitKey.getKeyOffset(), splitKey.getKeyLength(), lastKey, 0, lastKey.length) > 0) {
             return null;
           }
         } else {
           //check if smaller than first key
           KeyValue splitKey = KeyValueUtil.createLastOnRow(splitRow);
-          byte[] firstKey = f.createReader().getFirstKey();
+          byte[] firstKey = f.getFirstKey();
           // If firstKey is null means storefile is empty.
           if (firstKey == null) {
             return null;
           }
-          if (f.getReader().getComparator().compareFlatKey(splitKey.getBuffer(),
+          if (f.getComparator().compareFlatKey(splitKey.getBuffer(),
             splitKey.getKeyOffset(), splitKey.getKeyLength(), firstKey, 0, firstKey.length) < 0) {
             return null;
           }
