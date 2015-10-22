@@ -209,15 +209,16 @@ public class HFileOutputFormat2
           if (conf.getBoolean(LOCALITY_SENSITIVE_CONF_KEY, DEFAULT_LOCALITY_SENSITIVE)) {
             HRegionLocation loc = null;
             String tableName = conf.get(OUTPUT_TABLE_NAME_CONF_KEY);
-
-            try (Connection connection = ConnectionFactory.createConnection(conf);
-                RegionLocator locator =
-                    connection.getRegionLocator(TableName.valueOf(tableName))) {
-              loc = locator.getRegionLocation(rowKey);
-            } catch (Throwable e) {
-              LOG.warn("there's something wrong when locating rowkey: " +
+            if (tableName != null) {
+              try (Connection connection = ConnectionFactory.createConnection(conf);
+                     RegionLocator locator =
+                       connection.getRegionLocator(TableName.valueOf(tableName))) {
+                loc = locator.getRegionLocation(rowKey);
+              } catch (Throwable e) {
+                LOG.warn("there's something wrong when locating rowkey: " +
                   Bytes.toString(rowKey), e);
-              loc = null;
+                loc = null;
+              }
             }
 
             if (null == loc) {
