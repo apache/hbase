@@ -40,7 +40,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -48,6 +47,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoder;
 import org.apache.hadoop.hbase.io.hfile.HFileDataBlockEncoderImpl;
@@ -197,7 +197,7 @@ public class TestMajorCompaction {
       createStoreFile(r);
     }
     // Add more content.
-    HBaseTestCase.addContent(new HRegionIncommon(r), Bytes.toString(COLUMN_FAMILY));
+    HBaseTestCase.addContent(new RegionTable(r), Bytes.toString(COLUMN_FAMILY));
 
     // Now there are about 5 versions of each column.
     // Default is that there only 3 (MAXVERSIONS) versions allowed per column.
@@ -386,13 +386,13 @@ public class TestMajorCompaction {
   }
 
   private void createStoreFile(final Region region, String family) throws IOException {
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionTable(region);
     HBaseTestCase.addContent(loader, family);
     loader.flushcache();
   }
 
   private void createSmallerStoreFile(final Region region) throws IOException {
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionTable(region);
     HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY), ("" +
         "bbb").getBytes(), null);
     loader.flushcache();

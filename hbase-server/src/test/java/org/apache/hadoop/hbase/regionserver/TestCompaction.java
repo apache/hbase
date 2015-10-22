@@ -37,8 +37,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -47,25 +45,25 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
-import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
-import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputControllerFactory;
-import org.apache.hadoop.hbase.wal.WAL;
+import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
+import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -84,7 +82,6 @@ import org.mockito.stubbing.Answer;
 @Category(MediumTests.class)
 public class TestCompaction {
   @Rule public TestName name = new TestName();
-  private static final Log LOG = LogFactory.getLog(TestCompaction.class.getName());
   private static final HBaseTestingUtility UTIL = HBaseTestingUtility.createLocalHTU();
   protected Configuration conf = UTIL.getConfiguration();
   
@@ -146,15 +143,15 @@ public class TestCompaction {
       int jmax = (int) Math.ceil(15.0/compactionThreshold);
       byte [] pad = new byte[1000]; // 1 KB chunk
       for (int i = 0; i < compactionThreshold; i++) {
-        HRegionIncommon loader = new HRegionIncommon(r);
+        Table loader = new RegionTable(r);
         Put p = new Put(Bytes.add(STARTROW, Bytes.toBytes(i)));
         p.setDurability(Durability.SKIP_WAL);
         for (int j = 0; j < jmax; j++) {
-          p.add(COLUMN_FAMILY, Bytes.toBytes(j), pad);
+          p.addColumn(COLUMN_FAMILY, Bytes.toBytes(j), pad);
         }
         HBaseTestCase.addContent(loader, Bytes.toString(COLUMN_FAMILY));
         loader.put(p);
-        loader.flushcache();
+        r.flush(true);
       }
 
       HRegion spyR = spy(r);
@@ -228,9 +225,9 @@ public class TestCompaction {
   }
 
   private void createStoreFile(final HRegion region, String family) throws IOException {
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionTable(region);
     HBaseTestCase.addContent(loader, family);
-    loader.flushcache();
+    region.flush(true);
   }
 
   @Test
