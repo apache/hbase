@@ -89,13 +89,16 @@ public abstract class MonkeyFactory {
 
   public static MonkeyFactory getFactory(String factoryName) {
     MonkeyFactory fact = FACTORIES.get(factoryName);
-    if (fact == null) {
+    if (fact == null && factoryName != null && !factoryName.isEmpty()) {
       Class klass = null;
       try {
         klass = Class.forName(factoryName);
-        fact = (MonkeyFactory) ReflectionUtils.newInstance(klass);
-      } catch (ClassNotFoundException e) {
+        if (klass != null) {
+          fact = (MonkeyFactory) ReflectionUtils.newInstance(klass);
+        }
+      } catch (Exception e) {
         LOG.error("Error trying to create " + factoryName + " could not load it by class name");
+        return null;
       }
     }
     return fact;
