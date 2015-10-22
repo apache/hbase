@@ -745,7 +745,9 @@ public class HStore implements Store {
           completionService.submit(new Callable<Void>() {
             @Override
             public Void call() throws IOException {
-              f.closeReader(true);
+              boolean evictOnClose = 
+                  cacheConf != null? cacheConf.shouldEvictOnClose(): true; 
+              f.closeReader(evictOnClose);
               return null;
             }
           });
