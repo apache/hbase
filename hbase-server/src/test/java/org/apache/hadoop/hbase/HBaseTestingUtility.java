@@ -1312,19 +1312,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create a table.
    * @param tableName
-   * @param family
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[])}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[] family) throws IOException {
-    return createTable(TableName.valueOf(tableName), new byte[][] { family });
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
    * @param families
    * @return An HTable instance for the created table.
    * @throws IOException
@@ -1368,22 +1355,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     return createTable(tableName, new byte[][] { family }, splitKeys);
   }
 
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][])}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families)
-  throws IOException {
-    return createTable(tableName, families,
-        new Configuration(getConfiguration()));
-  }
-
   /**
    * Create a table.
    * @param tableName
@@ -1418,20 +1389,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(TableName tableName, byte[][] families, byte[][] splitKeys)
       throws IOException {
     return createTable(tableName, families, splitKeys, new Configuration(getConfiguration()));
-  }
-
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families, int numVersions, byte[] startKey,
-      byte[] endKey, int numRegions) throws IOException {
-    return createTable(TableName.valueOf(tableName), families, numVersions, startKey, endKey,
-        numRegions);
-  }
-
-  @Deprecated
-  public HTable createTable(String tableName, byte[][] families, int numVersions, byte[] startKey,
-      byte[] endKey, int numRegions) throws IOException {
-    return createTable(TableName.valueOf(tableName), families, numVersions, startKey, endKey,
-        numRegions);
   }
 
   public HTable createTable(TableName tableName, byte[][] families,
@@ -1509,21 +1466,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Create a table.
    * @param tableName
    * @param families
-   * @param c Configuration to use
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][])}
-   */
-  @Deprecated
-  public HTable createTable(TableName tableName, byte[][] families, final Configuration c)
-      throws IOException {
-    return createTable(tableName, families, (byte[][]) null, c);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
    * @param splitKeys
    * @param c Configuration to use
    * @return An HTable instance for the created table.
@@ -1537,95 +1479,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   /**
    * Create a table.
    * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][])}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families, final Configuration c)
-      throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      // Disable blooms (they are on by default as of 0.95) but we disable them here because
-      // tests have hard coded counts of what to expect in block cache, etc., and blooms being
-      // on is interfering.
-      hcd.setBloomFilterType(BloomType.NONE);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    return (HTable) getConnection().getTable(desc.getTableName());
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], int)}
-   */
-  @Deprecated
-  public HTable createTable(TableName tableName, byte[][] families,
-      final Configuration c, int numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(tableName);
-    for(byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family)
-          .setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(tableName);
-    return (HTable) getConnection().getTable(tableName);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param c Configuration to use
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], int)}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families,
-      final Configuration c, int numVersions)
-  throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for (byte[] family : families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family).setMaxVersions(numVersions);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc);
-    return (HTable) getConnection().getTable(desc.getTableName());
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param family
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[], int)}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[] family, int numVersions)
-  throws IOException {
-    return createTable(tableName, new byte[][]{family}, numVersions);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
    * @param family
    * @param numVersions
    * @return An HTable instance for the created table.
@@ -1634,21 +1487,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
   public HTable createTable(TableName tableName, byte[] family, int numVersions)
   throws IOException {
     return createTable(tableName, new byte[][]{family}, numVersions);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], int)}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families, int numVersions)
-      throws IOException {
-    return createTable(TableName.valueOf(tableName), families, numVersions);
   }
 
   /**
@@ -1707,23 +1545,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param blockSize
    * @return An HTable instance for the created table.
    * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], int, int)}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families,
-    int numVersions, int blockSize) throws IOException {
-    return createTable(TableName.valueOf(tableName),
-        families, numVersions, blockSize);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
-   * @param blockSize
-   * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families,
     int numVersions, int blockSize) throws IOException {
@@ -1765,22 +1586,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * @param numVersions
    * @return An HTable instance for the created table.
    * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], int)}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families,
-      int[] numVersions)
-  throws IOException {
-    return createTable(TableName.valueOf(tableName), families, numVersions);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param numVersions
-   * @return An HTable instance for the created table.
-   * @throws IOException
    */
   public HTable createTable(TableName tableName, byte[][] families,
       int[] numVersions)
@@ -1797,21 +1602,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
     waitUntilAllRegionsAssigned(tableName);
     return (HTable) getConnection().getTable(tableName);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param family
-   * @param splitRows
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[], byte[][])}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[] family, byte[][] splitRows)
-    throws IOException{
-    return createTable(TableName.valueOf(tableName), family, splitRows);
   }
 
   /**
@@ -1842,29 +1632,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable createMultiRegionTable(TableName tableName, byte[] family) throws IOException {
     return createTable(tableName, family, KEYS_FOR_HBA_CREATE_TABLE);
-  }
-
-  /**
-   * Create a table.
-   * @param tableName
-   * @param families
-   * @param splitRows
-   * @return An HTable instance for the created table.
-   * @throws IOException
-   * @deprecated use {@link #createTable(TableName, byte[][], byte[][])}
-   */
-  @Deprecated
-  public HTable createTable(byte[] tableName, byte[][] families, byte[][] splitRows)
-      throws IOException {
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(tableName));
-    for(byte[] family:families) {
-      HColumnDescriptor hcd = new HColumnDescriptor(family);
-      desc.addFamily(hcd);
-    }
-    getHBaseAdmin().createTable(desc, splitRows);
-    // HBaseAdmin only waits for regions to appear in hbase:meta we should wait until they are assigned
-    waitUntilAllRegionsAssigned(desc.getTableName());
-    return (HTable) getConnection().getTable(desc.getTableName());
   }
 
   /**
@@ -2156,37 +1923,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    */
   public HTable truncateTable(final TableName tableName) throws IOException {
     return truncateTable(tableName, false);
-  }
-
-  /**
-   * Truncate a table using the admin command.
-   * Effectively disables, deletes, and recreates the table.
-   *
-   * @param tableName       table which must exist.
-   * @param preserveRegions keep the existing split points
-   * @return HTable for the new table
-   * @deprecated use {@link #truncateTable(TableName, boolean)}
-   */
-  @Deprecated
-  public HTable truncateTable(final byte[] tableName, final boolean preserveRegions)
-      throws IOException {
-    return truncateTable(TableName.valueOf(tableName), preserveRegions);
-  }
-
-  /**
-   * Truncate a table using the admin command.
-   * Effectively disables, deletes, and recreates the table.
-   * For previous behavior of issuing row deletes, see
-   * deleteTableData.
-   * Expressly does not preserve regions of existing table.
-   *
-   * @param tableName table which must exist.
-   * @return HTable for the new table
-   * @deprecated use {@link #truncateTable(TableName)}
-   */
-  @Deprecated
-  public HTable truncateTable(final byte[] tableName) throws IOException {
-    return truncateTable(TableName.valueOf(tableName), false);
   }
 
   /**
@@ -2879,12 +2615,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   public void expireSession(ZooKeeperWatcher nodeZK) throws Exception {
    expireSession(nodeZK, false);
-  }
-
-  @Deprecated
-  public void expireSession(ZooKeeperWatcher nodeZK, Server server)
-    throws Exception {
-    expireSession(nodeZK, false);
   }
 
   /**
@@ -3655,15 +3385,6 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
         + conf.get(HConstants.ZOOKEEPER_CLIENT_PORT) + ":"
         + conf.get(HConstants.ZOOKEEPER_ZNODE_PARENT,
             HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
-  }
-
-  @Deprecated
-  public HTable createRandomTable(String tableName, final Collection<String> families,
-      final int maxVersions, final int numColsPerRow, final int numFlushes, final int numRegions,
-      final int numRowsPerFlush) throws IOException, InterruptedException {
-    return (HTable) this
-        .createRandomTable(TableName.valueOf(tableName), families, maxVersions, numColsPerRow,
-            numFlushes, numRegions, numRowsPerFlush);
   }
 
   /** Creates a random table with the given parameters */
