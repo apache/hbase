@@ -24,11 +24,8 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.experimental.categories.Category;
-import org.junit.internal.runners.statements.FailOnTimeout;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
 
 /**
  * Set a test method timeout based off the test categories small, medium, large.

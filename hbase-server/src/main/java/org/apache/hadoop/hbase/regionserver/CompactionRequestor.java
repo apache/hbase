@@ -73,7 +73,7 @@ public interface CompactionRequestor {
    * @param requests custom compaction requests. Each compaction must specify the store on which it
    *          is acting. Can be <tt>null</tt> in which case a compaction will be attempted on all
    *          stores for the region.
-   * @user  the effective user
+   * @param user  the effective user
    * @return The created {@link CompactionRequest CompactionRequests} or an empty list if no
    *         compactions were started.
    * @throws IOException

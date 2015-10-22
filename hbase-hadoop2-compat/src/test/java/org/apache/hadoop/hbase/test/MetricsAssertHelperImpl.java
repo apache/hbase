@@ -19,7 +19,6 @@
 package org.apache.hadoop.hbase.test;
 
 import org.apache.hadoop.hbase.metrics.BaseSource;
-import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsInfo;

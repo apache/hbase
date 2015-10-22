@@ -230,7 +230,7 @@ public class ProcedureInfo {
 
   /**
    * Check if the user is this procedure's owner
-   * @param owner the owner field of the procedure
+   * @param procInfo the procedure to check
    * @param user the user
    * @return true if the user is the owner of the procedure,
    *   false otherwise or the owner is unknown.

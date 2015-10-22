@@ -26,7 +26,6 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils.SnapshotMock;
 import org.junit.experimental.categories.Category;
-import org.mockito.Mockito;
 
 /**
  * Test the restore/clone operation from a file-system point of view.

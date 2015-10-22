@@ -145,8 +145,6 @@ denied by receiving this exception.
 <blockquote><pre>
 package org.apache.hadoop.hbase.coprocessor;
 
-import java.util.List;
-import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 
 // Sample access-control coprocessor. It utilizes RegionObserver

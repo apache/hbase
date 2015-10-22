@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.BeforeClass;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Lists;
 
 /**
  * Test create/using/deleting snapshots from the client

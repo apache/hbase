@@ -23,7 +23,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
 
 @Category({SmallTests.class})
 public class TestTimeout {

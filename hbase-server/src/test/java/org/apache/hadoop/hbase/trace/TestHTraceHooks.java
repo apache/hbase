@@ -42,7 +42,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-import com.google.common.collect.Multimap;
 
 @Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {

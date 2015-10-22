@@ -18,19 +18,11 @@
 
 package org.apache.hadoop.hbase.chaos.actions;
 
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang.math.RandomUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.RegionLocator;
-import org.apache.hadoop.hbase.client.Table;
 
 /**
 * Action that restarts an HRegionServer holding one of the regions of the table.

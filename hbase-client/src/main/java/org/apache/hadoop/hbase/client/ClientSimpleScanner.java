@@ -23,7 +23,6 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 
 /**
