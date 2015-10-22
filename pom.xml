@@ -2749,20 +2749,20 @@
         <reportSets>
           <reportSet>
             <reports>
-              <report>index</report>
-              <report>project-team</report>
-              <report>mailing-list</report>
               <report>cim</report>
+              <report>dependencies</report>
+              <report>dependency-convergence</report>
+              <report>dependency-info</report>
+              <report>dependency-management</report>
+              <report>index</report>
               <report>issue-tracking</report>
               <report>license</report>
-              <report>scm</report>
-              <report>cim</report>
-              <report>dependency-info</report>
-              <report>dependency-convergence</report>
-              <report>distribution-management</report>
-              <report>modules</report>
+              <report>mailing-list</report>
               <report>plugin-management</report>
               <report>plugins</report>
+              <report>project-team</report>
+              <report>scm</report>
+              <report>summary</report>
             </reports>
           </reportSet>
         </reportSets>
@@ -3007,14 +3007,4 @@
 
     </plugins>
   </reporting>
-  <distributionManagement>
-    <site>
-      <id>hbase.apache.org</id>
-      <name>HBase Website at hbase.apache.org</name>
-      <!-- On why this is the tmp dir and not hbase.apache.org, see
-               https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
-               -->
-      <url>file:///tmp</url>
-    </site>
-  </distributionManagement>
 </project>
