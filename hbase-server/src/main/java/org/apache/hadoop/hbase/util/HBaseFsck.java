@@ -313,23 +313,12 @@ public class HBaseFsck extends Configured implements Closeable {
    */
   public HBaseFsck(Configuration conf) throws MasterNotRunningException,
       ZooKeeperConnectionException, IOException, ClassNotFoundException {
-    super(conf);
-    // make a copy, just to be sure we're not overriding someone else's config
-    setConf(HBaseConfiguration.create(getConf()));
-    // disable blockcache for tool invocation, see HBASE-10500
-    getConf().setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0);
-    // Disable usage of meta replicas in hbck
-    getConf().setBoolean(HConstants.USE_META_REPLICAS, false);
-    errors = getErrorReporter(conf);
+    this(conf, createThreadPool(conf));
+  }
 
+  private static ExecutorService createThreadPool(Configuration conf) {
     int numThreads = conf.getInt("hbasefsck.numthreads", MAX_NUM_THREADS);
-    executor = new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
-    lockFileRetryCounterFactory = new RetryCounterFactory(
-      getConf().getInt("hbase.hbck.lockfile.attempts", DEFAULT_MAX_LOCK_FILE_ATTEMPTS),
-      getConf().getInt(
-        "hbase.hbck.lockfile.attempt.sleep.interval", DEFAULT_LOCK_FILE_ATTEMPT_SLEEP_INTERVAL),
-      getConf().getInt(
-        "hbase.hbck.lockfile.attempt.maxsleeptime", DEFAULT_LOCK_FILE_ATTEMPT_MAX_SLEEP_TIME));
+    return new ScheduledThreadPoolExecutor(numThreads, Threads.newDaemonThreadFactory("hbasefsck"));
   }
 
   /**
