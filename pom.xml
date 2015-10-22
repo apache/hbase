@@ -2750,6 +2750,19 @@
           <reportSet>
             <reports>
               <report>index</report>
+              <report>project-team</report>
+              <report>mailing-list</report>
+              <report>cim</report>
+              <report>issue-tracking</report>
+              <report>license</report>
+              <report>scm</report>
+              <report>cim</report>
+              <report>dependency-info</report>
+              <report>dependency-convergence</report>
+              <report>distribution-management</report>
+              <report>modules</report>
+              <report>plugin-management</report>
+              <report>plugins</report>
             </reports>
           </reportSet>
         </reportSets>
