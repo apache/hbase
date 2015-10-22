@@ -17,6 +17,7 @@
 package org.apache.hadoop.hbase.io.encoding;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
@@ -333,14 +334,14 @@ public class TestDataBlockEncoders {
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
       boolean seekBefore, Cell keyValue) {
-    ByteBuffer expectedKeyValue = null;
+    Cell expectedKeyValue = null;
     ByteBuffer expectedKey = null;
     ByteBuffer expectedValue = null;
     for (DataBlockEncoder.EncodedSeeker seeker : encodedSeekers) {
       seeker.seekToKeyInBlock(keyValue, seekBefore);
       seeker.rewind();
 
-      ByteBuffer actualKeyValue = seeker.getKeyValueBuffer();
+      Cell actualKeyValue = seeker.getCell();
       ByteBuffer actualKey = null;
       if (seeker instanceof PrefixTreeSeeker) {
         byte[] serializedKey = CellUtil.getCellKeySerializedAsKeyValueKey(seeker.getKey());
@@ -351,7 +352,7 @@ public class TestDataBlockEncoders {
       ByteBuffer actualValue = seeker.getValueShallowCopy();
 
       if (expectedKeyValue != null) {
-        assertEquals(expectedKeyValue, actualKeyValue);
+        assertTrue(CellUtil.equals(expectedKeyValue, actualKeyValue));
       } else {
         expectedKeyValue = actualKeyValue;
       }

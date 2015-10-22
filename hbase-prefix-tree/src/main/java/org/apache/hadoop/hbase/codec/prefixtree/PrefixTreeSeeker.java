@@ -90,14 +90,6 @@ public class PrefixTreeSeeker implements EncodedSeeker {
    * currently must do deep copy into new array
    */
   @Override
-  public ByteBuffer getKeyValueBuffer() {
-    return KeyValueUtil.copyToNewByteBuffer(ptSearcher.current());
-  }
-
-  /**
-   * currently must do deep copy into new array
-   */
-  @Override
   public Cell getCell() {
     // The PrefixTreecell is of type BytebufferedCell and the value part of the cell
     // determines whether we are offheap cell or onheap cell.  All other parts of the cell-
