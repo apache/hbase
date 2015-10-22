@@ -2748,7 +2748,9 @@
         <version>2.7</version>
         <reportSets>
           <reportSet>
-            <report>index</report>
+            <reports>
+              <report>index</report>
+            </reports>
           </reportSet>
         </reportSets>
         <!-- see src/main/site/site.xml for selected reports -->
