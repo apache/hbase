@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -35,7 +36,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -46,26 +46,24 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.nio.ByteBuff;
-import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import static org.junit.Assert.*;
 
 /**
  * test hfile features.
- * <p>
- * Copied from
- * <a href="https://issues.apache.org/jira/browse/HADOOP-3315">hadoop-3315 tfile</a>.
- * Remove after tfile is committed and use the tfile version of this class
- * instead.</p>
  */
 @Category({IOTests.class, SmallTests.class})
-public class TestHFile extends HBaseTestCase {
+public class TestHFile  {
+
+  @Rule public TestName testName = new TestName();
+
   private static final Log LOG = LogFactory.getLog(TestHFile.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -75,18 +73,15 @@ public class TestHFile extends HBaseTestCase {
   private static String localFormatter = "%010d";
   private static CacheConfig cacheConf = null;
   private Map<String, Long> startingMetrics;
+  private static Configuration conf ;
+  private static FileSystem fs;
 
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
+  @BeforeClass
+  public static void setUp() throws Exception {
+    conf = TEST_UTIL.getConfiguration();
+    fs = TEST_UTIL.getTestFileSystem();
   }
-
-  @After
-  public void tearDown() throws Exception {
-    super.tearDown();
-  }
-
-
+  
   /**
    * Test empty HFile.
    * Test all features work reasonably when hfile is empty of entries.
@@ -95,7 +90,7 @@ public class TestHFile extends HBaseTestCase {
   @Test
   public void testEmptyHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path f = new Path(ROOT_DIR, getName());
+    Path f = new Path(ROOT_DIR, testName.getMethodName());
     HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
     Writer w =
         HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
@@ -112,7 +107,7 @@ public class TestHFile extends HBaseTestCase {
   @Test
   public void testCorrupt0LengthHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path f = new Path(ROOT_DIR, getName());
+    Path f = new Path(ROOT_DIR, testName.getMethodName());
     FSDataOutputStream fsos = fs.create(f);
     fsos.close();
 
@@ -146,7 +141,7 @@ public class TestHFile extends HBaseTestCase {
   @Test
   public void testCorruptTruncatedHFile() throws IOException {
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path f = new Path(ROOT_DIR, getName());
+    Path f = new Path(ROOT_DIR, testName.getMethodName());
     HFileContext  context = new HFileContextBuilder().build();
     Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f)
         .withFileContext(context).create();
@@ -165,7 +160,7 @@ public class TestHFile extends HBaseTestCase {
     fail("Should have thrown exception");
   }
 
-  // write some records into the tfile
+  // write some records into the hfile
   // write them twice
   private int writeSomeRecords(Writer writer, int start, int n, boolean useTags)
       throws IOException {
@@ -248,8 +243,8 @@ public class TestHFile extends HBaseTestCase {
       conf.setInt("hfile.format.version", 3);
     }
     if (cacheConf == null) cacheConf = new CacheConfig(conf);
-    Path ncTFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
-    FSDataOutputStream fout = createFSOutput(ncTFile);
+    Path  ncHFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
+    FSDataOutputStream fout = createFSOutput(ncHFile);
     HFileContext meta = new HFileContextBuilder()
                         .withBlockSize(minBlockSize)
                         .withCompression(HFileWriterImpl.compressionByName(codec))
@@ -262,9 +257,9 @@ public class TestHFile extends HBaseTestCase {
     LOG.info(writer);
     writeRecords(writer, useTags);
     fout.close();
-    FSDataInputStream fin = fs.open(ncTFile);
-    Reader reader = HFile.createReaderFromStream(ncTFile, fs.open(ncTFile),
-      fs.getFileStatus(ncTFile).getLen(), cacheConf, conf);
+    FSDataInputStream fin = fs.open(ncHFile);
+    Reader reader = HFile.createReaderFromStream(ncHFile, fs.open(ncHFile),
+      fs.getFileStatus(ncHFile).getLen(), cacheConf, conf);
     System.out.println(cacheConf.toString());
     // Load up the index.
     reader.loadFileInfo();
@@ -290,17 +285,16 @@ public class TestHFile extends HBaseTestCase {
 
     reader.close();
     fin.close();
-    fs.delete(ncTFile, true);
+    fs.delete(ncHFile, true);
   }
 
   @Test
   public void testTFileFeatures() throws IOException {
-    testTFilefeaturesInternals(false);
-    testTFilefeaturesInternals(true);
+    testHFilefeaturesInternals(false);
+    testHFilefeaturesInternals(true);
   }
 
-  @Test
-  protected void testTFilefeaturesInternals(boolean useTags) throws IOException {
+  protected void testHFilefeaturesInternals(boolean useTags) throws IOException {
     basicWithSomeCodec("none", useTags);
     basicWithSomeCodec("gz", useTags);
   }
@@ -369,7 +363,7 @@ public class TestHFile extends HBaseTestCase {
     fin.close();
   }
 
-  // test meta blocks for tfiles
+  // test meta blocks for hfiles
   @Test
   public void testMetaBlocks() throws Exception {
     metablocks("none");
