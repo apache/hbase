@@ -3007,4 +3007,14 @@
 
     </plugins>
   </reporting>
+  <distributionManagement>
+    <site>
+      <id>hbase.apache.org</id>
+      <name>HBase Website at hbase.apache.org</name>
+      <!-- On why this is the tmp dir and not hbase.apache.org, see
+               https://issues.apache.org/jira/browse/HBASE-7593?focusedCommentId=13555866&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-13555866
+               -->
+      <url>file:///tmp</url>
+    </site>
+  </distributionManagement>
 </project>
