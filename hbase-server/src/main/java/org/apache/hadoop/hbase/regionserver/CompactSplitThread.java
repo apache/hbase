@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -350,7 +349,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
 
     CompactionContext compaction = null;
     if (selectNow) {
-      compaction = selectCompaction(r, s, priority, request);
+      compaction = selectCompaction(r, s, priority, request, user);
       if (compaction == null) return null; // message logged inside
     }
 
@@ -368,10 +367,10 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
   }
 
   private CompactionContext selectCompaction(final Region r, final Store s,
-      int priority, CompactionRequest request) throws IOException {
-    CompactionContext compaction = s.requestCompaction(priority, request);
+      int priority, CompactionRequest request, User user) throws IOException {
+    CompactionContext compaction = s.requestCompaction(priority, request, user);
     if (compaction == null) {
-      if(LOG.isDebugEnabled()) {
+      if(LOG.isDebugEnabled() && r.getRegionInfo() != null) {
         LOG.debug("Not compacting " + r.getRegionInfo().getRegionNameAsString() +
             " because compaction request was cancelled");
       }
@@ -482,7 +481,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
           : ("Store = " + store.toString() + ", pri = " + queuedPriority);
     }
 
-    private void doCompaction() {
+    private void doCompaction(User user) {
       // Common case - system compaction without a file selection. Select now.
       if (this.compaction == null) {
         int oldPriority = this.queuedPriority;
@@ -494,7 +493,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
           return;
         }
         try {
-          this.compaction = selectCompaction(this.region, this.store, queuedPriority, null);
+          this.compaction = selectCompaction(this.region, this.store, queuedPriority, null, user);
         } catch (IOException ex) {
           LOG.error("Compaction selection failed " + this, ex);
           server.checkFileSystem();
@@ -523,7 +522,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
         //       put it into region/store/etc. This is CST logic.
         long start = EnvironmentEdgeManager.currentTime();
         boolean completed =
-            region.compact(compaction, store, compactionThroughputController);
+            region.compact(compaction, store, compactionThroughputController, user);
         long now = EnvironmentEdgeManager.currentTime();
         LOG.info(((completed) ? "Completed" : "Aborted") + " compaction: " +
               this + "; duration=" + StringUtils.formatTimeDiff(now, start));
@@ -559,22 +558,7 @@ public class CompactSplitThread implements CompactionRequestor, PropagatingConfi
           || (region.getTableDesc() != null && !region.getTableDesc().isCompactionEnabled())) {
         return;
       }
-      if (this.user == null) doCompaction();
-      else {
-        try {
-          user.getUGI().doAs(new PrivilegedExceptionAction<Void>() {
-            @Override
-            public Void run() throws Exception {
-              doCompaction();
-              return null;
-            }
-          });
-        } catch (InterruptedException ie) {
-          Thread.currentThread().interrupt();
-        } catch (IOException ioe) {
-          LOG.error("Encountered exception while compacting", ioe);
-        }
-      }
+      doCompaction(user);
     }
 
     private String formatStackTrace(Exception ex) {
