@@ -29,18 +29,18 @@ under the License.
     <section name="Welcome to Apache HBase&#8482;">
         <p><a href="http://www.apache.org/">Apache</a> HBase&#8482; is the <a href="http://hadoop.apache.org/">Hadoop</a> database, a distributed, scalable, big data store.
     </p>
-    <h4>Download Apache HBase&#8482;</h4>
-    <p>
-    Click <b><a href="http://www.apache.org/dyn/closer.cgi/hbase/">here</a></b> to download Apache HBase&#8482;.
-    </p>
-    <h4>When Would I Use Apache HBase?</h4>
-    <p>
-    Use Apache HBase&#8482; when you need random, realtime read/write access to your Big Data.
+    <p>Use Apache HBase&#8482; when you need random, realtime read/write access to your Big Data.
     This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware.
 Apache HBase is an open-source, distributed, versioned, non-relational database modeled after Google's <a href="http://research.google.com/archive/bigtable.html">Bigtable: A Distributed Storage System for Structured Data</a> by Chang et al.
  Just as Bigtable leverages the distributed data storage provided by the Google File System, Apache HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
     </p>
-    <h4>Features</h4>
+  </section>
+    <section name="Download">
+    <p>
+    Click <b><a href="http://www.apache.org/dyn/closer.cgi/hbase/">here</a></b> to download Apache HBase&#8482;.
+    </p>
+    </section>
+    <section name="Features">
     <p>
 <ul>
     <li>Linear and modular scalability.
@@ -67,17 +67,21 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
 </li>
 </ul>
 </p>
-     <h4>Where Can I Get More Information?</h4>
-   <p>See the <a href="http://hbase.apache.org/book#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book#faq">Apache HBase Reference Guide FAQ</a>,
-    and the other documentation links on the left!
+</section>
+     <section name="More Info">
+   <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Reference Guide FAQ</a>,
+    and the other documentation links.
    </p>
-     <h4>Export Control</h4>
-   <p>The HBase distribution includes cryptographic software. See the export control notice <a href="export_control.html">here</a>
-   </p>
-     <h4>Code Of Conduct</h4>
-   <p>We expect participants in discussions on the HBase project mailing lists, IRC channels, and JIRA issues to abide by the Apache Software Foundation's <a href="http://apache.org/foundation/policies/conduct.html">Code of Conduct</a>. More information can be found <a href="coc.html">here</a>.
-   </p>
- </section>
+   <dl>
+     <dt>Export Control</dt>
+   <dd><p>The HBase distribution includes cryptographic software. See the export control notice <a href="export_control.html">here</a>
+   </p></dd>
+     <dt>Code Of Conduct</dt>
+   <dd><p>We expect participants in discussions on the HBase project mailing lists, IRC channels, and JIRA issues to abide by the Apache Software Foundation's <a href="http://apache.org/foundation/policies/conduct.html">Code of Conduct</a>. More information can be found <a href="coc.html">here</a>.
+   </p></dd>
+ </dl>
+</section>
+
      <section name="News">
          <p>June 25th, 2015 <a href="http://www.zusaar.com/event/14057003">HBase Summer Meetup 2015</a> in Tokyo</p>
        <p>May 7th, 2015 <a href="http://hbasecon.com/">HBaseCon2015</a> in San Francisco</p>

@@ -17,114 +17,98 @@
  * under the License.
  */
 
-a.externalLink, a.externalLink:link, a.externalLink:visited, a.externalLink:active, a.externalLink:hover {
-  background: none;
-  padding-right: 0;
+/*@import(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap.min.css);
+@import(https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.3.2/css/bootstrap-responsive.css);*/
+html {
+  background-color: #fff;
+}
+body {
+  width: 100%;
+  font-size: 16px;
+}
+li {
+  line-height: 120%;
 }
 
-/*
-body ul {
-  list-style-type: square;
+div#topbar,
+div#banner,
+div#breadcrumbs,
+div#bodyColumn,
+footer {
+  width: 98%;
+  max-width: 1000px;
+  margin-left: 5px;
+  margin-right: 5px;
+  clear: both;
 }
-*/
-
-#downloadbox {
-  float: right;
-  margin: 0 10px 20px 20px;
-  padding: 5px;
-  border: 1px solid #999;
-  background-color: #eee;
+footer {
+  background-color: #e5e5e5;
+}
+footer .row, footer p, footer .pull-right {
+  margin: 5px;
+}
+form#search-form.navbar-search.pull-right {
+  width: 150px;
+  margin-right: 33px;
+}
+li#publishDate.pull-right {
+  margin-top: -23px;
+  list-style: none;
+}
+.container,
+.navbar-static-top .container,
+.navbar-fixed-top .container,
+.navbar-fixed-bottom .container,
+.navbar-inner {
+  width: 100%;
+  margin: 2px;
 }
 
-#downloadbox h5 {
+/* Change the color and effect when clicking in menus */
+.dropdown-menu>li>a:hover,
+.dropdown-menu>li>a:focus,
+.dropdown-submenu:hover>a,
+.dropdown-submenu:focus>a {
+  background-color: #e5e5e5;
+  background-image: none;
   color: #000;
-  margin: 0;
-  border-bottom: 1px solid #aaaaaa;
-  font-size: smaller;
-  padding: 0;
+  font-weight: bolder;
 }
 
-#downloadbox p {
-  margin-top: 1em;
-  margin-bottom: 0;
+/* On small screens, put the search form on its own line */
+@media only screen and (max-width: 800px) {
+  body {
+    width: 100%;
+    font-size: 120%;
+  }
+  div#topbar,
+  div#banner,
+  div#breadcrumbs,
+  div#bodyColumn,
+  footer {
+    width: 98%;
+    margin-left: 5px;
+    margin-right: 5px;
+    clear: both;
+    margin-bottom: 2px;
+  }
+  div#banner {
+    margin-top: 90px;
+  }
+  form#search-form.navbar-search.pull-right, .pull-right {
+    width: 95%;
+    margin: 2px;
+    float: left;
+    clear: both;
+  }
+  li#publishDate.pull-right {
+    display: block;
+    width: 95%;
+    float: left;
+    margin-top: 5px;
+    list-style: none;
+  }
 }
 
-#downloadbox ul {
-  margin-top: 0;
-  margin-bottom: 1em;
-  list-style-type: disc;
-}
-
-#downloadbox li {
-  font-size: smaller;
-}
-
-/*
-h4 {
-  padding: 0;
-  border: none;
-  color: #000;
-  margin: 0;
-  font-size: larger;
-  font-weight: bold;
-}
-*/
-
-#banner {
-  background: none;
-  padding: 10px;
-}
-
-/*
-#banner img {
-  padding: 10px;
-  margin: auto;
-  display: block;
-  background: none;
-  float: center;
-  height:;
-}
-  */
-
-#breadcrumbs {
-  background-image: url();
-}
-
-#footer {
-  border-top: 0px;
-}
-
-.frontpagebox {
-  float: left;
-  text-align: center;
-  width: 15em;
-  margin-left: 0.5em;
-  margin-right: 0.5em;
-  margin-top: 2em;
-}
-
-.headline {
-  font-size: 120%;
-  font-weight: bold;
-  padding-top: 1px;
-  padding-bottom: 5px;
-  background-image: url(../images/breadcrumbs.jpg);
-  background-repeat: repeat-x;
-}
-
-.section {
-  padding-bottom: 0;
-  padding-top: 0;
-}
-
-/*
-#leftColumn {
-  display: none !important
-}
-
-#bodyColumn {
-  margin-left: 1.5em;
-}
-*/
 
 

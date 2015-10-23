@@ -1025,21 +1025,10 @@
             <artifactId>wagon-ssh</artifactId>
             <version>2.2</version>
           </dependency>
-          <dependency>
-            <!-- required for reflow skin (http://andriusvelykis.github.io/reflow-maven-skin/) -->
-            <groupId>lt.velykis.maven.skins</groupId>
-            <artifactId>reflow-velocity-tools</artifactId>
-            <version>1.1.1</version>
-          </dependency>
-          <dependency>
-            <!-- velocity explicitly required by reflow-maven-skin -->
-            <groupId>org.apache.velocity</groupId>
-            <artifactId>velocity</artifactId>
-            <version>1.7</version>
-          </dependency>
         </dependencies>
         <configuration>
           <siteDirectory>${basedir}/src/main/site</siteDirectory>
+          <customBundle>${basedir}/src/main/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
