@@ -154,9 +154,6 @@ public interface DataBlockEncoder {
      */
     ByteBuffer getValueShallowCopy();
     
-    //TODO : to be removed - currently used in testcases only
-    /** @return a key value buffer with the position set at the beginning of the buffer */
-    ByteBuffer getKeyValueBuffer();
 
     /**
      * @return the KeyValue object at the current position. Includes memstore
