@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.regionserver.compactions;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -42,6 +44,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.StringUtils;
@@ -201,9 +204,31 @@ public abstract class Compactor {
    */
   protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
       ScanType scanType, long earliestPutTs,  List<StoreFileScanner> scanners) throws IOException {
+    return preCreateCoprocScanner(request, scanType, earliestPutTs, scanners, null);
+  }
+
+  protected InternalScanner preCreateCoprocScanner(final CompactionRequest request,
+      final ScanType scanType, final long earliestPutTs, final List<StoreFileScanner> scanners,
+      User user) throws IOException {
     if (store.getCoprocessorHost() == null) return null;
-    return store.getCoprocessorHost()
-        .preCompactScannerOpen(store, scanners, scanType, earliestPutTs, request);
+    if (user == null) {
+      return store.getCoprocessorHost().preCompactScannerOpen(store, scanners, scanType,
+        earliestPutTs, request);
+    } else {
+      try {
+        return user.getUGI().doAs(new PrivilegedExceptionAction<InternalScanner>() {
+          @Override
+          public InternalScanner run() throws Exception {
+            return store.getCoprocessorHost().preCompactScannerOpen(store, scanners,
+              scanType, earliestPutTs, request);
+          }
+        });
+      } catch (InterruptedException ie) {
+        InterruptedIOException iioe = new InterruptedIOException();
+        iioe.initCause(ie);
+        throw iioe;
+      }
+    }
   }
 
   /**
@@ -214,9 +239,24 @@ public abstract class Compactor {
    * @return Scanner scanner to use (usually the default); null if compaction should not proceed.
    */
    protected InternalScanner postCreateCoprocScanner(final CompactionRequest request,
-      ScanType scanType, InternalScanner scanner) throws IOException {
-    if (store.getCoprocessorHost() == null) return scanner;
-    return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
+      final ScanType scanType, final InternalScanner scanner, User user) throws IOException {
+     if (store.getCoprocessorHost() == null) return scanner;
+     if (user == null) {
+       return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
+     } else {
+       try {
+         return user.getUGI().doAs(new PrivilegedExceptionAction<InternalScanner>() {
+           @Override
+           public InternalScanner run() throws Exception {
+             return store.getCoprocessorHost().preCompact(store, scanner, scanType, request);
+           }
+         });
+       } catch (InterruptedException ie) {
+         InterruptedIOException iioe = new InterruptedIOException();
+         iioe.initCause(ie);
+         throw iioe;
+       }
+     }
   }
 
   /**

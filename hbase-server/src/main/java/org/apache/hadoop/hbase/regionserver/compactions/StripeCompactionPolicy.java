@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.StripeStoreConfig;
 import org.apache.hadoop.hbase.regionserver.StripeStoreFlusher;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -390,13 +391,16 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     protected CompactionRequest request;
     protected byte[] majorRangeFromRow = null, majorRangeToRow = null;
 
+    public List<Path> execute(StripeCompactor compactor) throws IOException {
+      return execute(compactor, null);
+    }
     /**
      * Executes the request against compactor (essentially, just calls correct overload of
      * compact method), to simulate more dynamic dispatch.
      * @param compactor Compactor.
      * @return result of compact(...)
      */
-    public abstract List<Path> execute(StripeCompactor compactor) throws IOException;
+    public abstract List<Path> execute(StripeCompactor compactor, User user) throws IOException;
 
     public StripeCompactionRequest(CompactionRequest request) {
       this.request = request;
@@ -447,9 +451,9 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) throws IOException {
+    public List<Path> execute(StripeCompactor compactor, User user) throws IOException {
       return compactor.compact(
-          this.request, this.targetBoundaries, this.majorRangeFromRow, this.majorRangeToRow);
+          this.request, this.targetBoundaries, this.majorRangeFromRow, this.majorRangeToRow, user);
     }
   }
 
@@ -497,9 +501,9 @@ public class StripeCompactionPolicy extends CompactionPolicy {
     }
 
     @Override
-    public List<Path> execute(StripeCompactor compactor) throws IOException {
+    public List<Path> execute(StripeCompactor compactor, User user) throws IOException {
       return compactor.compact(this.request, this.targetCount, this.targetKvs,
-          this.startRow, this.endRow, this.majorRangeFromRow, this.majorRangeToRow);
+          this.startRow, this.endRow, this.majorRangeFromRow, this.majorRangeToRow, user);
     }
 
     /** Set major range of the compaction to the entire compaction range.

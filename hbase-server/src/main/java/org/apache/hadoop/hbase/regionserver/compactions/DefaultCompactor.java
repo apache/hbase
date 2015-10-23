@@ -34,9 +34,11 @@ import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
+import org.apache.hadoop.hbase.security.User;
 
 /**
- * Compact passed set of files. Create an instance and then call {@link #compact(CompactionRequest)}
+ * Compact passed set of files. Create an instance and then call
+ * {@link #compact(CompactionRequest, User)}
  */
 @InterfaceAudience.Private
 public class DefaultCompactor extends Compactor {
@@ -49,7 +51,7 @@ public class DefaultCompactor extends Compactor {
   /**
    * Do a minor/major compaction on an explicit set of storefiles from a Store.
    */
-  public List<Path> compact(final CompactionRequest request) throws IOException {
+  public List<Path> compact(final CompactionRequest request, User user) throws IOException {
     FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles());
     this.progress = new CompactionProgress(fd.maxKeyCount);
 
@@ -81,11 +83,11 @@ public class DefaultCompactor extends Compactor {
         /* Include deletes, unless we are doing a compaction of all files */
         ScanType scanType =
             request.isAllFiles() ? ScanType.COMPACT_DROP_DELETES : ScanType.COMPACT_RETAIN_DELETES;
-        scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners);
+        scanner = preCreateCoprocScanner(request, scanType, fd.earliestPutTs, scanners, user);
         if (scanner == null) {
           scanner = createScanner(store, scanners, scanType, smallestReadPoint, fd.earliestPutTs);
         }
-        scanner = postCreateCoprocScanner(request, scanType, scanner);
+        scanner = postCreateCoprocScanner(request, scanType, scanner, user);
         if (scanner == null) {
           // NULL scanner returned from coprocessor hooks means skip normal processing.
           return newFiles;
@@ -146,7 +148,7 @@ public class DefaultCompactor extends Compactor {
 
   /**
    * Compact a list of files for testing. Creates a fake {@link CompactionRequest} to pass to
-   * {@link #compact(CompactionRequest)};
+   * {@link #compact(CompactionRequest, User)};
    * @param filesToCompact the files to compact. These are used as the compactionSelection for
    *          the generated {@link CompactionRequest}.
    * @param isMajor true to major compact (prune all deletes, max versions, etc)
@@ -158,6 +160,6 @@ public class DefaultCompactor extends Compactor {
       throws IOException {
     CompactionRequest cr = new CompactionRequest(filesToCompact);
     cr.setIsMajor(isMajor, isMajor);
-    return this.compact(cr);
+    return this.compact(cr, null);
   }
 }

@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.junit.Test;
@@ -124,6 +125,17 @@ public class TestIOFencing {
         compactCount++;
       }
     }
+
+    @Override
+    public boolean compact(CompactionContext compaction, Store store,
+        User user) throws IOException {
+      try {
+        return super.compact(compaction, store, user);
+      } finally {
+        compactCount++;
+      }
+    }
+
     public int countStoreFiles() {
       int count = 0;
       for (Store store : stores.values()) {

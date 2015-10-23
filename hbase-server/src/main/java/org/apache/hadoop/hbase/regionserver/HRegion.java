@@ -143,6 +143,7 @@ import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hbase.wal.WALSplitter.MutationReplay;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.regionserver.wal.WALEdit;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1562,7 +1563,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
     for (Store s : getStores().values()) {
       CompactionContext compaction = s.requestCompaction();
       if (compaction != null) {
-        compact(compaction, s);
+        compact(compaction, s, null);
       }
     }
   }
@@ -1583,6 +1584,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver { // 
    * @throws IOException e
    */
   public boolean compact(CompactionContext compaction, Store store) throws IOException {
+    return compact(compaction, store, null);
+  }
+    
+  public boolean compact(CompactionContext compaction, Store store,
+      User user) throws IOException {
     assert compaction != null && compaction.hasSelection();
     assert !compaction.getRequest().getFiles().isEmpty();
     if (this.closing.get() || this.closed.get()) {
