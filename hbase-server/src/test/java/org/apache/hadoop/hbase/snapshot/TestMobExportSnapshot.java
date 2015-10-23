@@ -45,7 +45,6 @@ public class TestMobExportSnapshot extends TestExportSnapshot {
   public static void setUpBeforeClass() throws Exception {
     setUpBaseConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
-    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @Override
