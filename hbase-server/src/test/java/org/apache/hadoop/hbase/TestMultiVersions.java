@@ -29,6 +29,9 @@ import java.util.NavigableMap;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseTestCase.FlushCache;
+import org.apache.hadoop.hbase.HBaseTestCase.HTableIncommon;
+import org.apache.hadoop.hbase.HBaseTestCase.Incommon;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
@@ -99,7 +102,8 @@ public class TestMultiVersions {
     Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
     // TODO: Remove these deprecated classes or pull them in here if this is
     // only test using them.
-    TimestampTestBase.doTestDelete(table, new FlushCache() {
+    Incommon incommon = new HTableIncommon(table);
+    TimestampTestBase.doTestDelete(incommon, new FlushCache() {
       public void flushcache() throws IOException {
         UTIL.getHBaseCluster().flushcache();
       }
@@ -107,7 +111,7 @@ public class TestMultiVersions {
 
     // Perhaps drop and readd the table between tests so the former does
     // not pollute this latter?  Or put into separate tests.
-    TimestampTestBase.doTestTimestampScanning(table, new FlushCache() {
+    TimestampTestBase.doTestTimestampScanning(incommon, new FlushCache() {
       public void flushcache() throws IOException {
         UTIL.getMiniHBaseCluster().flushcache();
       }
@@ -137,7 +141,7 @@ public class TestMultiVersions {
     desc.addFamily(hcd);
     this.admin.createTable(desc);
     Put put = new Put(row, timestamp1);
-    put.addColumn(contents, contents, value1);
+    put.add(contents, contents, value1);
     Table table = new HTable(UTIL.getConfiguration(), desc.getTableName());
     table.put(put);
     // Shut down and restart the HBase cluster
@@ -150,7 +154,7 @@ public class TestMultiVersions {
     table = new HTable(new Configuration(UTIL.getConfiguration()), desc.getTableName());
     // Overwrite previous value
     put = new Put(row, timestamp2);
-    put.addColumn(contents, contents, value2);
+    put.add(contents, contents, value2);
     table.put(put);
     // Now verify that getRow(row, column, latest) works
     Get get = new Get(row);
@@ -220,7 +224,7 @@ public class TestMultiVersions {
     for (int i = 0; i < locations.size(); i++) {
       for (int j = 0; j < timestamp.length; j++) {
         Put put = new Put(rows[i], timestamp[j]);
-        put.addColumn(HConstants.CATALOG_FAMILY, null, timestamp[j],
+        put.add(HConstants.CATALOG_FAMILY, null, timestamp[j],
             Bytes.toBytes(timestamp[j]));
         table.put(put);
       }

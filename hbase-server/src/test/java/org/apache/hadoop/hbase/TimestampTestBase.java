@@ -24,9 +24,6 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -52,7 +49,7 @@ public class TimestampTestBase extends HBaseTestCase {
    * @param flusher
    * @throws IOException
    */
-  public static void doTestDelete(final Table incommon, FlushCache flusher)
+  public static void doTestDelete(final Incommon incommon, FlushCache flusher)
   throws IOException {
     // Add values at various timestamps (Values are timestampes as bytes).
     put(incommon, T0);
@@ -90,9 +87,8 @@ public class TimestampTestBase extends HBaseTestCase {
     put(incommon, T1);
 
     Delete delete = new Delete(ROW);
-    delete.setWriteToWAL(true);
-    delete.addColumn(FAMILY_NAME, QUALIFIER_NAME, T2);
-    incommon.delete(delete);
+    delete.deleteColumns(FAMILY_NAME, QUALIFIER_NAME, T2);
+    incommon.delete(delete, true);
 
     // Should only be current value in set.  Assert this is so
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
@@ -102,7 +98,7 @@ public class TimestampTestBase extends HBaseTestCase {
     assertOnlyLatest(incommon, HConstants.LATEST_TIMESTAMP);
   }
 
-  private static void assertOnlyLatest(final Table incommon,
+  private static void assertOnlyLatest(final Incommon incommon,
     final long currentTime)
   throws IOException {
     Get get = null;
@@ -123,7 +119,7 @@ public class TimestampTestBase extends HBaseTestCase {
    * @param tss
    * @throws IOException
    */
-  public static void assertVersions(final Table incommon, final long [] tss)
+  public static void assertVersions(final Incommon incommon, final long [] tss)
   throws IOException {
     // Assert that 'latest' is what we expect.
     Get get = null;
@@ -173,7 +169,7 @@ public class TimestampTestBase extends HBaseTestCase {
    * @param flusher
    * @throws IOException
    */
-  public static void doTestTimestampScanning(final Table incommon,
+  public static void doTestTimestampScanning(final Incommon incommon,
     final FlushCache flusher)
   throws IOException {
     // Add a couple of values for three different timestamps.
@@ -199,12 +195,10 @@ public class TimestampTestBase extends HBaseTestCase {
    * @return Count of items scanned.
    * @throws IOException
    */
-  public static int assertScanContentTimestamp(final Table in, final long ts)
+  public static int assertScanContentTimestamp(final Incommon in, final long ts)
   throws IOException {
-    Scan scan = new Scan(HConstants.EMPTY_START_ROW);
-    scan.addFamily(COLUMNS[0]);
-    scan.setTimeRange(0, ts);
-    ResultScanner scanner = in.getScanner(scan);
+    ScannerIncommon scanner =
+      in.getScanner(COLUMNS[0], null, HConstants.EMPTY_START_ROW, ts);
     int count = 0;
     try {
       // TODO FIX
@@ -227,12 +221,12 @@ public class TimestampTestBase extends HBaseTestCase {
     return count;
   }
 
-  public static void put(final Table loader, final long ts)
+  public static void put(final Incommon loader, final long ts)
   throws IOException {
     put(loader, Bytes.toBytes(ts), ts);
   }
 
-  public static void put(final Table loader)
+  public static void put(final Incommon loader)
   throws IOException {
     long ts = HConstants.LATEST_TIMESTAMP;
     put(loader, Bytes.toBytes(ts), ts);
@@ -245,40 +239,39 @@ public class TimestampTestBase extends HBaseTestCase {
    * @param ts
    * @throws IOException
    */
-  public static void put(final Table loader, final byte [] bytes,
+  public static void put(final Incommon loader, final byte [] bytes,
     final long ts)
   throws IOException {
     Put put = new Put(ROW, ts);
     put.setDurability(Durability.SKIP_WAL);
-    put.addColumn(FAMILY_NAME, QUALIFIER_NAME, bytes);
+    put.add(FAMILY_NAME, QUALIFIER_NAME, bytes);
     loader.put(put);
   }
 
-  public static void delete(final Table loader) throws IOException {
+  public static void delete(final Incommon loader) throws IOException {
     delete(loader, null);
   }
 
-  public static void delete(final Table loader, final byte [] column)
+  public static void delete(final Incommon loader, final byte [] column)
   throws IOException {
     delete(loader, column, HConstants.LATEST_TIMESTAMP);
   }
 
-  public static void delete(final Table loader, final long ts)
+  public static void delete(final Incommon loader, final long ts)
   throws IOException {
     delete(loader, null, ts);
   }
 
-  public static void delete(final Table loader, final byte [] column,
+  public static void delete(final Incommon loader, final byte [] column,
       final long ts)
   throws IOException {
     Delete delete = ts == HConstants.LATEST_TIMESTAMP?
       new Delete(ROW): new Delete(ROW, ts);
-    delete.addColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
-    delete.setWriteToWAL(true);
-    loader.delete(delete);
+    delete.deleteColumn(FAMILY_NAME, QUALIFIER_NAME, ts);
+    loader.delete(delete, true);
   }
 
-  public static Result get(final Table loader) throws IOException {
+  public static Result get(final Incommon loader) throws IOException {
     return loader.get(new Get(ROW));
   }
 }

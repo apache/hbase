@@ -19,28 +19,34 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import java.util.NavigableMap;
+
+import junit.framework.AssertionFailedError;
+import junit.framework.TestCase;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.regionserver.RegionTable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
 
 /**
  * Abstract HBase test class.  Initializes a few things that can come in handly
@@ -233,7 +239,7 @@ public abstract class HBaseTestCase extends TestCase {
     if (startKeyBytes == null || startKeyBytes.length == 0) {
       startKeyBytes = START_KEY_BYTES;
     }
-    return addContent(new RegionTable(r), Bytes.toString(columnFamily), Bytes.toString(column),
+    return addContent(new HRegionIncommon(r), Bytes.toString(columnFamily), Bytes.toString(column),
       startKeyBytes, endKey, -1);
   }
 
@@ -245,15 +251,18 @@ public abstract class HBaseTestCase extends TestCase {
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Incommon}.
+   * @param columnFamily
+   * @param writeToWAL
    * @throws IOException
    * @return count of what we added.
    */
-  public static long addContent(final Table updater,
+  public static long addContent(final Incommon updater,
       final String columnFamily) throws IOException {
     return addContent(updater, columnFamily, START_KEY_BYTES, null);
   }
 
-  public static long addContent(final Table updater, final String family,
+  public static long addContent(final Incommon updater, final String family,
       final String column) throws IOException {
     return addContent(updater, family, column, START_KEY_BYTES, null);
   }
@@ -262,16 +271,21 @@ public abstract class HBaseTestCase extends TestCase {
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Incommon}.
+   * @param columnFamily
+   * @param startKeyBytes Where to start the rows inserted
+   * @param endKey Where to stop inserting rows.
+   * @param writeToWAL
    * @return count of what we added.
    * @throws IOException
    */
-  public static long addContent(final Table updater, final String columnFamily,
+  public static long addContent(final Incommon updater, final String columnFamily,
       final byte [] startKeyBytes, final byte [] endKey)
   throws IOException {
     return addContent(updater, columnFamily, null, startKeyBytes, endKey, -1);
   }
 
-  public static long addContent(final Table updater, final String family, String column,
+  public static long addContent(final Incommon updater, final String family, String column,
       final byte [] startKeyBytes, final byte [] endKey) throws IOException {
     return addContent(updater, family, column, startKeyBytes, endKey, -1);
   }
@@ -280,10 +294,16 @@ public abstract class HBaseTestCase extends TestCase {
    * Add content to region <code>r</code> on the passed column
    * <code>column</code>.
    * Adds data of the from 'aaa', 'aab', etc where key and value are the same.
+   * @param updater  An instance of {@link Incommon}.
+   * @param column
+   * @param startKeyBytes Where to start the rows inserted
+   * @param endKey Where to stop inserting rows.
+   * @param ts Timestamp to write the content with.
+   * @param writeToWAL
    * @return count of what we added.
    * @throws IOException
    */
-  public static long addContent(final Table updater,
+  public static long addContent(final Incommon updater,
                                    final String columnFamily, 
                                    final String column,
       final byte [] startKeyBytes, final byte [] endKey, final long ts)
@@ -356,6 +376,209 @@ public abstract class HBaseTestCase extends TestCase {
       secondCharStart = FIRST_CHAR;
     }
     return count;
+  }
+
+  /**
+   * Implementors can flushcache.
+   */
+  public interface FlushCache {
+    /**
+     * @throws IOException
+     */
+    void flushcache() throws IOException;
+  }
+
+  /**
+   * Interface used by tests so can do common operations against an HTable
+   * or an HRegion.
+   *
+   * TOOD: Come up w/ a better name for this interface.
+   */
+  public interface Incommon {
+    /**
+     *
+     * @param delete
+     * @param writeToWAL
+     * @throws IOException
+     */
+    void delete(Delete delete, boolean writeToWAL)
+    throws IOException;
+
+    /**
+     * @param put
+     * @throws IOException
+     */
+    void put(Put put) throws IOException;
+
+    Result get(Get get) throws IOException;
+
+    /**
+     * @param family
+     * @param qualifiers
+     * @param firstRow
+     * @param ts
+     * @return scanner for specified columns, first row and timestamp
+     * @throws IOException
+     */
+    ScannerIncommon getScanner(
+      byte[] family, byte[][] qualifiers, byte[] firstRow, long ts
+    )
+    throws IOException;
+  }
+
+  /**
+   * A class that makes a {@link Incommon} out of a {@link HRegion}
+   */
+  public static class HRegionIncommon implements Incommon, FlushCache {
+    final HRegion region;
+
+    /**
+     * @param HRegion
+     */
+    public HRegionIncommon(final HRegion HRegion) {
+      this.region = HRegion;
+    }
+
+    public HRegionIncommon(final Region region) {
+      this.region = (HRegion)region;
+    }
+
+    public void put(Put put) throws IOException {
+      region.put(put);
+    }
+
+    public void delete(Delete delete,  boolean writeToWAL)
+    throws IOException {
+      this.region.delete(delete);
+    }
+
+    public Result get(Get get) throws IOException {
+      return region.get(get);
+    }
+
+    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
+        byte [] firstRow, long ts)
+      throws IOException {
+        Scan scan = new Scan(firstRow);
+        if(qualifiers == null || qualifiers.length == 0) {
+          scan.addFamily(family);
+        } else {
+          for(int i=0; i<qualifiers.length; i++){
+            scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
+          }
+        }
+        scan.setTimeRange(0, ts);
+        return new
+          InternalScannerIncommon(region.getScanner(scan));
+      }
+
+    public void flushcache() throws IOException {
+      this.region.flush(true);
+    }
+  }
+
+  /**
+   * A class that makes a {@link Incommon} out of a {@link HTable}
+   */
+  public static class HTableIncommon implements Incommon {
+    final Table table;
+
+    /**
+     * @param table
+     */
+    public HTableIncommon(final Table table) {
+      super();
+      this.table = table;
+    }
+
+    public void put(Put put) throws IOException {
+      table.put(put);
+    }
+
+
+    public void delete(Delete delete, boolean writeToWAL)
+    throws IOException {
+      this.table.delete(delete);
+    }
+
+    public Result get(Get get) throws IOException {
+      return table.get(get);
+    }
+
+    public ScannerIncommon getScanner(byte [] family, byte [][] qualifiers,
+        byte [] firstRow, long ts)
+      throws IOException {
+      Scan scan = new Scan(firstRow);
+      if(qualifiers == null || qualifiers.length == 0) {
+        scan.addFamily(family);
+      } else {
+        for(int i=0; i<qualifiers.length; i++){
+          scan.addColumn(HConstants.CATALOG_FAMILY, qualifiers[i]);
+        }
+      }
+      scan.setTimeRange(0, ts);
+      return new
+        ClientScannerIncommon(table.getScanner(scan));
+    }
+  }
+
+  public interface ScannerIncommon
+  extends Iterable<Result> {
+    boolean next(List<Cell> values)
+    throws IOException;
+
+    void close() throws IOException;
+  }
+
+  public static class ClientScannerIncommon implements ScannerIncommon {
+    ResultScanner scanner;
+    public ClientScannerIncommon(ResultScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    @Override
+    public boolean next(List<Cell> values)
+    throws IOException {
+      Result results = scanner.next();
+      if (results == null) {
+        return false;
+      }
+      values.clear();
+      values.addAll(results.listCells());
+      return true;
+    }
+
+    public void close() throws IOException {
+      scanner.close();
+    }
+
+    public Iterator<Result> iterator() {
+      return scanner.iterator();
+    }
+  }
+
+  public static class InternalScannerIncommon implements ScannerIncommon {
+    InternalScanner scanner;
+
+    public InternalScannerIncommon(InternalScanner scanner) {
+      this.scanner = scanner;
+    }
+
+    @Override
+    public boolean next(List<Cell> results)
+    throws IOException {
+      return scanner.next(results);
+    }
+
+    @Override
+    public void close() throws IOException {
+      scanner.close();
+    }
+
+    @Override
+    public Iterator<Result> iterator() {
+      throw new UnsupportedOperationException();
+    }
   }
 
   protected void assertResultEquals(final HRegion region, final byte [] row,
@@ -446,4 +669,5 @@ public abstract class HBaseTestCase extends TestCase {
       Bytes.toStringBinary(actual) + ">");
     }
   }
+
 }
