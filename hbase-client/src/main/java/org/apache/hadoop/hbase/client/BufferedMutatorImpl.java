@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -95,48 +96,35 @@ public class BufferedMutatorImpl implements BufferedMutator {
   @Override
   public synchronized void mutate(Mutation m) throws InterruptedIOException,
       RetriesExhaustedWithDetailsException {
-    doMutate(m);
+    mutate(Arrays.asList(m));
   }
 
   @Override
   public synchronized void mutate(List<? extends Mutation> ms) throws InterruptedIOException,
       RetriesExhaustedWithDetailsException {
-    for (Mutation m : ms) {
-      doMutate(m);
-    }
-  }
-
-  /**
-   * Add the put to the buffer. If the buffer is already too large, sends the buffer to the
-   * cluster.
-   *
-   * @throws RetriesExhaustedWithDetailsException if there is an error on the cluster.
-   * @throws InterruptedIOException if we were interrupted.
-   */
-  private void doMutate(Mutation m) throws InterruptedIOException,
-      RetriesExhaustedWithDetailsException {
     if (closed) {
       throw new IllegalStateException("Cannot put when the BufferedMutator is closed.");
     }
-    if (!(m instanceof Put) && !(m instanceof Delete)) {
-      throw new IllegalArgumentException("Pass a Delete or a Put");
+
+    for (Mutation m : ms) {
+      if (m instanceof Put) {
+        validatePut((Put) m);
+      }
+        currentWriteBufferSize += m.heapSize();
     }
 
-    // This behavior is highly non-intuitive... it does not protect us against
-    // 94-incompatible behavior, which is a timing issue because hasError, the below code
-    // and setter of hasError are not synchronized. Perhaps it should be removed.
-    if (ap.hasError()) {
-      writeAsyncBuffer.add(m);
-      backgroundFlushCommits(true);
-    }
+      // This behavior is highly non-intuitive... it does not protect us against
+      // 94-incompatible behavior, which is a timing issue because hasError, the below code
+      // and setter of hasError are not synchronized. Perhaps it should be removed.
+      if (ap.hasError()) {
+        writeAsyncBuffer.addAll(ms);
+        backgroundFlushCommits(true);
+      } else {
+        writeAsyncBuffer.addAll(ms);
+      }
 
-    if (m instanceof Put) {
-      validatePut((Put) m);
-    }
 
-    currentWriteBufferSize += m.heapSize();
-    writeAsyncBuffer.add(m);
-
+    // Now try and queue what needs to be queued.
     while (currentWriteBufferSize > writeBufferSize) {
       backgroundFlushCommits(false);
     }
