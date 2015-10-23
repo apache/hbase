@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
+import org.apache.hadoop.hbase.security.User;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -56,6 +57,8 @@ public class StatefulStoreMockMaker {
     Store store = mock(Store.class, name);
     when(store.requestCompaction(
         anyInt(), isNull(CompactionRequest.class))).then(new SelectAnswer());
+    when(store.requestCompaction(
+      anyInt(), isNull(CompactionRequest.class), any(User.class))).then(new SelectAnswer());
     when(store.getCompactPriority()).then(new PriorityAnswer());
     doAnswer(new CancelAnswer()).when(
         store).cancelRequestedCompaction(any(CompactionContext.class));

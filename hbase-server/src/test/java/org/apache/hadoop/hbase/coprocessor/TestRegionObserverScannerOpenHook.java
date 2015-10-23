@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Test;
@@ -233,6 +234,14 @@ public class TestRegionObserverScannerOpenHook {
     public boolean compact(CompactionContext compaction, Store store,
         CompactionThroughputController throughputController) throws IOException {
       boolean ret = super.compact(compaction, store, throughputController);
+      if (ret) compactionStateChangeLatch.countDown();
+      return ret;
+    }
+
+    @Override
+    public boolean compact(CompactionContext compaction, Store store,
+        CompactionThroughputController throughputController, User user) throws IOException {
+      boolean ret = super.compact(compaction, store, throughputController, user);
       if (ret) compactionStateChangeLatch.countDown();
       return ret;
     }
