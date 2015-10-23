@@ -595,40 +595,6 @@ abstract class BufferedDataBlockEncoder implements DataBlockEncoder {
     }
 
     @Override
-    public ByteBuffer getKeyValueBuffer() {
-      ByteBuffer kvBuffer = createKVBuffer();
-      kvBuffer.putInt(current.keyLength);
-      kvBuffer.putInt(current.valueLength);
-      kvBuffer.put(current.keyBuffer, 0, current.keyLength);
-      ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.valueOffset,
-          current.valueLength);
-      if (current.tagsLength > 0) {
-        // Put short as unsigned
-        kvBuffer.put((byte) (current.tagsLength >> 8 & 0xff));
-        kvBuffer.put((byte) (current.tagsLength & 0xff));
-        if (current.tagsOffset != -1) {
-          // the offset of the tags bytes in the underlying buffer is marked. So the temp
-          // buffer,tagsBuffer was not been used.
-          ByteBufferUtils.copyFromBufferToBuffer(kvBuffer, currentBuffer, current.tagsOffset,
-              current.tagsLength);
-        } else {
-          // When tagsOffset is marked as -1, tag compression was present and so the tags were
-          // uncompressed into temp buffer, tagsBuffer. Let us copy it from there
-          kvBuffer.put(current.tagsBuffer, 0, current.tagsLength);
-        }
-      }
-      kvBuffer.rewind();
-      return kvBuffer;
-    }
-
-    protected ByteBuffer createKVBuffer() {
-      int kvBufSize = (int) KeyValue.getKeyValueDataStructureSize(current.keyLength,
-          current.valueLength, current.tagsLength);
-      ByteBuffer kvBuffer = ByteBuffer.allocate(kvBufSize);
-      return kvBuffer;
-    }
-
-    @Override
     public Cell getKeyValue() {
       return current.shallowCopy();
     }

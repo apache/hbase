@@ -273,17 +273,17 @@ public class TestDataBlockEncoders {
       int i = 0;
       do {
         KeyValue expectedKeyValue = sampleKv.get(i);
-        ByteBuffer keyValue = seeker.getKeyValueBuffer();
-        if (0 != Bytes.compareTo(keyValue.array(), keyValue.arrayOffset(), keyValue.limit(),
+        KeyValue keyValue = KeyValueUtil.copyToNewKeyValue(seeker.getKeyValue());
+        if (0 != Bytes.compareTo(keyValue.getBuffer(), keyValue.getOffset(), keyValue.getLength(),
             expectedKeyValue.getBuffer(), expectedKeyValue.getOffset(),
             expectedKeyValue.getLength())) {
 
           int commonPrefix = 0;
-          byte[] left = keyValue.array();
+          byte[] left = keyValue.getBuffer();
           byte[] right = expectedKeyValue.getBuffer();
-          int leftOff = keyValue.arrayOffset();
+          int leftOff = keyValue.getOffset();
           int rightOff = expectedKeyValue.getOffset();
-          int length = Math.min(keyValue.limit(), expectedKeyValue.getLength());
+          int length = Math.min(keyValue.getLength(), expectedKeyValue.getLength());
           while (commonPrefix < length
               && left[commonPrefix + leftOff] == right[commonPrefix + rightOff]) {
             commonPrefix++;
@@ -293,7 +293,7 @@ public class TestDataBlockEncoders {
               + "encoder: %s i: %d commonPrefix: %d" + "\n expected %s\n actual      %s", encoder
               .toString(), i, commonPrefix, Bytes.toStringBinary(expectedKeyValue.getBuffer(),
               expectedKeyValue.getOffset(), expectedKeyValue.getLength()), Bytes
-              .toStringBinary(keyValue)));
+              .toStringBinary(keyValue.getBuffer())));
         }
         i++;
       } while (seeker.next());
@@ -341,7 +341,7 @@ public class TestDataBlockEncoders {
       seeker.seekToKeyInBlock(keyValue, seekBefore);
       seeker.rewind();
 
-      ByteBuffer actualKeyValue = seeker.getKeyValueBuffer();
+      ByteBuffer actualKeyValue = KeyValueUtil.copyKeyToNewByteBuffer(seeker.getKeyValue());
       ByteBuffer actualKey = seeker.getKeyDeepCopy();
       ByteBuffer actualValue = seeker.getValueShallowCopy();
 
