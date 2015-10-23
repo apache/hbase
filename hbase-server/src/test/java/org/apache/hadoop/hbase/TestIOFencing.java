@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -123,6 +124,16 @@ public class TestIOFencing {
         CompactionThroughputController throughputController) throws IOException {
       try {
         return super.compact(compaction, store, throughputController);
+      } finally {
+        compactCount++;
+      }
+    }
+
+    @Override
+    public boolean compact(CompactionContext compaction, Store store,
+        CompactionThroughputController throughputController, User user) throws IOException {
+      try {
+        return super.compact(compaction, store, throughputController, user);
       } finally {
         compactCount++;
       }

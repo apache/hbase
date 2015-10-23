@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.ExploringCompactionPolic
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 
 /**
@@ -109,7 +110,13 @@ public class DefaultStoreEngine extends StoreEngine<
     @Override
     public List<Path> compact(CompactionThroughputController throughputController)
         throws IOException {
-      return compactor.compact(request, throughputController);
+      return compact(throughputController, null);
+    }
+
+    @Override
+    public List<Path> compact(CompactionThroughputController throughputController, User user)
+        throws IOException {
+      return compactor.compact(request, throughputController, user);
     }
 
     @Override
