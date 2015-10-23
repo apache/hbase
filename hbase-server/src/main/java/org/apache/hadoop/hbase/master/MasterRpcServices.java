@@ -1214,15 +1214,15 @@ public class MasterRpcServices extends RSRpcServices
   public ModifyTableResponse modifyTable(RpcController controller,
       ModifyTableRequest req) throws ServiceException {
     try {
-      master.modifyTable(
+      long procId = master.modifyTable(
         ProtobufUtil.toTableName(req.getTableName()),
         HTableDescriptor.convert(req.getTableSchema()),
         req.getNonceGroup(),
         req.getNonce());
+      return ModifyTableResponse.newBuilder().setProcId(procId).build();
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
-    return ModifyTableResponse.newBuilder().build();
   }
 
   @Override
