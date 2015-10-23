@@ -111,7 +111,7 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.hregion.memstore.flush.size", 25000);
     // so make sure we get a compaction when doing a load, but keep around some
     // files in the store
-    conf.setInt("hbase.hstore.compaction.min", 3);
+    conf.setInt("hbase.hstore.compaction.min", 2);
     conf.setInt("hbase.hstore.compactionThreshold", 5);
     // block writes if we get to 12 store files
     conf.setInt("hbase.hstore.blockingStoreFiles", 12);
@@ -288,11 +288,12 @@ public class TestSnapshotFromMaster {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     htd.setCompactionEnabled(false);
     UTIL.createTable(htd, new byte[][] { TEST_FAM }, null);
-    // load the table (creates 4 hfiles)
-    UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
-    UTIL.flush(TABLE_NAME);
-    // Put some more data into the table so for sure we get more storefiles.
-    UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
+
+    // load the table (creates at least 4 hfiles)
+    for ( int i = 0; i < 5; i++) {
+      UTIL.loadTable(UTIL.getConnection().getTable(TABLE_NAME), TEST_FAM);
+      UTIL.flush(TABLE_NAME);
+    }
 
     // disable the table so we can take a snapshot
     admin.disableTable(TABLE_NAME);
@@ -319,7 +320,7 @@ public class TestSnapshotFromMaster {
     List<HRegion> regions = UTIL.getHBaseCluster().getRegions(TABLE_NAME);
     for (HRegion region : regions) {
       region.waitForFlushesAndCompactions(); // enable can trigger a compaction, wait for it.
-      region.compactStores(); // min is 3 so will compact and archive
+      region.compactStores(); // min is 2 so will compact and archive
     }
     LOG.info("After compaction File-System state");
     FSUtils.logFileSystemState(fs, rootDir, LOG);
