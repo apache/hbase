@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.regionserver.StripeMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreFile.Writer;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -51,8 +52,15 @@ public class StripeCompactor extends Compactor {
   }
 
   public List<Path> compact(CompactionRequest request, List<byte[]> targetBoundaries,
+    byte[] majorRangeFromRow, byte[] majorRangeToRow,
+    CompactionThroughputController throughputController) throws IOException {
+    return compact(request, targetBoundaries, majorRangeFromRow, majorRangeToRow,
+      throughputController, null);
+  }
+
+  public List<Path> compact(CompactionRequest request, List<byte[]> targetBoundaries,
       byte[] majorRangeFromRow, byte[] majorRangeToRow,
-      CompactionThroughputController throughputController) throws IOException {
+      CompactionThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
       StringBuilder sb = new StringBuilder();
       sb.append("Executing compaction with " + targetBoundaries.size() + " boundaries:");
@@ -64,12 +72,19 @@ public class StripeCompactor extends Compactor {
     StripeMultiFileWriter writer = new StripeMultiFileWriter.BoundaryMultiWriter(
         targetBoundaries, majorRangeFromRow, majorRangeToRow);
     return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow,
-      throughputController);
+      throughputController, user);
+  }
+
+  public List<Path> compact(CompactionRequest request, int targetCount, long targetSize,
+    byte[] left, byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
+    CompactionThroughputController throughputController) throws IOException {
+    return compact(request, targetCount, targetSize, left, right, majorRangeFromRow,
+      majorRangeToRow, throughputController, null);
   }
 
   public List<Path> compact(CompactionRequest request, int targetCount, long targetSize,
       byte[] left, byte[] right, byte[] majorRangeFromRow, byte[] majorRangeToRow,
-      CompactionThroughputController throughputController) throws IOException {
+      CompactionThroughputController throughputController, User user) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Executing compaction with " + targetSize
           + " target file size, no more than " + targetCount + " files, in ["
@@ -78,12 +93,12 @@ public class StripeCompactor extends Compactor {
     StripeMultiFileWriter writer = new StripeMultiFileWriter.SizeMultiWriter(
         targetCount, targetSize, left, right);
     return compactInternal(writer, request, majorRangeFromRow, majorRangeToRow,
-      throughputController);
+      throughputController, user);
   }
 
   private List<Path> compactInternal(StripeMultiFileWriter mw, final CompactionRequest request,
       byte[] majorRangeFromRow, byte[] majorRangeToRow,
-      CompactionThroughputController throughputController) throws IOException {
+      CompactionThroughputController throughputController, User user) throws IOException {
     final Collection<StoreFile> filesToCompact = request.getFiles();
     final FileDetails fd = getFileDetails(filesToCompact, request.isMajor());
     this.progress = new CompactionProgress(fd.maxKeyCount);
@@ -98,7 +113,7 @@ public class StripeCompactor extends Compactor {
     try {
       // Get scanner to use.
       ScanType coprocScanType = ScanType.COMPACT_RETAIN_DELETES;
-      scanner = preCreateCoprocScanner(request, coprocScanType, fd.earliestPutTs, scanners);
+      scanner = preCreateCoprocScanner(request, coprocScanType, fd.earliestPutTs, scanners, user);
       if (scanner == null) {
         scanner = (majorRangeFromRow == null)
             ? createScanner(store, scanners,
@@ -106,7 +121,7 @@ public class StripeCompactor extends Compactor {
             : createScanner(store, scanners,
                 smallestReadPoint, fd.earliestPutTs, majorRangeFromRow, majorRangeToRow);
       }
-      scanner = postCreateCoprocScanner(request, coprocScanType, scanner);
+      scanner = postCreateCoprocScanner(request, coprocScanType, scanner, user);
       if (scanner == null) {
         // NULL scanner returned from coprocessor hooks means skip normal processing.
         return new ArrayList<Path>();

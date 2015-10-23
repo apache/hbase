@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
@@ -367,6 +368,12 @@ public class TestCompaction {
       @Override
       public List<Path> compact(CompactionThroughputController throughputController)
           throws IOException {
+        return compact(throughputController, null);
+      }
+
+      @Override
+      public List<Path> compact(CompactionThroughputController throughputController, User user)
+          throws IOException {
         finishCompaction(this.selectedFiles);
         return new ArrayList<Path>();
       }
@@ -418,6 +425,12 @@ public class TestCompaction {
 
       @Override
       public List<Path> compact(CompactionThroughputController throughputController)
+          throws IOException {
+        return compact(throughputController, null);
+      }
+
+      @Override
+      public List<Path> compact(CompactionThroughputController throughputController, User user)
           throws IOException {
         try {
           isInCompact = true;
@@ -500,7 +513,7 @@ public class TestCompaction {
     HRegion r = mock(HRegion.class);
     when(
       r.compact(any(CompactionContext.class), any(Store.class),
-        any(CompactionThroughputController.class))).then(new Answer<Boolean>() {
+        any(CompactionThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         invocation.getArgumentAt(0, CompactionContext.class).compact(
           invocation.getArgumentAt(2, CompactionThroughputController.class));

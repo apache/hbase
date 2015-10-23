@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThrough
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactionPolicy;
 import org.apache.hadoop.hbase.regionserver.compactions.StripeCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
@@ -76,7 +77,8 @@ public class TestStripeStoreEngine {
     when(
       mockCompactor.compact(any(CompactionRequest.class), anyInt(), anyLong(), any(byte[].class),
         any(byte[].class), any(byte[].class), any(byte[].class),
-        any(CompactionThroughputController.class))).thenReturn(new ArrayList<Path>());
+        any(CompactionThroughputController.class), any(User.class)))
+        .thenReturn(new ArrayList<Path>());
 
     // Produce 3 L0 files.
     StoreFile sf = createFile();
@@ -97,7 +99,7 @@ public class TestStripeStoreEngine {
     compaction.compact(NoLimitCompactionThroughputController.INSTANCE);
     verify(mockCompactor, times(1)).compact(compaction.getRequest(), targetCount, 0L,
       StripeStoreFileManager.OPEN_KEY, StripeStoreFileManager.OPEN_KEY, null, null,
-      NoLimitCompactionThroughputController.INSTANCE);
+      NoLimitCompactionThroughputController.INSTANCE, null);
   }
 
   private static StoreFile createFile() throws Exception {
