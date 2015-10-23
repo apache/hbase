@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputCont
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.NoLimitCompactionThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
@@ -368,6 +369,13 @@ public class TestCompaction {
         finishCompaction(this.selectedFiles);
         return new ArrayList<Path>();
       }
+
+      @Override
+      public List<Path> compact(CompactionThroughputController throughputController,
+        User user) throws IOException {
+        finishCompaction(this.selectedFiles);
+        return new ArrayList<Path>();
+      }
     }
 
     @Override
@@ -416,6 +424,12 @@ public class TestCompaction {
 
       @Override
       public List<Path> compact(CompactionThroughputController throughputController)
+          throws IOException {
+        return compact(throughputController, null);
+      }
+
+      @Override
+      public List<Path> compact(CompactionThroughputController throughputController, User user)
           throws IOException {
         try {
           isInCompact = true;
@@ -496,7 +510,7 @@ public class TestCompaction {
     HRegion r = mock(HRegion.class);
     when(
       r.compact(any(CompactionContext.class), any(Store.class),
-        any(CompactionThroughputController.class))).then(new Answer<Boolean>() {
+        any(CompactionThroughputController.class), any(User.class))).then(new Answer<Boolean>() {
       public Boolean answer(InvocationOnMock invocation) throws Throwable {
         ((CompactionContext)invocation.getArguments()[0]).compact(
           (CompactionThroughputController)invocation.getArguments()[2]);

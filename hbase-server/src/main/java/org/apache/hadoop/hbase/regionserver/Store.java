@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionThroughputController;
+import org.apache.hadoop.hbase.security.User;
 
 /**
  * Interface for objects that hold a column family in a Region. Its a memstore and a set of zero or
@@ -204,13 +205,27 @@ public interface Store extends HeapSize, StoreConfigInformation {
 
   CompactionContext requestCompaction() throws IOException;
 
+  /**
+   * @deprecated see requestCompaction(int, CompactionRequest, User)
+   */
+  @Deprecated
   CompactionContext requestCompaction(int priority, CompactionRequest baseRequest)
+      throws IOException;
+
+  CompactionContext requestCompaction(int priority, CompactionRequest baseRequest, User user)
       throws IOException;
 
   void cancelRequestedCompaction(CompactionContext compaction);
 
+  /**
+   * @deprecated see compact(CompactionContext, CompactionThroughputController, User)
+   */
+  @Deprecated
   List<StoreFile> compact(CompactionContext compaction,
       CompactionThroughputController throughputController) throws IOException;
+
+  List<StoreFile> compact(CompactionContext compaction,
+    CompactionThroughputController throughputController, User user) throws IOException;
 
   /**
    * @return true if we should run a major compaction.

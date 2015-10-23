@@ -24,6 +24,7 @@ import java.util.List;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.security.User;
 
 
 /**
@@ -70,6 +71,9 @@ public abstract class CompactionContext {
    */
   public abstract List<Path> compact(CompactionThroughputController throughputController)
       throws IOException;
+
+  public abstract List<Path> compact(CompactionThroughputController throughputController,
+    User user) throws IOException;
 
   public CompactionRequest getRequest() {
     assert hasSelection();
