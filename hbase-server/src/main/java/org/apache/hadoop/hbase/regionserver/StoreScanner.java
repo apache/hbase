@@ -31,7 +31,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -49,6 +48,8 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.NextState;
 import org.apache.hadoop.hbase.regionserver.handler.ParallelSeekHandler;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * Scanner scans both the memstore and the Store. Coalesce KeyValue stream
  * into List&lt;KeyValue&gt; for a single row.
@@ -57,7 +58,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     implements KeyValueScanner, InternalScanner, ChangedReadersObserver {
   private static final Log LOG = LogFactory.getLog(StoreScanner.class);
-  protected Store store;
+  // In unit tests, the store could be null
+  protected final Store store;
   protected ScanQueryMatcher matcher;
   protected KeyValueHeap heap;
   protected boolean cacheBlocks;
@@ -69,13 +71,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   // Used to indicate that the scanner has closed (see HBASE-1107)
   // Doesnt need to be volatile because it's always accessed via synchronized methods
   protected boolean closing = false;
-  protected final boolean isGet;
+  protected final boolean get;
   protected final boolean explicitColumnQuery;
   protected final boolean useRowColBloom;
   /**
    * A flag that enables StoreFileScanner parallel-seeking
    */
-  protected boolean isParallelSeekEnabled = false;
+  protected boolean parallelSeekEnabled = false;
   protected ExecutorService executor;
   protected final Scan scan;
   protected final NavigableSet<byte[]> columns;
@@ -133,58 +135,39 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     AFTER_SEEK,
     COMPACT_COMPLETE
   }
-  
+
   /** An internal constructor. */
-  protected StoreScanner(Store store, boolean cacheBlocks, Scan scan,
-      final NavigableSet<byte[]> columns, long ttl, int minVersions, long readPt) {
+  protected StoreScanner(Store store, Scan scan, final ScanInfo scanInfo,
+      final NavigableSet<byte[]> columns, long readPt, boolean cacheBlocks) {
     this.readPt = readPt;
     this.store = store;
     this.cacheBlocks = cacheBlocks;
-    isGet = scan.isGetScan();
+    get = scan.isGetScan();
     int numCol = columns == null ? 0 : columns.size();
     explicitColumnQuery = numCol > 0;
     this.scan = scan;
     this.columns = columns;
     this.now = EnvironmentEdgeManager.currentTime();
-    this.oldestUnexpiredTS = now - ttl;
-    this.minVersions = minVersions;
+    this.oldestUnexpiredTS = now - scanInfo.getTtl();
+    this.minVersions = scanInfo.getMinVersions();
 
-    if (store != null && ((HStore)store).getHRegion() != null
-        && ((HStore)store).getHRegion().getBaseConf() != null) {
-      Configuration conf = ((HStore) store).getHRegion().getBaseConf();
-      this.maxRowSize =
-          conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
-      this.scanUsePread = conf.getBoolean("hbase.storescanner.use.pread", scan.isSmall());
+     // We look up row-column Bloom filters for multi-column queries as part of
+     // the seek operation. However, we also look the row-column Bloom filter
+     // for multi-row (non-"get") scans because this is not done in
+     // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
+     this.useRowColBloom = numCol > 1 || (!get && numCol == 1);
 
-      long tmpCellsPerTimeoutCheck =
-          conf.getLong(HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
-            DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
-      this.cellsPerHeartbeatCheck =
-          tmpCellsPerTimeoutCheck > 0 ? tmpCellsPerTimeoutCheck
-              : DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
-    } else {
-      this.maxRowSize = HConstants.TABLE_MAX_ROWSIZE_DEFAULT;
-      this.scanUsePread = scan.isSmall();
-      this.cellsPerHeartbeatCheck = DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
-    }
-
-    // We look up row-column Bloom filters for multi-column queries as part of
-    // the seek operation. However, we also look the row-column Bloom filter
-    // for multi-row (non-"get") scans because this is not done in
-    // StoreFile.passesBloomFilter(Scan, SortedSet<byte[]>).
-    useRowColBloom = numCol > 1 || (!isGet && numCol == 1);
-
-    // The parallel-seeking is on :
-    // 1) the config value is *true*
-    // 2) store has more than one store file
-    if (store != null && ((HStore)store).getHRegion() != null
-        && store.getStorefilesCount() > 1) {
-      RegionServerServices rsService = ((HStore)store).getHRegion().getRegionServerServices();
-      if (rsService == null || !rsService.getConfiguration().getBoolean(
-            STORESCANNER_PARALLEL_SEEK_ENABLE, false)) return;
-      isParallelSeekEnabled = true;
-      executor = rsService.getExecutorService();
-    }
+     this.maxRowSize = scanInfo.getTableMaxRowSize();
+     this.scanUsePread = scan.isSmall()? true: scanInfo.isUsePread();
+     this.cellsPerHeartbeatCheck = scanInfo.getCellsPerTimeoutCheck();
+     // Parallel seeking is on if the config allows and more there is more than one store file.
+     if (this.store != null && this.store.getStorefilesCount() > 1) {
+       RegionServerServices rsService = ((HStore)store).getHRegion().getRegionServerServices();
+       if (rsService != null && scanInfo.isParallelSeekEnabled()) {
+         this.parallelSeekEnabled = true;
+         this.executor = rsService.getExecutorService();
+       }
+     }
   }
 
   /**
@@ -198,12 +181,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   public StoreScanner(Store store, ScanInfo scanInfo, Scan scan, final NavigableSet<byte[]> columns,
       long readPt)
-                              throws IOException {
-    this(store, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
-        scanInfo.getMinVersions(), readPt);
+  throws IOException {
+    this(store, scan, scanInfo, columns, readPt, scan.getCacheBlocks());
     if (columns != null && scan.isRaw()) {
-      throw new DoNotRetryIOException(
-          "Cannot specify any column for a raw scan");
+      throw new DoNotRetryIOException("Cannot specify any column for a raw scan");
     }
     matcher = new ScanQueryMatcher(scan, scanInfo, columns,
         ScanType.USER_SCAN, Long.MAX_VALUE, HConstants.LATEST_TIMESTAMP,
@@ -219,7 +200,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     // Always check bloom filter to optimize the top row seek for delete
     // family marker.
     seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery
-        && lazySeekEnabledGlobally, isParallelSeekEnabled);
+        && lazySeekEnabledGlobally, parallelSeekEnabled);
 
     // set storeLimit
     this.storeLimit = scan.getMaxResultsPerColumnFamily();
@@ -268,8 +249,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   private StoreScanner(Store store, ScanInfo scanInfo, Scan scan,
       List<? extends KeyValueScanner> scanners, ScanType scanType, long smallestReadPoint,
       long earliestPutTs, byte[] dropDeletesFromRow, byte[] dropDeletesToRow) throws IOException {
-    this(store, false, scan, null, scanInfo.getTtl(), scanInfo.getMinVersions(),
-        ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED));
+    this(store, scan, scanInfo, null,
+      ((HStore)store).getHRegion().getReadpoint(IsolationLevel.READ_COMMITTED), false);
     if (dropDeletesFromRow == null) {
       matcher = new ScanQueryMatcher(scan, scanInfo, null, scanType, smallestReadPoint,
           earliestPutTs, oldestUnexpiredTS, now, store.getCoprocessorHost());
@@ -282,13 +263,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     scanners = selectScannersFrom(scanners);
 
     // Seek all scanners to the initial key
-    seekScanners(scanners, matcher.getStartKey(), false, isParallelSeekEnabled);
+    seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
 
     // Combine all seeked scanners with a heap
     resetKVHeap(scanners, store.getComparator());
   }
 
-  /** Constructor for testing. */
+  @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners) throws IOException {
@@ -298,7 +279,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         0);
   }
 
-  // Constructor for testing.
+  @VisibleForTesting
   StoreScanner(final Scan scan, ScanInfo scanInfo,
     ScanType scanType, final NavigableSet<byte[]> columns,
     final List<KeyValueScanner> scanners, long earliestPutTs)
@@ -311,9 +292,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   public StoreScanner(final Scan scan, ScanInfo scanInfo,
       ScanType scanType, final NavigableSet<byte[]> columns,
       final List<KeyValueScanner> scanners, long earliestPutTs, long readPt)
-          throws IOException {
-    this(null, scan.getCacheBlocks(), scan, columns, scanInfo.getTtl(),
-        scanInfo.getMinVersions(), readPt);
+  throws IOException {
+    this(null, scan, scanInfo, columns, readPt, scan.getCacheBlocks());
     this.matcher = new ScanQueryMatcher(scan, scanInfo, columns, scanType,
         Long.MAX_VALUE, earliestPutTs, oldestUnexpiredTS, now, null);
 
@@ -322,7 +302,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       this.store.addChangedReaderObserver(this);
     }
     // Seek all scanners to the initial key
-    seekScanners(scanners, matcher.getStartKey(), false, isParallelSeekEnabled);
+    seekScanners(scanners, matcher.getStartKey(), false, parallelSeekEnabled);
     resetKVHeap(scanners, scanInfo.getComparator());
   }
 
@@ -332,8 +312,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    */
   protected List<KeyValueScanner> getScannersNoCompaction() throws IOException {
     final boolean isCompaction = false;
-    boolean usePread = isGet || scanUsePread;
-    return selectScannersFrom(store.getScanners(cacheBlocks, isGet, usePread,
+    boolean usePread = get || scanUsePread;
+    return selectScannersFrom(store.getScanners(cacheBlocks, get, usePread,
         isCompaction, matcher, scan.getStartRow(), scan.getStopRow(), this.readPt));
   }
 
@@ -452,7 +432,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         return;
       }
       if (withHeapClose) this.closing = true;
-      // under test, we dont have a this.store
+      // Under test, we dont have a this.store
       if (this.store != null) this.store.deleteChangedReaderObserver(this);
       if (withHeapClose) {
         for (KeyValueHeap h : this.heapsForDelayedClose) {
@@ -501,67 +481,65 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   @Override
   public boolean next(List<Cell> outResult, ScannerContext scannerContext) throws IOException {
     lock.lock();
-
     try {
-    if (scannerContext == null) {
-      throw new IllegalArgumentException("Scanner context cannot be null");
-    }
-    if (checkReseek()) {
-      return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
-    }
-
-    // if the heap was left null, then the scanners had previously run out anyways, close and
-    // return.
-    if (this.heap == null) {
-      // By this time partial close should happened because already heap is null
-      close(false);// Do all cleanup except heap.close()
-      return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
-    }
-
-    Cell cell = this.heap.peek();
-    if (cell == null) {
-      close(false);// Do all cleanup except heap.close()
-      return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
-    }
-
-    // only call setRow if the row changes; avoids confusing the query matcher
-    // if scanning intra-row
-
-    // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
-    // rows. Else it is possible we are still traversing the same row so we must perform the row
-    // comparison.
-    if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null ||
-        !CellUtil.matchingRow(cell, matcher.curCell)) {
-      this.countPerRow = 0;
-      matcher.setToNewRow(cell);
-    }
-
-    // Clear progress away unless invoker has indicated it should be kept.
-    if (!scannerContext.getKeepProgress()) scannerContext.clearProgress();
-
-    // Only do a sanity-check if store and comparator are available.
-    CellComparator comparator =
-        store != null ? store.getComparator() : null;
-
-    int count = 0;
-    long totalBytesRead = 0;
-
-    LOOP: do {
-      // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
-      if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
-        scannerContext.updateTimeProgress();
-        if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
-          return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
-        }
+      if (scannerContext == null) {
+        throw new IllegalArgumentException("Scanner context cannot be null");
+      }
+      if (checkReseek()) {
+        return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
       }
 
-      if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
-      checkScanOrder(prevCell, cell, comparator);
-      prevCell = cell;
+      // if the heap was left null, then the scanners had previously run out anyways, close and
+      // return.
+      if (this.heap == null) {
+        // By this time partial close should happened because already heap is null
+        close(false);// Do all cleanup except heap.close()
+        return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+      }
 
-      ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
-      qcode = optimize(qcode, cell);
-      switch(qcode) {
+      Cell cell = this.heap.peek();
+      if (cell == null) {
+        close(false);// Do all cleanup except heap.close()
+        return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+      }
+
+      // only call setRow if the row changes; avoids confusing the query matcher
+      // if scanning intra-row
+
+      // If no limits exists in the scope LimitScope.Between_Cells then we are sure we are changing
+      // rows. Else it is possible we are still traversing the same row so we must perform the row
+      // comparison.
+      if (!scannerContext.hasAnyLimit(LimitScope.BETWEEN_CELLS) || matcher.curCell == null ||
+          !CellUtil.matchingRow(cell, matcher.curCell)) {
+        this.countPerRow = 0;
+        matcher.setToNewRow(cell);
+      }
+
+      // Clear progress away unless invoker has indicated it should be kept.
+      if (!scannerContext.getKeepProgress()) scannerContext.clearProgress();
+
+      // Only do a sanity-check if store and comparator are available.
+      CellComparator comparator = store != null ? store.getComparator() : null;
+
+      int count = 0;
+      long totalBytesRead = 0;
+
+      LOOP: do {
+        // Update and check the time limit based on the configured value of cellsPerTimeoutCheck
+        if ((kvsScanned % cellsPerHeartbeatCheck == 0)) {
+          scannerContext.updateTimeProgress();
+          if (scannerContext.checkTimeLimit(LimitScope.BETWEEN_CELLS)) {
+            return scannerContext.setScannerState(NextState.TIME_LIMIT_REACHED).hasMoreValues();
+          }
+        }
+
+        if (prevCell != cell) ++kvsScanned; // Do object compare - we set prevKV from the same heap.
+        checkScanOrder(prevCell, cell, comparator);
+        prevCell = cell;
+
+        ScanQueryMatcher.MatchCode qcode = matcher.match(cell);
+        qcode = optimize(qcode, cell);
+        switch(qcode) {
         case INCLUDE:
         case INCLUDE_AND_SEEK_NEXT_ROW:
         case INCLUDE_AND_SEEK_NEXT_COL:
@@ -597,7 +575,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
             if (totalBytesRead > maxRowSize) {
               throw new RowTooBigException("Max row size allowed: " + maxRowSize
-              + ", but the row is bigger than that.");
+                  + ", but the row is bigger than that.");
             }
           }
 
@@ -656,16 +634,16 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
         default:
           throw new RuntimeException("UNEXPECTED");
+        }
+      } while((cell = this.heap.peek()) != null);
+
+      if (count > 0) {
+        return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
       }
-    } while((cell = this.heap.peek()) != null);
 
-    if (count > 0) {
-      return scannerContext.setScannerState(NextState.MORE_VALUES).hasMoreValues();
-    }
-
-    // No more keys
-    close(false);// Do all cleanup except heap.close()
-    return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+      // No more keys
+      close(false);// Do all cleanup except heap.close()
+      return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
     } finally {
       lock.unlock();
     }
@@ -764,7 +742,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     List<KeyValueScanner> scanners = getScannersNoCompaction();
 
     // Seek all scanners to the initial key
-    seekScanners(scanners, lastTopKey, false, isParallelSeekEnabled);
+    seekScanners(scanners, lastTopKey, false, parallelSeekEnabled);
 
     // Combine all seeked scanners with a heap
     resetKVHeap(scanners, store.getComparator());

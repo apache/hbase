@@ -551,7 +551,7 @@ public class PartitionedMobCompactor extends MobCompactor {
     Scan scan = new Scan();
     scan.setMaxVersions(column.getMaxVersions());
     long ttl = HStore.determineTTLFromFamily(column);
-    ScanInfo scanInfo = new ScanInfo(column, ttl, 0, CellComparator.COMPARATOR);
+    ScanInfo scanInfo = new ScanInfo(conf, column, ttl, 0, CellComparator.COMPARATOR);
     StoreScanner scanner = new StoreScanner(scan, scanInfo, scanType, null, scanners, 0L,
       HConstants.LATEST_TIMESTAMP);
     return scanner;
