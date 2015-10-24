@@ -309,7 +309,7 @@ public class TestDefaultCompactSelection extends TestCase {
   public void testCompactionEmptyHFile() throws IOException {
     // Set TTL
     ScanInfo oldScanInfo = store.getScanInfo();
-    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getFamily(),
+    ScanInfo newScanInfo = new ScanInfo(oldScanInfo.getConfiguration(), oldScanInfo.getFamily(),
         oldScanInfo.getMinVersions(), oldScanInfo.getMaxVersions(), 600,
         oldScanInfo.getKeepDeletedCells(), oldScanInfo.getTimeToPurgeDeletes(),
         oldScanInfo.getComparator());

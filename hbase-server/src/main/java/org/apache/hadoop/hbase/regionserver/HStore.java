@@ -233,7 +233,7 @@ public class HStore implements Store {
     long ttl = determineTTLFromFamily(family);
     // Why not just pass a HColumnDescriptor in here altogether?  Even if have
     // to clone it?
-    scanInfo = new ScanInfo(family, ttl, timeToPurgeDeletes, this.comparator);
+    scanInfo = new ScanInfo(conf, family, ttl, timeToPurgeDeletes, this.comparator);
     String className = conf.get(MEMSTORE_CLASS_NAME, DefaultMemStore.class.getName());
     this.memstore = ReflectionUtils.instantiateWithCustomCtor(className, new Class[] {
         Configuration.class, KeyValue.KVComparator.class }, new Object[] { conf, this.comparator });
