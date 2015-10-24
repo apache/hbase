@@ -20,6 +20,7 @@
 body { padding-top: 50px; }
 html .content {
   margin-left: 2.0em;
+  margin-right: 2.0em;
 }
 .navbar-brand img {
   margin-top: -7px;
