@@ -28,7 +28,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestCase;
-import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -37,6 +36,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
@@ -162,7 +162,7 @@ public class TestMinorCompaction {
   }
 
   private void testMinorCompactionWithDelete(Delete delete, int expectedResultsAfterDelete) throws Exception {
-    HRegionIncommon loader = new HRegionIncommon(r);
+    Table loader = new RegionAsTable(r);
     for (int i = 0; i < compactionThreshold + 1; i++) {
       HBaseTestCase.addContent(loader, Bytes.toString(fam1), Bytes.toString(col1), firstRowBytes,
         thirdRowBytes, i);

@@ -38,11 +38,11 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.*;
-import org.apache.hadoop.hbase.HBaseTestCase.HRegionIncommon;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -125,12 +125,12 @@ public class TestMobStoreCompaction {
   public void testSmallerValue() throws Exception {
     init(UTIL.getConfiguration(), 500);
     byte[] dummyData = makeDummyData(300); // smaller than mob threshold
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionAsTable(region);
     // one hfile per row
     for (int i = 0; i < compactionThreshold; i++) {
       Put p = createPut(i, dummyData);
       loader.put(p);
-      loader.flushcache();
+      region.flush(true);
     }
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", 0, countMobFiles());
@@ -153,11 +153,11 @@ public class TestMobStoreCompaction {
   public void testLargerValue() throws Exception {
     init(UTIL.getConfiguration(), 200);
     byte[] dummyData = makeDummyData(300); // larger than mob threshold
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionAsTable(region);
     for (int i = 0; i < compactionThreshold; i++) {
       Put p = createPut(i, dummyData);
       loader.put(p);
-      loader.flushcache();
+      region.flush(true);
     }
     assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
     assertEquals("Before compaction: mob file count", compactionThreshold, countMobFiles());
@@ -221,14 +221,14 @@ public class TestMobStoreCompaction {
   public void testMajorCompactionAfterDelete() throws Exception {
     init(UTIL.getConfiguration(), 100);
     byte[] dummyData = makeDummyData(200); // larger than mob threshold
-    HRegionIncommon loader = new HRegionIncommon(region);
+    Table loader = new RegionAsTable(region);
     // create hfiles and mob hfiles but don't trigger compaction
     int numHfiles = compactionThreshold - 1;
     byte[] deleteRow = Bytes.add(STARTROW, Bytes.toBytes(0));
     for (int i = 0; i < numHfiles; i++) {
       Put p = createPut(i, dummyData);
       loader.put(p);
-      loader.flushcache();
+      region.flush(true);
     }
     assertEquals("Before compaction: store files", numHfiles, countStoreFiles());
     assertEquals("Before compaction: mob file count", numHfiles, countMobFiles());
@@ -239,7 +239,7 @@ public class TestMobStoreCompaction {
     Delete delete = new Delete(deleteRow);
     delete.addFamily(COLUMN_FAMILY);
     region.delete(delete);
-    loader.flushcache();
+    region.flush(true);
 
     assertEquals("Before compaction: store files", numHfiles + 1, countStoreFiles());
     assertEquals("Before compaction: mob files", numHfiles, countMobFiles());
