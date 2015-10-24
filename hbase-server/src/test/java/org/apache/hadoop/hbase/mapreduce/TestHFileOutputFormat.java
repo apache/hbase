@@ -403,6 +403,7 @@ public class TestHFileOutputFormat  {
         assertEquals("Should make 5 regions", numRegions, 5);
 
         // Generate the bulk load files
+        util.startMiniMapReduceCluster();
         runIncrementalPELoad(conf, table, r, testDir);
         // This doesn't write into the table, just makes files
         assertEquals("HFOF should not touch actual table",
@@ -472,6 +473,7 @@ public class TestHFileOutputFormat  {
       assertEquals("Data should remain after reopening of regions",
           tableDigestBefore, util.checksumRows(table));
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -935,6 +937,7 @@ public class TestHFileOutputFormat  {
       // Generate two bulk load files
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       try (RegionLocator regionLocator = util.getConnection().getRegionLocator(TABLE_NAME)) {
         for (int i = 0; i < 2; i++) {
@@ -975,6 +978,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }
@@ -1015,6 +1019,7 @@ public class TestHFileOutputFormat  {
       // Generate a bulk load file with more rows
       conf.setBoolean("hbase.mapreduce.hfileoutputformat.compaction.exclude",
           true);
+      util.startMiniMapReduceCluster();
 
       try (RegionLocator locator = util.getConnection().getRegionLocator(TABLE_NAME)) {
         runIncrementalPELoad(conf, table, locator, testDir);
@@ -1053,6 +1058,7 @@ public class TestHFileOutputFormat  {
       }, 5000);
 
     } finally {
+      util.shutdownMiniMapReduceCluster();
       util.shutdownMiniCluster();
     }
   }

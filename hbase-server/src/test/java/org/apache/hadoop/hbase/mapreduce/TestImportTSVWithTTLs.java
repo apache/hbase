@@ -90,10 +90,12 @@ public class TestImportTSVWithTTLs implements Configurable {
     conf.setInt("hfile.format.version", 3);
     conf.set("hbase.coprocessor.region.classes", TTLCheckingObserver.class.getName());
     util.startMiniCluster();
+    util.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
+    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 

@@ -46,6 +46,7 @@ public class TestSecureExportSnapshot extends TestExportSnapshot {
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
 
     TEST_UTIL.startMiniCluster(3);
+    TEST_UTIL.startMiniMapReduceCluster();
 
     // Wait for the ACL table to become available
     TEST_UTIL.waitTableEnabled(AccessControlLists.ACL_TABLE_NAME);

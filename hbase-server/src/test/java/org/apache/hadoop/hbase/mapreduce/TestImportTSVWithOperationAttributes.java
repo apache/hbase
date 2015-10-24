@@ -99,10 +99,12 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     conf.set("hbase.coprocessor.master.classes", OperationAttributesTestController.class.getName());
     conf.set("hbase.coprocessor.region.classes", OperationAttributesTestController.class.getName());
     util.startMiniCluster();
+    util.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
+    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 

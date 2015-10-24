@@ -90,10 +90,12 @@ public class TestTableMapReduceUtil {
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
     presidentsTable = createAndFillTable(TableName.valueOf(TABLE_NAME));
+    UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
+    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 

@@ -83,10 +83,13 @@ public abstract class MultiTableInputFormatTestBase {
         TEST_UTIL.loadTable(table, INPUT_FAMILY, false);
       }
     }
+    // start MR cluster
+    TEST_UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void tearDownAfterClass() throws Exception {
+    TEST_UTIL.shutdownMiniMapReduceCluster();
     TEST_UTIL.shutdownMiniCluster();
   }
 
