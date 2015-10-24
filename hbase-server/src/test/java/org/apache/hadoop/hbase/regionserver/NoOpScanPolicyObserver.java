@@ -45,7 +45,7 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
   public InternalScanner preFlushScannerOpen(final ObserverContext<RegionCoprocessorEnvironment> c,
       Store store, KeyValueScanner memstoreScanner, InternalScanner s) throws IOException {
     ScanInfo oldSI = store.getScanInfo();
-    ScanInfo scanInfo = new ScanInfo(store.getFamily(), oldSI.getTtl(),
+    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());
@@ -62,7 +62,7 @@ public class NoOpScanPolicyObserver extends BaseRegionObserver {
       InternalScanner s) throws IOException {
     // this demonstrates how to override the scanners default behavior
     ScanInfo oldSI = store.getScanInfo();
-    ScanInfo scanInfo = new ScanInfo(store.getFamily(), oldSI.getTtl(),
+    ScanInfo scanInfo = new ScanInfo(oldSI.getConfiguration(), store.getFamily(), oldSI.getTtl(),
         oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
     Scan scan = new Scan();
     scan.setMaxVersions(oldSI.getMaxVersions());

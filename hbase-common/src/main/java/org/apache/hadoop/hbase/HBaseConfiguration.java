@@ -36,11 +36,10 @@ import org.apache.hadoop.hbase.util.VersionInfo;
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public class HBaseConfiguration extends Configuration {
-
   private static final Log LOG = LogFactory.getLog(HBaseConfiguration.class);
 
   /**
-   * Instantinating HBaseConfiguration() is deprecated. Please use
+   * Instantiating HBaseConfiguration() is deprecated. Please use
    * HBaseConfiguration#create() to construct a plain Configuration
    */
   @Deprecated

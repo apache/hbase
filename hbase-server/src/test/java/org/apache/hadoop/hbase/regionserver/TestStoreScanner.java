@@ -30,6 +30,8 @@ import java.util.TreeSet;
 
 import junit.framework.TestCase;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -47,7 +49,8 @@ import org.junit.experimental.categories.Category;
 public class TestStoreScanner extends TestCase {
   private static final String CF_STR = "cf";
   final byte [] CF = Bytes.toBytes(CF_STR);
-  private ScanInfo scanInfo = new ScanInfo(CF, 0, Integer.MAX_VALUE,
+  static Configuration CONF = HBaseConfiguration.create();
+  private ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, Integer.MAX_VALUE,
       Long.MAX_VALUE, KeepDeletedCells.FALSE, 0, KeyValue.COMPARATOR);
   private ScanType scanType = ScanType.USER_SCAN;
 
@@ -416,7 +419,7 @@ public class TestStoreScanner extends TestCase {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     Scan scan = new Scan();
     scan.setMaxVersions(1);
-    ScanInfo scanInfo = new ScanInfo(CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
         KeyValue.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner scanner =
@@ -487,7 +490,7 @@ public class TestStoreScanner extends TestCase {
     Scan scan = new Scan();
     scan.setMaxVersions(1);
     // scanner with ttl equal to 500
-    ScanInfo scanInfo = new ScanInfo(CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
+    ScanInfo scanInfo = new ScanInfo(CONF, CF, 0, 1, 500, KeepDeletedCells.FALSE, 0,
         KeyValue.COMPARATOR);
     ScanType scanType = ScanType.USER_SCAN;
     StoreScanner scanner =
@@ -547,7 +550,7 @@ public class TestStoreScanner extends TestCase {
       List<KeyValueScanner> scanners = scanFixture(kvs);
       Scan scan = new Scan();
       scan.setMaxVersions(2);
-      ScanInfo scanInfo = new ScanInfo(Bytes.toBytes("cf"),
+      ScanInfo scanInfo = new ScanInfo(CONF, Bytes.toBytes("cf"),
         0 /* minVersions */,
         2 /* maxVersions */, 500 /* ttl */,
         KeepDeletedCells.FALSE /* keepDeletedCells */,

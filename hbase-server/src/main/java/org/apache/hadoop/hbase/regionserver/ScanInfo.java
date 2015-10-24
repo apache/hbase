@@ -24,10 +24,16 @@ import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Immutable information for scans over a store.
  */
+// Has to be public for PartitionedMobCompactor to access; ditto on tests making use of a few of
+// the accessors below. Shutdown access. TODO
+@VisibleForTesting
 @InterfaceAudience.Private
 public class ScanInfo {
   private byte[] family;
@@ -37,25 +43,32 @@ public class ScanInfo {
   private KeepDeletedCells keepDeletedCells;
   private long timeToPurgeDeletes;
   private KVComparator comparator;
+  private long tableMaxRowSize;
+  private boolean usePread;
+  private long cellsPerTimeoutCheck;
+  private boolean parallelSeekEnabled;
+  private final Configuration conf;
 
   public static final long FIXED_OVERHEAD = ClassSize.align(ClassSize.OBJECT
       + (2 * ClassSize.REFERENCE) + (2 * Bytes.SIZEOF_INT)
-      + (2 * Bytes.SIZEOF_LONG) + Bytes.SIZEOF_BOOLEAN);
+      + (4 * Bytes.SIZEOF_LONG) + (3 * Bytes.SIZEOF_BOOLEAN));
 
   /**
+   * @param conf
    * @param family {@link HColumnDescriptor} describing the column family
    * @param ttl Store's TTL (in ms)
    * @param timeToPurgeDeletes duration in ms after which a delete marker can
    *        be purged during a major compaction.
    * @param comparator The store's comparator
    */
-  public ScanInfo(final HColumnDescriptor family, final long ttl, final long timeToPurgeDeletes,
-      final KVComparator comparator) {
-    this(family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl, family
+  public ScanInfo(final Configuration conf, final HColumnDescriptor family, final long ttl,
+      final long timeToPurgeDeletes, final KVComparator comparator) {
+    this(conf, family.getName(), family.getMinVersions(), family.getMaxVersions(), ttl, family
         .getKeepDeletedCells(), timeToPurgeDeletes, comparator);
   }
 
   /**
+   * @param conf
    * @param family Name of this store's column family
    * @param minVersions Store's MIN_VERSIONS setting
    * @param maxVersions Store's VERSIONS setting
@@ -65,9 +78,9 @@ public class ScanInfo {
    * @param keepDeletedCells Store's keepDeletedCells setting
    * @param comparator The store's comparator
    */
-  public ScanInfo(final byte[] family, final int minVersions, final int maxVersions,
-      final long ttl, final KeepDeletedCells keepDeletedCells, final long timeToPurgeDeletes,
-      final KVComparator comparator) {
+  public ScanInfo(final Configuration conf, final byte[] family, final int minVersions,
+      final int maxVersions, final long ttl, final KeepDeletedCells keepDeletedCells,
+      final long timeToPurgeDeletes, final KVComparator comparator) {
     this.family = family;
     this.minVersions = minVersions;
     this.maxVersions = maxVersions;
@@ -75,13 +88,44 @@ public class ScanInfo {
     this.keepDeletedCells = keepDeletedCells;
     this.timeToPurgeDeletes = timeToPurgeDeletes;
     this.comparator = comparator;
+    this.tableMaxRowSize =
+      conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT);
+    this.usePread = conf.getBoolean("hbase.storescanner.use.pread", false);
+    long perHeartbeat =
+      conf.getLong(StoreScanner.HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK,
+        StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK);
+    this.cellsPerTimeoutCheck = perHeartbeat > 0?
+        perHeartbeat: StoreScanner.DEFAULT_HBASE_CELLS_SCANNED_PER_HEARTBEAT_CHECK;
+    this.parallelSeekEnabled =
+      conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false);
+    this.conf = conf;
   }
 
-  public byte[] getFamily() {
+  public Configuration getConfiguration() {
+    return this.conf;
+  }
+
+  long getTableMaxRowSize() {
+    return this.tableMaxRowSize;
+  }
+
+  boolean isUsePread() {
+    return this.usePread;
+  }
+
+  long getCellsPerTimeoutCheck() {
+    return this.cellsPerTimeoutCheck;
+  }
+
+  boolean isParallelSeekEnabled() {
+    return this.parallelSeekEnabled;
+  }
+
+  byte[] getFamily() {
     return family;
   }
 
-  public int getMinVersions() {
+  int getMinVersions() {
     return minVersions;
   }
 
@@ -93,7 +137,7 @@ public class ScanInfo {
     return ttl;
   }
 
-  public KeepDeletedCells getKeepDeletedCells() {
+  KeepDeletedCells getKeepDeletedCells() {
     return keepDeletedCells;
   }
 

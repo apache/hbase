@@ -248,7 +248,8 @@ public class TestCoprocessorScanPolicy {
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
+      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
+          family.getName(), family.getMinVersions(),
           newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -268,7 +269,8 @@ public class TestCoprocessorScanPolicy {
       Integer newVersions = versions.get(store.getTableName());
       ScanInfo oldSI = store.getScanInfo();
       HColumnDescriptor family = store.getFamily();
-      ScanInfo scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
+      ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
+          family.getName(), family.getMinVersions(),
           newVersions == null ? family.getMaxVersions() : newVersions,
           newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
           oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -288,7 +290,8 @@ public class TestCoprocessorScanPolicy {
         Integer newVersions = versions.get(store.getTableName());
         ScanInfo oldSI = store.getScanInfo();
         HColumnDescriptor family = store.getFamily();
-        ScanInfo scanInfo = new ScanInfo(family.getName(), family.getMinVersions(),
+        ScanInfo scanInfo = new ScanInfo(TEST_UTIL.getConfiguration(),
+            family.getName(), family.getMinVersions(),
             newVersions == null ? family.getMaxVersions() : newVersions,
             newTtl == null ? oldSI.getTtl() : newTtl, family.getKeepDeletedCells(),
             oldSI.getTimeToPurgeDeletes(), oldSI.getComparator());
@@ -299,5 +302,4 @@ public class TestCoprocessorScanPolicy {
       }
     }
   }
-
 }
