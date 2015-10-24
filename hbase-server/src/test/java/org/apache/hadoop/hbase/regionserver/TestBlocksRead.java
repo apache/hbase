@@ -26,11 +26,10 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HBaseTestCase;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -48,44 +47,35 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 @Category({RegionServerTests.class, MediumTests.class})
-public class TestBlocksRead extends HBaseTestCase {
+public class TestBlocksRead  {
   private static final Log LOG = LogFactory.getLog(TestBlocksRead.class);
+  @Rule public TestName testName = new TestName();
+
   static final BloomType[] BLOOM_TYPE = new BloomType[] { BloomType.ROWCOL,
       BloomType.ROW, BloomType.NONE };
 
   private static BlockCache blockCache;
-
-  private HBaseConfiguration getConf() {
-    HBaseConfiguration conf = new HBaseConfiguration();
-
-    // disable compactions in this test.
-    conf.setInt("hbase.hstore.compactionThreshold", 10000);
-    return conf;
-  }
-
   Region region = null;
-  private HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
+  private Configuration conf = TEST_UTIL.getConfiguration();
 
-  /**
-   * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
-   */
-  @SuppressWarnings("deprecation")
-  @Before
-  protected void setUp() throws Exception {
-    super.setUp();
+  @BeforeClass
+  public static void setUp() throws Exception {
+    // disable compactions in this test.
+    TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10000);
   }
 
-  @SuppressWarnings("deprecation")
-  @After
-  protected void tearDown() throws Exception {
-    super.tearDown();
+  @AfterClass
+  public static void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
   }
 
@@ -99,7 +89,7 @@ public class TestBlocksRead extends HBaseTestCase {
    * @return created and initialized region.
    */
   private Region initHRegion(byte[] tableName, String callingMethod,
-      HBaseConfiguration conf, String family) throws IOException {
+      Configuration conf, String family) throws IOException {
     HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(tableName));
     HColumnDescriptor familyDesc;
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
@@ -223,8 +213,7 @@ public class TestBlocksRead extends HBaseTestCase {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
     Cell kvs[];
-    HBaseConfiguration conf = getConf();
-    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -280,8 +269,7 @@ public class TestBlocksRead extends HBaseTestCase {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
     Cell kvs[];
-    HBaseConfiguration conf = getConf();
-    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
       // File 1
@@ -388,8 +376,7 @@ public class TestBlocksRead extends HBaseTestCase {
     byte [] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
     String FAMILY = "cf1";
 
-    HBaseConfiguration conf = getConf();
-    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -433,8 +420,7 @@ public class TestBlocksRead extends HBaseTestCase {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
     Cell kvs[];
-    HBaseConfiguration conf = getConf();
-    this.region = initHRegion(TABLE, getName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
     try {
       deleteFamily(FAMILY, "row", 200);
       for (int i = 0; i < 100; i++) {
