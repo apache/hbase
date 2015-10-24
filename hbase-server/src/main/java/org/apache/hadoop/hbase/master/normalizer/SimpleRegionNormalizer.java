@@ -48,7 +48,9 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 public class SimpleRegionNormalizer implements RegionNormalizer {
+
   private static final Log LOG = LogFactory.getLog(SimpleRegionNormalizer.class);
+  private static final int MIN_REGION_COUNT = 3;
   private MasterServices masterServices;
 
   /**
@@ -68,8 +70,7 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
    * @return normalization plan to execute
    */
   @Override
-  public NormalizationPlan computePlanForTable(TableName table)
-      throws HBaseIOException {
+  public NormalizationPlan computePlanForTable(TableName table) throws HBaseIOException {
     if (table == null || table.isSystemTable()) {
       LOG.debug("Normalization of table " + table + " isn't allowed");
       return EmptyNormalizationPlan.getInstance();
@@ -79,9 +80,10 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
       getRegionsOfTable(table);
 
     //TODO: should we make min number of regions a config param?
-    if (tableRegions == null || tableRegions.size() < 3) {
-      LOG.debug("Table " + table + " has " + tableRegions.size() + " regions, required min number"
-        + " of regions for normalizer to run is 3, not running normalizer");
+    if (tableRegions == null || tableRegions.size() < MIN_REGION_COUNT) {
+      int nrRegions = tableRegions == null ? 0 : tableRegions.size();
+      LOG.debug("Table " + table + " has " + nrRegions + " regions, required min number"
+        + " of regions for normalizer to run is " + MIN_REGION_COUNT + ", not running normalizer");
       return EmptyNormalizationPlan.getInstance();
     }
 
@@ -93,7 +95,6 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
 
     // A is a smallest region, B is it's smallest neighbor
     Pair<HRegionInfo, Long> smallestRegion = new Pair<>();
-    Pair<HRegionInfo, Long> smallestNeighborOfSmallestRegion;
     int smallestRegionIndex = 0;
 
     for (int i = 0; i < tableRegions.size(); i++) {
@@ -115,16 +116,17 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
 
     // now get smallest neighbor of smallest region
     long leftNeighborSize = -1;
-    long rightNeighborSize = -1;
 
     if (smallestRegionIndex > 0) {
       leftNeighborSize = getRegionSize(tableRegions.get(smallestRegionIndex - 1));
     }
 
+    long rightNeighborSize = -1;
     if (smallestRegionIndex < tableRegions.size() - 1) {
       rightNeighborSize = getRegionSize(tableRegions.get(smallestRegionIndex + 1));
     }
 
+    Pair<HRegionInfo, Long> smallestNeighborOfSmallestRegion;
     if (leftNeighborSize == -1) {
       smallestNeighborOfSmallestRegion =
         new Pair<>(tableRegions.get(smallestRegionIndex + 1), rightNeighborSize);
@@ -154,11 +156,11 @@ public class SimpleRegionNormalizer implements RegionNormalizer {
         + largestRegion.getSecond() + ", more than 2 times than avg size, splitting");
       return new SplitNormalizationPlan(largestRegion.getFirst(), null);
     } else {
-      if ((smallestRegion.getSecond() + smallestNeighborOfSmallestRegion.getSecond()
-          < avgRegionSize)) {
+      if (smallestRegion.getSecond() + smallestNeighborOfSmallestRegion.getSecond()
+          < avgRegionSize) {
         LOG.debug("Table " + table + ", smallest region size: " + smallestRegion.getSecond()
           + " and its smallest neighbor size: " + smallestNeighborOfSmallestRegion.getSecond()
-          + ", less than half the avg size, merging them");
+          + ", less than the avg size, merging them");
         return new MergeNormalizationPlan(smallestRegion.getFirst(),
           smallestNeighborOfSmallestRegion.getFirst());
       } else {
