@@ -223,8 +223,8 @@ public class TestBulkDeleteProtocol {
     List<Put> puts = new ArrayList<Put>(100);
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
-      put.add(FAMILY1, QUALIFIER1, "v1".getBytes());
-      put.add(FAMILY2, QUALIFIER2, "v2".getBytes());
+      put.addColumn(FAMILY1, QUALIFIER1, "v1".getBytes());
+      put.addColumn(FAMILY2, QUALIFIER2, "v2".getBytes());
       puts.add(put);
     }
     ht.put(puts);
@@ -251,15 +251,15 @@ public class TestBulkDeleteProtocol {
     for (int j = 0; j < 100; j++) {
       Put put = new Put(Bytes.toBytes(j));
       byte[] value = "v1".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 1234L, value);
-      put.add(FAMILY1, QUALIFIER2, 1234L, value);
-      put.add(FAMILY1, QUALIFIER3, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 1234L, value);
       // Latest version values
       value = "v2".getBytes();
-      put.add(FAMILY1, QUALIFIER1, value);
-      put.add(FAMILY1, QUALIFIER2, value);
-      put.add(FAMILY1, QUALIFIER3, value);
-      put.add(FAMILY1, null, value);
+      put.addColumn(FAMILY1, QUALIFIER1, value);
+      put.addColumn(FAMILY1, QUALIFIER2, value);
+      put.addColumn(FAMILY1, QUALIFIER3, value);
+      put.addColumn(FAMILY1, null, value);
       puts.add(put);
     }
     ht.put(puts);
@@ -300,19 +300,19 @@ public class TestBulkDeleteProtocol {
       Put put = new Put(Bytes.toBytes(j));
       // TS = 1000L
       byte[] value = "v1".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 1000L, value);
-      put.add(FAMILY1, QUALIFIER2, 1000L, value);
-      put.add(FAMILY1, QUALIFIER3, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 1000L, value);
       // TS = 1234L
       value = "v2".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 1234L, value);
-      put.add(FAMILY1, QUALIFIER2, 1234L, value);
-      put.add(FAMILY1, QUALIFIER3, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 1234L, value);
       // Latest version values
       value = "v3".getBytes();
-      put.add(FAMILY1, QUALIFIER1, value);
-      put.add(FAMILY1, QUALIFIER2, value);
-      put.add(FAMILY1, QUALIFIER3, value);
+      put.addColumn(FAMILY1, QUALIFIER1, value);
+      put.addColumn(FAMILY1, QUALIFIER2, value);
+      put.addColumn(FAMILY1, QUALIFIER3, value);
       puts.add(put);
     }
     ht.put(puts);
@@ -347,24 +347,24 @@ public class TestBulkDeleteProtocol {
       Put put = new Put(Bytes.toBytes(j));
       // TS = 1000L
       byte[] value = "v1".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 1000L, value);
-      put.add(FAMILY1, QUALIFIER2, 1000L, value);
-      put.add(FAMILY1, QUALIFIER3, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 1000L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 1000L, value);
       // TS = 1234L
       value = "v2".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 1234L, value);
-      put.add(FAMILY1, QUALIFIER2, 1234L, value);
-      put.add(FAMILY1, QUALIFIER3, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 1234L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 1234L, value);
       // TS = 2000L
       value = "v3".getBytes();
-      put.add(FAMILY1, QUALIFIER1, 2000L, value);
-      put.add(FAMILY1, QUALIFIER2, 2000L, value);
-      put.add(FAMILY1, QUALIFIER3, 2000L, value);
+      put.addColumn(FAMILY1, QUALIFIER1, 2000L, value);
+      put.addColumn(FAMILY1, QUALIFIER2, 2000L, value);
+      put.addColumn(FAMILY1, QUALIFIER3, 2000L, value);
       // Latest version values
       value = "v4".getBytes();
-      put.add(FAMILY1, QUALIFIER1, value);
-      put.add(FAMILY1, QUALIFIER2, value);
-      put.add(FAMILY1, QUALIFIER3, value);
+      put.addColumn(FAMILY1, QUALIFIER1, value);
+      put.addColumn(FAMILY1, QUALIFIER2, value);
+      put.addColumn(FAMILY1, QUALIFIER3, value);
       puts.add(put);
     }
     ht.put(puts);
@@ -435,9 +435,9 @@ public class TestBulkDeleteProtocol {
 
   private Put createPut(byte[] rowkey, String value) throws IOException {
     Put put = new Put(rowkey);
-    put.add(FAMILY1, QUALIFIER1, value.getBytes());
-    put.add(FAMILY1, QUALIFIER2, value.getBytes());
-    put.add(FAMILY1, QUALIFIER3, value.getBytes());
+    put.addColumn(FAMILY1, QUALIFIER1, value.getBytes());
+    put.addColumn(FAMILY1, QUALIFIER2, value.getBytes());
+    put.addColumn(FAMILY1, QUALIFIER3, value.getBytes());
     return put;
   }
 }

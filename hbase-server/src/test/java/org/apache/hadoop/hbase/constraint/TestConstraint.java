@@ -86,7 +86,8 @@ public class TestConstraint {
       // test that we don't fail on a valid put
       Put put = new Put(row1);
       byte[] value = Integer.toString(10).getBytes();
-      put.add(dummy, new byte[0], value);
+      byte[] qualifier = new byte[0];
+      put.addColumn(dummy, qualifier, value);
       table.put(put);
     } finally {
       table.close();
@@ -117,7 +118,8 @@ public class TestConstraint {
 
     // test that we do fail on violation
     Put put = new Put(row1);
-    put.add(dummy, new byte[0], "fail".getBytes());
+    byte[] qualifier = new byte[0];
+    put.addColumn(dummy, qualifier, "fail".getBytes());
     LOG.warn("Doing put in table");
     try {
       table.put(put);
@@ -160,7 +162,8 @@ public class TestConstraint {
     try {
       // test that we don't fail because its disabled
       Put put = new Put(row1);
-      put.add(dummy, new byte[0], "pass".getBytes());
+      byte[] qualifier = new byte[0];
+      put.addColumn(dummy, qualifier, "pass".getBytes());
       table.put(put);
     } finally {
       table.close();
@@ -192,7 +195,8 @@ public class TestConstraint {
     try {
       // test that we do fail on violation
       Put put = new Put(row1);
-      put.add(dummy, new byte[0], "pass".getBytes());
+      byte[] qualifier = new byte[0];
+      put.addColumn(dummy, qualifier, "pass".getBytes());
       LOG.warn("Doing put in table");
       table.put(put);
     } finally {
@@ -224,8 +228,9 @@ public class TestConstraint {
 
     // test that we do fail on violation
     Put put = new Put(row1);
-    put.add(dummy, new byte[0], "pass".getBytes());
-    
+    byte[] qualifier = new byte[0];
+    put.addColumn(dummy, qualifier, "pass".getBytes());
+
     try{
     table.put(put);
     fail("RuntimeFailConstraint wasn't triggered - this put shouldn't work!");

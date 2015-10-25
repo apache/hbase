@@ -108,7 +108,7 @@ public class TestLogRollPeriod {
             long row = 0;
             while (!interrupted()) {
               Put p = new Put(Bytes.toBytes(String.format("row%d", row)));
-              p.add(Bytes.toBytes(family), Bytes.toBytes("col"), Bytes.toBytes(row));
+              p.addColumn(Bytes.toBytes(family), Bytes.toBytes("col"), Bytes.toBytes(row));
               table.put(p);
               row++;
 

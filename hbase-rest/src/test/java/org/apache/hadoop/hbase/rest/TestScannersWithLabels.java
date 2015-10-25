@@ -98,7 +98,7 @@ public class TestScannersWithLabels {
     for (int i = 0; i < 9; i++) {
       Put put = new Put(Bytes.toBytes("row" + i));
       put.setDurability(Durability.SKIP_WAL);
-      put.add(famAndQf[0], famAndQf[1], k);
+      put.addColumn(famAndQf[0], famAndQf[1], k);
       put.setCellVisibility(new CellVisibility("(" + SECRET + "|" + CONFIDENTIAL + ")" + "&" + "!"
           + TOPSECRET));
       puts.add(put);

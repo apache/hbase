@@ -208,7 +208,7 @@ public class TestMetaWithReplicas {
     htable = c.getTable(TABLE);
     byte[] row = "test".getBytes();
     Put put = new Put(row);
-    put.add("foo".getBytes(), row, row);
+    put.addColumn("foo".getBytes(), row, row);
     BufferedMutator m = c.getBufferedMutator(TABLE);
     m.mutate(put);
     m.flush();

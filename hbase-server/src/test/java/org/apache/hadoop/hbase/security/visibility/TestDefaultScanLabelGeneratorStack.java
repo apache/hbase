@@ -106,15 +106,15 @@ public class TestDefaultScanLabelGeneratorStack {
         try (Connection connection = ConnectionFactory.createConnection(conf);
              Table table = TEST_UTIL.createTable(tableName, CF)) {
           Put put = new Put(ROW_1);
-          put.add(CF, Q1, HConstants.LATEST_TIMESTAMP, value1);
+          put.addColumn(CF, Q1, HConstants.LATEST_TIMESTAMP, value1);
           put.setCellVisibility(new CellVisibility(SECRET));
           table.put(put);
           put = new Put(ROW_1);
-          put.add(CF, Q2, HConstants.LATEST_TIMESTAMP, value2);
+          put.addColumn(CF, Q2, HConstants.LATEST_TIMESTAMP, value2);
           put.setCellVisibility(new CellVisibility(CONFIDENTIAL));
           table.put(put);
           put = new Put(ROW_1);
-          put.add(CF, Q3, HConstants.LATEST_TIMESTAMP, value3);
+          put.addColumn(CF, Q3, HConstants.LATEST_TIMESTAMP, value3);
           table.put(put);
           return null;
         }

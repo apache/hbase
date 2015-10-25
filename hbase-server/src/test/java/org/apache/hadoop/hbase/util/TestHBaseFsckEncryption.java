@@ -109,8 +109,8 @@ public class TestHBaseFsckEncryption {
       for (int i = 0; i < values.length; i++) {
         for (int j = 0; j < values.length; j++) {
           Put put = new Put(new byte[] { values[i], values[j] });
-          put.add(Bytes.toBytes("cf"), new byte[] {}, new byte[] { values[i],
-            values[j] });
+          put.addColumn(Bytes.toBytes("cf"), new byte[]{}, new byte[]{values[i],
+                  values[j]});
           table.put(put);
         }
       }

@@ -152,7 +152,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
-        p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
+        p.addColumn(FAMILIES[0], QUALIFIER, VALUES[0]);
       }
       this.region.put(p);
     }
@@ -160,7 +160,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
-        p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
+        p.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
       }
       this.region.put(p);
     }
@@ -173,7 +173,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_ONE) {
-        p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
+        p.addColumn(FAMILIES[1], QUALIFIER, VALUES[0]);
       }
       this.region.put(p);
     }
@@ -181,7 +181,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for(byte [] QUALIFIER : QUALIFIERS_TWO) {
-        p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
+        p.addColumn(FAMILIES[0], QUALIFIER, VALUES[1]);
       }
       this.region.put(p);
     }
@@ -229,7 +229,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_THREE) {
-        p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
+        p.addColumn(FAMILIES[0], QUALIFIER, VALUES[0]);
 
       }
       this.region.put(p);
@@ -238,7 +238,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_FOUR) {
-        p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
+        p.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
       }
       this.region.put(p);
     }
@@ -250,7 +250,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_THREE) {
-        p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
+        p.addColumn(FAMILIES[1], QUALIFIER, VALUES[0]);
       }
       this.region.put(p);
     }
@@ -258,7 +258,7 @@ public class TestFilter {
       Put p = new Put(ROW);
       p.setDurability(Durability.SKIP_WAL);
       for (byte[] QUALIFIER : QUALIFIERS_FOUR) {
-        p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
+        p.addColumn(FAMILIES[0], QUALIFIER, VALUES[1]);
       }
       this.region.put(p);
     }
@@ -1458,7 +1458,7 @@ public class TestFilter {
     for(int i=0; i<5; i++) {
       Put p = new Put(Bytes.toBytes((char)('a'+i) + "row"));
       p.setDurability(Durability.SKIP_WAL);
-      p.add(family, qualifier, Bytes.toBytes(String.valueOf(111+i)));
+      p.addColumn(family, qualifier, Bytes.toBytes(String.valueOf(111 + i)));
       testRegion.put(p);
     }
     testRegion.flush(true);
@@ -1501,7 +1501,7 @@ public class TestFilter {
 
     // Need to change one of the group one columns to use group two value
     Put p = new Put(ROWS_ONE[2]);
-    p.add(FAMILIES[0], QUALIFIERS_ONE[2], VALUES[1]);
+    p.addColumn(FAMILIES[0], QUALIFIERS_ONE[2], VALUES[1]);
     this.region.put(p);
 
     // Now let's grab rows that have Q_ONE[0](VALUES[0]) and Q_ONE[2](VALUES[1])
@@ -1816,11 +1816,11 @@ public class TestFilter {
 
   @Test
   public void testColumnPaginationFilter() throws Exception {
-      // Test that the filter skips multiple column versions.
-      Put p = new Put(ROWS_ONE[0]);
-      p.setDurability(Durability.SKIP_WAL);
-      p.add(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
-      this.region.put(p);
+    // Test that the filter skips multiple column versions.
+    Put p = new Put(ROWS_ONE[0]);
+    p.setDurability(Durability.SKIP_WAL);
+    p.addColumn(FAMILIES[0], QUALIFIERS_ONE[0], VALUES[0]);
+    this.region.put(p);
       this.region.flush(true);
 
       // Set of KVs (page: 1; pageSize: 1) - the first set of 1 column per row
@@ -2017,7 +2017,7 @@ public class TestFilter {
     for(int i=0; i<10; i++) {
       Put p = new Put(Bytes.toBytes("row" + i));
       p.setDurability(Durability.SKIP_WAL);
-      p.add(FAMILIES[0], columnStatus, Bytes.toBytes(i%2));
+      p.addColumn(FAMILIES[0], columnStatus, Bytes.toBytes(i % 2));
       testRegion.put(p);
     }
     testRegion.flush(true);

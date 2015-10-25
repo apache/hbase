@@ -138,15 +138,15 @@ public class TestRowProcessorEndpoint {
     table = util.createTable(TABLE, FAM);
     {
       Put put = new Put(ROW);
-      put.add(FAM, A, Bytes.add(B, C));    // B, C are friends of A
-      put.add(FAM, B, Bytes.add(D, E, F)); // D, E, F are friends of B
-      put.add(FAM, C, G);                  // G is a friend of C
+      put.addColumn(FAM, A, Bytes.add(B, C));    // B, C are friends of A
+      put.addColumn(FAM, B, Bytes.add(D, E, F)); // D, E, F are friends of B
+      put.addColumn(FAM, C, G);                  // G is a friend of C
       table.put(put);
       rowSize = put.size();
     }
     Put put = new Put(ROW2);
-    put.add(FAM, D, E);
-    put.add(FAM, F, G);
+    put.addColumn(FAM, D, E);
+    put.addColumn(FAM, F, G);
     table.put(put);
     row2Size = put.size();
   }

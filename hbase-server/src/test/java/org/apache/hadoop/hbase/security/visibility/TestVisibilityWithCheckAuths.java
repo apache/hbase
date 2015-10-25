@@ -137,7 +137,7 @@ public class TestVisibilityWithCheckAuths {
                Table table = connection.getTable(tableName)) {
             Put p = new Put(row1);
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
-            p.add(fam, qual, 125l, value);
+            p.addColumn(fam, qual, 125l, value);
             table.put(p);
             Assert.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
@@ -177,7 +177,7 @@ public class TestVisibilityWithCheckAuths {
           try (Connection connection = ConnectionFactory.createConnection(conf);
                Table table = connection.getTable(tableName)) {
             Put put = new Put(row1);
-            put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
+            put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, val);
             put.setCellVisibility(new CellVisibility(TOPSECRET));
             table.put(put);
           }

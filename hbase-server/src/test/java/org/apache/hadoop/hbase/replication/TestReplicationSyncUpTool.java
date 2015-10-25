@@ -225,21 +225,21 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     // 100 + 1 row to t1_syncup
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       p = new Put(Bytes.toBytes("row" + i));
-      p.add(famName, qualName, Bytes.toBytes("val" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       ht1Source.put(p);
     }
     p = new Put(Bytes.toBytes("row" + 9999));
-    p.add(noRepfamName, qualName, Bytes.toBytes("val" + 9999));
+    p.addColumn(noRepfamName, qualName, Bytes.toBytes("val" + 9999));
     ht1Source.put(p);
 
     // 200 + 1 row to t2_syncup
     for (int i = 0; i < NB_ROWS_IN_BATCH * 2; i++) {
       p = new Put(Bytes.toBytes("row" + i));
-      p.add(famName, qualName, Bytes.toBytes("val" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       ht2Source.put(p);
     }
     p = new Put(Bytes.toBytes("row" + 9999));
-    p.add(noRepfamName, qualName, Bytes.toBytes("val" + 9999));
+    p.addColumn(noRepfamName, qualName, Bytes.toBytes("val" + 9999));
     ht2Source.put(p);
 
     // ensure replication completed
@@ -351,22 +351,22 @@ public class TestReplicationSyncUpTool extends TestReplicationBase {
     // we should see 100 + 2 rows now
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       p = new Put(Bytes.toBytes("row" + i));
-      p.add(famName, qualName, Bytes.toBytes("val" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       ht1Source.put(p);
     }
     p = new Put(Bytes.toBytes("row" + 9998));
-    p.add(noRepfamName, qualName, Bytes.toBytes("val" + 9998));
+    p.addColumn(noRepfamName, qualName, Bytes.toBytes("val" + 9998));
     ht1Source.put(p);
 
     // another 200 + 1 row to t1_syncup
     // we should see 200 + 2 rows now
     for (int i = 0; i < NB_ROWS_IN_BATCH * 2; i++) {
       p = new Put(Bytes.toBytes("row" + i));
-      p.add(famName, qualName, Bytes.toBytes("val" + i));
+      p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
       ht2Source.put(p);
     }
     p = new Put(Bytes.toBytes("row" + 9998));
-    p.add(noRepfamName, qualName, Bytes.toBytes("val" + 9998));
+    p.addColumn(noRepfamName, qualName, Bytes.toBytes("val" + 9998));
     ht2Source.put(p);
 
     int rowCount_ht1Source = utility1.countRows(ht1Source);

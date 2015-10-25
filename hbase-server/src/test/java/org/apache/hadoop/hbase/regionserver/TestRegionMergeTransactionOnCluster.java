@@ -456,7 +456,7 @@ public class TestRegionMergeTransactionOnCluster {
   private void loadData(Table table) throws IOException {
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
-      put.add(FAMILYNAME, QUALIFIER, Bytes.toBytes(i));
+      put.addColumn(FAMILYNAME, QUALIFIER, Bytes.toBytes(i));
       table.put(put);
     }
   }

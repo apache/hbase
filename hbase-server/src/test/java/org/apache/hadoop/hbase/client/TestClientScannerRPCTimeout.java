@@ -126,7 +126,7 @@ public class TestClientScannerRPCTimeout {
 
   private void putToTable(Table ht, byte[] rowkey) throws IOException {
     Put put = new Put(rowkey);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
   }
 

@@ -102,7 +102,7 @@ public class TestOpenTableInCoprocessor {
         final WALEdit edit, final Durability durability) throws IOException {
       Table table = e.getEnvironment().getTable(otherTable, getPool());
       Put p = new Put(new byte[] { 'a' });
-      p.add(family, null, new byte[] { 'a' });
+      p.addColumn(family, null, new byte[]{'a'});
       try {
         table.batch(Collections.singletonList(put), null);
       } catch (InterruptedException e1) {
@@ -162,7 +162,7 @@ public class TestOpenTableInCoprocessor {
 
     Table table = UTIL.getConnection().getTable(TableName.valueOf("primary"));
     Put p = new Put(new byte[] { 'a' });
-    p.add(family, null, new byte[] { 'a' });
+    p.addColumn(family, null, new byte[]{'a'});
     table.put(p);
     table.close();
 

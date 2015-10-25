@@ -1010,17 +1010,17 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           // with ro ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q1, ZERO);
           p.setACL(USER_NONE.getShortName(), new Permission(Action.READ));
           t.put(p);
           // with rw ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY, TEST_Q2, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY, TEST_Q2, ZERO);
           p.setACL(USER_NONE.getShortName(), new Permission(Action.READ, Action.WRITE));
           t.put(p);
           // no ACL
           p = new Put(TEST_ROW)
-            .add(TEST_FAMILY, TEST_Q3, ZERO)
-            .add(TEST_FAMILY, TEST_Q4, ZERO);
+              .addColumn(TEST_FAMILY, TEST_Q3, ZERO)
+              .addColumn(TEST_FAMILY, TEST_Q4, ZERO);
           t.put(p);
         }
         return null;

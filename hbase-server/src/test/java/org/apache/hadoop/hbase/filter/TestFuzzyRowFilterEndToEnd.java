@@ -139,7 +139,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
             Put p = new Put(rk);
             p.setDurability(Durability.SKIP_WAL);
-            p.add(cf.getBytes(), cq, Bytes.toBytes(c));
+            p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
             ht.put(p);
           }
         }
@@ -277,7 +277,7 @@ public class TestFuzzyRowFilterEndToEnd {
 
           Put p = new Put(rk);
           p.setDurability(Durability.SKIP_WAL);
-          p.add(cf.getBytes(), cq, Bytes.toBytes(c));
+          p.addColumn(cf.getBytes(), cq, Bytes.toBytes(c));
           ht.put(p);
           LOG.info("Inserting: rk: " + Bytes.toStringBinary(rk) + " cq: "
               + Bytes.toStringBinary(cq));

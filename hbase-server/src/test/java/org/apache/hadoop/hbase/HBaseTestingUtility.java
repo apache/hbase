@@ -1951,7 +1951,8 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
       Put put = new Put(row);
       put.setDurability(writeToWAL ? Durability.USE_DEFAULT : Durability.SKIP_WAL);
       for (int i = 0; i < f.length; i++) {
-        put.add(f[i], null, value != null ? value : row);
+        byte[] value1 = value != null ? value : row;
+        put.addColumn(f[i], null, value1);
       }
       puts.add(put);
     }
@@ -2038,7 +2039,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
           k[2] = b3;
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
-          put.add(f, null, k);
+          put.addColumn(f, null, k);
           if (r.getWAL() == null) {
             put.setDurability(Durability.SKIP_WAL);
           }
@@ -2068,7 +2069,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
     for (int i = startRow; i < endRow; i++) {
       byte[] data = Bytes.toBytes(String.valueOf(i));
       Put put = new Put(data);
-      put.add(f, null, data);
+      put.addColumn(f, null, data);
       t.put(put);
     }
   }
@@ -3415,7 +3416,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
             final byte[] value = Bytes.toBytes("value_for_row_" + iRow +
                 "_cf_" + Bytes.toStringBinary(cf) + "_col_" + iCol + "_ts_" +
                 ts + "_random_" + rand.nextLong());
-            put.add(cf, qual, ts, value);
+            put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
             del.deleteColumn(cf, qual, ts);
           } else {

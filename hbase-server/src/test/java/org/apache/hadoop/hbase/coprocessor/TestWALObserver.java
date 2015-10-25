@@ -489,7 +489,7 @@ public class TestWALObserver {
   private Put creatPutWith2Families(byte[] row) throws IOException {
     Put p = new Put(row);
     for (int i = 0; i < TEST_FAMILY.length - 1; i++) {
-      p.add(TEST_FAMILY[i], TEST_QUALIFIER[i], TEST_VALUE[i]);
+      p.addColumn(TEST_FAMILY[i], TEST_QUALIFIER[i], TEST_VALUE[i]);
     }
     return p;
   }

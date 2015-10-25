@@ -169,20 +169,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
           // with ro ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
           t.put(p);
           // with ro ACL
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
           t.put(p);
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
           t.put(p);
         }
@@ -228,13 +228,13 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try(Connection connection = ConnectionFactory.createConnection(conf);
             Table t = connection.getTable(TEST_TABLE.getTableName())) {
           Put p;
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
           t.put(p);
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(readPerms);
           t.put(p);
-          p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           p.setACL(writePerms);
           t.put(p);
         }
@@ -275,15 +275,15 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             // with rw ACL for "user1"
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
             t.put(p);
             // with rw ACL for "user1"
             p = new Put(TEST_ROW2);
-            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             p.setACL(user1.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
             t.put(p);
@@ -300,8 +300,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             // with rw ACL for "user1", "user2" and "@group"
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             Map<String, Permission> perms =
                 prepareCellPermissions(new String[] { user1.getShortName(), user2.getShortName(),
                     AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
@@ -309,8 +309,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             t.put(p);
             // with rw ACL for "user1", "user2" and "@group"
             p = new Put(TEST_ROW2);
-            p.add(TEST_FAMILY1, TEST_Q1, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             p.setACL(perms);
             t.put(p);
           }
@@ -391,17 +391,17 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             // Store a read write ACL without a timestamp, server will use current time
-            Put p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q2, ONE);
+            Put p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q2, ONE);
             Map<String, Permission> readAndWritePerms =
                 prepareCellPermissions(usersAndGroups, Action.READ, Action.WRITE);
             p.setACL(readAndWritePerms);
             t.put(p);
-            p = new Put(TEST_ROW).add(TEST_FAMILY2, TEST_Q2, ONE);
+            p = new Put(TEST_ROW).addColumn(TEST_FAMILY2, TEST_Q2, ONE);
             p.setACL(readAndWritePerms);
             t.put(p);
             LOG.info("Stored at current time");
             // Store read only ACL at a future time
-            p = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1,
+            p = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1,
                 EnvironmentEdgeManager.currentTime() + 1000000, ZERO);
             p.setACL(prepareCellPermissions(new String[]{ USER_OTHER.getShortName(),
                 AuthUtil.toGroupEntry(GROUP)}, Action.READ));
@@ -484,8 +484,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             // This version (TS = 123) with rw ACL for USER_OTHER and USER_OTHER2
             Put p = new Put(TEST_ROW);
-            p.add(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 123L, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 123L, ZERO);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP),
                   USER_OTHER2.getShortName() }, Permission.Action.READ, Permission.Action.WRITE));
@@ -493,8 +493,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
             // This version (TS = 125) with rw ACL for USER_OTHER
             p = new Put(TEST_ROW);
-            p.add(TEST_FAMILY1, TEST_Q1, 125L, ONE);
-            p.add(TEST_FAMILY1, TEST_Q2, 125L, ONE);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 125L, ONE);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 125L, ONE);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
               Action.READ, Action.WRITE));
@@ -502,8 +502,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
 
             // This version (TS = 127) with rw ACL for USER_OTHER
             p = new Put(TEST_ROW);
-            p.add(TEST_FAMILY1, TEST_Q1, 127L, TWO);
-            p.add(TEST_FAMILY1, TEST_Q2, 127L, TWO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, 127L, TWO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, 127L, TWO);
             p.setACL(prepareCellPermissions(
               new String[] { USER_OTHER.getShortName(), AuthUtil.toGroupEntry(GROUP) },
               Action.READ, Action.WRITE));
@@ -570,36 +570,36 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY2, TEST_Q1, 123, ZERO);
-            p.add(TEST_FAMILY2, TEST_Q2, 123, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY2, TEST_Q1, 125, ZERO);
-            p.add(TEST_FAMILY2, TEST_Q2, 125, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 125, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 125, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY2, TEST_Q1, 129, ZERO);
-            p.add(TEST_FAMILY2, TEST_Q2, 129, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q1, (long) 129, ZERO);
+            p.addColumn(TEST_FAMILY2, TEST_Q2, (long) 129, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -676,20 +676,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                   new String[] { user2.getShortName(), AuthUtil.toGroupEntry(GROUP),
                       USER_OWNER.getShortName() }, Action.READ, Action.WRITE);
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -768,20 +768,20 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
             permsU2andGUandOwner.put(USER_OWNER.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU2andGUandOwner);
             t.put(p);
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
           }
@@ -799,8 +799,8 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
         try (Connection connection = ConnectionFactory.createConnection(conf)) {
           try (Table t = connection.getTable(TEST_TABLE.getTableName())) {
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 125, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 125, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, ZERO);
             p.setACL(user2.getShortName(), new Permission(Permission.Action.READ,
                 Permission.Action.WRITE));
             t.put(p);
@@ -864,26 +864,26 @@ public class TestCellACLWithMultipleVersions extends SecureTestUtil {
                     AuthUtil.toGroupEntry(GROUP) }, Action.READ, Action.WRITE);
 
             Put p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 120, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, 120, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q3, 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 120, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 120, ZERO);
             p.setACL(permsU1andU2andGUandOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 123, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q2, 123, ZERO);
-            p.add(TEST_FAMILY1, TEST_Q3, 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 123, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q3, (long) 123, ZERO);
             p.setACL(permsU1andOwner);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q1, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q1, (long) 127, ZERO);
             p.setACL(permsU1_U2andGU);
             t.put(p);
 
             p = new Put(TEST_ROW1);
-            p.add(TEST_FAMILY1, TEST_Q2, 127, ZERO);
+            p.addColumn(TEST_FAMILY1, TEST_Q2, (long) 127, ZERO);
             p.setACL(user2.getShortName(), new Permission(Permission.Action.READ));
             t.put(p);
 

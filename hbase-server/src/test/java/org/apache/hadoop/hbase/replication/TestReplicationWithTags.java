@@ -167,7 +167,7 @@ public class TestReplicationWithTags {
     LOG.info("testSimplePutDelete");
     Put put = new Put(ROW);
     put.setAttribute("visibility", Bytes.toBytes("myTag3"));
-    put.add(FAMILY, ROW, ROW);
+    put.addColumn(FAMILY, ROW, ROW);
 
     htable1 = utility1.getConnection().getTable(TABLE_NAME);
     htable1.put(put);

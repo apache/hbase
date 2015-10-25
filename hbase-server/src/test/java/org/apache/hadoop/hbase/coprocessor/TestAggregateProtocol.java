@@ -93,12 +93,12 @@ public class TestAggregateProtocol {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
       Long l = new Long(i);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(l));
+      put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(l));
       table.put(put);
       Put p2 = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      p2.add(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(l)), Bytes
-          .toBytes(l * 10));
+      p2.addColumn(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(l)), Bytes
+              .toBytes(l * 10));
       table.put(p2);
     }
     table.close();

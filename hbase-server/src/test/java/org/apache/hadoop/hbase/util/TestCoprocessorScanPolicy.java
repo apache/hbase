@@ -110,17 +110,17 @@ public class TestCoprocessorScanPolicy {
     // set the version override to 2
     Put p = new Put(R);
     p.setAttribute("versions", new byte[]{});
-    p.add(F, tableName.getName(), Bytes.toBytes(2));
+    p.addColumn(F, tableName.getName(), Bytes.toBytes(2));
     t.put(p);
 
     long now = EnvironmentEdgeManager.currentTime();
 
     // insert 2 versions
     p = new Put(R);
-    p.add(F, Q, now, Q);
+    p.addColumn(F, Q, now, Q);
     t.put(p);
     p = new Put(R);
-    p.add(F, Q, now+1, Q);
+    p.addColumn(F, Q, now + 1, Q);
     t.put(p);
     Get g = new Get(R);
     g.setMaxVersions(10);
@@ -138,7 +138,7 @@ public class TestCoprocessorScanPolicy {
 
     // insert a 3rd version
     p = new Put(R);
-    p.add(F, Q, now+2, Q);
+    p.addColumn(F, Q, now + 2, Q);
     t.put(p);
     g = new Get(R);
     g.setMaxVersions(10);
@@ -172,14 +172,14 @@ public class TestCoprocessorScanPolicy {
     // Set the TTL override to 3s
     Put p = new Put(R);
     p.setAttribute("ttl", new byte[]{});
-    p.add(F, tableName.getName(), Bytes.toBytes(3000L));
+    p.addColumn(F, tableName.getName(), Bytes.toBytes(3000L));
     t.put(p);
 
     p = new Put(R);
-    p.add(F, Q, ts, Q);
+    p.addColumn(F, Q, ts, Q);
     t.put(p);
     p = new Put(R);
-    p.add(F, Q, ts+1, Q);
+    p.addColumn(F, Q, ts + 1, Q);
     t.put(p);
 
     // these two should be expired but for the override

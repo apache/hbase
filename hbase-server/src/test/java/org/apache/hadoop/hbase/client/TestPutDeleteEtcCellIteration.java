@@ -49,7 +49,7 @@ public class TestPutDeleteEtcCellIteration {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
-      p.add(bytes, bytes, TIMESTAMP, bytes);
+      p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
     int index = 0;
     for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
@@ -65,7 +65,7 @@ public class TestPutDeleteEtcCellIteration {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte [] bytes = Bytes.toBytes(i);
-      p.add(bytes, bytes, TIMESTAMP, bytes);
+      p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
     int index = 0;
     int trigger = 3;
@@ -73,7 +73,7 @@ public class TestPutDeleteEtcCellIteration {
       Cell cell = cellScanner.current();
       byte [] bytes = Bytes.toBytes(index++);
       // When we hit the trigger, try inserting a new KV; should trigger exception
-      if (trigger == 3) p.add(bytes, bytes, TIMESTAMP, bytes);
+      if (trigger == 3) p.addColumn(bytes, bytes, TIMESTAMP, bytes);
       cell.equals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes));
     }
     assertEquals(COUNT, index);

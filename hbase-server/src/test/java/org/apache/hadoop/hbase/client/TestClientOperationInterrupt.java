@@ -85,7 +85,7 @@ public class TestClientOperationInterrupt {
     Table ht = util.createTable(tableName, new byte[][]{dummy, test});
 
     Put p = new Put(row1);
-    p.add(dummy, dummy, dummy);
+    p.addColumn(dummy, dummy, dummy);
     ht.put(p);
   }
 

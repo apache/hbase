@@ -115,7 +115,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
 
   private void doPutTest(byte[] row) throws IOException, InterruptedException {
     Put put = new Put(row);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
 
     if (htable1 == null) {
       htable1 = utility1.getConnection().getTable(tableName);

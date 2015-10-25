@@ -176,15 +176,15 @@ public class TestTimestampsFilter {
     Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLE), FAMILIES, Integer.MAX_VALUE);
 
     Put p = new Put(Bytes.toBytes("row"));
-    p.add(FAMILY, Bytes.toBytes("column0"), 3, Bytes.toBytes("value0-3"));
-    p.add(FAMILY, Bytes.toBytes("column1"), 3, Bytes.toBytes("value1-3"));
-    p.add(FAMILY, Bytes.toBytes("column2"), 1, Bytes.toBytes("value2-1"));
-    p.add(FAMILY, Bytes.toBytes("column2"), 2, Bytes.toBytes("value2-2"));
-    p.add(FAMILY, Bytes.toBytes("column2"), 3, Bytes.toBytes("value2-3"));
-    p.add(FAMILY, Bytes.toBytes("column3"), 2, Bytes.toBytes("value3-2"));
-    p.add(FAMILY, Bytes.toBytes("column4"), 1, Bytes.toBytes("value4-1"));
-    p.add(FAMILY, Bytes.toBytes("column4"), 2, Bytes.toBytes("value4-2"));
-    p.add(FAMILY, Bytes.toBytes("column4"), 3, Bytes.toBytes("value4-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column0"), (long) 3, Bytes.toBytes("value0-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column1"), (long) 3, Bytes.toBytes("value1-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 1, Bytes.toBytes("value2-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 2, Bytes.toBytes("value2-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column2"), (long) 3, Bytes.toBytes("value2-3"));
+    p.addColumn(FAMILY, Bytes.toBytes("column3"), (long) 2, Bytes.toBytes("value3-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 1, Bytes.toBytes("value4-1"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 2, Bytes.toBytes("value4-2"));
+    p.addColumn(FAMILY, Bytes.toBytes("column4"), (long) 3, Bytes.toBytes("value4-3"));
     ht.put(p);
 
     ArrayList<Long> timestamps = new ArrayList<Long>();
@@ -360,7 +360,7 @@ public class TestTimestampsFilter {
     put.setDurability(Durability.SKIP_WAL);
 
     for (long idx = versionStart; idx <= versionEnd; idx++) {
-      put.add(cf, column, idx, Bytes.toBytes("value-version-" + idx));
+      put.addColumn(cf, column, idx, Bytes.toBytes("value-version-" + idx));
     }
 
     ht.put(put);

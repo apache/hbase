@@ -90,11 +90,12 @@ public class TestDoubleColumnInterpreter {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
       Double d = new Double(i);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(d));
+      put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(d));
       table.put(put);
       Put p2 = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      p2.add(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(d)), Bytes.toBytes(d * 0.10));
+      p2.addColumn(TEST_FAMILY, Bytes.add(TEST_MULTI_CQ, Bytes.toBytes(d)),
+              Bytes.toBytes(d * 0.10));
       table.put(p2);
     }
     table.close();

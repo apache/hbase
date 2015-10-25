@@ -410,10 +410,10 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
 
     // Put for parent
     Put putOfMerged = MetaTableAccessor.makePutFromRegionInfo(copyOfMerged, time);
-    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
-      regionA.toByteArray());
-    putOfMerged.add(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
-      regionB.toByteArray());
+    putOfMerged.addColumn(HConstants.CATALOG_FAMILY, HConstants.MERGEA_QUALIFIER,
+        regionA.toByteArray());
+    putOfMerged.addColumn(HConstants.CATALOG_FAMILY, HConstants.MERGEB_QUALIFIER,
+        regionB.toByteArray());
     mutations.add(putOfMerged);
     // Deletes for merging regions
     Delete deleteA = MetaTableAccessor.makeDeleteFromRegionInfo(regionA, time);
@@ -426,11 +426,11 @@ public class RegionMergeTransactionImpl implements RegionMergeTransaction {
 
   @VisibleForTesting
   Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
-        .toBytes(sn.getHostAndPort()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
-        .getStartcode()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
+            .toBytes(sn.getHostAndPort()));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
+            .getStartcode()));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
     return p;
   }
 

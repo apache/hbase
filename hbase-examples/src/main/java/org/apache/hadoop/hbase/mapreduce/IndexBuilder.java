@@ -89,7 +89,7 @@ public class IndexBuilder extends Configured implements Tool {
           // original: row 123 attribute:phone 555-1212
           // index: row 555-1212 INDEX:ROW 123
           Put put = new Put(value);
-          put.add(INDEX_COLUMN, INDEX_QUALIFIER, rowKey.get());
+          put.addColumn(INDEX_COLUMN, INDEX_QUALIFIER, rowKey.get());
           context.write(tableName, put);
         }
       }

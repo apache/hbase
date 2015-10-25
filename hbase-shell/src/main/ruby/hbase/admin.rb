@@ -853,7 +853,9 @@ module Hbase
 
       # Write it back
       put = org.apache.hadoop.hbase.client.Put.new(region_bytes)
-      put.add(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY, org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER, org.apache.hadoop.hbase.util.Writables.getBytes(hri))
+      put.addColumn(org.apache.hadoop.hbase.HConstants::CATALOG_FAMILY,
+        org.apache.hadoop.hbase.HConstants::REGIONINFO_QUALIFIER,
+        org.apache.hadoop.hbase.util.Writables.getBytes(hri))
       meta.put(put)
     end
     # Apply user metadata to table/column descriptor

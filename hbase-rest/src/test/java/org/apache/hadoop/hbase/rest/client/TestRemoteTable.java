@@ -100,12 +100,12 @@ public class TestRemoteTable {
     admin.createTable(htd);
     try (Table table = TEST_UTIL.getConnection().getTable(TABLE)) {
       Put put = new Put(ROW_1);
-      put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
+      put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, VALUE_1);
       table.put(put);
       put = new Put(ROW_2);
-      put.add(COLUMN_1, QUALIFIER_1, TS_1, VALUE_1);
-      put.add(COLUMN_1, QUALIFIER_1, TS_2, VALUE_2);
-      put.add(COLUMN_2, QUALIFIER_2, TS_2, VALUE_2);
+      put.addColumn(COLUMN_1, QUALIFIER_1, TS_1, VALUE_1);
+      put.addColumn(COLUMN_1, QUALIFIER_1, TS_2, VALUE_2);
+      put.addColumn(COLUMN_2, QUALIFIER_2, TS_2, VALUE_2);
       table.put(put);
     }
     remoteTable = new RemoteHTable(
@@ -282,7 +282,7 @@ public class TestRemoteTable {
   @Test
   public void testPut() throws IOException {
     Put put = new Put(ROW_3);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     remoteTable.put(put);
 
     Get get = new Get(ROW_3);
@@ -296,13 +296,13 @@ public class TestRemoteTable {
 
     List<Put> puts = new ArrayList<Put>();
     put = new Put(ROW_3);
-    put.add(COLUMN_2, QUALIFIER_2, VALUE_2);
+    put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
     puts.add(put);
     put = new Put(ROW_4);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_4);
-    put.add(COLUMN_2, QUALIFIER_2, VALUE_2);
+    put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
     puts.add(put);
     remoteTable.put(puts);
 
@@ -327,8 +327,8 @@ public class TestRemoteTable {
   @Test
   public void testDelete() throws IOException {
     Put put = new Put(ROW_3);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
-    put.add(COLUMN_2, QUALIFIER_2, VALUE_2);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_2, QUALIFIER_2, VALUE_2);
     remoteTable.put(put);
 
     Get get = new Get(ROW_3);
@@ -390,16 +390,16 @@ public class TestRemoteTable {
   public void testScanner() throws IOException {
     List<Put> puts = new ArrayList<Put>();
     Put put = new Put(ROW_1);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_2);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_3);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_4);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     remoteTable.put(puts);
 
@@ -465,7 +465,7 @@ public class TestRemoteTable {
     assertFalse(remoteTable.exists(get));
 
     Put put = new Put(ROW_1);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     remoteTable.put(put);
 
     assertTrue(remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1,
@@ -481,16 +481,16 @@ public class TestRemoteTable {
   public void testIteratorScaner() throws IOException {
     List<Put> puts = new ArrayList<Put>();
     Put put = new Put(ROW_1);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_2);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_3);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     put = new Put(ROW_4);
-    put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+    put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
     puts.add(put);
     remoteTable.put(puts);
 

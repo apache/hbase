@@ -115,8 +115,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
     List<Put> puts = new ArrayList<Put>(100);
     for (int i=0; i<100; i++) {
       Put p = new Put(Bytes.toBytes(i));
-      p.add(FAMILY, PRIVATE_COL, Bytes.toBytes("secret "+i));
-      p.add(FAMILY, PUBLIC_COL, Bytes.toBytes("info "+i));
+      p.addColumn(FAMILY, PRIVATE_COL, Bytes.toBytes("secret " + i));
+      p.addColumn(FAMILY, PUBLIC_COL, Bytes.toBytes("info " + i));
       puts.add(p);
     }
     table.put(puts);

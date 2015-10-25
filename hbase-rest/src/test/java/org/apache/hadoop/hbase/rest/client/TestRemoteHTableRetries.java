@@ -151,7 +151,7 @@ public class TestRemoteHTableRetries {
       @Override
       public void run() throws Exception {
         Put put = new Put(ROW_1);
-        put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+        put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
         remoteTable.checkAndPut(ROW_1, COLUMN_1, QUALIFIER_1, VALUE_1, put );
       }
     });
@@ -164,7 +164,7 @@ public class TestRemoteHTableRetries {
       @Override
       public void run() throws Exception {
         Put put = new Put(ROW_1);
-        put.add(COLUMN_1, QUALIFIER_1, VALUE_1);
+        put.addColumn(COLUMN_1, QUALIFIER_1, VALUE_1);
         Delete delete= new Delete(ROW_1);
         remoteTable.checkAndDelete(ROW_1, COLUMN_1, QUALIFIER_1,  VALUE_1, delete );
       }

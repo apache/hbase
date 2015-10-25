@@ -125,7 +125,7 @@ public class TestFastFail {
       byte[] rowKey = longToByteArrayKey(i);
       Put put = new Put(rowKey);
       byte[] value = rowKey; // value is the same as the row key
-      put.add(FAMILY, QUALIFIER, value);
+      put.addColumn(FAMILY, QUALIFIER, value);
       puts.add(put);
     }
     try (Table table = connection.getTable(TableName.valueOf(tableName))) {

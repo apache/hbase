@@ -439,7 +439,7 @@ public class TestPerTableCFReplication {
       Table source, Table... targets)
     throws Exception {
     Put put = new Put(row);
-    put.add(fam, row, val);
+    put.addColumn(fam, row, val);
     source.put(put);
 
     Get get = new Get(row);

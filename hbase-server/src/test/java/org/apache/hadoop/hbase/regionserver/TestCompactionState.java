@@ -222,7 +222,7 @@ public class TestCompactionState {
         byte[] row = Bytes.toBytes(random.nextLong());
         Put p = new Put(row);
         for (int j = 0; j < families.length; ++j) {
-          p.add(families[ j ], qualifier, row);
+          p.addColumn(families[j], qualifier, row);
         }
         puts.add(p);
       }

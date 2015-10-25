@@ -218,7 +218,7 @@ public class TestDurability {
 
   private Put newPut(Durability durability) {
     Put p = new Put(ROW);
-    p.add(FAMILY, COL, COL);
+    p.addColumn(FAMILY, COL, COL);
     if (durability != null) {
       p.setDurability(durability);
     }

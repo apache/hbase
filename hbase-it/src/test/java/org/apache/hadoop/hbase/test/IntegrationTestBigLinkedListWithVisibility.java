@@ -211,13 +211,14 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
         for (int i = 0; i < current.length; i++) {
           for (int j = 0; j < DEFAULT_TABLES_COUNT; j++) {
             Put put = new Put(current[i]);
-            put.add(FAMILY_NAME, COLUMN_PREV, prev == null ? NO_KEY : prev[i]);
+            byte[] value = prev == null ? NO_KEY : prev[i];
+            put.addColumn(FAMILY_NAME, COLUMN_PREV, value);
 
             if (count >= 0) {
-              put.add(FAMILY_NAME, COLUMN_COUNT, Bytes.toBytes(count + i));
+              put.addColumn(FAMILY_NAME, COLUMN_COUNT, Bytes.toBytes(count + i));
             }
             if (id != null) {
-              put.add(FAMILY_NAME, COLUMN_CLIENT, id);
+              put.addColumn(FAMILY_NAME, COLUMN_CLIENT, id);
             }
             visibilityExps = split[j * 2] + OR + split[(j * 2) + 1];
             put.setCellVisibility(new CellVisibility(visibilityExps));

@@ -85,7 +85,7 @@ public class TestTableMapReduce extends TestTableMapReduceBase {
       newValue.reverse();
       // Now set the value to be collected
       Put outval = new Put(key.get());
-      outval.add(OUTPUT_FAMILY, null, Bytes.toBytes(newValue.toString()));
+      outval.addColumn(OUTPUT_FAMILY, null, Bytes.toBytes(newValue.toString()));
       context.write(key, outval);
     }
   }

@@ -486,7 +486,7 @@ public class TestSplitTransactionOnCluster {
         String row = "row" + i;
         Put p = new Put(row.getBytes());
         String val = "Val" + i;
-        p.add("col".getBytes(), "ql".getBytes(), val.getBytes());
+        p.addColumn("col".getBytes(), "ql".getBytes(), val.getBytes());
         table.put(p);
         admin.flush(userTableName.getName());
         Delete d = new Delete(row.getBytes());
@@ -500,13 +500,13 @@ public class TestSplitTransactionOnCluster {
           .getRegionsOfTable(userTableName);
       HRegionInfo hRegionInfo = regionsOfTable.get(0);
       Put p = new Put("row6".getBytes());
-      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
       table.put(p);
       p = new Put("row7".getBytes());
-      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
       table.put(p);
       p = new Put("row8".getBytes());
-      p.add("col".getBytes(), "ql".getBytes(), "val".getBytes());
+      p.addColumn("col".getBytes(), "ql".getBytes(), "val".getBytes());
       table.put(p);
       admin.flush(userTableName.getName());
       admin.split(hRegionInfo.getRegionName(), "row7".getBytes());
@@ -753,16 +753,16 @@ public class TestSplitTransactionOnCluster {
   private void insertData(final TableName tableName, HBaseAdmin admin, Table t) throws IOException,
       InterruptedException {
     Put p = new Put(Bytes.toBytes("row1"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("1"));
     t.put(p);
     p = new Put(Bytes.toBytes("row2"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("2"));
     t.put(p);
     p = new Put(Bytes.toBytes("row3"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("3"));
     t.put(p);
     p = new Put(Bytes.toBytes("row4"));
-    p.add(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
+    p.addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q1"), Bytes.toBytes("4"));
     t.put(p);
     admin.flush(tableName);
   }
@@ -966,7 +966,7 @@ public class TestSplitTransactionOnCluster {
       Table hTable = connection.getTable(desc.getTableName());
       for(int i = 1; i < 5; i++) {
         Put p1 = new Put(("r"+i).getBytes());
-        p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
+        p1.addColumn(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
         hTable.put(p1);
       }
       admin.flush(desc.getTableName());
@@ -1055,8 +1055,8 @@ public class TestSplitTransactionOnCluster {
       HRegion region = regions.get(0);
       for(int i = 3;i<9;i++) {
         Put p = new Put(Bytes.toBytes("row"+i));
-        p.add(Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
-        p.add(Bytes.toBytes("i_f"), Bytes.toBytes("q"), Bytes.toBytes("value"+i));
+        p.addColumn(Bytes.toBytes("f"), Bytes.toBytes("q"), Bytes.toBytes("value" + i));
+        p.addColumn(Bytes.toBytes("i_f"), Bytes.toBytes("q"), Bytes.toBytes("value" + i));
         region.put(p);
       }
       region.flush(true);

@@ -94,7 +94,7 @@ public class TestBatchCoprocessorEndpoint {
     Table table = util.getConnection().getTable(TEST_TABLE);
     for (int i = 0; i < ROWSIZE; i++) {
       Put put = new Put(ROWS[i]);
-      put.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
+      put.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(i));
       table.put(put);
     }
     table.close();

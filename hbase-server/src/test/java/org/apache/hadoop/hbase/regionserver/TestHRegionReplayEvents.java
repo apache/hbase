@@ -1078,7 +1078,7 @@ public class TestHRegionReplayEvents {
       long readPoint = region.getMVCC().getReadPoint();
       long origSeqId = readPoint + 100;
 
-      Put put = new Put(row).add(family, row, row);
+      Put put = new Put(row).addColumn(family, row, row);
       put.setDurability(Durability.SKIP_WAL); // we replay with skip wal
       replay(region, put, origSeqId);
 
@@ -1091,7 +1091,7 @@ public class TestHRegionReplayEvents {
       // replay an entry that is smaller than current read point
       // caution: adding an entry below current read point might cause partial dirty reads. Normal
       // replay does not allow reads while replay is going on.
-      put = new Put(row2).add(family, row2, row2);
+      put = new Put(row2).addColumn(family, row2, row2);
       put.setDurability(Durability.SKIP_WAL);
       replay(region, put, origSeqId - 50);
 
@@ -1628,7 +1628,7 @@ public class TestHRegionReplayEvents {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
       for (byte[] family : families) {
-        put.add(family, qf, EnvironmentEdgeManager.currentTime(), null);
+        put.addColumn(family, qf, EnvironmentEdgeManager.currentTime(), null);
       }
       replay(region, put, i+1);
     }

@@ -241,7 +241,7 @@ public class TestAdmin1 {
     final TableName table = TableName.valueOf("testDisableAndEnableTable");
     Table ht = TEST_UTIL.createTable(table, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
-    put.add(HConstants.CATALOG_FAMILY, qualifier, value);
+    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
     ht.put(put);
     Get get = new Get(row);
     get.addColumn(HConstants.CATALOG_FAMILY, qualifier);
@@ -308,7 +308,7 @@ public class TestAdmin1 {
     Table ht1 = TEST_UTIL.createTable(table1, HConstants.CATALOG_FAMILY);
     Table ht2 = TEST_UTIL.createTable(table2, HConstants.CATALOG_FAMILY);
     Put put = new Put(row);
-    put.add(HConstants.CATALOG_FAMILY, qualifier, value);
+    put.addColumn(HConstants.CATALOG_FAMILY, qualifier, value);
     ht1.put(put);
     ht2.put(put);
     Get get = new Get(row);
@@ -1187,13 +1187,13 @@ public class TestAdmin1 {
     List<Put> puts = new ArrayList<Put>();
     byte[] qualifier = "c".getBytes();
     Put put = new Put(new byte[]{(byte)'1'});
-    put.add(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, "100".getBytes());
     puts.add(put);
     put = new Put(new byte[]{(byte)'6'});
-    put.add(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, "100".getBytes());
     puts.add(put);
     put = new Put(new byte[]{(byte)'8'});
-    put.add(cf, qualifier, "100".getBytes());
+    put.addColumn(cf, qualifier, "100".getBytes());
     puts.add(put);
     ht.put(puts);
     ht.close();

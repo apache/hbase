@@ -108,15 +108,15 @@ public class TestHTableWrapper {
     table = util.createTable(TEST_TABLE, TEST_FAMILY);
 
     Put puta = new Put(ROW_A);
-    puta.add(TEST_FAMILY, qualifierCol1, bytes1);
+    puta.addColumn(TEST_FAMILY, qualifierCol1, bytes1);
     table.put(puta);
 
     Put putb = new Put(ROW_B);
-    putb.add(TEST_FAMILY, qualifierCol1, bytes2);
+    putb.addColumn(TEST_FAMILY, qualifierCol1, bytes2);
     table.put(putb);
 
     Put putc = new Put(ROW_C);
-    putc.add(TEST_FAMILY, qualifierCol1, bytes3);
+    putc.addColumn(TEST_FAMILY, qualifierCol1, bytes3);
     table.put(putc);
   }
 
@@ -204,7 +204,7 @@ public class TestHTableWrapper {
 
   private void checkPutsAndDeletes() throws IOException {
     // put:
-    Put putD = new Put(ROW_D).add(TEST_FAMILY, qualifierCol1, bytes2);
+    Put putD = new Put(ROW_D).addColumn(TEST_FAMILY, qualifierCol1, bytes2);
     hTableInterface.put(putD);
     checkRowValue(ROW_D, bytes2);
 
@@ -214,8 +214,8 @@ public class TestHTableWrapper {
     checkRowValue(ROW_D, null);
 
     // multiple puts:
-    Put[] puts = new Put[] { new Put(ROW_D).add(TEST_FAMILY, qualifierCol1, bytes2),
-        new Put(ROW_E).add(TEST_FAMILY, qualifierCol1, bytes3) };
+    Put[] puts = new Put[] {new Put(ROW_D).addColumn(TEST_FAMILY, qualifierCol1, bytes2),
+            new Put(ROW_E).addColumn(TEST_FAMILY, qualifierCol1, bytes3)};
     hTableInterface.put(Arrays.asList(puts));
     checkRowsValues(new byte[][] { ROW_D, ROW_E }, new byte[][] { bytes2, bytes3 });
 
@@ -226,7 +226,7 @@ public class TestHTableWrapper {
   }
 
   private void checkCheckAndPut() throws IOException {
-    Put putC = new Put(ROW_C).add(TEST_FAMILY, qualifierCol1, bytes5);
+    Put putC = new Put(ROW_C).addColumn(TEST_FAMILY, qualifierCol1, bytes5);
     assertFalse(hTableInterface.checkAndPut(ROW_C, TEST_FAMILY, qualifierCol1, /* expect */bytes4,
       putC/* newValue */));
     assertTrue(hTableInterface.checkAndPut(ROW_C, TEST_FAMILY, qualifierCol1, /* expect */bytes3,
@@ -242,7 +242,7 @@ public class TestHTableWrapper {
   }
 
   private void checkIncrementColumnValue() throws IOException {
-    hTableInterface.put(new Put(ROW_A).add(TEST_FAMILY, qualifierCol1, Bytes.toBytes(1L)));
+    hTableInterface.put(new Put(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, Bytes.toBytes(1L)));
     checkRowValue(ROW_A, Bytes.toBytes(1L));
 
     final long newVal = hTableInterface
@@ -319,7 +319,7 @@ public class TestHTableWrapper {
   }
 
   private void checkMutateRow() throws IOException {
-    Put put = new Put(ROW_A).add(TEST_FAMILY, qualifierCol1, bytes1);
+    Put put = new Put(ROW_A).addColumn(TEST_FAMILY, qualifierCol1, bytes1);
     RowMutations rowMutations = new RowMutations(ROW_A);
     rowMutations.add(put);
     hTableInterface.mutateRow(rowMutations);

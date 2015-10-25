@@ -130,9 +130,9 @@ public class TestRegionObserverInterface {
         new Boolean[] { false, false, false, false, false, false, false, false });
 
       Put put = new Put(ROW);
-      put.add(A, A, A);
-      put.add(B, B, B);
-      put.add(C, C, C);
+      put.addColumn(A, A, A);
+      put.addColumn(B, B, B);
+      put.addColumn(C, C, C);
       table.put(put);
 
       verifyMethodResult(SimpleRegionObserver.class, new String[] { "hadPreGet", "hadPostGet",
@@ -189,9 +189,9 @@ public class TestRegionObserverInterface {
         tableName,
         new Boolean[] {false, false, false, false, false});
       Put put = new Put(ROW);
-      put.add(A, A, A);
-      put.add(B, B, B);
-      put.add(C, C, C);
+      put.addColumn(A, A, A);
+      put.addColumn(B, B, B);
+      put.addColumn(C, C, C);
 
       Delete delete = new Delete(ROW);
       delete.deleteColumn(A, A);
@@ -248,10 +248,10 @@ public class TestRegionObserverInterface {
         TableName.valueOf(TEST_TABLE.getNameAsString() + ".testCheckAndPutHooks");
     try (Table table = util.createTable(tableName, new byte[][] {A, B, C})) {
       Put p = new Put(Bytes.toBytes(0));
-      p.add(A, A, A);
+      p.addColumn(A, A, A);
       table.put(p);
       p = new Put(Bytes.toBytes(0));
-      p.add(A, A, A);
+      p.addColumn(A, A, A);
       verifyMethodResult(SimpleRegionObserver.class,
           new String[] { "hadPreCheckAndPut", "hadPreCheckAndPutAfterRowLock",
               "hadPostCheckAndPut" }, tableName, new Boolean[] { false, false, false });
@@ -274,7 +274,7 @@ public class TestRegionObserverInterface {
     Table table = util.createTable(tableName, new byte[][] {A, B, C});
     try {
       Put p = new Put(Bytes.toBytes(0));
-      p.add(A, A, A);
+      p.addColumn(A, A, A);
       table.put(p);
       Delete d = new Delete(Bytes.toBytes(0));
       table.delete(d);
@@ -338,7 +338,7 @@ public class TestRegionObserverInterface {
 
     Table table = util.getConnection().getTable(tableName);
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     table.put(put);
 
     Get get = new Get(ROW);
@@ -412,7 +412,7 @@ public class TestRegionObserverInterface {
 
     Table table = util.getConnection().getTable(tableName);
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     table.put(put);
 
     Delete delete = new Delete(ROW);
@@ -522,7 +522,7 @@ public class TestRegionObserverInterface {
       byte[] iBytes = Bytes.toBytes(i);
       Put put = new Put(iBytes);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(A, A, iBytes);
+      put.addColumn(A, A, iBytes);
       table.put(put);
     }
 
@@ -677,9 +677,9 @@ public class TestRegionObserverInterface {
         }
 
         Put put = new Put(ROW);
-        put.add(A, A, A);
-        put.add(B, B, B);
-        put.add(C, C, C);
+        put.addColumn(A, A, A);
+        put.addColumn(B, B, B);
+        put.addColumn(C, C, C);
         table.put(put);
 
         verifyMethodResult(SimpleRegionObserver.Legacy.class,
@@ -729,9 +729,9 @@ public class TestRegionObserverInterface {
       }
 
       Put put = new Put(ROW);
-      put.add(A, A, A);
-      put.add(B, B, B);
-      put.add(C, C, C);
+      put.addColumn(A, A, A);
+      put.addColumn(B, B, B);
+      put.addColumn(C, C, C);
       table.put(put);
 
       cluster.killRegionServer(rs1.getRegionServer().getServerName());

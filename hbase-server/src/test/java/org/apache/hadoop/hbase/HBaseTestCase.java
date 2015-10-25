@@ -328,9 +328,10 @@ public abstract class HBaseTestCase extends TestCase {
               byte[][] split =
                 KeyValue.parseColumn(Bytes.toBytes(sb.toString()));
               if(split.length == 1) {
-                put.add(split[0], new byte[0], t);
+                byte[] qualifier = new byte[0];
+                put.addColumn(split[0], qualifier, t);
               } else {
-                put.add(split[0], split[1], t);
+                put.addColumn(split[0], split[1], t);
               }
               put.setDurability(Durability.SKIP_WAL);
               updater.put(put);

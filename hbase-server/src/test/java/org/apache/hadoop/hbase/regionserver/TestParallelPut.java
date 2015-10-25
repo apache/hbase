@@ -115,7 +115,7 @@ public class TestParallelPut {
     long value = 1L;
 
     Put put = new Put(row);
-    put.add(fam1, qual1, Bytes.toBytes(value));
+    put.addColumn(fam1, qual1, Bytes.toBytes(value));
     region.put(put);
 
     assertGet(this.region, row, fam1, qual1, Bytes.toBytes(value));
@@ -215,7 +215,7 @@ public class TestParallelPut {
         // put the randombytes and verify that we can read it. This is one
         // way of ensuring that rwcc manipulation in HRegion.put() is fine.
         Put put = new Put(rowkey);
-        put.add(fam1, qual1, value);
+        put.addColumn(fam1, qual1, value);
         in[0] = put;
         try {
           OperationStatus[] ret = region.batchMutate(in);

@@ -42,7 +42,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
-
 @Category({MiscTests.class, MediumTests.class})
 public class TestHTraceHooks {
 
@@ -117,7 +116,7 @@ public class TestHTraceHooks {
     assertTrue(spans.size() > 5);
     
     Put put = new Put("row".getBytes());
-    put.add(FAMILY_BYTES, "col".getBytes(), "value".getBytes());
+    put.addColumn(FAMILY_BYTES, "col".getBytes(), "value".getBytes());
 
     TraceScope putSpan = Trace.startSpan("doing put", Sampler.ALWAYS);
     try {

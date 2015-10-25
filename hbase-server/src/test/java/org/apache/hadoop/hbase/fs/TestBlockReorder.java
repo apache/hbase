@@ -318,7 +318,7 @@ public class TestBlockReorder {
 
       // insert one put to ensure a minimal size
       Put p = new Put(sb);
-      p.add(sb, sb, sb);
+      p.addColumn(sb, sb, sb);
       h.put(p);
 
       DirectoryListing dl = dfs.getClient().listPaths(rootDir, HdfsFileStatus.EMPTY_NAME);

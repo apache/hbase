@@ -178,7 +178,7 @@ public class TestRegionObserverScannerOpenHook {
     h.load(EmptyRegionObsever.class, Coprocessor.PRIORITY_USER, conf);
 
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     region.put(put);
 
     Get get = new Get(ROW);
@@ -204,7 +204,7 @@ public class TestRegionObserverScannerOpenHook {
 
     // put a row and flush it to disk
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     region.put(put);
     region.flush(true);
     Get get = new Get(ROW);
@@ -278,7 +278,7 @@ public class TestRegionObserverScannerOpenHook {
 
     // put a row and flush it to disk
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     table.put(put);
 
     HRegionServer rs = UTIL.getRSForFirstRegionInTable(desc.getTableName());
@@ -291,7 +291,7 @@ public class TestRegionObserverScannerOpenHook {
 
     // put another row and flush that too
     put = new Put(Bytes.toBytes("anotherrow"));
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     table.put(put);
     admin.flushRegion(region.getRegionInfo().getRegionName());
 

@@ -183,10 +183,10 @@ public class TestBlockEvictionFromClient {
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
       // data was in memstore so don't expect any changes
@@ -214,7 +214,7 @@ public class TestBlockEvictionFromClient {
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       byte[] data2 = Bytes.add(data, data);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       Result r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
@@ -332,16 +332,16 @@ public class TestBlockEvictionFromClient {
       BlockCache cache = cacheConf.getBlockCache();
 
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
       // flush the data
@@ -389,16 +389,16 @@ public class TestBlockEvictionFromClient {
           regionName);
       BlockCache cache = setCacheProperties(region);
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       for (int i = 1; i < 10; i++) {
         put = new Put(ROW);
-        put.add(FAMILY, Bytes.toBytes("testQualifier" + i), data2);
+        put.addColumn(FAMILY, Bytes.toBytes("testQualifier" + i), data2);
         table.put(put);
         if (i % 2 == 0) {
           region.flush(true);
@@ -406,7 +406,7 @@ public class TestBlockEvictionFromClient {
       }
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
       // flush the data
@@ -483,16 +483,16 @@ public class TestBlockEvictionFromClient {
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       for (int i = 1; i < 10; i++) {
         put = new Put(ROW);
-        put.add(Bytes.toBytes("testFamily" + i), Bytes.toBytes("testQualifier" + i), data2);
+        put.addColumn(Bytes.toBytes("testFamily" + i), Bytes.toBytes("testQualifier" + i), data2);
         table.put(put);
         if (i % 2 == 0) {
           region.flush(true);
@@ -501,7 +501,7 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
       // flush the data
@@ -577,16 +577,16 @@ public class TestBlockEvictionFromClient {
       BlockCache cache = cacheConf.getBlockCache();
 
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
       // flush the data
@@ -656,16 +656,16 @@ public class TestBlockEvictionFromClient {
       BlockCache cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       region.flush(true);
       for (int i = 1; i < 10; i++) {
         put = new Put(ROW);
-        put.add(Bytes.toBytes("testFamily" + i), Bytes.toBytes("testQualifier" + i), data2);
+        put.addColumn(Bytes.toBytes("testFamily" + i), Bytes.toBytes("testQualifier" + i), data2);
         table.put(put);
         if (i % 2 == 0) {
           region.flush(true);
@@ -674,7 +674,7 @@ public class TestBlockEvictionFromClient {
       region.flush(true);
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       region.flush(true);
       // flush the data
@@ -827,10 +827,10 @@ public class TestBlockEvictionFromClient {
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       put = new Put(ROW1);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
       // Should create one Hfile with 2 blocks
@@ -842,7 +842,7 @@ public class TestBlockEvictionFromClient {
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       byte[] data2 = Bytes.add(data, data);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       // flush, one new block
       System.out.println("Flushing cache");
@@ -1042,14 +1042,14 @@ public class TestBlockEvictionFromClient {
 
   private void insertData(HTable table) throws IOException {
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, data);
+    put.addColumn(FAMILY, QUALIFIER, data);
     table.put(put);
     put = new Put(ROW1);
-    put.add(FAMILY, QUALIFIER, data);
+    put.addColumn(FAMILY, QUALIFIER, data);
     table.put(put);
     byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER2, data2);
+    put.addColumn(FAMILY, QUALIFIER2, data2);
     table.put(put);
   }
 

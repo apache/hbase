@@ -1047,7 +1047,7 @@ public class TestHFileOutputFormat2  {
 
       // put some data in it and flush to create a storefile
       Put p = new Put(Bytes.toBytes("test"));
-      p.add(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
+      p.addColumn(FAMILIES[0], Bytes.toBytes("1"), Bytes.toBytes("1"));
       table.put(p);
       admin.flush(TABLE_NAME);
       assertEquals(1, util.countRows(table));

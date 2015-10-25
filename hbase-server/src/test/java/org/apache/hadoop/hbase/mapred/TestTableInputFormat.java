@@ -125,12 +125,12 @@ public class TestTableInputFormat {
     Table table = UTIL.createTable(TableName.valueOf(tableName), families);
     Put p = new Put("aaa".getBytes());
     for (byte[] family : families) {
-      p.add(family, null, "value aaa".getBytes());
+      p.addColumn(family, null, "value aaa".getBytes());
     }
     table.put(p);
     p = new Put("bbb".getBytes());
     for (byte[] family : families) {
-      p.add(family, null, "value bbb".getBytes());
+      p.addColumn(family, null, "value bbb".getBytes());
     }
     table.put(p);
     return table;

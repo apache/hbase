@@ -121,7 +121,7 @@ public class TestTimeRangeMapRed {
       for (Long ts : tsList) {
         Put put = new Put(key.get());
         put.setDurability(Durability.SKIP_WAL);
-        put.add(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
+        put.addColumn(FAMILY_NAME, COLUMN_NAME, ts, Bytes.toBytes(true));
         puts.add(put);
       }
       table.put(puts);
@@ -156,7 +156,7 @@ public class TestTimeRangeMapRed {
     for (Map.Entry<Long, Boolean> entry : TIMESTAMP.entrySet()) {
       Put put = new Put(KEY);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
+      put.addColumn(FAMILY_NAME, COLUMN_NAME, entry.getKey(), Bytes.toBytes(false));
       puts.add(put);
     }
     Table table = UTIL.getConnection().getTable(desc.getTableName());

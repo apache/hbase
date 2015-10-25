@@ -336,7 +336,7 @@ public class TestRegionReplicas {
             while (running.get()) {
               byte[] data = Bytes.toBytes(String.valueOf(key));
               Put put = new Put(data);
-              put.add(f, null, data);
+              put.addColumn(f, null, data);
               table.put(put);
               key++;
               if (key == endKey) key = startKey;

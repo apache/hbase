@@ -110,11 +110,11 @@ public class TestHTableMultiplexer {
       for (int i = 0; i < NUM_REGIONS; i++) {
         byte [] row = startRows[i];
         if (row == null || row.length <= 0) continue;
-        Put put = new Put(row).add(FAMILY, QUALIFIER, VALUE1);
+        Put put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
         success = multiplexer.put(TABLE_1, put);
         assertTrue("multiplexer.put returns", success);
 
-        put = new Put(row).add(FAMILY, QUALIFIER, VALUE1);
+        put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
         success = multiplexer.put(TABLE_2, put);
         assertTrue("multiplexer.put failed", success);
 
@@ -131,7 +131,7 @@ public class TestHTableMultiplexer {
         byte [] row = endRows[i];
         if (row == null || row.length <= 0) continue;
         Put put = new Put(row);
-        put.add(FAMILY, QUALIFIER, VALUE2);
+        put.addColumn(FAMILY, QUALIFIER, VALUE2);
         multiput.add(put);
       }
       failedPuts = multiplexer.put(TABLE_1, multiput);

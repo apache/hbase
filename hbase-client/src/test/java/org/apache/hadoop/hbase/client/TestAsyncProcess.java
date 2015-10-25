@@ -1071,7 +1071,7 @@ public class TestAsyncProcess {
         throw new IllegalArgumentException("unknown " + regCnt);
     }
 
-    p.add(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
+    p.addColumn(DUMMY_BYTES_1, DUMMY_BYTES_1, DUMMY_BYTES_1);
 
     return p;
   }

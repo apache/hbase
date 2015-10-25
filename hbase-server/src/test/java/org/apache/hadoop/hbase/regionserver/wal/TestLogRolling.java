@@ -268,11 +268,11 @@ public class TestLogRolling  {
     for (int i = 0; i < 10; i++) {
       Put put = new Put(Bytes.toBytes("row"
           + String.format("%1$04d", (start + i))));
-      put.add(HConstants.CATALOG_FAMILY, null, value);
+      put.addColumn(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
     }
     Put tmpPut = new Put(Bytes.toBytes("tmprow"));
-    tmpPut.add(HConstants.CATALOG_FAMILY, null, value);
+    tmpPut.addColumn(HConstants.CATALOG_FAMILY, null, value);
     long startTime = System.currentTimeMillis();
     long remaining = timeout;
     while (remaining > 0) {
@@ -631,7 +631,7 @@ public class TestLogRolling  {
 
   private void doPut(Table table, int i) throws IOException {
     Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
-    put.add(HConstants.CATALOG_FAMILY, null, value);
+    put.addColumn(HConstants.CATALOG_FAMILY, null, value);
     table.put(put);
   }
 

@@ -98,7 +98,7 @@ public class TestHBaseTestingUtility {
       Table table2 = htu2.createTable(TABLE_NAME, FAM_NAME);
 
       Put put = new Put(ROW);
-      put.add(FAM_NAME, QUAL_NAME, VALUE);
+      put.addColumn(FAM_NAME, QUAL_NAME, VALUE);
       table1.put(put);
 
       Get get = new Get(ROW);

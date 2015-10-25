@@ -287,13 +287,13 @@ public class TestHRegion {
     byte [] value = Bytes.toBytes(name.getMethodName());
     // Make a random put against our cf.
     Put put = new Put(value);
-    put.add(COLUMN_FAMILY_BYTES, null, value);
+    put.addColumn(COLUMN_FAMILY_BYTES, null, value);
     // First put something in current memstore, which will be in snapshot after flusher.prepare()
     region.put(put);
     StoreFlushContext storeFlushCtx = store.createFlushContext(12345);
     storeFlushCtx.prepare();
     // Second put something in current memstore
-    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
     region.put(put);
     // Close with something in memstore and something in the snapshot.  Make sure all is cleared.
     region.close();
@@ -339,7 +339,7 @@ public class TestHRegion {
     faultyLog.setStoreFlushCtx(store.createFlushContext(12345));
 
     Put put = new Put(value);
-    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
     faultyLog.setFailureType(FaultyFSLog.FailureType.SYNC);
 
     boolean threwIOE = false;
@@ -388,7 +388,7 @@ public class TestHRegion {
     // Put some value and make sure flush could be completed normally
     byte [] value = Bytes.toBytes(name.getMethodName());
     Put put = new Put(value);
-    put.add(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
+    put.addColumn(COLUMN_FAMILY_BYTES, Bytes.toBytes("abc"), value);
     region.put(put);
     long onePutSize = region.getMemstoreSize();
     assertTrue(onePutSize > 0);
@@ -457,7 +457,7 @@ public class TestHRegion {
           Assert.assertEquals(0, size);
           // Put one item into memstore.  Measure the size of one item in memstore.
           Put p1 = new Put(row);
-          p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[])null));
+          p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[]) null));
           region.put(p1);
           final long sizeOfOnePut = region.getMemstoreSize();
           // Fail a flush which means the current memstore will hang out as memstore 'snapshot'.
@@ -556,7 +556,7 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
 
     Put put = new Put(Bytes.toBytes("r1"));
-    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
     region.put(put);
     region.flush(true);
 
@@ -604,10 +604,10 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
 
     Put put = new Put(Bytes.toBytes("r1"));
-    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
     region.put(put);
     put = new Put(Bytes.toBytes("r2"));
-    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
     region.put(put);
     region.flush(true);
 
@@ -853,7 +853,7 @@ public class TestHRegion {
 
       for (long i = minSeqId; i < maxSeqId; i++) {
         Put put = new Put(Bytes.toBytes(i));
-        put.add(family, Bytes.toBytes(i), Bytes.toBytes(i));
+        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
         region.put(put);
         region.flush(true);
       }
@@ -955,7 +955,7 @@ public class TestHRegion {
 
       for (long i = minSeqId; i < maxSeqId; i++) {
         Put put = new Put(Bytes.toBytes(i));
-        put.add(family, Bytes.toBytes(i), Bytes.toBytes(i));
+        put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
         region.put(put);
         region.flush(true);
       }
@@ -1152,7 +1152,7 @@ public class TestHRegion {
       int i = 0;
       Put put = new Put(Bytes.toBytes(i));
       put.setDurability(Durability.SKIP_WAL); // have to skip mocked wal
-      put.add(family, Bytes.toBytes(i), Bytes.toBytes(i));
+      put.addColumn(family, Bytes.toBytes(i), Bytes.toBytes(i));
       region.put(put);
 
       // 1. Test case where START_FLUSH throws exception
@@ -1440,11 +1440,11 @@ public class TestHRegion {
       System.out.println(String.format("Saving row: %s, with value %s", row, value));
       Put put = new Put(Bytes.toBytes(row));
       put.setDurability(Durability.SKIP_WAL);
-      put.add(Bytes.toBytes("trans-blob"), null, Bytes.toBytes("value for blob"));
-      put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
-      put.add(Bytes.toBytes("trans-date"), null, Bytes.toBytes("20090921010101999"));
-      put.add(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes.toBytes(value));
-      put.add(Bytes.toBytes("trans-group"), null, Bytes.toBytes("adhocTransactionGroupId"));
+      put.addColumn(Bytes.toBytes("trans-blob"), null, Bytes.toBytes("value for blob"));
+      put.addColumn(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
+      put.addColumn(Bytes.toBytes("trans-date"), null, Bytes.toBytes("20090921010101999"));
+      put.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes.toBytes(value));
+      put.addColumn(Bytes.toBytes("trans-group"), null, Bytes.toBytes("adhocTransactionGroupId"));
       r.put(put);
     }
   }
@@ -1457,7 +1457,7 @@ public class TestHRegion {
     try {
       Put p = new Put(b.toBytes());
       byte[] cfwithcolon = Bytes.toBytes(COLUMN_FAMILY + ":");
-      p.add(cfwithcolon, cfwithcolon, cfwithcolon);
+      p.addColumn(cfwithcolon, cfwithcolon, cfwithcolon);
       boolean exception = false;
       try {
         this.region.put(p);
@@ -1486,7 +1486,7 @@ public class TestHRegion {
       final Put[] puts = new Put[10];
       for (int i = 0; i < 10; i++) {
         puts[i] = new Put(Bytes.toBytes("row_" + i));
-        puts[i].add(cf, qual, val);
+        puts[i].addColumn(cf, qual, val);
       }
 
       OperationStatus[] codes = this.region.batchMutate(puts);
@@ -1497,7 +1497,7 @@ public class TestHRegion {
       metricsAssertHelper.assertCounter("syncTimeNumOps", syncs + 1, source);
 
       LOG.info("Next a batch put with one invalid family");
-      puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
+      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, val);
       codes = this.region.batchMutate(puts);
       assertEquals(10, codes.length);
       for (int i = 0; i < 10; i++) {
@@ -1526,9 +1526,9 @@ public class TestHRegion {
       final Put[] puts = new Put[10];
       for (int i = 0; i < 10; i++) {
         puts[i] = new Put(Bytes.toBytes("row_" + i));
-        puts[i].add(cf, qual, val);
+        puts[i].addColumn(cf, qual, val);
       }
-      puts[5].add(Bytes.toBytes("BAD_CF"), qual, val);
+      puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, val);
 
       LOG.info("batchPut will have to break into four batches to avoid row locks");
       RowLock rowLock1 = region.getRowLock(Bytes.toBytes("row_2"));
@@ -1633,7 +1633,7 @@ public class TestHRegion {
       final Put[] puts = new Put[10];
       for (int i = 0; i < 10; i++) {
         puts[i] = new Put(Bytes.toBytes("row_" + i), Long.MAX_VALUE - 100);
-        puts[i].add(cf, qual, val);
+        puts[i].addColumn(cf, qual, val);
       }
 
       OperationStatus[] codes = this.region.batchMutate(puts);
@@ -1668,7 +1668,7 @@ public class TestHRegion {
     try {
       // Putting empty data in key
       Put put = new Put(row1);
-      put.add(fam1, qf1, emptyVal);
+      put.addColumn(fam1, qf1, emptyVal);
 
       // checkAndPut with empty value
       boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(
@@ -1677,7 +1677,7 @@ public class TestHRegion {
 
       // Putting data in key
       put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
 
       // checkAndPut with correct value
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(emptyVal),
@@ -1696,7 +1696,7 @@ public class TestHRegion {
       assertFalse(res);
 
       put = new Put(row1);
-      put.add(fam1, qf1, val2);
+      put.addColumn(fam1, qf1, val2);
       // checkAndPut with correct value
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new BinaryComparator(val1),
           put, true);
@@ -1717,7 +1717,7 @@ public class TestHRegion {
 
       // checkAndPut looking for a null value
       put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
 
       res = region
           .checkAndMutate(row1, fam1, qf1, CompareOp.EQUAL, new NullComparator(), put, true);
@@ -1742,7 +1742,7 @@ public class TestHRegion {
     try {
       // Putting data in key
       Put put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
       region.put(put);
 
       // checkAndPut with wrong value
@@ -1775,7 +1775,7 @@ public class TestHRegion {
     try {
       // Putting data in key
       Put put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
       region.put(put);
 
       // checkAndPut with correct value
@@ -1811,7 +1811,7 @@ public class TestHRegion {
     try {
       // Putting val3 in key
       Put put = new Put(row1);
-      put.add(fam1, qf1, val3);
+      put.addColumn(fam1, qf1, val3);
       region.put(put);
 
       // Test CompareOp.LESS: original = val3, compare with val3, fail
@@ -1827,7 +1827,7 @@ public class TestHRegion {
       // Test CompareOp.LESS: original = val3, compare with val2,
       // succeed (now value = val2)
       put = new Put(row1);
-      put.add(fam1, qf1, val2);
+      put.addColumn(fam1, qf1, val2);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS,
           new BinaryComparator(val2), put, true);
       assertEquals(true, res);
@@ -1846,7 +1846,7 @@ public class TestHRegion {
       // Test CompareOp.LESS_OR_EQUAL: original = val2, compare with val1,
       // succeed (now value = val3)
       put = new Put(row1);
-      put.add(fam1, qf1, val3);
+      put.addColumn(fam1, qf1, val3);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.LESS_OR_EQUAL,
           new BinaryComparator(val1), put, true);
       assertEquals(true, res);
@@ -1864,7 +1864,7 @@ public class TestHRegion {
       // Test CompareOp.GREATER: original = val3, compare with val4,
       // succeed (now value = val2)
       put = new Put(row1);
-      put.add(fam1, qf1, val2);
+      put.addColumn(fam1, qf1, val2);
       res = region.checkAndMutate(row1, fam1, qf1, CompareOp.GREATER,
           new BinaryComparator(val4), put, true);
       assertEquals(true, res);
@@ -1907,7 +1907,7 @@ public class TestHRegion {
     try {
       // Putting data in the key to check
       Put put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
       region.put(put);
 
       // Creating put to add
@@ -1943,7 +1943,7 @@ public class TestHRegion {
     this.region = initHRegion(tableName, this.getName(), CONF, COLUMNS);
     try {
       Put put = new Put(row2);
-      put.add(fam1, qual1, value1);
+      put.addColumn(fam1, qual1, value1);
       try {
         region.checkAndMutate(row, fam1, qual1, CompareOp.EQUAL,
             new BinaryComparator(value2), put, false);
@@ -1978,16 +1978,16 @@ public class TestHRegion {
     try {
       // Put content
       Put put = new Put(row1);
-      put.add(fam1, qf1, val1);
+      put.addColumn(fam1, qf1, val1);
       region.put(put);
       Threads.sleep(2);
 
       put = new Put(row1);
-      put.add(fam1, qf1, val2);
-      put.add(fam2, qf1, val3);
-      put.add(fam2, qf2, val2);
-      put.add(fam2, qf3, val1);
-      put.add(fam1, qf3, val1);
+      put.addColumn(fam1, qf1, val2);
+      put.addColumn(fam2, qf1, val3);
+      put.addColumn(fam2, qf2, val2);
+      put.addColumn(fam2, qf3, val1);
+      put.addColumn(fam1, qf3, val1);
       region.put(put);
 
       // Multi-column delete
@@ -2045,8 +2045,8 @@ public class TestHRegion {
     byte[] value = Bytes.toBytes("value");
 
     Put put = new Put(row1);
-    put.add(fam1, qual, 1, value);
-    put.add(fam1, qual, 2, value);
+    put.addColumn(fam1, qual, (long) 1, value);
+    put.addColumn(fam1, qual, (long) 2, value);
 
     String method = this.getName();
     this.region = initHRegion(tableName, method, CONF, fam1);
@@ -2130,15 +2130,15 @@ public class TestHRegion {
 
       // add some data:
       Put put = new Put(row);
-      put.add(fam, splitA, Bytes.toBytes("reference_A"));
+      put.addColumn(fam, splitA, Bytes.toBytes("reference_A"));
       region.put(put);
 
       put = new Put(row);
-      put.add(fam, splitB, Bytes.toBytes("reference_B"));
+      put.addColumn(fam, splitB, Bytes.toBytes("reference_B"));
       region.put(put);
 
       put = new Put(row);
-      put.add(fam, serverinfo, Bytes.toBytes("ip_address"));
+      put.addColumn(fam, serverinfo, Bytes.toBytes("ip_address"));
       region.put(put);
 
       // ok now delete a split:
@@ -2161,7 +2161,7 @@ public class TestHRegion {
 
       // Assert that after a delete, I can put.
       put = new Put(row);
-      put.add(fam, splitA, Bytes.toBytes("reference_A"));
+      put.addColumn(fam, splitA, Bytes.toBytes("reference_A"));
       region.put(put);
       get = new Get(row);
       result = region.get(get);
@@ -2172,7 +2172,7 @@ public class TestHRegion {
       region.delete(delete);
       assertEquals(0, region.get(get).size());
 
-      region.put(new Put(row).add(fam, splitA, Bytes.toBytes("reference_A")));
+      region.put(new Put(row).addColumn(fam, splitA, Bytes.toBytes("reference_A")));
       result = region.get(get);
       assertEquals(1, result.size());
     } finally {
@@ -2194,7 +2194,7 @@ public class TestHRegion {
 
       // add data in the far future
       Put put = new Put(row);
-      put.add(fam, serverinfo, HConstants.LATEST_TIMESTAMP - 5, Bytes.toBytes("value"));
+      put.addColumn(fam, serverinfo, HConstants.LATEST_TIMESTAMP - 5, Bytes.toBytes("value"));
       region.put(put);
 
       // now delete something in the present
@@ -2237,7 +2237,7 @@ public class TestHRegion {
 
       // add data with LATEST_TIMESTAMP, put without WAL
       Put put = new Put(row);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
       region.put(put);
 
       // Make sure it shows up with an actual timestamp
@@ -2253,7 +2253,7 @@ public class TestHRegion {
       // code paths, so check both)
       row = Bytes.toBytes("row2");
       put = new Put(row);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, Bytes.toBytes("value"));
       region.put(put);
 
       // Make sure it shows up with an actual timestamp
@@ -2289,10 +2289,10 @@ public class TestHRegion {
     try {
       try {
         // no TS specified == use latest. should not error
-        region.put(new Put(row).add(fam, Bytes.toBytes("qual"), Bytes.toBytes("value")));
+        region.put(new Put(row).addColumn(fam, Bytes.toBytes("qual"), Bytes.toBytes("value")));
         // TS out of range. should error
-        region.put(new Put(row).add(fam, Bytes.toBytes("qual"), System.currentTimeMillis() + 2000,
-            Bytes.toBytes("value")));
+        region.put(new Put(row).addColumn(fam, Bytes.toBytes("qual"),
+            System.currentTimeMillis() + 2000, Bytes.toBytes("value")));
         fail("Expected IOE for TS out of configured timerange");
       } catch (FailedSanityCheckException ioe) {
         LOG.debug("Received expected exception", ioe);
@@ -2323,12 +2323,12 @@ public class TestHRegion {
 
       // now create data.
       Put put = new Put(rowA);
-      put.add(fam2, null, value);
+      put.addColumn(fam2, null, value);
       region.put(put);
 
       put = new Put(rowB);
-      put.add(fam1, null, value);
-      put.add(fam2, null, value);
+      put.addColumn(fam1, null, value);
+      put.addColumn(fam2, null, value);
       region.put(put);
 
       Scan scan = new Scan();
@@ -2367,7 +2367,7 @@ public class TestHRegion {
     try {
       EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
       Put put = new Put(row);
-      put.add(fam1, qual1, value1);
+      put.addColumn(fam1, qual1, value1);
       region.put(put);
 
       // now delete the value:
@@ -2375,7 +2375,7 @@ public class TestHRegion {
 
       // ok put data:
       put = new Put(row);
-      put.add(fam1, qual1, value2);
+      put.addColumn(fam1, qual1, value2);
       region.put(put);
 
       // ok get:
@@ -2493,11 +2493,11 @@ public class TestHRegion {
     try {
       // Add to memstore
       Put put = new Put(row1);
-      put.add(fam1, col1, null);
-      put.add(fam1, col2, null);
-      put.add(fam1, col3, null);
-      put.add(fam1, col4, null);
-      put.add(fam1, col5, null);
+      put.addColumn(fam1, col1, null);
+      put.addColumn(fam1, col2, null);
+      put.addColumn(fam1, col3, null);
+      put.addColumn(fam1, col4, null);
+      put.addColumn(fam1, col5, null);
       region.put(put);
 
       Get get = new Get(row1);
@@ -2708,10 +2708,10 @@ public class TestHRegion {
 
       // Putting data in Region
       Put put = new Put(row1);
-      put.add(fam1, null, null);
-      put.add(fam2, null, null);
-      put.add(fam3, null, null);
-      put.add(fam4, null, null);
+      put.addColumn(fam1, null, null);
+      put.addColumn(fam2, null, null);
+      put.addColumn(fam3, null, null);
+      put.addColumn(fam4, null, null);
       region.put(put);
 
       Scan scan = null;
@@ -2791,17 +2791,17 @@ public class TestHRegion {
       // Putting data in Region
       Put put = null;
       put = new Put(row1);
-      put.add(fam1, (byte[]) null, ts, null);
-      put.add(fam2, (byte[]) null, ts, null);
-      put.add(fam3, (byte[]) null, ts, null);
-      put.add(fam4, (byte[]) null, ts, null);
+      put.addColumn(fam1, (byte[]) null, ts, null);
+      put.addColumn(fam2, (byte[]) null, ts, null);
+      put.addColumn(fam3, (byte[]) null, ts, null);
+      put.addColumn(fam4, (byte[]) null, ts, null);
       region.put(put);
 
       put = new Put(row2);
-      put.add(fam1, (byte[]) null, ts, null);
-      put.add(fam2, (byte[]) null, ts, null);
-      put.add(fam3, (byte[]) null, ts, null);
-      put.add(fam4, (byte[]) null, ts, null);
+      put.addColumn(fam1, (byte[]) null, ts, null);
+      put.addColumn(fam2, (byte[]) null, ts, null);
+      put.addColumn(fam3, (byte[]) null, ts, null);
+      put.addColumn(fam4, (byte[]) null, ts, null);
       region.put(put);
 
       Scan scan = new Scan();
@@ -3179,23 +3179,23 @@ public class TestHRegion {
       byte[] col2 = Bytes.toBytes("Pub222");
 
       Put put = new Put(row1);
-      put.add(family, col1, Bytes.toBytes(10L));
+      put.addColumn(family, col1, Bytes.toBytes(10L));
       region.put(put);
 
       put = new Put(row2);
-      put.add(family, col1, Bytes.toBytes(15L));
+      put.addColumn(family, col1, Bytes.toBytes(15L));
       region.put(put);
 
       put = new Put(row3);
-      put.add(family, col2, Bytes.toBytes(20L));
+      put.addColumn(family, col2, Bytes.toBytes(20L));
       region.put(put);
 
       put = new Put(row4);
-      put.add(family, col2, Bytes.toBytes(30L));
+      put.addColumn(family, col2, Bytes.toBytes(30L));
       region.put(put);
 
       put = new Put(row5);
-      put.add(family, col1, Bytes.toBytes(40L));
+      put.addColumn(family, col1, Bytes.toBytes(40L));
       region.put(put);
 
       Scan scan = new Scan(row3, row4);
@@ -3314,19 +3314,19 @@ public class TestHRegion {
       byte[] filtered_val = Bytes.toBytes(3);
 
       Put put = new Put(row1);
-      put.add(cf_essential, col_normal, Bytes.toBytes(1));
-      put.add(cf_joined, col_alpha, Bytes.toBytes(1));
+      put.addColumn(cf_essential, col_normal, Bytes.toBytes(1));
+      put.addColumn(cf_joined, col_alpha, Bytes.toBytes(1));
       region.put(put);
 
       put = new Put(row2);
-      put.add(cf_essential, col_alpha, Bytes.toBytes(2));
-      put.add(cf_joined, col_normal, Bytes.toBytes(2));
-      put.add(cf_alpha, col_alpha, Bytes.toBytes(2));
+      put.addColumn(cf_essential, col_alpha, Bytes.toBytes(2));
+      put.addColumn(cf_joined, col_normal, Bytes.toBytes(2));
+      put.addColumn(cf_alpha, col_alpha, Bytes.toBytes(2));
       region.put(put);
 
       put = new Put(row3);
-      put.add(cf_essential, col_normal, filtered_val);
-      put.add(cf_joined, col_normal, filtered_val);
+      put.addColumn(cf_essential, col_normal, filtered_val);
+      put.addColumn(cf_joined, col_normal, filtered_val);
       region.put(put);
 
       // Check two things:
@@ -3379,11 +3379,11 @@ public class TestHRegion {
 
       for (int i = 0; i < 10; i++) {
         put = new Put(Bytes.toBytes("r" + Integer.toString(i)));
-        put.add(cf_first, col_a, Bytes.toBytes(i));
+        put.addColumn(cf_first, col_a, Bytes.toBytes(i));
         if (i < 5) {
-          put.add(cf_first, col_b, Bytes.toBytes(i));
-          put.add(cf_second, col_a, Bytes.toBytes(i));
-          put.add(cf_second, col_b, Bytes.toBytes(i));
+          put.addColumn(cf_first, col_b, Bytes.toBytes(i));
+          put.addColumn(cf_second, col_a, Bytes.toBytes(i));
+          put.addColumn(cf_second, col_b, Bytes.toBytes(i));
         }
         region.put(put);
       }
@@ -3717,7 +3717,7 @@ public class TestHRegion {
       for (long i = 0; i < numRows; i++) {
         Put put = new Put(Bytes.toBytes(i));
         put.setDurability(Durability.SKIP_WAL);
-        put.add(family, qual1, Bytes.toBytes(i % 10));
+        put.addColumn(family, qual1, Bytes.toBytes(i % 10));
         region.put(put);
 
         if (i != 0 && i % compactInterval == 0) {
@@ -3951,7 +3951,7 @@ public class TestHRegion {
             byte[] value = Bytes.toBytes(String.valueOf(numPutsFinished));
             for (byte[] family : families) {
               for (byte[] qualifier : qualifiers) {
-                put.add(family, qualifier, (long) numPutsFinished, value);
+                put.addColumn(family, qualifier, (long) numPutsFinished, value);
               }
             }
             region.put(put);
@@ -4128,7 +4128,7 @@ public class TestHRegion {
     this.region = initHRegion(tableName, method, CONF, family);
     try {
       Put put = new Put(Bytes.toBytes(1L));
-      put.add(family, qual1, 1L, Bytes.toBytes(1L));
+      put.addColumn(family, qual1, 1L, Bytes.toBytes(1L));
       region.put(put);
 
       region.flush(true);
@@ -4137,7 +4137,7 @@ public class TestHRegion {
       region.delete(delete);
 
       put = new Put(Bytes.toBytes(2L));
-      put.add(family, qual1, 2L, Bytes.toBytes(2L));
+      put.addColumn(family, qual1, 2L, Bytes.toBytes(2L));
       region.put(put);
 
       Scan idxScan = new Scan();
@@ -4185,7 +4185,8 @@ public class TestHRegion {
           for (int j = 0; j < num_unique_rows; j++) {
             Put put = new Put(Bytes.toBytes("row" + j));
             put.setDurability(Durability.SKIP_WAL);
-            put.add(fam1, qf1, version++, val1);
+            long ts = version++;
+            put.addColumn(fam1, qf1, ts, val1);
             region.put(put);
           }
         }
@@ -4238,7 +4239,7 @@ public class TestHRegion {
       Put put = new Put(row);
       put.setDurability(Durability.SKIP_WAL);
       for (long idx = 1; idx <= 4; idx++) {
-        put.add(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
+        put.addColumn(FAMILY, column, idx, Bytes.toBytes("value-version-" + idx));
       }
       region.put(put);
 
@@ -4285,7 +4286,7 @@ public class TestHRegion {
       byte col[] = Bytes.toBytes("col1");
 
       Put put = new Put(row);
-      put.add(familyName, col, 1, Bytes.toBytes("SomeRandomValue"));
+      put.addColumn(familyName, col, (long) 1, Bytes.toBytes("SomeRandomValue"));
       region.put(put);
       region.flush(true);
 
@@ -4332,8 +4333,8 @@ public class TestHRegion {
       byte col[] = Bytes.toBytes("col1");
 
       Put put = new Put(row);
-      put.add(fam1, col, 1, Bytes.toBytes("test1"));
-      put.add(fam2, col, 1, Bytes.toBytes("test2"));
+      put.addColumn(fam1, col, (long) 1, Bytes.toBytes("test1"));
+      put.addColumn(fam2, col, (long) 1, Bytes.toBytes("test2"));
       ht.put(put);
 
       HRegion firstRegion = htu.getHBaseCluster().getRegions(TableName.valueOf(this.getName()))
@@ -4662,7 +4663,7 @@ public class TestHRegion {
 
     put = new Put(row);
     value = Bytes.toBytes("value0");
-    put.add(family, qualifier, 1234567l, value);
+    put.addColumn(family, qualifier, 1234567l, value);
     region.put(put);
     get = new Get(row);
     get.addColumn(family, qualifier);
@@ -4683,7 +4684,7 @@ public class TestHRegion {
 
     put = new Put(row);
     value = Bytes.toBytes("value1");
-    put.add(family, qualifier, 1234567l, value);
+    put.addColumn(family, qualifier, 1234567l, value);
     region.put(put);
     get = new Get(row);
     get.addColumn(family, qualifier);
@@ -4771,7 +4772,7 @@ public class TestHRegion {
         new byte[][] { family });
 
     Put put = new Put(Bytes.toBytes("r1"));
-    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes("v1"));
     put.setDurability(mutationDurability);
     region.put(put);
 
@@ -4987,7 +4988,7 @@ public class TestHRegion {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(durability);
       for (byte[] family : families) {
-        put.add(family, qf, null);
+        put.addColumn(family, qf, null);
       }
       region.put(put);
     }
@@ -5081,7 +5082,7 @@ public class TestHRegion {
 
     // Flush enough files to get up to the threshold, doesn't need compactions
     for (int i = 0; i < 2; i++) {
-      Put put = new Put(tableName.toBytes()).add(family, family, tableName.toBytes());
+      Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
       region.put(put);
       fr = region.flush(true);
       assertTrue(fr.isFlushSucceeded());
@@ -5090,7 +5091,7 @@ public class TestHRegion {
 
     // Two flushes after the threshold, compactions are needed
     for (int i = 0; i < 2; i++) {
-      Put put = new Put(tableName.toBytes()).add(family, family, tableName.toBytes());
+      Put put = new Put(tableName.toBytes()).addColumn(family, family, tableName.toBytes());
       region.put(put);
       fr = region.flush(true);
       assertTrue(fr.isFlushSucceeded());
@@ -5793,11 +5794,11 @@ public class TestHRegion {
     try {
       // setup with one storefile and one memstore, to create scanner and get an earlier readPt
       Put put = new Put(Bytes.toBytes("19998"));
-      put.add(cf1, col, Bytes.toBytes("val"));
+      put.addColumn(cf1, col, Bytes.toBytes("val"));
       region.put(put);
       region.flushcache(true, true);
       Put put2 = new Put(Bytes.toBytes("19997"));
-      put2.add(cf1, col, Bytes.toBytes("val"));
+      put2.addColumn(cf1, col, Bytes.toBytes("val"));
       region.put(put2);
 
       Scan scan = new Scan(Bytes.toBytes("19998"));
@@ -5808,7 +5809,7 @@ public class TestHRegion {
       // to check StoreFileScanner.seekToPreviousRow
       for (int i = 10000; i < 20000; i++) {
         Put p = new Put(Bytes.toBytes(""+i));
-        p.add(cf1, col, Bytes.toBytes(""+i));
+        p.addColumn(cf1, col, Bytes.toBytes("" + i));
         region.put(p);
       }
       region.flushcache(true, true);
@@ -5817,7 +5818,7 @@ public class TestHRegion {
       // to check MemStoreScanner.seekToPreviousRow
       for (int i = 10000; i < 20000; i++) {
         Put p = new Put(Bytes.toBytes(""+i));
-        p.add(cf1, col, Bytes.toBytes(""+i));
+        p.addColumn(cf1, col, Bytes.toBytes("" + i));
         region.put(p);
       }
 
@@ -5944,7 +5945,7 @@ public class TestHRegion {
     Assert.assertEquals(0L, region.getWriteRequestsCount());
 
     Put put = new Put(row);
-    put.add(fam, fam, fam);
+    put.addColumn(fam, fam, fam);
 
     Assert.assertEquals(0L, region.getWriteRequestsCount());
     region.put(put);
@@ -5981,7 +5982,7 @@ public class TestHRegion {
     assertNotNull(region);
 
     // create a file in fam1 for the region before opening in OpenRegionHandler
-    region.put(new Put(Bytes.toBytes("a")).add(fam1, fam1, fam1));
+    region.put(new Put(Bytes.toBytes("a")).addColumn(fam1, fam1, fam1));
     region.flush(true);
     HBaseTestingUtility.closeRegionAndWAL(region);
 
@@ -6086,7 +6087,7 @@ public class TestHRegion {
     assertNotNull(region);
 
     // create a file in fam1 for the region before opening in OpenRegionHandler
-    region.put(new Put(Bytes.toBytes("a")).add(fam1, fam1, fam1));
+    region.put(new Put(Bytes.toBytes("a")).addColumn(fam1, fam1, fam1));
     region.flush(true);
     HBaseTestingUtility.closeRegionAndWAL(region);
 
@@ -6319,14 +6320,14 @@ public class TestHRegion {
           // TTL tags specify ts in milliseconds
           new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire after 10 seconds via family setting
-      region.put(new Put(row).add(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q2, now, HConstants.EMPTY_BYTE_ARRAY));
       // Add a cell that will expire in 15 seconds via cell TTL
       region.put(new Put(row).add(new KeyValue(row, fam1, q3, now + 10000 - 1,
         HConstants.EMPTY_BYTE_ARRAY, new Tag[] {
           // TTL tags specify ts in milliseconds
           new Tag(TagType.TTL_TAG_TYPE, Bytes.toBytes(5000L)) } )));
       // Add a cell that will expire in 20 seconds via family setting
-      region.put(new Put(row).add(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
+      region.put(new Put(row).addColumn(fam1, q4, now + 10000 - 1, HConstants.EMPTY_BYTE_ARRAY));
 
       // Flush so we are sure store scanning gets this right
       region.flush(true);
@@ -6377,7 +6378,7 @@ public class TestHRegion {
       // Fun with disappearing increments
 
       // Start at 1
-      region.put(new Put(row).add(fam1, q1, Bytes.toBytes(1L)));
+      region.put(new Put(row).addColumn(fam1, q1, Bytes.toBytes(1L)));
       r = region.get(new Get(row));
       byte[] val = r.getValue(fam1, q1);
       assertNotNull(val);

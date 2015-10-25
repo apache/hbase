@@ -329,11 +329,11 @@ public class SplitTransactionImpl implements SplitTransaction {
 
   @VisibleForTesting
   Put addLocation(final Put p, final ServerName sn, long openSeqNum) {
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
-      .toBytes(sn.getHostAndPort()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
-      .getStartcode()));
-    p.add(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes
+            .toBytes(sn.getHostAndPort()));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(sn
+            .getStartcode()));
+    p.addColumn(HConstants.CATALOG_FAMILY, HConstants.SEQNUM_QUALIFIER, Bytes.toBytes(openSeqNum));
     return p;
   }
 

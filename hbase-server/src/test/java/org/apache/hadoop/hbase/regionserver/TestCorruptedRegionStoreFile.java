@@ -88,7 +88,7 @@ public class TestCorruptedRegionStoreFile {
       while (rowCount < NUM_ROWS) {
         Put put = new Put(Bytes.toBytes(String.format("%010d", rowCount)));
         put.setDurability(Durability.SKIP_WAL);
-        put.add(FAMILY_NAME, q, value);
+        put.addColumn(FAMILY_NAME, q, value);
         table.put(put);
 
         if ((rowCount++ % ROW_PER_FILE) == 0) {

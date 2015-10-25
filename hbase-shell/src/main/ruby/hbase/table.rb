@@ -152,9 +152,9 @@ EOF
         timestamp = nil
       end
       if timestamp
-        p.add(family, qualifier, timestamp, value.to_s.to_java_bytes)
+        p.addColumn(family, qualifier, timestamp, value.to_s.to_java_bytes)
       else
-        p.add(family, qualifier, value.to_s.to_java_bytes)
+        p.addColumn(family, qualifier, value.to_s.to_java_bytes)
       end
       @table.put(p)
     end

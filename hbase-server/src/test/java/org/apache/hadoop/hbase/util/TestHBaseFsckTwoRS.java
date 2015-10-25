@@ -363,7 +363,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
       assertNotNull(serverName);
       try (Table meta = connection.getTable(TableName.META_TABLE_NAME, tableExecutorService)) {
         Put put = new Put(regionName);
-        put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
             Bytes.toBytes(serverName.getHostAndPort()));
         meta.put(put);
       }
@@ -432,9 +432,9 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
           startCode != sn.getStartcode()) {
         Put put = new Put(res.getRow());
         put.setDurability(Durability.SKIP_WAL);
-        put.add(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+        put.addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
             Bytes.toBytes(sn.getHostAndPort()));
-        put.add(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+        put.addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
             Bytes.toBytes(sn.getStartcode()));
         meta.put(put);
         hri = MetaTableAccessor.getHRegionInfo(res);

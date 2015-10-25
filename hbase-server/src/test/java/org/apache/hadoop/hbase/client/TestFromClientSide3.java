@@ -109,7 +109,7 @@ public class TestFromClientSide3 {
     for (int i = 0; i < nPuts; i++) {
       byte[] qualifier = Bytes.toBytes(random.nextInt());
       byte[] value = Bytes.toBytes(random.nextInt());
-      put.add(family, qualifier, value);
+      put.addColumn(family, qualifier, value);
     }
     table.put(put);
   }
@@ -274,7 +274,7 @@ public class TestFromClientSide3 {
       actions.add(put1);
       
       Put put2 = new Put(ANOTHERROW);
-      put2.add(FAMILY, QUALIFIER, VALUE);
+      put2.addColumn(FAMILY, QUALIFIER, VALUE);
       actions.add(put2);
       
       table.batch(actions, results);
@@ -294,7 +294,7 @@ public class TestFromClientSide3 {
           new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
 
     Get get = new Get(ROW);
 
@@ -312,7 +312,7 @@ public class TestFromClientSide3 {
         "testHTableExistsMethodSingleRegionMultipleGets"), new byte[][] { FAMILY });
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
     List<Get> gets = new ArrayList<Get>();
@@ -406,7 +406,7 @@ public class TestFromClientSide3 {
       TableName.valueOf("testHTableExistsMethodMultipleRegionsMultipleGets"), 
       new byte[][] { FAMILY }, 1, new byte[] { 0x00 }, new byte[] { (byte) 0xff }, 255);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put (put);
 
     List<Get> gets = new ArrayList<Get>();
@@ -424,7 +424,7 @@ public class TestFromClientSide3 {
 
     // Test with the first region.
     put = new Put(new byte[] { 0x00 });
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
     gets = new ArrayList<Get>();
@@ -436,7 +436,7 @@ public class TestFromClientSide3 {
 
     // Test with the last region
     put = new Put(new byte[] { (byte) 0xff, (byte) 0xff });
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
     gets = new ArrayList<Get>();
@@ -459,7 +459,7 @@ public class TestFromClientSide3 {
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
 
     Put put = new Put(ROW_BYTES);
-    put.add(FAMILY, COL_QUAL, VAL_BYTES);
+    put.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(put);
 
     //Try getting the row with an empty row key

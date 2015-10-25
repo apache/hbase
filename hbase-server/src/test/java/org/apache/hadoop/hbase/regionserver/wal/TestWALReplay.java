@@ -177,7 +177,7 @@ public class TestWALReplay {
     TEST_UTIL.createTable(tableName, familys);
     Table htable = TEST_UTIL.getConnection().getTable(tableName);
     Put put = new Put(Bytes.toBytes("r1"));
-    put.add(family1, qualifier, value);
+    put.addColumn(family1, qualifier, value);
     htable.put(put);
     ResultScanner resultScanner = htable.getScanner(new Scan());
     int count = 0;
@@ -353,7 +353,7 @@ public class TestWALReplay {
 
     // Add an edit so something in the WAL
     byte [] row = tableName.getName();
-    region.put((new Put(row)).add(family, family, family));
+    region.put((new Put(row)).addColumn(family, family, family));
     wal.sync();
     final int rowsInsertedCount = 11;
 
@@ -412,7 +412,7 @@ public class TestWALReplay {
     // Add an edit so something in the WAL
     byte [] row = tableName.getName();
     byte [] family = htd.getFamilies().iterator().next().getName();
-    region.put((new Put(row)).add(family, family, family));
+    region.put((new Put(row)).addColumn(family, family, family));
     wal.sync();
 
     List <Pair<byte[],String>>  hfs= new ArrayList<Pair<byte[],String>>(1);
@@ -686,7 +686,7 @@ public class TestWALReplay {
         htd.getFamilies());
     for (int i = 0; i < writtenRowCount; i++) {
       Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
-      put.add(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
+      put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
           Bytes.toBytes("val"));
       region.put(put);
     }
@@ -712,7 +712,7 @@ public class TestWALReplay {
     int moreRow = 10;
     for (int i = writtenRowCount; i < writtenRowCount + moreRow; i++) {
       Put put = new Put(Bytes.toBytes(tableName + Integer.toString(i)));
-      put.add(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
+      put.addColumn(families.get(i % families.size()).getName(), Bytes.toBytes("q"),
           Bytes.toBytes("val"));
       region.put(put);
     }
@@ -1008,7 +1008,7 @@ public class TestWALReplay {
     for (int j = 0; j < count; j++) {
       byte[] qualifier = Bytes.toBytes(qualifierPrefix + Integer.toString(j));
       Put p = new Put(rowName);
-      p.add(family, qualifier, ee.currentTime(), rowName);
+      p.addColumn(family, qualifier, ee.currentTime(), rowName);
       r.put(p);
       puts.add(p);
     }

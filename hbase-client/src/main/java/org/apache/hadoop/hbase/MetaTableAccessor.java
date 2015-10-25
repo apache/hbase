@@ -1713,7 +1713,7 @@ public class MetaTableAccessor {
   public static Put makePutFromTableState(TableState state) {
     long time = EnvironmentEdgeManager.currentTime();
     Put put = new Put(state.getTableName().getName(), time);
-    put.add(getTableFamily(), getStateColumn(), state.convert().toByteArray());
+    put.addColumn(getTableFamily(), getStateColumn(), state.convert().toByteArray());
     return put;
   }
 

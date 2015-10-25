@@ -71,7 +71,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -172,14 +171,14 @@ public class TestImportExport {
     String EXPORT_TABLE = "exportSimpleCase";
     Table t = UTIL.createTable(TableName.valueOf(EXPORT_TABLE), FAMILYA, 3);
     Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now+1, QUAL);
-    p.add(FAMILYA, QUAL, now+2, QUAL);
+    p.addColumn(FAMILYA, QUAL, now, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
     t.put(p);
     p = new Put(ROW2);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now+1, QUAL);
-    p.add(FAMILYA, QUAL, now+2, QUAL);
+    p.addColumn(FAMILYA, QUAL, now, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
     t.put(p);
 
     String[] args = new String[] {
@@ -272,12 +271,12 @@ public class TestImportExport {
      Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now+1, QUAL);
-    p.add(FAMILYA, QUAL, now+2, QUAL);
-    p.add(FAMILYA, QUAL, now+3, QUAL);
-    p.add(FAMILYA, QUAL, now+4, QUAL);
-    t.put(p);
+     p.addColumn(FAMILYA, QUAL, now, QUAL);
+     p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+     p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+     p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
+     p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
+     t.put(p);
 
     String[] args = new String[] {
         "-D" + Export.EXPORT_BATCHING + "=" + EXPORT_BATCH_SIZE,  // added scanner batching arg.
@@ -303,11 +302,11 @@ public class TestImportExport {
     Table t = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
-    p.add(FAMILYA, QUAL, now+1, QUAL);
-    p.add(FAMILYA, QUAL, now+2, QUAL);
-    p.add(FAMILYA, QUAL, now+3, QUAL);
-    p.add(FAMILYA, QUAL, now+4, QUAL);
+    p.addColumn(FAMILYA, QUAL, now, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 3, QUAL);
+    p.addColumn(FAMILYA, QUAL, now + 4, QUAL);
     t.put(p);
 
     Delete d = new Delete(ROW1, now+3);
@@ -371,7 +370,7 @@ public class TestImportExport {
 
     //Add first version of QUAL
     Put p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now, QUAL);
+    p.addColumn(FAMILYA, QUAL, now, QUAL);
     exportT.put(p);
 
     //Add Delete family marker
@@ -380,7 +379,7 @@ public class TestImportExport {
 
     //Add second version of QUAL
     p = new Put(ROW1);
-    p.add(FAMILYA, QUAL, now+5, "s".getBytes());
+    p.addColumn(FAMILYA, QUAL, now + 5, "s".getBytes());
     exportT.put(p);
 
     //Add second Delete family marker
@@ -447,15 +446,15 @@ public class TestImportExport {
     Table exportTable = UTIL.getConnection().getTable(desc.getTableName());
 
     Put p1 = new Put(ROW1);
-    p1.add(FAMILYA, QUAL, now, QUAL);
-    p1.add(FAMILYA, QUAL, now + 1, QUAL);
-    p1.add(FAMILYA, QUAL, now + 2, QUAL);
-    p1.add(FAMILYA, QUAL, now + 3, QUAL);
-    p1.add(FAMILYA, QUAL, now + 4, QUAL);
+    p1.addColumn(FAMILYA, QUAL, now, QUAL);
+    p1.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    p1.addColumn(FAMILYA, QUAL, now + 2, QUAL);
+    p1.addColumn(FAMILYA, QUAL, now + 3, QUAL);
+    p1.addColumn(FAMILYA, QUAL, now + 4, QUAL);
 
     // Having another row would actually test the filter.
     Put p2 = new Put(ROW2);
-    p2.add(FAMILYA, QUAL, now, QUAL);
+    p2.addColumn(FAMILYA, QUAL, now, QUAL);
 
     exportTable.put(Arrays.asList(p1, p2));
 
@@ -639,15 +638,15 @@ public class TestImportExport {
 
     // Insert some data
     Put put = new Put(ROW1);
-    put.add(FAMILYA, QUAL, now, QUAL);
-    put.add(FAMILYA, QUAL, now + 1, QUAL);
-    put.add(FAMILYA, QUAL, now + 2, QUAL);
+    put.addColumn(FAMILYA, QUAL, now, QUAL);
+    put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
     exportTable.put(put);
 
     put = new Put(ROW2);
-    put.add(FAMILYA, QUAL, now, QUAL);
-    put.add(FAMILYA, QUAL, now + 1, QUAL);
-    put.add(FAMILYA, QUAL, now + 2, QUAL);
+    put.addColumn(FAMILYA, QUAL, now, QUAL);
+    put.addColumn(FAMILYA, QUAL, now + 1, QUAL);
+    put.addColumn(FAMILYA, QUAL, now + 2, QUAL);
     exportTable.put(put);
 
     // Run the export

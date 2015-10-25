@@ -213,10 +213,10 @@ public class TestMultiParallel {
 
     List<Row> actions = new ArrayList<Row>();
     Put p = new Put(Bytes.toBytes("row1"));
-    p.add(Bytes.toBytes("bad_family"), Bytes.toBytes("qual"), Bytes.toBytes("value"));
+    p.addColumn(Bytes.toBytes("bad_family"), Bytes.toBytes("qual"), Bytes.toBytes("value"));
     actions.add(p);
     p = new Put(Bytes.toBytes("row2"));
-    p.add(BYTES_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
+    p.addColumn(BYTES_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
     actions.add(p);
 
     // row1 and row2 should be in the same region.
@@ -423,7 +423,7 @@ public class TestMultiParallel {
     for (int i = 0; i < 100; i++) {
       Put put = new Put(ONE_ROW);
       byte[] qual = Bytes.toBytes("column" + i);
-      put.add(BYTES_FAMILY, qual, VALUE);
+      put.addColumn(BYTES_FAMILY, qual, VALUE);
       puts.add(put);
     }
     Object[] results = new Object[puts.size()];
@@ -464,8 +464,8 @@ public class TestMultiParallel {
     Delete d = new Delete(ONE_ROW);
     table.delete(d);
     Put put = new Put(ONE_ROW);
-    put.add(BYTES_FAMILY, QUAL1, Bytes.toBytes("abc"));
-    put.add(BYTES_FAMILY, QUAL2, Bytes.toBytes(1L));
+    put.addColumn(BYTES_FAMILY, QUAL1, Bytes.toBytes("abc"));
+    put.addColumn(BYTES_FAMILY, QUAL2, Bytes.toBytes(1L));
     table.put(put);
 
     Increment inc = new Increment(ONE_ROW);
@@ -494,7 +494,7 @@ public class TestMultiParallel {
     final Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
     Table table = connection.getTable(TEST_TABLE);
     Put put = new Put(ONE_ROW);
-    put.add(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
+    put.addColumn(BYTES_FAMILY, QUALIFIER, Bytes.toBytes(0L));
 
     // Replace nonce manager with the one that returns each nonce twice.
     NonceGenerator cnm = new PerClientRandomNonceGenerator() {
@@ -610,7 +610,7 @@ public class TestMultiParallel {
 
     // 2 put of new column
     Put put = new Put(KEYS[10]);
-    put.add(BYTES_FAMILY, qual2, val2);
+    put.addColumn(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
     // 3 delete
@@ -629,7 +629,7 @@ public class TestMultiParallel {
 
     // 5 put of new column
     put = new Put(KEYS[40]);
-    put.add(BYTES_FAMILY, qual2, val2);
+    put.addColumn(BYTES_FAMILY, qual2, val2);
     actions.add(put);
 
     results = new Object[actions.size()];
@@ -673,7 +673,7 @@ public class TestMultiParallel {
     List<Put> puts = new ArrayList<>();
     for (byte[] k : KEYS) {
       Put put = new Put(k);
-      put.add(BYTES_FAMILY, QUALIFIER, VALUE);
+      put.addColumn(BYTES_FAMILY, QUALIFIER, VALUE);
       puts.add(put);
     }
     return puts;

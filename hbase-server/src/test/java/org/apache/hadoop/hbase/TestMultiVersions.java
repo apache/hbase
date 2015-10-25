@@ -218,8 +218,7 @@ public class TestMultiVersions {
     for (int i = 0; i < startKeys.length; i++) {
       for (int j = 0; j < timestamp.length; j++) {
         Put put = new Put(rows[i], timestamp[j]);
-        put.addColumn(HConstants.CATALOG_FAMILY, null, timestamp[j],
-            Bytes.toBytes(timestamp[j]));
+        put.addColumn(HConstants.CATALOG_FAMILY, null, timestamp[j], Bytes.toBytes(timestamp[j]));
         puts.add(put);
       }
     }

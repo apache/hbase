@@ -80,7 +80,7 @@ public class TestCopyTable {
       // put rows into the first table
       for (int i = 0; i < 10; i++) {
         Put p = new Put(Bytes.toBytes("row" + i));
-        p.add(FAMILY, COLUMN1, COLUMN1);
+        p.addColumn(FAMILY, COLUMN1, COLUMN1);
         t1.put(p);
       }
 
@@ -143,13 +143,13 @@ public class TestCopyTable {
 
     // put rows into the first table
     Put p = new Put(ROW0);
-    p.add(FAMILY, COLUMN1, COLUMN1);
+    p.addColumn(FAMILY, COLUMN1, COLUMN1);
     t1.put(p);
     p = new Put(ROW1);
-    p.add(FAMILY, COLUMN1, COLUMN1);
+    p.addColumn(FAMILY, COLUMN1, COLUMN1);
     t1.put(p);
     p = new Put(ROW2);
-    p.add(FAMILY, COLUMN1, COLUMN1);
+    p.addColumn(FAMILY, COLUMN1, COLUMN1);
     t1.put(p);
 
     CopyTable copy = new CopyTable();
@@ -193,14 +193,14 @@ public class TestCopyTable {
     Table t = TEST_UTIL.createTable(sourceTable, families);
     Table t2 = TEST_UTIL.createTable(targetTable, families);
     Put p = new Put(ROW1);
-    p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data11"));
-    p.add(FAMILY_B, QUALIFIER,  Bytes.toBytes("Data12"));
-    p.add(FAMILY_A, QUALIFIER,  Bytes.toBytes("Data13"));
+    p.addColumn(FAMILY_A, QUALIFIER, Bytes.toBytes("Data11"));
+    p.addColumn(FAMILY_B, QUALIFIER, Bytes.toBytes("Data12"));
+    p.addColumn(FAMILY_A, QUALIFIER, Bytes.toBytes("Data13"));
     t.put(p);
     p = new Put(ROW2);
-    p.add(FAMILY_B, QUALIFIER, Bytes.toBytes("Dat21"));
-    p.add(FAMILY_A, QUALIFIER, Bytes.toBytes("Data22"));
-    p.add(FAMILY_B, QUALIFIER, Bytes.toBytes("Data23"));
+    p.addColumn(FAMILY_B, QUALIFIER, Bytes.toBytes("Dat21"));
+    p.addColumn(FAMILY_A, QUALIFIER, Bytes.toBytes("Data22"));
+    p.addColumn(FAMILY_B, QUALIFIER, Bytes.toBytes("Data23"));
     t.put(p);
 
     long currentTime = System.currentTimeMillis();

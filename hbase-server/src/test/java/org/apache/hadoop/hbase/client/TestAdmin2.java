@@ -218,7 +218,7 @@ public class TestAdmin2 {
     byte[] value = Bytes.toBytes("somedata");
     // This used to use an empty row... That must have been a bug
     Put put = new Put(value);
-    put.add(HConstants.CATALOG_FAMILY, HConstants.CATALOG_FAMILY, value);
+    put.addColumn(HConstants.CATALOG_FAMILY, HConstants.CATALOG_FAMILY, value);
     table.put(put);
     table.close();
   }
@@ -614,7 +614,7 @@ public class TestAdmin2 {
     HRegionServer regionServer = TEST_UTIL.getRSForFirstRegionInTable(tableName);
     for (int i = 1; i <= 256; i++) { // 256 writes should cause 8 log rolls
       Put put = new Put(Bytes.toBytes("row" + String.format("%1$04d", i)));
-      put.add(HConstants.CATALOG_FAMILY, null, value);
+      put.addColumn(HConstants.CATALOG_FAMILY, null, value);
       table.put(put);
       if (i % 32 == 0) {
         // After every 32 writes sleep to let the log roller run

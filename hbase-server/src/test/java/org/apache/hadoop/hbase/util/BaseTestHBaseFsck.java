@@ -90,14 +90,12 @@ import org.apache.hadoop.hbase.util.HBaseFsck.ErrorReporter.ERROR_CODE;
 import org.apache.hadoop.hbase.util.HBaseFsck.HbckInfo;
 import org.apache.hadoop.hbase.util.HBaseFsck.TableInfo;
 import org.apache.hadoop.hbase.util.hbck.HFileCorruptionChecker;
-import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.rules.TestName;
-
 
 /**
  * This is the base class for  HBaseFsck's ability to detect reasons for inconsistent tables.
@@ -313,7 +311,7 @@ public class BaseTestHBaseFsck {
     List<Put> puts = new ArrayList<Put>();
     for (byte[] row : ROWKEYS) {
       Put p = new Put(row);
-      p.add(FAM, Bytes.toBytes("val"), row);
+      p.addColumn(FAM, Bytes.toBytes("val"), row);
       puts.add(p);
     }
     tbl.put(puts);
@@ -468,7 +466,7 @@ public class BaseTestHBaseFsck {
       tbl = connection.getTable(desc.getTableName());
       for (int i = 0; i < 5; i++) {
         Put p1 = new Put(("r" + i).getBytes());
-        p1.add(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
+        p1.addColumn(Bytes.toBytes("f"), "q1".getBytes(), "v".getBytes());
         tbl.put(p1);
       }
       admin.flush(desc.getTableName());

@@ -105,8 +105,7 @@ public class TestFilterWithScanLimits extends FilterTestingCluster {
       for (int i = 1; i < 4; i++) {
         Put put = new Put(Bytes.toBytes("row" + i));
         for (int j = 1; j < 6; j++) {
-          put.add(Bytes.toBytes("f1"), Bytes.toBytes("c" + j),
-              Bytes.toBytes(i + "_c" + j));
+          put.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("c" + j), Bytes.toBytes(i + "_c" + j));
         }
         puts.add(put);
       }

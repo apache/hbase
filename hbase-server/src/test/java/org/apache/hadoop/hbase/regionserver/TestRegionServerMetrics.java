@@ -119,7 +119,7 @@ public class TestRegionServerMetrics {
     // Do a first put to be sure that the connection is established, meta is there and so on.
     Table table = connection.getTable(tName);
     Put p = new Put(row);
-    p.add(cfName, qualifier, initValue);
+    p.addColumn(cfName, qualifier, initValue);
     table.put(p);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
@@ -199,7 +199,7 @@ public class TestRegionServerMetrics {
     Table t = TEST_UTIL.createTable(tableName, cf);
 
     Put p = new Put(row);
-    p.add(cf, qualifier, val);
+    p.addColumn(cf, qualifier, val);
     p.setDurability(Durability.SKIP_WAL);
 
     t.put(p);
@@ -227,7 +227,7 @@ public class TestRegionServerMetrics {
     //Force a hfile.
     Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
-    p.add(cf, qualifier, val);
+    p.addColumn(cf, qualifier, val);
     t.put(p);
     TEST_UTIL.getHBaseAdmin().flush(tableName);
 
@@ -251,15 +251,15 @@ public class TestRegionServerMetrics {
 
     Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
-    p.add(cf, qualifier, valOne);
+    p.addColumn(cf, qualifier, valOne);
     t.put(p);
 
     Put pTwo = new Put(row);
-    pTwo.add(cf, qualifier, valTwo);
+    pTwo.addColumn(cf, qualifier, valTwo);
     t.checkAndPut(row, cf, qualifier, valOne, pTwo);
 
     Put pThree = new Put(row);
-    pThree.add(cf, qualifier, valThree);
+    pThree.addColumn(cf, qualifier, valThree);
     t.checkAndPut(row, cf, qualifier, valOne, pThree);
 
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
@@ -281,7 +281,7 @@ public class TestRegionServerMetrics {
 
     Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
-    p.add(cf, qualifier, val);
+    p.addColumn(cf, qualifier, val);
     t.put(p);
 
     for(int count = 0; count< 13; count++) {
@@ -308,7 +308,7 @@ public class TestRegionServerMetrics {
 
     Table t = TEST_UTIL.createTable(tableName, cf);
     Put p = new Put(row);
-    p.add(cf, qualifier, val);
+    p.addColumn(cf, qualifier, val);
     t.put(p);
 
     for(int count = 0; count< 73; count++) {
@@ -334,7 +334,7 @@ public class TestRegionServerMetrics {
     List<Put> puts = new ArrayList<>();
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
-      p.add(cf, qualifier, val);
+      p.addColumn(cf, qualifier, val);
       puts.add(p);
     }
     try (Table t = TEST_UTIL.createTable(tableName, cf)) {
@@ -384,7 +384,7 @@ public class TestRegionServerMetrics {
     List<Put> puts = new ArrayList<>();
     for (int insertCount =0; insertCount < 100; insertCount++) {
       Put p = new Put(Bytes.toBytes("" + insertCount + "row"));
-      p.add(cf, qualifier, val);
+      p.addColumn(cf, qualifier, val);
       puts.add(p);
     }
     try (Table t = TEST_UTIL.createTable(tableName, cf)) {
@@ -442,7 +442,7 @@ public class TestRegionServerMetrics {
     t.setAutoFlush(true, true);
     for (int insertCount = 0; insertCount < numHfiles; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
-      p.add(cf, qualifier, val);
+      p.addColumn(cf, qualifier, val);
       t.put(p);
       admin.flush(tableName);
     }
@@ -471,7 +471,7 @@ public class TestRegionServerMetrics {
     for (int insertCount = numHfiles;
         insertCount < 2 * numHfiles - 1; insertCount++) {
       Put p = new Put(Bytes.toBytes(insertCount));
-      p.add(cf, qualifier, val);
+      p.addColumn(cf, qualifier, val);
       t.put(p);
       admin.flush(tableName);
     }

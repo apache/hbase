@@ -171,7 +171,7 @@ public class TestMultiSlaveReplication {
     checkRow(row3,1,htable3);
 
     Put p = new Put(row);
-    p.add(famName, row, row);
+    p.addColumn(famName, row, row);
     htable1.put(p);
     // now roll the logs again
     rollWALAndWait(utility1, htable1.getName(), row);
@@ -299,7 +299,7 @@ public class TestMultiSlaveReplication {
   private void putAndWait(byte[] row, byte[] fam, Table source, Table... targets)
   throws Exception {
     Put put = new Put(row);
-    put.add(fam, row, row);
+    put.addColumn(fam, row, row);
     source.put(put);
 
     Get get = new Get(row);

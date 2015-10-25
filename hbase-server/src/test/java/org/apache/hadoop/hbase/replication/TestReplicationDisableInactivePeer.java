@@ -54,7 +54,7 @@ public class TestReplicationDisableInactivePeer extends TestReplicationBase {
 
     byte[] rowkey = Bytes.toBytes("disable inactive peer");
     Put put = new Put(rowkey);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
     htable1.put(put);
 
     // wait for the sleep interval of the master cluster to become long

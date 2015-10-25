@@ -146,7 +146,7 @@ public class TestMergeTable {
     for(int i = firstRow; i < firstRow + nrows; i++) {
       Put put = new Put(Bytes.toBytes("row_" + String.format("%1$05d", i)));
       put.setDurability(Durability.SKIP_WAL);
-      put.add(COLUMN_NAME, null,  VALUE);
+      put.addColumn(COLUMN_NAME, null, VALUE);
       region.put(put);
       if (i % 10000 == 0) {
         LOG.info("Flushing write #" + i);

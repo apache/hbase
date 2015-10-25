@@ -131,8 +131,8 @@ public class TestForceCacheImportantBlocks {
       Put put = new Put(Bytes.toBytes("row" + i));
       for (int j = 0; j < NUM_COLS_PER_ROW; ++j) {
         for (long ts = 1; ts < NUM_TIMESTAMPS_PER_COL; ++ts) {
-          put.add(CF_BYTES, Bytes.toBytes("col" + j), ts,
-              Bytes.toBytes("value" + i + "_" + j + "_" + ts));
+          put.addColumn(CF_BYTES, Bytes.toBytes("col" + j), ts,
+                  Bytes.toBytes("value" + i + "_" + j + "_" + ts));
         }
       }
       region.put(put);

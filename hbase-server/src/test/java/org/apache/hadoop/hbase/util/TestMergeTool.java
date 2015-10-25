@@ -164,7 +164,7 @@ public class TestMergeTool extends HBaseTestCase {
         for (int j = 0; j < rows[i].length; j++) {
           byte [] row = rows[i][j];
           Put put = new Put(row);
-          put.add(FAMILY, QUALIFIER, row);
+          put.addColumn(FAMILY, QUALIFIER, row);
           regions[i].put(put);
         }
         HRegion.addRegionToMETA(meta, regions[i]);

@@ -100,26 +100,26 @@ public class TestDependentColumnFilter {
   private void addData() throws IOException {
     Put put = new Put(ROWS[0]);
     // add in an entry for each stamp, with 2 as a "good" value
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]);
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]);
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[1], BAD_VALS[1]);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
     // add in entries for stamps 0 and 2.
     // without a value check both will be "accepted"
     // with one 2 will be accepted(since the corresponding ts entry
     // has a matching value
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[0], BAD_VALS[0]);
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[0], BAD_VALS[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[2], BAD_VALS[2]);
 
     this.region.put(put);
 
     put = new Put(ROWS[1]);
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], BAD_VALS[0]);
     // there is no corresponding timestamp for this so it should never pass
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[2], MATCH_VAL);
     // if we reverse the qualifiers this one should pass
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[0], MATCH_VAL);
     // should pass
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[1], BAD_VALS[2]);
 
     this.region.put(put);
   }

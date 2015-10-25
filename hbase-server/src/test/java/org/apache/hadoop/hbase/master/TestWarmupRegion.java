@@ -93,7 +93,7 @@ public class TestWarmupRegion {
     for (int i = 0; i < numRows; i++) {
       long ts = System.currentTimeMillis() * 2;
       Put put = new Put(ROW, ts);
-      put.add(FAMILY, COLUMN, VALUE);
+      put.addColumn(FAMILY, COLUMN, VALUE);
       table.put(put);
     }
 

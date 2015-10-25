@@ -123,15 +123,15 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     long t = EnvironmentEdgeManager.currentTime();
     // create three versions for "row"
     Put put = new Put(row);
-    put.add(famName, row, t, v1);
+    put.addColumn(famName, row, t, v1);
     htable1.put(put);
 
     put = new Put(row);
-    put.add(famName, row, t+1, v2);
+    put.addColumn(famName, row, t + 1, v2);
     htable1.put(put);
 
     put = new Put(row);
-    put.add(famName, row, t+2, v3);
+    put.addColumn(famName, row, t + 2, v3);
     htable1.put(put);
 
     Get get = new Get(row);
@@ -203,7 +203,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   public void testSimplePutDelete() throws Exception {
     LOG.info("testSimplePutDelete");
     Put put = new Put(row);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
 
     htable1 = utility1.getConnection().getTable(tableName);
     htable1.put(put);
@@ -252,7 +252,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     List<Put> puts = new ArrayList<>();
     for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
-      put.add(famName, row, row);
+      put.addColumn(famName, row, row);
       puts.add(put);
     }
     htable1.put(puts);
@@ -295,7 +295,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     byte[] rowkey = Bytes.toBytes("disable enable");
     Put put = new Put(rowkey);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
     htable1.put(put);
 
     Get get = new Get(rowkey);
@@ -338,7 +338,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Thread.sleep(SLEEP_TIME);
     byte[] rowKey = Bytes.toBytes("Won't be replicated");
     Put put = new Put(rowKey);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
     htable1.put(put);
 
     Get get = new Get(rowKey);
@@ -359,7 +359,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     Thread.sleep(SLEEP_TIME);
     rowKey = Bytes.toBytes("do rep");
     put = new Put(rowKey);
-    put.add(famName, row, row);
+    put.addColumn(famName, row, row);
     LOG.info("Adding new row");
     htable1.put(put);
 
@@ -391,7 +391,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     List<Put> puts = new ArrayList<Put>();
     for (int i = 0; i < NB_ROWS_IN_BIG_BATCH; i++) {
       Put put = new Put(Bytes.toBytes(i));
-      put.add(famName, row, row);
+      put.addColumn(famName, row, row);
       puts.add(put);
     }
     htable1.setWriteBufferSize(1024);
@@ -472,8 +472,8 @@ public class TestReplicationSmallTests extends TestReplicationBase {
     for (Result result : rs) {
       put = new Put(result.getRow());
       Cell firstVal = result.rawCells()[0];
-      put.add(CellUtil.cloneFamily(firstVal),
-          CellUtil.cloneQualifier(firstVal), Bytes.toBytes("diff data"));
+      put.addColumn(CellUtil.cloneFamily(firstVal), CellUtil.cloneQualifier(firstVal),
+          Bytes.toBytes("diff data"));
       htable2.put(put);
     }
     Delete delete = new Delete(put.getRow());
@@ -579,7 +579,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
       for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
         p = new Put(Bytes.toBytes("row" + i));
-        p.add(famName, qualName, Bytes.toBytes("val" + i));
+        p.addColumn(famName, qualName, Bytes.toBytes("val" + i));
         htable1.put(p);
       }
 

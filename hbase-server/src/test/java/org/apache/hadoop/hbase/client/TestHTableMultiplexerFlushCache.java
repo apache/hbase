@@ -97,7 +97,7 @@ public class TestHTableMultiplexerFlushCache {
       byte[] row = startRows[1];
       assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
 
-      Put put = new Put(row).add(FAMILY, QUALIFIER1, VALUE1);
+      Put put = new Put(row).addColumn(FAMILY, QUALIFIER1, VALUE1);
       assertTrue("multiplexer.put returns", multiplexer.put(TABLE, put));
 
       checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);

@@ -208,7 +208,7 @@ public class MultiThreadedUpdater extends MultiThreadedWriterBase {
                   switch (mt) {
                   case PUT:
                     Put put = new Put(rowKey);
-                    put.add(cf, column, hashCodeBytes);
+                    put.addColumn(cf, column, hashCodeBytes);
                     mutate(table, put, rowKeyBase, rowKey, cf, column, checkedValue);
                     buf.append(MutationType.PUT.getNumber());
                     break;

@@ -127,7 +127,7 @@ public class TestBlocksRead  {
     put.setDurability(Durability.SKIP_WAL);
 
     for (long version = versionStart; version <= versionEnd; version++) {
-      put.add(cf, columnBytes, version, genValue(row, col, version));
+      put.addColumn(cf, columnBytes, version, genValue(row, col, version));
     }
     region.put(put);
   }

@@ -152,7 +152,7 @@ public class TestEncodedSeekers {
           KeyValue kv = new KeyValue(key, CF_BYTES, col, HConstants.LATEST_TIMESTAMP, value, tag);
           put.add(kv);
         } else {
-          put.add(CF_BYTES, col, value);
+          put.addColumn(CF_BYTES, col, value);
         }
         if(VERBOSE){
           KeyValue kvPut = new KeyValue(key, CF_BYTES, col, value);

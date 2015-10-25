@@ -545,7 +545,8 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     for (int cf = 0; cf < numFamilies; ++cf) {
       for (int q = 0; q < numQualifiers; ++q) {
         rand.nextBytes(value);
-        put.add(Bytes.toBytes(FAMILY_PREFIX + cf), Bytes.toBytes(QUALIFIER_PREFIX + q), value);
+        put.addColumn(Bytes.toBytes(FAMILY_PREFIX + cf),
+            Bytes.toBytes(QUALIFIER_PREFIX + q), value);
       }
     }
     return put;

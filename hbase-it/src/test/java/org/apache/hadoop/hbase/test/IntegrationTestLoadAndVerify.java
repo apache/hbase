@@ -242,12 +242,12 @@ public void cleanUpCluster() throws Exception {
           Bytes.putLong(row, 0, byteSwapped);
 
           Put p = new Put(row);
-          p.add(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
+          p.addColumn(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
           if (blockStart > 0) {
             for (int j = 0; j < numBackReferencesPerRow; j++) {
               long referredRow = blockStart - BLOCK_SIZE + rand.nextInt(BLOCK_SIZE);
               Bytes.putLong(row, 0, swapLong(referredRow));
-              p.add(TEST_FAMILY, row, HConstants.EMPTY_BYTE_ARRAY);
+              p.addColumn(TEST_FAMILY, row, HConstants.EMPTY_BYTE_ARRAY);
             }
             refsWritten.increment(1);
           }

@@ -217,7 +217,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
   private void doPut(final Connection connection, final byte [] row) throws IOException {
     try (Table t = connection.getTable(tableName)) {
       Put put = new Put(row);
-      put.add(famName, row, row);
+      put.addColumn(famName, row, row);
       t.put(put);
     }
   }

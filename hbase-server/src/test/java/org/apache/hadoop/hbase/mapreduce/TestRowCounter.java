@@ -155,13 +155,13 @@ public class TestRowCounter {
     // clean up content of TABLE_NAME
     Table table = TEST_UTIL.deleteTableData(TableName.valueOf(TABLE_NAME));
     ts = System.currentTimeMillis();
-    put1.add(family, col1, ts, Bytes.toBytes("val1"));
+    put1.addColumn(family, col1, ts, Bytes.toBytes("val1"));
     table.put(put1);
     Thread.sleep(100);
 
     ts = System.currentTimeMillis();
-    put2.add(family, col1, ts, Bytes.toBytes("val2"));
-    put3.add(family, col1, ts, Bytes.toBytes("val3"));
+    put2.addColumn(family, col1, ts, Bytes.toBytes("val2"));
+    put3.addColumn(family, col1, ts, Bytes.toBytes("val3"));
     table.put(put2);
     table.put(put3);
     table.close();
@@ -227,9 +227,9 @@ public class TestRowCounter {
     for (; i < TOTAL_ROWS - ROWS_WITH_ONE_COL; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.add(family, col1, value);
-      put.add(family, col2, value);
-      put.add(family, col3, value);
+      put.addColumn(family, col1, value);
+      put.addColumn(family, col2, value);
+      put.addColumn(family, col3, value);
       rowsUpdate.add(put);
     }
 
@@ -237,7 +237,7 @@ public class TestRowCounter {
     for (; i < TOTAL_ROWS; i++) {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
-      put.add(family, col2, value);
+      put.addColumn(family, col2, value);
       rowsUpdate.add(put);
     }
     table.put(rowsUpdate);

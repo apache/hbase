@@ -195,7 +195,7 @@ public class TestMasterReplication {
       // cluster 0
       putAndWait(row3, famName, htables[0], htables[1]);
       // now add a local edit to cluster 1
-      htables[1].put(new Put(row4).add(famName, row4, row4));
+      htables[1].put(new Put(row4).addColumn(famName, row4, row4));
       // re-enable replication from cluster 2 to cluster 0
       enablePeer("1", 2);
       // without HBASE-9158 the edit for row4 would have been marked with
@@ -373,7 +373,7 @@ public class TestMasterReplication {
   private void putAndWait(byte[] row, byte[] fam, Table source, Table target)
       throws Exception {
     Put put = new Put(row);
-    put.add(fam, row, row);
+    put.addColumn(fam, row, row);
     source.put(put);
     wait(row, target, false);
   }

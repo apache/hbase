@@ -69,7 +69,9 @@ public class TestFromClientSideNoCodec {
     // Check put and get.
     final byte [] row = Bytes.toBytes("row");
     Put p = new Put(row);
-    for (byte [] f: fs) p.add(f, f, f);
+    for (byte [] f: fs) {
+      p.addColumn(f, f, f);
+    }
     ht.put(p);
     Result r = ht.get(new Get(row));
     int i = 0;

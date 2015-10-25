@@ -309,7 +309,7 @@ public class TestSeekOptimizations {
 
   public void put(String qual, long ts) {
     if (!putTimestamps.contains(ts)) {
-      put.add(FAMILY_BYTES, Bytes.toBytes(qual), ts, createValue(ts));
+      put.addColumn(FAMILY_BYTES, Bytes.toBytes(qual), ts, createValue(ts));
       putTimestamps.add(ts);
     }
     if (VERBOSE) {

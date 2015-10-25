@@ -120,8 +120,8 @@ public class TestScannerSelectionUsingTTL {
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
         Put put = new Put(Bytes.toBytes("row" + iRow));
         for (int iCol = 0; iCol < NUM_COLS_PER_ROW; ++iCol) {
-          put.add(FAMILY_BYTES, Bytes.toBytes("col" + iCol),
-              ts + version, Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
+          put.addColumn(FAMILY_BYTES, Bytes.toBytes("col" + iCol), ts + version,
+                  Bytes.toBytes("value" + iFile + "_" + iRow + "_" + iCol));
         }
         region.put(put);
       }

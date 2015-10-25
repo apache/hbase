@@ -108,7 +108,7 @@ public class TestTableResource {
           k[2] = b3;
           Put put = new Put(k);
           put.setDurability(Durability.SKIP_WAL);
-          put.add(famAndQf[0], famAndQf[1], k);
+          put.addColumn(famAndQf[0], famAndQf[1], k);
           puts.add(put);
         }
       }

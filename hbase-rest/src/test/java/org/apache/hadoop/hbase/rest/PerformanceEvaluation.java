@@ -1131,7 +1131,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             value, tags);
         put.add(kv);
       } else {
-        put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+        put.addColumn(FAMILY_NAME, QUALIFIER_NAME, value);
       }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       mutator.mutate(put);
@@ -1202,7 +1202,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
             value, tags);
         put.add(kv);
       } else {
-        put.add(FAMILY_NAME, QUALIFIER_NAME, value);
+        put.addColumn(FAMILY_NAME, QUALIFIER_NAME, value);
       }
       put.setDurability(writeToWAL ? Durability.SYNC_WAL : Durability.SKIP_WAL);
       mutator.mutate(put);

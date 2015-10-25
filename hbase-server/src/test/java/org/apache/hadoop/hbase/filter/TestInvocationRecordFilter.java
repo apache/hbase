@@ -75,8 +75,8 @@ public class TestInvocationRecordFilter {
     Put put = new Put(ROW_BYTES);
     for (int i = 0; i < 10; i += 2) {
       // puts 0, 2, 4, 6 and 8
-      put.add(FAMILY_NAME_BYTES, Bytes.toBytes(QUALIFIER_PREFIX + i), i,
-          Bytes.toBytes(VALUE_PREFIX + i));
+      put.addColumn(FAMILY_NAME_BYTES, Bytes.toBytes(QUALIFIER_PREFIX + i), (long) i,
+              Bytes.toBytes(VALUE_PREFIX + i));
     }
     this.region.put(put);
     this.region.flush(true);

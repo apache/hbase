@@ -575,12 +575,12 @@ public abstract class TestVisibilityLabels {
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       byte[] row1 = Bytes.toBytes("row1");
       Put put = new Put(row1);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET + " & " + CONFIDENTIAL));
       table.checkAndPut(row1, fam, qual, null, put);
       byte[] row2 = Bytes.toBytes("row2");
       put = new Put(row2);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.checkAndPut(row2, fam, qual, null, put);
       
@@ -602,7 +602,7 @@ public abstract class TestVisibilityLabels {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes(1L);
       Put put = new Put(row1);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, val);
       put.setCellVisibility(new CellVisibility(SECRET + " & " + CONFIDENTIAL));
       table.put(put);
       Get get = new Get(row1);
@@ -628,7 +628,7 @@ public abstract class TestVisibilityLabels {
       byte[] row1 = Bytes.toBytes("row1");
       byte[] val = Bytes.toBytes("a");
       Put put = new Put(row1);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, val);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, val);
       put.setCellVisibility(new CellVisibility(SECRET + " & " + CONFIDENTIAL));
       table.put(put);
       Get get = new Get(row1);
@@ -708,32 +708,32 @@ public abstract class TestVisibilityLabels {
     TEST_UTIL.getHBaseAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(r1);
-      put.add(fam, qual, 3l, v1);
-      put.add(fam, qual2, 3l, v1);
-      put.add(fam2, qual, 3l, v1);
-      put.add(fam2, qual2, 3l, v1);
+      put.addColumn(fam, qual, 3l, v1);
+      put.addColumn(fam, qual2, 3l, v1);
+      put.addColumn(fam2, qual, 3l, v1);
+      put.addColumn(fam2, qual2, 3l, v1);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       put = new Put(r1);
-      put.add(fam, qual, 4l, v2);
-      put.add(fam, qual2, 4l, v2);
-      put.add(fam2, qual, 4l, v2);
-      put.add(fam2, qual2, 4l, v2);
+      put.addColumn(fam, qual, 4l, v2);
+      put.addColumn(fam, qual2, 4l, v2);
+      put.addColumn(fam2, qual, 4l, v2);
+      put.addColumn(fam2, qual2, 4l, v2);
       put.setCellVisibility(new CellVisibility(PRIVATE));
       table.put(put);
 
       put = new Put(r2);
-      put.add(fam, qual, 3l, v1);
-      put.add(fam, qual2, 3l, v1);
-      put.add(fam2, qual, 3l, v1);
-      put.add(fam2, qual2, 3l, v1);
+      put.addColumn(fam, qual, 3l, v1);
+      put.addColumn(fam, qual2, 3l, v1);
+      put.addColumn(fam2, qual, 3l, v1);
+      put.addColumn(fam2, qual2, 3l, v1);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
       put = new Put(r2);
-      put.add(fam, qual, 4l, v2);
-      put.add(fam, qual2, 4l, v2);
-      put.add(fam2, qual, 4l, v2);
-      put.add(fam2, qual2, 4l, v2);
+      put.addColumn(fam, qual, 4l, v2);
+      put.addColumn(fam, qual2, 4l, v2);
+      put.addColumn(fam2, qual, 4l, v2);
+      put.addColumn(fam2, qual2, 4l, v2);
       put.setCellVisibility(new CellVisibility(SECRET));
       table.put(put);
 
@@ -792,11 +792,11 @@ public abstract class TestVisibilityLabels {
     TEST_UTIL.getHBaseAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)){
       Put p1 = new Put(row1);
-      p1.add(fam, qual, value);
+      p1.addColumn(fam, qual, value);
       p1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
 
       Put p2 = new Put(row1);
-      p2.add(fam, qual2, value);
+      p2.addColumn(fam, qual2, value);
       p2.setCellVisibility(new CellVisibility(SECRET));
 
       RowMutations rm = new RowMutations(row1);
@@ -828,11 +828,11 @@ public abstract class TestVisibilityLabels {
     TEST_UTIL.getHBaseAdmin().createTable(desc);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put p1 = new Put(row1);
-      p1.add(fam, qual, value);
+      p1.addColumn(fam, qual, value);
       p1.setCellVisibility(new CellVisibility(CONFIDENTIAL));
 
       Put p2 = new Put(row1);
-      p2.add(fam, qual2, value);
+      p2.addColumn(fam, qual2, value);
       p2.setCellVisibility(new CellVisibility(SECRET));
 
       RowMutations rm = new RowMutations(row1);
@@ -856,7 +856,7 @@ public abstract class TestVisibilityLabels {
     List<Put> puts = new ArrayList<Put>();
     for (int i = 0; i < labelExps.length; i++) {
       Put put = new Put(Bytes.toBytes("row" + (i+1)));
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setCellVisibility(new CellVisibility(labelExps[i]));
       puts.add(put);
     }

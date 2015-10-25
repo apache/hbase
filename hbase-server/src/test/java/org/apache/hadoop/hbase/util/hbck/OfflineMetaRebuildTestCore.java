@@ -150,8 +150,8 @@ public class OfflineMetaRebuildTestCore {
     for (int i = 0; i < values.length; i++) {
       for (int j = 0; j < values.length; j++) {
         Put put = new Put(new byte[] { values[i], values[j] });
-        put.add(Bytes.toBytes("fam"), new byte[] {}, new byte[] { values[i],
-            values[j] });
+        put.addColumn(Bytes.toBytes("fam"), new byte[]{}, new byte[]{values[i],
+                values[j]});
         puts.add(put);
       }
     }

@@ -113,11 +113,11 @@ public class TestJoinedScanners {
       for (long i = 0; i < rows_to_insert; i++) {
         Put put = new Put(Bytes.toBytes(Long.toString (i)));
         if (rand.nextInt(100) <= selectionRatio) {
-          put.add(cf_essential, col_name, flag_yes);
+          put.addColumn(cf_essential, col_name, flag_yes);
         } else {
-          put.add(cf_essential, col_name, flag_no);
+          put.addColumn(cf_essential, col_name, flag_no);
         }
-        put.add(cf_joined, col_name, val_large);
+        put.addColumn(cf_joined, col_name, val_large);
         puts.add(put);
         if (puts.size() >= insert_batch) {
           ht.put(puts);

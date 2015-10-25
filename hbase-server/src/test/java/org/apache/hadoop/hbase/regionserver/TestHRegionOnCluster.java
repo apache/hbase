@@ -145,7 +145,7 @@ public class TestHRegionOnCluster {
       String value, int verifyNum) throws IOException {
     System.out.println("=========Putting data :" + row);
     Put put = new Put(Bytes.toBytes(row));
-    put.add(family, Bytes.toBytes("q1"), Bytes.toBytes(value));
+    put.addColumn(family, Bytes.toBytes("q1"), Bytes.toBytes(value));
     table.put(put);
     ResultScanner resultScanner = table.getScanner(new Scan());
     List<Result> results = new ArrayList<Result>();

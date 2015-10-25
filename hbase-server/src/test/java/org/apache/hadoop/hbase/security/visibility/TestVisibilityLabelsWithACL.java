@@ -318,7 +318,7 @@ public class TestVisibilityLabelsWithACL {
       List<Put> puts = new ArrayList<Put>();
       for (String labelExp : labelExps) {
         Put put = new Put(Bytes.toBytes("row" + i));
-        put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+        put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
         put.setCellVisibility(new CellVisibility(labelExp));
         puts.add(put);
         i++;

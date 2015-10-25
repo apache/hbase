@@ -420,7 +420,7 @@ public class MasterProcedureTestingUtility {
     Put put = new Put(key);
     put.setDurability(Durability.SKIP_WAL);
     for (byte[] family: families) {
-      put.add(family, q, value);
+      put.addColumn(family, q, value);
     }
     return put;
   }

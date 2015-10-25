@@ -261,8 +261,7 @@ public class TestZooKeeper {
 
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     Put put = new Put(Bytes.toBytes("testrow"));
-    put.add(Bytes.toBytes("fam"),
-        Bytes.toBytes("col"), Bytes.toBytes("testdata"));
+    put.addColumn(Bytes.toBytes("fam"), Bytes.toBytes("col"), Bytes.toBytes("testdata"));
     LOG.info("Putting table " + tableName);
     table.put(put);
     table.close();
@@ -611,7 +610,8 @@ public class TestZooKeeper {
       int numberOfPuts;
       for (numberOfPuts = 0; numberOfPuts < 6; numberOfPuts++) {
         p = new Put(Bytes.toBytes(numberOfPuts));
-        p.add(Bytes.toBytes("col"), Bytes.toBytes("ql"), Bytes.toBytes("value" + numberOfPuts));
+        p.addColumn(Bytes.toBytes("col"), Bytes.toBytes("ql"),
+                Bytes.toBytes("value" + numberOfPuts));
         table.put(p);
       }
       m.getZooKeeper().close();

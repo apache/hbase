@@ -76,7 +76,7 @@ public class TestRegionServerNoMaster {
     // Create table then get the single region for our new table.
     table = HTU.createTable(tableName,HConstants.CATALOG_FAMILY);
     Put p = new Put(row);
-    p.add(HConstants.CATALOG_FAMILY, row, row);
+    p.addColumn(HConstants.CATALOG_FAMILY, row, row);
     table.put(p);
 
     try (RegionLocator locator = HTU.getConnection().getRegionLocator(tableName)) {

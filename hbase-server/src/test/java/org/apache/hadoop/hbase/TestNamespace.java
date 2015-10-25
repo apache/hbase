@@ -248,7 +248,7 @@ public class TestNamespace {
     //sanity check try to write and read from table
     Table table = TEST_UTIL.getConnection().getTable(desc.getTableName());
     Put p = new Put(Bytes.toBytes("row1"));
-    p.add(Bytes.toBytes("my_cf"),Bytes.toBytes("my_col"),Bytes.toBytes("value1"));
+    p.addColumn(Bytes.toBytes("my_cf"), Bytes.toBytes("my_col"), Bytes.toBytes("value1"));
     table.put(p);
     //flush and read from disk to make sure directory changes are working
     admin.flush(desc.getTableName());

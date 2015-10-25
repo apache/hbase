@@ -68,9 +68,9 @@ public class TestScannerTimeout {
     // We need more than one region server for this test
     TEST_UTIL.startMiniCluster(2);
     Table table = TEST_UTIL.createTable(TABLE_NAME, SOME_BYTES);
-     for (int i = 0; i < NB_ROWS; i++) {
+    for (int i = 0; i < NB_ROWS; i++) {
       Put put = new Put(Bytes.toBytes(i));
-      put.add(SOME_BYTES, SOME_BYTES, SOME_BYTES);
+      put.addColumn(SOME_BYTES, SOME_BYTES, SOME_BYTES);
       table.put(put);
     }
     table.close();

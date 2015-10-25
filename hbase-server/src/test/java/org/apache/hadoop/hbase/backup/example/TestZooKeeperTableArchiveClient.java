@@ -403,7 +403,7 @@ public class TestZooKeeperTableArchiveClient {
   private void createHFileInRegion(Region region, byte[] columnFamily) throws IOException {
     // put one row in the region
     Put p = new Put(Bytes.toBytes("row"));
-    p.add(columnFamily, Bytes.toBytes("Qual"), Bytes.toBytes("v1"));
+    p.addColumn(columnFamily, Bytes.toBytes("Qual"), Bytes.toBytes("v1"));
     region.put(p);
     // flush the region to make a store file
     region.flush(true);

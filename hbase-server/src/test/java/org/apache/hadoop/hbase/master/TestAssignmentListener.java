@@ -208,7 +208,7 @@ public class TestAssignmentListener {
         for (int i = 0; i < 10; ++i) {
           byte[] key = Bytes.toBytes("row-" + i);
           Put put = new Put(key);
-          put.add(FAMILY, null, key);
+          put.addColumn(FAMILY, null, key);
           table.put(put);
         }
       } finally {

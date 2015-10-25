@@ -174,7 +174,7 @@ public class IntegrationTestWithCellVisibilityLoadAndVerify extends IntegrationT
           String exp = VISIBILITY_EXPS[expIdx];
           byte[] row = Bytes.add(Bytes.toBytes(i), Bytes.toBytes(suffix), Bytes.toBytes(exp));
           Put p = new Put(row);
-          p.add(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
+          p.addColumn(TEST_FAMILY, TEST_QUALIFIER, HConstants.EMPTY_BYTE_ARRAY);
           p.setCellVisibility(new CellVisibility(exp));
           getCounter(expIdx).increment(1);
           mutator.mutate(p);

@@ -161,14 +161,14 @@ public class TestScanEarlyTermination extends SecureTestUtil {
         Connection connection = ConnectionFactory.createConnection(conf);
         Table t = connection.getTable(TEST_TABLE.getTableName());
         try {
-          Put put = new Put(TEST_ROW).add(TEST_FAMILY1, TEST_Q1, ZERO);
+          Put put = new Put(TEST_ROW).addColumn(TEST_FAMILY1, TEST_Q1, ZERO);
           t.put(put);
           // Set a READ cell ACL for USER_OTHER on this value in FAMILY2
-          put = new Put(TEST_ROW).add(TEST_FAMILY2, TEST_Q1, ZERO);
+          put = new Put(TEST_ROW).addColumn(TEST_FAMILY2, TEST_Q1, ZERO);
           put.setACL(USER_OTHER.getShortName(), new Permission(Action.READ));
           t.put(put);
           // Set an empty cell ACL for USER_OTHER on this other value in FAMILY2
-          put = new Put(TEST_ROW).add(TEST_FAMILY2, TEST_Q2, ZERO);
+          put = new Put(TEST_ROW).addColumn(TEST_FAMILY2, TEST_Q2, ZERO);
           put.setACL(USER_OTHER.getShortName(), new Permission());
           t.put(put);
         } finally {

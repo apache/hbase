@@ -145,13 +145,13 @@ public class TestLogRollAbort {
         FSUtils.isAppendSupported(TEST_UTIL.getConfiguration()));
 
       Put p = new Put(Bytes.toBytes("row2001"));
-      p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2001));
+      p.addColumn(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2001));
       table.put(p);
 
       log.sync();
 
       p = new Put(Bytes.toBytes("row2002"));
-      p.add(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2002));
+      p.addColumn(HConstants.CATALOG_FAMILY, Bytes.toBytes("col"), Bytes.toBytes(2002));
       table.put(p);
 
       dfsCluster.restartDataNodes();

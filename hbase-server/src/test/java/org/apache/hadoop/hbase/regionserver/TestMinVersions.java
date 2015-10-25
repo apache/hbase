@@ -75,15 +75,15 @@ public class TestMinVersions {
       long ts = EnvironmentEdgeManager.currentTime() - 2000;
 
       Put p = new Put(T1, ts);
-      p.add(c0, c0, T1);
+      p.addColumn(c0, c0, T1);
       region.put(p);
 
       p = new Put(T1, ts+1);
-      p.add(c0, c0, T4);
+      p.addColumn(c0, c0, T4);
       region.put(p);
 
       p = new Put(T3, ts);
-      p.add(c0, c0, T3);
+      p.addColumn(c0, c0, T3);
       region.put(p);
 
       // now make sure that getClosestBefore(...) get can
@@ -124,11 +124,11 @@ public class TestMinVersions {
 
     try {
       Put p = new Put(T1, ts-1);
-      p.add(c0, c0, T2);
+      p.addColumn(c0, c0, T2);
       region.put(p);
 
       p = new Put(T1, ts-3);
-      p.add(c0, c0, T0);
+      p.addColumn(c0, c0, T0);
       region.put(p);
 
       // now flush/compact
@@ -136,15 +136,15 @@ public class TestMinVersions {
       region.compact(true);
 
       p = new Put(T1, ts);
-      p.add(c0, c0, T3);
+      p.addColumn(c0, c0, T3);
       region.put(p);
 
       p = new Put(T1, ts-2);
-      p.add(c0, c0, T1);
+      p.addColumn(c0, c0, T1);
       region.put(p);
 
       p = new Put(T1, ts-3);
-      p.add(c0, c0, T0);
+      p.addColumn(c0, c0, T0);
       region.put(p);
 
       // newest version in the memstore
@@ -180,15 +180,15 @@ public class TestMinVersions {
 
     try {
       Put p = new Put(T1, ts-2);
-      p.add(c0, c0, T1);
+      p.addColumn(c0, c0, T1);
       region.put(p);
 
       p = new Put(T1, ts-1);
-      p.add(c0, c0, T2);
+      p.addColumn(c0, c0, T2);
       region.put(p);
 
       p = new Put(T1, ts);
-      p.add(c0, c0, T3);
+      p.addColumn(c0, c0, T3);
       region.put(p);
 
       Delete d = new Delete(T1, ts-1);
@@ -240,17 +240,17 @@ public class TestMinVersions {
     try {
       // 2nd version
       Put p = new Put(T1, ts-2);
-      p.add(c0, c0, T2);
+      p.addColumn(c0, c0, T2);
       region.put(p);
 
       // 3rd version
       p = new Put(T1, ts-1);
-      p.add(c0, c0, T3);
+      p.addColumn(c0, c0, T3);
       region.put(p);
 
       // 4th version
       p = new Put(T1, ts);
-      p.add(c0, c0, T4);
+      p.addColumn(c0, c0, T4);
       region.put(p);
 
       // now flush/compact
@@ -259,7 +259,7 @@ public class TestMinVersions {
 
       // now put the first version (backdated)
       p = new Put(T1, ts-3);
-      p.add(c0, c0, T1);
+      p.addColumn(c0, c0, T1);
       region.put(p);
 
       // now the latest change is in the memstore,
@@ -280,7 +280,7 @@ public class TestMinVersions {
       checkResult(r, c0, T4,T3);
 
       p = new Put(T1, ts+1);
-      p.add(c0, c0, T5);
+      p.addColumn(c0, c0, T5);
       region.put(p);
 
       // now the latest version is in the memstore
@@ -316,22 +316,22 @@ public class TestMinVersions {
 
        // 1st version
       Put p = new Put(T1, ts-3);
-      p.add(c0, c0, T1);
+      p.addColumn(c0, c0, T1);
       region.put(p);
 
       // 2nd version
       p = new Put(T1, ts-2);
-      p.add(c0, c0, T2);
+      p.addColumn(c0, c0, T2);
       region.put(p);
 
       // 3rd version
       p = new Put(T1, ts-1);
-      p.add(c0, c0, T3);
+      p.addColumn(c0, c0, T3);
       region.put(p);
 
       // 4th version
       p = new Put(T1, ts);
-      p.add(c0, c0, T4);
+      p.addColumn(c0, c0, T4);
       region.put(p);
 
       Result r = region.get(new Get(T1));
@@ -408,23 +408,23 @@ public class TestMinVersions {
     try {
 
       Put p = new Put(T1, ts-3);
-      p.add(c0, c0, T0);
-      p.add(c1, c1, T0);
+      p.addColumn(c0, c0, T0);
+      p.addColumn(c1, c1, T0);
       region.put(p);
 
       p = new Put(T1, ts-2);
-      p.add(c0, c0, T1);
-      p.add(c1, c1, T1);
+      p.addColumn(c0, c0, T1);
+      p.addColumn(c1, c1, T1);
       region.put(p);
 
       p = new Put(T1, ts-1);
-      p.add(c0, c0, T2);
-      p.add(c1, c1, T2);
+      p.addColumn(c0, c0, T2);
+      p.addColumn(c1, c1, T2);
       region.put(p);
 
       p = new Put(T1, ts);
-      p.add(c0, c0, T3);
-      p.add(c1, c1, T3);
+      p.addColumn(c0, c0, T3);
+      p.addColumn(c1, c1, T3);
       region.put(p);
 
       List<Long> tss = new ArrayList<Long>();

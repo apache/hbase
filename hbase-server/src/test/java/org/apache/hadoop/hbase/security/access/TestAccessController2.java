@@ -288,8 +288,8 @@ public class TestAccessController2 extends SecureTestUtil {
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(AccessControlLists.ACL_TABLE_NAME)) {
-            t.put(new Put(TEST_ROW).add(AccessControlLists.ACL_LIST_FAMILY, TEST_QUALIFIER,
-              TEST_VALUE));
+            t.put(new Put(TEST_ROW).addColumn(AccessControlLists.ACL_LIST_FAMILY,
+                TEST_QUALIFIER, TEST_VALUE));
             return null;
           } finally {
           }

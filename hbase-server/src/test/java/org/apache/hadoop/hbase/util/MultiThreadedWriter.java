@@ -105,7 +105,7 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
             byte[][] columns = dataGenerator.generateColumnsForCf(rowKey, cf);
             for (byte[] column : columns) {
               byte[] value = dataGenerator.generateValue(rowKey, cf, column);
-              put.add(cf, column, value);
+              put.addColumn(cf, column, value);
               ++columnCount;
               if (!isMultiPut) {
                 insert(table, put, rowKeyBase);
@@ -114,8 +114,8 @@ public class MultiThreadedWriter extends MultiThreadedWriterBase {
               }
             }
             long rowKeyHash = Arrays.hashCode(rowKey);
-            put.add(cf, MUTATE_INFO, HConstants.EMPTY_BYTE_ARRAY);
-            put.add(cf, INCREMENT, Bytes.toBytes(rowKeyHash));
+            put.addColumn(cf, MUTATE_INFO, HConstants.EMPTY_BYTE_ARRAY);
+            put.addColumn(cf, INCREMENT, Bytes.toBytes(rowKeyHash));
             if (!isMultiPut) {
               insert(table, put, rowKeyBase);
               numCols.addAndGet(1);

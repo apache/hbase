@@ -248,7 +248,7 @@ public class TestHCM {
     }
 
     Put p1 = new Put(rk);
-    p1.add(cf, "qual".getBytes(), "val".getBytes());
+    p1.addColumn(cf, "qual".getBytes(), "val".getBytes());
     t.put(p1);
 
     rs.getRegionServer().abort("I'm dead");
@@ -430,7 +430,7 @@ public class TestHCM {
     final Table table = connection.getTable(tableName);
 
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.addColumn(FAM_NAM, ROW, ROW);
     table.put(put);
 
     ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
@@ -583,7 +583,7 @@ public class TestHCM {
 
     TEST_UTIL.waitUntilAllRegionsAssigned(table.getName());
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.addColumn(FAM_NAM, ROW, ROW);
     table.put(put);
     ConnectionImplementation conn = (ConnectionImplementation) connection;
 
@@ -606,7 +606,7 @@ public class TestHCM {
     conn.clearRegionCache(TABLE_NAME);
     Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME));
     Put put2 = new Put(ROW);
-    put2.add(FAM_NAM, ROW, ROW);
+    put2.addColumn(FAM_NAM, ROW, ROW);
     table.put(put2);
     assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
     assertNotNull(conn.getCachedLocation(TableName.valueOf(TABLE_NAME.getName()), ROW.clone()));
@@ -676,7 +676,7 @@ public class TestHCM {
     // We do a put and expect the cache to be updated, even if we don't retry
     LOG.info("Put starting");
     Put put3 = new Put(ROW);
-    put3.add(FAM_NAM, ROW, ROW);
+    put3.addColumn(FAM_NAM, ROW, ROW);
     try {
       table.put(put3);
       Assert.fail("Unreachable point");
@@ -783,7 +783,7 @@ public class TestHCM {
   public void testCacheSeqNums() throws Exception{
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME2, FAM_NAM);
     Put put = new Put(ROW);
-    put.add(FAM_NAM, ROW, ROW);
+    put.addColumn(FAM_NAM, ROW, ROW);
     table.put(put);
     ConnectionImplementation conn = (ConnectionImplementation) TEST_UTIL.getConnection();
 
@@ -895,44 +895,44 @@ public class TestHCM {
   @Test
   public void testMulti() throws Exception {
     Table table = TEST_UTIL.createMultiRegionTable(TABLE_NAME3, FAM_NAM);
-     try {
-       ConnectionImplementation conn =
+    try {
+      ConnectionImplementation conn =
            (ConnectionImplementation)TEST_UTIL.getConnection();
 
-       // We're now going to move the region and check that it works for the client
-       // First a new put to add the location in the cache
-       conn.clearRegionCache(TABLE_NAME3);
-       Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
+      // We're now going to move the region and check that it works for the client
+      // First a new put to add the location in the cache
+      conn.clearRegionCache(TABLE_NAME3);
+      Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
 
-       TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
-       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+      TEST_UTIL.getHBaseAdmin().setBalancerRunning(false, false);
+      HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
 
-       // We can wait for all regions to be online, that makes log reading easier when debugging
-       while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-         Thread.sleep(1);
-       }
+      // We can wait for all regions to be online, that makes log reading easier when debugging
+      while (master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+        Thread.sleep(1);
+      }
 
-       Put put = new Put(ROW_X);
-       put.add(FAM_NAM, ROW_X, ROW_X);
-       table.put(put);
+      Put put = new Put(ROW_X);
+      put.addColumn(FAM_NAM, ROW_X, ROW_X);
+      table.put(put);
 
-       // Now moving the region to the second server
-       HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation();
-       byte[] regionName = toMove.getRegionInfo().getRegionName();
-       byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
+      // Now moving the region to the second server
+      HRegionLocation toMove = conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation();
+      byte[] regionName = toMove.getRegionInfo().getRegionName();
+      byte[] encodedRegionNameBytes = toMove.getRegionInfo().getEncodedNameAsBytes();
 
-       // Choose the other server.
-       int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
-       int destServerId = (curServerId == 0 ? 1 : 0);
+      // Choose the other server.
+      int curServerId = TEST_UTIL.getHBaseCluster().getServerWith(regionName);
+      int destServerId = (curServerId == 0 ? 1 : 0);
 
-       HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
-       HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(destServerId);
+      HRegionServer curServer = TEST_UTIL.getHBaseCluster().getRegionServer(curServerId);
+      HRegionServer destServer = TEST_UTIL.getHBaseCluster().getRegionServer(destServerId);
 
-       ServerName destServerName = destServer.getServerName();
+      ServerName destServerName = destServer.getServerName();
 
        //find another row in the cur server that is less than ROW_X
-       List<Region> regions = curServer.getOnlineRegions(TABLE_NAME3);
-       byte[] otherRow = null;
+      List<Region> regions = curServer.getOnlineRegions(TABLE_NAME3);
+      byte[] otherRow = null;
        for (Region region : regions) {
          if (!region.getRegionInfo().getEncodedName().equals(toMove.getRegionInfo().getEncodedName())
              && Bytes.BYTES_COMPARATOR.compare(region.getRegionInfo().getStartKey(), ROW_X) < 0) {
@@ -940,69 +940,71 @@ public class TestHCM {
            break;
          }
        }
-       assertNotNull(otherRow);
-       // If empty row, set it to first row.-f
-       if (otherRow.length <= 0) otherRow = Bytes.toBytes("aaa");
-       Put put2 = new Put(otherRow);
-       put2.add(FAM_NAM, otherRow, otherRow);
-       table.put(put2); //cache put2's location
+      assertNotNull(otherRow);
+      // If empty row, set it to first row.-f
+      if (otherRow.length <= 0) otherRow = Bytes.toBytes("aaa");
+      Put put2 = new Put(otherRow);
+      put2.addColumn(FAM_NAM, otherRow, otherRow);
+      table.put(put2); //cache put2's location
 
-       // Check that we are in the expected state
-       Assert.assertTrue(curServer != destServer);
-       Assert.assertNotEquals(curServer.getServerName(), destServer.getServerName());
-       Assert.assertNotEquals(toMove.getPort(), destServerName.getPort());
-       Assert.assertNotNull(curServer.getOnlineRegion(regionName));
-       Assert.assertNull(destServer.getOnlineRegion(regionName));
-       Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
-           getAssignmentManager().getRegionStates().isRegionsInTransition());
+      // Check that we are in the expected state
+      Assert.assertTrue(curServer != destServer);
+      Assert.assertNotEquals(curServer.getServerName(), destServer.getServerName());
+      Assert.assertNotEquals(toMove.getPort(), destServerName.getPort());
+      Assert.assertNotNull(curServer.getOnlineRegion(regionName));
+      Assert.assertNull(destServer.getOnlineRegion(regionName));
+      Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
+          getAssignmentManager().getRegionStates().isRegionsInTransition());
 
        // Moving. It's possible that we don't have all the regions online at this point, so
-       //  the test must depends only on the region we're looking at.
-       LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
-       TEST_UTIL.getHBaseAdmin().move(
-           toMove.getRegionInfo().getEncodedNameAsBytes(),
-           destServerName.getServerName().getBytes()
-           );
+      //  the test must depends only on the region we're looking at.
+      LOG.info("Move starting region="+toMove.getRegionInfo().getRegionNameAsString());
+      TEST_UTIL.getHBaseAdmin().move(
+          toMove.getRegionInfo().getEncodedNameAsBytes(),
+          destServerName.getServerName().getBytes()
+      );
 
-       while (destServer.getOnlineRegion(regionName) == null ||
-           destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
-           curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
-           master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
-         // wait for the move to be finished
-         Thread.sleep(1);
-        }
+      while (destServer.getOnlineRegion(regionName) == null ||
+          destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+          curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
+          master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+        // wait for the move to be finished
+        Thread.sleep(1);
+      }
 
-       LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
+      LOG.info("Move finished for region="+toMove.getRegionInfo().getRegionNameAsString());
 
-       // Check our new state.
-       Assert.assertNull(curServer.getOnlineRegion(regionName));
-       Assert.assertNotNull(destServer.getOnlineRegion(regionName));
-       Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
-       Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+      // Check our new state.
+      Assert.assertNull(curServer.getOnlineRegion(regionName));
+      Assert.assertNotNull(destServer.getOnlineRegion(regionName));
+      Assert.assertFalse(destServer.getRegionsInTransitionInRS()
+          .containsKey(encodedRegionNameBytes));
+      Assert.assertFalse(curServer.getRegionsInTransitionInRS()
+          .containsKey(encodedRegionNameBytes));
 
 
        // Cache was NOT updated and points to the wrong server
-       Assert.assertFalse(
-           conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation()
-            .getPort() == destServerName.getPort());
+      Assert.assertFalse(
+          conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation()
+              .getPort() == destServerName.getPort());
 
-       // Hijack the number of retry to fail after 2 tries
-       final int prevNumRetriesVal = setNumTries(conn, 2);
+      // Hijack the number of retry to fail after 2 tries
+      final int prevNumRetriesVal = setNumTries(conn, 2);
 
-       Put put3 = new Put(ROW_X);
-       put3.add(FAM_NAM, ROW_X, ROW_X);
-       Put put4 = new Put(otherRow);
-       put4.add(FAM_NAM, otherRow, otherRow);
+      Put put3 = new Put(ROW_X);
+      put3.addColumn(FAM_NAM, ROW_X, ROW_X);
+      Put put4 = new Put(otherRow);
+      put4.addColumn(FAM_NAM, otherRow, otherRow);
 
       // do multi
       ArrayList<Put> actions = Lists.newArrayList(put4, put3);
       table.batch(actions, null); // first should be a valid row,
-       // second we get RegionMovedException.
+      // second we get RegionMovedException.
 
-       setNumTries(conn, prevNumRetriesVal);
-     } finally {
-       table.close();
-     }
+      setNumTries(conn, prevNumRetriesVal);
+    } finally {
+      table.close();
+    }
   }
 
   @Ignore ("Test presumes RETRY_BACKOFF will never change; it has") @Test

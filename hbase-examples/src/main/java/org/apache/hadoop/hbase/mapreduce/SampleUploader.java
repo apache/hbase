@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
-import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -91,7 +90,7 @@ public class SampleUploader extends Configured implements Tool {
 
       // Create Put
       Put put = new Put(row);
-      put.add(family, qualifier, value);
+      put.addColumn(family, qualifier, value);
 
       // Uncomment below to disable WAL. This will improve performance but means
       // you will experience data loss in the case of a RegionServer crash.

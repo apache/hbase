@@ -92,7 +92,8 @@ public class TestRowTooBig {
       for (int i = 0; i < 5 ; i++) {
         Put put = new Put(row1);
 
-        put.add(fam1, Bytes.toBytes("col_" + i ), new byte[5 * 1024 * 1024]);
+        byte[] value = new byte[5 * 1024 * 1024];
+        put.addColumn(fam1, Bytes.toBytes("col_" + i), value);
         region.put(put);
         region.flush(true);
       }
@@ -138,7 +139,8 @@ public class TestRowTooBig {
       for (int i = 0; i < 10; i++) {
         Put put = new Put(row1);
         for (int j = 0; j < 10 * 10000; j++) {
-          put.add(fam1, Bytes.toBytes("col_" + i + "_" + j), new byte[10]);
+          byte[] value = new byte[10];
+          put.addColumn(fam1, Bytes.toBytes("col_" + i + "_" + j), value);
         }
         region.put(put);
         region.flush(true);

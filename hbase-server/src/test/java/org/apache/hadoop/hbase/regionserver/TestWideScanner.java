@@ -78,7 +78,8 @@ public class TestWideScanner extends HBaseTestCase {
         for (j = 0; j < 100; j++) {
           Put put = new Put(row);
           put.setDurability(Durability.SKIP_WAL);
-          put.add(COLUMNS[rng.nextInt(COLUMNS.length)], b, ++ts, b);
+          long ts1 = ++ts;
+          put.addColumn(COLUMNS[rng.nextInt(COLUMNS.length)], b, ts1, b);
           region.put(put);
           count++;
         }

@@ -1413,7 +1413,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           put.add(kv);
           updateValueSize(kv.getValueLength());
         } else {
-          put.add(FAMILY_NAME, qualifier, value);
+          put.addColumn(FAMILY_NAME, qualifier, value);
           updateValueSize(value.length);
         }
       }
@@ -1501,7 +1501,7 @@ public class PerformanceEvaluation extends Configured implements Tool {
           put.add(kv);
           updateValueSize(kv.getValueLength());
         } else {
-          put.add(FAMILY_NAME, qualifier, value);
+          put.addColumn(FAMILY_NAME, qualifier, value);
           updateValueSize(value.length);
         }
       }

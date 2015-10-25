@@ -135,7 +135,7 @@ public class TestRpcControllerFactory {
     Table table = connection.getTable(name);
     byte[] row = Bytes.toBytes("row");
     Put p = new Put(row);
-    p.add(fam1, fam1, Bytes.toBytes("val0"));
+    p.addColumn(fam1, fam1, Bytes.toBytes("val0"));
     table.put(p);
 
     Integer counter = 1;
@@ -147,7 +147,7 @@ public class TestRpcControllerFactory {
     counter = verifyCount(counter);
 
     Put p2 = new Put(row);
-    p2.add(fam1, Bytes.toBytes("qual"), Bytes.toBytes("val1"));
+    p2.addColumn(fam1, Bytes.toBytes("qual"), Bytes.toBytes("val1"));
     table.batch(Lists.newArrayList(p, p2), null);
     // this only goes to a single server, so we don't need to change the count here
     counter = verifyCount(counter);

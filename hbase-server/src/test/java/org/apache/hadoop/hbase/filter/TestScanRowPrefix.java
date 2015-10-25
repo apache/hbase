@@ -75,7 +75,7 @@ public class TestScanRowPrefix extends FilterTestingCluster {
     for (byte[] rowId: rowIds) {
       Put p = new Put(rowId);
       // Use the rowId as the column qualifier
-      p.add("F".getBytes(), rowId, "Dummy value".getBytes());
+      p.addColumn("F".getBytes(), rowId, "Dummy value".getBytes());
       table.put(p);
     }
 

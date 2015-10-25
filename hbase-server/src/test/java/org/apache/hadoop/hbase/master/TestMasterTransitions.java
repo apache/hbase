@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
-import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
@@ -504,7 +503,7 @@ public class TestMasterTransitions {
       byte [] row = getStartKey(hri);
       Put p = new Put(row);
       p.setDurability(Durability.SKIP_WAL);
-      p.add(getTestFamily(), getTestQualifier(), row);
+      p.addColumn(getTestFamily(), getTestQualifier(), row);
       t.put(p);
       rows++;
     }

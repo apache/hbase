@@ -135,7 +135,7 @@ public class TestAcidGuarantees implements Tool {
       for (byte[] family : targetFamilies) {
         for (int i = 0; i < NUM_COLS_TO_CHECK; i++) {
           byte qualifier[] = Bytes.toBytes("col" + i);
-          p.add(family, qualifier, data);
+          p.addColumn(family, qualifier, data);
         }
       }
       table.put(p);

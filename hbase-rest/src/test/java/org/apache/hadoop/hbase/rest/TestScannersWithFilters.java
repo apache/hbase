@@ -149,7 +149,7 @@ public class TestScannersWithFilters {
         Put p = new Put(ROW);
         p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
-          p.add(FAMILIES[0], QUALIFIER, VALUES[0]);
+          p.addColumn(FAMILIES[0], QUALIFIER, VALUES[0]);
         }
         table.put(p);
       }
@@ -157,7 +157,7 @@ public class TestScannersWithFilters {
         Put p = new Put(ROW);
         p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
-          p.add(FAMILIES[1], QUALIFIER, VALUES[1]);
+          p.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
         }
         table.put(p);
       }
@@ -167,7 +167,7 @@ public class TestScannersWithFilters {
         Put p = new Put(ROW);
         p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_ONE) {
-          p.add(FAMILIES[1], QUALIFIER, VALUES[0]);
+          p.addColumn(FAMILIES[1], QUALIFIER, VALUES[0]);
         }
         table.put(p);
       }
@@ -175,7 +175,7 @@ public class TestScannersWithFilters {
         Put p = new Put(ROW);
         p.setDurability(Durability.SKIP_WAL);
         for(byte [] QUALIFIER : QUALIFIERS_TWO) {
-          p.add(FAMILIES[0], QUALIFIER, VALUES[1]);
+          p.addColumn(FAMILIES[0], QUALIFIER, VALUES[1]);
         }
         table.put(p);
       }

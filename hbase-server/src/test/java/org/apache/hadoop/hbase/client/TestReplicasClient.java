@@ -384,7 +384,7 @@ public class TestReplicasClient {
       flushRegion(hriSecondary);
 
       Put p = new Put(row);
-      p.add(f, row, row);
+      p.addColumn(f, row, row);
       table.put(p);
 
       flushRegion(hriPrimary);
@@ -404,7 +404,7 @@ public class TestReplicasClient {
       flushRegion(hriPrimary);
 
       Put p = new Put(row);
-      p.add(f, row, row);
+      p.addColumn(f, row, row);
       table.put(p);
 
       flushRegion(hriPrimary);
@@ -422,7 +422,7 @@ public class TestReplicasClient {
       flushRegion(hriSecondary);
 
       Put p = new Put(row);
-      p.add(f, row, row);
+      p.addColumn(f, row, row);
       table.put(p);
 
       flushRegion(hriSecondary);
@@ -442,7 +442,7 @@ public class TestReplicasClient {
     try {
       // A simple put works, even if there here a second replica
       Put p = new Put(b1);
-      p.add(f, b1, b1);
+      p.addColumn(f, b1, b1);
       table.put(p);
       LOG.info("Put done");
 
@@ -534,12 +534,12 @@ public class TestReplicasClient {
       List<Put> puts = new ArrayList<Put>(2);
       byte[] b1 = Bytes.toBytes("testCancelOfMultiGet" + 0);
       Put p = new Put(b1);
-      p.add(f, b1, b1);
+      p.addColumn(f, b1, b1);
       puts.add(p);
 
       byte[] b2 = Bytes.toBytes("testCancelOfMultiGet" + 1);
       p = new Put(b2);
-      p.add(f, b2, b2);
+      p.addColumn(f, b2, b2);
       puts.add(p);
       table.put(puts);
       LOG.debug("PUT done");
@@ -619,7 +619,7 @@ public class TestReplicasClient {
       for (int i = 0; i < NUMROWS; i++) {
         byte[] b1 = Bytes.toBytes("testUseRegionWithReplica" + i);
         Put p = new Put(b1);
-        p.add(f, b1, b1);
+        p.addColumn(f, b1, b1);
         table.put(p);
       }
       LOG.debug("PUT done");

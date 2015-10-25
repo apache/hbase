@@ -135,7 +135,7 @@ public class TestScannerRetriableFailure {
       byte[] row = Bytes.toBytes(String.format("%09d", i));
       Put put = new Put(row);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILY_NAME, null, row);
+      put.addColumn(FAMILY_NAME, null, row);
       table.put(put);
     }
   }

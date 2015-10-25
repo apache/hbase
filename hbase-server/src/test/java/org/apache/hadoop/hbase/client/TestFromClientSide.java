@@ -193,13 +193,13 @@ public class TestFromClientSide {
 
      long ts = System.currentTimeMillis();
      Put p = new Put(T1, ts);
-     p.add(FAMILY, C0, T1);
+     p.addColumn(FAMILY, C0, T1);
      h.put(p);
      p = new Put(T1, ts+2);
-     p.add(FAMILY, C0, T2);
+     p.addColumn(FAMILY, C0, T2);
      h.put(p);
      p = new Put(T1, ts+4);
-     p.add(FAMILY, C0, T3);
+     p.addColumn(FAMILY, C0, T3);
      h.put(p);
 
      Delete d = new Delete(T1, ts+3);
@@ -254,7 +254,7 @@ public class TestFromClientSide {
      // future timestamp
      long ts = System.currentTimeMillis() * 2;
      Put put = new Put(ROW, ts);
-     put.add(FAMILY, COLUMN, VALUE);
+     put.addColumn(FAMILY, COLUMN, VALUE);
      table.put(put);
 
      Get get = new Get(ROW);
@@ -283,7 +283,7 @@ public class TestFromClientSide {
      });
 
      put = new Put(ROW, ts);
-     put.add(FAMILY, COLUMN, VALUE);
+     put.addColumn(FAMILY, COLUMN, VALUE);
      table.put(put);
 
      get = new Get(ROW);
@@ -418,14 +418,14 @@ public class TestFromClientSide {
           value));
       Put put = new Put(Bytes.toBytes(row));
       put.setDurability(Durability.SKIP_WAL);
-      put.add(Bytes.toBytes("trans-blob"), null, Bytes
+      put.addColumn(Bytes.toBytes("trans-blob"), null, Bytes
           .toBytes("value for blob"));
-      put.add(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
-      put.add(Bytes.toBytes("trans-date"), null, Bytes
+      put.addColumn(Bytes.toBytes("trans-type"), null, Bytes.toBytes("statement"));
+      put.addColumn(Bytes.toBytes("trans-date"), null, Bytes
           .toBytes("20090921010101999"));
-      put.add(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes
+      put.addColumn(Bytes.toBytes("trans-tags"), Bytes.toBytes("qual2"), Bytes
           .toBytes(value));
-      put.add(Bytes.toBytes("trans-group"), null, Bytes
+      put.addColumn(Bytes.toBytes("trans-group"), null, Bytes
           .toBytes("adhocTransactionGroupId"));
       ht.put(put);
     }
@@ -590,7 +590,7 @@ public class TestFromClientSide {
     TableName TABLE = TableName.valueOf("testSuperSimple");
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     Scan scan = new Scan();
     scan.addColumn(FAMILY, TABLE.toBytes());
@@ -608,7 +608,7 @@ public class TestFromClientSide {
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     byte[] value = new byte[4 * 1024 * 1024];
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, value);
+    put.addColumn(FAMILY, QUALIFIER, value);
     ht.put(put);
     try {
       TEST_UTIL.getConfiguration().setInt(
@@ -618,7 +618,7 @@ public class TestFromClientSide {
           ConnectionFactory.createConnection(TEST_UTIL.getConfiguration())) {
         try (Table t = connection.getTable(TableName.valueOf(FAMILY))) {
           put = new Put(ROW);
-          put.add(FAMILY, QUALIFIER, value);
+          put.addColumn(FAMILY, QUALIFIER, value);
           t.put(put);
         }
       }
@@ -642,7 +642,7 @@ public class TestFromClientSide {
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
     Scan scan = new Scan();
@@ -675,7 +675,7 @@ public class TestFromClientSide {
     for(int i = 0; i < 10; i ++) {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILY, QUALIFIER, values[i]);
+      put.addColumn(FAMILY, QUALIFIER, values[i]);
       ht.put(put);
     }
     Scan scan = new Scan();
@@ -709,7 +709,7 @@ public class TestFromClientSide {
     for(int i=0;i<10;i++) {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
     Scan scan = new Scan();
@@ -778,7 +778,7 @@ public class TestFromClientSide {
     // Insert a row
 
     Put put = new Put(ROWS[2]);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
 
     // Try to get empty rows around it
@@ -863,7 +863,7 @@ public class TestFromClientSide {
     ////////////////////////////////////////////////////////////////////////////
 
     put = new Put(ROWS[0]);
-    put.add(FAMILIES[4], QUALIFIERS[0], VALUES[0]);
+    put.addColumn(FAMILIES[4], QUALIFIERS[0], VALUES[0]);
     ht.put(put);
 
     // Get the single column
@@ -896,13 +896,13 @@ public class TestFromClientSide {
 
     // Insert multiple columns to two other families
     put = new Put(ROWS[0]);
-    put.add(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIERS[4], VALUES[4]);
-    put.add(FAMILIES[4], QUALIFIERS[4], VALUES[4]);
-    put.add(FAMILIES[6], QUALIFIERS[6], VALUES[6]);
-    put.add(FAMILIES[6], QUALIFIERS[7], VALUES[7]);
-    put.add(FAMILIES[7], QUALIFIERS[7], VALUES[7]);
-    put.add(FAMILIES[9], QUALIFIERS[0], VALUES[0]);
+    put.addColumn(FAMILIES[2], QUALIFIERS[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIERS[4], VALUES[4]);
+    put.addColumn(FAMILIES[4], QUALIFIERS[4], VALUES[4]);
+    put.addColumn(FAMILIES[6], QUALIFIERS[6], VALUES[6]);
+    put.addColumn(FAMILIES[6], QUALIFIERS[7], VALUES[7]);
+    put.addColumn(FAMILIES[7], QUALIFIERS[7], VALUES[7]);
+    put.addColumn(FAMILIES[9], QUALIFIERS[0], VALUES[0]);
     ht.put(put);
 
     // Get multiple columns across multiple families and get empties around it
@@ -923,10 +923,10 @@ public class TestFromClientSide {
 
     // Insert more data to memstore
     put = new Put(ROWS[0]);
-    put.add(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
-    put.add(FAMILIES[6], QUALIFIERS[8], VALUES[8]);
-    put.add(FAMILIES[6], QUALIFIERS[9], VALUES[9]);
-    put.add(FAMILIES[4], QUALIFIERS[3], VALUES[3]);
+    put.addColumn(FAMILIES[6], QUALIFIERS[5], VALUES[5]);
+    put.addColumn(FAMILIES[6], QUALIFIERS[8], VALUES[8]);
+    put.addColumn(FAMILIES[6], QUALIFIERS[9], VALUES[9]);
+    put.addColumn(FAMILIES[4], QUALIFIERS[3], VALUES[3]);
     ht.put(put);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1164,7 +1164,7 @@ public class TestFromClientSide {
     // Null row (should NOT work)
     try {
       Put put = new Put((byte[])null);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       ht.put(put);
       fail("Inserting a null row worked, should throw exception");
     } catch(Exception e) {}
@@ -1172,7 +1172,7 @@ public class TestFromClientSide {
     // Null qualifier (should work)
     {
       Put put = new Put(ROW);
-      put.add(FAMILY, null, VALUE);
+      put.addColumn(FAMILY, null, VALUE);
       ht.put(put);
 
       getTestNull(ht, ROW, FAMILY, VALUE);
@@ -1195,7 +1195,7 @@ public class TestFromClientSide {
     // Empty qualifier, byte[0] instead of null (should work)
     try {
       Put put = new Put(ROW);
-      put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+      put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
       ht.put(put);
 
       getTestNull(ht, ROW, FAMILY, VALUE);
@@ -1225,7 +1225,7 @@ public class TestFromClientSide {
     // Null value
     try {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, null);
+      put.addColumn(FAMILY, QUALIFIER, null);
       ht.put(put);
 
       Get get = new Get(ROW);
@@ -1262,10 +1262,10 @@ public class TestFromClientSide {
 
     // Insert 4 versions of same column
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
 
     // Verify we can get each one properly
@@ -1351,10 +1351,10 @@ public class TestFromClientSide {
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    put.add(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    put.add(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
     ht.put(put);
 
     // Ensure maxVersions in query is respected
@@ -1414,10 +1414,10 @@ public class TestFromClientSide {
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
-    put.add(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
-    put.add(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
-    put.add(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
     ht.put(put);
 
     get = new Get(ROW);
@@ -1476,19 +1476,19 @@ public class TestFromClientSide {
 
     // Insert limit + 1 on each family
     Put put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILIES[0], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILIES[1], QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[5], VALUES[5]);
-    put.add(FAMILIES[2], QUALIFIER, STAMPS[6], VALUES[6]);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILIES[1], QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILIES[2], QUALIFIER, STAMPS[6], VALUES[6]);
     ht.put(put);
 
     // Verify we only get the right number out of each
@@ -1673,7 +1673,7 @@ public class TestFromClientSide {
     Put put = new Put(ROW);
     for (int q = 0; q < 1; q++)
       for (int t = 0; t < 5; t++)
-        put.add(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
     admin.flush(TABLE);
 
@@ -1717,7 +1717,7 @@ public class TestFromClientSide {
     put = new Put(ROW);
     for (int q = 0; q < 5; q++)
       for (int t = 0; t < 5; t++)
-        put.add(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
     admin.flush(TABLE);
 
@@ -1726,7 +1726,7 @@ public class TestFromClientSide {
     put = new Put(ROW2);
     for (int q = 0; q < 5; q++)
       for (int t = 0; t < 5; t++)
-        put.add(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
+        put.addColumn(FAMILY, QUALIFIERS[q], ts[t], VALUES[t]);
     ht.put(put);
     admin.flush(TABLE);
 
@@ -1825,8 +1825,8 @@ public class TestFromClientSide {
     Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
 
     Put put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
     ht.put(put);
 
     Delete delete = new Delete(ROW);
@@ -1853,12 +1853,12 @@ public class TestFromClientSide {
 
     // Test delete latest version
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
-    put.add(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
-    put.add(FAMILIES[0], null, ts[4], VALUES[4]);
-    put.add(FAMILIES[0], null, ts[2], VALUES[2]);
-    put.add(FAMILIES[0], null, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
+    put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
     ht.put(put);
 
     delete = new Delete(ROW);
@@ -1897,8 +1897,8 @@ public class TestFromClientSide {
     // But alas, this is not to be.  We can't put them back in either case.
 
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
     ht.put(put);
 
 
@@ -1928,24 +1928,24 @@ public class TestFromClientSide {
     // Test deleting an entire family from one row but not the other various ways
 
     put = new Put(ROWS[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     put = new Put(ROWS[1]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     put = new Put(ROWS[2]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     // Assert that above went in.
@@ -2040,12 +2040,12 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     put = new Put(ROWS[3]);
-    put.add(FAMILIES[2], QUALIFIER, VALUES[0]);
+    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
     ht.put(put);
 
     put = new Put(ROWS[4]);
-    put.add(FAMILIES[1], QUALIFIER, VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, VALUES[2]);
+    put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
     ht.put(put);
 
     get = new Get(ROWS[3]);
@@ -2088,7 +2088,7 @@ public class TestFromClientSide {
       byte [] bytes = Bytes.toBytes(i);
       put = new Put(bytes);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(FAMILIES[0], QUALIFIER, bytes);
+      put.addColumn(FAMILIES[0], QUALIFIER, bytes);
       ht.put(put);
     }
     for (int i = 0; i < 10; i++) {
@@ -2197,7 +2197,7 @@ public class TestFromClientSide {
       Put put = new Put(ROWS[i]);
       put.setDurability(Durability.SKIP_WAL);
       for(int j=0;j<numColsPerRow;j++) {
-        put.add(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
+        put.addColumn(FAMILY, QUALIFIERS[j], QUALIFIERS[j]);
       }
       assertTrue("Put expected to contain " + numColsPerRow + " columns but " +
           "only contains " + put.size(), put.size() == numColsPerRow);
@@ -2277,9 +2277,9 @@ public class TestFromClientSide {
     // Insert three versions
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
     ht.put(put);
 
     // Get the middle value
@@ -2299,8 +2299,8 @@ public class TestFromClientSide {
 
     // Insert two more versions surrounding others, into memstore
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
     ht.put(put);
 
     // Check we can get everything we should and can't get what we shouldn't
@@ -2341,12 +2341,12 @@ public class TestFromClientSide {
     // Insert lots versions
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
 
     getVersionRangeAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
@@ -2390,7 +2390,7 @@ public class TestFromClientSide {
     // Insert lots versions
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, manualStamp, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, manualStamp, VALUE);
     ht.put(put);
 
     getVersionAndVerify(ht, ROW, FAMILY, QUALIFIER, manualStamp, VALUE);
@@ -2415,12 +2415,12 @@ public class TestFromClientSide {
     // Insert lots versions
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
 
     getVersionRangeAndVerifyGreaterThan(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
@@ -2458,12 +2458,12 @@ public class TestFromClientSide {
     // Insert lots versions
 
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
-    put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[0], VALUES[0]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
 
     getAllVersionsAndVerify(ht, ROW, FAMILY, QUALIFIER, STAMPS, VALUES, 0, 5);
@@ -3288,10 +3288,10 @@ public class TestFromClientSide {
 
     // Insert 4 versions of same column
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
-    put.add(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
-    put.add(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[1], VALUES[1]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[2], VALUES[2]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[4]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[5], VALUES[5]);
     ht.put(put);
 
     // Verify we can get each one properly
@@ -3377,11 +3377,11 @@ public class TestFromClientSide {
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
-    put.add(FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
-    put.add(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
-    put.add(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
-    put.add(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[3], VALUES[3]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[4], VALUES[14]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[6], VALUES[6]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[7], VALUES[7]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[8], VALUES[8]);
     ht.put(put);
 
     // Ensure maxVersions in query is respected
@@ -3441,10 +3441,10 @@ public class TestFromClientSide {
 
     // Insert 4 more versions of same column and a dupe
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
-    put.add(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
-    put.add(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
-    put.add(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[9], VALUES[9]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[11], VALUES[11]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[13], VALUES[13]);
+    put.addColumn(FAMILY, QUALIFIER, STAMPS[15], VALUES[15]);
     ht.put(put);
 
     get = new Get(ROW);
@@ -3501,15 +3501,15 @@ public class TestFromClientSide {
     byte[] row = Bytes.toBytes("row1");
     byte[] qualifier = Bytes.toBytes("myCol");
     Put put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
     hTable.put(put);
 
     Get get = new Get(row);
@@ -3526,12 +3526,12 @@ public class TestFromClientSide {
 
     // Update the value at timestamp 1
     put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
     hTable.put(put);
 
     // Update the value at timestamp 2
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
     hTable.put(put);
 
     // Check that the values at timestamp 2 and 1 got updated
@@ -3552,15 +3552,15 @@ public class TestFromClientSide {
     byte[] row = Bytes.toBytes("row2");
     byte[] qualifier = Bytes.toBytes("myCol");
     Put put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
     hTable.put(put);
 
     Get get = new Get(row);
@@ -3582,12 +3582,12 @@ public class TestFromClientSide {
 
     // Update the value at timestamp 1
     put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
     hTable.put(put);
 
     // Update the value at timestamp 2
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
     hTable.put(put);
 
     // Trigger a major compaction
@@ -3614,15 +3614,15 @@ public class TestFromClientSide {
     byte[] row = Bytes.toBytes("row3");
     byte[] qualifier = Bytes.toBytes("myCol");
     Put put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("AAA"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("BBB"));
     hTable.put(put);
 
     put = new Put(row);
-    put.add(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
+    put.addColumn(FAMILY, qualifier, 3L, Bytes.toBytes("EEE"));
     hTable.put(put);
 
     Get get = new Get(row);
@@ -3644,7 +3644,7 @@ public class TestFromClientSide {
 
     // Update the value at timestamp 1
     put = new Put(row);
-    put.add(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
+    put.addColumn(FAMILY, qualifier, 1L, Bytes.toBytes("CCC"));
     hTable.put(put);
 
     // Trigger a major compaction
@@ -3654,7 +3654,7 @@ public class TestFromClientSide {
 
     // Update the value at timestamp 2
     put = new Put(row);
-    put.add(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
+    put.addColumn(FAMILY, qualifier, 2L, Bytes.toBytes("DDD"));
     hTable.put(put);
 
     // Trigger a major compaction
@@ -3683,11 +3683,11 @@ public class TestFromClientSide {
   public void testGet_NullQualifier() throws IOException {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testGet_NullQualifier"), FAMILY);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
     put = new Put(ROW);
-    put.add(FAMILY, null, VALUE);
+    put.addColumn(FAMILY, null, VALUE);
     table.put(put);
     LOG.info("Row put");
 
@@ -3706,7 +3706,7 @@ public class TestFromClientSide {
   public void testGet_NonExistentRow() throws IOException {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testGet_NonExistentRow"), FAMILY);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
     LOG.info("Row put");
 
@@ -3734,11 +3734,11 @@ public class TestFromClientSide {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testPut"),
         new byte[][] { CONTENTS_FAMILY, SMALL_FAMILY });
     Put put = new Put(row1);
-    put.add(CONTENTS_FAMILY, null, value);
+    put.addColumn(CONTENTS_FAMILY, null, value);
     table.put(put);
 
     put = new Put(row2);
-    put.add(CONTENTS_FAMILY, null, value);
+    put.addColumn(CONTENTS_FAMILY, null, value);
 
     assertEquals(put.size(), 1);
     assertEquals(put.getFamilyCellMap().get(CONTENTS_FAMILY).size(), 1);
@@ -3774,7 +3774,7 @@ public class TestFromClientSide {
 
     try {
       Put p = new Put(ROW);
-      p.add(BAD_FAM, QUALIFIER, VAL);
+      p.addColumn(BAD_FAM, QUALIFIER, VAL);
       table.put(p);
     } catch (RetriesExhaustedWithDetailsException e) {
       caughtNSCFE = e.getCause(0) instanceof NoSuchColumnFamilyException;
@@ -3796,7 +3796,7 @@ public class TestFromClientSide {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(CONTENTS_FAMILY, null, value);
+      put.addColumn(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
     table.put(rowsUpdate);
@@ -3828,7 +3828,7 @@ public class TestFromClientSide {
         byte[] row = Bytes.toBytes("row" + i);
         Put put = new Put(row);
         put.setDurability(Durability.SKIP_WAL);
-        put.add(CONTENTS_FAMILY, null, value);
+        put.addColumn(CONTENTS_FAMILY, null, value);
         rowsUpdate.add(put);
       }
       table.put(rowsUpdate);
@@ -3869,7 +3869,7 @@ public class TestFromClientSide {
       byte[] row = Bytes.toBytes("row" + i);
       Put put = new Put(row);
       put.setDurability(Durability.SKIP_WAL);
-      put.add(CONTENTS_FAMILY, null, value);
+      put.addColumn(CONTENTS_FAMILY, null, value);
       rowsUpdate.add(put);
     }
     table.put(rowsUpdate);
@@ -3927,7 +3927,7 @@ public class TestFromClientSide {
       new byte [][] {FAM1, FAM2});
     // Insert some values
     Put put = new Put(ROW);
-    put.add(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
+    put.addColumn(FAM1, Bytes.toBytes("letters"), Bytes.toBytes("abcdefg"));
     table.put(put);
     try {
       Thread.sleep(1000);
@@ -3936,7 +3936,7 @@ public class TestFromClientSide {
     }
 
     put = new Put(ROW);
-    put.add(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
+    put.addColumn(FAM1, Bytes.toBytes("numbers"), Bytes.toBytes("123456"));
     table.put(put);
 
     try {
@@ -3946,7 +3946,7 @@ public class TestFromClientSide {
     }
 
     put = new Put(ROW);
-    put.add(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
+    put.addColumn(FAM2, Bytes.toBytes("letters"), Bytes.toBytes("hijklmnop"));
     table.put(put);
 
     long times[] = new long[3];
@@ -4099,7 +4099,7 @@ public class TestFromClientSide {
     Table a = TEST_UTIL.createTable(tableAname, HConstants.CATALOG_FAMILY);
     Table b = TEST_UTIL.createTable(tableBname, HConstants.CATALOG_FAMILY);
     Put put = new Put(ROW);
-    put.add(HConstants.CATALOG_FAMILY, null, value);
+    put.addColumn(HConstants.CATALOG_FAMILY, null, value);
     a.put(put);
 
     // open a new connection to A and a connection to b
@@ -4198,10 +4198,10 @@ public class TestFromClientSide {
         byte[] three = new byte[] { 3 };
         byte[] four = new byte[] { 4 };
 
-        put1.add(HConstants.CATALOG_FAMILY, null, one);
-        put2.add(HConstants.CATALOG_FAMILY, null, two);
-        put3.add(HConstants.CATALOG_FAMILY, null, three);
-        put4.add(HConstants.CATALOG_FAMILY, null, four);
+        put1.addColumn(HConstants.CATALOG_FAMILY, null, one);
+        put2.addColumn(HConstants.CATALOG_FAMILY, null, two);
+        put3.addColumn(HConstants.CATALOG_FAMILY, null, three);
+        put4.addColumn(HConstants.CATALOG_FAMILY, null, four);
         table.put(put1);
         table.put(put2);
         table.put(put3);
@@ -4304,11 +4304,11 @@ public class TestFromClientSide {
 
     Table t = TEST_UTIL.createTable(TABLENAME, FAMILY);
     Put p = new Put(ROW);
-    p.add(FAMILY, QUALIFIER, VALUE);
+    p.addColumn(FAMILY, QUALIFIER, VALUE);
     MutationProto m1 = ProtobufUtil.toMutation(MutationType.PUT, p);
 
     p = new Put(ROW1);
-    p.add(FAMILY, QUALIFIER, VALUE);
+    p.addColumn(FAMILY, QUALIFIER, VALUE);
     MutationProto m2 = ProtobufUtil.toMutation(MutationType.PUT, p);
 
     MutateRowsRequest.Builder mrmBuilder = MutateRowsRequest.newBuilder();
@@ -4337,7 +4337,7 @@ public class TestFromClientSide {
     };
     RowMutations arm = new RowMutations(ROW);
     Put p = new Put(ROW);
-    p.add(FAMILY, QUALIFIERS[0], VALUE);
+    p.addColumn(FAMILY, QUALIFIERS[0], VALUE);
     arm.add(p);
     t.mutateRow(arm);
 
@@ -4347,7 +4347,7 @@ public class TestFromClientSide {
 
     arm = new RowMutations(ROW);
     p = new Put(ROW);
-    p.add(FAMILY, QUALIFIERS[1], VALUE);
+    p.addColumn(FAMILY, QUALIFIERS[1], VALUE);
     arm.add(p);
     Delete d = new Delete(ROW);
     d.deleteColumns(FAMILY, QUALIFIERS[0]);
@@ -4362,7 +4362,7 @@ public class TestFromClientSide {
     try {
       arm = new RowMutations(ROW);
       p = new Put(ROW);
-      p.add(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
+      p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, QUALIFIERS[0], VALUE);
       arm.add(p);
       t.mutateRow(arm);
       fail("Expected NoSuchColumnFamilyException");
@@ -4429,7 +4429,7 @@ public class TestFromClientSide {
     final byte[] COLUMN = Bytes.toBytes("column");
     Put p = new Put(ROW);
     // write an integer here (not a Long)
-    p.add(FAMILY, COLUMN, Bytes.toBytes(5));
+    p.addColumn(FAMILY, COLUMN, Bytes.toBytes(5));
     ht.put(p);
     try {
       ht.incrementColumnValue(ROW, FAMILY, COLUMN, 5);
@@ -4676,7 +4676,7 @@ public class TestFromClientSide {
 
     for (int versions = 1; versions <= numVersions; versions++) {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, ts + versions, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
       table.put(put);
 
       Result result = table.get(get);
@@ -4712,7 +4712,7 @@ public class TestFromClientSide {
 
     for (int versions = 1; versions <= numVersions; versions++) {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, ts + versions, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, ts + versions, VALUE);
       table.put(put);
 
       Result result = table.get(get);
@@ -4738,7 +4738,7 @@ public class TestFromClientSide {
         public Void call() {
           try {
             Put put = new Put(ROW);
-            put.add(FAMILY, QUALIFIER, ts + versionsCopy, VALUE);
+            put.addColumn(FAMILY, QUALIFIER, ts + versionsCopy, VALUE);
             table.put(put);
 
             Result result = table.get(get);
@@ -4782,7 +4782,7 @@ public class TestFromClientSide {
 
     Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndPut"), FAMILY);
     Put put1 = new Put(ROW);
-    put1.add(FAMILY, QUALIFIER, VALUE);
+    put1.addColumn(FAMILY, QUALIFIER, VALUE);
 
     // row doesn't exist, so using non-null value should be considered "not match".
     boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put1);
@@ -4797,14 +4797,14 @@ public class TestFromClientSide {
     assertEquals(ok, false);
 
     Put put2 = new Put(ROW);
-    put2.add(FAMILY, QUALIFIER, value2);
+    put2.addColumn(FAMILY, QUALIFIER, value2);
 
     // row now exists, use the matching value to check
     ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, VALUE, put2);
     assertEquals(ok, true);
 
     Put put3 = new Put(anotherrow);
-    put3.add(FAMILY, QUALIFIER, VALUE);
+    put3.addColumn(FAMILY, QUALIFIER, VALUE);
 
     // try to do CheckAndPut on different rows
     try {
@@ -4824,10 +4824,10 @@ public class TestFromClientSide {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testCheckAndPutWithCompareOp"), FAMILY);
 
     Put put2 = new Put(ROW);
-    put2.add(FAMILY, QUALIFIER, value2);
+    put2.addColumn(FAMILY, QUALIFIER, value2);
 
     Put put3 = new Put(ROW);
-    put3.add(FAMILY, QUALIFIER, value3);
+    put3.addColumn(FAMILY, QUALIFIER, value3);
 
     // row doesn't exist, so using "null" to check for existence should be considered "match".
     boolean ok = table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put2);
@@ -4890,11 +4890,11 @@ public class TestFromClientSide {
         FAMILY);
 
     Put put2 = new Put(ROW);
-    put2.add(FAMILY, QUALIFIER, value2);
+    put2.addColumn(FAMILY, QUALIFIER, value2);
     table.put(put2);
 
     Put put3 = new Put(ROW);
-    put3.add(FAMILY, QUALIFIER, value3);
+    put3.addColumn(FAMILY, QUALIFIER, value3);
 
     Delete delete = new Delete(ROW);
     delete.deleteColumns(FAMILY, QUALIFIER);
@@ -4972,11 +4972,11 @@ public class TestFromClientSide {
     // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
     // scan are forced to hit all the regions.
     Put put1 = new Put(Bytes.toBytes("zzz1"));
-    put1.add(FAMILY, QUALIFIER, VALUE);
+    put1.addColumn(FAMILY, QUALIFIER, VALUE);
     Put put2 = new Put(Bytes.toBytes("zzz2"));
-    put2.add(FAMILY, QUALIFIER, VALUE);
+    put2.addColumn(FAMILY, QUALIFIER, VALUE);
     Put put3 = new Put(Bytes.toBytes("zzz3"));
-    put3.add(FAMILY, QUALIFIER, VALUE);
+    put3.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(Arrays.asList(put1, put2, put3));
 
     Scan scan1 = new Scan();
@@ -5134,7 +5134,7 @@ public class TestFromClientSide {
 
       // insert data
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, data);
+      put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
       // data was in memstore so don't expect any changes
@@ -5160,7 +5160,7 @@ public class TestFromClientSide {
       byte [] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
       byte [] data2 = Bytes.add(data, data);
       put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER2, data2);
+      put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       Result r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
@@ -5346,7 +5346,7 @@ public class TestFromClientSide {
     List<Put> puts = new ArrayList<Put>();
     for (int i=0;i !=100; i++){
       Put put = new Put(Bytes.toBytes(i));
-      put.add(FAMILY, FAMILY, Bytes.toBytes(i));
+      put.addColumn(FAMILY, FAMILY, Bytes.toBytes(i));
       puts.add(put);
     }
     foo.put(puts);
@@ -5369,11 +5369,11 @@ public class TestFromClientSide {
   public void testScan_NullQualifier() throws IOException {
     Table table = TEST_UTIL.createTable(TableName.valueOf("testScan_NullQualifier"), FAMILY);
     Put put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     table.put(put);
 
     put = new Put(ROW);
-    put.add(FAMILY, null, VALUE);
+    put.addColumn(FAMILY, null, VALUE);
     table.put(put);
     LOG.info("Row put");
 
@@ -5400,7 +5400,7 @@ public class TestFromClientSide {
 
     try {
       Put put = new Put(ROW, -1);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
       fail("Negative timestamps should not have been allowed");
     } catch (IllegalArgumentException ex) {
@@ -5409,7 +5409,8 @@ public class TestFromClientSide {
 
     try {
       Put put = new Put(ROW);
-      put.add(FAMILY, QUALIFIER, -1, VALUE);
+      long ts = -1;
+      put.addColumn(FAMILY, QUALIFIER, ts, VALUE);
       table.put(put);
       fail("Negative timestamps should not have been allowed");
     } catch (IllegalArgumentException ex) {
@@ -5606,18 +5607,18 @@ public class TestFromClientSide {
 
     // put the same row 4 times, with different values
     Put p = new Put(row);
-    p.add(FAMILY, QUALIFIER, 10, VALUE);
+    p.addColumn(FAMILY, QUALIFIER, (long) 10, VALUE);
     table.put(p);
     p = new Put(row);
-    p.add(FAMILY, QUALIFIER, 11, ArrayUtils.add(VALUE, (byte) 2));
-    table.put(p);
-
-    p = new Put(row);
-    p.add(FAMILY, QUALIFIER, 12, ArrayUtils.add(VALUE, (byte) 3));
+    p.addColumn(FAMILY, QUALIFIER, (long) 11, ArrayUtils.add(VALUE, (byte) 2));
     table.put(p);
 
     p = new Put(row);
-    p.add(FAMILY, QUALIFIER, 13, ArrayUtils.add(VALUE, (byte) 4));
+    p.addColumn(FAMILY, QUALIFIER, (long) 12, ArrayUtils.add(VALUE, (byte) 3));
+    table.put(p);
+
+    p = new Put(row);
+    p.addColumn(FAMILY, QUALIFIER, (long) 13, ArrayUtils.add(VALUE, (byte) 4));
     table.put(p);
 
     int versions = 4;
@@ -5678,7 +5679,7 @@ public class TestFromClientSide {
     int insertNum = 10;
     for (int i = 0; i < 10; i++) {
       Put put = new Put(Bytes.toBytes("row" + String.format("%03d", i)));
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
     }
 
@@ -5710,34 +5711,34 @@ public class TestFromClientSide {
     TableName TABLE = TableName.valueOf("testSuperSimpleWithReverseScan");
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     Put put = new Put(Bytes.toBytes("0-b11111-0000000000000000000"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b11111-0000000000000000002"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b11111-0000000000000000004"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b11111-0000000000000000006"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b11111-0000000000000000008"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000001"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000003"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000005"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000007"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     put = new Put(Bytes.toBytes("0-b22222-0000000000000000009"));
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
     Scan scan = new Scan(Bytes.toBytes("0-b11111-9223372036854775807"),
         Bytes.toBytes("0-b11111-0000000000000000000"));
@@ -5767,7 +5768,7 @@ public class TestFromClientSide {
         Bytes.toBytes("col9-<d2v1>-<d3v2>") };
     for (int i = 0; i < 10; i++) {
       Put put = new Put(ROWS[i]);
-      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
     Scan scan = new Scan();
@@ -5809,7 +5810,7 @@ public class TestFromClientSide {
         Bytes.toBytes("col9-<d2v1>-<d3v2>") };
     for (int i = 0; i < 10; i++) {
       Put put = new Put(ROWS[i]);
-      put.add(FAMILY, QUALIFIERS[i], VALUE);
+      put.addColumn(FAMILY, QUALIFIERS[i], VALUE);
       ht.put(put);
     }
     Scan scan = new Scan();
@@ -5870,7 +5871,7 @@ public class TestFromClientSide {
     // Insert a row
 
     Put put = new Put(ROWS[2]);
-    put.add(FAMILY, QUALIFIER, VALUE);
+    put.addColumn(FAMILY, QUALIFIER, VALUE);
     ht.put(put);
 
     // Make sure we can scan the row
@@ -5904,7 +5905,7 @@ public class TestFromClientSide {
     Table ht = TEST_UTIL.createTable(TABLE, FAMILY);
     // Null qualifier (should work)
     Put put = new Put(ROW);
-    put.add(FAMILY, null, VALUE);
+    put.addColumn(FAMILY, null, VALUE);
     ht.put(put);
     scanTestNull(ht, ROW, FAMILY, VALUE, true);
     Delete delete = new Delete(ROW);
@@ -5915,7 +5916,7 @@ public class TestFromClientSide {
     ht = TEST_UTIL.createTable(TableName.valueOf(TABLE2), FAMILY);
     // Empty qualifier, byte[0] instead of null (should work)
     put = new Put(ROW);
-    put.add(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
+    put.addColumn(FAMILY, HConstants.EMPTY_BYTE_ARRAY, VALUE);
     ht.put(put);
     scanTestNull(ht, ROW, FAMILY, VALUE, true);
     TEST_UTIL.flush();
@@ -5925,7 +5926,7 @@ public class TestFromClientSide {
     ht.delete(delete);
     // Null value
     put = new Put(ROW);
-    put.add(FAMILY, QUALIFIER, null);
+    put.addColumn(FAMILY, QUALIFIER, null);
     ht.put(put);
     Scan scan = new Scan();
     scan.setReversed(true);
@@ -5945,8 +5946,8 @@ public class TestFromClientSide {
     Table ht = TEST_UTIL.createTable(TABLE, FAMILIES, 3);
 
     Put put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[1], VALUES[1]);
     ht.put(put);
 
     Delete delete = new Delete(ROW);
@@ -5963,12 +5964,12 @@ public class TestFromClientSide {
 
     // Test delete latest version
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
-    put.add(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
-    put.add(FAMILIES[0], null, ts[4], VALUES[4]);
-    put.add(FAMILIES[0], null, ts[2], VALUES[2]);
-    put.add(FAMILIES[0], null, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[0], null, ts[4], VALUES[4]);
+    put.addColumn(FAMILIES[0], null, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[0], null, ts[3], VALUES[3]);
     ht.put(put);
 
     delete = new Delete(ROW);
@@ -5997,8 +5998,8 @@ public class TestFromClientSide {
     // But alas, this is not to be. We can't put them back in either case.
 
     put = new Put(ROW);
-    put.add(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]); // 1000
-    put.add(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]); // 5000
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[0], QUALIFIER, ts[4], VALUES[4]);
     ht.put(put);
 
     // The Scanner returns the previous values, the expected-naive-unexpected
@@ -6016,24 +6017,24 @@ public class TestFromClientSide {
     // ways
 
     put = new Put(ROWS[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     put = new Put(ROWS[1]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     put = new Put(ROWS[2]);
-    put.add(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
-    put.add(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
-    put.add(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[0], VALUES[0]);
+    put.addColumn(FAMILIES[1], QUALIFIER, ts[1], VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[2], VALUES[2]);
+    put.addColumn(FAMILIES[2], QUALIFIER, ts[3], VALUES[3]);
     ht.put(put);
 
     delete = new Delete(ROWS[0]);
@@ -6087,12 +6088,12 @@ public class TestFromClientSide {
     ht.delete(delete);
 
     put = new Put(ROWS[3]);
-    put.add(FAMILIES[2], QUALIFIER, VALUES[0]);
+    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[0]);
     ht.put(put);
 
     put = new Put(ROWS[4]);
-    put.add(FAMILIES[1], QUALIFIER, VALUES[1]);
-    put.add(FAMILIES[2], QUALIFIER, VALUES[2]);
+    put.addColumn(FAMILIES[1], QUALIFIER, VALUES[1]);
+    put.addColumn(FAMILIES[2], QUALIFIER, VALUES[2]);
     ht.put(put);
 
     scan = new Scan(ROWS[4]);
@@ -6142,7 +6143,7 @@ public class TestFromClientSide {
     int insertNum = splitRows.length;
     for (int i = 0; i < insertNum; i++) {
       Put put = new Put(splitRows[i]);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
     }
 
@@ -6194,14 +6195,14 @@ public class TestFromClientSide {
     }
     for (byte[] splitRow : splitRows) {
       Put put = new Put(splitRow);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
 
       byte[] nextRow = Bytes.copy(splitRow);
       nextRow[nextRow.length - 1]++;
 
       put = new Put(nextRow);
-      put.add(FAMILY, QUALIFIER, VALUE);
+      put.addColumn(FAMILY, QUALIFIER, VALUE);
       table.put(put);
     }
 

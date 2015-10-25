@@ -76,7 +76,7 @@ public class TestRowCountEndpoint {
     for (int i=0; i<5; i++) {
       byte[] iBytes = Bytes.toBytes(i);
       Put p = new Put(iBytes);
-      p.add(TEST_FAMILY, TEST_COLUMN, iBytes);
+      p.addColumn(TEST_FAMILY, TEST_COLUMN, iBytes);
       table.put(p);
     }
 

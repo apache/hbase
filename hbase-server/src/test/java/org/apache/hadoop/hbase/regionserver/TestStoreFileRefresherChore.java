@@ -121,7 +121,7 @@ public class TestStoreFileRefresherChore {
       Put put = new Put(Bytes.toBytes("" + i));
       put.setDurability(Durability.SKIP_WAL);
       for (byte[] family : families) {
-        put.add(family, qf, null);
+        put.addColumn(family, qf, null);
       }
       region.put(put);
     }

@@ -460,7 +460,7 @@ public class TestRegionMergeTransaction {
             continue;
           }
           Put put = new Put(k);
-          put.add(f, null, k);
+          put.addColumn(f, null, k);
           if (r.getWAL() == null)
             put.setDurability(Durability.SKIP_WAL);
           r.put(put);

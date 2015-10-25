@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.util.Bytes;
  * Used to perform Put operations for a single row.
  * <p>
  * To perform a Put, instantiate a Put object with the row to insert to and
- * for eachumn to be inserted, execute {@link #add(byte[], byte[], byte[]) add} or
- * {@link #add(byte[], byte[], long, byte[]) add} if setting the timestamp.
+ * for eachumn to be inserted, execute {@link #addColumn(byte[], byte[], byte[]) add} or
+ * {@link #addColumn(byte[], byte[], long, byte[]) add} if setting the timestamp.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
@@ -137,26 +137,13 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param qualifier column qualifier
    * @param value column value
    * @return this
-   * @deprecated Since 1.0.0. Use {@link #addColumn(byte[], byte[], byte[])}
-   */
-  @Deprecated
-  public Put add(byte [] family, byte [] qualifier, byte [] value) {
-    return addColumn(family, qualifier, value);
-  }
-
-  /**
-   * Add the specified column and value to this Put operation.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param value column value
-   * @return this
    */
   public Put addColumn(byte [] family, byte [] qualifier, byte [] value) {
     return addColumn(family, qualifier, this.ts, value);
   }
 
   /**
-   * See {@link #add(byte[], byte[], byte[])}. This version expects
+   * See {@link #addColumn(byte[], byte[], byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
    */
@@ -183,21 +170,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param ts version timestamp
    * @param value column value
    * @return this
-   * @deprecated Since 1.0.0. Use {@link #addColumn(byte[], byte[], long, byte[])}
-   */
-  @Deprecated
-  public Put add(byte [] family, byte [] qualifier, long ts, byte [] value) {
-    return addColumn(family, qualifier, ts, value);
-  }
-
-  /**
-   * Add the specified column and value, with the specified timestamp as
-   * its version to this Put operation.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param ts version timestamp
-   * @param value column value
-   * @return this
    */
   public Put addColumn(byte [] family, byte [] qualifier, long ts, byte [] value) {
     if (ts < 0) {
@@ -211,7 +183,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   }
 
   /**
-   * See {@link #add(byte[], byte[], long, byte[])}. This version expects
+   * See {@link #addColumn(byte[], byte[], long, byte[])}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
    */
@@ -269,21 +241,6 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
    * @param ts version timestamp
    * @param value column value
    * @return this
-   * @deprecated Since 1.0.0. Use {@link Put#addColumn(byte[], ByteBuffer, long, ByteBuffer)}
-   */
-  @Deprecated
-  public Put add(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
-    return addColumn(family, qualifier, ts, value);
-  }
-
-  /**
-   * Add the specified column and value, with the specified timestamp as
-   * its version to this Put operation.
-   * @param family family name
-   * @param qualifier column qualifier
-   * @param ts version timestamp
-   * @param value column value
-   * @return this
    */
   public Put addColumn(byte[] family, ByteBuffer qualifier, long ts, ByteBuffer value) {
     if (ts < 0) {
@@ -297,7 +254,7 @@ public class Put extends Mutation implements HeapSize, Comparable<Row> {
   }
 
   /**
-   * See {@link #add(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
+   * See {@link #addColumn(byte[], ByteBuffer, long, ByteBuffer)}. This version expects
    * that the underlying arrays won't change. It's intended
    * for usage internal HBase to and for advanced client applications.
    */

@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -116,7 +115,7 @@ public class TestMultithreadedTableMapper {
       newValue.reverse();
       // Now set the value to be collected
       Put outval = new Put(key.get());
-      outval.add(OUTPUT_FAMILY, null, Bytes.toBytes(newValue.toString()));
+      outval.addColumn(OUTPUT_FAMILY, null, Bytes.toBytes(newValue.toString()));
       context.write(key, outval);
     }
   }

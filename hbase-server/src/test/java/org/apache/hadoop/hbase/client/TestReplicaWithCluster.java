@@ -196,7 +196,7 @@ public class TestReplicaWithCluster {
         bHdt.getColumnFamilies().length + 1, nHdt.getColumnFamilies().length);
 
     p = new Put(row);
-    p.add(row, row, row);
+    p.addColumn(row, row, row);
     table.put(p);
 
     g = new Get(row);
@@ -253,7 +253,7 @@ public class TestReplicaWithCluster {
     admin.close();
 
     Put p = new Put(row);
-    p.add(row, row, row);
+    p.addColumn(row, row, row);
     final Table table = HTU.getConnection().getTable(hdt.getTableName());
     table.put(p);
 

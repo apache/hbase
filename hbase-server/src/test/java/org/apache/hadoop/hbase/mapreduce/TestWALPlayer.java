@@ -97,8 +97,8 @@ public class TestWALPlayer {
 
     // put a row into the first table
     Put p = new Put(ROW);
-    p.add(FAMILY, COLUMN1, COLUMN1);
-    p.add(FAMILY, COLUMN2, COLUMN2);
+    p.addColumn(FAMILY, COLUMN1, COLUMN1);
+    p.addColumn(FAMILY, COLUMN2, COLUMN2);
     t1.put(p);
     // delete one column
     Delete d = new Delete(ROW);

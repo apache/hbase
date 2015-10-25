@@ -120,7 +120,7 @@ public class TestTags {
       byte[] value = Bytes.toBytes("value");
       table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       put.setAttribute("visibility", Bytes.toBytes("myTag"));
       table.put(put);
       admin.flush(tableName);
@@ -133,7 +133,7 @@ public class TestTags {
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
-      put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
+      put1.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       // put1.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put1);
       admin.flush(tableName);
@@ -141,7 +141,7 @@ public class TestTags {
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
-      put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
+      put2.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       put2.setAttribute("visibility", Bytes.toBytes("myTag3"));
       table.put(put2);
       admin.flush(tableName);
@@ -187,7 +187,7 @@ public class TestTags {
       table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row);
       byte[] value = Bytes.toBytes("value");
-      put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+      put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
       table.put(put);
       admin.flush(tableName);
       // We are lacking an API for confirming flush request compaction.
@@ -199,14 +199,14 @@ public class TestTags {
 
       Put put1 = new Put(row1);
       byte[] value1 = Bytes.toBytes("1000dfsdf");
-      put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
+      put1.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
       table.put(put1);
       admin.flush(tableName);
       Thread.sleep(1000);
 
       Put put2 = new Put(row2);
       byte[] value2 = Bytes.toBytes("1000dfsdf");
-      put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
+      put2.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
       table.put(put2);
       admin.flush(tableName);
       Thread.sleep(1000);
@@ -277,13 +277,13 @@ public class TestTags {
         table = TEST_UTIL.getConnection().getTable(tableName);
         Put put = new Put(row);
         byte[] value = Bytes.toBytes("value");
-        put.add(fam, qual, HConstants.LATEST_TIMESTAMP, value);
+        put.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value);
         int bigTagLen = Short.MAX_VALUE - 5;
         put.setAttribute("visibility", new byte[bigTagLen]);
         table.put(put);
         Put put1 = new Put(row1);
         byte[] value1 = Bytes.toBytes("1000dfsdf");
-        put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
+        put1.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
         // We are lacking an API for confirming flush request compaction.
@@ -295,18 +295,18 @@ public class TestTags {
 
         put1 = new Put(row2);
         value1 = Bytes.toBytes("1000dfsdf");
-        put1.add(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
+        put1.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value1);
         table.put(put1);
         admin.flush(tableName);
         Thread.sleep(1000);
 
         Put put2 = new Put(rowd);
         byte[] value2 = Bytes.toBytes("1000dfsdf");
-        put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
+        put2.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
         table.put(put2);
         put2 = new Put(rowe);
         value2 = Bytes.toBytes("1000dfsddfdf");
-        put2.add(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
+        put2.addColumn(fam, qual, HConstants.LATEST_TIMESTAMP, value2);
         put.setAttribute("visibility", Bytes.toBytes("ram"));
         table.put(put2);
         admin.flush(tableName);
@@ -390,7 +390,7 @@ public class TestTags {
       table = TEST_UTIL.getConnection().getTable(tableName);
       Put put = new Put(row1);
       byte[] v = Bytes.toBytes(2L);
-      put.add(f, q, v);
+      put.addColumn(f, q, v);
       put.setAttribute("visibility", Bytes.toBytes("tag1"));
       table.put(put);
       Increment increment = new Increment(row1);
@@ -430,7 +430,7 @@ public class TestTags {
 
       put = new Put(row2);
       v = Bytes.toBytes(2L);
-      put.add(f, q, v);
+      put.addColumn(f, q, v);
       table.put(put);
       increment = new Increment(row2);
       increment.add(new KeyValue(row2, f, q, 1234L, v));
@@ -452,7 +452,7 @@ public class TestTags {
       // Test Append
       byte[] row3 = Bytes.toBytes("r3");
       put = new Put(row3);
-      put.add(f, q, Bytes.toBytes("a"));
+      put.addColumn(f, q, Bytes.toBytes("a"));
       put.setAttribute("visibility", Bytes.toBytes("tag1"));
       table.put(put);
       Append append = new Append(row3);
@@ -492,7 +492,7 @@ public class TestTags {
 
       byte[] row4 = Bytes.toBytes("r4");
       put = new Put(row4);
-      put.add(f, q, Bytes.toBytes("a"));
+      put.addColumn(f, q, Bytes.toBytes("a"));
       table.put(put);
       append = new Append(row4);
       append.add(new KeyValue(row4, f, q, 1234L, v));

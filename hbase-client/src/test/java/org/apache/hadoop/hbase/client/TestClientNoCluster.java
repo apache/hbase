@@ -703,7 +703,7 @@ public class TestClientNoCluster extends Configured implements Tool {
         for (int i = 0; i < namespaceSpan; i++) {
           byte [] b = format(rd.nextLong());
           Put p = new Put(b);
-          p.add(HConstants.CATALOG_FAMILY, b, b);
+          p.addColumn(HConstants.CATALOG_FAMILY, b, b);
           mutator.mutate(p);
           if (i % printInterval == 0) {
             LOG.info("Put " + printInterval + "/" + stopWatch.elapsedMillis());

@@ -41,7 +41,7 @@ public class TestPutDotHas {
 
   @Before
   public void setUp() {
-    put.add(FAMILY_01, QUALIFIER_01, TS, VALUE_01);
+    put.addColumn(FAMILY_01, QUALIFIER_01, TS, VALUE_01);
   }
 
   @Test

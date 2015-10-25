@@ -91,7 +91,7 @@ public class TestCompactionWithThroughputController {
       for (int j = 0; j < 10; j++) {
         byte[] value = new byte[128 * 1024];
         rand.nextBytes(value);
-        table.put(new Put(Bytes.toBytes(i * 10 + j)).add(family, qualifier, value));
+        table.put(new Put(Bytes.toBytes(i * 10 + j)).addColumn(family, qualifier, value));
       }
       admin.flush(tableName);
     }
@@ -207,18 +207,21 @@ public class TestCompactionWithThroughputController {
       assertEquals(10L * 1024 * 1024, throughputController.maxThroughput, EPSILON);
       Table table = conn.getTable(tableName);
       for (int i = 0; i < 5; i++) {
-        table.put(new Put(Bytes.toBytes(i)).add(family, qualifier, new byte[0]));
+        byte[] value = new byte[0];
+        table.put(new Put(Bytes.toBytes(i)).addColumn(family, qualifier, value));
         TEST_UTIL.flush(tableName);
       }
       Thread.sleep(2000);
       assertEquals(15L * 1024 * 1024, throughputController.maxThroughput, EPSILON);
 
-      table.put(new Put(Bytes.toBytes(5)).add(family, qualifier, new byte[0]));
+      byte[] value1 = new byte[0];
+      table.put(new Put(Bytes.toBytes(5)).addColumn(family, qualifier, value1));
       TEST_UTIL.flush(tableName);
       Thread.sleep(2000);
       assertEquals(20L * 1024 * 1024, throughputController.maxThroughput, EPSILON);
 
-      table.put(new Put(Bytes.toBytes(6)).add(family, qualifier, new byte[0]));
+      byte[] value = new byte[0];
+      table.put(new Put(Bytes.toBytes(6)).addColumn(family, qualifier, value));
       TEST_UTIL.flush(tableName);
       Thread.sleep(2000);
       assertEquals(Double.MAX_VALUE, throughputController.maxThroughput, EPSILON);
@@ -259,27 +262,35 @@ public class TestCompactionWithThroughputController {
       assertEquals(0.0, store.getCompactionPressure(), EPSILON);
       Table table = conn.getTable(tableName);
       for (int i = 0; i < 4; i++) {
-        table.put(new Put(Bytes.toBytes(i)).add(family, qualifier, new byte[0]));
-        table.put(new Put(Bytes.toBytes(100 + i)).add(family, qualifier, new byte[0]));
+        byte[] value1 = new byte[0];
+        table.put(new Put(Bytes.toBytes(i)).addColumn(family, qualifier, value1));
+        byte[] value = new byte[0];
+        table.put(new Put(Bytes.toBytes(100 + i)).addColumn(family, qualifier, value));
         TEST_UTIL.flush(tableName);
       }
       assertEquals(8, store.getStorefilesCount());
       assertEquals(0.0, store.getCompactionPressure(), EPSILON);
 
-      table.put(new Put(Bytes.toBytes(4)).add(family, qualifier, new byte[0]));
-      table.put(new Put(Bytes.toBytes(104)).add(family, qualifier, new byte[0]));
+      byte[] value5 = new byte[0];
+      table.put(new Put(Bytes.toBytes(4)).addColumn(family, qualifier, value5));
+      byte[] value4 = new byte[0];
+      table.put(new Put(Bytes.toBytes(104)).addColumn(family, qualifier, value4));
       TEST_UTIL.flush(tableName);
       assertEquals(10, store.getStorefilesCount());
       assertEquals(0.5, store.getCompactionPressure(), EPSILON);
 
-      table.put(new Put(Bytes.toBytes(5)).add(family, qualifier, new byte[0]));
-      table.put(new Put(Bytes.toBytes(105)).add(family, qualifier, new byte[0]));
+      byte[] value3 = new byte[0];
+      table.put(new Put(Bytes.toBytes(5)).addColumn(family, qualifier, value3));
+      byte[] value2 = new byte[0];
+      table.put(new Put(Bytes.toBytes(105)).addColumn(family, qualifier, value2));
       TEST_UTIL.flush(tableName);
       assertEquals(12, store.getStorefilesCount());
       assertEquals(1.0, store.getCompactionPressure(), EPSILON);
 
-      table.put(new Put(Bytes.toBytes(6)).add(family, qualifier, new byte[0]));
-      table.put(new Put(Bytes.toBytes(106)).add(family, qualifier, new byte[0]));
+      byte[] value1 = new byte[0];
+      table.put(new Put(Bytes.toBytes(6)).addColumn(family, qualifier, value1));
+      byte[] value = new byte[0];
+      table.put(new Put(Bytes.toBytes(106)).addColumn(family, qualifier, value));
       TEST_UTIL.flush(tableName);
       assertEquals(14, store.getStorefilesCount());
       assertEquals(2.0, store.getCompactionPressure(), EPSILON);

@@ -245,7 +245,7 @@ public class IntegrationTestSendTraceRequests extends AbstractHBaseTool {
           Put p = new Put(Bytes.toBytes(rk));
           for (int y = 0; y < 10; y++) {
             random.nextBytes(value);
-            p.add(familyName, Bytes.toBytes(random.nextLong()), value);
+            p.addColumn(familyName, Bytes.toBytes(random.nextLong()), value);
           }
           ht.mutate(p);
         }

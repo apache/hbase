@@ -289,9 +289,9 @@ public class TestTablePermissions {
 
     Table table = UTIL.getConnection().getTable(TEST_TABLE);
     table.put(new Put(Bytes.toBytes("row1"))
-        .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
+            .addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v1")));
     table.put(new Put(Bytes.toBytes("row2"))
-        .add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
+            .addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes("v2")));
     Admin admin = UTIL.getHBaseAdmin();
     admin.split(TEST_TABLE);
 

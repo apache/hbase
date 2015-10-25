@@ -129,8 +129,8 @@ public class TestFilterWrapper {
           long timestamp = j;
           if (i != 1)
             timestamp = i;
-          put.add(Bytes.toBytes("f1"), Bytes.toBytes("c" + j), timestamp,
-              Bytes.toBytes(i + "_c" + j));
+          put.addColumn(Bytes.toBytes("f1"), Bytes.toBytes("c" + j), timestamp,
+                  Bytes.toBytes(i + "_c" + j));
         }
         puts.add(put);
       }

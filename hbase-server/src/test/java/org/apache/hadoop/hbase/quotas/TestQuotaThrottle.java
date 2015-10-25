@@ -508,7 +508,7 @@ public class TestQuotaThrottle {
     try {
       while (count < maxOps) {
         Put put = new Put(Bytes.toBytes("row-" + count));
-        put.add(FAMILY, QUALIFIER, Bytes.toBytes("data-" + count));
+        put.addColumn(FAMILY, QUALIFIER, Bytes.toBytes("data-" + count));
         for (final Table table: tables) {
           table.put(put);
         }

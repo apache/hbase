@@ -107,7 +107,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
       try {
         final byte[] ROW = Bytes.toBytes("aaa");
         Put put = new Put(ROW);
-        put.add(TEST_FAMILY, ROW, ROW);
+        put.addColumn(TEST_FAMILY, ROW, ROW);
         table.put(put);
       } catch (IOException e) {
         // The region server is going to be aborted.

@@ -475,8 +475,8 @@ public class TestMultipleTimestamps {
       for(int colIdx: columnIndexes) {
         byte column[] = Bytes.toBytes("column:" + colIdx);
         for (long version: versions) {
-          put.add(cf, column, version, Bytes.toBytes("value-version-" +
-              version));
+          put.addColumn(cf, column, version, Bytes.toBytes("value-version-" +
+                  version));
         }
       }
       ht.put(put);
@@ -496,7 +496,7 @@ public class TestMultipleTimestamps {
     put.setDurability(Durability.SKIP_WAL);
 
     for (long idx = versionStart; idx <= versionEnd; idx++) {
-      put.add(cf, column, idx, Bytes.toBytes("value-version-" + idx));
+      put.addColumn(cf, column, idx, Bytes.toBytes("value-version-" + idx));
     }
 
     ht.put(put);

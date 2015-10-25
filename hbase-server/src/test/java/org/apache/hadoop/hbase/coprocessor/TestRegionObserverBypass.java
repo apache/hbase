@@ -94,7 +94,7 @@ public class TestRegionObserverBypass {
   public void testSimple() throws Exception {
     Table t = util.getConnection().getTable(tableName);
     Put p = new Put(row1);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     // before HBASE-4331, this would throw an exception
     t.put(p);
     checkRowAndDelete(t,row1,0);
@@ -114,13 +114,13 @@ public class TestRegionObserverBypass {
     Table t = util.getConnection().getTable(tableName);
     List<Put> puts = new ArrayList<Put>();
     Put p = new Put(row1);
-    p.add(dummy,dummy,dummy);
+    p.addColumn(dummy, dummy, dummy);
     puts.add(p);
     p = new Put(row2);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row3);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);
@@ -130,13 +130,13 @@ public class TestRegionObserverBypass {
 
     puts.clear();
     p = new Put(row1);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row2);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row3);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);
@@ -146,13 +146,13 @@ public class TestRegionObserverBypass {
 
     puts.clear();
     p = new Put(row1);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row2);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row3);
-    p.add(dummy,dummy,dummy);
+    p.addColumn(dummy, dummy, dummy);
     puts.add(p);
     // this worked fine even before HBASE-4331
     t.put(puts);
@@ -162,13 +162,13 @@ public class TestRegionObserverBypass {
 
     puts.clear();
     p = new Put(row1);
-    p.add(dummy,dummy,dummy);
+    p.addColumn(dummy, dummy, dummy);
     puts.add(p);
     p = new Put(row2);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row3);
-    p.add(dummy,dummy,dummy);
+    p.addColumn(dummy, dummy, dummy);
     puts.add(p);
     // this worked fine even before HBASE-4331
     t.put(puts);
@@ -178,13 +178,13 @@ public class TestRegionObserverBypass {
 
     puts.clear();
     p = new Put(row1);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     p = new Put(row2);
-    p.add(dummy,dummy,dummy);
+    p.addColumn(dummy, dummy, dummy);
     puts.add(p);
     p = new Put(row3);
-    p.add(test,dummy,dummy);
+    p.addColumn(test, dummy, dummy);
     puts.add(p);
     // before HBASE-4331, this would throw an exception
     t.put(puts);

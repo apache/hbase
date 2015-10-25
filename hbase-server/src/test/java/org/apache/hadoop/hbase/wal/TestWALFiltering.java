@@ -89,7 +89,7 @@ public class TestWALFiltering {
             final byte[] value = Bytes.toBytes("value_for_row_" + iRow +
                 "_cf_" + Bytes.toStringBinary(cf) + "_col_" + iCol + "_ts_" +
                 ts + "_random_" + rand.nextLong());
-            put.add(cf, qual, ts, value);
+            put.addColumn(cf, qual, ts, value);
           } else if (rand.nextDouble() < 0.8) {
             del.addColumn(cf, qual, ts);
           } else {

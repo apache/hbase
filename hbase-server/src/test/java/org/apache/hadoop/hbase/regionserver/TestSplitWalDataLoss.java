@@ -118,7 +118,8 @@ public class TestSplitWalDataLoss {
     Connection conn = testUtil.getConnection();
 
     try (Table table = conn.getTable(tableName)) {
-      table.put(new Put(Bytes.toBytes("row0")).addColumn(family, qualifier, Bytes.toBytes("val0")));
+      table.put(new Put(Bytes.toBytes("row0"))
+              .addColumn(family, qualifier, Bytes.toBytes("val0")));
     }
     long oldestSeqIdOfStore = region.getOldestSeqIdOfStore(family);
     Log.info("CHANGE OLDEST " + oldestSeqIdOfStore);
@@ -130,7 +131,8 @@ public class TestSplitWalDataLoss {
       }
     }
     try (Table table = conn.getTable(tableName)) {
-      table.put(new Put(Bytes.toBytes("row1")).addColumn(family, qualifier, Bytes.toBytes("val1")));
+      table.put(new Put(Bytes.toBytes("row1"))
+              .addColumn(family, qualifier, Bytes.toBytes("val1")));
     }
     long now = EnvironmentEdgeManager.currentTime();
     rs.tryRegionServerReport(now - 500, now);

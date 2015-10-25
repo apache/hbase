@@ -107,7 +107,7 @@ public class TestEncryptionRandomKeying {
     Table table = TEST_UTIL.getConnection().getTable(htd.getTableName());
     try {
       table.put(new Put(Bytes.toBytes("testrow"))
-        .add(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));
+              .addColumn(hcd.getName(), Bytes.toBytes("q"), Bytes.toBytes("value")));
     } finally {
       table.close();
     }

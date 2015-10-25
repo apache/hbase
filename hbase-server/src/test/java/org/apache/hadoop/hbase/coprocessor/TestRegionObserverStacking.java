@@ -127,7 +127,7 @@ public class TestRegionObserverStacking extends TestCase {
     h.load(ObserverC.class, Coprocessor.PRIORITY_LOWEST, conf);
 
     Put put = new Put(ROW);
-    put.add(A, A, A);
+    put.addColumn(A, A, A);
     region.put(put);
 
     Coprocessor c = h.findCoprocessor(ObserverA.class.getName());

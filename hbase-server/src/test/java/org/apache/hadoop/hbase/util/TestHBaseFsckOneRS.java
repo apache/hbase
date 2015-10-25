@@ -1363,10 +1363,12 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       meta.delete(deletes);
 
       // Mess it up by creating a fake hbase:meta entry with no associated RegionInfo
-      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
-          HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER, Bytes.toBytes("node1:60020")));
-      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66")).add(
-          HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER, Bytes.toBytes(1362150791183L)));
+      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66"))
+          .addColumn(HConstants.CATALOG_FAMILY, HConstants.SERVER_QUALIFIER,
+              Bytes.toBytes("node1:60020")));
+      meta.put(new Put(Bytes.toBytes(table + ",,1361911384013.810e28f59a57da91c66"))
+          .addColumn(HConstants.CATALOG_FAMILY, HConstants.STARTCODE_QUALIFIER,
+              Bytes.toBytes(1362150791183L)));
       meta.close();
 
       HBaseFsck hbck = doFsck(conf, false);

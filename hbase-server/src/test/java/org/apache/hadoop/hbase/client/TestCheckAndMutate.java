@@ -62,9 +62,9 @@ public class TestCheckAndMutate {
     try {
       // put one row
       Put put = new Put(rowKey);
-      put.add(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
-      put.add(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
-      put.add(family, Bytes.toBytes("C"), Bytes.toBytes("c"));
+      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
+      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
+      put.addColumn(family, Bytes.toBytes("C"), Bytes.toBytes("c"));
       table.put(put);
       // get row back and assert the values
       Get get = new Get(rowKey);
@@ -102,7 +102,8 @@ public class TestCheckAndMutate {
       //Test that we get a region level exception
       try {
         Put p = new Put(rowKey);
-        p.add(new byte[]{'b', 'o', 'g', 'u', 's'}, new byte[]{'A'},  new byte[0]);
+        byte[] value = new byte[0];
+        p.addColumn(new byte[]{'b', 'o', 'g', 'u', 's'}, new byte[]{'A'}, value);
         rm = new RowMutations(rowKey);
         rm.add(p);
         table.checkAndMutate(rowKey, family, Bytes.toBytes("A"), CompareFilter.CompareOp.EQUAL,

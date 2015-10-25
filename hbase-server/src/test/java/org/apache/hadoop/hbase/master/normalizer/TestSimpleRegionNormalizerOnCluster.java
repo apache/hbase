@@ -210,7 +210,7 @@ public class TestSimpleRegionNormalizerOnCluster {
         Put put = new Put(key);
         byte[] col = Bytes.toBytes(String.valueOf(j));
         byte[] value = dataGenerator.generateRandomSizeValue(key, col);
-        put.add(FAMILYNAME, col, value);
+        put.addColumn(FAMILYNAME, col, value);
         region.put(put);
       }
     }

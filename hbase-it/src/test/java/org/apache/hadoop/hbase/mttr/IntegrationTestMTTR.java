@@ -496,7 +496,7 @@ public class IntegrationTestMTTR {
     @Override
     protected boolean doAction() throws Exception {
       Put p = new Put(Bytes.toBytes(RandomStringUtils.randomAlphanumeric(5)));
-      p.add(FAMILY, Bytes.toBytes("\0"), Bytes.toBytes(RandomStringUtils.randomAscii(5)));
+      p.addColumn(FAMILY, Bytes.toBytes("\0"), Bytes.toBytes(RandomStringUtils.randomAscii(5)));
       table.put(p);
       return true;
     }

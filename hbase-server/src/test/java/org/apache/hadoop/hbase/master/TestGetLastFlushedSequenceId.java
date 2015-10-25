@@ -73,7 +73,8 @@ public class TestGetLastFlushedSequenceId {
     testUtil.getHBaseAdmin().createNamespace(
       NamespaceDescriptor.create(tableName.getNamespaceAsString()).build());
     Table table = testUtil.createTable(tableName, families);
-    table.put(new Put(Bytes.toBytes("k")).add(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
+    table.put(new Put(Bytes.toBytes("k"))
+            .addColumn(family, Bytes.toBytes("q"), Bytes.toBytes("v")));
     MiniHBaseCluster cluster = testUtil.getMiniHBaseCluster();
     List<JVMClusterUtil.RegionServerThread> rsts = cluster.getRegionServerThreads();
     Region region = null;

@@ -59,10 +59,10 @@ public class TestPutWithDelete {
     try {
       // put one row
       Put put = new Put(rowKey);
-      put.add(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
-      put.add(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
-      put.add(family, Bytes.toBytes("C"), Bytes.toBytes("c"));
-      put.add(family, Bytes.toBytes("D"), Bytes.toBytes("d"));
+      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a"));
+      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b"));
+      put.addColumn(family, Bytes.toBytes("C"), Bytes.toBytes("c"));
+      put.addColumn(family, Bytes.toBytes("D"), Bytes.toBytes("d"));
       table.put(put);
       // get row back and assert the values
       Get get = new Get(rowKey);
@@ -77,11 +77,11 @@ public class TestPutWithDelete {
           Bytes.toString(result.getValue(family, Bytes.toBytes("D"))).equals("d"));
       // put the same row again with C column deleted
       put = new Put(rowKey);
-      put.add(family, Bytes.toBytes("A"), Bytes.toBytes("a1"));
-      put.add(family, Bytes.toBytes("B"), Bytes.toBytes("b1"));
+      put.addColumn(family, Bytes.toBytes("A"), Bytes.toBytes("a1"));
+      put.addColumn(family, Bytes.toBytes("B"), Bytes.toBytes("b1"));
       KeyValue marker = new KeyValue(rowKey, family, Bytes.toBytes("C"),
           HConstants.LATEST_TIMESTAMP, KeyValue.Type.DeleteColumn);
-      put.add(family, Bytes.toBytes("D"), Bytes.toBytes("d1"));
+      put.addColumn(family, Bytes.toBytes("D"), Bytes.toBytes("d1"));
       put.add(marker);
       table.put(put);
       // get row back and assert the values

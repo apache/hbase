@@ -386,7 +386,7 @@ public class TestAtomicOperation {
               RowMutations rm = new RowMutations(row);
               if (op) {
                 Put p = new Put(row, ts);
-                p.add(fam1, qual1, value1);
+                p.addColumn(fam1, qual1, value1);
                 p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
                 Delete d = new Delete(row);
@@ -399,7 +399,7 @@ public class TestAtomicOperation {
                 d.setDurability(Durability.ASYNC_WAL);
                 rm.add(d);
                 Put p = new Put(row, ts);
-                p.add(fam1, qual2, value2);
+                p.addColumn(fam1, qual2, value2);
                 p.setDurability(Durability.ASYNC_WAL);
                 rm.add(p);
               }
@@ -479,7 +479,7 @@ public class TestAtomicOperation {
               List<Mutation> mrm = new ArrayList<Mutation>();
               if (op) {
                 Put p = new Put(row2, ts);
-                p.add(fam1, qual1, value1);
+                p.addColumn(fam1, qual1, value1);
                 p.setDurability(Durability.ASYNC_WAL);
                 mrm.add(p);
                 Delete d = new Delete(row);
@@ -493,7 +493,7 @@ public class TestAtomicOperation {
                 mrm.add(d);
                 Put p = new Put(row, ts);
                 p.setDurability(Durability.ASYNC_WAL);
-                p.add(fam1, qual1, value2);
+                p.addColumn(fam1, qual1, value2);
                 mrm.add(p);
               }
               region.mutateRowsWithLocks(mrm, rowsToLock, HConstants.NO_NONCE, HConstants.NO_NONCE);
@@ -581,7 +581,7 @@ public class TestAtomicOperation {
     
     Put[] puts = new Put[1];
     Put put = new Put(Bytes.toBytes("r1"));
-    put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
+    put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("10"));
     puts[0] = put;
     
     region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
@@ -615,7 +615,7 @@ public class TestAtomicOperation {
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
-      put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
+      put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("50"));
       puts[0] = put;
       testStep = TestStep.PUT_STARTED;
       region.batchMutate(puts, HConstants.NO_NONCE, HConstants.NO_NONCE);
@@ -632,7 +632,7 @@ public class TestAtomicOperation {
     public void doWork() throws Exception {
       Put[] puts = new Put[1];
       Put put = new Put(Bytes.toBytes("r1"));
-      put.add(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("11"));
+      put.addColumn(Bytes.toBytes(family), Bytes.toBytes("q1"), Bytes.toBytes("11"));
       puts[0] = put;
       while (testStep != TestStep.PUT_COMPLETED) {
         Thread.sleep(100);

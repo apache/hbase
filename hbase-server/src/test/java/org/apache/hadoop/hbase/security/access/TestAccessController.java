@@ -920,7 +920,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Put p = new Put(TEST_ROW);
-        p.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
+        p.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE)) {
           t.put(p);
@@ -984,7 +984,7 @@ public class TestAccessController extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         Put p = new Put(TEST_ROW);
-        p.add(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
+        p.addColumn(TEST_FAMILY, TEST_QUALIFIER, Bytes.toBytes(1));
         try(Connection conn = ConnectionFactory.createConnection(conf);
             Table t = conn.getTable(TEST_TABLE);) {
           t.checkAndPut(TEST_ROW, TEST_FAMILY, TEST_QUALIFIER,
@@ -1122,7 +1122,7 @@ public class TestAccessController extends SecureTestUtil {
         byte[] row = TEST_ROW;
         byte[] qualifier = TEST_QUALIFIER;
         Put put = new Put(row);
-        put.add(TEST_FAMILY, qualifier, Bytes.toBytes(1));
+        put.addColumn(TEST_FAMILY, qualifier, Bytes.toBytes(1));
         Append append = new Append(row);
         append.add(TEST_FAMILY, qualifier, Bytes.toBytes(2));
         try(Connection conn = ConnectionFactory.createConnection(conf);
@@ -1251,8 +1251,8 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Put p = new Put(Bytes.toBytes("a"));
-          p.add(family1, qualifier, Bytes.toBytes("v1"));
-          p.add(family2, qualifier, Bytes.toBytes("v2"));
+          p.addColumn(family1, qualifier, Bytes.toBytes("v1"));
+          p.addColumn(family2, qualifier, Bytes.toBytes("v2"));
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName);) {
@@ -1266,7 +1266,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Put p = new Put(Bytes.toBytes("a"));
-          p.add(family1, qualifier, Bytes.toBytes("v1"));
+          p.addColumn(family1, qualifier, Bytes.toBytes("v1"));
 
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {
@@ -1280,7 +1280,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Put p = new Put(Bytes.toBytes("a"));
-          p.add(family2, qualifier, Bytes.toBytes("v2"));
+          p.addColumn(family2, qualifier, Bytes.toBytes("v2"));
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName);) {
             t.put(p);
@@ -1515,7 +1515,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Put p = new Put(TEST_ROW);
-          p.add(family1, qualifier, Bytes.toBytes("v1"));
+          p.addColumn(family1, qualifier, Bytes.toBytes("v1"));
           try (Connection conn = ConnectionFactory.createConnection(conf);
               Table t = conn.getTable(tableName)) {
             t.put(p);
@@ -2145,7 +2145,7 @@ public class TestAccessController extends SecureTestUtil {
         @Override
         public Object run() throws Exception {
           Put put = new Put(Bytes.toBytes("test"));
-          put.add(TEST_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
+          put.addColumn(TEST_FAMILY, Bytes.toBytes("qual"), Bytes.toBytes("value"));
           table.put(put);
           return null;
         }
