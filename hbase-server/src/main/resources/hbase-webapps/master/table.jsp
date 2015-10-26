@@ -313,7 +313,7 @@ if ( fqtn != null ) {
                     conf))) %></td>
   <%
   if (addr != null) {
-    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
   %>
   <td>
      <a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a>
