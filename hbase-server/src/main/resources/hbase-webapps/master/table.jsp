@@ -262,7 +262,7 @@ if ( fqtn != null ) {
   <td><%= escapeXml(Bytes.toStringBinary(regionInfo.getRegionName())) %></td>
   <%
   if (addr != null) {
-    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+    String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
   %>
   <td>
      <a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a>
@@ -293,7 +293,7 @@ if ( fqtn != null ) {
 <%
   for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {   
      ServerName addr = rdEntry.getKey();                                       
-     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/";
+     String url = "//" + addr.getHostname() + ":" + master.getRegionServerInfoPort(addr) + "/rs-status";
 %>
 <tr>
   <td><a href="<%= url %>"><%= addr.getHostname().toString() + ":" + addr.getPort() %></a></td>
