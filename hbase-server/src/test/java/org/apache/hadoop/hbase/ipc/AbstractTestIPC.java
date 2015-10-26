@@ -158,10 +158,13 @@ public abstract class AbstractTestIPC {
     TestRpcServer rpcServer = new TestRpcServer();
     try {
       rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       final String message = "hello";
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage(message).build();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       Pair<Message, CellScanner> r =
           client.call(null, md, param, md.getOutputType().toProto(), User.getCurrent(), address);
       assertTrue(r.getSecond() == null);
@@ -198,12 +201,14 @@ public abstract class AbstractTestIPC {
     TestRpcServer rpcServer = new TestRpcServer();
     try {
       rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
-
       PayloadCarryingRpcController pcrc =
           new PayloadCarryingRpcController(CellUtil.createCellScanner(cells));
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       Pair<Message, CellScanner> r =
           client.call(pcrc, md, param, md.getOutputType().toProto(), User.getCurrent(), address);
       int index = 0;
@@ -228,9 +233,12 @@ public abstract class AbstractTestIPC {
     AbstractRpcClient client = createRpcClientRTEDuringConnectionSetup(conf);
     try {
       rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       client.call(null, md, param, null, User.getCurrent(), address);
       fail("Expected an exception to have been thrown!");
     } catch (Exception e) {
@@ -254,11 +262,15 @@ public abstract class AbstractTestIPC {
       verify(scheduler).start();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       for (int i = 0; i < 10; i++) {
         client.call(
           new PayloadCarryingRpcController(
               CellUtil.createCellScanner(ImmutableList.<Cell> of(CELL))), md, param, md
-              .getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress());
+              .getOutputType().toProto(), User.getCurrent(), address);
       }
       verify(scheduler, times(10)).dispatch((CallRunner) anyObject());
     } finally {
