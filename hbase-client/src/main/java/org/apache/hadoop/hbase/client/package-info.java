@@ -200,7 +200,7 @@ public class MyLittleHBaseClient {
 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
-  <li><a href="http://hbase.org">HBase Home Page</a>
+  <li><a href="http://hbase.org/">HBase Home Page</a>
   <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
 </ul>
   <p>See also the section in the HBase Reference Guide where it discusses

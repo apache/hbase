@@ -1252,7 +1252,8 @@ Have a look in the Web UI.
 
 == Cluster Replication
 
-NOTE: This information was previously available at link:http://hbase.apache.org/replication.html[Cluster Replication].
+NOTE: This information was previously available at
+link:http://hbase.apache.org#replication[Cluster Replication].
 
 HBase provides a cluster replication mechanism which allows you to keep one cluster's state synchronized with that of another cluster, using the write-ahead log (WAL) of the source cluster to propagate the changes.
 Some use cases for cluster replication include:

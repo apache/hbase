@@ -2804,8 +2804,12 @@
               <destDir>devapidocs</destDir>
               <name>Developer API</name>
               <description>The full HBase API, including private and unstable APIs</description>
-              <sourceFilesExclude>**/generated/*</sourceFilesExclude>
-              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <sourceFileExcludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/protobuf/*</exclude>
+                <exclude>**/*.scala</exclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>
@@ -2842,8 +2846,12 @@
               <destDir>testdevapidocs</destDir>
               <name>Developer API</name>
               <description>The full HBase API, including private and unstable APIs</description>
-              <sourceFilesExclude>**/generated/*</sourceFilesExclude>
-              <excludePackageNames>org.apache.hadoop.hbase.generated.master:org.apache.hadoop.hbase.protobuf.generated:org.apache.hadoop.hbase.tmpl.common</excludePackageNames>
+              <sourceFileExcludes>
+                <exclude>**/generated/*</exclude>
+                <exclude>**/protobuf/*</exclude>
+                <exclude>**/*.scala</exclude>
+              </sourceFileExcludes>
+              <excludePackageNames>*.generated.master:*.generated:org.apache.hadoop.hbase.tmpl.common:com.google.protobuf:org.apache.hadoop.hbase.spark</excludePackageNames>
               <quiet>true</quiet>
               <linksource>true</linksource>
               <sourcetab>2</sourcetab>

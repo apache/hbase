@@ -29,12 +29,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 /**
- * <a href="http://www.mapr.com">MapR</a> implementation.
+ * <a href="http://www.mapr.com/">MapR</a> implementation.
  */
 @InterfaceAudience.Private
 public class FSMapRUtils extends FSUtils {
   private static final Log LOG = LogFactory.getLog(FSMapRUtils.class);
-  
+
   public void recoverFileLease(final FileSystem fs, final Path p,
       Configuration conf, CancelableProgressable reporter) throws IOException {
     LOG.info("Recovering file " + p.toString() +

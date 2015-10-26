@@ -27,7 +27,7 @@ under the License.
 
   <body>
     <section name="Welcome to Apache HBase&#8482;">
-        <p><a href="http://www.apache.org/">Apache</a> HBase&#8482; is the <a href="http://hadoop.apache.org">Hadoop</a> database, a distributed, scalable, big data store.
+        <p><a href="http://www.apache.org/">Apache</a> HBase&#8482; is the <a href="http://hadoop.apache.org/">Hadoop</a> database, a distributed, scalable, big data store.
     </p>
     <h4>Download Apache HBase&#8482;</h4>
     <p>
@@ -68,7 +68,7 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
 </ul>
 </p>
      <h4>Where Can I Get More Information?</h4>
-   <p>See the <a href="http://hbase.apache.org/book/architecture.html#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book/faq.html">Apache HBase Reference Guide FAQ</a>,
+   <p>See the <a href="http://hbase.apache.org/book#arch.overview">Architecture Overview</a>, the <a href="http://hbase.apache.org/book#faq">Apache HBase Reference Guide FAQ</a>,
     and the other documentation links on the left!
    </p>
      <h4>Export Control</h4>
@@ -85,12 +85,12 @@ Apache HBase is an open-source, distributed, versioned, non-relational database 
        <p>January 15th, 2015 <a href="http://www.meetup.com/hbaseusergroup/events/218744798/">HBase meetup @ AppDynamics</a> in San Francisco</p>
        <p>November 20th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/205219992/">HBase meetup @ WANdisco</a> in San Ramon</p>
        <p>October 27th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/207386102/">HBase Meetup @ Apple</a> in Cupertino</p>
-       <p>October 15th, 2014 <a href="http://www.meetup.com/HBase-NYC/events/207655552">HBase Meetup @ Google</a> on the night before Strata/HW in NYC</p>
+       <p>October 15th, 2014 <a href="http://www.meetup.com/HBase-NYC/events/207655552/">HBase Meetup @ Google</a> on the night before Strata/HW in NYC</p>
        <p>September 25th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/203173692/">HBase Meetup @ Continuuity</a> in Palo Alto</p>
          <p>August 28th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/197773762/">HBase Meetup @ Sift Science</a> in San Francisco</p>
          <p>July 17th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/190994082/">HBase Meetup @ HP</a> in Sunnyvale</p>
          <p>June 5th, 2014 <a href="http://www.meetup.com/Hadoop-Summit-Community-San-Jose/events/179081342/">HBase BOF at Hadoop Summit</a>, San Jose Convention Center</p>
-         <p>May 5th, 2014 <a href="http://www.hbasecon.com">HBaseCon2014</a> at the Hilton San Francisco on Union Square</p>
+         <p>May 5th, 2014 <a href="http://www.hbasecon.com/">HBaseCon2014</a> at the Hilton San Francisco on Union Square</p>
          <p>March 12th, 2014 <a href="http://www.meetup.com/hbaseusergroup/events/160757912/">HBase Meetup @ Ancestry.com</a> in San Francisco</p>
       <p><small><a href="old_news.html">Old News</a></small></p>
     </section>

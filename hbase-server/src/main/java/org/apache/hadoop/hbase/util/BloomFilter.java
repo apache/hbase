@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
  * trade-off between the false positive rate and the size.
  *
  * <p>
- * Originally inspired by <a href="http://www.one-lab.org">European Commission
+ * Originally inspired by <a href="http://www.one-lab.org/">European Commission
  * One-Lab Project 034819</a>.
  *
  * Bloom filters are very sensitive to the number of elements inserted into
