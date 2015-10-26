@@ -413,7 +413,7 @@ public class TestAsyncProcess {
   }
 
   @Rule
-  public Timeout timeout = new Timeout(10000); // 10 seconds max per method tested
+  public Timeout timeout = Timeout.millis(10000); // 10 seconds max per method tested
 
   @Test
   public void testSubmit() throws Exception {
@@ -703,7 +703,7 @@ public class TestAsyncProcess {
 
     Put put = createPut(1, false);
 
-    Assert.assertEquals(0L, ht.mutator.currentWriteBufferSize);
+    Assert.assertEquals(0L, ht.mutator.currentWriteBufferSize.get());
     try {
       ht.put(put);
       if (bufferOn) {
@@ -712,7 +712,7 @@ public class TestAsyncProcess {
       Assert.fail();
     } catch (RetriesExhaustedException expected) {
     }
-    Assert.assertEquals(0L, ht.mutator.currentWriteBufferSize);
+    Assert.assertEquals(0L, ht.mutator.currentWriteBufferSize.get());
     // The table should have sent one request, maybe after multiple attempts
     AsyncRequestFuture ars = null;
     for (AsyncRequestFuture someReqs : ap.allReqs) {
@@ -764,32 +764,6 @@ public class TestAsyncProcess {
     }
     Assert.assertEquals("the put should not been inserted.", 0, mutator.getWriteBuffer().size());
   }
-
-
-/*
-  @Test
-  public void testWithNoClearOnFail() throws IOException {
-    HTable ht = new HTable();
-    ht.ap = new MyAsyncProcess(createHConnection(), conf, true);
-    ht.setAutoFlushTo(false);
-
-    Put p = createPut(1, false);
-    ht.put(p);
-    Assert.assertEquals(0, ht.writeAsyncBuffer.size());
-
-    try {
-      ht.flushCommits();
-    } catch (RetriesExhaustedWithDetailsException expected) {
-    }
-    Assert.assertEquals(1, ht.writeAsyncBuffer.size());
-
-    try {
-      ht.close();
-    } catch (RetriesExhaustedWithDetailsException expected) {
-    }
-    Assert.assertEquals(1, ht.writeAsyncBuffer.size());
-  }
-  */
 
   @Test
   public void testBatch() throws IOException, InterruptedException {
