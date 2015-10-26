@@ -431,8 +431,8 @@ public class DistributedHBaseCluster extends HBaseCluster {
   protected boolean restoreRegionServers(ClusterStatus initial, ClusterStatus current) {
     Set<ServerName> toStart = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
     Set<ServerName> toKill = new TreeSet<ServerName>(new ServerNameIgnoreStartCodeComparator());
-    toStart.addAll(initial.getBackupMasters());
-    toKill.addAll(current.getBackupMasters());
+    toStart.addAll(initial.getServers());
+    toKill.addAll(current.getServers());
 
     for (ServerName server : current.getServers()) {
       toStart.remove(server);
