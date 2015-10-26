@@ -21,6 +21,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -115,13 +116,16 @@ public class TestRSKilledWhenInitializing {
     @Override
     protected void handleReportForDutyResponse(RegionServerStartupResponse c) throws IOException {
       if (firstRS.getAndSet(false)) {
+        InetSocketAddress address = super.getRpcServer().getListenerAddress();
+        if (address == null) {
+          throw new IOException("Listener channel is closed");
+        }
         for (NameStringPair e : c.getMapEntriesList()) {
           String key = e.getName();
           // The hostname the master sees us as.
           if (key.equals(HConstants.KEY_FOR_HOSTNAME_SEEN_BY_MASTER)) {
             String hostnameFromMasterPOV = e.getValue();
-            assertEquals(super.getRpcServer().getListenerAddress().getHostName(),
-              hostnameFromMasterPOV);
+            assertEquals(address.getHostName(), hostnameFromMasterPOV);
           }
         }
         while (!masterActive) {

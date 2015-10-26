@@ -16,6 +16,7 @@ package org.apache.hadoop.hbase.ipc;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import java.net.InetSocketAddress;
 import java.nio.channels.ClosedChannelException;
 
 import org.apache.commons.logging.Log;
@@ -96,8 +97,9 @@ public class CallRunner {
       TraceScope traceScope = null;
       try {
         if (!this.rpcServer.isStarted()) {
-          throw new ServerNotRunningYetException("Server " + rpcServer.getListenerAddress()
-              + " is not running yet");
+          InetSocketAddress address = rpcServer.getListenerAddress();
+          throw new ServerNotRunningYetException("Server " +
+              (address != null ? address : "(channel closed)") + " is not running yet");
         }
         if (call.tinfo != null) {
           traceScope = Trace.startSpan(call.toTraceString(), call.tinfo);
@@ -143,9 +145,10 @@ public class CallRunner {
         throw e;
       }
     } catch (ClosedChannelException cce) {
+      InetSocketAddress address = rpcServer.getListenerAddress();
       RpcServer.LOG.warn(Thread.currentThread().getName() + ": caught a ClosedChannelException, " +
-          "this means that the server " + rpcServer.getListenerAddress() + " was processing a " +
-          "request but the client went away. The error message was: " +
+          "this means that the server " + (address != null ? address : "(channel closed)") +
+          " was processing a request but the client went away. The error message was: " +
           cce.getMessage());
     } catch (Exception e) {
       RpcServer.LOG.warn(Thread.currentThread().getName()
