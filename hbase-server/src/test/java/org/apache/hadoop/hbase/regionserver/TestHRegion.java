@@ -56,7 +56,11 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -100,6 +104,7 @@ import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
+import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.RowMutations;
@@ -6075,7 +6080,7 @@ public class TestHRegion {
           key.setWriteEntry(we);
           return 1L;
         }
-      
+
     });
     return wal;
   }
@@ -6098,7 +6103,7 @@ public class TestHRegion {
     // capture append() calls
     WAL wal = mockWAL();
     when(rss.getWAL((HRegionInfo) any())).thenReturn(wal);
-    
+
 
     // open a region first so that it can be closed later
     region = HRegion.openHRegion(hri, htd, rss.getWAL(hri),
@@ -6436,6 +6441,53 @@ public class TestHRegion {
 
     assertTrue(Bytes.equals(c.getValueArray(), c.getValueOffset(), c.getValueLength(),
       qual2, 0, qual2.length));
+  }
+
+  @Test(timeout = 30000)
+  public void testBatchMutateWithWrongRegionException() throws IOException, InterruptedException {
+    final byte[] a = Bytes.toBytes("a");
+    final byte[] b = Bytes.toBytes("b");
+    final byte[] c = Bytes.toBytes("c"); // exclusive
+
+    int prevLockTimeout = CONF.getInt("hbase.rowlock.wait.duration", 30000);
+    CONF.setInt("hbase.rowlock.wait.duration", 3000);
+    final HRegion region = initHRegion(tableName, a, c, name.getMethodName(), CONF, false, fam1);
+
+    Mutation[] mutations = new Mutation[] {
+        new Put(a).addImmutable(fam1, null, null),
+        new Put(c).addImmutable(fam1, null, null), // this is outside the region boundary
+        new Put(b).addImmutable(fam1, null, null),
+    };
+
+    OperationStatus[] status = region.batchMutate(mutations);
+    assertEquals(status[0].getOperationStatusCode(), OperationStatusCode.SUCCESS);
+    assertEquals(status[1].getOperationStatusCode(), OperationStatusCode.SANITY_CHECK_FAILURE);
+    assertEquals(status[2].getOperationStatusCode(), OperationStatusCode.SUCCESS);
+
+    // test with a leaked row lock
+    ExecutorService exec = Executors.newSingleThreadExecutor();
+    exec.submit(new Callable<Void>() {
+      @Override
+      public Void call() throws Exception {
+        region.getRowLock(b);
+        return null;
+      }
+    });
+    exec.shutdown();
+    exec.awaitTermination(30, TimeUnit.SECONDS);
+
+    mutations = new Mutation[] {
+        new Put(a).addImmutable(fam1, null, null),
+        new Put(b).addImmutable(fam1, null, null),
+    };
+
+    try {
+      status = region.batchMutate(mutations);
+      fail("Failed to throw exception");
+    } catch (IOException expected) {
+    }
+
+    CONF.setInt("hbase.rowlock.wait.duration", prevLockTimeout);
   }
 
   static HRegion initHRegion(byte[] tableName, String callingMethod,
