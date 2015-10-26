@@ -15,6 +15,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -23,21 +24,27 @@ import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * <p>
  * Used to communicate with a single HBase table similar to {@link Table}
  * but meant for batched, potentially asynchronous puts. Obtain an instance from
  * a {@link Connection} and call {@link #close()} afterwards.
+ * </p>
+ *
+ * <p>
+ * While this can be used accross threads, great care should be used when doing so.
+ * Errors are global to the buffered mutator and the Exceptions can be thrown on any
+ * thread that causes the flush for requests.
  * </p>
  *
  * @see ConnectionFactory
@@ -55,13 +62,18 @@ public class BufferedMutatorImpl implements BufferedMutator {
   protected ClusterConnection connection; // non-final so can be overridden in test
   private final TableName tableName;
   private volatile Configuration conf;
+
   @VisibleForTesting
-  List<Row> writeAsyncBuffer = new LinkedList<>();
+  final ConcurrentLinkedQueue<Mutation> writeAsyncBuffer = new ConcurrentLinkedQueue<Mutation>();
+  @VisibleForTesting
+  AtomicLong currentWriteBufferSize = new AtomicLong(0);
+
   private long writeBufferSize;
   private final int maxKeyValueSize;
-  protected long currentWriteBufferSize = 0;
   private boolean closed = false;
   private final ExecutorService pool;
+
+  @VisibleForTesting
   protected AsyncProcess ap; // non-final so can be overridden in test
 
   BufferedMutatorImpl(ClusterConnection conn, RpcRetryingCallerFactory rpcCallerFactory,
@@ -97,38 +109,41 @@ public class BufferedMutatorImpl implements BufferedMutator {
   }
 
   @Override
-  public synchronized void mutate(Mutation m) throws InterruptedIOException,
+  public void mutate(Mutation m) throws InterruptedIOException,
       RetriesExhaustedWithDetailsException {
     mutate(Arrays.asList(m));
   }
 
   @Override
-  public synchronized void mutate(List<? extends Mutation> ms) throws InterruptedIOException,
+  public void mutate(List<? extends Mutation> ms) throws InterruptedIOException,
       RetriesExhaustedWithDetailsException {
+
     if (closed) {
       throw new IllegalStateException("Cannot put when the BufferedMutator is closed.");
     }
 
+    long toAddSize = 0;
     for (Mutation m : ms) {
       if (m instanceof Put) {
         validatePut((Put) m);
       }
-        currentWriteBufferSize += m.heapSize();
+      toAddSize += m.heapSize();
     }
 
-      // This behavior is highly non-intuitive... it does not protect us against
-      // 94-incompatible behavior, which is a timing issue because hasError, the below code
-      // and setter of hasError are not synchronized. Perhaps it should be removed.
-      if (ap.hasError()) {
-        writeAsyncBuffer.addAll(ms);
-        backgroundFlushCommits(true);
-      } else {
-        writeAsyncBuffer.addAll(ms);
-      }
-
+    // This behavior is highly non-intuitive... it does not protect us against
+    // 94-incompatible behavior, which is a timing issue because hasError, the below code
+    // and setter of hasError are not synchronized. Perhaps it should be removed.
+    if (ap.hasError()) {
+      currentWriteBufferSize.addAndGet(toAddSize);
+      writeAsyncBuffer.addAll(ms);
+      backgroundFlushCommits(true);
+    } else {
+      currentWriteBufferSize.addAndGet(toAddSize);
+      writeAsyncBuffer.addAll(ms);
+    }
 
     // Now try and queue what needs to be queued.
-    while (currentWriteBufferSize > writeBufferSize) {
+    while (currentWriteBufferSize.get() > writeBufferSize) {
       backgroundFlushCommits(false);
     }
   }
@@ -140,15 +155,15 @@ public class BufferedMutatorImpl implements BufferedMutator {
 
   @Override
   public synchronized void close() throws IOException {
-    if (this.closed) {
-      return;
-    }
     try {
+      if (this.closed) {
+        return;
+      }
       // As we can have an operation in progress even if the buffer is empty, we call
       // backgroundFlushCommits at least one time.
       backgroundFlushCommits(true);
       this.pool.shutdown();
-      boolean terminated = false;
+      boolean terminated;
       int loopCnt = 0;
       do {
         // wait until the pool has terminated
@@ -159,8 +174,10 @@ public class BufferedMutatorImpl implements BufferedMutator {
           break;
         }
       } while (!terminated);
+
     } catch (InterruptedException e) {
       LOG.warn("waitForTermination interrupted");
+
     } finally {
       this.closed = true;
     }
@@ -182,19 +199,44 @@ public class BufferedMutatorImpl implements BufferedMutator {
    * @param synchronous - if true, sends all the writes and wait for all of them to finish before
    *        returning.
    */
-  private void backgroundFlushCommits(boolean synchronous) throws InterruptedIOException,
+  private void backgroundFlushCommits(boolean synchronous) throws
+      InterruptedIOException,
       RetriesExhaustedWithDetailsException {
+
+    LinkedList<Mutation> buffer = new LinkedList<>();
+    // Keep track of the size so that this thread doesn't spin forever
+    long dequeuedSize = 0;
+
     try {
+      // Grab all of the available mutations.
+      Mutation m;
+
+      // If there's no buffer size drain everything. If there is a buffersize drain up to twice
+      // that amount. This should keep the loop from continually spinning if there are threads
+      // that keep adding more data to the buffer.
+      while (
+          (writeBufferSize <= 0 || dequeuedSize < (writeBufferSize * 2) || synchronous)
+              && (m = writeAsyncBuffer.poll()) != null) {
+        buffer.add(m);
+        long size = m.heapSize();
+        dequeuedSize += size;
+        currentWriteBufferSize.addAndGet(-size);
+      }
+
+      if (!synchronous && dequeuedSize == 0) {
+        return;
+      }
+
       if (!synchronous) {
-        ap.submit(tableName, writeAsyncBuffer, true, null, false);
+        ap.submit(tableName, buffer, true, null, false);
         if (ap.hasError()) {
           LOG.debug(tableName + ": One or more of the operations have failed -"
               + " waiting for all operation in progress to finish (successfully or not)");
         }
       }
       if (synchronous || ap.hasError()) {
-        while (!writeAsyncBuffer.isEmpty()) {
-          ap.submit(tableName, writeAsyncBuffer, true, null, false);
+        while (!buffer.isEmpty()) {
+          ap.submit(tableName, buffer, true, null, false);
         }
         RetriesExhaustedWithDetailsException error = ap.waitForAllPreviousOpsAndReset(null);
         if (error != null) {
@@ -206,11 +248,11 @@ public class BufferedMutatorImpl implements BufferedMutator {
         }
       }
     } finally {
-      currentWriteBufferSize = 0;
-      for (Row mut : writeAsyncBuffer) {
-        if (mut instanceof Mutation) {
-          currentWriteBufferSize += ((Mutation) mut).heapSize();
-        }
+      for (Mutation mut : buffer) {
+        long size = mut.heapSize();
+        currentWriteBufferSize.addAndGet(size);
+        dequeuedSize -= size;
+        writeAsyncBuffer.add(mut);
       }
     }
   }
@@ -224,7 +266,7 @@ public class BufferedMutatorImpl implements BufferedMutator {
   public void setWriteBufferSize(long writeBufferSize) throws RetriesExhaustedWithDetailsException,
       InterruptedIOException {
     this.writeBufferSize = writeBufferSize;
-    if (currentWriteBufferSize > writeBufferSize) {
+    if (currentWriteBufferSize.get() > writeBufferSize) {
       flush();
     }
   }
