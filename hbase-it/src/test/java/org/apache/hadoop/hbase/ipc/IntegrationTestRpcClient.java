@@ -161,9 +161,13 @@ public class IntegrationTestRpcClient {
 
         TestRpcServer rpcServer = new TestRpcServer(conf);
         rpcServer.start();
-        rpcServers.put(rpcServer.getListenerAddress(), rpcServer);
+        InetSocketAddress address = rpcServer.getListenerAddress();        
+        if (address == null) {
+          throw new IOException("Listener channel is closed");
+        }
+        rpcServers.put(address, rpcServer);
         serverList.add(rpcServer);
-        LOG.info("Started server: " + rpcServer.getListenerAddress());
+        LOG.info("Started server: " + address);
         return rpcServer;
       } finally {
         lock.writeLock().unlock();
@@ -180,7 +184,13 @@ public class IntegrationTestRpcClient {
         int size = rpcServers.size();
         int rand = random.nextInt(size);
         rpcServer = serverList.remove(rand);
-        rpcServers.remove(rpcServer.getListenerAddress());
+        InetSocketAddress address = rpcServer.getListenerAddress();
+        if (address == null) {
+          // Throw exception here. We can't remove this instance from the server map because
+          // we no longer have access to its map key
+          throw new IOException("Listener channel is closed");
+        }
+        rpcServers.remove(address);
 
         if (rpcServer != null) {
           stopServer(rpcServer);
@@ -298,8 +308,12 @@ public class IntegrationTestRpcClient {
         TestRpcServer server = cluster.getRandomServer();
         try {
           User user = User.getCurrent();
+          InetSocketAddress address = server.getListenerAddress();
+          if (address == null) {
+            throw new IOException("Listener channel is closed");
+          }
           ret = (EchoResponseProto)
-              rpcClient.callBlockingMethod(md, null, param, ret, user, server.getListenerAddress(), 60000);
+              rpcClient.callBlockingMethod(md, null, param, ret, user, address, 60000);
         } catch (Exception e) {
           LOG.warn(e);
           continue; // expected in case connection is closing or closed
