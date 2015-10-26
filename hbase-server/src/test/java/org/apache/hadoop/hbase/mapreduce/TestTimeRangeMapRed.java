@@ -167,7 +167,6 @@ public class TestTimeRangeMapRed {
 
   private void runTestOnTable()
   throws IOException, InterruptedException, ClassNotFoundException {
-    UTIL.startMiniMapReduceCluster();
     Job job = null;
     try {
       job = new Job(UTIL.getConfiguration(), "test123");
@@ -184,7 +183,6 @@ public class TestTimeRangeMapRed {
       // TODO Auto-generated catch block
       e.printStackTrace();
     } finally {
-      UTIL.shutdownMiniMapReduceCluster();
       if (job != null) {
         FileUtil.fullyDelete(
           new File(job.getConfiguration().get("hadoop.tmp.dir")));

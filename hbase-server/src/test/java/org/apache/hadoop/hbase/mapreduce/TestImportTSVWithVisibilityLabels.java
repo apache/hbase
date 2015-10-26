@@ -151,7 +151,6 @@ public class TestImportTSVWithVisibilityLabels implements Configurable {
 
   @AfterClass
   public static void releaseCluster() throws Exception {
-    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 

@@ -155,14 +155,12 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected void testWithMapReduce(HBaseTestingUtility util, String snapshotName,
       int numRegions, int expectedNumSplits, boolean shutdownCluster) throws Exception {
     setupCluster();
-    util.startMiniMapReduceCluster();
     try {
       Path tableDir = util.getDataTestDirOnTestFS(snapshotName);
       TableName tableName = TableName.valueOf("testWithMapReduce");
       testWithMapReduceImpl(util, tableName, snapshotName, tableDir, numRegions,
         expectedNumSplits, shutdownCluster);
     } finally {
-      util.shutdownMiniMapReduceCluster();
       tearDownCluster();
     }
   }

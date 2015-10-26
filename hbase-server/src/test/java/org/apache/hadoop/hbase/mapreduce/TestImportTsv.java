@@ -104,12 +104,10 @@ public class TestImportTsv implements Configurable {
   @BeforeClass
   public static void provisionCluster() throws Exception {
     util.startMiniCluster();
-    util.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void releaseCluster() throws Exception {
-    util.shutdownMiniMapReduceCluster();
     util.shutdownMiniCluster();
   }
 

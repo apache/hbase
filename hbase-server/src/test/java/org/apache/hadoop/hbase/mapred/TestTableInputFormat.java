@@ -34,6 +34,7 @@ import java.util.Map;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.client.Connection;
@@ -80,7 +81,7 @@ public class TestTableInputFormat {
   private static final Log LOG = LogFactory.getLog(TestTableInputFormat.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
-  private static MiniMRCluster mrCluster;
+
   static final byte[] FAMILY = Bytes.toBytes("family");
 
   private static final byte[][] columns = new byte[][] { FAMILY };
@@ -88,12 +89,10 @@ public class TestTableInputFormat {
   @BeforeClass
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
-    mrCluster = UTIL.startMiniMapReduceCluster();
   }
 
   @AfterClass
   public static void afterClass() throws Exception {
-    UTIL.shutdownMiniMapReduceCluster();
     UTIL.shutdownMiniCluster();
   }
 
@@ -344,7 +343,8 @@ public class TestTableInputFormat {
   }
 
   void testInputFormat(Class<? extends InputFormat> clazz) throws IOException {
-    final JobConf job = MapreduceTestingShim.getJobConf(mrCluster);
+    Configuration conf = UTIL.getConfiguration();
+    final JobConf job = new JobConf(conf);
     job.setInputFormat(clazz);
     job.setOutputFormat(NullOutputFormat.class);
     job.setMapperClass(ExampleVerifier.class);

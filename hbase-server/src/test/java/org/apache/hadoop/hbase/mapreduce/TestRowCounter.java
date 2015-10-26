@@ -76,7 +76,6 @@ public class TestRowCounter {
   public static void setUpBeforeClass()
       throws Exception {
     TEST_UTIL.startMiniCluster();
-    TEST_UTIL.startMiniMapReduceCluster();
     Table table = TEST_UTIL.createTable(TableName.valueOf(TABLE_NAME), Bytes.toBytes(COL_FAM));
     writeRows(table);
     table.close();
@@ -89,7 +88,6 @@ public class TestRowCounter {
   public static void tearDownAfterClass()
       throws Exception {
     TEST_UTIL.shutdownMiniCluster();
-    TEST_UTIL.shutdownMiniMapReduceCluster();
   }
 
   /**
