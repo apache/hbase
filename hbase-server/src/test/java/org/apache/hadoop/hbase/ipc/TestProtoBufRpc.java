@@ -100,7 +100,11 @@ public class TestProtoBufRpc {
         Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(service, null)),
         new InetSocketAddress(ADDRESS, PORT), conf,
         new FifoRpcScheduler(conf, 10));
-    this.isa = server.getListenerAddress();
+    InetSocketAddress address = server.getListenerAddress();
+    if (address == null) {
+      throw new IOException("Listener channel is closed");
+    }
+    this.isa = address;
     this.server.start();
   }
 

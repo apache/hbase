@@ -321,9 +321,12 @@ public class TestIPC {
     rm.add(p);
     try {
       rpcServer.start();
-      InetSocketAddress address = rpcServer.getListenerAddress();
       long startTime = System.currentTimeMillis();
       User user = User.getCurrent();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       for (int i = 0; i < cycles; i++) {
         List<CellScannable> cells = new ArrayList<CellScannable>();
         // Message param = RequestConverter.buildMultiRequest(HConstants.EMPTY_BYTE_ARRAY, rm);

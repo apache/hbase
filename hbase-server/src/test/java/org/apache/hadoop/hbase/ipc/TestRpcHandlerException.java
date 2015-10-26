@@ -177,8 +177,12 @@ public class TestRpcHandlerException {
       rpcServer.start();
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
+      InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       client.call(null, md, param, CellUtil.createCellScanner(ImmutableList.of(CELL)), md
-        .getOutputType().toProto(), User.getCurrent(), rpcServer.getListenerAddress(), 0);
+        .getOutputType().toProto(), User.getCurrent(), address, 0);
     } catch (Throwable e) {
       assert(abortable.isAborted() == true);
     } finally {
