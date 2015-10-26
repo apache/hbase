@@ -37,6 +37,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CategoryBasedTimeout;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -85,13 +86,17 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.rules.TestRule;
 
 import com.google.common.collect.Sets;
 
 @Category(MediumTests.class)
 public class TestNamespaceAuditor {
+  @Rule public final TestRule timeout = CategoryBasedTimeout.builder().
+      withTimeout(this.getClass()).withLookingForStuckThread(true).build();
   private static final Log LOG = LogFactory.getLog(TestNamespaceAuditor.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static HBaseAdmin ADMIN;
@@ -133,7 +138,7 @@ public class TestNamespaceAuditor {
       .getMasterQuotaManager().isQuotaEnabled());
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void testTableOperations() throws Exception {
     String nsp = prefix + "_np2";
     NamespaceDescriptor nspDesc =
@@ -480,7 +485,7 @@ public class TestNamespaceAuditor {
    * namespace quota cache. Now correct the failure and recreate the table with same name.
    * HBASE-13394
    */
-  @Test(timeout = 180000)
+  @Test
   public void testRecreateTableWithSameNameAfterFirstTimeFailure() throws Exception {
     String nsp1 = prefix + "_testRecreateTable";
     NamespaceDescriptor nspDesc =
@@ -659,7 +664,7 @@ public class TestNamespaceAuditor {
     observer.tableDeletionLatch.await();
   }
 
-  @Test(expected = QuotaExceededException.class, timeout = 30000)
+  @Test(expected = QuotaExceededException.class)
   public void testExceedTableQuotaInNamespace() throws Exception {
     String nsp = prefix + "_testExceedTableQuotaInNamespace";
     NamespaceDescriptor nspDesc =
@@ -676,7 +681,7 @@ public class TestNamespaceAuditor {
     ADMIN.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 4);
   }
   
-  @Test(expected = QuotaExceededException.class, timeout = 30000)
+  @Test(expected = QuotaExceededException.class)
   public void testCloneSnapshotQuotaExceed() throws Exception {
     String nsp = prefix + "_testTableQuotaExceedWithCloneSnapshot";
     NamespaceDescriptor nspDesc =
@@ -694,7 +699,7 @@ public class TestNamespaceAuditor {
     ADMIN.deleteSnapshot(snapshot);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testCloneSnapshot() throws Exception {
     String nsp = prefix + "_testCloneSnapshot";
     NamespaceDescriptor nspDesc =
@@ -729,7 +734,7 @@ public class TestNamespaceAuditor {
     ADMIN.deleteSnapshot(snapshot);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testRestoreSnapshot() throws Exception {
     String nsp = prefix + "_testRestoreSnapshot";
     NamespaceDescriptor nspDesc =
@@ -763,7 +768,7 @@ public class TestNamespaceAuditor {
     ADMIN.deleteSnapshot(snapshot);
   }
 
-  @Test(timeout = 180000)
+  @Test
   public void testRestoreSnapshotQuotaExceed() throws Exception {
     String nsp = prefix + "_testRestoreSnapshotQuotaExceed";
     NamespaceDescriptor nspDesc =
