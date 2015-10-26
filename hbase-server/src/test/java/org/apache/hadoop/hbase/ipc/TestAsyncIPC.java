@@ -156,6 +156,9 @@ public class TestAsyncIPC extends AbstractTestIPC {
     try {
       rpcServer.start();
       InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
 
@@ -192,6 +195,9 @@ public class TestAsyncIPC extends AbstractTestIPC {
     try {
       rpcServer.start();
       InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       MethodDescriptor md = SERVICE.getDescriptorForType().findMethodByName("echo");
       EchoRequestProto param = EchoRequestProto.newBuilder().setMessage("hello").build();
 
@@ -257,6 +263,9 @@ public class TestAsyncIPC extends AbstractTestIPC {
     try {
       rpcServer.start();
       InetSocketAddress address = rpcServer.getListenerAddress();
+      if (address == null) {
+        throw new IOException("Listener channel is closed");
+      }
       long startTime = System.currentTimeMillis();
       User user = User.getCurrent();
       for (int i = 0; i < cycles; i++) {

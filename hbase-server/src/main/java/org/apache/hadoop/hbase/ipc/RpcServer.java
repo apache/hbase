@@ -1797,8 +1797,9 @@ public class RpcServer implements RpcServerInterface {
             responder, totalRequestSize, null, null);
         ByteArrayOutputStream responseBuffer = new ByteArrayOutputStream();
         metrics.exception(CALL_QUEUE_TOO_BIG_EXCEPTION);
+        InetSocketAddress address = getListenerAddress();
         setupResponse(responseBuffer, callTooBig, CALL_QUEUE_TOO_BIG_EXCEPTION,
-            "Call queue is full on " + getListenerAddress() +
+            "Call queue is full on " + (address != null ? address : "(channel closed)") +
                 ", is hbase.ipc.server.max.callqueue.size too small?");
         responder.doRespond(callTooBig);
         return;
@@ -1826,8 +1827,9 @@ public class RpcServer implements RpcServerInterface {
             buf, offset, buf.length);
         }
       } catch (Throwable t) {
-        String msg = getListenerAddress() + " is unable to read call parameter from client " +
-            getHostAddress();
+        InetSocketAddress address = getListenerAddress();
+        String msg = (address != null ? address : "(channel closed)") +
+            " is unable to read call parameter from client " + getHostAddress();
         LOG.warn(msg, t);
 
         metrics.exception(t);
@@ -2250,11 +2252,16 @@ public class RpcServer implements RpcServerInterface {
   }
 
   /**
-   * Return the socket (ip+port) on which the RPC server is listening to.
-   * @return the socket (ip+port) on which the RPC server is listening to.
+   * Return the socket (ip+port) on which the RPC server is listening to. May return null if
+   * the listener channel is closed.
+   * @return the socket (ip+port) on which the RPC server is listening to, or null if this
+   * information cannot be determined
    */
   @Override
   public synchronized InetSocketAddress getListenerAddress() {
+    if (listener == null) {
+      return null;
+    }
     return listener.getAddress();
   }
 
