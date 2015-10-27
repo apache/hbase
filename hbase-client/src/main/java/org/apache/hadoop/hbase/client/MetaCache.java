@@ -21,10 +21,9 @@ package org.apache.hadoop.hbase.client;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
-import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -35,6 +34,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.types.CopyOnWriteArrayMap;
 import org.apache.hadoop.hbase.util.Bytes;
 
 /**
@@ -48,16 +48,16 @@ public class MetaCache {
   /**
    * Map of table to table {@link HRegionLocation}s.
    */
-  private final ConcurrentMap<TableName, ConcurrentSkipListMap<byte[], RegionLocations>>
+  private final ConcurrentMap<TableName, ConcurrentNavigableMap<byte[], RegionLocations>>
   cachedRegionLocations =
-  new ConcurrentHashMap<TableName, ConcurrentSkipListMap<byte[], RegionLocations>>();
+  new CopyOnWriteArrayMap<>();
 
   // The presence of a server in the map implies it's likely that there is an
   // entry in cachedRegionLocations that map to this server; but the absence
   // of a server in this map guarentees that there is no entry in cache that
   // maps to the absent server.
   // The access to this attribute must be protected by a lock on cachedRegionLocations
-  private final Set<ServerName> cachedServers = new ConcurrentSkipListSet<ServerName>();
+  private final Set<ServerName> cachedServers = new CopyOnWriteArraySet<>();
 
   private final MetricsConnection metrics;
 
@@ -69,13 +69,10 @@ public class MetaCache {
    * Search the cache for a location that fits our table and row key.
    * Return null if no suitable region is located.
    *
-   *
-   * @param tableName
-   * @param row
    * @return Null or region location found in cache.
    */
   public RegionLocations getCachedLocation(final TableName tableName, final byte [] row) {
-    ConcurrentSkipListMap<byte[], RegionLocations> tableLocations =
+    ConcurrentNavigableMap<byte[], RegionLocations> tableLocations =
       getTableLocations(tableName);
 
     Entry<byte[], RegionLocations> e = tableLocations.floorEntry(row);
@@ -194,15 +191,15 @@ public class MetaCache {
    * @param tableName
    * @return Map of cached locations for passed <code>tableName</code>
    */
-  private ConcurrentSkipListMap<byte[], RegionLocations>
+  private ConcurrentNavigableMap<byte[], RegionLocations>
     getTableLocations(final TableName tableName) {
     // find the map of cached locations for this table
-    ConcurrentSkipListMap<byte[], RegionLocations> result;
+    ConcurrentNavigableMap<byte[], RegionLocations> result;
     result = this.cachedRegionLocations.get(tableName);
     // if tableLocations for this table isn't built yet, make one
     if (result == null) {
-      result = new ConcurrentSkipListMap<byte[], RegionLocations>(Bytes.BYTES_COMPARATOR);
-      ConcurrentSkipListMap<byte[], RegionLocations> old =
+      result = new CopyOnWriteArrayMap<>(Bytes.BYTES_COMPARATOR);
+      ConcurrentNavigableMap<byte[], RegionLocations> old =
           this.cachedRegionLocations.putIfAbsent(tableName, result);
       if (old != null) {
         return old;

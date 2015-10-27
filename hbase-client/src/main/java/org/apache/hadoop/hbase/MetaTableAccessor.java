@@ -972,7 +972,9 @@ public class MetaTableAccessor {
     // iterate until all serverName columns are seen
     int replicaId = 0;
     byte[] serverColumn = getServerColumn(replicaId);
-    SortedMap<byte[], byte[]> serverMap = infoMap.tailMap(serverColumn, false);
+    SortedMap<byte[], byte[]> serverMap = null;
+    serverMap = infoMap.tailMap(serverColumn, false);
+
     if (serverMap.isEmpty()) return new RegionLocations(locations);
 
     for (Map.Entry<byte[], byte[]> entry : serverMap.entrySet()) {
