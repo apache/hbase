@@ -84,7 +84,7 @@ fi
 hostname=$1
 filename="/tmp/$hostname"
 
-local=false
+local=
 localhostname=`/bin/hostname`
 
 if [ "$localhostname" == "$hostname" ]; then
@@ -103,7 +103,7 @@ log "Unloaded $hostname region(s)"
 hosts="/tmp/$(basename $0).$$.tmp"
 echo $hostname >> $hosts
 if [ "$thrift" != "" ]; then
-  log "Stopping thrift"
+  log "Stopping thrift server on $hostname"
   if [ "$local" ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop thrift
   else
@@ -111,28 +111,28 @@ if [ "$thrift" != "" ]; then
   fi
 fi
 if [ "$rest" != "" ]; then
-  log "Stopping rest"
+  log "Stopping rest server on $hostname"
   if [ "$local" ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop rest
   else
     "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop rest
   fi
 fi
-log "Stopping regionserver"
+log "Stopping regionserver on $hostname"
 if [ "$local" ]; then
   "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} stop regionserver
 else
   "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} stop regionserver
 fi
 if [ "$restart" != "" ]; then
-  log "Restarting regionserver"
+  log "Restarting regionserver on $hostname"
   if [ "$local" ]; then
     "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start regionserver
   else
     "$bin"/hbase-daemons.sh --config ${HBASE_CONF_DIR} --hosts ${hosts} start regionserver
   fi
   if [ "$thrift" != "" ]; then
-    log "Restarting thrift"
+    log "Restarting thrift server on $hostname"
     # -b 0.0.0.0 says listen on all interfaces rather than just default.
     if [ "$local" ]; then
       "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start thrift -b 0.0.0.0
@@ -141,7 +141,7 @@ if [ "$restart" != "" ]; then
     fi
   fi
   if [ "$rest" != "" ]; then
-    log "Restarting rest"
+    log "Restarting rest server on $hostname"
     if [ "$local" ]; then
       "$bin"/hbase-daemon.sh --config ${HBASE_CONF_DIR} start rest
     else
