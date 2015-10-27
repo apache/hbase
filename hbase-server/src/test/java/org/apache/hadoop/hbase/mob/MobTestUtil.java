@@ -19,11 +19,16 @@
 package org.apache.hadoop.hbase.mob;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Assert;
@@ -73,15 +78,30 @@ public class MobTestUtil {
   /**
    * Compare two Cells only for their row family qualifier value
    */
-  public static void assertCellEquals(Cell firstKeyValue,
-	      Cell secondKeyValue) {
-		    Assert.assertEquals(Bytes.toString(CellUtil.cloneRow(firstKeyValue)),
-	            Bytes.toString(CellUtil.cloneRow(secondKeyValue)));
-		    Assert.assertEquals(Bytes.toString(CellUtil.cloneFamily(firstKeyValue)),
-	            Bytes.toString(CellUtil.cloneFamily(secondKeyValue)));
-		    Assert.assertEquals(Bytes.toString(CellUtil.cloneQualifier(firstKeyValue)),
-	            Bytes.toString(CellUtil.cloneQualifier(secondKeyValue)));
-		    Assert.assertEquals(Bytes.toString(CellUtil.cloneValue(firstKeyValue)),
-	            Bytes.toString(CellUtil.cloneValue(secondKeyValue)));
-	  }
+  public static void assertCellEquals(Cell firstKeyValue, Cell secondKeyValue) {
+    Assert.assertArrayEquals(CellUtil.cloneRow(firstKeyValue),
+        CellUtil.cloneRow(secondKeyValue));
+    Assert.assertArrayEquals(CellUtil.cloneFamily(firstKeyValue),
+        CellUtil.cloneFamily(secondKeyValue));
+    Assert.assertArrayEquals(CellUtil.cloneQualifier(firstKeyValue),
+        CellUtil.cloneQualifier(secondKeyValue));
+    Assert.assertArrayEquals(CellUtil.cloneValue(firstKeyValue),
+        CellUtil.cloneValue(secondKeyValue));
+  }
+
+  public static void assertCellsValue(Table table, Scan scan,
+      byte[] expectedValue, int expectedCount) throws IOException {
+    ResultScanner results = table.getScanner(scan);
+    int count = 0;
+    for (Result res : results) {
+      List<Cell> cells = res.listCells();
+      for(Cell cell : cells) {
+        // Verify the value
+        Assert.assertArrayEquals(expectedValue, CellUtil.cloneValue(cell));
+        count++;
+      }
+    }
+    results.close();
+    Assert.assertEquals(expectedCount, count);
+  }
 }

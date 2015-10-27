@@ -413,8 +413,8 @@ public class TestMobCompactor {
     result = table.get(get);
     cell = result.getColumnLatestCell(hcd1.getName(), Bytes.toBytes(qf1));
     // the ref name is the new file
-    Path mobFamilyPath = new Path(
-      MobUtils.getMobRegionPath(TEST_UTIL.getConfiguration(), tableName), hcd1.getNameAsString());
+    Path mobFamilyPath =
+      MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, hcd1.getNameAsString());
     List<Path> paths = new ArrayList<Path>();
     if (fs.exists(mobFamilyPath)) {
       FileStatus[] files = fs.listStatus(mobFamilyPath);
@@ -495,13 +495,7 @@ public class TestMobCompactor {
     Scan scan = new Scan();
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
-    ResultScanner results = table.getScanner(scan);
-    int count = 0;
-    for (Result res : results) {
-      count++;
-    }
-    results.close();
-    return count;
+    return TEST_UTIL.countRows(table, scan);
   }
 
   /**
@@ -532,8 +526,7 @@ public class TestMobCompactor {
    */
   private int countFiles(TableName tableName, boolean isMobFile, String familyName)
     throws IOException {
-    Path mobDirPath = MobUtils.getMobFamilyPath(
-        MobUtils.getMobRegionPath(conf, tableName), familyName);
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableName, familyName);
     int count = 0;
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = fs.listStatus(mobDirPath);
@@ -553,8 +546,7 @@ public class TestMobCompactor {
   }
 
   private boolean verifyEncryption(TableName tableName, String familyName) throws IOException {
-    Path mobDirPath = MobUtils.getMobFamilyPath(MobUtils.getMobRegionPath(conf, tableName),
-      familyName);
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableName, familyName);
     boolean hasFiles = false;
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = fs.listStatus(mobDirPath);
@@ -579,8 +571,7 @@ public class TestMobCompactor {
    * @return the number of the HFileLink
    */
   private int countHFileLinks(String familyName) throws IOException {
-    Path mobDirPath = MobUtils.getMobFamilyPath(
-        MobUtils.getMobRegionPath(conf, tableName), familyName);
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableName, familyName);
     int count = 0;
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = fs.listStatus(mobDirPath);
@@ -601,8 +592,7 @@ public class TestMobCompactor {
    * @return the number of files large than the size
    */
   private int countLargeFiles(int size, TableName tableName, String familyName) throws IOException {
-    Path mobDirPath = MobUtils.getMobFamilyPath(MobUtils.getMobRegionPath(conf, tableName),
-      familyName);
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, tableName, familyName);
     int count = 0;
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = fs.listStatus(mobDirPath);
@@ -729,8 +719,8 @@ public class TestMobCompactor {
     // Do not retrieve the mob data when scanning
     scan.setAttribute(MobConstants.MOB_SCAN_RAW, Bytes.toBytes(Boolean.TRUE));
     ResultScanner results = table.getScanner(scan);
-    Path mobFamilyPath = new Path(MobUtils.getMobRegionPath(TEST_UTIL.getConfiguration(),
-        tableName), familyName);
+    Path mobFamilyPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(),
+        tableName, familyName);
     List<Path> actualFilePaths = new ArrayList<>();
     List<Path> expectFilePaths = new ArrayList<>();
     for (Result res : results) {

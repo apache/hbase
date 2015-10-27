@@ -131,7 +131,7 @@ public class BaseTestHBaseFsck {
     Bytes.toBytes("00"), Bytes.toBytes("50"), Bytes.toBytes("A0"), Bytes.toBytes("A5"),
     Bytes.toBytes("B0"), Bytes.toBytes("B5"), Bytes.toBytes("C0"), Bytes.toBytes("C5") };
 
-  
+
   /**
    * Create a new region in META.
    */
@@ -633,8 +633,7 @@ public class BaseTestHBaseFsck {
    * @throws IOException
    */
   Path getFlushedMobFile(FileSystem fs, TableName table) throws IOException {
-    Path regionDir = MobUtils.getMobRegionPath(conf, table);
-    Path famDir = new Path(regionDir, FAM_STR);
+    Path famDir = MobUtils.getMobFamilyPath(conf, table, FAM_STR);
 
     // keep doing this until we get a legit hfile
     while (true) {

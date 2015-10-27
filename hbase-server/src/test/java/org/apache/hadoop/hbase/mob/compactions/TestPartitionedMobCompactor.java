@@ -104,8 +104,27 @@ public class TestPartitionedMobCompactor {
 
   @Test
   public void testCompactionSelectWithAllFiles() throws Exception {
-    resetConf();
     String tableName = "testCompactionSelectWithAllFiles";
+    testCompactionAtMergeSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD,
+        CompactionType.ALL_FILES, false);
+  }
+
+  @Test
+  public void testCompactionSelectWithPartFiles() throws Exception {
+    String tableName = "testCompactionSelectWithPartFiles";
+    testCompactionAtMergeSize(tableName, 4000, CompactionType.PART_FILES, false);
+  }
+
+  @Test
+  public void testCompactionSelectWithForceAllFiles() throws Exception {
+    String tableName = "testCompactionSelectWithForceAllFiles";
+    testCompactionAtMergeSize(tableName, Long.MAX_VALUE, CompactionType.ALL_FILES, true);
+  }
+
+  private void testCompactionAtMergeSize(final String tableName,
+      final long mergeSize, final CompactionType type, final boolean isForceAllFiles)
+      throws Exception {
+    resetConf();
     init(tableName);
     int count = 10;
     // create 10 mob files.
@@ -113,7 +132,6 @@ public class TestPartitionedMobCompactor {
     // create 10 del files
     createStoreFiles(basePath, family, qf, count, Type.Delete);
     listFiles();
-    long mergeSize = MobConstants.DEFAULT_MOB_COMPACTION_MERGEABLE_THRESHOLD;
     List<String> expectedStartKeys = new ArrayList<>();
     for(FileStatus file : mobFiles) {
       if(file.getLen() < mergeSize) {
@@ -122,90 +140,33 @@ public class TestPartitionedMobCompactor {
         expectedStartKeys.add(startKey);
       }
     }
-    testSelectFiles(tableName, CompactionType.ALL_FILES, false, expectedStartKeys);
-  }
-
-  @Test
-  public void testCompactionSelectWithPartFiles() throws Exception {
-    resetConf();
-    String tableName = "testCompactionSelectWithPartFiles";
-    init(tableName);
-    int count = 10;
-    // create 10 mob files.
-    createStoreFiles(basePath, family, qf, count, Type.Put);
-    // create 10 del files
-    createStoreFiles(basePath, family, qf, count, Type.Delete);
-    listFiles();
-    long mergeSize = 4000;
-    List<String> expectedStartKeys = new ArrayList<>();
-    for(FileStatus file : mobFiles) {
-      if(file.getLen() < 4000) {
-        String fileName = file.getPath().getName();
-        String startKey = fileName.substring(0, 32);
-        expectedStartKeys.add(startKey);
-      }
-    }
     // set the mob compaction mergeable threshold
     conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
-    testSelectFiles(tableName, CompactionType.PART_FILES, false, expectedStartKeys);
-  }
-
-  @Test
-  public void testCompactionSelectWithForceAllFiles() throws Exception {
-    resetConf();
-    String tableName = "testCompactionSelectWithForceAllFiles";
-    init(tableName);
-    int count = 10;
-    // create 10 mob files.
-    createStoreFiles(basePath, family, qf, count, Type.Put);
-    // create 10 del files
-    createStoreFiles(basePath, family, qf, count, Type.Delete);
-    listFiles();
-    long mergeSize = 4000;
-    List<String> expectedStartKeys = new ArrayList<>();
-    for(FileStatus file : mobFiles) {
-      String fileName = file.getPath().getName();
-      String startKey = fileName.substring(0, 32);
-      expectedStartKeys.add(startKey);
-    }
-    // set the mob compaction mergeable threshold
-    conf.setLong(MobConstants.MOB_COMPACTION_MERGEABLE_THRESHOLD, mergeSize);
-    testSelectFiles(tableName, CompactionType.ALL_FILES, true, expectedStartKeys);
+    testSelectFiles(tableName, type, isForceAllFiles, expectedStartKeys);
   }
 
   @Test
   public void testCompactDelFilesWithDefaultBatchSize() throws Exception {
-    resetConf();
     String tableName = "testCompactDelFilesWithDefaultBatchSize";
-    init(tableName);
-    // create 20 mob files.
-    createStoreFiles(basePath, family, qf, 20, Type.Put);
-    // create 13 del files
-    createStoreFiles(basePath, family, qf, 13, Type.Delete);
-    listFiles();
-    testCompactDelFiles(tableName, 1, 13, false);
+    testCompactDelFilesAtBatchSize(tableName, MobConstants.DEFAULT_MOB_COMPACTION_BATCH_SIZE,
+      MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
   }
 
   @Test
   public void testCompactDelFilesWithSmallBatchSize() throws Exception {
-    resetConf();
     String tableName = "testCompactDelFilesWithSmallBatchSize";
-    init(tableName);
-    // create 20 mob files.
-    createStoreFiles(basePath, family, qf, 20, Type.Put);
-    // create 13 del files
-    createStoreFiles(basePath, family, qf, 13, Type.Delete);
-    listFiles();
-
-    // set the mob compaction batch size
-    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, 4);
-    testCompactDelFiles(tableName, 1, 13, false);
+    testCompactDelFilesAtBatchSize(tableName, 4, MobConstants.DEFAULT_MOB_DELFILE_MAX_COUNT);
   }
 
   @Test
   public void testCompactDelFilesChangeMaxDelFileCount() throws Exception {
-    resetConf();
     String tableName = "testCompactDelFilesWithSmallBatchSize";
+    testCompactDelFilesAtBatchSize(tableName, 4, 2);
+  }
+
+  private void testCompactDelFilesAtBatchSize(String tableName, int batchSize,
+      int delfileMaxCount)  throws Exception {
+    resetConf();
     init(tableName);
     // create 20 mob files.
     createStoreFiles(basePath, family, qf, 20, Type.Put);
@@ -214,10 +175,10 @@ public class TestPartitionedMobCompactor {
     listFiles();
 
     // set the max del file count
-    conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, 5);
+    conf.setInt(MobConstants.MOB_DELFILE_MAX_COUNT, delfileMaxCount);
     // set the mob compaction batch size
-    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, 2);
-    testCompactDelFiles(tableName, 4, 13, false);
+    conf.setInt(MobConstants.MOB_COMPACTION_BATCH_SIZE, batchSize);
+    testCompactDelFiles(tableName, 1, 13, false);
   }
 
   /**

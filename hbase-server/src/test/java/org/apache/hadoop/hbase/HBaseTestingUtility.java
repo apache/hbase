@@ -1845,7 +1845,7 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
 
   //
   // ==========================================================================
-  
+
   /**
    * Provide an existing table name to truncate.
    * Scans the table and issues a delete for each row read.
@@ -2141,7 +2141,10 @@ public class HBaseTestingUtility extends HBaseCommonTestingUtility {
    * Return the number of rows in the given table.
    */
   public int countRows(final Table table) throws IOException {
-    Scan scan = new Scan();
+    return countRows(table, new Scan());
+  }
+
+  public int countRows(final Table table, final Scan scan) throws IOException {
     ResultScanner results = table.getScanner(scan);
     int count = 0;
     for (@SuppressWarnings("unused") Result res : results) {

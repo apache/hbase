@@ -278,8 +278,7 @@ public class TestMobStoreCompaction {
   }
 
   private int countMobFiles() throws IOException {
-    Path mobDirPath = new Path(MobUtils.getMobRegionPath(conf, htd.getTableName()),
-        hcd.getNameAsString());
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
     if (fs.exists(mobDirPath)) {
       FileStatus[] files = UTIL.getTestFileSystem().listStatus(mobDirPath);
       return files.length;
@@ -289,8 +288,7 @@ public class TestMobStoreCompaction {
 
   private long countMobCellsInMetadata() throws IOException {
     long mobCellsCount = 0;
-    Path mobDirPath = new Path(MobUtils.getMobRegionPath(conf, htd.getTableName()),
-        hcd.getNameAsString());
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
@@ -357,9 +355,16 @@ public class TestMobStoreCompaction {
 
   private int countRows() throws IOException {
     Scan scan = new Scan();
-    // Do not retrieve the mob data when scanning
     InternalScanner scanner = region.getScanner(scan);
+    try {
+      return countRows(scanner);
+    } finally {
+      scanner.close();
+    }
+  }
 
+  private int countRows(InternalScanner scanner) throws IOException {
+    // Do not retrieve the mob data when scanning
     int scannedCount = 0;
     List<Cell> results = new ArrayList<Cell>();
     boolean hasMore = true;
@@ -368,8 +373,6 @@ public class TestMobStoreCompaction {
       scannedCount += results.size();
       results.clear();
     }
-    scanner.close();
-
     return scannedCount;
   }
 
@@ -423,8 +426,7 @@ public class TestMobStoreCompaction {
     Configuration copyOfConf = new Configuration(conf);
     copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     CacheConfig cacheConfig = new CacheConfig(copyOfConf);
-    Path mobDirPath = new Path(MobUtils.getMobRegionPath(conf, htd.getTableName()),
-        hcd.getNameAsString());
+    Path mobDirPath = MobUtils.getMobFamilyPath(conf, htd.getTableName(), hcd.getNameAsString());
     List<StoreFile> sfs = new ArrayList<>();
     int numDelfiles = 0;
     int size = 0;
@@ -436,6 +438,7 @@ public class TestMobStoreCompaction {
           numDelfiles++;
         }
       }
+
       List scanners = StoreFileScanner.getScannersForStoreFiles(sfs, false, true, false, false,
           HConstants.LATEST_TIMESTAMP);
       Scan scan = new Scan();
@@ -446,12 +449,10 @@ public class TestMobStoreCompaction {
         CellComparator.COMPARATOR);
       StoreScanner scanner = new StoreScanner(scan, scanInfo, ScanType.COMPACT_DROP_DELETES, null,
           scanners, 0L, HConstants.LATEST_TIMESTAMP);
-      List<Cell> results = new ArrayList<>();
-      boolean hasMore = true;
-      while (hasMore) {
-        hasMore = scanner.next(results);
-        size += results.size();
-        results.clear();
+      try {
+        size += countRows(scanner);
+      } finally {
+        scanner.close();
       }
     }
     // assert the number of the existing del files

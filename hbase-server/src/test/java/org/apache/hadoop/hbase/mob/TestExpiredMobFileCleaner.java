@@ -21,7 +21,6 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.Random;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -124,7 +123,7 @@ public class TestExpiredMobFileCleaner {
   public void testCleaner() throws Exception {
     init();
 
-    Path mobDirPath = getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
+    Path mobDirPath = MobUtils.getMobFamilyPath(TEST_UTIL.getConfiguration(), tableName, family);
 
     byte[] dummyData = makeDummyData(600);
     long ts = System.currentTimeMillis() - 3 * secondsOfDay() * 1000; // 3 days before
@@ -156,11 +155,6 @@ public class TestExpiredMobFileCleaner {
     //the first mob fie is removed
     assertEquals("After cleanup without delay 1", 1, filesAfterClean.length);
     assertEquals("After cleanup without delay 2", secondFile, lastFile);
-  }
-
-  private Path getMobFamilyPath(Configuration conf, TableName tableName, String familyName) {
-    Path p = new Path(MobUtils.getMobRegionPath(conf, tableName), familyName);
-    return p;
   }
 
   private int secondsOfDay() {
