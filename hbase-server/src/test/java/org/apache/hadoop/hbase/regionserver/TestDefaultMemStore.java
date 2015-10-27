@@ -944,10 +944,10 @@ public class TestDefaultMemStore extends TestCase {
 
   public void testShouldFlushMeta() throws Exception {
     // write an edit in the META and ensure the shouldFlush (that the periodic memstore
-    // flusher invokes) returns true after META_CACHE_FLUSH_INTERVAL (even though
+    // flusher invokes) returns true after SYSTEM_CACHE_FLUSH_INTERVAL (even though
     // the MEMSTORE_PERIODIC_FLUSH_INTERVAL is set to a higher value)
     Configuration conf = new Configuration();
-    conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.META_CACHE_FLUSH_INTERVAL * 10);
+    conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, HRegion.SYSTEM_CACHE_FLUSH_INTERVAL * 10);
     HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
     Path testDir = hbaseUtility.getDataTestDir();
     EnvironmentEdgeForMemstoreTest edge = new EnvironmentEdgeForMemstoreTest();
@@ -969,7 +969,7 @@ public class TestDefaultMemStore extends TestCase {
     edge.setCurrentTimeMillis(1234 + 100);
     StringBuffer sb = new StringBuffer();
     assertTrue(meta.shouldFlush(sb) == false);
-    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.META_CACHE_FLUSH_INTERVAL + 1);
+    edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
     assertTrue(meta.shouldFlush(sb) == true);
   }
 
