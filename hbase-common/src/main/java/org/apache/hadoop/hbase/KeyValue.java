@@ -392,7 +392,8 @@ public class KeyValue implements Cell, HeapSize, Cloneable, SettableSequenceId, 
   }
 
   /**
-   * Constructs KeyValue structure filled with null value.
+   * Constructs KeyValue structure as a put filled with specified values and
+   * LATEST_TIMESTAMP.
    * @param row - row key (arbitrary byte array)
    * @param family family name
    * @param qualifier column qualifier
