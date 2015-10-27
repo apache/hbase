@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.base.Preconditions;
@@ -124,7 +125,9 @@ public abstract class RpcExecutor {
     try {
       while (running) {
         try {
+          MonitoredRPCHandler status = RpcServer.getStatus();
           CallRunner task = myQueue.take();
+          task.setStatus(status);
           try {
             activeHandlerCount.incrementAndGet();
             task.run();
