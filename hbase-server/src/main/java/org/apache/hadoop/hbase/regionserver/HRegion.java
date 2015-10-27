@@ -1309,7 +1309,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       "hbase.regionserver.optionalcacheflushinterval";
   /** Default interval for the memstore flush */
   public static final int DEFAULT_CACHE_FLUSH_INTERVAL = 3600000;
-  public static final int META_CACHE_FLUSH_INTERVAL = 300000; // 5 minutes
+  /** Default interval for System tables memstore flush */
+  public static final int SYSTEM_CACHE_FLUSH_INTERVAL = 300000; // 5 minutes
 
   /** Conf key to force a flush if there are already enough changes for one region in memstore */
   public static final String MEMSTORE_FLUSH_PER_CHANGES =
@@ -1997,9 +1998,9 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return true;
     }
     long modifiedFlushCheckInterval = flushCheckInterval;
-    if (getRegionInfo().isMetaRegion() &&
+    if (getRegionInfo().isSystemTable() &&
         getRegionInfo().getReplicaId() == HRegionInfo.DEFAULT_REPLICA_ID) {
-      modifiedFlushCheckInterval = META_CACHE_FLUSH_INTERVAL;
+      modifiedFlushCheckInterval = SYSTEM_CACHE_FLUSH_INTERVAL;
     }
     if (modifiedFlushCheckInterval <= 0) { //disabled
       return false;
