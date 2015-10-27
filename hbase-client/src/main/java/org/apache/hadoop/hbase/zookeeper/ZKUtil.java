@@ -42,12 +42,14 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos;
 import org.apache.hadoop.hbase.protobuf.generated.ZooKeeperProtos.RegionStoreSequenceIds;
+import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil.ZKUtilOp.CreateAndFailSilent;
@@ -971,11 +973,23 @@ public class ZKUtil {
       return Ids.OPEN_ACL_UNSAFE;
     }
     if (isSecureZooKeeper) {
-      String superUser = zkw.getConfiguration().get("hbase.superuser");
       ArrayList<ACL> acls = new ArrayList<ACL>();
       // add permission to hbase supper user
-      if (superUser != null) {
-        acls.add(new ACL(Perms.ALL, new Id("auth", superUser)));
+      String[] superUsers = zkw.getConfiguration().getStrings(Superusers.SUPERUSER_CONF_KEY);
+      if (superUsers != null) {
+        List<String> groups = new ArrayList<String>();
+        for (String user : superUsers) {
+          if (user.startsWith(AuthUtil.GROUP_PREFIX)) {
+            // TODO: Set node ACL for groups when ZK supports this feature
+            groups.add(user);
+          } else {
+            acls.add(new ACL(Perms.ALL, new Id("auth", user)));
+          }
+        }
+        if (!groups.isEmpty()) {
+          LOG.warn("Znode ACL setting for group " + groups
+              + " is skipped, Zookeeper doesn't support this feature presently.");
+        }
       }
       // Certain znodes are accessed directly by the client,
       // so they must be readable by non-authenticated clients
