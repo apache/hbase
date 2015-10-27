@@ -1547,7 +1547,7 @@ public class HRegion implements HeapSize { // , Writable{
           // We no longer need to cancel the request on the way out of this
           // method because Store#compact will clean up unconditionally
           requestNeedsCancellation = false;
-          store.compact(compaction, throughputController);
+          store.compact(compaction, throughputController, user);
         } catch (InterruptedIOException iioe) {
           String msg = "compaction interrupted";
           LOG.info(msg, iioe);
