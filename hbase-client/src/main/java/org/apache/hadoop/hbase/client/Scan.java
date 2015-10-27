@@ -230,6 +230,7 @@ public class Scan extends Query {
     reversed = scan.isReversed();
     asyncPrefetch = scan.isAsyncPrefetch();
     small = scan.isSmall();
+    allowPartialResults = scan.getAllowPartialResults();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
