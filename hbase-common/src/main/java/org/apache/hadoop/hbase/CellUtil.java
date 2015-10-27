@@ -450,10 +450,6 @@ public final class CellUtil {
         buf.length);
   }
 
-  public static boolean matchingTimestamp(Cell a, Cell b) {
-    return CellComparator.compareTimestamps(a, b) == 0;
-  }
-
   /**
    * @return True if a delete type, a {@link KeyValue.Type#Delete} or a
    *         {KeyValue.Type#DeleteFamily} or a
