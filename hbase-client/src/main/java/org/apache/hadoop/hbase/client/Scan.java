@@ -233,6 +233,7 @@ public class Scan extends Query {
     consistency = scan.getConsistency();
     reversed = scan.isReversed();
     small = scan.isSmall();
+    allowPartialResults = scan.getAllowPartialResults();
     TimeRange ctr = scan.getTimeRange();
     tr = new TimeRange(ctr.getMin(), ctr.getMax());
     Map<byte[], NavigableSet<byte[]>> fams = scan.getFamilyMap();
