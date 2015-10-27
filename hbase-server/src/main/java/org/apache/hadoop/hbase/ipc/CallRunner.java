@@ -54,11 +54,14 @@ public class CallRunner {
     this.rpcServer = rpcServer;
     // Add size of the call to queue size.
     this.rpcServer.addCallSize(call.getSize());
-    this.status = getStatus();
   }
 
   public Call getCall() {
     return call;
+  }
+
+  public void setStatus(MonitoredRPCHandler status) {
+    this.status = status;
   }
 
   /**
@@ -67,7 +70,6 @@ public class CallRunner {
   private void cleanup() {
     this.call = null;
     this.rpcServer = null;
-    this.status = null;
   }
 
   public void run() {
@@ -149,17 +151,5 @@ public class CallRunner {
       this.rpcServer.addCallSize(call.getSize() * -1);
       cleanup();
     }
-  }
-
-  MonitoredRPCHandler getStatus() {
-    // It is ugly the way we park status up in RpcServer.  Let it be for now.  TODO.
-    MonitoredRPCHandler status = RpcServer.MONITORED_RPC.get();
-    if (status != null) {
-      return status;
-    }
-    status = TaskMonitor.get().createRPCStatus(Thread.currentThread().getName());
-    status.pause("Waiting for a call");
-    RpcServer.MONITORED_RPC.set(status);
-    return status;
   }
 }

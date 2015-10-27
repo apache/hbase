@@ -77,6 +77,7 @@ import org.apache.hadoop.hbase.exceptions.RegionMovedException;
 import org.apache.hadoop.hbase.io.ByteBufferOutputStream;
 import org.apache.hadoop.hbase.io.BoundedByteBufferPool;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.CellBlockMeta;
 import org.apache.hadoop.hbase.protobuf.generated.RPCProtos.ConnectionHeader;
@@ -2291,7 +2292,8 @@ public class RpcServer implements RpcServerInterface {
    * @param user client user
    * @param connection incoming connection
    * @param addr InetAddress of incoming connection
-   * @throws org.apache.hadoop.security.authorize.AuthorizationException when the client isn't authorized to talk the protocol
+   * @throws org.apache.hadoop.security.authorize.AuthorizationException
+   *         when the client isn't authorized to talk the protocol
    */
   @SuppressWarnings("static-access")
   public void authorize(UserGroupInformation user, ConnectionHeader connection, InetAddress addr)
@@ -2474,6 +2476,18 @@ public class RpcServer implements RpcServerInterface {
     BlockingServiceAndInterface bsasi =
         getServiceAndInterface(services, serviceName);
     return bsasi == null? null: bsasi.getBlockingService();
+  }
+
+  static MonitoredRPCHandler getStatus() {
+    // It is ugly the way we park status up in RpcServer.  Let it be for now.  TODO.
+    MonitoredRPCHandler status = RpcServer.MONITORED_RPC.get();
+    if (status != null) {
+      return status;
+    }
+    status = TaskMonitor.get().createRPCStatus(Thread.currentThread().getName());
+    status.pause("Waiting for a call");
+    RpcServer.MONITORED_RPC.set(status);
+    return status;
   }
 
   /** Returns the remote side ip address when invoked inside an RPC
