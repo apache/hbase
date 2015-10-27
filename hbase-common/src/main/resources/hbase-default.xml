@@ -1369,4 +1369,18 @@ possible configurations would overwhelm and obscure the important.
     0.x Abort only when this percent of handlers have died;
     1 Abort only all of the handers have died.</description>
   </property>
+  <property>
+    <name>hbase.snapshot.master.timeout.millis</name>
+    <value>300000</value>
+    <description>
+       Timeout for master for the snapshot procedure execution
+    </description>
+   </property>
+     <property>
+    <name>hbase.snapshot.region.timeout</name>
+    <value>300000</value>
+    <description>
+       Timeout for regionservers to keep threads in snapshot request pool waiting
+    </description>
+   </property>
 </configuration>

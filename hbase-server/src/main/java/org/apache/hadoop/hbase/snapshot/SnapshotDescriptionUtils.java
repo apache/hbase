@@ -104,10 +104,27 @@ public class SnapshotDescriptionUtils {
   /** Default value if no start time is specified */
   public static final long NO_SNAPSHOT_START_TIME_SPECIFIED = 0;
 
+
   public static final String MASTER_SNAPSHOT_TIMEOUT_MILLIS = "hbase.snapshot.master.timeout.millis";
 
-  /** By default, wait 60 seconds for a snapshot to complete */
-  public static final long DEFAULT_MAX_WAIT_TIME = 60000;
+  /** By default, wait 300 seconds for a snapshot to complete */
+  public static final long DEFAULT_MAX_WAIT_TIME = 60000 * 5 ;
+
+
+  /**
+   * By default, check to see if the snapshot is complete (ms)
+   * @deprecated Use {@link #DEFAULT_MAX_WAIT_TIME} instead.
+   * */
+  @Deprecated
+  public static final int SNAPSHOT_TIMEOUT_MILLIS_DEFAULT = 60000 * 5;
+
+  /**
+   * Conf key for # of ms elapsed before injecting a snapshot timeout error when waiting for
+   * completion.
+   * @deprecated Use {@link #MASTER_SNAPSHOT_TIMEOUT_MILLIS} instead.
+   */
+  @Deprecated
+  public static final String SNAPSHOT_TIMEOUT_MILLIS_KEY = "hbase.snapshot.master.timeoutMillis";
 
   private SnapshotDescriptionUtils() {
     // private constructor for utility class
@@ -127,7 +144,8 @@ public class SnapshotDescriptionUtils {
     default:
       confKey = MASTER_SNAPSHOT_TIMEOUT_MILLIS;
     }
-    return conf.getLong(confKey, defaultMaxWaitTime);
+    return Math.max(conf.getLong(confKey, defaultMaxWaitTime),
+        conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, defaultMaxWaitTime));
   }
 
   /**
