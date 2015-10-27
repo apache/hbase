@@ -26,17 +26,15 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
-import org.apache.hadoop.hbase.errorhandling.ForeignExceptionListener;
-import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
@@ -52,7 +50,6 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceStability.Evolving
 public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   private static final Log LOG = LogFactory.getLog(DisabledTableSnapshotHandler.class);
-  private final TimeoutExceptionInjector timeoutInjector;
 
   /**
    * @param snapshot descriptor of the snapshot to take
@@ -61,9 +58,6 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   public DisabledTableSnapshotHandler(SnapshotDescription snapshot,
       final MasterServices masterServices) {
     super(snapshot, masterServices);
-
-    // setup the timer
-    timeoutInjector = getMasterTimerAndBindToMonitor(snapshot, conf, monitor);
   }
 
   @Override
@@ -77,8 +71,6 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   public void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regionsAndLocations)
       throws IOException, KeeperException {
     try {
-      timeoutInjector.start();
-
       // 1. get all the regions hosting this table.
 
       // extract each pair to separate lists
@@ -114,25 +106,6 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
     } finally {
       LOG.debug("Marking snapshot" + ClientSnapshotDescriptionUtils.toString(snapshot)
           + " as finished.");
-
-      // 3. mark the timer as finished - even if we got an exception, we don't need to time the
-      // operation any further
-      timeoutInjector.complete();
     }
-  }
-
-
-  /**
-   * Create a snapshot timer for the master which notifies the monitor when an error occurs
-   * @param snapshot snapshot to monitor
-   * @param conf configuration to use when getting the max snapshot life
-   * @param monitor monitor to notify when the snapshot life expires
-   * @return the timer to use update to signal the start and end of the snapshot
-   */
-  private TimeoutExceptionInjector getMasterTimerAndBindToMonitor(SnapshotDescription snapshot,
-      Configuration conf, ForeignExceptionListener monitor) {
-    long maxTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
-      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
-    return new TimeoutExceptionInjector(monitor, maxTime);
   }
 }
