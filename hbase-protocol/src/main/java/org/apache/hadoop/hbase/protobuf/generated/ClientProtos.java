@@ -13682,6 +13682,16 @@ public final class ClientProtos {
      * <code>optional uint32 caching = 17;</code>
      */
     int getCaching();
+
+    // optional bool allow_partial_results = 18;
+    /**
+     * <code>optional bool allow_partial_results = 18;</code>
+     */
+    boolean hasAllowPartialResults();
+    /**
+     * <code>optional bool allow_partial_results = 18;</code>
+     */
+    boolean getAllowPartialResults();
   }
   /**
    * Protobuf type {@code hbase.pb.Scan}
@@ -13856,6 +13866,11 @@ public final class ClientProtos {
             case 136: {
               bitField0_ |= 0x00004000;
               caching_ = input.readUInt32();
+              break;
+            }
+            case 144: {
+              bitField0_ |= 0x00008000;
+              allowPartialResults_ = input.readBool();
               break;
             }
           }
@@ -14236,6 +14251,22 @@ public final class ClientProtos {
       return caching_;
     }
 
+    // optional bool allow_partial_results = 18;
+    public static final int ALLOW_PARTIAL_RESULTS_FIELD_NUMBER = 18;
+    private boolean allowPartialResults_;
+    /**
+     * <code>optional bool allow_partial_results = 18;</code>
+     */
+    public boolean hasAllowPartialResults() {
+      return ((bitField0_ & 0x00008000) == 0x00008000);
+    }
+    /**
+     * <code>optional bool allow_partial_results = 18;</code>
+     */
+    public boolean getAllowPartialResults() {
+      return allowPartialResults_;
+    }
+
     private void initFields() {
       column_ = java.util.Collections.emptyList();
       attribute_ = java.util.Collections.emptyList();
@@ -14254,6 +14285,7 @@ public final class ClientProtos {
       reversed_ = false;
       consistency_ = org.apache.hadoop.hbase.protobuf.generated.ClientProtos.Consistency.STRONG;
       caching_ = 0;
+      allowPartialResults_ = false;
     }
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
@@ -14336,6 +14368,9 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         output.writeUInt32(17, caching_);
       }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        output.writeBool(18, allowPartialResults_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -14412,6 +14447,10 @@ public final class ClientProtos {
       if (((bitField0_ & 0x00004000) == 0x00004000)) {
         size += com.google.protobuf.CodedOutputStream
           .computeUInt32Size(17, caching_);
+      }
+      if (((bitField0_ & 0x00008000) == 0x00008000)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(18, allowPartialResults_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSerializedSize = size;
@@ -14515,6 +14554,11 @@ public final class ClientProtos {
         result = result && (getCaching()
             == other.getCaching());
       }
+      result = result && (hasAllowPartialResults() == other.hasAllowPartialResults());
+      if (hasAllowPartialResults()) {
+        result = result && (getAllowPartialResults()
+            == other.getAllowPartialResults());
+      }
       result = result &&
           getUnknownFields().equals(other.getUnknownFields());
       return result;
@@ -14595,6 +14639,10 @@ public final class ClientProtos {
       if (hasCaching()) {
         hash = (37 * hash) + CACHING_FIELD_NUMBER;
         hash = (53 * hash) + getCaching();
+      }
+      if (hasAllowPartialResults()) {
+        hash = (37 * hash) + ALLOW_PARTIAL_RESULTS_FIELD_NUMBER;
+        hash = (53 * hash) + hashBoolean(getAllowPartialResults());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -14770,6 +14818,8 @@ public final class ClientProtos {
         bitField0_ = (bitField0_ & ~0x00008000);
         caching_ = 0;
         bitField0_ = (bitField0_ & ~0x00010000);
+        allowPartialResults_ = false;
+        bitField0_ = (bitField0_ & ~0x00020000);
         return this;
       }
 
@@ -14884,6 +14934,10 @@ public final class ClientProtos {
           to_bitField0_ |= 0x00004000;
         }
         result.caching_ = caching_;
+        if (((from_bitField0_ & 0x00020000) == 0x00020000)) {
+          to_bitField0_ |= 0x00008000;
+        }
+        result.allowPartialResults_ = allowPartialResults_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -14996,6 +15050,9 @@ public final class ClientProtos {
         }
         if (other.hasCaching()) {
           setCaching(other.getCaching());
+        }
+        if (other.hasAllowPartialResults()) {
+          setAllowPartialResults(other.getAllowPartialResults());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         return this;
@@ -16206,6 +16263,39 @@ public final class ClientProtos {
       public Builder clearCaching() {
         bitField0_ = (bitField0_ & ~0x00010000);
         caching_ = 0;
+        onChanged();
+        return this;
+      }
+
+      // optional bool allow_partial_results = 18;
+      private boolean allowPartialResults_ ;
+      /**
+       * <code>optional bool allow_partial_results = 18;</code>
+       */
+      public boolean hasAllowPartialResults() {
+        return ((bitField0_ & 0x00020000) == 0x00020000);
+      }
+      /**
+       * <code>optional bool allow_partial_results = 18;</code>
+       */
+      public boolean getAllowPartialResults() {
+        return allowPartialResults_;
+      }
+      /**
+       * <code>optional bool allow_partial_results = 18;</code>
+       */
+      public Builder setAllowPartialResults(boolean value) {
+        bitField0_ |= 0x00020000;
+        allowPartialResults_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool allow_partial_results = 18;</code>
+       */
+      public Builder clearAllowPartialResults() {
+        bitField0_ = (bitField0_ & ~0x00020000);
+        allowPartialResults_ = false;
         onChanged();
         return this;
       }
@@ -33168,7 +33258,7 @@ public final class ClientProtos {
       "b.MutationProto\022&\n\tcondition\030\003 \001(\0132\023.hba",
       "se.pb.Condition\022\023\n\013nonce_group\030\004 \001(\004\"E\n\016" +
       "MutateResponse\022 \n\006result\030\001 \001(\0132\020.hbase.p" +
-      "b.Result\022\021\n\tprocessed\030\002 \001(\010\"\346\003\n\004Scan\022 \n\006" +
+      "b.Result\022\021\n\tprocessed\030\002 \001(\010\"\205\004\n\004Scan\022 \n\006" +
       "column\030\001 \003(\0132\020.hbase.pb.Column\022*\n\tattrib" +
       "ute\030\002 \003(\0132\027.hbase.pb.NameBytesPair\022\021\n\tst" +
       "art_row\030\003 \001(\014\022\020\n\010stop_row\030\004 \001(\014\022 \n\006filte" +
@@ -33180,75 +33270,76 @@ public final class ClientProtos {
       "t\030\014 \001(\r\022&\n\036load_column_families_on_deman" +
       "d\030\r \001(\010\022\r\n\005small\030\016 \001(\010\022\027\n\010reversed\030\017 \001(\010" +
       ":\005false\0222\n\013consistency\030\020 \001(\0162\025.hbase.pb." +
-      "Consistency:\006STRONG\022\017\n\007caching\030\021 \001(\r\"\220\002\n" +
-      "\013ScanRequest\022)\n\006region\030\001 \001(\0132\031.hbase.pb." +
-      "RegionSpecifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb" +
-      ".Scan\022\022\n\nscanner_id\030\003 \001(\004\022\026\n\016number_of_r" +
-      "ows\030\004 \001(\r\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext" +
-      "_call_seq\030\006 \001(\004\022\037\n\027client_handles_partia",
-      "ls\030\007 \001(\010\022!\n\031client_handles_heartbeats\030\010 " +
-      "\001(\010\022\032\n\022track_scan_metrics\030\t \001(\010\"\232\002\n\014Scan" +
-      "Response\022\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nsc" +
-      "anner_id\030\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003" +
-      "ttl\030\004 \001(\r\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Re" +
-      "sult\022\r\n\005stale\030\006 \001(\010\022\037\n\027partial_flag_per_" +
-      "result\030\007 \003(\010\022\036\n\026more_results_in_region\030\010" +
-      " \001(\010\022\031\n\021heartbeat_message\030\t \001(\010\022+\n\014scan_" +
-      "metrics\030\n \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n" +
-      "\024BulkLoadHFileRequest\022)\n\006region\030\001 \002(\0132\031.",
-      "hbase.pb.RegionSpecifier\022>\n\013family_path\030" +
-      "\002 \003(\0132).hbase.pb.BulkLoadHFileRequest.Fa" +
-      "milyPath\022\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFami" +
-      "lyPath\022\016\n\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025" +
-      "BulkLoadHFileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n" +
-      "\026CoprocessorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014" +
-      "service_name\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022" +
-      "\017\n\007request\030\004 \002(\014\"B\n\030CoprocessorServiceRe" +
-      "sult\022&\n\005value\030\001 \001(\0132\027.hbase.pb.NameBytes" +
-      "Pair\"v\n\031CoprocessorServiceRequest\022)\n\006reg",
-      "ion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022.\n\004" +
-      "call\030\002 \002(\0132 .hbase.pb.CoprocessorService" +
-      "Call\"o\n\032CoprocessorServiceResponse\022)\n\006re" +
-      "gion\030\001 \002(\0132\031.hbase.pb.RegionSpecifier\022&\n" +
-      "\005value\030\002 \002(\0132\027.hbase.pb.NameBytesPair\"\226\001" +
-      "\n\006Action\022\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(" +
-      "\0132\027.hbase.pb.MutationProto\022\032\n\003get\030\003 \001(\0132" +
-      "\r.hbase.pb.Get\0226\n\014service_call\030\004 \001(\0132 .h" +
-      "base.pb.CoprocessorServiceCall\"k\n\014Region" +
-      "Action\022)\n\006region\030\001 \002(\0132\031.hbase.pb.Region",
-      "Specifier\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(" +
-      "\0132\020.hbase.pb.Action\"D\n\017RegionLoadStats\022\027" +
-      "\n\014memstoreLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy" +
-      "\030\002 \001(\005:\0010\"\332\001\n\021ResultOrException\022\r\n\005index" +
-      "\030\001 \001(\r\022 \n\006result\030\002 \001(\0132\020.hbase.pb.Result" +
-      "\022*\n\texception\030\003 \001(\0132\027.hbase.pb.NameBytes" +
-      "Pair\022:\n\016service_result\030\004 \001(\0132\".hbase.pb." +
-      "CoprocessorServiceResult\022,\n\tloadStats\030\005 " +
-      "\001(\0132\031.hbase.pb.RegionLoadStats\"x\n\022Region" +
-      "ActionResult\0226\n\021resultOrException\030\001 \003(\0132",
-      "\033.hbase.pb.ResultOrException\022*\n\texceptio" +
-      "n\030\002 \001(\0132\027.hbase.pb.NameBytesPair\"x\n\014Mult" +
-      "iRequest\022,\n\014regionAction\030\001 \003(\0132\026.hbase.p" +
-      "b.RegionAction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tco" +
-      "ndition\030\003 \001(\0132\023.hbase.pb.Condition\"\\\n\rMu" +
-      "ltiResponse\0228\n\022regionActionResult\030\001 \003(\0132" +
-      "\034.hbase.pb.RegionActionResult\022\021\n\tprocess" +
-      "ed\030\002 \001(\010*\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010T" +
-      "IMELINE\020\0012\203\004\n\rClientService\0222\n\003Get\022\024.hba" +
-      "se.pb.GetRequest\032\025.hbase.pb.GetResponse\022",
-      ";\n\006Mutate\022\027.hbase.pb.MutateRequest\032\030.hba" +
-      "se.pb.MutateResponse\0225\n\004Scan\022\025.hbase.pb." +
-      "ScanRequest\032\026.hbase.pb.ScanResponse\022P\n\rB" +
-      "ulkLoadHFile\022\036.hbase.pb.BulkLoadHFileReq" +
-      "uest\032\037.hbase.pb.BulkLoadHFileResponse\022X\n" +
-      "\013ExecService\022#.hbase.pb.CoprocessorServi" +
-      "ceRequest\032$.hbase.pb.CoprocessorServiceR" +
-      "esponse\022d\n\027ExecRegionServerService\022#.hba" +
-      "se.pb.CoprocessorServiceRequest\032$.hbase." +
-      "pb.CoprocessorServiceResponse\0228\n\005Multi\022\026",
-      ".hbase.pb.MultiRequest\032\027.hbase.pb.MultiR" +
-      "esponseBB\n*org.apache.hadoop.hbase.proto" +
-      "buf.generatedB\014ClientProtosH\001\210\001\001\240\001\001"
+      "Consistency:\006STRONG\022\017\n\007caching\030\021 \001(\r\022\035\n\025" +
+      "allow_partial_results\030\022 \001(\010\"\220\002\n\013ScanRequ" +
+      "est\022)\n\006region\030\001 \001(\0132\031.hbase.pb.RegionSpe" +
+      "cifier\022\034\n\004scan\030\002 \001(\0132\016.hbase.pb.Scan\022\022\n\n" +
+      "scanner_id\030\003 \001(\004\022\026\n\016number_of_rows\030\004 \001(\r" +
+      "\022\025\n\rclose_scanner\030\005 \001(\010\022\025\n\rnext_call_seq",
+      "\030\006 \001(\004\022\037\n\027client_handles_partials\030\007 \001(\010\022" +
+      "!\n\031client_handles_heartbeats\030\010 \001(\010\022\032\n\022tr" +
+      "ack_scan_metrics\030\t \001(\010\"\232\002\n\014ScanResponse\022" +
+      "\030\n\020cells_per_result\030\001 \003(\r\022\022\n\nscanner_id\030" +
+      "\002 \001(\004\022\024\n\014more_results\030\003 \001(\010\022\013\n\003ttl\030\004 \001(\r" +
+      "\022!\n\007results\030\005 \003(\0132\020.hbase.pb.Result\022\r\n\005s" +
+      "tale\030\006 \001(\010\022\037\n\027partial_flag_per_result\030\007 " +
+      "\003(\010\022\036\n\026more_results_in_region\030\010 \001(\010\022\031\n\021h" +
+      "eartbeat_message\030\t \001(\010\022+\n\014scan_metrics\030\n" +
+      " \001(\0132\025.hbase.pb.ScanMetrics\"\305\001\n\024BulkLoad",
+      "HFileRequest\022)\n\006region\030\001 \002(\0132\031.hbase.pb." +
+      "RegionSpecifier\022>\n\013family_path\030\002 \003(\0132).h" +
+      "base.pb.BulkLoadHFileRequest.FamilyPath\022" +
+      "\026\n\016assign_seq_num\030\003 \001(\010\032*\n\nFamilyPath\022\016\n" +
+      "\006family\030\001 \002(\014\022\014\n\004path\030\002 \002(\t\"\'\n\025BulkLoadH" +
+      "FileResponse\022\016\n\006loaded\030\001 \002(\010\"a\n\026Coproces" +
+      "sorServiceCall\022\013\n\003row\030\001 \002(\014\022\024\n\014service_n" +
+      "ame\030\002 \002(\t\022\023\n\013method_name\030\003 \002(\t\022\017\n\007reques" +
+      "t\030\004 \002(\014\"B\n\030CoprocessorServiceResult\022&\n\005v" +
+      "alue\030\001 \001(\0132\027.hbase.pb.NameBytesPair\"v\n\031C",
+      "oprocessorServiceRequest\022)\n\006region\030\001 \002(\013" +
+      "2\031.hbase.pb.RegionSpecifier\022.\n\004call\030\002 \002(" +
+      "\0132 .hbase.pb.CoprocessorServiceCall\"o\n\032C" +
+      "oprocessorServiceResponse\022)\n\006region\030\001 \002(" +
+      "\0132\031.hbase.pb.RegionSpecifier\022&\n\005value\030\002 " +
+      "\002(\0132\027.hbase.pb.NameBytesPair\"\226\001\n\006Action\022" +
+      "\r\n\005index\030\001 \001(\r\022)\n\010mutation\030\002 \001(\0132\027.hbase" +
+      ".pb.MutationProto\022\032\n\003get\030\003 \001(\0132\r.hbase.p" +
+      "b.Get\0226\n\014service_call\030\004 \001(\0132 .hbase.pb.C" +
+      "oprocessorServiceCall\"k\n\014RegionAction\022)\n",
+      "\006region\030\001 \002(\0132\031.hbase.pb.RegionSpecifier" +
+      "\022\016\n\006atomic\030\002 \001(\010\022 \n\006action\030\003 \003(\0132\020.hbase" +
+      ".pb.Action\"D\n\017RegionLoadStats\022\027\n\014memstor" +
+      "eLoad\030\001 \001(\005:\0010\022\030\n\rheapOccupancy\030\002 \001(\005:\0010" +
+      "\"\332\001\n\021ResultOrException\022\r\n\005index\030\001 \001(\r\022 \n" +
+      "\006result\030\002 \001(\0132\020.hbase.pb.Result\022*\n\texcep" +
+      "tion\030\003 \001(\0132\027.hbase.pb.NameBytesPair\022:\n\016s" +
+      "ervice_result\030\004 \001(\0132\".hbase.pb.Coprocess" +
+      "orServiceResult\022,\n\tloadStats\030\005 \001(\0132\031.hba" +
+      "se.pb.RegionLoadStats\"x\n\022RegionActionRes",
+      "ult\0226\n\021resultOrException\030\001 \003(\0132\033.hbase.p" +
+      "b.ResultOrException\022*\n\texception\030\002 \001(\0132\027" +
+      ".hbase.pb.NameBytesPair\"x\n\014MultiRequest\022" +
+      ",\n\014regionAction\030\001 \003(\0132\026.hbase.pb.RegionA" +
+      "ction\022\022\n\nnonceGroup\030\002 \001(\004\022&\n\tcondition\030\003" +
+      " \001(\0132\023.hbase.pb.Condition\"\\\n\rMultiRespon" +
+      "se\0228\n\022regionActionResult\030\001 \003(\0132\034.hbase.p" +
+      "b.RegionActionResult\022\021\n\tprocessed\030\002 \001(\010*" +
+      "\'\n\013Consistency\022\n\n\006STRONG\020\000\022\014\n\010TIMELINE\020\001" +
+      "2\203\004\n\rClientService\0222\n\003Get\022\024.hbase.pb.Get",
+      "Request\032\025.hbase.pb.GetResponse\022;\n\006Mutate" +
+      "\022\027.hbase.pb.MutateRequest\032\030.hbase.pb.Mut" +
+      "ateResponse\0225\n\004Scan\022\025.hbase.pb.ScanReque" +
+      "st\032\026.hbase.pb.ScanResponse\022P\n\rBulkLoadHF" +
+      "ile\022\036.hbase.pb.BulkLoadHFileRequest\032\037.hb" +
+      "ase.pb.BulkLoadHFileResponse\022X\n\013ExecServ" +
+      "ice\022#.hbase.pb.CoprocessorServiceRequest" +
+      "\032$.hbase.pb.CoprocessorServiceResponse\022d" +
+      "\n\027ExecRegionServerService\022#.hbase.pb.Cop" +
+      "rocessorServiceRequest\032$.hbase.pb.Coproc",
+      "essorServiceResponse\0228\n\005Multi\022\026.hbase.pb" +
+      ".MultiRequest\032\027.hbase.pb.MultiResponseBB" +
+      "\n*org.apache.hadoop.hbase.protobuf.gener" +
+      "atedB\014ClientProtosH\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -33338,7 +33429,7 @@ public final class ClientProtos {
           internal_static_hbase_pb_Scan_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_hbase_pb_Scan_descriptor,
-              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", "Consistency", "Caching", });
+              new java.lang.String[] { "Column", "Attribute", "StartRow", "StopRow", "Filter", "TimeRange", "MaxVersions", "CacheBlocks", "BatchSize", "MaxResultSize", "StoreLimit", "StoreOffset", "LoadColumnFamiliesOnDemand", "Small", "Reversed", "Consistency", "Caching", "AllowPartialResults", });
           internal_static_hbase_pb_ScanRequest_descriptor =
             getDescriptor().getMessageTypes().get(12);
           internal_static_hbase_pb_ScanRequest_fieldAccessorTable = new
