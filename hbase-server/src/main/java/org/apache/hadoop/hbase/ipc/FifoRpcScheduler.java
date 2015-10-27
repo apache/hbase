@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.ipc.CallRunner;
 
 /**
  * A very simple {@code }RpcScheduler} that serves incoming requests in order.
@@ -70,6 +69,7 @@ public class FifoRpcScheduler extends RpcScheduler {
     executor.submit(new Runnable() {
       @Override
       public void run() {
+        task.setStatus(RpcServer.getStatus());
         task.run();
       }
     });
