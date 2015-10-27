@@ -256,6 +256,7 @@ message Scan {
   optional bool reversed = 15 [default = false];
   optional Consistency consistency = 16 [default = STRONG];
   optional uint32 caching = 17;
+  optional bool allow_partial_results = 18;
 }
 
 /**

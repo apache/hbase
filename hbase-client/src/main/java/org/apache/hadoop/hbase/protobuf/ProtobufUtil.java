@@ -882,6 +882,9 @@ public final class ProtobufUtil {
     if (scan.isSmall()) {
       scanBuilder.setSmall(scan.isSmall());
     }
+    if (scan.getAllowPartialResults()) {
+      scanBuilder.setAllowPartialResults(scan.getAllowPartialResults());
+    }
     Boolean loadColumnFamiliesOnDemand = scan.getLoadColumnFamiliesOnDemandValue();
     if (loadColumnFamiliesOnDemand != null) {
       scanBuilder.setLoadColumnFamiliesOnDemand(loadColumnFamiliesOnDemand.booleanValue());
@@ -1005,6 +1008,9 @@ public final class ProtobufUtil {
     }
     if (proto.hasSmall()) {
       scan.setSmall(proto.getSmall());
+    }
+    if (proto.hasAllowPartialResults()) {
+      scan.setAllowPartialResults(proto.getAllowPartialResults());
     }
     for (NameBytesPair attribute: proto.getAttributeList()) {
       scan.setAttribute(attribute.getName(), attribute.getValue().toByteArray());
