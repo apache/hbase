@@ -916,4 +916,8 @@ public final class CellUtil {
   public static boolean matchingType(Cell a, Cell b) {
     return a.getTypeByte() == b.getTypeByte();
   }
+
+  public static boolean matchingTimestamp(Cell a, Cell b) {
+    return CellComparator.compareTimestamps(a, b) == 0;
+  }
 }
