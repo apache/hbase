@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.ipc.RpcServer.Call;
@@ -86,6 +87,7 @@ public class TestSimpleRpcScheduler {
     scheduler.init(CONTEXT);
     scheduler.start();
     CallRunner task = createMockTask();
+    task.setStatus(new MonitoredRPCHandlerImpl());
     scheduler.dispatch(task);
     verify(task, timeout(1000)).run();
     scheduler.stop();
@@ -120,6 +122,7 @@ public class TestSimpleRpcScheduler {
       }
     };
     for (CallRunner task : tasks) {
+      task.setStatus(new MonitoredRPCHandlerImpl());
       doAnswer(answerToRun).when(task).run();
     }
 
@@ -302,6 +305,7 @@ public class TestSimpleRpcScheduler {
 
   private void doAnswerTaskExecution(final CallRunner callTask,
       final ArrayList<Integer> results, final int value, final int sleepInterval) {
+    callTask.setStatus(new MonitoredRPCHandlerImpl());
     doAnswer(new Answer<Object>() {
       @Override
       public Object answer(InvocationOnMock invocation) {

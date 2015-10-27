@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
@@ -34,6 +35,7 @@ public class TestCallRunner {
     RpcServer.Call mockCall = Mockito.mock(RpcServer.Call.class);
     mockCall.connection = Mockito.mock(RpcServer.Connection.class);
     CallRunner cr = new CallRunner(mockRpcServer, mockCall);
+    cr.setStatus(new MonitoredRPCHandlerImpl());
     cr.run();
   }
 }
